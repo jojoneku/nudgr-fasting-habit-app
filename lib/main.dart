@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'app_colors.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -78,7 +80,7 @@ class FastingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Idle Habits',
+      title: 'Nudgr',
       theme: _buildTheme(Brightness.light),
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
@@ -95,6 +97,42 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  Future<void> _sendTestNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'test_channel',
+      'Test Notifications',
+      channelDescription: 'Channel for test notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    await flutterLocalNotificationsPlugin.show(
+      9999,
+      'Nudgr Test Notification',
+      'This is a test notification. Notifications are working!',
+      details,
+    );
+  }
+
+  Future<void> _sendFullScreenAlarmNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'alarm_channel',
+      'Alarms',
+      channelDescription: 'Channel for alarm notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+      fullScreenIntent: true,
+      playSound: true,
+      enableVibration: true,
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    await flutterLocalNotificationsPlugin.show(
+      10001,
+      'Alarm!',
+      'This is a disruptive alarm notification!',
+      details,
+    );
+  }
   // --- Fasting State ---
   bool _isFasting = false;
   DateTime? _startTime;
@@ -329,59 +367,65 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   // --- Reminder Logic ---
 
   Future<void> _addReminder() async {
-    // 1. Get Title
+    // All-in-one dialog for title, time, and days
     String? title;
+    TimeOfDay time = const TimeOfDay(hour: 8, minute: 0);
+    List<bool> days = List.filled(7, true);
+    const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+    bool submitted = false;
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
         TextEditingController controller = TextEditingController();
-        return AlertDialog(
-          title: const Text("New Habit"),
-          content: TextField(
-            controller: controller,
-            decoration: const InputDecoration(hintText: "e.g., Jogging, Meds"),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
-            TextButton(
-              onPressed: () {
-                title = controller.text;
-                Navigator.pop(context);
-              },
-              child: const Text("Next"),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (title == null || title!.isEmpty) return;
-
-    // 2. Get Time
-    TimeOfDay? time = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 8, minute: 0),
-    );
-
-    if (time == null) return;
-
-    // 3. Get Days (Multi-select)
-    List<bool>? selectedDays = await showDialog<List<bool>>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          // Local state for the dialog
-          List<bool> days = List.filled(7, true);
-          const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-          return StatefulBuilder(
-              builder: (context, setState) {
-                return AlertDialog(
-                  title: const Text("Repeat on"),
-                  content: SingleChildScrollView(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text("New Habit"),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Title"),
+                    TextField(
+                      controller: controller,
+                      decoration: const InputDecoration(hintText: "e.g., Jogging, Meds"),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("Time"),
+                    InkWell(
+                      onTap: () async {
+                        TimeOfDay? picked = await showTimePicker(
+                          context: context,
+                          initialTime: time,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            time = picked;
+                          });
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: AppColors.neutral),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(time.format(context), style: const TextStyle(fontSize: 16)),
+                            const Icon(Icons.access_time, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text("Repeat on"),
+                    Column(
                       children: List.generate(7, (index) {
                         return CheckboxListTile(
                           title: Text(dayLabels[index]),
@@ -393,22 +437,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         );
                       }),
                     ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, days),
-                      child: const Text("Save"),
-                    ),
                   ],
-                );
-              }
-          );
-        }
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () {
+                    title = controller.text.trim();
+                    if (title == null || title!.isEmpty) {
+                      // Optionally show error
+                      return;
+                    }
+                    submitted = true;
+                    Navigator.pop(context);
+                  },
+                  child: const Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (selectedDays == null) return; // User cancelled logic if needed, but here we assume save
+    if (!submitted || title == null || title!.isEmpty) return;
 
-    // 4. Save & Schedule
     int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     Map<String, dynamic> newReminder = {
       'id': id,
@@ -416,7 +475,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       'hour': time.hour,
       'minute': time.minute,
       'isEnabled': true,
-      'days': selectedDays,
+      'days': days,
     };
 
     setState(() {
@@ -455,7 +514,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _startTime!.add(Duration(hours: _fastingGoalHours)),
       tz.local,
     );
-    await _scheduleOneShotNotification(0, "Fasting Goal Reached! 🏆", "Time to eat!", scheduledDate);
+    await _scheduleOneShotNotification(0, "Fasting Goal Reached! 🏆", "Time to eat!", scheduledDate, fullScreen: true);
     // Schedule notifications for every 2 hours fasted
     // Fasting effect milestones
     final Map<int, Map<String, String>> fastingEffects = {
@@ -494,7 +553,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _eatingStartTime!.add(Duration(hours: eatingWindow)),
       tz.local,
     );
-    await _scheduleOneShotNotification(1, "Eating Window Over 🍽️", "Time to start fasting!", scheduledDate);
+    await _scheduleOneShotNotification(1, "Eating Window Over 🍽️", "Time to start fasting!", scheduledDate, fullScreen: true);
 
     // Schedule notifications for every hour remaining in eating window
     for (int h = eatingWindow - 1; h > 0; h--) {
@@ -515,14 +574,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     List<bool> days = List<bool>.from(item['days']);
     int baseId = item['id']; // e.g. 170000000
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'habits_channel',
       'Daily Habits',
       channelDescription: 'Recurring reminders',
       importance: Importance.max,
       priority: Priority.high,
+      fullScreenIntent: true,
+      playSound: true,
+      enableVibration: true,
+      vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
+      sound: RawResourceAndroidNotificationSound('notification'), // Use 'notification' from res/raw/notification.mp3 if present, else default
     );
-    const NotificationDetails details = NotificationDetails(android: androidDetails);
+    final NotificationDetails details = NotificationDetails(android: androidDetails);
 
     for (int i = 0; i < 7; i++) {
       if (days[i]) {
@@ -574,7 +638,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return scheduledDate;
   }
 
-  Future<void> _scheduleOneShotNotification(int id, String title, String body, tz.TZDateTime scheduledDate, {String? groupKey}) async {
+  Future<void> _scheduleOneShotNotification(int id, String title, String body, tz.TZDateTime scheduledDate, {String? groupKey, bool fullScreen = false}) async {
     AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'fasting_channel',
       'Fasting Timer',
@@ -582,6 +646,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       importance: Importance.max,
       priority: Priority.high,
       groupKey: groupKey,
+      fullScreenIntent: fullScreen,
+      playSound: true,
+      enableVibration: true,
     );
     NotificationDetails details = NotificationDetails(android: androidDetails);
 
@@ -604,7 +671,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Idle Habits'),
+        title: null,
         centerTitle: true,
         actions: [
           IconButton(
@@ -618,7 +685,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       ListTile(
-                        leading: const Icon(Icons.science, color: Colors.blue),
+                        leading: const Icon(Icons.science, color: AppColors.primary),
                         title: const Text('Add Test Data'),
                         subtitle: const Text('Add sample fasting records'),
                         onTap: () {
@@ -626,9 +693,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           _addTestData();
                         },
                       ),
+                      ListTile(
+                        leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+                        title: const Text('Send Test Notification'),
+                        subtitle: const Text('Check if notifications work'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await _sendTestNotification();
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.alarm, color: AppColors.primary),
+                        title: const Text('Send Full-Screen Alarm Notification'),
+                        subtitle: const Text('Test disruptive alarm notification'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await _sendFullScreenAlarmNotification();
+                        },
+                      ),
                       const Divider(),
                       ListTile(
-                        leading: const Icon(Icons.delete_forever, color: Colors.red),
+                        leading: const Icon(Icons.delete_forever, color: AppColors.neutral),
                         title: const Text('Clear All Data'),
                         subtitle: const Text('Delete all fasting history and habits'),
                         onTap: () async {
@@ -645,7 +730,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 ),
                                 TextButton(
                                   onPressed: () => Navigator.pop(context, true),
-                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  style: TextButton.styleFrom(foregroundColor: AppColors.neutral),
                                   child: const Text('Delete All'),
                                 ),
                               ],
@@ -991,38 +1076,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     if (leftPanel != null || rightPanel != null) ...[
                       const SizedBox(height: 16), // reduced from 32
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final bool tooTight = constraints.maxWidth < 340;
-                          if (tooTight) {
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                if (leftPanel != null)
-                                  Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: leftPanel!,
-                                  ),
-                                if (leftPanel != null && rightPanel != null)
-                                  const SizedBox(height: 8), // reduced from 16
-                                if (rightPanel != null)
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: rightPanel!,
-                                  ),
-                              ],
-                            );
-                          }
-
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              leftPanel ?? const SizedBox(),
-                              rightPanel ?? const SizedBox(),
-                            ],
-                          );
-                        },
+                      IntrinsicHeight(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (leftPanel != null)
+                              Expanded(child: leftPanel!),
+                            if (rightPanel != null)
+                              Expanded(child: rightPanel!),
+                          ],
+                        ),
                       ),
                     ],
                     const SizedBox(height: 20), // reduced from 40
@@ -1073,7 +1137,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Color? accentColor,
     VoidCallback? onEdit,
   }) {
-    final color = accentColor ?? Theme.of(context).colorScheme.primary;
+    final color = accentColor ?? AppColors.primary;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
@@ -1081,33 +1145,39 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         Text(
           title,
           style: TextStyle(
-            color: Colors.grey.shade600,
+            color: AppColors.neutral,
             fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 6),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: color,
+        SizedBox(
+          height: 48,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Center(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: color,
+                  ),
+                ),
               ),
-            ),
-            if (onEdit != null)
-              IconButton(
-                icon: const Icon(Icons.edit, size: 18),
-                tooltip: 'Edit $title',
-                splashRadius: 18,
-                onPressed: onEdit,
-              ),
-          ],
+              if (onEdit != null)
+                Positioned(
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.edit, size: 18),
+                    tooltip: 'Edit $title',
+                    splashRadius: 18,
+                    onPressed: onEdit,
+                  ),
+                ),
+            ],
+          ),
         ),
       ],
     );
@@ -1119,7 +1189,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.notification_add_outlined, size: 64, color: Colors.grey),
+            const Icon(Icons.notification_add_outlined, size: 64, color: AppColors.neutral),
             const SizedBox(height: 16),
             const Text("No habits yet."),
             TextButton(onPressed: _addReminder, child: const Text("Add your first habit"))
@@ -1149,12 +1219,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         return Dismissible(
           key: Key(item['id'].toString()),
-          background: Container(color: Colors.red, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
+          background: Container(color: AppColors.primary, alignment: Alignment.centerRight, padding: const EdgeInsets.only(right: 20), child: const Icon(Icons.delete, color: Colors.white)),
           onDismissed: (direction) => _deleteReminder(index),
           child: ListTile(
             leading: Icon(
               item['isEnabled'] ? Icons.alarm_on : Icons.alarm_off,
-              color: item['isEnabled'] ? Theme.of(context).colorScheme.primary : Colors.grey,
+              color: item['isEnabled'] ? AppColors.primary : AppColors.neutral,
             ),
             title: Text(item['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text("$timeStr • $daysText"),
@@ -1276,14 +1346,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: (isSuccess ? Colors.green : Colors.orange).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: isSuccess ? Colors.green : Colors.orange,
-                                width: 2,
-                              ),
-                            ),
+                             decoration: BoxDecoration(
+                               color: (isSuccess ? Colors.green : Colors.orange).withOpacity(0.1),
+                               borderRadius: BorderRadius.circular(20),
+                               border: Border.all(
+                                 color: isSuccess ? Colors.green : Colors.orange,
+                                 width: 2,
+                               ),
+                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
@@ -1329,14 +1399,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
                                     fontSize: 16,
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: AppColors.primary,
                                   ),
                                 ),
                                 Text(
                                   '${fastStart.month}/${fastStart.day}',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey.shade600,
+                                    color: AppColors.neutral,
                                   ),
                                 ),
                               ],
@@ -1344,11 +1414,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 12),
-                            child: Icon(
-                              Icons.arrow_forward,
-                              color: Colors.grey.shade300,
-                              size: 16,
-                            ),
+                             child: Icon(
+                               Icons.arrow_forward,
+                               color: AppColors.neutral,
+                               size: 16,
+                             ),
                           ),
                           // Switch Point (Fast End = Eating Start)
                           Expanded(
@@ -1358,7 +1428,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 Text(
                                   'Switch',
                                   style: TextStyle(
-                                    color: Colors.grey.shade600,
+                                    color: AppColors.neutral,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -1377,7 +1447,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     '${fastEnd.month}/${fastEnd.day}',
                                     style: TextStyle(
                                       fontSize: 11,
-                                      color: Colors.grey.shade600,
+                                      color: AppColors.neutral,
                                     ),
                                   ),
                               ],
@@ -1387,7 +1457,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             child: Icon(
                               Icons.arrow_forward,
-                              color: Colors.grey.shade300,
+                              color: AppColors.neutral,
                               size: 16,
                             ),
                           ),
@@ -1399,7 +1469,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 Text(
                                   'Finish',
                                   style: TextStyle(
-                                    color: Colors.grey.shade600,
+                                    color: AppColors.neutral,
                                     fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -1411,7 +1481,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: AppColors.primary,
                                     ),
                                   ),
                                   if (!isSameDay(eatingStart, eatingEnd))
@@ -1419,7 +1489,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       '${eatingEnd.month}/${eatingEnd.day}',
                                       style: TextStyle(
                                         fontSize: 11,
-                                        color: Colors.grey.shade600,
+                                        color: AppColors.neutral,
                                       ),
                                     ),
                                 ] else ...[
@@ -1428,7 +1498,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
-                                      color: Colors.grey.shade600,
+                                      color: AppColors.neutral,
                                     ),
                                   ),
                                 ],
@@ -1453,7 +1523,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                   Expanded(
                                     flex: (fastDuration * 100).toInt(),
                                     child: Container(
-                                      color: Theme.of(context).colorScheme.primary,
+                                      color: AppColors.primary,
                                       alignment: Alignment.center,
                                       child: Row(
                                         mainAxisAlignment: MainAxisAlignment.center,
@@ -1508,7 +1578,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                     Expanded(
                                       flex: ((24 - fastDuration) * 100).toInt(),
                                       child: Container(
-                                        color: Colors.grey.shade300,
+                                        color: AppColors.neutral,
                                       ),
                                     ),
                                 ],
@@ -1524,7 +1594,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           '"$note"',
                           style: TextStyle(
                             fontSize: 13,
-                            color: Colors.grey.shade600,
+                            color: AppColors.neutral,
                             fontStyle: FontStyle.italic,
                           ),
                         ),
