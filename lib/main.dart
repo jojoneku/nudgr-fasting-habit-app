@@ -22,24 +22,49 @@ void notificationTapBackground(NotificationResponse notificationResponse) {
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  tz.initializeTimeZones();
+    try {
+      tz.initializeTimeZones();
+    } catch (e) {
+      debugPrint('Error initializing timezones: $e');
+    }
 
-  const AndroidInitializationSettings initializationSettingsAndroid =
-  AndroidInitializationSettings('@mipmap/ic_launcher');
+    const AndroidInitializationSettings initializationSettingsAndroid =
+    AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings initializationSettings = InitializationSettings(
-    android: initializationSettingsAndroid,
-  );
+    const InitializationSettings initializationSettings = InitializationSettings(
+      android: initializationSettingsAndroid,
+    );
 
-  await flutterLocalNotificationsPlugin.initialize(
-    initializationSettings,
-    onDidReceiveNotificationResponse: (details) {},
-    onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-  );
+    try {
+      await flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (details) {},
+        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
+      );
+    } catch (e) {
+      debugPrint('Error initializing notifications: $e');
+    }
 
-  runApp(const FastingApp());
+    runApp(const FastingApp());
+  } catch (e, stack) {
+    debugPrint('Error in main: $e');
+    debugPrint(stack.toString());
+    runApp(MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('Error during startup:\n$e', textAlign: TextAlign.center),
+            ),
+          ),
+        ),
+      ),
+    ));
+  }
 }
 
 class FastingApp extends StatelessWidget {
@@ -398,15 +423,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     const Text("Time"),
                     InkWell(
                       onTap: () async {
-                        TimeOfDay? picked = await showTimePicker(
+                        await showCupertinoModalPopup(
                           context: context,
-                          initialTime: time,
+                          builder: (BuildContext context) {
+                            return Container(
+                              height: 200,
+                              color: Colors.white,
+                              child: CupertinoDatePicker(
+                                mode: CupertinoDatePickerMode.time,
+                                initialDateTime: DateTime(2024, 1, 1, time.hour, time.minute),
+                                onDateTimeChanged: (DateTime newDateTime) {
+                                  setState(() {
+                                    time = TimeOfDay.fromDateTime(newDateTime);
+                                  });
+                                },
+                                use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+                              ),
+                            );
+                          },
                         );
-                        if (picked != null) {
-                          setState(() {
-                            time = picked;
-                          });
-                        }
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
@@ -425,15 +460,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     const SizedBox(height: 20),
                     const Text("Repeat on"),
-                    Column(
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
-                        return CheckboxListTile(
-                          title: Text(dayLabels[index]),
-                          value: days[index],
-                          onChanged: (val) {
-                            setState(() => days[index] = val ?? false);
-                          },
-                          dense: true,
+                        final isSelected = days[index];
+                        return Padding(
+                          padding: const EdgeInsets.all(2.0),
+                          child: InkWell(
+                            onTap: () {
+                              setState(() => days[index] = !days[index]);
+                            },
+                            borderRadius: BorderRadius.circular(18),
+                            child: Container(
+                              width: 36,
+                              height: 36,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: isSelected ? AppColors.primary : Colors.transparent,
+                                border: Border.all(color: isSelected ? AppColors.primary : AppColors.neutral),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Text(
+                                dayLabels[index].substring(0, 1),
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
                         );
                       }),
                     ),
