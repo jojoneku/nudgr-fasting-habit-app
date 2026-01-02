@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
-import '../models/habit.dart';
+import '../models/quest.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -29,6 +29,16 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (details) {},
     );
+  }
+
+  Future<void> requestPermissions() async {
+    final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    await androidImplementation?.requestNotificationsPermission();
+    // Also request exact alarm permission for reliable scheduling on Android 12+
+    await androidImplementation?.requestExactAlarmsPermission();
   }
 
   Future<void> scheduleFastingAlarm(DateTime startTime, int goalHours) async {
@@ -88,12 +98,12 @@ class NotificationService {
     }
   }
 
-  Future<void> scheduleHabitNotifications(Habit habit) async {
-    int baseId = habit.id;
+  Future<void> scheduleQuestNotifications(Quest quest) async {
+    int baseId = quest.id;
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'habits_channel',
-      'Daily Habits',
+      'quests_channel',
+      'Daily Quests',
       channelDescription: 'Recurring reminders',
       importance: Importance.max,
       priority: Priority.high,
@@ -105,15 +115,15 @@ class NotificationService {
     final NotificationDetails details = NotificationDetails(android: androidDetails);
 
     for (int i = 0; i < 7; i++) {
-      if (habit.days[i]) {
+      if (quest.days[i]) {
         int dayOfWeekISO = i + 1;
-        tz.TZDateTime scheduledDate = _nextInstanceOfDay(dayOfWeekISO, habit.hour, habit.minute);
+        tz.TZDateTime scheduledDate = _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
         int notificationId = baseId + i;
 
         await flutterLocalNotificationsPlugin.zonedSchedule(
           notificationId,
-          habit.title,
-          "It's time for your habit!",
+          quest.title,
+          "It's time for your quest!",
           scheduledDate,
           details,
           androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -124,8 +134,8 @@ class NotificationService {
     }
   }
 
-  Future<void> cancelHabitNotifications(Habit habit) async {
-    int baseId = habit.id;
+  Future<void> cancelQuestNotifications(Quest quest) async {
+    int baseId = quest.id;
     for (int i = 0; i < 7; i++) {
       await flutterLocalNotificationsPlugin.cancel(baseId + i);
     }

@@ -7,6 +7,9 @@ class FastingLog {
   DateTime? eatingEnd;
   double? eatingDuration;
   String? note;
+  int? _goalDuration; // Backing field for goalDuration
+
+  int get goalDuration => _goalDuration ?? 16; // Default to 16 if null
 
   FastingLog({
     required this.fastStart,
@@ -17,7 +20,8 @@ class FastingLog {
     this.eatingEnd,
     this.eatingDuration,
     this.note,
-  });
+    int? goalDuration,
+  }) : _goalDuration = goalDuration ?? 16;
 
   factory FastingLog.fromJson(Map<String, dynamic> json) {
     return FastingLog(
@@ -29,6 +33,7 @@ class FastingLog {
       eatingEnd: json['eatingEnd'] != null ? DateTime.parse(json['eatingEnd']) : null,
       eatingDuration: json['eatingDuration']?.toDouble(),
       note: json['note'],
+      goalDuration: json['goalDuration'],
     );
   }
 
@@ -42,6 +47,7 @@ class FastingLog {
       'eatingEnd': eatingEnd?.toIso8601String(),
       'eatingDuration': eatingDuration,
       'note': note,
+      'goalDuration': goalDuration,
     };
   }
 }

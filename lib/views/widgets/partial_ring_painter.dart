@@ -36,10 +36,32 @@ class PartialRingPainter extends CustomPainter {
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, paintBase);
 
-    final paintProgress = paintBase..color = progressColor;
+    // Glow Paint
+    final paintGlow = Paint()
+      ..color = progressColor.withValues(alpha: 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+
+    final paintProgress = Paint()
+      ..color = progressColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
     final double clampedProgress = math.max(0.0, math.min(1.0, progress));
     final sweep = sweepAngle * clampedProgress;
     if (reverse) {
+      // Draw Glow
+      canvas.drawArc(
+        rect,
+        startAngle + sweepAngle,
+        -sweep,
+        false,
+        paintGlow,
+      );
+      // Draw Progress
       canvas.drawArc(
         rect,
         startAngle + sweepAngle,
@@ -48,6 +70,9 @@ class PartialRingPainter extends CustomPainter {
         paintProgress,
       );
     } else {
+      // Draw Glow
+      canvas.drawArc(rect, startAngle, sweep, false, paintGlow);
+      // Draw Progress
       canvas.drawArc(rect, startAngle, sweep, false, paintProgress);
     }
   }

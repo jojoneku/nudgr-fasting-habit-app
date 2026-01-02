@@ -1,10 +1,12 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:intl/intl.dart';
 import '../../presenters/fasting_presenter.dart';
 import '../../app_colors.dart';
+import '../../utils/date_utils.dart' as date_utils;
 import '../widgets/partial_ring_painter.dart';
+import 'history_tab.dart';
 
 class TimerTab extends StatefulWidget {
   final FastingPresenter presenter;
@@ -62,8 +64,8 @@ class _TimerTabState extends State<TimerTab> {
     if (progress > 1.0) progress = 1.0;
 
     final theme = Theme.of(context);
-    final Color fastingAccent = theme.colorScheme.primary;
-    final Color eatingAccent = Colors.orange.shade300;
+    final Color fastingAccent = AppColors.primary;
+    final Color eatingAccent = AppColors.secondary;
     final bool showEatingProgress = presenter.eatingStartTime != null && hasEatingWindow;
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
@@ -87,10 +89,10 @@ class _TimerTabState extends State<TimerTab> {
           child: CustomPaint(
             painter: PartialRingPainter(
               progress: displayProgress,
-              trackColor: theme.colorScheme.surfaceContainerHighest,
+              trackColor: AppColors.neutral.withValues(alpha: 0.2),
               progressColor: presenter.isFasting
                   ? fastingAccent
-                  : (presenter.eatingStartTime != null ? eatingAccent : Colors.grey),
+                  : (presenter.eatingStartTime != null ? eatingAccent : AppColors.neutral),
               strokeWidth: 20,
               reverse: reverseProgress,
             ),
@@ -135,7 +137,7 @@ class _TimerTabState extends State<TimerTab> {
       );
       rightPanel = _buildTimerInfoPanel(
         title: 'Goal End',
-        value: _format12Hour(start.add(Duration(hours: presenter.fastingGoalHours))),
+        value: date_utils.formatTimeWithDay(start.add(Duration(hours: presenter.fastingGoalHours)), start),
         accentColor: fastingAccent,
       );
     } else if (presenter.eatingStartTime != null) {
@@ -148,7 +150,7 @@ class _TimerTabState extends State<TimerTab> {
       );
       rightPanel = _buildTimerInfoPanel(
         title: 'Window End',
-        value: _format12Hour(eatingStart.add(Duration(hours: 24 - presenter.fastingGoalHours))),
+        value: date_utils.formatTimeWithDay(eatingStart.add(Duration(hours: 24 - presenter.fastingGoalHours)), eatingStart),
         accentColor: eatingAccent,
       );
     }
@@ -199,17 +201,32 @@ class _TimerTabState extends State<TimerTab> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               if (leftPanel != null)
-                                Expanded(child: leftPanel!),
+                                Expanded(child: leftPanel),
                               if (rightPanel != null)
-                                Expanded(child: rightPanel!),
+                                Expanded(child: rightPanel),
                             ],
                           ),
                         ),
                       ],
                       const SizedBox(height: 20),
-                      SizedBox(
+                      Container(
                         width: double.infinity,
                         height: 56,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: (presenter.isFasting
+                                      ? fastingAccent
+                                      : (presenter.eatingStartTime != null
+                                          ? eatingAccent
+                                          : theme.colorScheme.primary))
+                                  .withValues(alpha: 0.5),
+                              blurRadius: 20,
+                              spreadRadius: 1,
+                            ),
+                          ],
+                        ),
                         child: FilledButton(
                           onPressed: _toggleFast,
                           style: FilledButton.styleFrom(
@@ -232,7 +249,7 @@ class _TimerTabState extends State<TimerTab> {
                           child: TextButton(
                             onPressed: _skipEatingWindow,
                             style: TextButton.styleFrom(
-                              foregroundColor: Colors.grey,
+                              foregroundColor: AppColors.textSecondary,
                             ),
                             child: const Text("Skip / Pause Today"),
                           ),
@@ -243,6 +260,7 @@ class _TimerTabState extends State<TimerTab> {
                 ),
               ),
             ),
+            _buildHistorySummary(theme),
           ],
         ),
       ),
@@ -260,7 +278,7 @@ class _TimerTabState extends State<TimerTab> {
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -313,10 +331,7 @@ class _TimerTabState extends State<TimerTab> {
   }
 
   Future<void> _skipEatingWindow() async {
-    presenter.eatingStartTime = null;
-    presenter.elapsedSeconds = 0;
-    await presenter.saveState();
-    presenter.notifyListeners(); // Force update
+    await presenter.skipEatingWindow();
   }
 
   Future<void> _editCurrentFastingTime() async {
@@ -336,15 +351,26 @@ class _TimerTabState extends State<TimerTab> {
                 children: [
                   SizedBox(
                     height: 200,
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.dateAndTime,
-                      initialDateTime: tempStartTime,
-                      maximumDate: DateTime.now(),
-                      onDateTimeChanged: (DateTime value) {
-                        setState(() {
-                          tempStartTime = value;
-                        });
-                      },
+                    child: CupertinoTheme(
+                      data: const CupertinoThemeData(
+                        brightness: Brightness.dark,
+                        textTheme: CupertinoTextThemeData(
+                          dateTimePickerTextStyle: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                      child: CupertinoDatePicker(
+                        mode: CupertinoDatePickerMode.dateAndTime,
+                        initialDateTime: tempStartTime,
+                        maximumDate: DateTime.now(),
+                        onDateTimeChanged: (DateTime value) {
+                          setState(() {
+                            tempStartTime = value;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -364,11 +390,7 @@ class _TimerTabState extends State<TimerTab> {
                       Expanded(
                         child: FilledButton(
                           onPressed: () {
-                            presenter.startTime = tempStartTime;
-                            final now = DateTime.now();
-                            presenter.elapsedSeconds = now.difference(presenter.startTime!).inSeconds;
-                            presenter.saveState();
-                            presenter.notifyListeners();
+                            presenter.updateStartTime(tempStartTime);
                             Navigator.pop(context);
                           },
                           style: FilledButton.styleFrom(
@@ -407,15 +429,26 @@ class _TimerTabState extends State<TimerTab> {
                 children: [
                   SizedBox(
                     height: 200,
-                    child: CupertinoDatePicker(
-                      mode: CupertinoDatePickerMode.dateAndTime,
-                      initialDateTime: tempStartTime,
-                      maximumDate: DateTime.now(),
-                      onDateTimeChanged: (DateTime value) {
-                        setState(() {
-                          tempStartTime = value;
-                        });
-                      },
+                    child: CupertinoTheme(
+                      data: const CupertinoThemeData(
+                        brightness: Brightness.dark,
+                        textTheme: CupertinoTextThemeData(
+                          dateTimePickerTextStyle: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 20,
+                          ),
+                        ),
+                      ),
+                      child: CupertinoDatePicker(
+                        mode: CupertinoDatePickerMode.dateAndTime,
+                        initialDateTime: tempStartTime,
+                        maximumDate: DateTime.now(),
+                        onDateTimeChanged: (DateTime value) {
+                          setState(() {
+                            tempStartTime = value;
+                          });
+                        },
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -435,11 +468,7 @@ class _TimerTabState extends State<TimerTab> {
                       Expanded(
                         child: FilledButton(
                           onPressed: () {
-                            presenter.eatingStartTime = tempStartTime;
-                            final now = DateTime.now();
-                            presenter.elapsedSeconds = now.difference(presenter.eatingStartTime!).inSeconds;
-                            presenter.saveState();
-                            presenter.notifyListeners();
+                            presenter.updateEatingStartTime(tempStartTime);
                             Navigator.pop(context);
                           },
                           style: FilledButton.styleFrom(
@@ -474,5 +503,94 @@ class _TimerTabState extends State<TimerTab> {
     hour = hour % 12;
     if (hour == 0) hour = 12;
     return '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  Widget _buildHistorySummary(ThemeData theme) {
+    if (presenter.history.isEmpty) return const SizedBox.shrink();
+
+    final lastLog = presenter.history.first;
+    final duration = lastLog.fastDuration;
+    final isSuccess = lastLog.success;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "LAST FAST",
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: AppColors.textSecondary,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => Scaffold(
+                        appBar: AppBar(title: const Text("History")),
+                        body: HistoryList(presenter: presenter),
+                      ),
+                    ),
+                  );
+                },
+                child: const Text("Show All"),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.neutral.withValues(alpha: 0.1)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isSuccess ? AppColors.primary : AppColors.error).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isSuccess ? Icons.check : Icons.close,
+                    color: isSuccess ? AppColors.primary : AppColors.error,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "${duration.toStringAsFixed(1)} Hours",
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      Text(
+                        DateFormat('MMM d, h:mm a').format(lastLog.fastStart),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

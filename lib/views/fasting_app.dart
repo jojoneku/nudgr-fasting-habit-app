@@ -1,37 +1,46 @@
 import 'package:flutter/material.dart';
+import '../app_colors.dart';
 import 'home_screen.dart';
 
 class FastingApp extends StatelessWidget {
   const FastingApp({super.key});
 
   ThemeData _buildTheme(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xFF2563EB),
-      brightness: brightness,
+    // Use AppColors for the theme
+    final scheme = ColorScheme.dark(
+      primary: AppColors.primary,
+      secondary: AppColors.secondary,
+      surface: AppColors.surface,
+      onPrimary: Colors.white,
+      onSecondary: Colors.black,
+      onSurface: AppColors.textPrimary,
+      error: AppColors.error,
     );
-
-    final scaffoldShade = brightness == Brightness.light
-        ? Color.alphaBlend(Colors.white.withOpacity(0.45), scheme.surface)
-        : Color.alphaBlend(Colors.white.withOpacity(0.04), scheme.surface);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: scaffoldShade,
-      canvasColor: scaffoldShade,
-      appBarTheme: AppBarTheme(
-        backgroundColor: scaffoldShade,
-        foregroundColor: scheme.onSurface,
+      scaffoldBackgroundColor: AppColors.background,
+      canvasColor: AppColors.background,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.primary,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: scheme.surface,
+        backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: scheme.primary.withOpacity(0.15),
+        indicatorColor: AppColors.primary.withOpacity(0.15),
         labelTextStyle: MaterialStateProperty.all(
-          TextStyle(fontWeight: FontWeight.w600, color: scheme.onSurface),
+          const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
         ),
+        iconTheme: MaterialStateProperty.resolveWith((states) {
+          if (states.contains(MaterialState.selected)) {
+            return const IconThemeData(color: AppColors.primary);
+          }
+          return const IconThemeData(color: AppColors.textSecondary);
+        }),
       ),
     );
   }
@@ -40,9 +49,9 @@ class FastingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Intermittent Fasting',
-      theme: _buildTheme(Brightness.light),
+      theme: _buildTheme(Brightness.dark), // Force dark theme for Solo Leveling vibe
       darkTheme: _buildTheme(Brightness.dark),
-      themeMode: ThemeMode.system,
+      themeMode: ThemeMode.dark, 
       home: const HomeScreen(),
     );
   }

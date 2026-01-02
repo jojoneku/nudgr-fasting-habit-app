@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/fasting_log.dart';
-import '../models/habit.dart';
+import '../models/quest.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 
@@ -15,7 +15,7 @@ class FastingPresenter extends ChangeNotifier {
   int elapsedSeconds = 0;
   int fastingGoalHours = 16;
   List<FastingLog> history = [];
-  List<Habit> reminders = [];
+  List<Quest> quests = [];
   Timer? _ticker;
 
   FastingPresenter() {
@@ -24,6 +24,7 @@ class FastingPresenter extends ChangeNotifier {
 
   Future<void> _init() async {
     await _notificationService.init();
+    await _notificationService.requestPermissions();
     await loadState();
   }
 
@@ -35,7 +36,7 @@ class FastingPresenter extends ChangeNotifier {
     elapsedSeconds = state['elapsedSeconds'];
     fastingGoalHours = state['fastingGoalHours'];
     history = state['history'];
-    reminders = state['reminders'];
+    quests = state['quests'];
     
     if (isFasting && startTime != null) {
       _startTicker();
@@ -53,7 +54,7 @@ class FastingPresenter extends ChangeNotifier {
       elapsedSeconds: elapsedSeconds,
       fastingGoalHours: fastingGoalHours,
       history: history,
-      reminders: reminders,
+      quests: quests,
     );
   }
 
@@ -102,7 +103,7 @@ class FastingPresenter extends ChangeNotifier {
     await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
     
     _startTicker();
-    saveState();
+    await saveState();
     notifyListeners();
   }
 
@@ -119,6 +120,7 @@ class FastingPresenter extends ChangeNotifier {
       fastDuration: durationHours,
       success: durationHours >= fastingGoalHours,
       eatingStart: endTime, // Eating starts now
+      goalDuration: fastingGoalHours,
     );
     
     history.insert(0, log);
@@ -132,7 +134,7 @@ class FastingPresenter extends ChangeNotifier {
     await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
 
     _startTicker();
-    saveState();
+    await saveState();
     notifyListeners();
   }
   
@@ -142,10 +144,10 @@ class FastingPresenter extends ChangeNotifier {
       notifyListeners();
   }
 
-  // Habit Methods
-  Future<void> addHabit(String title, int hour, int minute, List<bool> days) async {
+  // Quest Methods
+  Future<void> addQuest(String title, int hour, int minute, List<bool> days) async {
     int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final habit = Habit(
+    final quest = Quest(
       id: id,
       title: title,
       hour: hour,
@@ -153,33 +155,60 @@ class FastingPresenter extends ChangeNotifier {
       days: days,
       isEnabled: true,
     );
-    reminders.add(habit);
-    await _notificationService.scheduleHabitNotifications(habit);
+    quests.add(quest);
+    await _notificationService.scheduleQuestNotifications(quest);
     saveState();
     notifyListeners();
   }
 
-  Future<void> toggleHabit(int index, bool isEnabled) async {
-    reminders[index].isEnabled = isEnabled;
+  Future<void> toggleQuest(int index, bool isEnabled) async {
+    quests[index].isEnabled = isEnabled;
     if (isEnabled) {
-      await _notificationService.scheduleHabitNotifications(reminders[index]);
+      await _notificationService.scheduleQuestNotifications(quests[index]);
     } else {
-      await _notificationService.cancelHabitNotifications(reminders[index]);
+      await _notificationService.cancelQuestNotifications(quests[index]);
     }
     saveState();
     notifyListeners();
   }
 
-  Future<void> deleteHabit(int index) async {
-    await _notificationService.cancelHabitNotifications(reminders[index]);
-    reminders.removeAt(index);
+  Future<void> deleteQuest(int index) async {
+    await _notificationService.cancelQuestNotifications(quests[index]);
+    quests.removeAt(index);
+    saveState();
+    notifyListeners();
+  }
+
+  Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days) async {
+    final quest = quests[index];
+    await _notificationService.cancelQuestNotifications(quest);
+    
+    quest.title = title;
+    quest.hour = hour;
+    quest.minute = minute;
+    quest.days = days;
+    
+    if (quest.isEnabled) {
+      await _notificationService.scheduleQuestNotifications(quest);
+    }
+    
+    saveState();
+    notifyListeners();
+  }
+
+  Future<void> completeQuest(int index) async {
+    if (quests[index].isCompletedToday) {
+      quests[index].lastCompleted = null; // Toggle off (undo)
+    } else {
+      quests[index].lastCompleted = DateTime.now();
+    }
     saveState();
     notifyListeners();
   }
   
   Future<void> clearHistory() async {
       history.clear();
-      reminders.clear();
+      quests.clear();
       await _notificationService.cancelAll();
       saveState();
       notifyListeners();
@@ -217,6 +246,45 @@ class FastingPresenter extends ChangeNotifier {
     ));
 
     saveState();
+    notifyListeners();
+  }
+
+  Future<void> updateLog(int index, FastingLog newLog) async {
+    if (index >= 0 && index < history.length) {
+      history[index] = newLog;
+      await saveState();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteLog(int index) async {
+    if (index >= 0 && index < history.length) {
+      history.removeAt(index);
+      await saveState();
+      notifyListeners();
+    }
+  }
+
+  Future<void> skipEatingWindow() async {
+    eatingStartTime = null;
+    elapsedSeconds = 0;
+    await saveState();
+    notifyListeners();
+  }
+
+  Future<void> updateStartTime(DateTime newStartTime) async {
+    startTime = newStartTime;
+    final now = DateTime.now();
+    elapsedSeconds = now.difference(startTime!).inSeconds;
+    await saveState();
+    notifyListeners();
+  }
+
+  Future<void> updateEatingStartTime(DateTime newStartTime) async {
+    eatingStartTime = newStartTime;
+    final now = DateTime.now();
+    elapsedSeconds = now.difference(eatingStartTime!).inSeconds;
+    await saveState();
     notifyListeners();
   }
 

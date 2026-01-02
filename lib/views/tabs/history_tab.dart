@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+
 import '../../presenters/fasting_presenter.dart';
 import '../../models/fasting_log.dart';
 import '../../app_colors.dart';
-import '../../utils/date_utils.dart' as date_utils;
 
-class HistoryTab extends StatefulWidget {
+
+class HistoryList extends StatefulWidget {
   final FastingPresenter presenter;
 
-  const HistoryTab({super.key, required this.presenter});
+  const HistoryList({super.key, required this.presenter});
 
   @override
-  State<HistoryTab> createState() => _HistoryTabState();
+  State<HistoryList> createState() => _HistoryListState();
 }
 
-class _HistoryTabState extends State<HistoryTab> {
+class _HistoryListState extends State<HistoryList> {
   FastingPresenter get presenter => widget.presenter;
 
   @override
@@ -30,7 +31,10 @@ class _HistoryTabState extends State<HistoryTab> {
 
   Widget _buildHistoryView() {
     if (presenter.history.isEmpty) {
-      return const Center(child: Text("No fasts recorded yet."));
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(24.0),
+        child: Text("No fasts recorded yet."),
+      ));
     }
 
     return ListView.builder(
@@ -41,125 +45,184 @@ class _HistoryTabState extends State<HistoryTab> {
         final fastStart = log.fastStart;
         final fastEnd = log.fastEnd;
         final fastDuration = log.fastDuration;
-        final isSuccess = log.success;
 
-        final eatingStart = log.eatingStart;
-        final eatingEnd = log.eatingEnd;
         final eatingDuration = log.eatingDuration;
-        final hasEatingData = eatingEnd != null && eatingDuration != null;
+        double eatingDurVal = eatingDuration ?? (24.0 - fastDuration);
+        if (eatingDurVal < 0) eatingDurVal = 0;
+
         final note = log.note;
 
-        final fastStartDate = DateTime(fastStart.year, fastStart.month, fastStart.day);
-        final fastEndDate = DateTime(fastEnd.year, fastEnd.month, fastEnd.day);
-        final fastSpansMultipleDays = !date_utils.isSameDay(fastStartDate, fastEndDate);
-
-        String dateHeader;
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-        final yesterday = today.subtract(const Duration(days: 1));
-        final tomorrow = today.add(const Duration(days: 1));
-
-        if (date_utils.isSameDay(fastStartDate, today)) {
-          dateHeader = "Today";
-        } else if (date_utils.isSameDay(fastStartDate, yesterday)) {
-          dateHeader = "Yesterday";
-        } else if (date_utils.isSameDay(fastStartDate, tomorrow)) {
-          dateHeader = "Tomorrow";
-        } else {
-          dateHeader = DateFormat('EEE, MMM d').format(fastStart);
-        }
-
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Card(
+            elevation: 0,
+            color: AppColors.surface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: AppColors.surface.withValues(alpha: 0.5), width: 1),
+            ),
+            margin: EdgeInsets.zero,
+            child: InkWell(
+              onTap: () => _showHistoryContextMenu(context, index),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      dateHeader,
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
+                    // Header: Icon + Ratio
                     Row(
                       children: [
-                        if (isSuccess)
-                          const Icon(Icons.emoji_events, color: Colors.amber, size: 20),
+                        const Icon(Icons.bolt, color: AppColors.primary, size: 20),
                         const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 20, color: Colors.grey),
-                          onPressed: () => _editHistoryTimes(index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 20,
+                        Text(
+                          '${log.goalDuration}:${24 - log.goalDuration}',
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 20, color: Colors.redAccent),
-                          onPressed: () => _deleteHistoryItem(index),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          splashRadius: 20,
-                        ),
+                        if (note != null && note.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.note, size: 16, color: AppColors.textSecondary),
+                        ],
                       ],
-                    )
-                  ],
-                ),
-                const Divider(),
-                Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 16, color: AppColors.primary),
-                    const SizedBox(width: 8),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Duration
                     Text(
-                      "${fastDuration.toStringAsFixed(1)}h Fast",
-                      style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.primary),
+                      '${fastDuration.toStringAsFixed(1)} Hours',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        height: 1.0,
+                      ),
                     ),
-                    const Spacer(),
                     Text(
-                      "${DateFormat('HH:mm').format(fastStart)} - ${DateFormat('HH:mm').format(fastEnd)}${fastSpansMultipleDays ? ' (+1)' : ''}",
-                      style: const TextStyle(color: Colors.grey),
-                    ),
-                  ],
-                ),
-                if (hasEatingData) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.restaurant, size: 16, color: Colors.orange),
-                      const SizedBox(width: 8),
-                      Text(
-                        "${eatingDuration!.toStringAsFixed(1)}h Eating",
-                        style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.orange),
+                      '${eatingDurVal.toStringAsFixed(1)} Hours Eating',
+                      style: const TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
-                      const Spacer(),
-                      Text(
-                        "${DateFormat('HH:mm').format(eatingStart)} - ${DateFormat('HH:mm').format(eatingEnd!)}",
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ],
-                if (note != null && note.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Row(
+                    const SizedBox(height: 20),
+
+                    // Start / End Times
+                    Row(
                       children: [
-                        const Icon(Icons.note, size: 16, color: Colors.grey),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(note, style: const TextStyle(fontStyle: FontStyle.italic))),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Start',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('MMM d, h:mm a').format(fastStart),
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary, 
+                                  fontSize: 14, 
+                                  fontWeight: FontWeight.w600
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 30,
+                          color: AppColors.textSecondary.withValues(alpha: 0.2),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'End',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                DateFormat('MMM d, h:mm a').format(fastEnd),
+                                style: const TextStyle(
+                                  color: AppColors.textPrimary, 
+                                  fontSize: 14, 
+                                  fontWeight: FontWeight.w600
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+
+      },
+    );
+  }
+
+
+  void _showHistoryContextMenu(BuildContext context, int index) {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _editHistoryTimes(index);
+                      },
+                    ),
+                    const Text('Edit Times', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.note_add),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _editHistoryNote(index);
+                      },
+                    ),
+                    const Text('Add Note', style: TextStyle(fontSize: 12)),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete, color: Colors.red),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _deleteHistoryItem(index);
+                      },
+                    ),
+                    const Text('Delete', style: TextStyle(fontSize: 12, color: Colors.red)),
+                  ],
+                ),
               ],
             ),
           ),
@@ -191,15 +254,26 @@ class _HistoryTabState extends State<HistoryTab> {
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 200,
-                        child: CupertinoDatePicker(
-                          mode: CupertinoDatePickerMode.dateAndTime,
-                          initialDateTime: newFastStart,
-                          maximumDate: DateTime.now(),
-                          onDateTimeChanged: (DateTime value) {
-                            setState(() {
-                              newFastStart = value;
-                            });
-                          },
+                        child: CupertinoTheme(
+                          data: const CupertinoThemeData(
+                            brightness: Brightness.dark,
+                            textTheme: CupertinoTextThemeData(
+                              dateTimePickerTextStyle: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                          child: CupertinoDatePicker(
+                            mode: CupertinoDatePickerMode.dateAndTime,
+                            initialDateTime: newFastStart,
+                            maximumDate: DateTime.now(),
+                            onDateTimeChanged: (DateTime value) {
+                              setState(() {
+                                newFastStart = value;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       const Divider(height: 32),
@@ -207,15 +281,26 @@ class _HistoryTabState extends State<HistoryTab> {
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 200,
-                        child: CupertinoDatePicker(
-                          mode: CupertinoDatePickerMode.dateAndTime,
-                          initialDateTime: newFastEnd,
-                          maximumDate: DateTime.now(),
-                          onDateTimeChanged: (DateTime value) {
-                            setState(() {
-                              newFastEnd = value;
-                            });
-                          },
+                        child: CupertinoTheme(
+                          data: const CupertinoThemeData(
+                            brightness: Brightness.dark,
+                            textTheme: CupertinoTextThemeData(
+                              dateTimePickerTextStyle: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                              ),
+                            ),
+                          ),
+                          child: CupertinoDatePicker(
+                            mode: CupertinoDatePickerMode.dateAndTime,
+                            initialDateTime: newFastEnd,
+                            maximumDate: DateTime.now(),
+                            onDateTimeChanged: (DateTime value) {
+                              setState(() {
+                                newFastEnd = value;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       if (newEatingEnd != null) ...[
@@ -224,15 +309,26 @@ class _HistoryTabState extends State<HistoryTab> {
                         const SizedBox(height: 8),
                         SizedBox(
                           height: 200,
-                          child: CupertinoDatePicker(
-                            mode: CupertinoDatePickerMode.dateAndTime,
-                            initialDateTime: newEatingEnd ?? DateTime.now(),
-                            maximumDate: DateTime.now(),
-                            onDateTimeChanged: (DateTime value) {
-                              setState(() {
-                                newEatingEnd = value;
-                              });
-                            },
+                          child: CupertinoTheme(
+                            data: const CupertinoThemeData(
+                              brightness: Brightness.dark,
+                              textTheme: CupertinoTextThemeData(
+                                dateTimePickerTextStyle: TextStyle(
+                                  color: AppColors.textPrimary,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                            child: CupertinoDatePicker(
+                              mode: CupertinoDatePickerMode.dateAndTime,
+                              initialDateTime: newEatingEnd ?? DateTime.now(),
+                              maximumDate: DateTime.now(),
+                              onDateTimeChanged: (DateTime value) {
+                                setState(() {
+                                  newEatingEnd = value;
+                                });
+                              },
+                            ),
                           ),
                         ),
                       ],
@@ -253,7 +349,7 @@ class _HistoryTabState extends State<HistoryTab> {
                         : null;
 
                     // Replace the entry with a new FastingLog object
-                    presenter.history[index] = FastingLog(
+                    presenter.updateLog(index, FastingLog(
                       fastStart: newFastStart,
                       fastEnd: newFastEnd,
                       fastDuration: newFastDuration,
@@ -262,9 +358,8 @@ class _HistoryTabState extends State<HistoryTab> {
                       eatingEnd: newEatingEnd,
                       eatingDuration: newEatingDuration,
                       note: log.note,
-                    );
-                    presenter.saveState();
-                    presenter.notifyListeners();
+                      goalDuration: log.goalDuration,
+                    ));
                     Navigator.pop(context);
                   },
                   child: const Text('Save'),
@@ -275,6 +370,54 @@ class _HistoryTabState extends State<HistoryTab> {
         );
       },
     );
+  }
+
+  Future<void> _editHistoryNote(int index) async {
+    final currentNote = presenter.history[index].note ?? '';
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController(text: currentNote);
+        return AlertDialog(
+          title: const Text('Add Note'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              hintText: 'Enter your note...',
+              border: OutlineInputBorder(),
+            ),
+            maxLines: 5,
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, controller.text),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      final log = presenter.history[index];
+      presenter.updateLog(index, FastingLog(
+        fastStart: log.fastStart,
+        fastEnd: log.fastEnd,
+        fastDuration: log.fastDuration,
+        success: log.success,
+        eatingStart: log.eatingStart,
+        eatingEnd: log.eatingEnd,
+        eatingDuration: log.eatingDuration,
+        note: result.isEmpty ? null : result,
+        goalDuration: log.goalDuration,
+      ));
+    }
   }
 
   Future<void> _deleteHistoryItem(int index) async {
@@ -291,9 +434,7 @@ class _HistoryTabState extends State<HistoryTab> {
     );
 
     if (confirm == true) {
-      presenter.history.removeAt(index);
-      presenter.saveState();
-      presenter.notifyListeners();
+      presenter.deleteLog(index);
     }
   }
 }

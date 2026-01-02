@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/fasting_log.dart';
-import '../models/habit.dart';
+import '../models/quest.dart';
 
 class StorageService {
   static const String keyIsFasting = 'isFasting';
@@ -10,7 +10,7 @@ class StorageService {
   static const String keyElapsedSeconds = 'elapsedSeconds';
   static const String keyFastingGoalHours = 'fastingGoalHours';
   static const String keyHistory = 'history';
-  static const String keyReminders = 'reminders';
+  static const String keyQuests = 'quests';
 
   Future<void> saveState({
     required bool isFasting,
@@ -19,7 +19,7 @@ class StorageService {
     required int elapsedSeconds,
     required int fastingGoalHours,
     required List<FastingLog> history,
-    required List<Habit> reminders,
+    required List<Quest> quests,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(keyIsFasting, isFasting);
@@ -41,8 +41,8 @@ class StorageService {
     final historyJson = jsonEncode(history.map((e) => e.toJson()).toList());
     await prefs.setString(keyHistory, historyJson);
 
-    final remindersJson = jsonEncode(reminders.map((e) => e.toJson()).toList());
-    await prefs.setString(keyReminders, remindersJson);
+    final questsJson = jsonEncode(quests.map((e) => e.toJson()).toList());
+    await prefs.setString(keyQuests, questsJson);
   }
 
   Future<Map<String, dynamic>> loadState() async {
@@ -70,14 +70,14 @@ class StorageService {
       }
     }
     
-    String? remindersJson = prefs.getString(keyReminders);
-    List<Habit> reminders = [];
-    if (remindersJson != null) {
+    String? questsJson = prefs.getString(keyQuests);
+    List<Quest> quests = [];
+    if (questsJson != null) {
       try {
-        List<dynamic> list = jsonDecode(remindersJson);
-        reminders = list.map((e) => Habit.fromJson(e)).toList();
+        List<dynamic> list = jsonDecode(questsJson);
+        quests = list.map((e) => Quest.fromJson(e)).toList();
       } catch (e) {
-        print("Error parsing reminders: $e");
+        print("Error parsing quests: $e");
       }
     }
 
@@ -88,7 +88,7 @@ class StorageService {
       'elapsedSeconds': elapsedSeconds,
       'fastingGoalHours': fastingGoalHours,
       'history': history,
-      'reminders': reminders,
+      'quests': quests,
     };
   }
 }
