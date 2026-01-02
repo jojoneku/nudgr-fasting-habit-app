@@ -64,8 +64,8 @@ class _TimerTabState extends State<TimerTab> {
     if (progress > 1.0) progress = 1.0;
 
     final theme = Theme.of(context);
-    final Color fastingAccent = AppColors.primary;
-    final Color eatingAccent = AppColors.secondary;
+    final Color fastingAccent = AppColors.secondary;
+    final Color eatingAccent = AppColors.primary;
     final bool showEatingProgress = presenter.eatingStartTime != null && hasEatingWindow;
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
