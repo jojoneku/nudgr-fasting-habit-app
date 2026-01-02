@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:intl/intl.dart';
 import '../models/quest.dart';
 
 class NotificationService {
@@ -19,7 +20,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/launcher_icon');
 
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -46,7 +47,7 @@ class NotificationService {
       startTime.add(Duration(hours: goalHours)),
       tz.local,
     );
-    await _scheduleOneShotNotification(0, "Fasting Goal Reached! 🏆", "Time to eat!", scheduledDate, fullScreen: true);
+    await _scheduleOneShotNotification(0, "You did it! 🏆", "Fasting goal reached. Time to eat!", scheduledDate, fullScreen: true);
     
     final Map<int, Map<String, String>> fastingEffects = {
       12: {'title': 'Fat Burning Starts', 'body': 'Your body is now burning fat for energy.'},
@@ -84,7 +85,7 @@ class NotificationService {
       eatingStartTime.add(Duration(hours: eatingWindow)),
       tz.local,
     );
-    await _scheduleOneShotNotification(1, "Eating Window Over 🍽️", "Time to start fasting!", scheduledDate, fullScreen: true);
+    await _scheduleOneShotNotification(1, "Eating Window Over ⏳", "Time to start fasting!", scheduledDate, fullScreen: true);
 
     for (int h = eatingWindow - 1; h > 0; h--) {
       final notifTime = tz.TZDateTime.from(eatingStartTime.add(Duration(hours: eatingWindow - h)), tz.local);
@@ -96,6 +97,68 @@ class NotificationService {
         groupKey: 'eating_group',
       );
     }
+  }
+
+  Future<void> showFastingTimerNotification(DateTime endTime) async {
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'fasting_timer_channel',
+      'Active Fasting Timer',
+      channelDescription: 'Shows the time remaining for your current fast',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      ongoing: true,
+      autoCancel: false,
+      showWhen: true,
+      when: endTime.millisecondsSinceEpoch,
+      usesChronometer: true,
+      chronometerCountDown: true,
+    );
+    final NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    final formattedTime = DateFormat.jm().format(endTime);
+
+    await flutterLocalNotificationsPlugin.show(
+      999,
+      'Fasting Goal',
+      'Ends at $formattedTime',
+      details,
+    );
+  }
+
+  Future<void> showEatingTimerNotification(DateTime endTime) async {
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'eating_timer_channel',
+      'Active Eating Timer',
+      channelDescription: 'Shows the time remaining for your eating window',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+      ongoing: true,
+      autoCancel: false,
+      showWhen: true,
+      when: endTime.millisecondsSinceEpoch,
+      usesChronometer: true,
+      chronometerCountDown: true,
+    );
+    final NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    final formattedTime = DateFormat.jm().format(endTime);
+
+    await flutterLocalNotificationsPlugin.show(
+      998,
+      'Eating Window',
+      'Ends at $formattedTime',
+      details,
+    );
+  }
+
+  Future<void> cancelFastingTimerNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(999);
+  }
+
+  Future<void> cancelEatingTimerNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(998);
   }
 
   Future<void> scheduleQuestNotifications(Quest quest) async {
@@ -171,6 +234,10 @@ class NotificationService {
       priority: Priority.high,
       fullScreenIntent: fullScreen,
       groupKey: groupKey,
+      playSound: true,
+      enableVibration: true,
+      visibility: NotificationVisibility.public,
+      category: fullScreen ? AndroidNotificationCategory.alarm : null,
     );
     NotificationDetails details = NotificationDetails(android: androidDetails);
     

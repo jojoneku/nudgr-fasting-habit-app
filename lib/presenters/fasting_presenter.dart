@@ -40,8 +40,13 @@ class FastingPresenter extends ChangeNotifier {
     
     if (isFasting && startTime != null) {
       _startTicker();
+      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+      _notificationService.showFastingTimerNotification(endTime);
     } else if (eatingStartTime != null) {
       _startTicker(); // Also tick for eating window
+      int eatingWindowHours = 24 - fastingGoalHours;
+      final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+      _notificationService.showEatingTimerNotification(eatingEndTime);
     }
     notifyListeners();
   }
@@ -101,6 +106,8 @@ class FastingPresenter extends ChangeNotifier {
     
     await _notificationService.cancelAll(); // Cancel eating alarms
     await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
+    final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+    await _notificationService.showFastingTimerNotification(endTime);
     
     _startTicker();
     await saveState();
@@ -131,7 +138,12 @@ class FastingPresenter extends ChangeNotifier {
     elapsedSeconds = 0;
     
     await _notificationService.cancelAll(); // Cancel fasting alarms
+    await _notificationService.cancelFastingTimerNotification();
     await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
+    
+    int eatingWindowHours = 24 - fastingGoalHours;
+    final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+    await _notificationService.showEatingTimerNotification(eatingEndTime);
 
     _startTicker();
     await saveState();
@@ -139,9 +151,13 @@ class FastingPresenter extends ChangeNotifier {
   }
   
   Future<void> updateFastingGoal(int hours) async {
-      fastingGoalHours = hours;
-      saveState();
-      notifyListeners();
+    fastingGoalHours = hours;
+    if (isFasting && startTime != null) {
+      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+      await _notificationService.showFastingTimerNotification(endTime);
+    }
+    saveState();
+    notifyListeners();
   }
 
   // Quest Methods
