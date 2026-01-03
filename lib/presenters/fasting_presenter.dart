@@ -103,15 +103,15 @@ class FastingPresenter extends ChangeNotifier {
     isFasting = true;
     startTime = DateTime.now();
     elapsedSeconds = 0;
+    _startTicker();
+    notifyListeners(); // Notify immediately for UI responsiveness
     
     await _notificationService.cancelAll(); // Cancel eating alarms
     await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
     final endTime = startTime!.add(Duration(hours: fastingGoalHours));
     await _notificationService.showFastingTimerNotification(endTime);
     
-    _startTicker();
     await saveState();
-    notifyListeners();
   }
 
   Future<void> stopFast() async {
@@ -136,6 +136,8 @@ class FastingPresenter extends ChangeNotifier {
     startTime = null;
     eatingStartTime = endTime;
     elapsedSeconds = 0;
+    _startTicker();
+    notifyListeners(); // Notify immediately
     
     await _notificationService.cancelAll(); // Cancel fasting alarms
     await _notificationService.cancelFastingTimerNotification();
@@ -145,9 +147,7 @@ class FastingPresenter extends ChangeNotifier {
     final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
     await _notificationService.showEatingTimerNotification(eatingEndTime);
 
-    _startTicker();
     await saveState();
-    notifyListeners();
   }
   
   Future<void> updateFastingGoal(int hours) async {
@@ -172,44 +172,48 @@ class FastingPresenter extends ChangeNotifier {
       isEnabled: true,
     );
     quests.add(quest);
+    notifyListeners(); // Notify immediately
+    
     await _notificationService.scheduleQuestNotifications(quest);
     saveState();
-    notifyListeners();
   }
 
   Future<void> toggleQuest(int index, bool isEnabled) async {
     quests[index].isEnabled = isEnabled;
+    notifyListeners(); // Notify immediately
+
     if (isEnabled) {
       await _notificationService.scheduleQuestNotifications(quests[index]);
     } else {
       await _notificationService.cancelQuestNotifications(quests[index]);
     }
     saveState();
-    notifyListeners();
   }
 
   Future<void> deleteQuest(int index) async {
-    await _notificationService.cancelQuestNotifications(quests[index]);
+    final quest = quests[index];
     quests.removeAt(index);
+    notifyListeners(); // Notify immediately
+
+    await _notificationService.cancelQuestNotifications(quest);
     saveState();
-    notifyListeners();
   }
 
   Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days) async {
     final quest = quests[index];
-    await _notificationService.cancelQuestNotifications(quest);
     
     quest.title = title;
     quest.hour = hour;
     quest.minute = minute;
     quest.days = days;
+    notifyListeners(); // Notify immediately
     
+    await _notificationService.cancelQuestNotifications(quest);
     if (quest.isEnabled) {
       await _notificationService.scheduleQuestNotifications(quest);
     }
     
     saveState();
-    notifyListeners();
   }
 
   Future<void> completeQuest(int index) async {
@@ -218,16 +222,16 @@ class FastingPresenter extends ChangeNotifier {
     } else {
       quests[index].lastCompleted = DateTime.now();
     }
+    notifyListeners(); // Notify immediately
     saveState();
-    notifyListeners();
   }
   
   Future<void> clearHistory() async {
       history.clear();
       quests.clear();
+      notifyListeners();
       await _notificationService.cancelAll();
       saveState();
-      notifyListeners();
   }
   
   Future<void> addTestData() async {
@@ -261,47 +265,47 @@ class FastingPresenter extends ChangeNotifier {
       eatingDuration: 8.0,
     ));
 
-    saveState();
     notifyListeners();
+    saveState();
   }
 
   Future<void> updateLog(int index, FastingLog newLog) async {
     if (index >= 0 && index < history.length) {
       history[index] = newLog;
-      await saveState();
       notifyListeners();
+      await saveState();
     }
   }
 
   Future<void> deleteLog(int index) async {
     if (index >= 0 && index < history.length) {
       history.removeAt(index);
-      await saveState();
       notifyListeners();
+      await saveState();
     }
   }
 
   Future<void> skipEatingWindow() async {
     eatingStartTime = null;
     elapsedSeconds = 0;
-    await saveState();
     notifyListeners();
+    await saveState();
   }
 
   Future<void> updateStartTime(DateTime newStartTime) async {
     startTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(startTime!).inSeconds;
-    await saveState();
     notifyListeners();
+    await saveState();
   }
 
   Future<void> updateEatingStartTime(DateTime newStartTime) async {
     eatingStartTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(eatingStartTime!).inSeconds;
-    await saveState();
     notifyListeners();
+    await saveState();
   }
 
   @override
