@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/fasting_log.dart';
 import '../models/quest.dart';
@@ -43,12 +44,15 @@ class StorageService {
 
     final questsJson = jsonEncode(quests.map((e) => e.toJson()).toList());
     await prefs.setString(keyQuests, questsJson);
+    debugPrint('StorageService: State saved. isFasting=$isFasting');
   }
 
   Future<Map<String, dynamic>> loadState() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.reload(); // Force reload from disk
     
     bool isFasting = prefs.getBool(keyIsFasting) ?? false;
+    debugPrint('StorageService: Loaded isFasting=$isFasting');
     
     String? startTimeStr = prefs.getString(keyStartTime);
     DateTime? startTime = startTimeStr != null ? DateTime.parse(startTimeStr) : null;
@@ -66,7 +70,7 @@ class StorageService {
         List<dynamic> list = jsonDecode(historyJson);
         history = list.map((e) => FastingLog.fromJson(e)).toList();
       } catch (e) {
-        print("Error parsing history: $e");
+        // Error parsing history
       }
     }
     
@@ -77,7 +81,7 @@ class StorageService {
         List<dynamic> list = jsonDecode(questsJson);
         quests = list.map((e) => Quest.fromJson(e)).toList();
       } catch (e) {
-        print("Error parsing quests: $e");
+        // Error parsing quests
       }
     }
 

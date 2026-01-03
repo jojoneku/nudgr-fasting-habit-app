@@ -1,9 +1,14 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:intl/intl.dart';
 import '../models/quest.dart';
+
+@pragma('vm:entry-point')
+void notificationTapBackground(NotificationResponse notificationResponse) {
+  // Handle background notification tap
+}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -11,16 +16,19 @@ class NotificationService {
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  bool _isInitialized = false;
 
   Future<void> init() async {
+    if (_isInitialized) return;
+
     try {
       tz.initializeTimeZones();
     } catch (e) {
-      print('Error initializing timezones: $e');
+      // Error initializing timezones
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/launcher_icon');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -28,8 +36,14 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse: (details) {},
+      onDidReceiveNotificationResponse: (details) {
+        debugPrint('Notification clicked: ${details.payload}');
+      },
+      onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
+    
+    _isInitialized = true;
+    debugPrint('NotificationService: Initialized');
   }
 
   Future<void> requestPermissions() async {
@@ -37,12 +51,16 @@ class NotificationService {
         flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
 
-    await androidImplementation?.requestNotificationsPermission();
+    final bool? granted = await androidImplementation?.requestNotificationsPermission();
+    if (granted == false) {
+      // Permissions denied
+    }
     // Also request exact alarm permission for reliable scheduling on Android 12+
     await androidImplementation?.requestExactAlarmsPermission();
   }
 
   Future<void> scheduleFastingAlarm(DateTime startTime, int goalHours) async {
+    print('NotificationService: Scheduling fasting alarm. Start: $startTime, Goal: $goalHours hours');
     final scheduledDate = tz.TZDateTime.from(
       startTime.add(Duration(hours: goalHours)),
       tz.local,
@@ -67,7 +85,7 @@ class NotificationService {
         body = "You've fasted for $h hours.";
       }
       await _scheduleOneShotNotification(
-        100 + h,
+        10000 + h,
         title,
         body,
         notifTime,
@@ -77,6 +95,7 @@ class NotificationService {
   }
 
   Future<void> scheduleEatingAlarm(DateTime eatingStartTime, int goalHours) async {
+    print('NotificationService: Scheduling eating alarm. Start: $eatingStartTime, Goal: $goalHours hours');
     int eatingWindow = 24 - goalHours;
     if (eatingWindow <= 0) {
       return;
@@ -90,7 +109,7 @@ class NotificationService {
     for (int h = eatingWindow - 1; h > 0; h--) {
       final notifTime = tz.TZDateTime.from(eatingStartTime.add(Duration(hours: eatingWindow - h)), tz.local);
       await _scheduleOneShotNotification(
-        200 + h,
+        20000 + h,
         "$h hour${h == 1 ? '' : 's'} left to eat",
         "You have $h hour${h == 1 ? '' : 's'} left in your eating window.",
         notifTime,
@@ -99,9 +118,28 @@ class NotificationService {
     }
   }
 
+  Future<void> showSimpleNotification() async {
+    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'test_channel',
+      'Test Notifications',
+      channelDescription: 'Channel for testing notifications',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const NotificationDetails details = NotificationDetails(android: androidDetails);
+
+    await flutterLocalNotificationsPlugin.show(
+      888,
+      'Test Notification',
+      'This is a test notification to verify the system works.',
+      details,
+    );
+  }
+
   Future<void> showFastingTimerNotification(DateTime endTime) async {
+    print('NotificationService: Showing fasting timer notification. Ends at $endTime');
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'fasting_timer_channel',
+      'fasting_timer_channel_v3',
       'Active Fasting Timer',
       channelDescription: 'Shows the time remaining for your current fast',
       importance: Importance.defaultImportance,
@@ -127,8 +165,9 @@ class NotificationService {
   }
 
   Future<void> showEatingTimerNotification(DateTime endTime) async {
+    print('NotificationService: Showing eating timer notification. Ends at $endTime');
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'eating_timer_channel',
+      'eating_timer_channel_v3',
       'Active Eating Timer',
       channelDescription: 'Shows the time remaining for your eating window',
       importance: Importance.defaultImportance,
@@ -162,6 +201,7 @@ class NotificationService {
   }
 
   Future<void> scheduleQuestNotifications(Quest quest) async {
+    print('NotificationService: Scheduling quest notifications for ${quest.title}');
     int baseId = quest.id;
 
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
@@ -198,13 +238,35 @@ class NotificationService {
   }
 
   Future<void> cancelQuestNotifications(Quest quest) async {
+    print('NotificationService: Cancelling quest notifications for ${quest.title}');
     int baseId = quest.id;
     for (int i = 0; i < 7; i++) {
       await flutterLocalNotificationsPlugin.cancel(baseId + i);
     }
   }
   
+  Future<void> cancelFastingNotifications() async {
+    print('NotificationService: Cancelling fasting notifications');
+    await flutterLocalNotificationsPlugin.cancel(0); // Goal reached
+    await flutterLocalNotificationsPlugin.cancel(999); // Timer
+    // Cancel milestones (assuming max 168 hours for a week fast)
+    for (int i = 0; i <= 168; i++) {
+      await flutterLocalNotificationsPlugin.cancel(10000 + i);
+    }
+  }
+
+  Future<void> cancelEatingNotifications() async {
+    print('NotificationService: Cancelling eating notifications');
+    await flutterLocalNotificationsPlugin.cancel(1); // Window over
+    await flutterLocalNotificationsPlugin.cancel(998); // Timer
+    // Cancel milestones (assuming max 24 hours eating window)
+    for (int i = 0; i <= 24; i++) {
+      await flutterLocalNotificationsPlugin.cancel(20000 + i);
+    }
+  }
+  
   Future<void> cancelAll() async {
+      print('NotificationService: Cancelling all notifications');
       await flutterLocalNotificationsPlugin.cancelAll();
   }
   

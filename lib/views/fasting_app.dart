@@ -7,7 +7,7 @@ class FastingApp extends StatelessWidget {
 
   ThemeData _buildTheme(Brightness brightness) {
     // Use AppColors for the theme
-    final scheme = ColorScheme.dark(
+    const scheme = ColorScheme.dark(
       primary: AppColors.primary,
       secondary: AppColors.secondary,
       surface: AppColors.surface,
@@ -31,12 +31,12 @@ class FastingApp extends StatelessWidget {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: AppColors.primary.withOpacity(0.15),
-        labelTextStyle: MaterialStateProperty.all(
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        labelTextStyle: WidgetStateProperty.all(
           const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
         ),
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: AppColors.primary);
           }
           return const IconThemeData(color: AppColors.textSecondary);
@@ -48,7 +48,7 @@ class FastingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Intermittent Fasting',
+      title: 'Nudgr',
       theme: _buildTheme(Brightness.dark), // Force dark theme for Solo Leveling vibe
       darkTheme: _buildTheme(Brightness.dark),
       themeMode: ThemeMode.dark, 

@@ -64,8 +64,8 @@ class _TimerTabState extends State<TimerTab> {
     if (progress > 1.0) progress = 1.0;
 
     final theme = Theme.of(context);
-    final Color fastingAccent = AppColors.secondary;
-    final Color eatingAccent = AppColors.primary;
+    const Color fastingAccent = AppColors.secondary;
+    const Color eatingAccent = AppColors.primary;
     final bool showEatingProgress = presenter.eatingStartTime != null && hasEatingWindow;
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
@@ -351,6 +351,7 @@ class _TimerTabState extends State<TimerTab> {
                 children: [
                   SizedBox(
                     height: 200,
+                    width: double.maxFinite,
                     child: CupertinoTheme(
                       data: const CupertinoThemeData(
                         brightness: Brightness.dark,
@@ -429,6 +430,7 @@ class _TimerTabState extends State<TimerTab> {
                 children: [
                   SizedBox(
                     height: 200,
+                    width: double.maxFinite,
                     child: CupertinoTheme(
                       data: const CupertinoThemeData(
                         brightness: Brightness.dark,

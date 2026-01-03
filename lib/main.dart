@@ -1,37 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'services/notification_service.dart';
 import 'views/fasting_app.dart';
-
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-
-@pragma('vm:entry-point')
-void notificationTapBackground(NotificationResponse notificationResponse) {
-  // Handle background notification tap if needed
-}
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
     try {
-      tz.initializeTimeZones();
-    } catch (e) {
-      debugPrint('Error initializing timezones: $e');
-    }
-
-    const AndroidInitializationSettings initializationSettingsAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
-
-    try {
-      await flutterLocalNotificationsPlugin.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: (details) {},
-        onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
-      );
+      await NotificationService().init();
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }

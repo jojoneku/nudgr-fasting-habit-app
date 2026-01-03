@@ -31,8 +31,8 @@ class PartialRingPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round;
 
     const gapAngle = 2 * math.pi * _gapFraction;
-    final startAngle = math.pi / 2 + gapAngle / 2;
-    final sweepAngle = 2 * math.pi - gapAngle;
+    const startAngle = math.pi / 2 + gapAngle / 2;
+    const sweepAngle = 2 * math.pi - gapAngle;
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, paintBase);
 

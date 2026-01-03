@@ -23,12 +23,17 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    debugPrint('FastingPresenter: Initializing...');
+    // Load state first to ensure UI is correct immediately
+    await loadState();
+    
     await _notificationService.init();
     await _notificationService.requestPermissions();
-    await loadState();
+    debugPrint('FastingPresenter: Initialization complete');
   }
 
   Future<void> loadState() async {
+    debugPrint('FastingPresenter: Loading state...');
     final state = await _storageService.loadState();
     isFasting = state['isFasting'];
     startTime = state['startTime'];
@@ -38,20 +43,51 @@ class FastingPresenter extends ChangeNotifier {
     history = state['history'];
     quests = state['quests'];
     
+    debugPrint('FastingPresenter: State loaded - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');
+    
     if (isFasting && startTime != null) {
       _startTicker();
-      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
-      _notificationService.showFastingTimerNotification(endTime);
+      try {
+        final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+        await _notificationService.showFastingTimerNotification(endTime);
+      } catch (e) {
+        // Error showing resume notification
+      }
     } else if (eatingStartTime != null) {
       _startTicker(); // Also tick for eating window
-      int eatingWindowHours = 24 - fastingGoalHours;
-      final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
-      _notificationService.showEatingTimerNotification(eatingEndTime);
+      try {
+        int eatingWindowHours = 24 - fastingGoalHours;
+        final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+        await _notificationService.showEatingTimerNotification(eatingEndTime);
+      } catch (e) {
+        // Error showing resume notification
+      }
     }
     notifyListeners();
   }
 
+  Future<void> refreshNotifications() async {
+    debugPrint('FastingPresenter: Refreshing notifications...');
+    if (isFasting && startTime != null) {
+      try {
+        final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+        await _notificationService.showFastingTimerNotification(endTime);
+      } catch (e) {
+        debugPrint('Error refreshing fasting notification: $e');
+      }
+    } else if (eatingStartTime != null) {
+      try {
+        int eatingWindowHours = 24 - fastingGoalHours;
+        final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+        await _notificationService.showEatingTimerNotification(eatingEndTime);
+      } catch (e) {
+        debugPrint('Error refreshing eating notification: $e');
+      }
+    }
+  }
+
   Future<void> saveState() async {
+    debugPrint('FastingPresenter: Saving state - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');
     await _storageService.saveState(
       isFasting: isFasting,
       startTime: startTime,
@@ -80,7 +116,11 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> startFast() async {
-    if (isFasting) return;
+    print('FastingPresenter: Starting fast...');
+    if (isFasting) {
+      print('FastingPresenter: Already fasting, ignoring startFast call');
+      return;
+    }
 
     // If we were in eating window, log it
     if (eatingStartTime != null) {
@@ -106,16 +146,25 @@ class FastingPresenter extends ChangeNotifier {
     _startTicker();
     notifyListeners(); // Notify immediately for UI responsiveness
     
-    await _notificationService.cancelAll(); // Cancel eating alarms
-    await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
-    final endTime = startTime!.add(Duration(hours: fastingGoalHours));
-    await _notificationService.showFastingTimerNotification(endTime);
-    
+    // Save state immediately to prevent data loss if app is killed or notification fails
     await saveState();
+
+    try {
+      await _notificationService.cancelEatingNotifications(); // Cancel eating alarms
+      await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
+      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+      await _notificationService.showFastingTimerNotification(endTime);
+    } catch (e) {
+      // Error scheduling notifications
+    }
   }
 
   Future<void> stopFast() async {
-    if (!isFasting || startTime == null) return;
+    print('FastingPresenter: Stopping fast...');
+    if (!isFasting || startTime == null) {
+      print('FastingPresenter: Not fasting or startTime is null, ignoring stopFast call');
+      return;
+    }
 
     final endTime = DateTime.now();
     final durationHours = endTime.difference(startTime!).inSeconds / 3600.0;
@@ -139,29 +188,36 @@ class FastingPresenter extends ChangeNotifier {
     _startTicker();
     notifyListeners(); // Notify immediately
     
-    await _notificationService.cancelAll(); // Cancel fasting alarms
-    await _notificationService.cancelFastingTimerNotification();
-    await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
-    
-    int eatingWindowHours = 24 - fastingGoalHours;
-    final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
-    await _notificationService.showEatingTimerNotification(eatingEndTime);
-
+    // Save state immediately
     await saveState();
+
+    try {
+      await _notificationService.cancelFastingNotifications(); // Cancel fasting alarms
+      await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
+      
+      int eatingWindowHours = 24 - fastingGoalHours;
+      final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+      await _notificationService.showEatingTimerNotification(eatingEndTime);
+    } catch (e) {
+      // Error scheduling notifications
+    }
   }
   
   Future<void> updateFastingGoal(int hours) async {
+    print('FastingPresenter: Updating fasting goal to $hours hours');
     fastingGoalHours = hours;
+    await saveState(); // Save immediately
+    
     if (isFasting && startTime != null) {
       final endTime = startTime!.add(Duration(hours: fastingGoalHours));
       await _notificationService.showFastingTimerNotification(endTime);
     }
-    saveState();
     notifyListeners();
   }
 
   // Quest Methods
   Future<void> addQuest(String title, int hour, int minute, List<bool> days) async {
+    print('FastingPresenter: Adding quest - $title');
     int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final quest = Quest(
       id: id,
@@ -179,6 +235,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> toggleQuest(int index, bool isEnabled) async {
+    print('FastingPresenter: Toggling quest index $index to $isEnabled');
     quests[index].isEnabled = isEnabled;
     notifyListeners(); // Notify immediately
 
@@ -191,6 +248,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> deleteQuest(int index) async {
+    print('FastingPresenter: Deleting quest index $index');
     final quest = quests[index];
     quests.removeAt(index);
     notifyListeners(); // Notify immediately
@@ -200,6 +258,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days) async {
+    print('FastingPresenter: Updating quest index $index - $title');
     final quest = quests[index];
     
     quest.title = title;
@@ -217,6 +276,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> completeQuest(int index) async {
+    print('FastingPresenter: Completing quest index $index');
     if (quests[index].isCompletedToday) {
       quests[index].lastCompleted = null; // Toggle off (undo)
     } else {
@@ -226,14 +286,26 @@ class FastingPresenter extends ChangeNotifier {
     saveState();
   }
   
-  Future<void> clearHistory() async {
+  Future<void> clearAllData() async {
+      print('FastingPresenter: Clearing all data');
       history.clear();
       quests.clear();
+      isFasting = false;
+      startTime = null;
+      eatingStartTime = null;
+      elapsedSeconds = 0;
+      _ticker?.cancel();
+      
       notifyListeners();
       await _notificationService.cancelAll();
-      saveState();
+      await saveState();
   }
   
+  Future<void> testNotification() async {
+    await _notificationService.requestPermissions();
+    await _notificationService.showSimpleNotification();
+  }
+
   Future<void> addTestData() async {
     final now = DateTime.now();
 
@@ -270,6 +342,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> updateLog(int index, FastingLog newLog) async {
+    print('FastingPresenter: Updating log at index $index');
     if (index >= 0 && index < history.length) {
       history[index] = newLog;
       notifyListeners();
@@ -278,6 +351,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> deleteLog(int index) async {
+    print('FastingPresenter: Deleting log at index $index');
     if (index >= 0 && index < history.length) {
       history.removeAt(index);
       notifyListeners();
@@ -286,6 +360,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> skipEatingWindow() async {
+    print('FastingPresenter: Skipping eating window');
     eatingStartTime = null;
     elapsedSeconds = 0;
     notifyListeners();
@@ -293,6 +368,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> updateStartTime(DateTime newStartTime) async {
+    print('FastingPresenter: Updating start time to $newStartTime');
     startTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(startTime!).inSeconds;
@@ -301,6 +377,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   Future<void> updateEatingStartTime(DateTime newStartTime) async {
+    print('FastingPresenter: Updating eating start time to $newStartTime');
     eatingStartTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(eatingStartTime!).inSeconds;

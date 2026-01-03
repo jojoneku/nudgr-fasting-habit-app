@@ -14,15 +14,29 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final FastingPresenter _presenter = FastingPresenter();
   int _selectedIndex = 0;
   bool _isEditingQuests = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _presenter.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _presenter.refreshNotifications();
+    }
   }
 
   @override
@@ -78,6 +92,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const Divider(),
                       ListTile(
+                        leading:
+                            const Icon(Icons.notifications_active, color: AppColors.secondary),
+                        title: const Text('Test Notification'),
+                        subtitle: const Text('Check if notifications work'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          await _presenter.testNotification();
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Notification sent! Check status bar.')),
+                            );
+                          }
+                        },
+                      ),
+                      const Divider(),
+                      ListTile(
                         leading: const Icon(Icons.delete_forever,
                             color: AppColors.neutral),
                         title: const Text('Clear All Data'),
@@ -108,8 +138,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
 
                           if (confirm == true) {
-                            await _presenter.clearHistory();
-                            if (mounted) {
+                            await _presenter.clearAllData();
+                            if (context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                     content:
@@ -192,36 +222,53 @@ class _HomeScreenState extends State<HomeScreen> {
                     const Text("Time"),
                     InkWell(
                       onTap: () async {
-                        await showCupertinoModalPopup(
+                        TimeOfDay tempTime = time;
+                        await showDialog(
                           context: context,
                           builder: (BuildContext context) {
-                            return Container(
-                              height: 200,
-                              color: AppColors.surface,
-                              child: CupertinoTheme(
-                                data: const CupertinoThemeData(
-                                  brightness: Brightness.dark,
-                                  textTheme: CupertinoTextThemeData(
-                                    dateTimePickerTextStyle: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 20,
+                            return AlertDialog(
+                              title: const Text("Select Time"),
+                              content: SizedBox(
+                                width: double.maxFinite,
+                                height: 200,
+                                child: CupertinoTheme(
+                                  data: const CupertinoThemeData(
+                                    brightness: Brightness.dark,
+                                    textTheme: CupertinoTextThemeData(
+                                      dateTimePickerTextStyle: TextStyle(
+                                        color: AppColors.textPrimary,
+                                        fontSize: 20,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                child: CupertinoDatePicker(
-                                  backgroundColor: AppColors.surface,
-                                  mode: CupertinoDatePickerMode.time,
-                                  initialDateTime:
-                                      DateTime(2024, 1, 1, time.hour, time.minute),
-                                  onDateTimeChanged: (DateTime newDateTime) {
-                                    setState(() {
-                                      time = TimeOfDay.fromDateTime(newDateTime);
-                                    });
-                                  },
-                                  use24hFormat:
-                                      MediaQuery.of(context).alwaysUse24HourFormat,
+                                  child: CupertinoDatePicker(
+                                    backgroundColor: AppColors.surface,
+                                    mode: CupertinoDatePickerMode.time,
+                                    initialDateTime:
+                                        DateTime(2024, 1, 1, time.hour, time.minute),
+                                    onDateTimeChanged: (DateTime newDateTime) {
+                                      tempTime = TimeOfDay.fromDateTime(newDateTime);
+                                    },
+                                    use24hFormat:
+                                        MediaQuery.of(context).alwaysUse24HourFormat,
+                                  ),
                                 ),
                               ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text("Cancel"),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      time = tempTime;
+                                    });
+                                    Navigator.pop(context);
+                                  },
+                                  child: const Text("OK"),
+                                ),
+                              ],
                             );
                           },
                         );
@@ -313,16 +360,17 @@ class _HomeScreenState extends State<HomeScreen> {
       },
     );
 
-    if (!submitted || title == null || title!.isEmpty) return;
+    final safeTitle = title;
+    if (!submitted || safeTitle == null || safeTitle.isEmpty) return;
 
-    if (isEditing) {
-      final index = _presenter.quests.indexOf(quest!);
+    if (quest != null) {
+      final index = _presenter.quests.indexOf(quest);
       if (index != -1) {
         await _presenter.updateQuest(
-            index, title!, time.hour, time.minute, days);
+            index, safeTitle, time.hour, time.minute, days);
       }
     } else {
-      await _presenter.addQuest(title!, time.hour, time.minute, days);
+      await _presenter.addQuest(safeTitle, time.hour, time.minute, days);
     }
   }
 }
