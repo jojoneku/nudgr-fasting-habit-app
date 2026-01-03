@@ -46,6 +46,8 @@ class FastingPresenter extends ChangeNotifier {
     debugPrint('FastingPresenter: State loaded - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');
     
     if (isFasting && startTime != null) {
+      // Calculate elapsed time immediately to prevent UI jump to 0
+      elapsedSeconds = DateTime.now().difference(startTime!).inSeconds;
       _startTicker();
       try {
         final endTime = startTime!.add(Duration(hours: fastingGoalHours));
@@ -54,6 +56,8 @@ class FastingPresenter extends ChangeNotifier {
         // Error showing resume notification
       }
     } else if (eatingStartTime != null) {
+      // Calculate elapsed time immediately to prevent UI jump to 0
+      elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
       _startTicker(); // Also tick for eating window
       try {
         int eatingWindowHours = 24 - fastingGoalHours;
@@ -64,26 +68,6 @@ class FastingPresenter extends ChangeNotifier {
       }
     }
     notifyListeners();
-  }
-
-  Future<void> refreshNotifications() async {
-    debugPrint('FastingPresenter: Refreshing notifications...');
-    if (isFasting && startTime != null) {
-      try {
-        final endTime = startTime!.add(Duration(hours: fastingGoalHours));
-        await _notificationService.showFastingTimerNotification(endTime);
-      } catch (e) {
-        debugPrint('Error refreshing fasting notification: $e');
-      }
-    } else if (eatingStartTime != null) {
-      try {
-        int eatingWindowHours = 24 - fastingGoalHours;
-        final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
-        await _notificationService.showEatingTimerNotification(eatingEndTime);
-      } catch (e) {
-        debugPrint('Error refreshing eating notification: $e');
-      }
-    }
   }
 
   Future<void> saveState() async {
@@ -150,10 +134,12 @@ class FastingPresenter extends ChangeNotifier {
     await saveState();
 
     try {
+      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+      // Show persistent notification first for immediate feedback
+      await _notificationService.showFastingTimerNotification(endTime);
+
       await _notificationService.cancelEatingNotifications(); // Cancel eating alarms
       await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
-      final endTime = startTime!.add(Duration(hours: fastingGoalHours));
-      await _notificationService.showFastingTimerNotification(endTime);
     } catch (e) {
       // Error scheduling notifications
     }
@@ -192,12 +178,13 @@ class FastingPresenter extends ChangeNotifier {
     await saveState();
 
     try {
-      await _notificationService.cancelFastingNotifications(); // Cancel fasting alarms
-      await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
-      
       int eatingWindowHours = 24 - fastingGoalHours;
       final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+      // Show persistent notification first for immediate feedback
       await _notificationService.showEatingTimerNotification(eatingEndTime);
+
+      await _notificationService.cancelFastingNotifications(); // Cancel fasting alarms
+      await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
     } catch (e) {
       // Error scheduling notifications
     }

@@ -85,7 +85,7 @@ class NotificationService {
         body = "You've fasted for $h hours.";
       }
       await _scheduleOneShotNotification(
-        10000 + h,
+        100 + h,
         title,
         body,
         notifTime,
@@ -109,7 +109,7 @@ class NotificationService {
     for (int h = eatingWindow - 1; h > 0; h--) {
       final notifTime = tz.TZDateTime.from(eatingStartTime.add(Duration(hours: eatingWindow - h)), tz.local);
       await _scheduleOneShotNotification(
-        20000 + h,
+        200 + h,
         "$h hour${h == 1 ? '' : 's'} left to eat",
         "You have $h hour${h == 1 ? '' : 's'} left in your eating window.",
         notifTime,
@@ -138,14 +138,22 @@ class NotificationService {
 
   Future<void> showFastingTimerNotification(DateTime endTime) async {
     print('NotificationService: Showing fasting timer notification. Ends at $endTime');
+    // Ensure eating timer is cancelled
+    try {
+      await flutterLocalNotificationsPlugin.cancel(998);
+    } catch (e) {
+      print('Error cancelling eating timer: $e');
+    }
+    
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'fasting_timer_channel_v3',
+      'fasting_timer_channel_v4',
       'Active Fasting Timer',
       channelDescription: 'Shows the time remaining for your current fast',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: Importance.max,
+      priority: Priority.high,
       ongoing: true,
       autoCancel: false,
+      onlyAlertOnce: true,
       showWhen: true,
       when: endTime.millisecondsSinceEpoch,
       usesChronometer: true,
@@ -166,14 +174,22 @@ class NotificationService {
 
   Future<void> showEatingTimerNotification(DateTime endTime) async {
     print('NotificationService: Showing eating timer notification. Ends at $endTime');
+    // Ensure fasting timer is cancelled
+    try {
+      await flutterLocalNotificationsPlugin.cancel(999);
+    } catch (e) {
+      print('Error cancelling fasting timer: $e');
+    }
+
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'eating_timer_channel_v3',
+      'eating_timer_channel_v4',
       'Active Eating Timer',
       channelDescription: 'Shows the time remaining for your eating window',
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: Importance.max,
+      priority: Priority.high,
       ongoing: true,
       autoCancel: false,
+      onlyAlertOnce: true,
       showWhen: true,
       when: endTime.millisecondsSinceEpoch,
       usesChronometer: true,
@@ -249,9 +265,9 @@ class NotificationService {
     print('NotificationService: Cancelling fasting notifications');
     await flutterLocalNotificationsPlugin.cancel(0); // Goal reached
     await flutterLocalNotificationsPlugin.cancel(999); // Timer
-    // Cancel milestones (assuming max 168 hours for a week fast)
-    for (int i = 0; i <= 168; i++) {
-      await flutterLocalNotificationsPlugin.cancel(10000 + i);
+    // Cancel milestones (100-124)
+    for (int i = 100; i <= 124; i++) {
+      await flutterLocalNotificationsPlugin.cancel(i);
     }
   }
 
@@ -259,9 +275,9 @@ class NotificationService {
     print('NotificationService: Cancelling eating notifications');
     await flutterLocalNotificationsPlugin.cancel(1); // Window over
     await flutterLocalNotificationsPlugin.cancel(998); // Timer
-    // Cancel milestones (assuming max 24 hours eating window)
-    for (int i = 0; i <= 24; i++) {
-      await flutterLocalNotificationsPlugin.cancel(20000 + i);
+    // Cancel milestones (200-224)
+    for (int i = 200; i <= 224; i++) {
+      await flutterLocalNotificationsPlugin.cancel(i);
     }
   }
   
