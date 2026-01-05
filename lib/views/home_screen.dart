@@ -208,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         : const TimeOfDay(hour: 8, minute: 0);
     List<bool> days =
         quest != null ? List.from(quest.days) : List.filled(7, true);
+    bool isOneTime = quest?.isOneTime ?? false;
     const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     bool submitted = false;
@@ -306,16 +307,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     const SizedBox(height: 20),
-                    const Text("Repeat on"),
+                    SwitchListTile(
+                      title: const Text("One-time Quest"),
+                      subtitle: const Text("Deletes after completion"),
+                      value: isOneTime,
+                      onChanged: (val) {
+                        setState(() => isOneTime = val);
+                      },
+                      contentPadding: EdgeInsets.zero,
+                    ),
                     const SizedBox(height: 10),
-                    Row(
+                    Opacity(
+                      opacity: isOneTime ? 0.5 : 1.0,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("Repeat on"),
+                          const SizedBox(height: 10),
+                          Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: List.generate(7, (index) {
                         final isSelected = days[index];
                         return Padding(
                           padding: const EdgeInsets.all(2.0),
                           child: InkWell(
-                            onTap: () {
+                            onTap: isOneTime ? null : () {
                               setState(() => days[index] = !days[index]);
                             },
                             borderRadius: BorderRadius.circular(18),
@@ -346,6 +362,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         );
                       }),
+                    ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -382,10 +401,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final index = _presenter.quests.indexOf(quest);
       if (index != -1) {
         await _presenter.updateQuest(
-            index, safeTitle, time.hour, time.minute, days);
+            index, safeTitle, time.hour, time.minute, days, isOneTime: isOneTime);
       }
     } else {
-      await _presenter.addQuest(safeTitle, time.hour, time.minute, days);
+      await _presenter.addQuest(safeTitle, time.hour, time.minute, days, isOneTime: isOneTime);
     }
   }
 }

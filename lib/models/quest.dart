@@ -8,6 +8,7 @@ class Quest {
   DateTime? lastCompleted;
   DateTime? lastXpAwarded;
   int xpReward;
+  bool isOneTime;
 
   Quest({
     required this.id,
@@ -19,6 +20,7 @@ class Quest {
     this.lastCompleted,
     this.lastXpAwarded,
     this.xpReward = 10,
+    this.isOneTime = false,
   });
 
   bool get isCompletedToday {
@@ -44,6 +46,7 @@ class Quest {
           ? DateTime.parse(json['lastXpAwarded']) 
           : null,
       xpReward: json['xpReward'] ?? 10,
+      isOneTime: json['isOneTime'] ?? false,
     );
   }
 
@@ -58,6 +61,7 @@ class Quest {
       'lastCompleted': lastCompleted?.toIso8601String(),
       'lastXpAwarded': lastXpAwarded?.toIso8601String(),
       'xpReward': xpReward,
+      'isOneTime': isOneTime,
     };
   }
 }

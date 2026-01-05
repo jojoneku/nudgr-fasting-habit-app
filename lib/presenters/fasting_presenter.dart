@@ -323,7 +323,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   // Quest Methods
-  Future<void> addQuest(String title, int hour, int minute, List<bool> days) async {
+  Future<void> addQuest(String title, int hour, int minute, List<bool> days, {bool isOneTime = false}) async {
     debugPrint('FastingPresenter: Adding quest - $title');
     int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final quest = Quest(
@@ -333,6 +333,7 @@ class FastingPresenter extends ChangeNotifier {
       minute: minute,
       days: days,
       isEnabled: true,
+      isOneTime: isOneTime,
     );
     quests.add(quest);
     notifyListeners(); // Notify immediately
@@ -364,7 +365,7 @@ class FastingPresenter extends ChangeNotifier {
     saveState();
   }
 
-  Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days) async {
+  Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days, {bool isOneTime = false}) async {
     debugPrint('FastingPresenter: Updating quest index $index - $title');
     final quest = quests[index];
     
@@ -372,6 +373,7 @@ class FastingPresenter extends ChangeNotifier {
     quest.hour = hour;
     quest.minute = minute;
     quest.days = days;
+    quest.isOneTime = isOneTime;
     notifyListeners(); // Notify immediately
     
     await _notificationService.cancelQuestNotifications(quest);
@@ -408,6 +410,28 @@ class FastingPresenter extends ChangeNotifier {
         xpGained = quest.xpReward;
         statsPresenter?.addXp(xpGained);
         quest.lastXpAwarded = now;
+      }
+
+      if (quest.isOneTime) {
+        // Delete one-time quest after completion
+        // Wait a bit so the user sees the checkmark animation?
+        // Or just disable it?
+        // Let's delete it for now, but maybe we need to handle the index shift if we delete immediately.
+        // Actually, if we delete it, the UI might break if it's building the list.
+        // Safer to mark it disabled or delete it after a delay.
+        // But for MVP, let's just delete it and let the UI rebuild.
+        // Wait, if we delete it, the `index` passed to this function becomes invalid for subsequent operations if any.
+        // But we are at the end of the function.
+        // However, `quests[index]` is used.
+        // Let's just delete it.
+        // BUT: If we delete it, the user can't "undo" it if they clicked by mistake.
+        // So maybe just disable it?
+        // "One time" implies it's gone.
+        // Let's remove it.
+        await deleteQuest(index);
+        // Since we deleted it, we shouldn't save state again at the end of this function if deleteQuest already saves.
+        // deleteQuest saves state.
+        return xpGained;
       }
     }
     notifyListeners(); // Notify immediately
