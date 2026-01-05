@@ -14,6 +14,7 @@ class StorageService {
   static const String keyHistory = 'history';
   static const String keyQuests = 'quests';
   static const String keyUserStats = 'userStats';
+  static const String keyLastPenaltyCheckDate = 'lastPenaltyCheckDate';
 
   Future<void> saveUserStats(UserStats stats) async {
     final prefs = await SharedPreferences.getInstance();
@@ -43,6 +44,7 @@ class StorageService {
     required int fastingGoalHours,
     required List<FastingLog> history,
     required List<Quest> quests,
+    DateTime? lastPenaltyCheckDate,
   }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(keyIsFasting, isFasting);
@@ -56,6 +58,10 @@ class StorageService {
       await prefs.setString(keyEatingStartTime, eatingStartTime.toIso8601String());
     } else {
       await prefs.remove(keyEatingStartTime);
+    }
+
+    if (lastPenaltyCheckDate != null) {
+      await prefs.setString(keyLastPenaltyCheckDate, lastPenaltyCheckDate.toIso8601String());
     }
 
     await prefs.setInt(keyElapsedSeconds, elapsedSeconds);
@@ -82,6 +88,9 @@ class StorageService {
     String? eatingStartTimeStr = prefs.getString(keyEatingStartTime);
     DateTime? eatingStartTime = eatingStartTimeStr != null ? DateTime.parse(eatingStartTimeStr) : null;
     
+    String? lastPenaltyCheckDateStr = prefs.getString(keyLastPenaltyCheckDate);
+    DateTime? lastPenaltyCheckDate = lastPenaltyCheckDateStr != null ? DateTime.parse(lastPenaltyCheckDateStr) : null;
+
     int elapsedSeconds = prefs.getInt(keyElapsedSeconds) ?? 0;
     int fastingGoalHours = prefs.getInt(keyFastingGoalHours) ?? 16;
     
@@ -115,6 +124,7 @@ class StorageService {
       'fastingGoalHours': fastingGoalHours,
       'history': history,
       'quests': quests,
+      'lastPenaltyCheckDate': lastPenaltyCheckDate,
     };
   }
 }

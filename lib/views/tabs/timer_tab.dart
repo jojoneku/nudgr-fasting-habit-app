@@ -326,7 +326,26 @@ class _TimerTabState extends State<TimerTab> {
     );
 
     if (shouldStop == true) {
-      presenter.stopFast();
+      final (xp, hpChange) = await presenter.stopFast();
+      if (context.mounted) {
+        if (hpChange < 0) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Fast Failed. +$xp XP\nPenalty: $hpChange HP"),
+              backgroundColor: AppColors.danger,
+              duration: const Duration(seconds: 4),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Fast Complete! +$xp XP\nRecovered: +$hpChange HP"),
+              backgroundColor: AppColors.success,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
     }
   }
 

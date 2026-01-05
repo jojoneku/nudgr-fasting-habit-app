@@ -169,15 +169,41 @@ class _QuestsTabState extends State<QuestsTab> {
             color:
                 item.isCompletedToday ? AppColors.neutral : AppColors.primary,
           ),
-          title: Text(
-            item.title,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: item.isCompletedToday ? AppColors.neutral : null,
-              decoration:
-                  item.isCompletedToday ? TextDecoration.lineThrough : null,
-              decorationThickness: 2.0,
-            ),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(
+                child: Text(
+                  item.title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: item.isCompletedToday ? AppColors.neutral : null,
+                    decoration:
+                        item.isCompletedToday ? TextDecoration.lineThrough : null,
+                    decorationThickness: 2.0,
+                  ),
+                ),
+              ),
+              if (!item.isCompletedToday) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.gold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: AppColors.gold.withValues(alpha: 0.5), width: 0.5),
+                  ),
+                  child: Text(
+                    "+${item.xpReward} XP",
+                    style: const TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
           subtitle: Text(
             timeStr,
@@ -193,7 +219,18 @@ class _QuestsTabState extends State<QuestsTab> {
               color:
                   item.isCompletedToday ? AppColors.neutral : AppColors.primary,
             ),
-            onPressed: () => presenter.completeQuest(originalIndex),
+            onPressed: () async {
+              final xp = await presenter.completeQuest(originalIndex);
+              if (xp > 0 && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text("Quest Complete! +$xp XP"),
+                    backgroundColor: AppColors.success,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
           ),
         ),
       );

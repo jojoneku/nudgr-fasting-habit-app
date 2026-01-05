@@ -1,6 +1,7 @@
 typedef Attributes = ({int str, int vit, int agi, int intl, int sen});
 
 class UserStats {
+  final String name;
   final int level;
   final int currentXp;
   final int currentHp;
@@ -9,6 +10,7 @@ class UserStats {
   final Attributes attributes;
 
   const UserStats({
+    required this.name,
     required this.level,
     required this.currentXp,
     required this.currentHp,
@@ -19,6 +21,7 @@ class UserStats {
 
   factory UserStats.initial() {
     return const UserStats(
+      name: 'Player',
       level: 1,
       currentXp: 0,
       currentHp: 100,
@@ -30,6 +33,7 @@ class UserStats {
 
   factory UserStats.fromJson(Map<String, dynamic> json) {
     return UserStats(
+      name: json['name'] as String? ?? 'Player',
       level: json['level'] as int,
       currentXp: json['currentXp'] as int,
       currentHp: json['currentHp'] as int,
@@ -47,6 +51,7 @@ class UserStats {
 
   Map<String, dynamic> toJson() {
     return {
+      'name': name,
       'level': level,
       'currentXp': currentXp,
       'currentHp': currentHp,
@@ -63,6 +68,7 @@ class UserStats {
   }
 
   UserStats copyWith({
+    String? name,
     int? level,
     int? currentXp,
     int? currentHp,
@@ -71,6 +77,7 @@ class UserStats {
     Attributes? attributes,
   }) {
     return UserStats(
+      name: name ?? this.name,
       level: level ?? this.level,
       currentXp: currentXp ?? this.currentXp,
       currentHp: currentHp ?? this.currentHp,

@@ -47,6 +47,12 @@ class StatsPresenter extends ChangeNotifier {
 
   // --- Actions ---
 
+  Future<void> updateName(String newName) async {
+    _stats = _stats.copyWith(name: newName);
+    notifyListeners();
+    await _storageService.saveUserStats(_stats);
+  }
+
   Future<void> addXp(int amount) async {
     // Apply STR bonus to XP gain (e.g., 1% per STR point)
     final bonusMultiplier = 1 + (_stats.attributes.str * 0.01);

@@ -56,7 +56,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onEditQuest: _editQuest,
         isEditing: _isEditingQuests,
       ),
-      StatsView(presenter: _statsPresenter),
+      StatsView(
+        presenter: _statsPresenter,
+        fastingPresenter: _presenter,
+      ),
     ];
 
     return Scaffold(

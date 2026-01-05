@@ -18,6 +18,7 @@ class FastingPresenter extends ChangeNotifier {
   int fastingGoalHours = 16;
   List<FastingLog> history = [];
   List<Quest> quests = [];
+  DateTime? lastPenaltyCheckDate;
   Timer? _ticker;
 
   FastingPresenter({this.statsPresenter}) {
@@ -44,9 +45,12 @@ class FastingPresenter extends ChangeNotifier {
     fastingGoalHours = state['fastingGoalHours'];
     history = state['history'];
     quests = state['quests'];
+    lastPenaltyCheckDate = state['lastPenaltyCheckDate'];
     
     debugPrint('FastingPresenter: State loaded - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');
     
+    _checkMissedQuests();
+
     if (isFasting && startTime != null) {
       // Calculate elapsed time immediately to prevent UI jump to 0
       elapsedSeconds = DateTime.now().difference(startTime!).inSeconds;
@@ -82,7 +86,75 @@ class FastingPresenter extends ChangeNotifier {
       fastingGoalHours: fastingGoalHours,
       history: history,
       quests: quests,
+      lastPenaltyCheckDate: lastPenaltyCheckDate,
     );
+  }
+
+  void _checkMissedQuests() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    if (lastPenaltyCheckDate == null) {
+      // First run, just set the date
+      lastPenaltyCheckDate = today;
+      saveState();
+      return;
+    }
+
+    if (lastPenaltyCheckDate!.isBefore(today)) {
+      debugPrint('FastingPresenter: Checking missed quests from $lastPenaltyCheckDate to $today');
+      
+      int totalDamage = 0;
+      int missedCount = 0;
+
+      // Iterate from last check date until yesterday
+      DateTime checkDate = lastPenaltyCheckDate!;
+      while (checkDate.isBefore(today)) {
+        final dayIndex = checkDate.weekday - 1; // Mon=0, Sun=6
+        
+        for (final quest in quests) {
+          if (quest.isEnabled && quest.days[dayIndex]) {
+            // Check if completed on this specific date
+            bool completedOnDate = false;
+            if (quest.lastCompleted != null) {
+              final completedDate = DateTime(
+                quest.lastCompleted!.year,
+                quest.lastCompleted!.month,
+                quest.lastCompleted!.day,
+              );
+              if (completedDate.isAtSameMomentAs(checkDate)) {
+                completedOnDate = true;
+              }
+            }
+
+            if (!completedOnDate) {
+              // Missed quest!
+              totalDamage += 10;
+              missedCount++;
+            }
+          }
+        }
+        
+        checkDate = checkDate.add(const Duration(days: 1));
+      }
+
+      if (totalDamage > 0) {
+        debugPrint('FastingPresenter: Missed $missedCount quests. Applying $totalDamage damage.');
+        statsPresenter?.modifyHp(-totalDamage);
+        statsPresenter?.resetStreak(); // Reset streak on missed quest? Maybe too harsh? Let's keep it.
+        
+        // Show notification or snackbar? 
+        // Since this happens on load, we might not have context for SnackBar.
+        // We can use the notification service to show a local notification.
+        _notificationService.showSimpleNotification(
+          title: 'Penalty Applied',
+          body: 'You missed $missedCount quests. Took $totalDamage damage.',
+        );
+      }
+
+      lastPenaltyCheckDate = today;
+      saveState();
+    }
   }
 
   void _startTicker() {
@@ -147,11 +219,11 @@ class FastingPresenter extends ChangeNotifier {
     }
   }
 
-  Future<void> stopFast() async {
+  Future<(int, int)> stopFast() async {
     debugPrint('FastingPresenter: Stopping fast...');
     if (!isFasting || startTime == null) {
       debugPrint('FastingPresenter: Not fasting or startTime is null, ignoring stopFast call');
-      return;
+      return (0, 0);
     }
 
     final endTime = DateTime.now();
@@ -179,16 +251,48 @@ class FastingPresenter extends ChangeNotifier {
     // Save state immediately
     await saveState();
 
-    // Award XP
+    // Award XP & Health
+    int xp = 0;
+    int hpChange = 0;
+
     if (durationHours >= fastingGoalHours) {
-      final xp = (50 + (durationHours * 10)).round();
+      xp = (50 + (durationHours * 10)).round();
       statsPresenter?.addXp(xp);
       statsPresenter?.incrementStreak();
+      
+      // Status Recovery: Partial Heal based on duration
+      if (statsPresenter != null) {
+        // Base 30 HP + 2 HP per hour fasted
+        int healAmount = 30 + (durationHours * 2).round();
+        
+        // Cap at Max HP
+        final currentHp = statsPresenter!.stats.currentHp;
+        final maxHp = statsPresenter!.maxHp;
+        
+        if (currentHp + healAmount > maxHp) {
+            healAmount = maxHp - currentHp;
+        }
+        
+        hpChange = healAmount;
+        if (hpChange > 0) {
+          statsPresenter!.modifyHp(hpChange);
+        }
+      }
     } else {
       // Penalty? For now just no XP or small XP
-      final xp = (durationHours * 5).round();
+      xp = (durationHours * 5).round();
       statsPresenter?.addXp(xp);
       statsPresenter?.resetStreak();
+      
+      // Penalty: Damage scales with how early you stopped
+      // Base 10 damage + 2 damage per hour missed
+      double missedHours = fastingGoalHours - durationHours;
+      if (missedHours < 0) missedHours = 0;
+      
+      int damage = 10 + (missedHours * 2).round();
+      hpChange = -damage;
+      
+      statsPresenter?.modifyHp(hpChange);
     }
 
     try {
@@ -200,8 +304,10 @@ class FastingPresenter extends ChangeNotifier {
       await _notificationService.cancelFastingNotifications(); // Cancel fasting alarms
       await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
     } catch (e) {
-      // Error scheduling notifications
+      debugPrint('Error scheduling notifications: $e');
     }
+    
+    return (xp, hpChange);
   }
   
   Future<void> updateFastingGoal(int hours) async {
@@ -276,17 +382,37 @@ class FastingPresenter extends ChangeNotifier {
     saveState();
   }
 
-  Future<void> completeQuest(int index) async {
+  Future<int> completeQuest(int index) async {
     debugPrint('FastingPresenter: Completing quest index $index');
-    if (quests[index].isCompletedToday) {
-      quests[index].lastCompleted = null; // Toggle off (undo)
-      // Optionally remove XP? For MVP, let's keep it simple and only add on completion
+    int xpGained = 0;
+    final quest = quests[index];
+    final now = DateTime.now();
+
+    if (quest.isCompletedToday) {
+      quest.lastCompleted = null; // Toggle off (undo)
+      // Do not remove XP, do not reset lastXpAwarded to prevent farming
     } else {
-      quests[index].lastCompleted = DateTime.now();
-      statsPresenter?.addXp(20); // 20 XP per quest
+      quest.lastCompleted = now;
+      
+      // Check if XP was already awarded today
+      bool alreadyAwarded = false;
+      if (quest.lastXpAwarded != null) {
+        if (quest.lastXpAwarded!.year == now.year &&
+            quest.lastXpAwarded!.month == now.month &&
+            quest.lastXpAwarded!.day == now.day) {
+          alreadyAwarded = true;
+        }
+      }
+
+      if (!alreadyAwarded) {
+        xpGained = quest.xpReward;
+        statsPresenter?.addXp(xpGained);
+        quest.lastXpAwarded = now;
+      }
     }
     notifyListeners(); // Notify immediately
     saveState();
+    return xpGained;
   }
   
   Future<void> clearAllData() async {

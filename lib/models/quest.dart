@@ -6,6 +6,8 @@ class Quest {
   bool isEnabled;
   List<bool> days;
   DateTime? lastCompleted;
+  DateTime? lastXpAwarded;
+  int xpReward;
 
   Quest({
     required this.id,
@@ -15,6 +17,8 @@ class Quest {
     this.isEnabled = true,
     required this.days,
     this.lastCompleted,
+    this.lastXpAwarded,
+    this.xpReward = 10,
   });
 
   bool get isCompletedToday {
@@ -36,6 +40,10 @@ class Quest {
       lastCompleted: json['lastCompleted'] != null 
           ? DateTime.parse(json['lastCompleted']) 
           : null,
+      lastXpAwarded: json['lastXpAwarded'] != null 
+          ? DateTime.parse(json['lastXpAwarded']) 
+          : null,
+      xpReward: json['xpReward'] ?? 10,
     );
   }
 
@@ -48,6 +56,8 @@ class Quest {
       'isEnabled': isEnabled,
       'days': days,
       'lastCompleted': lastCompleted?.toIso8601String(),
+      'lastXpAwarded': lastXpAwarded?.toIso8601String(),
+      'xpReward': xpReward,
     };
   }
 }

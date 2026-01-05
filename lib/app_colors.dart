@@ -8,6 +8,7 @@ class AppColors {
   static const Color accent = Color(0xFF00E5FF);     // Mana Blue
   static const Color secondary = Color(0xFF00FFFF);  // Cyan Accent (Legacy)
   static const Color danger = Color(0xFFFF1744);     // HP Red
+  static const Color success = Color(0xFF00E676);    // Level-up Green
   static const Color gold = Color(0xFFFFD600);       // Level Up Gold
   
   static const Color textPrimary = Color(0xFFFFFFFF);   // Primary Titles

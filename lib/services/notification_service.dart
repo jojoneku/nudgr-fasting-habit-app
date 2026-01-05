@@ -63,6 +63,8 @@ class NotificationService {
     await androidImplementation?.requestExactAlarmsPermission();
   }
 
+
+
   Future<void> scheduleFastingAlarm(DateTime startTime, int goalHours) async {
     debugPrint('NotificationService: Scheduling fasting alarm. Start: $startTime, Goal: $goalHours hours');
     final scheduledDate = tz.TZDateTime.from(
@@ -122,7 +124,7 @@ class NotificationService {
     }
   }
 
-  Future<void> showSimpleNotification() async {
+  Future<void> showSimpleNotification({String title = 'Test Notification', String body = 'This is a test notification'}) async {
     const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       'test_channel',
       'Test Notifications',
@@ -131,14 +133,15 @@ class NotificationService {
       priority: Priority.high,
     );
     const NotificationDetails details = NotificationDetails(android: androidDetails);
-
     await flutterLocalNotificationsPlugin.show(
-      888,
-      'Test Notification',
-      'This is a test notification to verify the system works.',
+      0,
+      title,
+      body,
       details,
     );
   }
+
+
 
   Future<void> showFastingTimerNotification(DateTime endTime) async {
     debugPrint('NotificationService: Showing fasting timer notification. Ends at $endTime');
