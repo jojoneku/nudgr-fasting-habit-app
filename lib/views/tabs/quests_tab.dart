@@ -67,98 +67,136 @@ class _QuestsTabState extends State<QuestsTab> {
       );
     }
 
-    return ListView.builder(
-      itemCount: visibleQuests.length,
-      itemBuilder: (context, index) {
-        final item = visibleQuests[index];
-        final originalIndex = presenter.quests.indexOf(item);
-        final timeOfDay = TimeOfDay(hour: item.hour, minute: item.minute);
-        final timeStr = timeOfDay.format(context);
+    // Sort by time
+    visibleQuests.sort((a, b) {
+      if (a.hour != b.hour) return a.hour.compareTo(b.hour);
+      return a.minute.compareTo(b.minute);
+    });
 
-        // Generate Days Text string
-        String daysText = "Daily";
-        List<bool> days = item.days;
-        if (days.every((d) => !d)) {
-          daysText = "Never";
-        } else if (!days.every((d) => d)) {
-          const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-          daysText = "";
-          for (int i = 0; i < 7; i++) {
-            if (days[i]) daysText += "${labels[i]} ";
-          }
-        }
+    if (widget.isEditing) {
+      return ListView.builder(
+        itemCount: visibleQuests.length,
+        itemBuilder: (context, index) => _buildQuestTile(visibleQuests[index]),
+      );
+    }
 
-        final dismissBackground = Container(
-          color: AppColors.error,
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          child: const Icon(Icons.delete, color: Colors.white),
-        );
+    // View Mode: Split into Active and Finished
+    final activeQuests =
+        visibleQuests.where((q) => !q.isCompletedToday).toList();
+    final finishedQuests =
+        visibleQuests.where((q) => q.isCompletedToday).toList();
 
-        if (widget.isEditing) {
-          // Edit Mode: Show all quests, allow modal editing, keep switch, no right icons
-          return Dismissible(
-            key: Key(item.id.toString()),
-            direction: DismissDirection.endToStart,
-            background: dismissBackground,
-            onDismissed: (direction) => presenter.deleteQuest(originalIndex),
-            child: ListTile(
-              leading: Icon(MdiIcons.swordCross, color: AppColors.neutral),
-              title: Text(item.title,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              subtitle: Text("$timeStr • $daysText"),
-              trailing: Switch(
-                value: item.isEnabled,
-                onChanged: (val) => presenter.toggleQuest(originalIndex, val),
-              ),
-              onTap: () => widget.onEditQuest(item),
-            ),
-          );
-        } else {
-          // View Mode: Show only today's quests, circle check button, grey out completed, no right icons
-          return Dismissible(
-            key: Key(item.id.toString()),
-            direction: DismissDirection.endToStart,
-            background: dismissBackground,
-            onDismissed: (direction) => presenter.deleteQuest(originalIndex),
-            child: ListTile(
-              leading: Icon(
-                MdiIcons.circleDouble,
-                color: item.isCompletedToday
-                    ? AppColors.neutral
-                    : AppColors.primary,
-              ),
-              title: Text(
-                item.title,
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 80),
+      children: [
+        if (activeQuests.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text("Active",
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: item.isCompletedToday ? AppColors.neutral : null,
-                  decoration:
-                      item.isCompletedToday ? TextDecoration.lineThrough : null,
-                  decorationThickness: 2.0,
-                ),
-              ),
-              subtitle: Text(
-                timeStr,
+                    color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
+          ...activeQuests.map(_buildQuestTile),
+        ],
+        if (finishedQuests.isNotEmpty) ...[
+          if (activeQuests.isNotEmpty) const Divider(height: 32),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text("Finished",
                 style: TextStyle(
-                  color: item.isCompletedToday ? AppColors.neutral : null,
-                ),
-              ),
-              trailing: IconButton(
-                icon: Icon(
-                  item.isCompletedToday
-                      ? Icons.check_circle
-                      : Icons.radio_button_unchecked,
-                  color: item.isCompletedToday
-                      ? AppColors.neutral
-                      : AppColors.primary,
-                ),
-                onPressed: () => presenter.completeQuest(originalIndex),
-              ),
-            ),
-          );
-        }
-      },
+                    color: AppColors.neutral, fontWeight: FontWeight.bold)),
+          ),
+          ...finishedQuests.map(_buildQuestTile),
+        ],
+      ],
     );
+  }
+
+  Widget _buildQuestTile(Quest item) {
+    final originalIndex = presenter.quests.indexOf(item);
+    final timeOfDay = TimeOfDay(hour: item.hour, minute: item.minute);
+    final timeStr = timeOfDay.format(context);
+
+    // Generate Days Text string
+    String daysText = "Daily";
+    List<bool> days = item.days;
+    if (days.every((d) => !d)) {
+      daysText = "Never";
+    } else if (!days.every((d) => d)) {
+      const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      daysText = "";
+      for (int i = 0; i < 7; i++) {
+        if (days[i]) daysText += "${labels[i]} ";
+      }
+    }
+
+    final dismissBackground = Container(
+      color: AppColors.error,
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      child: const Icon(Icons.delete, color: Colors.white),
+    );
+
+    if (widget.isEditing) {
+      // Edit Mode: Show all quests, allow modal editing, keep switch, no right icons
+      return Dismissible(
+        key: Key(item.id.toString()),
+        direction: DismissDirection.endToStart,
+        background: dismissBackground,
+        onDismissed: (direction) => presenter.deleteQuest(originalIndex),
+        child: ListTile(
+          leading: Icon(MdiIcons.swordCross, color: AppColors.neutral),
+          title: Text(item.title,
+              style: const TextStyle(fontWeight: FontWeight.bold)),
+          subtitle: Text("$timeStr • $daysText"),
+          trailing: Switch(
+            value: item.isEnabled,
+            onChanged: (val) => presenter.toggleQuest(originalIndex, val),
+          ),
+          onTap: () => widget.onEditQuest(item),
+        ),
+      );
+    } else {
+      // View Mode: Show only today's quests, circle check button, grey out completed, no right icons
+      return Dismissible(
+        key: Key(item.id.toString()),
+        direction: DismissDirection.endToStart,
+        background: dismissBackground,
+        onDismissed: (direction) => presenter.deleteQuest(originalIndex),
+        child: ListTile(
+          leading: Icon(
+            MdiIcons.circleDouble,
+            color:
+                item.isCompletedToday ? AppColors.neutral : AppColors.primary,
+          ),
+          title: Text(
+            item.title,
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: item.isCompletedToday ? AppColors.neutral : null,
+              decoration:
+                  item.isCompletedToday ? TextDecoration.lineThrough : null,
+              decorationThickness: 2.0,
+            ),
+          ),
+          subtitle: Text(
+            timeStr,
+            style: TextStyle(
+              color: item.isCompletedToday ? AppColors.neutral : null,
+            ),
+          ),
+          trailing: IconButton(
+            icon: Icon(
+              item.isCompletedToday
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
+              color:
+                  item.isCompletedToday ? AppColors.neutral : AppColors.primary,
+            ),
+            onPressed: () => presenter.completeQuest(originalIndex),
+          ),
+        ),
+      );
+    }
   }
 }
