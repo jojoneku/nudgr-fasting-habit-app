@@ -4,10 +4,12 @@ import '../models/fasting_log.dart';
 import '../models/quest.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import 'stats_presenter.dart';
 
 class FastingPresenter extends ChangeNotifier {
   final NotificationService _notificationService = NotificationService();
   final StorageService _storageService = StorageService();
+  final StatsPresenter? statsPresenter;
 
   bool isFasting = false;
   DateTime? startTime;
@@ -18,7 +20,7 @@ class FastingPresenter extends ChangeNotifier {
   List<Quest> quests = [];
   Timer? _ticker;
 
-  FastingPresenter() {
+  FastingPresenter({this.statsPresenter}) {
     _init();
   }
 
@@ -177,6 +179,18 @@ class FastingPresenter extends ChangeNotifier {
     // Save state immediately
     await saveState();
 
+    // Award XP
+    if (durationHours >= fastingGoalHours) {
+      final xp = (50 + (durationHours * 10)).round();
+      statsPresenter?.addXp(xp);
+      statsPresenter?.incrementStreak();
+    } else {
+      // Penalty? For now just no XP or small XP
+      final xp = (durationHours * 5).round();
+      statsPresenter?.addXp(xp);
+      statsPresenter?.resetStreak();
+    }
+
     try {
       int eatingWindowHours = 24 - fastingGoalHours;
       final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
@@ -266,8 +280,10 @@ class FastingPresenter extends ChangeNotifier {
     debugPrint('FastingPresenter: Completing quest index $index');
     if (quests[index].isCompletedToday) {
       quests[index].lastCompleted = null; // Toggle off (undo)
+      // Optionally remove XP? For MVP, let's keep it simple and only add on completion
     } else {
       quests[index].lastCompleted = DateTime.now();
+      statsPresenter?.addXp(20); // 20 XP per quest
     }
     notifyListeners(); // Notify immediately
     saveState();

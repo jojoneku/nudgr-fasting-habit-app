@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/stats_presenter.dart';
+import '../services/storage_service.dart';
 import '../models/quest.dart';
 import '../app_colors.dart';
 import 'tabs/timer_tab.dart';
 import 'tabs/quests_tab.dart';
+import 'stats_view.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -15,13 +18,16 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
-  final FastingPresenter _presenter = FastingPresenter();
+  late final FastingPresenter _presenter;
+  late final StatsPresenter _statsPresenter;
   int _selectedIndex = 0;
   bool _isEditingQuests = false;
 
   @override
   void initState() {
     super.initState();
+    _statsPresenter = StatsPresenter(StorageService());
+    _presenter = FastingPresenter(statsPresenter: _statsPresenter);
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -29,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _presenter.dispose();
+    _statsPresenter.dispose();
     super.dispose();
   }
 
@@ -49,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         onEditQuest: _editQuest,
         isEditing: _isEditingQuests,
       ),
+      StatsView(presenter: _statsPresenter),
     ];
 
     return Scaffold(
@@ -176,6 +184,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               icon: Icon(MdiIcons.swordCross),
               selectedIcon: Icon(MdiIcons.swordCross),
               label: 'Quests'),
+          const NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Status'),
         ],
       ),
     );

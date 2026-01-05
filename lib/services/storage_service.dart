@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/fasting_log.dart';
 import '../models/quest.dart';
+import '../models/user_stats.dart';
 
 class StorageService {
   static const String keyIsFasting = 'isFasting';
@@ -12,6 +13,27 @@ class StorageService {
   static const String keyFastingGoalHours = 'fastingGoalHours';
   static const String keyHistory = 'history';
   static const String keyQuests = 'quests';
+  static const String keyUserStats = 'userStats';
+
+  Future<void> saveUserStats(UserStats stats) async {
+    final prefs = await SharedPreferences.getInstance();
+    final statsJson = jsonEncode(stats.toJson());
+    await prefs.setString(keyUserStats, statsJson);
+    debugPrint('StorageService: UserStats saved. Level=${stats.level}');
+  }
+
+  Future<UserStats> loadUserStats() async {
+    final prefs = await SharedPreferences.getInstance();
+    final statsJson = prefs.getString(keyUserStats);
+    if (statsJson != null) {
+      try {
+        return UserStats.fromJson(jsonDecode(statsJson));
+      } catch (e) {
+        debugPrint('StorageService: Error parsing UserStats: $e');
+      }
+    }
+    return UserStats.initial();
+  }
 
   Future<void> saveState({
     required bool isFasting,
