@@ -1,6 +1,6 @@
 {
-    "name": "intermittent_fasting_2",
-    "short_name": "intermittent_fasting_2",
+    "name": "Nudgr",
+    "short_name": "Nudgr",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#hexcode",
