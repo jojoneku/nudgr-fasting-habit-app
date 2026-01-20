@@ -39,19 +39,104 @@ class _QuestsTabState extends State<QuestsTab> {
   Widget _buildQuestsView() {
     final allQuests = presenter.quests;
 
-    // Filter for today if not editing
-    final visibleQuests = widget.isEditing
-        ? allQuests
-        : allQuests.where((q) {
-            if (!q.isEnabled) return false;
-            // Check if today is enabled
-            final today = DateTime.now().weekday; // 1 = Mon, 7 = Sun
-            // days list is 0-indexed (0=Mon, 6=Sun)
-            return q.days[today - 1];
-          }).toList();
+    if (widget.isEditing) {
+      if (allQuests.isEmpty) {
+        return _buildEmptyState();
+      }
+      return ListView.builder(
+        itemCount: allQuests.length,
+        itemBuilder: (context, index) => _buildQuestTile(allQuests[index]),
+      );
+    }
+    
+    // View Mode processing
+    final now = DateTime.now();
+    final todayWeekday = now.weekday; // 1 = Mon
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Get ALL Today's Quests (Scheduled for Today)
+    final todaysQuests = allQuests.where((q) {
+       if (!q.isEnabled) return false;
+       return q.days[todayWeekday - 1];
+    }).toList();
 
-    if (visibleQuests.isEmpty) {
-      return Center(
+    if (todaysQuests.isEmpty) {
+      return _buildEmptyState();
+    }
+    
+    // Filter out Already Completed
+    final uncompletedQuests = todaysQuests.where((q) => !q.isCompletedOn(today)).toList();
+    final finishedQuests = todaysQuests.where((q) => q.isCompletedOn(today)).toList();
+    
+    // Split Uncompleted into "Active" (Future) and "Missed/Overdue" (Past)
+    // Active means Time is >= Now (or reasonably close)
+    // Missed means Time < Now
+    
+    final activeQuests = <Quest>[];
+    final missedQuests = <Quest>[];
+
+    for (var q in uncompletedQuests) {
+      final questTime = DateTime(now.year, now.month, now.day, q.hour, q.minute);
+      if (questTime.isBefore(now)) {
+        missedQuests.add(q);
+      } else {
+        activeQuests.add(q);
+      }
+    }
+    
+    // Sort lists
+    midSort(Quest a, Quest b) {
+      if (a.hour != b.hour) return a.hour.compareTo(b.hour);
+      return a.minute.compareTo(b.minute);
+    }
+    activeQuests.sort(midSort);
+    missedQuests.sort(midSort);
+    finishedQuests.sort(midSort);
+
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 80),
+      children: [
+        if (activeQuests.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text("Active",
+                style: TextStyle(
+                    color: AppColors.primary, fontWeight: FontWeight.bold)),
+          ),
+          ...activeQuests.map((q) => _buildQuestTile(q)),
+        ],
+
+        if (missedQuests.isNotEmpty) ...[
+           Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                const Text("Missed", // "Missed" technically means overdue for today
+                  style: TextStyle(
+                      color: AppColors.error, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                Text("Tap to complete", style: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 12)),
+              ],
+            ),
+          ),
+          ...missedQuests.map((q) => _buildQuestTile(q, isMissed: true)),
+        ],
+        
+        if (finishedQuests.isNotEmpty) ...[
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Text("Finished",
+                style: TextStyle(
+                    color: AppColors.neutral, fontWeight: FontWeight.bold)),
+          ),
+          ...finishedQuests.map((q) => _buildQuestTile(q)),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildEmptyState() {
+     return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -65,54 +150,9 @@ class _QuestsTabState extends State<QuestsTab> {
           ],
         ),
       );
-    }
-
-    // Sort by time
-    visibleQuests.sort((a, b) {
-      if (a.hour != b.hour) return a.hour.compareTo(b.hour);
-      return a.minute.compareTo(b.minute);
-    });
-
-    if (widget.isEditing) {
-      return ListView.builder(
-        itemCount: visibleQuests.length,
-        itemBuilder: (context, index) => _buildQuestTile(visibleQuests[index]),
-      );
-    }
-
-    // View Mode: Split into Active and Finished
-    final activeQuests =
-        visibleQuests.where((q) => !q.isCompletedToday).toList();
-    final finishedQuests =
-        visibleQuests.where((q) => q.isCompletedToday).toList();
-
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 80),
-      children: [
-        if (activeQuests.isNotEmpty) ...[
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text("Active",
-                style: TextStyle(
-                    color: AppColors.primary, fontWeight: FontWeight.bold)),
-          ),
-          ...activeQuests.map(_buildQuestTile),
-        ],
-        if (finishedQuests.isNotEmpty) ...[
-          if (activeQuests.isNotEmpty) const Divider(height: 32),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text("Finished",
-                style: TextStyle(
-                    color: AppColors.neutral, fontWeight: FontWeight.bold)),
-          ),
-          ...finishedQuests.map(_buildQuestTile),
-        ],
-      ],
-    );
   }
 
-  Widget _buildQuestTile(Quest item) {
+  Widget _buildQuestTile(Quest item, {bool isMissed = false}) {
     final originalIndex = presenter.quests.indexOf(item);
     final timeOfDay = TimeOfDay(hour: item.hour, minute: item.minute);
     final timeStr = timeOfDay.format(context);
@@ -140,7 +180,7 @@ class _QuestsTabState extends State<QuestsTab> {
     if (widget.isEditing) {
       // Edit Mode: Show all quests, allow modal editing, keep switch, no right icons
       return Dismissible(
-        key: Key(item.id.toString()),
+        key: Key("edit_${item.id}"),
         direction: DismissDirection.endToStart,
         background: dismissBackground,
         onDismissed: (direction) => presenter.deleteQuest(originalIndex),
@@ -157,17 +197,25 @@ class _QuestsTabState extends State<QuestsTab> {
         ),
       );
     } else {
-      // View Mode: Show only today's quests, circle check button, grey out completed, no right icons
-      return Dismissible(
-        key: Key(item.id.toString()),
-        direction: DismissDirection.endToStart,
-        background: dismissBackground,
-        onDismissed: (direction) => presenter.deleteQuest(originalIndex),
-        child: ListTile(
+      // View Mode
+      // If isMissed = true, we are showing a missed quest (Overdue Today or Yesterday if we kept that)
+      // Since we changed logic to "Missed Today" (Overdue), completion is for Today.
+      
+      final now = DateTime.now();
+      // If we are dealing with "Missed (today)", the completion date is still Today.
+      // Unlike "Missed (Yesterday)" where it was yesterday.
+      final completionDate = DateTime.now();
+          
+      final isCompleted = item.isCompletedOn(completionDate);
+
+      return ListTile(
+          key: Key("view_${item.id}_${isMissed ? 'missed' : 'active'}"),
+          
           leading: Icon(
             MdiIcons.circleDouble,
-            color:
-                item.isCompletedToday ? AppColors.neutral : AppColors.primary,
+            color: isMissed 
+                ? AppColors.error.withValues(alpha: 0.5)
+                : (isCompleted ? AppColors.neutral : AppColors.primary),
           ),
           title: Row(
             mainAxisSize: MainAxisSize.min,
@@ -177,14 +225,13 @@ class _QuestsTabState extends State<QuestsTab> {
                   item.title,
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: item.isCompletedToday ? AppColors.neutral : null,
-                    decoration:
-                        item.isCompletedToday ? TextDecoration.lineThrough : null,
+                    color: isCompleted ? AppColors.neutral : (isMissed ? AppColors.error : null),
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
                     decorationThickness: 2.0,
                   ),
                 ),
               ),
-              if (!item.isCompletedToday) ...[
+              if (!isCompleted) ...[ // Show XP reward if not done
                 const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -206,33 +253,35 @@ class _QuestsTabState extends State<QuestsTab> {
             ],
           ),
           subtitle: Text(
-            timeStr,
+            isMissed ? "Overdue • $timeStr" : timeStr,
             style: TextStyle(
-              color: item.isCompletedToday ? AppColors.neutral : null,
+              color: isCompleted ? AppColors.neutral : (isMissed ? AppColors.textSecondary : null),
             ),
           ),
           trailing: IconButton(
             icon: Icon(
-              item.isCompletedToday
+              isCompleted
                   ? Icons.check_circle
                   : Icons.radio_button_unchecked,
-              color:
-                  item.isCompletedToday ? AppColors.neutral : AppColors.primary,
+              color: isCompleted ? AppColors.neutral : (isMissed ? AppColors.error : AppColors.primary),
             ),
             onPressed: () async {
-              final xp = await presenter.completeQuest(originalIndex);
+              // Pass the correct date!
+              final xp = await presenter.completeQuest(originalIndex, date: completionDate);
+              
               if (xp > 0 && context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text("Quest Complete! +$xp XP"),
-                    backgroundColor: AppColors.success,
+                    content: Text(isMissed 
+                        ? "Completed! +$xp XP" 
+                        : "Quest Complete! +$xp XP"),
+                    backgroundColor: isMissed ? AppColors.secondary : AppColors.success,
                     duration: const Duration(seconds: 2),
                   ),
                 );
               }
             },
           ),
-        ),
       );
     }
   }

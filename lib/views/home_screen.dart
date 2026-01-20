@@ -209,6 +209,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     List<bool> days =
         quest != null ? List.from(quest.days) : List.filled(7, true);
     bool isOneTime = quest?.isOneTime ?? false;
+    int? reminderMinutes = quest?.reminderMinutes; // Default null (None)
     const dayLabels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
     bool submitted = false;
@@ -307,6 +308,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       ),
                     ),
                     const SizedBox(height: 20),
+                    const Text("Reminder"),
+                    DropdownButtonFormField<int?>(
+                      value: reminderMinutes,
+                      decoration: const InputDecoration(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        border: OutlineInputBorder(),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text("None")),
+                        DropdownMenuItem(value: 5, child: Text("5 minutes before")),
+                        DropdownMenuItem(value: 30, child: Text("30 minutes before")),
+                        DropdownMenuItem(value: 60, child: Text("1 hour before")),
+                      ],
+                      onChanged: (val) {
+                        setState(() => reminderMinutes = val);
+                      },
+                    ),
+                    const SizedBox(height: 20),
                     SwitchListTile(
                       title: const Text("One-time Quest"),
                       subtitle: const Text("Deletes after completion"),
@@ -401,10 +420,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final index = _presenter.quests.indexOf(quest);
       if (index != -1) {
         await _presenter.updateQuest(
-            index, safeTitle, time.hour, time.minute, days, isOneTime: isOneTime);
+            index, safeTitle, time.hour, time.minute, days, isOneTime: isOneTime, reminderMinutes: reminderMinutes);
       }
     } else {
-      await _presenter.addQuest(safeTitle, time.hour, time.minute, days, isOneTime: isOneTime);
+      await _presenter.addQuest(safeTitle, time.hour, time.minute, days, isOneTime: isOneTime, reminderMinutes: reminderMinutes);
     }
   }
 }

@@ -32,7 +32,56 @@ class FastingPresenter extends ChangeNotifier {
     
     await _notificationService.init();
     await _notificationService.requestPermissions();
+    
+    // Reschedule all quests to ensure they are on the correct channel and active
+    // This fixes the issue where channel cleanup wipes existing alarms
+    await _rescheduleAllQuests();
+    
+    // Also reschedule active fasting/eating alarms
+    await _rescheduleActiveAlarms();
+    
     debugPrint('FastingPresenter: Initialization complete');
+  }
+
+  Future<void> _rescheduleActiveAlarms() async {
+    debugPrint('FastingPresenter: Rescheduling active alarms...');
+    if (isFasting && startTime != null) {
+      try {
+        // Show persistent notification
+        final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+        await _notificationService.showFastingTimerNotification(endTime);
+        
+        // Schedule end alarm and milestones
+        // We do not cancel old ones here because scheduleFastingAlarm uses fixed IDs (0, 100+)
+        // and usually overwrites them. But for safety against "stuck" eating alarms:
+        await _notificationService.cancelEatingNotifications(); 
+        await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
+      } catch (e) {
+        debugPrint('Error rescheduling fasting alarm: $e');
+      }
+    } else if (eatingStartTime != null) {
+      try {
+        // Show persistent notification
+        int eatingWindowHours = 24 - fastingGoalHours;
+        final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+        await _notificationService.showEatingTimerNotification(eatingEndTime);
+        
+        // Schedule end alarm and milestones
+        await _notificationService.cancelFastingNotifications();
+        await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
+      } catch (e) {
+        debugPrint('Error rescheduling eating alarm: $e');
+      }
+    }
+  }
+
+  Future<void> _rescheduleAllQuests() async {
+    debugPrint('FastingPresenter: Rescheduling all enabled quests...');
+    for (final quest in quests) {
+      if (quest.isEnabled) {
+        await _notificationService.scheduleQuestNotifications(quest);
+      }
+    }
   }
 
   Future<void> loadState() async {
@@ -323,7 +372,7 @@ class FastingPresenter extends ChangeNotifier {
   }
 
   // Quest Methods
-  Future<void> addQuest(String title, int hour, int minute, List<bool> days, {bool isOneTime = false}) async {
+  Future<void> addQuest(String title, int hour, int minute, List<bool> days, {bool isOneTime = false, int? reminderMinutes}) async {
     debugPrint('FastingPresenter: Adding quest - $title');
     int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final quest = Quest(
@@ -334,6 +383,7 @@ class FastingPresenter extends ChangeNotifier {
       days: days,
       isEnabled: true,
       isOneTime: isOneTime,
+      reminderMinutes: reminderMinutes,
     );
     quests.add(quest);
     notifyListeners(); // Notify immediately
@@ -365,7 +415,7 @@ class FastingPresenter extends ChangeNotifier {
     saveState();
   }
 
-  Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days, {bool isOneTime = false}) async {
+  Future<void> updateQuest(int index, String title, int hour, int minute, List<bool> days, {bool isOneTime = false, int? reminderMinutes}) async {
     debugPrint('FastingPresenter: Updating quest index $index - $title');
     final quest = quests[index];
     
@@ -374,6 +424,7 @@ class FastingPresenter extends ChangeNotifier {
     quest.minute = minute;
     quest.days = days;
     quest.isOneTime = isOneTime;
+    quest.reminderMinutes = reminderMinutes;
     notifyListeners(); // Notify immediately
     
     await _notificationService.cancelQuestNotifications(quest);
@@ -384,53 +435,47 @@ class FastingPresenter extends ChangeNotifier {
     saveState();
   }
 
-  Future<int> completeQuest(int index) async {
+  Future<int> completeQuest(int index, {DateTime? date}) async {
     debugPrint('FastingPresenter: Completing quest index $index');
     int xpGained = 0;
     final quest = quests[index];
-    final now = DateTime.now();
+    final completionDate = date ?? DateTime.now();
 
-    if (quest.isCompletedToday) {
-      quest.lastCompleted = null; // Toggle off (undo)
+    if (quest.isCompletedOn(completionDate)) {
+      // Toggle off (undo) - Remove date
+      final dateStr = completionDate.toIso8601String().split('T')[0];
+      quest.completedDates.remove(dateStr);
       // Do not remove XP, do not reset lastXpAwarded to prevent farming
     } else {
-      quest.lastCompleted = now;
+      // Mark as completed
+      quest.lastCompleted = completionDate; // Uses setter to add to list
       
-      // Check if XP was already awarded today
-      bool alreadyAwarded = false;
+      // Check if XP was already awarded today (or on the completion date?)
+      // The requirement says "daily quests".
+      // If I complete yesterday's quest today, should I gain XP? Yes.
+      // But avoid double dipping for the SAME day.
+      // lastXpAwarded tracks WHEN we gave XP.
+      // If we give XP now, we update lastXpAwarded to now.
+      
+      bool alreadyAwardedToday = false;
+      final now = DateTime.now();
+      
       if (quest.lastXpAwarded != null) {
         if (quest.lastXpAwarded!.year == now.year &&
             quest.lastXpAwarded!.month == now.month &&
             quest.lastXpAwarded!.day == now.day) {
-          alreadyAwarded = true;
+          alreadyAwardedToday = true;
         }
       }
 
-      if (!alreadyAwarded) {
+      if (!alreadyAwardedToday) {
         xpGained = quest.xpReward;
         statsPresenter?.addXp(xpGained);
-        quest.lastXpAwarded = now;
+        quest.lastXpAwarded = now; // Awarded NOW
       }
 
       if (quest.isOneTime) {
-        // Delete one-time quest after completion
-        // Wait a bit so the user sees the checkmark animation?
-        // Or just disable it?
-        // Let's delete it for now, but maybe we need to handle the index shift if we delete immediately.
-        // Actually, if we delete it, the UI might break if it's building the list.
-        // Safer to mark it disabled or delete it after a delay.
-        // But for MVP, let's just delete it and let the UI rebuild.
-        // Wait, if we delete it, the `index` passed to this function becomes invalid for subsequent operations if any.
-        // But we are at the end of the function.
-        // However, `quests[index]` is used.
-        // Let's just delete it.
-        // BUT: If we delete it, the user can't "undo" it if they clicked by mistake.
-        // So maybe just disable it?
-        // "One time" implies it's gone.
-        // Let's remove it.
         await deleteQuest(index);
-        // Since we deleted it, we shouldn't save state again at the end of this function if deleteQuest already saves.
-        // deleteQuest saves state.
         return xpGained;
       }
     }
@@ -456,7 +501,8 @@ class FastingPresenter extends ChangeNotifier {
   
   Future<void> testNotification() async {
     await _notificationService.requestPermissions();
-    await _notificationService.showSimpleNotification();
+    // Fire all types of notifications to verify channels
+    await _notificationService.testAllChannels();
   }
 
   Future<void> addTestData() async {
@@ -525,6 +571,27 @@ class FastingPresenter extends ChangeNotifier {
     startTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(startTime!).inSeconds;
+
+    // Sync with previous history log (End of previous eating window)
+    if (history.isNotEmpty) {
+      final lastLog = history.first;
+      if (lastLog.eatingStart.isBefore(newStartTime)) {
+         debugPrint('FastingPresenter: Syncing previous log eatingEnd to $newStartTime');
+         lastLog.eatingEnd = newStartTime;
+         lastLog.eatingDuration = newStartTime.difference(lastLog.eatingStart).inSeconds / 3600.0;
+      }
+    }
+
+    // Reschedule notifications since end time changed
+    try {
+        final endTime = startTime!.add(Duration(hours: fastingGoalHours));
+        await _notificationService.showFastingTimerNotification(endTime);
+        await _notificationService.cancelFastingNotifications(); // Reset milestones
+        await _notificationService.scheduleFastingAlarm(startTime!, fastingGoalHours);
+    } catch(e) { 
+      debugPrint('Error rescheduling fasting notifications: $e');
+    }
+
     notifyListeners();
     await saveState();
   }
@@ -534,6 +601,34 @@ class FastingPresenter extends ChangeNotifier {
     eatingStartTime = newStartTime;
     final now = DateTime.now();
     elapsedSeconds = now.difference(eatingStartTime!).inSeconds;
+
+    // Sync with most recent history log (End of just-finished fast)
+    if (history.isNotEmpty) {
+      final lastLog = history.first;
+      debugPrint('FastingPresenter: Syncing recent log fastEnd to $newStartTime');
+      
+      // Update times
+      lastLog.fastEnd = newStartTime;
+      lastLog.eatingStart = newStartTime;
+      
+      // Recalculate stats
+      final durationHours = newStartTime.difference(lastLog.fastStart).inSeconds / 3600.0;
+      lastLog.fastDuration = durationHours;
+      lastLog.success = durationHours >= lastLog.goalDuration;
+    }
+
+    // Reschedule eating notifications since window changed
+     try {
+      int eatingWindowHours = 24 - fastingGoalHours;
+      final eatingEndTime = eatingStartTime!.add(Duration(hours: eatingWindowHours));
+      await _notificationService.showEatingTimerNotification(eatingEndTime);
+      
+      await _notificationService.cancelEatingNotifications();
+      await _notificationService.scheduleEatingAlarm(eatingStartTime!, fastingGoalHours);
+    } catch (e) {
+       debugPrint('Error rescheduling eating notifications: $e');
+    }
+
     notifyListeners();
     await saveState();
   }
