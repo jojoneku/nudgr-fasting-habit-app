@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "intermittent_fasting_2" "\0"
+            VALUE "FileDescription", "Nudgr" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "intermittent_fasting_2" "\0"
+            VALUE "InternalName", "Nudgr" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "intermittent_fasting_2.exe" "\0"
-            VALUE "ProductName", "intermittent_fasting_2" "\0"
+            VALUE "OriginalFilename", "Nudgr.exe" "\0"
+            VALUE "ProductName", "Nudgr" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
