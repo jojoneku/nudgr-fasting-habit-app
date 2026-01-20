@@ -127,4 +127,46 @@ class StorageService {
       'lastPenaltyCheckDate': lastPenaltyCheckDate,
     };
   }
+
+  Future<String> exportAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final allData = <String, dynamic>{};
+    final keys = prefs.getKeys();
+    
+    for (String key in keys) {
+      allData[key] = prefs.get(key);
+    }
+    
+    return jsonEncode(allData);
+  }
+
+  Future<void> importAllData(String jsonString) async {
+    final prefs = await SharedPreferences.getInstance();
+    try {
+      final Map<String, dynamic> data = jsonDecode(jsonString);
+      
+      // Clear existing first? Maybe safer to just overwrite.
+      // But clearing ensures no stale keys remain.
+      await prefs.clear();
+
+      for (String key in data.keys) {
+        final value = data[key];
+        if (value is bool) {
+          await prefs.setBool(key, value);
+        } else if (value is int) {
+          await prefs.setInt(key, value);
+        } else if (value is double) {
+          await prefs.setDouble(key, value);
+        } else if (value is String) {
+          await prefs.setString(key, value);
+        } else if (value is List) {
+           await prefs.setStringList(key, List<String>.from(value));
+        }
+      }
+      debugPrint('StorageService: Import successful. Keys: ${data.keys.toList()}');
+    } catch (e) {
+      debugPrint('StorageService: Import failed: $e');
+      throw Exception('Invalid data format');
+    }
+  }
 }

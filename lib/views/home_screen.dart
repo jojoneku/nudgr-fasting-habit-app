@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/fasting_presenter.dart';
@@ -115,6 +116,125 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                               const SnackBar(content: Text('Notification sent! Check status bar.')),
                             );
                           }
+                        },
+                      ),
+                      const Divider(),
+                       ListTile(
+                        leading: const Icon(Icons.upload_file, color: AppColors.primary),
+                        title: const Text('Export Data'),
+                        subtitle: const Text('Copy data to clipboard'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final data = await _presenter.exportData();
+                          if (context.mounted) {
+                            await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Export Data'),
+                                content: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Text('Copy this code and save it somewhere safe:'),
+                                    const SizedBox(height: 10),
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      color: Colors.black12,
+                                      constraints: const BoxConstraints(maxHeight: 150),
+                                      child: SingleChildScrollView(
+                                        child: Text(data, style: const TextStyle(fontFamily: 'monospace', fontSize: 10)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                actions: [
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.copy),
+                                    label: const Text('Copy to Clipboard'),
+                                    onPressed: () async {
+                                      await Clipboard.setData(ClipboardData(text: data));
+                                      if (context.mounted) {
+                                         Navigator.pop(context);
+                                         ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Data copied to clipboard!')),
+                                          );
+                                      }
+                                    },
+                                  ),
+                                  TextButton(
+                                    child: const Text('Close'),
+                                    onPressed: () => Navigator.pop(context),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                       ListTile(
+                        leading: const Icon(Icons.download, color: AppColors.success),
+                        title: const Text('Import Data'),
+                        subtitle: const Text('Restore from clipboard/code'),
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final controller = TextEditingController();
+                          await showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: const Text('Import Data'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Text('Paste your data code here. WARNING: This will overwrite current data!'),
+                                  const SizedBox(height: 10),
+                                  TextField(
+                                    controller: controller,
+                                    maxLines: 5,
+                                    decoration: const InputDecoration(
+                                      border: OutlineInputBorder(),
+                                      hintText: 'Paste data here...',
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton.icon(
+                                  icon: const Icon(Icons.content_paste),
+                                  label: const Text('Paste'),
+                                  onPressed: () async {
+                                    final data = await Clipboard.getData(Clipboard.kTextPlain);
+                                    if (data?.text != null) {
+                                      controller.text = data!.text!;
+                                    }
+                                  },
+                                ),
+                                TextButton(
+                                  child: const Text('Cancel'),
+                                  onPressed: () => Navigator.pop(context),
+                                ),
+                                TextButton(
+                                  child: const Text('Import'),
+                                  onPressed: () async {
+                                    if (controller.text.isEmpty) return;
+                                    try {
+                                      await _presenter.importData(controller.text);
+                                      if (context.mounted) {
+                                        Navigator.pop(context);
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Data imported successfully!')),
+                                        );
+                                      }
+                                    } catch (e) {
+                                       if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(content: Text('Import failed: $e'), backgroundColor: AppColors.danger),
+                                        );
+                                      }
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
                         },
                       ),
                       const Divider(),

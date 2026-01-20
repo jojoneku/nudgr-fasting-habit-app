@@ -14,6 +14,10 @@ class StatsPresenter extends ChangeNotifier {
   UserStats get stats => _stats;
 
   Future<void> _init() async {
+    await loadStats();
+  }
+
+  Future<void> loadStats() async {
     _stats = await _storageService.loadUserStats();
     notifyListeners();
   }

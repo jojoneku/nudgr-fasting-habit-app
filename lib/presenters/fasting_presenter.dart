@@ -633,6 +633,30 @@ class FastingPresenter extends ChangeNotifier {
     await saveState();
   }
 
+  Future<String> exportData() async {
+     return await _storageService.exportAllData();
+  }
+
+  Future<void> importData(String jsonString) async {
+    debugPrint('FastingPresenter: Importing data...');
+    try {
+      await _storageService.importAllData(jsonString);
+      // Reload everything
+      await loadState();
+      await statsPresenter?.loadStats(); // Reload stats too
+      
+      // Reschedule alarms based on new data
+      await _notificationService.cancelAll();
+      await _rescheduleActiveAlarms();
+      await _rescheduleAllQuests();
+      
+      notifyListeners();
+    } catch (e) {
+      debugPrint('FastingPresenter: Import failed: $e');
+      rethrow;
+    }
+  }
+
   @override
   void dispose() {
     _ticker?.cancel();

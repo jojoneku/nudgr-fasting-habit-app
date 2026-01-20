@@ -18,16 +18,16 @@ class NotificationService {
   NotificationService._internal();
 
   // Channel IDs and Names
-  static const String channelIdFastingTimer = 'fasting_timer_channel_v5';
+  static const String channelIdFastingTimer = 'fasting_timer_channel_v6';
   static const String channelNameFastingTimer = 'Active Fasting Timer';
   
-  static const String channelIdEatingTimer = 'eating_timer_channel_v5';
+  static const String channelIdEatingTimer = 'eating_timer_channel_v6';
   static const String channelNameEatingTimer = 'Active Eating Timer';
   
-  static const String channelIdMilestones = 'milestones_channel_v5';
+  static const String channelIdMilestones = 'milestones_channel_v6';
   static const String channelNameMilestones = 'Fasting & Eating Alerts';
   
-  static const String channelIdQuests = 'quests_channel_v5';
+  static const String channelIdQuests = 'quests_channel_v6';
   static const String channelNameQuests = 'Daily Quests';
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -584,7 +584,8 @@ class NotificationService {
     while (scheduledDate.weekday != dayOfWeek) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
-    if (scheduledDate.isBefore(now)) {
+    // Allow scheduling for the current time if it's within the last minute (to fix "Test Now" scenarios)
+    if (scheduledDate.isBefore(now.subtract(const Duration(minutes: 1)))) {
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
     return scheduledDate;
