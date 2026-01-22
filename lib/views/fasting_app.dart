@@ -48,6 +48,7 @@ class FastingApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Nudgr',
       theme: _buildTheme(Brightness.dark), // Force dark theme for Solo Leveling vibe
       darkTheme: _buildTheme(Brightness.dark),

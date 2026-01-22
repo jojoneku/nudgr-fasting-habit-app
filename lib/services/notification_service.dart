@@ -67,7 +67,7 @@ class NotificationService {
     }
 
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@drawable/ic_notification');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings = InitializationSettings(
       android: initializationSettingsAndroid,
@@ -491,7 +491,7 @@ class NotificationService {
             "It's time for your quest!",
             scheduledDate,
             details,
-            androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+            androidScheduleMode: AndroidScheduleMode.alarmClock,
             uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
             matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
           );
@@ -527,7 +527,7 @@ class NotificationService {
                 "${quest.reminderMinutes} minutes until your quest!",
                 reminderDate,
                 details, // Reuse mostly same details (maybe sound different?)
-                androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+                androidScheduleMode: AndroidScheduleMode.alarmClock,
                 uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
                 matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
               );
@@ -647,7 +647,7 @@ class NotificationService {
         body,
         scheduledDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (e) {
