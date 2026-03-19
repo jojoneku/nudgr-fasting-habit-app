@@ -37,6 +37,8 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 | `/review` | Review code against architecture and UX rules |
 | `/plan` | Generate a step-by-step implementation plan |
 | `/ui-ux-pro-max` | UI/UX design intelligence — styles, colors, fonts, UX guidelines, Flutter patterns |
+| `/git-workflow` | Branching strategy, Conventional Commits, PR creation, merge, conflict resolution |
+| `/github-pr-review` | Review PRs via gh CLI — pending reviews, code suggestions, approval workflow |
 
 Skills live in `.claude/skills/` — each is a directory with a `SKILL.md` entrypoint.
 
