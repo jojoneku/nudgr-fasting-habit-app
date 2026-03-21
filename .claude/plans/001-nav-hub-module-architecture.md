@@ -1,7 +1,8 @@
 # Feature Implementation Plan: Scalable Module Navigation (Hub Architecture)
 
-> Status: DRAFT — awaiting approval
+> Status: IMPLEMENTED
 > Created: 2026-03-20
+> Implemented: 2026-03-21 — branch `feat/nav-hub-architecture`
 
 ---
 
@@ -35,11 +36,22 @@ No existing spec — this is a structural/navigation refactor. No model or persi
 class AppShell extends StatefulWidget { }
 
 // === HubScreen ===
+// Uses a callback-per-module pattern so new modules never require a new constructor param.
+// Each module registers a subtitle getter and a navigator callback at AppShell level.
 class HubScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final StatsPresenter statsPresenter;
+  // Extra subtitle overrides: moduleId → subtitle string getter
+  // Populated by AppShell as new modules (Nutrition, Activity, Treasury) are added.
+  // e.g. { 'calories': () => nutritionPresenter.summaryLabel }
+  final Map<String, String Function()> moduleSubtitleGetters;
+  final Map<String, VoidCallback> moduleOnTapOverrides;
   // GridView of ModuleCards — Navigator.push on tap
 }
+
+// ⚠️ Scalability contract: when Plans 002/003/004 unlock their Hub cards,
+// AppShell passes the new presenter's subtitle getter and onTap into these maps.
+// HubScreen itself never gains new constructor params for individual modules.
 
 // === ModuleCard ===
 class ModuleCard extends StatelessWidget {
@@ -60,13 +72,13 @@ class SettingsScreen extends StatelessWidget {
 ```
 
 ## Implementation Order
-1. [ ] Create `ModuleCard` widget — standalone, no presenter dependency
-2. [ ] Create `HubScreen` — GridView of ModuleCards, `Navigator.push` to module screens
-3. [ ] Rewrite `HomeScreen` → `AppShell` — 2-item bottom nav (Hub | Character)
-4. [ ] Give `TimerTab` its own AppBar when pushed as a full screen
-5. [ ] Move `_showQuestDialog()` + add/edit actions into `QuestsTab` own AppBar
-6. [ ] Create `SettingsScreen` — move AlertDialog contents to a proper push route
-7. [ ] Add settings gear icon entry point in `StatsView` header
+1. [x] Create `ModuleCard` widget — standalone, no presenter dependency
+2. [x] Create `HubScreen` — GridView of ModuleCards, `Navigator.push` to module screens
+3. [x] Rewrite `HomeScreen` → `AppShell` — 2-item bottom nav (Hub | Character)
+4. [x] Give `TimerTab` its own AppBar when pushed as a full screen (wrapped in HubScreen push)
+5. [x] Move `_showQuestDialog()` + add/edit actions into `QuestsTab` own AppBar
+6. [x] Create `SettingsScreen` — move AlertDialog contents to a proper push route
+7. [x] Add settings gear icon entry point in `StatsView` header
 8. [ ] UX verification — all nav flows, back button, presenter lifetime
 
 ## RPG Impact

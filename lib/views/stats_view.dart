@@ -5,6 +5,7 @@ import '../presenters/fasting_presenter.dart';
 import '../models/user_stats.dart';
 import 'widgets/level_up_overlay.dart';
 import 'widgets/stat_radar_chart.dart';
+import 'settings_screen.dart';
 
 class StatsView extends StatelessWidget {
   final StatsPresenter presenter;
@@ -41,19 +42,36 @@ class StatsView extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Header
-                            const Center(
-                              child: Text(
-                                "STATUS",
-                                style: TextStyle(
-                                  color: AppColors.textPrimary,
-                                  fontSize: 18,
-                                  letterSpacing: 4.0,
-                                  fontWeight: FontWeight.bold,
-                                  shadows: [
-                                    Shadow(color: AppColors.primary, blurRadius: 8),
-                                  ],
+                            Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                const Text(
+                                  "STATUS",
+                                  style: TextStyle(
+                                    color: AppColors.textPrimary,
+                                    fontSize: 18,
+                                    letterSpacing: 4.0,
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(color: AppColors.primary, blurRadius: 8),
+                                    ],
+                                  ),
                                 ),
-                              ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: IconButton(
+                                    icon: const Icon(Icons.settings_outlined,
+                                        color: AppColors.textSecondary, size: 20),
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => SettingsScreen(
+                                            presenter: fastingPresenter),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 20),
                             
