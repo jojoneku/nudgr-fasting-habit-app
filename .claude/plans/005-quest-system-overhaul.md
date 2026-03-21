@@ -167,6 +167,10 @@ class QuestPresenter extends ChangeNotifier {
   // Returns: (xpGained, isCritical) — isCritical = variable 2× bonus triggered
   Future<(int, bool)> completeQuest(String questId, {CompletionType type = CompletionType.full});
   // ^ Awards XP, updates streak, checks for achievements, checks stat contribution
+  //
+  // ⚠️ XP ROUTING NOTE: In this plan, XP is awarded via StatsPresenter.addXp() directly.
+  // Plan 008 (Gamification Overhaul) will refactor these calls to route through
+  // GamificationService.fireEvent() instead. Do NOT treat direct calls here as final.
 
   // Grace period: allow logging yesterday's quest up to 30 min after midnight
   bool canGraceComplete(String questId); // true if within grace window

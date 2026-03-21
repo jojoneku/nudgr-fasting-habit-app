@@ -1,7 +1,8 @@
 # Feature Implementation Plan: Calorie Counting Module (Alchemy Lab)
 
-> Status: DRAFT — awaiting approval
+> Status: SUPERSEDED by `007-calorie-counting-v2.md`
 > Created: 2026-03-20
+> ⚠️ Do NOT implement this plan. Plan 007 covers all of 002's scope plus significant extensions (tracking modes, food library, TDEE, IF-Sync, macro RPG hooks). Implement 007 directly.
 
 ---
 

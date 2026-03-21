@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
-import 'home_screen.dart';
+import 'home_screen.dart'; // AppShell (HomeScreen alias)
 
 class FastingApp extends StatelessWidget {
   const FastingApp({super.key});

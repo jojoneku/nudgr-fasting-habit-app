@@ -4,6 +4,26 @@
 
 ---
 
+## Conflict Check (complete before writing anything else)
+
+Before finalising this plan, verify the following against all existing plans in `.claude/plans/`:
+
+| Check | Question | Finding |
+|---|---|---|
+| **File overlap** | Does any existing plan Create or Modify the same files listed below? | |
+| **Model overlap** | Does any plan define the same model class or add the same StorageService key? | |
+| **Presenter split** | Is the logic being added already owned by another plan's new Presenter? | |
+| **XP routing** | Does this plan call `StatsPresenter.addXp()` directly? (Flag if Plan 008 is not yet merged — calls will be refactored.) | |
+| **HubScreen** | Does this plan unlock a Hub card? If so, use `moduleSubtitleGetters`/`moduleOnTapOverrides` pattern from Plan 001 — not new constructor params. | |
+| **Supersedes** | Does this plan make an older plan redundant? Mark the older plan SUPERSEDED. | |
+| **Dependency order** | List every plan that must ship before this one can be implemented. | |
+
+> If any row has a finding, resolve it before implementation begins — either by adjusting this plan, updating the conflicting plan, or explicitly sequencing them.
+
+---
+
+---
+
 ## Feature Name
 [Name of the feature]
 
