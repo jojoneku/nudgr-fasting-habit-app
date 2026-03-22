@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
+import '../services/ai_estimation_service.dart';
+import '../services/food_db_service.dart';
 import '../services/storage_service.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
@@ -14,16 +17,33 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
-  late final FastingPresenter _fastingPresenter;
+  late final StorageService _storage;
   late final StatsPresenter _statsPresenter;
+  late final FastingPresenter _fastingPresenter;
+  late final FoodDbService _foodDb;
+  late final AiEstimationService _aiEstimation;
+  NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _statsPresenter = StatsPresenter(StorageService());
+    _storage        = StorageService();
+    _statsPresenter = StatsPresenter(_storage);
     _fastingPresenter = FastingPresenter(statsPresenter: _statsPresenter);
+    _foodDb       = FoodDbService();
+    _aiEstimation = AiEstimationService();
+    _nutritionPresenter = NutritionPresenter(
+      statsPresenter:   _statsPresenter,
+      fastingPresenter: _fastingPresenter,
+      storage:          _storage,
+      foodDb:           _foodDb,
+      aiEstimation:     _aiEstimation,
+    );
     WidgetsBinding.instance.addObserver(this);
+    // Run after first frame so the widget tree is fully built before any
+    // platform-channel work (FlutterGemma.initialize) starts.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _aiEstimation.init());
   }
 
   @override
@@ -31,6 +51,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _fastingPresenter.dispose();
     _statsPresenter.dispose();
+    _nutritionPresenter?.dispose();
     super.dispose();
   }
 
@@ -47,6 +68,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       HubScreen(
         fastingPresenter: _fastingPresenter,
         statsPresenter: _statsPresenter,
+        nutritionPresenter: _nutritionPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,
