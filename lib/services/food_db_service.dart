@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -23,8 +24,13 @@ class FoodDbService {
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   Future<void> init() async {
-    final path = await _resolveDbPath();
-    _db = await openDatabase(path, readOnly: true);
+    try {
+      final path = await _resolveDbPath();
+      _db = await openDatabase(path, readOnly: true);
+    } catch (e) {
+      // Asset not bundled or copy failed — search will return empty results.
+      debugPrint('FoodDbService: init failed: $e');
+    }
   }
 
   Future<void> close() async {
