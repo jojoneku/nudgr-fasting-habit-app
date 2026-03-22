@@ -14,10 +14,18 @@ import '../models/ai_meal_estimate.dart';
 ///   2. User triggers [downloadModel] to download on first use.
 ///   3. Call [estimate] to get structured calorie breakdown.
 class AiEstimationService {
-  // Gemma 3 270M IT Q8 — litert-community public repo, ~450 MB.
+  // Gemma 3 1B IT Q8 — litert-community gated repo, ~700 MB.
+  // Requires a HuggingFace account with access granted at:
+  // https://huggingface.co/litert-community/Gemma3-1B-IT
   static const _modelUrl =
-      'https://huggingface.co/litert-community/gemma-3-270m-it/resolve/main/gemma3-270m-it-q8.task';
-  static const _modelSizeLabel = '~450 MB';
+      'https://huggingface.co/litert-community/Gemma3-1B-IT/resolve/main/gemma3-1b-it-int4.task';
+  static const _modelSizeLabel = '~700 MB';
+
+  /// HuggingFace read token — required to download the gated model.
+  /// Generate one at https://huggingface.co/settings/tokens
+  final String? huggingFaceToken;
+
+  AiEstimationService({this.huggingFaceToken});
 
   // System prompt that constrains the model to JSON-only output.
   static const _systemPrompt =
@@ -45,7 +53,7 @@ class AiEstimationService {
 
   /// Call once at app startup. Loads an already-installed model silently.
   Future<void> init() async {
-    await FlutterGemma.initialize();
+    await FlutterGemma.initialize(huggingFaceToken: huggingFaceToken);
     if (!FlutterGemma.hasActiveModel()) return;
     try {
       _model = await FlutterGemma.getActiveModel(
@@ -75,7 +83,7 @@ class AiEstimationService {
     _downloadProgress = 0;
 
     try {
-      await FlutterGemma.initialize();
+      await FlutterGemma.initialize(huggingFaceToken: huggingFaceToken);
       await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
           .fromNetwork(_modelUrl)
           .withProgress((p) {

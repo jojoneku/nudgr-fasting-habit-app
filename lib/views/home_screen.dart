@@ -32,7 +32,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _statsPresenter = StatsPresenter(_storage);
     _fastingPresenter = FastingPresenter(statsPresenter: _statsPresenter);
     _foodDb       = FoodDbService();
-    _aiEstimation = AiEstimationService();
+    _aiEstimation = AiEstimationService(
+      huggingFaceToken: const String.fromEnvironment('HF_TOKEN'),
+    );
     _nutritionPresenter = NutritionPresenter(
       statsPresenter:   _statsPresenter,
       fastingPresenter: _fastingPresenter,
