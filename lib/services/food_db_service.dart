@@ -1,32 +1,99 @@
+import 'dart:io';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:path_provider/path_provider.dart';
+import 'package:sqflite/sqflite.dart';
 import '../models/food_db_entry.dart';
 
-/// Stub implementation — real SQLite integration tracked in plan 009.
-/// Returns empty results until the food DB asset is bundled.
-/// Interface is final; swap the body of each method when plan 009 lands.
+/// Wraps the bundled SQLite food database (assets/food_db.sqlite).
+///
+/// On first launch, copies the asset to the app documents directory so
+/// sqflite can open it (Flutter assets are read-only and not directly
+/// openable by sqflite on all platforms).
+///
+/// Subsequent launches skip the copy — versioned filename ensures a
+/// schema bump triggers a fresh copy automatically.
 class FoodDbService {
-  bool _initialized = false;
+  static const _assetPath = 'assets/food_db.sqlite';
+  static const _dbFilename = 'food_db_v1.sqlite';
+
+  Database? _db;
+
+  bool get isReady => _db != null;
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   Future<void> init() async {
-    // TODO (plan 009): copy bundled asset → writable path, open sqflite DB
-    _initialized = true;
-  }
-
-  Future<List<FoodDbEntry>> search(String query) async {
-    if (!_initialized || query.trim().isEmpty) return [];
-    // TODO (plan 009): FTS5 MATCH query against SQLite DB
-    return [];
-  }
-
-  Future<FoodDbEntry?> getById(String id) async {
-    if (!_initialized) return null;
-    // TODO (plan 009): SELECT from SQLite DB by ID
-    return null;
+    final path = await _resolveDbPath();
+    _db = await openDatabase(path, readOnly: true);
   }
 
   Future<void> close() async {
-    // TODO (plan 009): close sqflite DB
-    _initialized = false;
+    await _db?.close();
+    _db = null;
   }
 
-  bool get isAvailable => _initialized;
+  // ── Queries ───────────────────────────────────────────────────────────────
+
+  /// FTS5 prefix search — returns up to 20 matches for [query].
+  /// Returns [] when the DB is not initialised or query is blank.
+  Future<List<FoodDbEntry>> search(String query) async {
+    if (_db == null || query.trim().isEmpty) return [];
+
+    final q = '${query.trim().replaceAll('"', '""')}*';
+
+    try {
+      final rows = await _db!.rawQuery(
+        'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
+        'FROM foods f '
+        'JOIN foods_fts ON foods_fts.rowid = f.rowid '
+        'WHERE foods_fts MATCH ? '
+        'LIMIT 20',
+        [q],
+      );
+      return rows.map(FoodDbEntry.fromRow).toList();
+    } catch (_) {
+      // FTS5 not available on this SQLite build — fall back to LIKE
+      return _searchLike(query);
+    }
+  }
+
+  /// Exact lookup by USDA FDC id.
+  Future<FoodDbEntry?> getById(String id) async {
+    if (_db == null) return null;
+    final rows = await _db!.query(
+      'foods',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    return rows.isEmpty ? null : FoodDbEntry.fromRow(rows.first);
+  }
+
+  // ── Internals ─────────────────────────────────────────────────────────────
+
+  Future<String> _resolveDbPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    final path = '${dir.path}/$_dbFilename';
+
+    if (!File(path).existsSync()) {
+      final data = await rootBundle.load(_assetPath);
+      await File(path).writeAsBytes(
+        data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+        flush: true,
+      );
+    }
+
+    return path;
+  }
+
+  Future<List<FoodDbEntry>> _searchLike(String query) async {
+    final pattern = '%${query.trim()}%';
+    final rows = await _db!.query(
+      'foods',
+      where: 'name LIKE ?',
+      whereArgs: [pattern],
+      limit: 20,
+    );
+    return rows.map(FoodDbEntry.fromRow).toList();
+  }
 }

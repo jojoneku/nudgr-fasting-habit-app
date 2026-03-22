@@ -41,9 +41,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       aiEstimation:     _aiEstimation,
     );
     WidgetsBinding.instance.addObserver(this);
-    // Run after first frame so the widget tree is fully built before any
-    // platform-channel work (FlutterGemma.initialize) starts.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _aiEstimation.init());
+    // Run heavy I/O after the first frame so the widget tree renders first.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _foodDb.init();       // copy asset → documents dir if needed
+      _aiEstimation.init();       // non-blocking — loads Gemma if installed
+    });
   }
 
   @override
