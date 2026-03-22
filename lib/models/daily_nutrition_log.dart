@@ -37,27 +37,42 @@ class DailyNutritionLog {
   // ── Serialization ─────────────────────────────────────────────────────────────
 
   factory DailyNutritionLog.fromJson(Map<String, dynamic> json) {
-    // Migration: legacy v1 flat list → snack slot
+    // Migration v1: legacy flat list → meal slot
     if (json.containsKey('entries')) {
       final entries = (json['entries'] as List<dynamic>)
           .map((e) => FoodEntry.fromJson(e as Map<String, dynamic>))
           .toList();
       return DailyNutritionLog(
         date: json['date'] as String,
-        meals: {MealSlot.snack: entries},
+        meals: {MealSlot.meal: entries},
       );
     }
 
     final mealsJson = json['meals'] as Map<String, dynamic>? ?? {};
-    final meals = <MealSlot, List<FoodEntry>>{};
+
+    // Migration v2: merge old breakfast/lunch/dinner/snack slots → meal slot
+    final allEntries = <FoodEntry>[];
+    bool needsMigration = false;
     for (final entry in mealsJson.entries) {
       final slot = MealSlot.fromJson(entry.key);
       final entries = (entry.value as List<dynamic>)
           .map((e) => FoodEntry.fromJson(e as Map<String, dynamic>))
           .toList();
-      meals[slot] = entries;
+      if (slot != MealSlot.meal) needsMigration = true;
+      allEntries.addAll(entries);
     }
-    return DailyNutritionLog(date: json['date'] as String, meals: meals);
+
+    if (needsMigration) {
+      return DailyNutritionLog(
+        date: json['date'] as String,
+        meals: allEntries.isEmpty ? {} : {MealSlot.meal: allEntries},
+      );
+    }
+
+    return DailyNutritionLog(
+      date: json['date'] as String,
+      meals: {MealSlot.meal: allEntries},
+    );
   }
 
   Map<String, dynamic> toJson() => {

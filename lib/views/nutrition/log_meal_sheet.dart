@@ -36,7 +36,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
   @override
   void initState() {
     super.initState();
-    _slot = widget.preselectedSlot ?? MealSlot.lunch;
+    _slot = MealSlot.meal;
     _searchCtrl.addListener(_onSearchChanged);
   }
 
@@ -74,8 +74,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
           children: [
             _buildHeader(),
             const SizedBox(height: 16),
-            _buildSlotPicker(),
-            const SizedBox(height: 16),
             _buildAiSection(),
             const SizedBox(height: 16),
             _buildSearchSection(),
@@ -110,42 +108,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
     );
   }
 
-  Widget _buildSlotPicker() {
-    return SizedBox(
-      height: 36,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        children: MealSlot.values.map((slot) {
-          final selected = slot == _slot;
-          return Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: GestureDetector(
-              onTap: () => setState(() => _slot = slot),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: selected
-                      ? AppColors.gold.withValues(alpha: 0.2)
-                      : AppColors.background,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: selected
-                        ? AppColors.gold
-                        : AppColors.textSecondary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Text(slot.label,
-                    style: TextStyle(
-                      color: selected ? AppColors.gold : AppColors.textSecondary,
-                      fontSize: 13, fontWeight: FontWeight.w600,
-                    )),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
 
   Widget _buildAiSection() {
     final available = widget.presenter.isAiAvailable;

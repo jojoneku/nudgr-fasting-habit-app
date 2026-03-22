@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../app_colors.dart';
 import '../../models/food_entry.dart';
-import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'food_library_screen.dart';
@@ -64,17 +63,15 @@ class _NutritionBody extends StatelessWidget {
   Widget _buildBody(BuildContext context) {
     return CustomScrollView(
       slivers: [
-        if (presenter.goals.mode == TrackingMode.ifSync)
+        if (presenter.goals.ifSyncEnabled)
           SliverToBoxAdapter(child: _IfSyncBanner(presenter: presenter)),
         SliverToBoxAdapter(child: _SummaryCard(presenter: presenter)),
         SliverToBoxAdapter(child: _QuickAddRow(presenter: presenter)),
-        ...MealSlot.values.map(
-          (slot) => SliverToBoxAdapter(
-            child: _MealSection(
-              slot: slot,
-              presenter: presenter,
-              onAddTap: () => _showLogMealSheet(context, slot),
-            ),
+        SliverToBoxAdapter(
+          child: _MealSection(
+            slot: MealSlot.meal,
+            presenter: presenter,
+            onAddTap: () => _showLogMealSheet(context),
           ),
         ),
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -83,10 +80,10 @@ class _NutritionBody extends StatelessWidget {
   }
 
   Widget _buildFab(BuildContext context) {
-    final locked = presenter.goals.mode == TrackingMode.ifSync &&
+    final locked = presenter.goals.ifSyncEnabled &&
         !presenter.isEatingWindowOpen;
     return FloatingActionButton.extended(
-      onPressed: locked ? null : () => _showLogMealSheet(context, null),
+      onPressed: locked ? null : () => _showLogMealSheet(context),
       backgroundColor: locked ? AppColors.neutral : AppColors.gold,
       foregroundColor: AppColors.background,
       icon: Icon(locked ? Icons.lock_outline : Icons.add),
@@ -97,15 +94,12 @@ class _NutritionBody extends StatelessWidget {
     );
   }
 
-  void _showLogMealSheet(BuildContext context, MealSlot? preselectedSlot) {
+  void _showLogMealSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => LogMealSheet(
-        presenter: presenter,
-        preselectedSlot: preselectedSlot,
-      ),
+      builder: (_) => LogMealSheet(presenter: presenter),
     );
   }
 
@@ -193,7 +187,7 @@ class _SummaryCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           _AnimatedBar(progress: progress, color: barColor),
-          if (presenter.goals.mode == TrackingMode.macro) ...[
+          if (presenter.goals.proteinGrams != null) ...[
             const SizedBox(height: 12),
             _MacroBars(presenter: presenter),
           ],
@@ -305,7 +299,7 @@ class _QuickAddRow extends StatelessWidget {
         children: [
           ...recents.map((t) => _QuickChip(
                 label: t.name,
-                onTap: () => _showSlotPicker(context, t),
+                onTap: () => presenter.addMealFromTemplate(t, MealSlot.meal),
               )),
           _QuickChip(
             label: '+ Library',
@@ -321,17 +315,6 @@ class _QuickAddRow extends StatelessWidget {
     );
   }
 
-  void _showSlotPicker(BuildContext context, FoodTemplate template) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SlotPickerSheet(
-        title: template.name,
-        onSlotSelected: (slot) =>
-            presenter.addMealFromTemplate(template, slot),
-      ),
-    );
-  }
 }
 
 class _QuickChip extends StatelessWidget {
@@ -587,47 +570,6 @@ class _ModeChip extends StatelessWidget {
               color: AppColors.gold, fontSize: 9, letterSpacing: 1.2,
               fontWeight: FontWeight.w700),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Slot Picker Sheet ────────────────────────────────────────────────────────
-
-class _SlotPickerSheet extends StatelessWidget {
-  final String title;
-  final void Function(MealSlot) onSlotSelected;
-  const _SlotPickerSheet(
-      {required this.title, required this.onSlotSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Add "$title" to...',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 16),
-          ...MealSlot.values.map((slot) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(slot.label,
-                    style: const TextStyle(color: AppColors.textPrimary)),
-                onTap: () {
-                  onSlotSelected(slot);
-                  Navigator.pop(context);
-                },
-              )),
-        ],
       ),
     );
   }

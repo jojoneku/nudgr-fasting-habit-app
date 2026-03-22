@@ -2,7 +2,8 @@ enum MealSlot {
   breakfast,
   lunch,
   dinner,
-  snack;
+  snack,
+  meal; // universal slot — all new entries go here
 
   String get label {
     switch (this) {
@@ -10,34 +11,36 @@ enum MealSlot {
       case MealSlot.lunch:     return 'Lunch';
       case MealSlot.dinner:    return 'Dinner';
       case MealSlot.snack:     return 'Snacks';
+      case MealSlot.meal:      return 'Meals';
     }
   }
 
-  String get jsonKey => name; // 'breakfast', 'lunch', 'dinner', 'snack'
+  String get jsonKey => name;
 
   static MealSlot fromJson(String key) =>
       MealSlot.values.firstWhere((s) => s.jsonKey == key,
-          orElse: () => MealSlot.snack);
+          orElse: () => MealSlot.meal);
 }
 
 enum TrackingMode {
   simple,
-  macro,
-  ifSync,
-  tdee;
+  standard;
 
   String get label {
     switch (this) {
-      case TrackingMode.simple: return 'Simple';
-      case TrackingMode.macro:  return 'Macro';
-      case TrackingMode.ifSync: return 'IF-Sync';
-      case TrackingMode.tdee:   return 'TDEE';
+      case TrackingMode.simple:   return 'Simple';
+      case TrackingMode.standard: return 'Standard';
     }
   }
 
-  static TrackingMode fromJson(String key) =>
-      TrackingMode.values.firstWhere((m) => m.name == key,
-          orElse: () => TrackingMode.simple);
+  static TrackingMode fromJson(String key) {
+    // Migrate old modes → standard
+    if (key == 'macro' || key == 'ifSync' || key == 'tdee') {
+      return TrackingMode.standard;
+    }
+    return TrackingMode.values.firstWhere((m) => m.name == key,
+        orElse: () => TrackingMode.simple);
+  }
 }
 
 enum ActivityLevel {
