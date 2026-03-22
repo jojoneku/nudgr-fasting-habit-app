@@ -139,4 +139,28 @@ class StatsPresenter extends ChangeNotifier {
       notifyListeners();
       await _storageService.saveUserStats(_stats);
   }
+
+  /// Awards a stat point directly (RPG system reward, not user-allocated).
+  Future<void> awardStat(String stat) async {
+    int str = _stats.attributes.str;
+    int vit = _stats.attributes.vit;
+    int agi = _stats.attributes.agi;
+    int intl = _stats.attributes.intl;
+    int sen = _stats.attributes.sen;
+
+    switch (stat.toLowerCase()) {
+      case 'str': str++; break;
+      case 'vit': vit++; break;
+      case 'agi': agi++; break;
+      case 'int': intl++; break;
+      case 'sen': sen++; break;
+      default: return;
+    }
+
+    _stats = _stats.copyWith(
+      attributes: (str: str, vit: vit, agi: agi, intl: intl, sen: sen),
+    );
+    notifyListeners();
+    await _storageService.saveUserStats(_stats);
+  }
 }
