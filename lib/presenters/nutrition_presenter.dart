@@ -63,7 +63,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   int get todayCalories => _todayLog.totalCalories;
 
-  int get effectiveGoal => _goals.mode == TrackingMode.tdee && _tdeeProfile != null
+  int get effectiveGoal => _goals.mode == TrackingMode.standard && _tdeeProfile != null
       ? _tdeeProfile!.targetCalories
       : _goals.dailyCalories;
 
@@ -108,7 +108,7 @@ class NutritionPresenter extends ChangeNotifier {
   // ── IF-Sync getters ──────────────────────────────────────────────────────────
 
   bool get isEatingWindowOpen {
-    if (_goals.mode != TrackingMode.ifSync) return true;
+    if (!_goals.ifSyncEnabled) return true;
     return !_fastingPresenter.isFasting;
   }
 
@@ -170,7 +170,7 @@ class NutritionPresenter extends ChangeNotifier {
   // ── Actions — entries ────────────────────────────────────────────────────────
 
   Future<void> addFoodEntry(FoodEntry entry, MealSlot slot) async {
-    if (_goals.mode == TrackingMode.ifSync && !isEatingWindowOpen) return;
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
     _todayLog = _todayLog.addEntry(entry, slot);
     notifyListeners();
     await _storage.saveNutritionLog(_todayLog);
@@ -187,7 +187,7 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> addMealFromTemplate(FoodTemplate meal, MealSlot slot) async {
-    if (_goals.mode == TrackingMode.ifSync && !isEatingWindowOpen) return;
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
     final entries = meal.entries
         .map((e) => e.copyWith())
         .map((e) => FoodEntry(
@@ -318,8 +318,8 @@ class NutritionPresenter extends ChangeNotifier {
   Future<void> _onCalorieGoalMet(String today) async {
     await _statsPresenter.addXp(30);
 
-    // IF-Sync bonus: +10 XP when entire window was respected
-    if (_goals.mode == TrackingMode.ifSync) {
+    // IF-Sync bonus: +10 XP when logging was locked to eating window
+    if (_goals.ifSyncEnabled) {
       await _statsPresenter.addXp(10);
     }
 
@@ -335,7 +335,7 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> _checkProteinGoalMet() async {
-    if (_goals.mode != TrackingMode.macro) return;
+    if (_goals.proteinGrams == null) return;
     if (_proteinGoalMetToday || !isProteinGoalMet) return;
     _proteinGoalMetToday = true;
     await _statsPresenter.addXp(15);

@@ -34,6 +34,32 @@ class TdeeProfile {
     }
   }
 
+  // Suggested macros derived from goal + body weight
+  // Protein: body-weight based (higher on cut to preserve muscle)
+  // Fat: fixed % of target calories
+  // Carbs: whatever is left
+  int get suggestedProteinG {
+    final multiplier = switch (goal) {
+      'cut'  => 2.2,
+      'bulk' => 2.0,
+      _      => 1.8, // maintain
+    };
+    return (weightKg * multiplier).round();
+  }
+
+  int get suggestedFatG {
+    final pct = switch (goal) {
+      'bulk' => 0.25,
+      _      => 0.28, // cut / maintain
+    };
+    return (targetCalories * pct / 9).round();
+  }
+
+  int get suggestedCarbsG {
+    final remaining = targetCalories - (suggestedProteinG * 4) - (suggestedFatG * 9);
+    return (remaining / 4).round().clamp(0, 9999);
+  }
+
   factory TdeeProfile.fromJson(Map<String, dynamic> json) => TdeeProfile(
         weightKg: (json['weightKg'] as num).toDouble(),
         heightCm: (json['heightCm'] as num).toDouble(),

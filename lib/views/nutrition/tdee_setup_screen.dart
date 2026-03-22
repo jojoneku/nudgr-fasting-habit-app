@@ -198,6 +198,21 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                 Text('BMR ${profile.bmr} · TDEE ${profile.tdee}',
                     style: const TextStyle(
                         color: AppColors.textSecondary, fontSize: 11)),
+                const SizedBox(height: 16),
+                const Text('SUGGESTED MACROS',
+                    style: TextStyle(
+                        color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
+                const SizedBox(height: 8),
+                Row(children: [
+                  _MacroChip(label: 'Protein', value: '${profile.suggestedProteinG}g'),
+                  const SizedBox(width: 8),
+                  _MacroChip(label: 'Carbs',   value: '${profile.suggestedCarbsG}g'),
+                  const SizedBox(width: 8),
+                  _MacroChip(label: 'Fat',     value: '${profile.suggestedFatG}g'),
+                ]),
+                const SizedBox(height: 8),
+                const Text('These will be applied to your macro targets.',
+                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
               ],
             ),
           ),
@@ -266,6 +281,14 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     final profile = _preview;
     if (profile == null) return;
     await widget.presenter.saveTdeeProfile(profile);
+    // Auto-apply suggested macros to nutrition goals
+    await widget.presenter.updateGoals(
+      widget.presenter.goals.copyWith(
+        proteinGrams: profile.suggestedProteinG.toDouble(),
+        carbsGrams:   profile.suggestedCarbsG.toDouble(),
+        fatGrams:     profile.suggestedFatG.toDouble(),
+      ),
+    );
     if (mounted) Navigator.pop(context);
   }
 
@@ -359,6 +382,38 @@ class _SexButton extends StatelessWidget {
                 color: isSelected ? AppColors.gold : AppColors.textSecondary,
                 fontWeight: FontWeight.w600,
               )),
+        ),
+      ),
+    );
+  }
+}
+
+class _MacroChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _MacroChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
+        ),
+        child: Column(
+          children: [
+            Text(value,
+                style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15)),
+            Text(label,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 10)),
+          ],
         ),
       ),
     );

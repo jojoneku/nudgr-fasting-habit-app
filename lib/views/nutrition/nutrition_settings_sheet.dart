@@ -32,6 +32,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   late double? _protein;
   late double? _carbs;
   late double? _fat;
+  late bool _ifSync;
   late bool _overshootPenalty;
 
   final _calCtrl     = TextEditingController();
@@ -48,6 +49,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
     _protein          = g.proteinGrams;
     _carbs            = g.carbsGrams;
     _fat              = g.fatGrams;
+    _ifSync           = g.ifSyncEnabled;
     _overshootPenalty = g.overshootPenaltyEnabled;
 
     _calCtrl.text     = _dailyCalories.toString();
@@ -75,6 +77,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
       proteinGrams: double.tryParse(_proteinCtrl.text.trim()),
       carbsGrams: double.tryParse(_carbsCtrl.text.trim()),
       fatGrams: double.tryParse(_fatCtrl.text.trim()),
+      ifSyncEnabled: _ifSync,
       overshootPenaltyEnabled: _overshootPenalty,
     );
     await widget.presenter.updateGoals(goals);
@@ -84,6 +87,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final isStandard = _mode == TrackingMode.standard;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
@@ -96,7 +100,6 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Drag handle
             Center(
               child: Container(
                 width: 40, height: 4,
@@ -126,23 +129,20 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                 )),
             const SizedBox(height: 20),
 
-            // ── Daily calorie goal ─────────────────────────────────────────
-            if (_mode != TrackingMode.tdee) ...[
+            // ── Simple: manual calorie goal ────────────────────────────────
+            if (!isStandard) ...[
               _label('DAILY CALORIE GOAL'),
               const SizedBox(height: 8),
               _numField(_calCtrl, 'kcal / day', 'e.g. 2000'),
               const SizedBox(height: 20),
             ],
 
-            // ── TDEE wizard link ───────────────────────────────────────────
-            if (_mode == TrackingMode.tdee) ...[
+            // ── Standard: TDEE + macros + toggles ─────────────────────────
+            if (isStandard) ...[
               _TdeeCard(presenter: widget.presenter),
               const SizedBox(height: 20),
-            ],
 
-            // ── Macro targets (macro mode) ─────────────────────────────────
-            if (_mode == TrackingMode.macro) ...[
-              _label('MACRO TARGETS (g)'),
+              _label('MACRO TARGETS (optional, g)'),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _numField(_proteinCtrl, 'Protein', 'g')),
@@ -152,9 +152,17 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                 Expanded(child: _numField(_fatCtrl, 'Fat', 'g')),
               ]),
               const SizedBox(height: 20),
+
+              _ToggleRow(
+                label: 'Lock logging during fast',
+                subtitle: 'Pause food logging while fasting window is active',
+                value: _ifSync,
+                onChanged: (v) => setState(() => _ifSync = v),
+              ),
+              const SizedBox(height: 12),
             ],
 
-            // ── Overshoot penalty ──────────────────────────────────────────
+            // ── Overshoot penalty (both modes) ─────────────────────────────
             _ToggleRow(
               label: 'Overshoot penalty',
               subtitle: '−5 HP when you exceed 120% of goal',
@@ -163,7 +171,6 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
             ),
             const SizedBox(height: 28),
 
-            // ── Save ───────────────────────────────────────────────────────
             SizedBox(
               width: double.infinity,
               height: 52,
@@ -275,10 +282,8 @@ class _ModeTile extends StatelessWidget {
 
   String _modeDescription(TrackingMode m) {
     switch (m) {
-      case TrackingMode.simple:  return 'Track calories only';
-      case TrackingMode.macro:   return 'Track protein, carbs, and fat';
-      case TrackingMode.ifSync:  return 'Logging locked during fasting window';
-      case TrackingMode.tdee:    return 'Dynamic goal based on your stats';
+      case TrackingMode.simple:   return 'Manual calorie goal — quick and minimal';
+      case TrackingMode.standard: return 'TDEE goal · optional macros · optional fasting lock';
     }
   }
 }
