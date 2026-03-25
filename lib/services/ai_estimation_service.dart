@@ -41,38 +41,34 @@ class AiEstimationService {
   InferenceModel? _model;
   bool _isDownloading = false;
   int _downloadProgress = 0; // 0–100
-  String? _downloadError;
 
   // ── State getters ────────────────────────────────────────────────────────────
 
-  bool    get isModelAvailable  => _model != null;
-  bool    get isDownloading     => _isDownloading;
-  int     get downloadProgress  => _downloadProgress;
-  String  get modelSizeLabel    => _modelSizeLabel;
-  String? get downloadError     => _downloadError;
+  bool get isModelAvailable  => _model != null;
+  bool get isDownloading     => _isDownloading;
+  int  get downloadProgress  => _downloadProgress;
+  String get modelSizeLabel  => _modelSizeLabel;
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
   /// Call once at app startup. Loads an already-installed model silently.
   Future<void> init() async {
     await FlutterGemma.initialize(huggingFaceToken: huggingFaceToken);
-    // Do NOT gate on hasActiveModel() — it reflects runtime state only and
-    // returns false after a cold restart even when the model is on disk.
-    // Always attempt to load; errors simply mean not yet installed.
+    if (!FlutterGemma.hasActiveModel()) return;
     try {
       _model = await FlutterGemma.getActiveModel(
-        maxTokens: 1024,
+        maxTokens: 512,
         preferredBackend: PreferredBackend.gpu,
       );
     } catch (_) {
       // GPU not available — fall back to CPU.
       try {
         _model = await FlutterGemma.getActiveModel(
-          maxTokens: 1024,
+          maxTokens: 512,
           preferredBackend: PreferredBackend.cpu,
         );
       } catch (_) {
-        // Model not installed yet; isModelAvailable stays false.
+        // Model load failed; isModelAvailable stays false.
       }
     }
   }
@@ -81,42 +77,33 @@ class AiEstimationService {
 
   /// Downloads and installs the model. Reports 0–100 progress via [onProgress].
   /// Safe to call multiple times; no-ops if already downloading.
-  /// Sets [downloadError] on failure, clears it on retry.
   Future<void> downloadModel({void Function(int progress)? onProgress}) async {
     if (_isDownloading) return;
-    _isDownloading    = true;
+    _isDownloading   = true;
     _downloadProgress = 0;
-    _downloadError    = null;
 
     try {
       await FlutterGemma.initialize(huggingFaceToken: huggingFaceToken);
-      try {
-        await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
-            .fromNetwork(_modelUrl)
-            .withProgress((p) {
-              _downloadProgress = p;
-              onProgress?.call(p);
-            })
-            .install();
-      } catch (_) {
-        // installModel may throw if the model is already installed on disk.
-        // Fall through and attempt to load it anyway.
-      }
+      await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
+          .fromNetwork(_modelUrl)
+          .withProgress((p) {
+            _downloadProgress = p;
+            onProgress?.call(p);
+          })
+          .install();
 
-      // Load the model — whether just installed or already present on disk.
+      // Load the model after successful installation.
       try {
         _model = await FlutterGemma.getActiveModel(
-          maxTokens: 1024,
+          maxTokens: 512,
           preferredBackend: PreferredBackend.gpu,
         );
       } catch (_) {
         _model = await FlutterGemma.getActiveModel(
-          maxTokens: 1024,
+          maxTokens: 512,
           preferredBackend: PreferredBackend.cpu,
         );
       }
-    } catch (e) {
-      _downloadError = 'Download failed. Check your connection and try again.';
     } finally {
       _isDownloading = false;
     }

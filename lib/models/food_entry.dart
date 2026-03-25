@@ -70,22 +70,4 @@ class FoodEntry {
         aiEstimated: aiEstimated ?? this.aiEstimated,
         loggedAt: loggedAt,
       );
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is FoodEntry &&
-          id == other.id &&
-          name == other.name &&
-          calories == other.calories &&
-          protein == other.protein &&
-          carbs == other.carbs &&
-          fat == other.fat &&
-          grams == other.grams &&
-          aiEstimated == other.aiEstimated &&
-          loggedAt == other.loggedAt;
-
-  @override
-  int get hashCode => Object.hash(
-      id, name, calories, protein, carbs, fat, grams, aiEstimated, loggedAt);
 }

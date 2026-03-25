@@ -121,29 +121,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
         if (!available)
           _AiUnavailableBanner(presenter: widget.presenter)
         else ...[
-          ListenableBuilder(
-            listenable: widget.presenter,
-            builder: (_, __) {
-              if (!widget.presenter.aiJustInstalled) return const SizedBox.shrink();
-              return Container(
-                margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.check_circle, color: AppColors.accent, size: 14),
-                    SizedBox(width: 8),
-                    Text('AI model installed — ready to estimate meals.',
-                        style: TextStyle(color: AppColors.accent, fontSize: 12)),
-                  ],
-                ),
-              );
-            },
-          ),
           Row(
             children: [
               Expanded(
@@ -189,29 +166,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
                       Text('System analyzing meal composition...',
                           style: TextStyle(
                               color: AppColors.accent, fontSize: 12)),
-                    ],
-                  ),
-                );
-              }
-              final error = widget.presenter.aiError;
-              if (error != null) {
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline,
-                          color: AppColors.danger, size: 14),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(error,
-                            style: const TextStyle(
-                                color: AppColors.danger, fontSize: 12)),
-                      ),
-                      GestureDetector(
-                        onTap: widget.presenter.clearEstimate,
-                        child: const Icon(Icons.close,
-                            color: AppColors.textSecondary, size: 14),
-                      ),
                     ],
                   ),
                 );
@@ -467,54 +421,20 @@ class _AiUnavailableBanner extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress / 100.0,
                         minHeight: 6,
-                        backgroundColor: AppColors.surface,
+                        backgroundColor:
+                            AppColors.surface,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             AppColors.accent),
                       ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  Text(
-                    progress < 100 ? '$progress%' : 'Loading...',
-                    style: const TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
-                  ),
+                  Text('$progress%',
+                      style: const TextStyle(
+                          color: AppColors.accent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
                 ]),
-              ] else if (presenter.aiDownloadError != null) ...[
-                Row(
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: AppColors.danger, size: 14),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        presenter.aiDownloadError!,
-                        style: const TextStyle(
-                            color: AppColors.danger, fontSize: 11),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.danger,
-                      side: const BorderSide(
-                          color: AppColors.danger, width: 0.8),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('RETRY',
-                        style: TextStyle(fontSize: 12, letterSpacing: 1.2)),
-                    onPressed: () => presenter.downloadAiModel(),
-                  ),
-                ),
               ] else
                 SizedBox(
                   width: double.infinity,
