@@ -86,4 +86,20 @@ class UserStats {
       attributes: attributes ?? this.attributes,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserStats &&
+          name == other.name &&
+          level == other.level &&
+          currentXp == other.currentXp &&
+          currentHp == other.currentHp &&
+          statPoints == other.statPoints &&
+          streak == other.streak &&
+          attributes == other.attributes;
+
+  @override
+  int get hashCode =>
+      Object.hash(name, level, currentXp, currentHp, statPoints, streak, attributes);
 }

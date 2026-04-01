@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import '../presenters/activity_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../app_colors.dart';
+import 'activity/activity_permission_screen.dart';
+import 'activity/activity_screen.dart';
 import 'widgets/module_card.dart';
 import 'tabs/timer_tab.dart';
 import 'tabs/quests_tab.dart';
@@ -13,6 +16,7 @@ class HubScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final StatsPresenter statsPresenter;
   final NutritionPresenter? nutritionPresenter;
+  final ActivityPresenter? activityPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
   /// Populated by AppShell as new modules (Activity, Treasury) are added.
@@ -26,6 +30,7 @@ class HubScreen extends StatelessWidget {
     required this.fastingPresenter,
     required this.statsPresenter,
     this.nutritionPresenter,
+    this.activityPresenter,
     this.moduleSubtitleGetters = const {},
     this.moduleOnTapOverrides = const {},
   });
@@ -37,6 +42,7 @@ class HubScreen extends StatelessWidget {
         fastingPresenter,
         statsPresenter,
         if (nutritionPresenter != null) nutritionPresenter!,
+        if (activityPresenter != null) activityPresenter!,
       ]),
       builder: (context, _) => _buildGrid(context),
     );
@@ -122,7 +128,15 @@ class HubScreen extends StatelessWidget {
         rpgName: 'TRAINING GROUNDS',
         icon: MdiIcons.run,
         accentColor: AppColors.success,
-        isLocked: true,
+        isLocked: activityPresenter == null,
+        subtitle: activityPresenter != null
+            ? moduleSubtitleGetters['activity']?.call() ??
+                activityPresenter!.hubSubtitle
+            : null,
+        onTap: moduleOnTapOverrides['activity'] ??
+            (activityPresenter != null
+                ? () => _pushActivityScreen(context)
+                : null),
       ),
       ModuleCard(
         title: 'Finance',
@@ -166,6 +180,18 @@ class HubScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) => NutritionScreen(presenter: nutritionPresenter!),
+      ),
+    );
+  }
+
+  void _pushActivityScreen(BuildContext context) {
+    final ap = activityPresenter!;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ap.isHealthConnectAvailable && !ap.hasHealthPermission
+            ? ActivityPermissionScreen(presenter: ap)
+            : ActivityScreen(presenter: ap),
       ),
     );
   }

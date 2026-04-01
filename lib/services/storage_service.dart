@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/activity_goals.dart';
+import '../models/activity_log.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
 import '../models/food_template.dart';
@@ -291,6 +293,99 @@ class StorageService {
   Future<String?> loadLogStreakDate() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(keyLogStreakDate);
+  }
+
+  // ─── Activity ────────────────────────────────────────────────────────────────
+
+  static const String keyActivityLogs = 'activityLogs';
+  static const String keyActivityGoals = 'activityGoals';
+  static const String keyActivityGoalMetDate = 'activityGoalMetDate';
+  static const String keyActivityStreak = 'activityStreak';
+
+  Future<void> saveActivityLog(ActivityLog log) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyActivityLogs);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    all[log.date] = log.toJson();
+    await prefs.setString(keyActivityLogs, jsonEncode(all));
+  }
+
+  Future<ActivityLog> loadTodayActivityLog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final raw = prefs.getString(keyActivityLogs);
+    if (raw != null) {
+      try {
+        final Map<String, dynamic> all =
+            jsonDecode(raw) as Map<String, dynamic>;
+        if (all.containsKey(todayKey)) {
+          return ActivityLog.fromJson(all[todayKey] as Map<String, dynamic>);
+        }
+      } catch (e) {
+        debugPrint('StorageService: Error loading today activity log: $e');
+      }
+    }
+    return ActivityLog.empty(todayKey);
+  }
+
+  Future<List<ActivityLog>> loadActivityHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyActivityLogs);
+    if (raw == null) return [];
+    try {
+      final Map<String, dynamic> all =
+          jsonDecode(raw) as Map<String, dynamic>;
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final logs = all.entries
+          .where((e) => e.key != todayKey)
+          .map((e) => ActivityLog.fromJson(e.value as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      return logs.take(30).toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading activity history: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveActivityGoals(ActivityGoals goals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyActivityGoals, jsonEncode(goals.toJson()));
+  }
+
+  Future<ActivityGoals> loadActivityGoals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyActivityGoals);
+    if (raw != null) {
+      try {
+        return ActivityGoals.fromJson(
+            jsonDecode(raw) as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('StorageService: Error loading activity goals: $e');
+      }
+    }
+    return ActivityGoals.initial();
+  }
+
+  Future<void> saveActivityGoalMetDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyActivityGoalMetDate, date);
+  }
+
+  Future<String?> loadActivityGoalMetDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyActivityGoalMetDate);
+  }
+
+  Future<void> saveActivityStreak(int streak) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(keyActivityStreak, streak);
+  }
+
+  Future<int> loadActivityStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(keyActivityStreak) ?? 0;
   }
 
   // ─── Export / Import ─────────────────────────────────────────────────────────

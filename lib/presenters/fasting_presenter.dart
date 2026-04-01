@@ -7,8 +7,8 @@ import '../services/storage_service.dart';
 import 'stats_presenter.dart';
 
 class FastingPresenter extends ChangeNotifier {
-  final NotificationService _notificationService = NotificationService();
-  final StorageService _storageService = StorageService();
+  final NotificationService _notificationService;
+  final StorageService _storageService;
   final StatsPresenter? statsPresenter;
 
   bool isFasting = false;
@@ -21,7 +21,12 @@ class FastingPresenter extends ChangeNotifier {
   DateTime? lastPenaltyCheckDate;
   Timer? _ticker;
 
-  FastingPresenter({this.statsPresenter}) {
+  FastingPresenter({
+    this.statsPresenter,
+    StorageService? storage,
+    NotificationService? notifications,
+  })  : _storageService = storage ?? StorageService(),
+        _notificationService = notifications ?? NotificationService() {
     _init();
   }
 

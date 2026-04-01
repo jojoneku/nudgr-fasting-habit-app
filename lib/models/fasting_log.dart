@@ -50,4 +50,23 @@ class FastingLog {
       'goalDuration': goalDuration,
     };
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FastingLog &&
+          fastStart == other.fastStart &&
+          fastEnd == other.fastEnd &&
+          fastDuration == other.fastDuration &&
+          success == other.success &&
+          eatingStart == other.eatingStart &&
+          eatingEnd == other.eatingEnd &&
+          eatingDuration == other.eatingDuration &&
+          note == other.note &&
+          goalDuration == other.goalDuration;
+
+  @override
+  int get hashCode => Object.hash(
+      fastStart, fastEnd, fastDuration, success, eatingStart, eatingEnd,
+      eatingDuration, note, goalDuration);
 }

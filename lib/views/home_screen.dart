@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../presenters/activity_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../services/ai_estimation_service.dart';
 import '../services/food_db_service.dart';
+import '../services/health_service.dart';
 import '../services/storage_service.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
@@ -22,6 +24,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final FastingPresenter _fastingPresenter;
   late final FoodDbService _foodDb;
   late final AiEstimationService _aiEstimation;
+  late final HealthService _healthService;
+  late final ActivityPresenter _activityPresenter;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
@@ -30,10 +34,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     super.initState();
     _storage        = StorageService();
     _statsPresenter = StatsPresenter(_storage);
-    _fastingPresenter = FastingPresenter(statsPresenter: _statsPresenter);
+    _fastingPresenter = FastingPresenter(
+      statsPresenter: _statsPresenter,
+      storage: _storage,
+    );
     _foodDb       = FoodDbService();
     _aiEstimation = AiEstimationService(
       huggingFaceToken: const String.fromEnvironment('HF_TOKEN'),
+    );
+    _healthService = HealthService();
+    _activityPresenter = ActivityPresenter(
+      statsPresenter: _statsPresenter,
+      healthService:  _healthService,
+      storage:        _storage,
     );
     _nutritionPresenter = NutritionPresenter(
       statsPresenter:   _statsPresenter,
@@ -56,6 +69,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _fastingPresenter.dispose();
     _statsPresenter.dispose();
     _nutritionPresenter?.dispose();
+    _activityPresenter.dispose();
     super.dispose();
   }
 
@@ -70,9 +84,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final screens = [
       HubScreen(
-        fastingPresenter: _fastingPresenter,
-        statsPresenter: _statsPresenter,
+        fastingPresenter:   _fastingPresenter,
+        statsPresenter:     _statsPresenter,
         nutritionPresenter: _nutritionPresenter,
+        activityPresenter:  _activityPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,
