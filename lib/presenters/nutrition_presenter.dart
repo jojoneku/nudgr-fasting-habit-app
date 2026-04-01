@@ -34,6 +34,8 @@ class NutritionPresenter extends ChangeNotifier {
   bool _proteinGoalMetToday = false;
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
+  String? _aiError;
+  bool _aiJustInstalled = false;
 
   static final _dateFmt = DateFormat('yyyy-MM-dd');
   static final _calFmt  = NumberFormat('#,###');
@@ -166,6 +168,9 @@ class NutritionPresenter extends ChangeNotifier {
   int             get aiDownloadProgress => _ai.downloadProgress;
   String          get aiSizeLabel        => _ai.modelSizeLabel;
   AiMealEstimate? get lastEstimate       => _lastEstimate;
+  String?         get aiError            => _aiError;
+  String?         get aiDownloadError    => _ai.downloadError;
+  bool            get aiJustInstalled    => _aiJustInstalled;
 
   // ── Actions — entries ────────────────────────────────────────────────────────
 
@@ -258,11 +263,14 @@ class NutritionPresenter extends ChangeNotifier {
     if (!isAiAvailable) return;
     _isAiEstimating = true;
     _lastEstimate = null;
+    _aiError = null;
+    _aiJustInstalled = false;
     notifyListeners();
     try {
       _lastEstimate = await _ai.estimate(description);
-    } catch (_) {
+    } catch (e) {
       _lastEstimate = null;
+      _aiError = 'Estimation failed — try rephrasing your meal.';
     } finally {
       _isAiEstimating = false;
       notifyListeners();
@@ -281,6 +289,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   void clearEstimate() {
     _lastEstimate = null;
+    _aiError = null;
     notifyListeners();
   }
 
@@ -288,6 +297,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (_ai.isDownloading) return;
     notifyListeners();
     await _ai.downloadModel(onProgress: (_) => notifyListeners());
+    if (_ai.isModelAvailable) _aiJustInstalled = true;
     notifyListeners();
   }
 
