@@ -69,4 +69,20 @@ class NutritionGoals {
         overshootPenaltyEnabled:
             overshootPenaltyEnabled ?? this.overshootPenaltyEnabled,
       );
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is NutritionGoals &&
+          mode == other.mode &&
+          dailyCalories == other.dailyCalories &&
+          proteinGrams == other.proteinGrams &&
+          carbsGrams == other.carbsGrams &&
+          fatGrams == other.fatGrams &&
+          ifSyncEnabled == other.ifSyncEnabled &&
+          overshootPenaltyEnabled == other.overshootPenaltyEnabled;
+
+  @override
+  int get hashCode => Object.hash(mode, dailyCalories, proteinGrams, carbsGrams,
+      fatGrams, ifSyncEnabled, overshootPenaltyEnabled);
 }

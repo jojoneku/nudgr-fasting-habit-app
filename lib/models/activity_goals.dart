@@ -16,4 +16,12 @@ class ActivityGoals {
   ActivityGoals copyWith({int? dailyStepGoal}) {
     return ActivityGoals(dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal);
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ActivityGoals && dailyStepGoal == other.dailyStepGoal;
+
+  @override
+  int get hashCode => dailyStepGoal.hashCode;
 }

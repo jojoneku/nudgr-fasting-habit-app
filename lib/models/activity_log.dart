@@ -49,4 +49,18 @@ class ActivityLog {
       isManualEntry: isManualEntry ?? this.isManualEntry,
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ActivityLog &&
+          date == other.date &&
+          steps == other.steps &&
+          activeCalories == other.activeCalories &&
+          distanceMeters == other.distanceMeters &&
+          isManualEntry == other.isManualEntry;
+
+  @override
+  int get hashCode =>
+      Object.hash(date, steps, activeCalories, distanceMeters, isManualEntry);
 }
