@@ -45,19 +45,8 @@ class HealthService {
 
   Future<int> readTodaySteps() async {
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final data = await Health().getHealthDataFromTypes(
-        startTime: midnight,
-        endTime: now,
-        types: [HealthDataType.STEPS],
-      );
-      final merged = Health().removeDuplicates(data);
-      final total = merged.fold<double>(
-        0,
-        (sum, p) => sum + (p.value as NumericHealthValue).numericValue.toDouble(),
-      );
-      return total.round();
+      final total = await _sumTodayType(HealthDataType.STEPS);
+      return total?.round() ?? 0;
     } catch (e) {
       debugPrint('HealthService: readTodaySteps error: $e');
       return 0;
@@ -66,19 +55,7 @@ class HealthService {
 
   Future<double?> readTodayActiveCalories() async {
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final data = await Health().getHealthDataFromTypes(
-        startTime: midnight,
-        endTime: now,
-        types: [HealthDataType.ACTIVE_ENERGY_BURNED],
-      );
-      if (data.isEmpty) return null;
-      final merged = Health().removeDuplicates(data);
-      return merged.fold<double>(
-        0,
-        (sum, p) => sum + (p.value as NumericHealthValue).numericValue.toDouble(),
-      );
+      return await _sumTodayType(HealthDataType.ACTIVE_ENERGY_BURNED);
     } catch (e) {
       debugPrint('HealthService: readTodayActiveCalories error: $e');
       return null;
@@ -87,22 +64,28 @@ class HealthService {
 
   Future<double?> readTodayDistance() async {
     try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final data = await Health().getHealthDataFromTypes(
-        startTime: midnight,
-        endTime: now,
-        types: [HealthDataType.DISTANCE_DELTA],
-      );
-      if (data.isEmpty) return null;
-      final merged = Health().removeDuplicates(data);
-      return merged.fold<double>(
-        0,
-        (sum, p) => sum + (p.value as NumericHealthValue).numericValue.toDouble(),
-      );
+      return await _sumTodayType(HealthDataType.DISTANCE_DELTA);
     } catch (e) {
       debugPrint('HealthService: readTodayDistance error: $e');
       return null;
     }
+  }
+
+  /// Sums all Health Connect data points for [type] since midnight today.
+  /// Returns null if no data is available.
+  Future<double?> _sumTodayType(HealthDataType type) async {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day);
+    final data = await Health().getHealthDataFromTypes(
+      startTime: midnight,
+      endTime: now,
+      types: [type],
+    );
+    if (data.isEmpty) return null;
+    final merged = Health().removeDuplicates(data);
+    return merged.fold<double>(
+      0,
+      (sum, p) => sum + (p.value as NumericHealthValue).numericValue.toDouble(),
+    );
   }
 }

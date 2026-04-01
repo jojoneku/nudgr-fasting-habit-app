@@ -8,6 +8,10 @@ import '../../app_colors.dart';
 import '../../models/activity_log.dart';
 import '../../presenters/activity_presenter.dart';
 
+// Hoisted to avoid per-rebuild allocations (suggestion #5, #6)
+final _dateFmt = DateFormat('MMM d');
+final _numFmt = NumberFormat('#,###');
+
 class ActivityScreen extends StatefulWidget {
   final ActivityPresenter presenter;
 
@@ -33,8 +37,10 @@ class _ActivityScreenState extends State<ActivityScreen>
     _ringAnimation = Tween<double>(begin: 0, end: 0).animate(
       CurvedAnimation(parent: _ringController, curve: Curves.easeOut),
     );
-    // Sync on open (non-blocking)
+    // Drive ring animation via listener, not inside build() (blocker #3)
+    widget.presenter.addListener(_onPresenterUpdate);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _animateRingTo(widget.presenter.stepProgress);
       if (widget.presenter.hasHealthPermission) {
         widget.presenter.syncFromHealthConnect();
       }
@@ -43,8 +49,13 @@ class _ActivityScreenState extends State<ActivityScreen>
 
   @override
   void dispose() {
+    widget.presenter.removeListener(_onPresenterUpdate);
     _ringController.dispose();
     super.dispose();
+  }
+
+  void _onPresenterUpdate() {
+    _animateRingTo(widget.presenter.stepProgress);
   }
 
   void _animateRingTo(double target) {
@@ -79,7 +90,6 @@ class _ActivityScreenState extends State<ActivityScreen>
         listenable: widget.presenter,
         builder: (context, _) {
           final p = widget.presenter;
-          _animateRingTo(p.stepProgress);
           return SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
@@ -127,7 +137,6 @@ class _StepRingSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = presenter;
-    final fmt = NumberFormat('#,###');
 
     return Column(
       children: [
@@ -148,7 +157,7 @@ class _StepRingSection extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      fmt.format(p.todaySteps),
+                      _numFmt.format(p.todaySteps),
                       style: const TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
@@ -156,7 +165,7 @@ class _StepRingSection extends StatelessWidget {
                         letterSpacing: -1,
                       ),
                     ),
-                    Text(
+                    const Text(
                       'steps',
                       style: TextStyle(
                         fontSize: 13,
@@ -175,7 +184,7 @@ class _StepRingSection extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           p.summaryLabel,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
         ),
         if (p.todayLog.activeCalories != null ||
             p.todayLog.distanceMeters != null) ...[
@@ -202,7 +211,7 @@ class _BonusStats extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '${log.activeCalories!.round()} kcal',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
         ],
         if (log.activeCalories != null && log.distanceMeters != null)
@@ -212,7 +221,7 @@ class _BonusStats extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
         ],
       ],
@@ -242,7 +251,8 @@ class _HealthConnectStatusBar extends StatelessWidget {
         label: p.todayLog.isManualEntry ? 'Manual entry' : 'Synced from Health Connect',
         action: FilledButton.tonal(
           onPressed: () => p.syncFromHealthConnect(),
-          style: FilledButton.styleFrom(minimumSize: const Size(100, 40)),
+          // Fix blocker #4: minimum 44px touch target
+          style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
           child: const Text('Sync Now'),
         ),
       );
@@ -257,7 +267,7 @@ class _HealthConnectStatusBar extends StatelessWidget {
           onPressed: () => p.requestHealthPermission(),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.success,
-            minimumSize: const Size(100, 40),
+            minimumSize: const Size(100, 44),
           ),
           child: const Text('Connect'),
         ),
@@ -271,7 +281,7 @@ class _HealthConnectStatusBar extends StatelessWidget {
       label: 'Manual mode',
       action: FilledButton.tonal(
         onPressed: () => _showManualEntry(context, p),
-        style: FilledButton.styleFrom(minimumSize: const Size(100, 40)),
+        style: FilledButton.styleFrom(minimumSize: const Size(100, 44)),
         child: const Text('Enter Steps'),
       ),
     );
@@ -319,7 +329,7 @@ class _StatusCard extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           action,
@@ -339,9 +349,9 @@ class _HistorySection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (history.isEmpty) {
-      return Center(
+      return const Center(
         child: Padding(
-          padding: const EdgeInsets.only(top: 16),
+          padding: EdgeInsets.only(top: 16),
           child: Text(
             'No history yet',
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
@@ -353,7 +363,7 @@ class _HistorySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'RECENT DAYS',
           style: TextStyle(
             color: AppColors.textSecondary,
@@ -375,12 +385,8 @@ class _HistoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateFormat('MMM d').format(DateTime.parse(log.date));
-    final isYesterday = log.date ==
-        DateFormat('yyyy-MM-dd')
-            .format(DateTime.now().subtract(const Duration(days: 1)));
-    final label = isYesterday ? 'Yesterday' : date;
-    final fmt = NumberFormat('#,###');
+    // Fix blockers #1 & #2: logic and date computation moved to model getters
+    final label = log.isYesterday ? 'Yesterday' : _dateFmt.format(DateTime.parse(log.date));
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -390,12 +396,12 @@ class _HistoryRow extends StatelessWidget {
             width: 90,
             child: Text(
               label,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ),
           Expanded(
             child: Text(
-              fmt.format(log.steps),
+              _numFmt.format(log.steps),
               style: const TextStyle(
                 color: AppColors.textPrimary,
                 fontWeight: FontWeight.w600,
@@ -403,20 +409,20 @@ class _HistoryRow extends StatelessWidget {
               ),
             ),
           ),
-          if (log.steps >= 8000)
+          if (log.goalMet)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check, size: 14, color: AppColors.success),
                 const SizedBox(width: 4),
-                Text(
+                const Text(
                   'Goal met',
                   style: TextStyle(color: AppColors.success, fontSize: 12),
                 ),
               ],
             ),
           if (log.isManualEntry)
-            Text(
+            const Text(
               ' (manual)',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),

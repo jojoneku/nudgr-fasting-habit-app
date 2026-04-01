@@ -100,6 +100,7 @@ class ActivityPresenter extends ChangeNotifier {
         activeCalories: calories,
         distanceMeters: distance,
         isManualEntry: false,
+        goalMet: steps >= _goals.dailyStepGoal,
       );
       await _storage.saveActivityLog(_todayLog);
       _checkGoalMet();
@@ -112,7 +113,11 @@ class ActivityPresenter extends ChangeNotifier {
   }
 
   Future<void> setManualSteps(int steps) async {
-    _todayLog = _todayLog.copyWith(steps: steps, isManualEntry: true);
+    _todayLog = _todayLog.copyWith(
+      steps: steps,
+      isManualEntry: true,
+      goalMet: steps >= _goals.dailyStepGoal,
+    );
     await _storage.saveActivityLog(_todayLog);
     _checkGoalMet();
     notifyListeners();

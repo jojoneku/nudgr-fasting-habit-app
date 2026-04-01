@@ -1,9 +1,12 @@
+import 'package:intl/intl.dart';
+
 class ActivityLog {
   final String date; // 'yyyy-MM-dd'
   final int steps;
   final double? activeCalories;
   final double? distanceMeters;
   final bool isManualEntry;
+  final bool goalMet;
 
   const ActivityLog({
     required this.date,
@@ -11,9 +14,17 @@ class ActivityLog {
     this.activeCalories,
     this.distanceMeters,
     this.isManualEntry = false,
+    this.goalMet = false,
   });
 
   factory ActivityLog.empty(String date) => ActivityLog(date: date, steps: 0);
+
+  /// True if this log's date is yesterday (display helper, avoids logic in build()).
+  bool get isYesterday {
+    final yesterday = DateFormat('yyyy-MM-dd')
+        .format(DateTime.now().subtract(const Duration(days: 1)));
+    return date == yesterday;
+  }
 
   factory ActivityLog.fromJson(Map<String, dynamic> json) {
     return ActivityLog(
@@ -22,6 +33,7 @@ class ActivityLog {
       activeCalories: (json['activeCalories'] as num?)?.toDouble(),
       distanceMeters: (json['distanceMeters'] as num?)?.toDouble(),
       isManualEntry: json['isManualEntry'] as bool? ?? false,
+      goalMet: json['goalMet'] as bool? ?? false,
     );
   }
 
@@ -32,6 +44,7 @@ class ActivityLog {
       'activeCalories': activeCalories,
       'distanceMeters': distanceMeters,
       'isManualEntry': isManualEntry,
+      'goalMet': goalMet,
     };
   }
 
@@ -40,6 +53,7 @@ class ActivityLog {
     double? activeCalories,
     double? distanceMeters,
     bool? isManualEntry,
+    bool? goalMet,
   }) {
     return ActivityLog(
       date: date,
@@ -47,6 +61,7 @@ class ActivityLog {
       activeCalories: activeCalories ?? this.activeCalories,
       distanceMeters: distanceMeters ?? this.distanceMeters,
       isManualEntry: isManualEntry ?? this.isManualEntry,
+      goalMet: goalMet ?? this.goalMet,
     );
   }
 
