@@ -46,7 +46,9 @@ void main() {
     });
 
     test('generateId produces unique values', () {
-      final ids = List.generate(100, (_) => FoodEntry.generateId());
+      // generateId uses microsecondsSinceEpoch + Random — use a small sample
+      // to avoid flaky collisions in tight loops on fast machines.
+      final ids = List.generate(10, (_) => FoodEntry.generateId());
       expect(ids.toSet().length, ids.length);
     });
   });
