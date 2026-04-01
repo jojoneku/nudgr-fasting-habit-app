@@ -1,8 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
+import '../models/food_template.dart';
+import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
+import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 
 class StorageService {
@@ -127,6 +132,168 @@ class StorageService {
       'lastPenaltyCheckDate': lastPenaltyCheckDate,
     };
   }
+
+  // ─── Nutrition ───────────────────────────────────────────────────────────────
+
+  static const String keyNutritionLogs = 'nutritionLogs';
+  static const String keyNutritionGoals = 'nutritionGoals';
+  static const String keyNutritionStreak = 'nutritionStreak';
+  static const String keyNutritionGoalMetDate = 'nutritionGoalMetDate';
+
+  Future<void> saveNutritionLog(DailyNutritionLog log) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyNutritionLogs);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    all[log.date] = log.toJson();
+    await prefs.setString(keyNutritionLogs, jsonEncode(all));
+  }
+
+  Future<DailyNutritionLog> loadTodayNutritionLog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final raw = prefs.getString(keyNutritionLogs);
+    if (raw != null) {
+      try {
+        final Map<String, dynamic> all =
+            jsonDecode(raw) as Map<String, dynamic>;
+        if (all.containsKey(todayKey)) {
+          return DailyNutritionLog.fromJson(
+              all[todayKey] as Map<String, dynamic>);
+        }
+      } catch (e) {
+        debugPrint('StorageService: Error loading today nutrition log: $e');
+      }
+    }
+    return DailyNutritionLog.empty(todayKey);
+  }
+
+  Future<List<DailyNutritionLog>> loadNutritionHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyNutritionLogs);
+    if (raw == null) return [];
+    try {
+      final Map<String, dynamic> all =
+          jsonDecode(raw) as Map<String, dynamic>;
+      final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+      final logs = all.entries
+          .where((e) => e.key != todayKey)
+          .map((e) =>
+              DailyNutritionLog.fromJson(e.value as Map<String, dynamic>))
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+      return logs.take(30).toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading nutrition history: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveNutritionGoals(NutritionGoals goals) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyNutritionGoals, jsonEncode(goals.toJson()));
+  }
+
+  Future<NutritionGoals> loadNutritionGoals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyNutritionGoals);
+    if (raw != null) {
+      try {
+        return NutritionGoals.fromJson(
+            jsonDecode(raw) as Map<String, dynamic>);
+      } catch (e) {
+        debugPrint('StorageService: Error loading nutrition goals: $e');
+      }
+    }
+    return NutritionGoals.initial();
+  }
+
+  Future<void> saveNutritionStreak(int streak) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(keyNutritionStreak, streak);
+  }
+
+  Future<int> loadNutritionStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(keyNutritionStreak) ?? 0;
+  }
+
+  Future<void> saveNutritionGoalMetDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyNutritionGoalMetDate, date);
+  }
+
+  Future<String?> loadNutritionGoalMetDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyNutritionGoalMetDate);
+  }
+
+  // ─── Nutrition v2 — TDEE, food library, log streak ───────────────────────────
+
+  static const String keyTdeeProfile  = 'tdeeProfile';
+  static const String keyFoodLibrary  = 'foodLibrary';
+  static const String keyLogStreak    = 'nutritionLogStreak';
+  static const String keyLogStreakDate = 'nutritionLogStreakDate';
+
+  Future<void> saveTdeeProfile(TdeeProfile profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyTdeeProfile, jsonEncode(profile.toJson()));
+  }
+
+  Future<TdeeProfile?> loadTdeeProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyTdeeProfile);
+    if (raw == null) return null;
+    try {
+      return TdeeProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('StorageService: Error loading TdeeProfile: $e');
+      return null;
+    }
+  }
+
+  Future<void> saveFoodLibrary(List<FoodTemplate> templates) async {
+    final prefs = await SharedPreferences.getInstance();
+    final json = jsonEncode(templates.map((t) => t.toJson()).toList());
+    await prefs.setString(keyFoodLibrary, json);
+  }
+
+  Future<List<FoodTemplate>> loadFoodLibrary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyFoodLibrary);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List<dynamic>;
+      return list
+          .map((e) => FoodTemplate.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading food library: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveLogStreak(int streak) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(keyLogStreak, streak);
+  }
+
+  Future<int> loadLogStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(keyLogStreak) ?? 0;
+  }
+
+  Future<void> saveLogStreakDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyLogStreakDate, date);
+  }
+
+  Future<String?> loadLogStreakDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyLogStreakDate);
+  }
+
+  // ─── Export / Import ─────────────────────────────────────────────────────────
 
   Future<String> exportAllData() async {
     final prefs = await SharedPreferences.getInstance();

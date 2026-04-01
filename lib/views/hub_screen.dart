@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../app_colors.dart';
 import 'widgets/module_card.dart';
 import 'tabs/timer_tab.dart';
 import 'tabs/quests_tab.dart';
+import 'nutrition/nutrition_screen.dart';
 
 class HubScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final StatsPresenter statsPresenter;
+  final NutritionPresenter? nutritionPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
-  /// Populated by AppShell as new modules (Nutrition, Activity, Treasury) are added.
+  /// Populated by AppShell as new modules (Activity, Treasury) are added.
   final Map<String, String Function()> moduleSubtitleGetters;
 
   /// Optional onTap overrides per module. If absent, defaults are used.
@@ -22,6 +25,7 @@ class HubScreen extends StatelessWidget {
     super.key,
     required this.fastingPresenter,
     required this.statsPresenter,
+    this.nutritionPresenter,
     this.moduleSubtitleGetters = const {},
     this.moduleOnTapOverrides = const {},
   });
@@ -29,7 +33,11 @@ class HubScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([fastingPresenter, statsPresenter]),
+      listenable: Listenable.merge([
+        fastingPresenter,
+        statsPresenter,
+        if (nutritionPresenter != null) nutritionPresenter!,
+      ]),
       builder: (context, _) => _buildGrid(context),
     );
   }
@@ -99,7 +107,15 @@ class HubScreen extends StatelessWidget {
         rpgName: 'ALCHEMY LAB',
         icon: MdiIcons.flask,
         accentColor: AppColors.gold,
-        isLocked: true,
+        isLocked: nutritionPresenter == null,
+        subtitle: nutritionPresenter != null
+            ? moduleSubtitleGetters['calories']?.call() ??
+                nutritionPresenter!.hubSubtitle
+            : null,
+        onTap: moduleOnTapOverrides['calories'] ??
+            (nutritionPresenter != null
+                ? () => _pushNutritionScreen(context)
+                : null),
       ),
       ModuleCard(
         title: 'Activity',
@@ -141,6 +157,15 @@ class HubScreen extends StatelessWidget {
           appBar: AppBar(title: const Text('Discipline Protocol')),
           body: TimerTab(presenter: fastingPresenter),
         ),
+      ),
+    );
+  }
+
+  void _pushNutritionScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NutritionScreen(presenter: nutritionPresenter!),
       ),
     );
   }
