@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
+import '../presenters/treasury_dashboard_presenter.dart';
 import '../app_colors.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
@@ -11,12 +13,15 @@ import 'widgets/module_card.dart';
 import 'tabs/timer_tab.dart';
 import 'tabs/quests_tab.dart';
 import 'nutrition/nutrition_screen.dart';
+import 'treasury/treasury_module_view.dart';
 
 class HubScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final StatsPresenter statsPresenter;
   final NutritionPresenter? nutritionPresenter;
   final ActivityPresenter? activityPresenter;
+  final TreasuryDashboardPresenter? treasuryPresenter;
+  final LedgerPresenter? ledgerPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
   /// Populated by AppShell as new modules (Activity, Treasury) are added.
@@ -31,6 +36,8 @@ class HubScreen extends StatelessWidget {
     required this.statsPresenter,
     this.nutritionPresenter,
     this.activityPresenter,
+    this.treasuryPresenter,
+    this.ledgerPresenter,
     this.moduleSubtitleGetters = const {},
     this.moduleOnTapOverrides = const {},
   });
@@ -43,6 +50,7 @@ class HubScreen extends StatelessWidget {
         statsPresenter,
         if (nutritionPresenter != null) nutritionPresenter!,
         if (activityPresenter != null) activityPresenter!,
+        if (treasuryPresenter != null) treasuryPresenter!,
       ]),
       builder: (context, _) => _buildGrid(context),
     );
@@ -140,7 +148,12 @@ class HubScreen extends StatelessWidget {
         rpgName: 'TREASURY',
         icon: MdiIcons.bank,
         accentColor: Colors.amber,
-        isLocked: true,
+        isLocked: treasuryPresenter == null,
+        subtitle: treasuryPresenter != null ? 'Track finances' : null,
+        onTap: moduleOnTapOverrides['treasury'] ??
+            (treasuryPresenter != null
+                ? () => _pushTreasuryScreen(context)
+                : null),
       ),
     ];
   }
@@ -187,6 +200,18 @@ class HubScreen extends StatelessWidget {
         builder: (_) => ap.isHealthConnectAvailable && !ap.hasHealthPermission
             ? ActivityPermissionScreen(presenter: ap)
             : ActivityScreen(presenter: ap),
+      ),
+    );
+  }
+
+  void _pushTreasuryScreen(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TreasuryModuleView(
+          dashPresenter: treasuryPresenter!,
+          ledgerPresenter: ledgerPresenter!,
+        ),
       ),
     );
   }
