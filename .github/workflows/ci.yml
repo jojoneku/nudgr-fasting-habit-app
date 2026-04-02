@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, dev]
   push:
-    branches: [main, dev]
+    branches: [main, dev, hotfix]
 
 jobs:
   analyze_format:
@@ -51,6 +51,54 @@ jobs:
         with:
           files: coverage/lcov.info
         continue-on-error: true
+
+  promote_hotfix:
+    name: Promote hotfix → main + dev
+    runs-on: ubuntu-latest
+    needs: [analyze_format, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/hotfix'
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open hotfix→main PR and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list --base main --head hotfix \
+            --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then
+            gh pr create \
+              --base main --head hotfix \
+              --title "hotfix: promote hotfix → main" \
+              --body "Automated hotfix promotion — CI passed on \`hotfix\`." \
+              --repo "$GITHUB_REPOSITORY"
+            existing=$(gh pr list --base main --head hotfix \
+              --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          fi
+          gh pr merge "$existing" --auto --merge \
+            --repo "$GITHUB_REPOSITORY"
+
+      - name: Open hotfix→dev PR and enable auto-merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          existing=$(gh pr list --base dev --head hotfix \
+            --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          if [ -z "$existing" ]; then
+            gh pr create \
+              --base dev --head hotfix \
+              --title "hotfix: back-merge hotfix → dev" \
+              --body "Keeping dev in sync with the hotfix." \
+              --repo "$GITHUB_REPOSITORY"
+            existing=$(gh pr list --base dev --head hotfix \
+              --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          fi
+          gh pr merge "$existing" --auto --merge \
+            --repo "$GITHUB_REPOSITORY"
 
   promote_to_main:
     name: Promote dev → main
