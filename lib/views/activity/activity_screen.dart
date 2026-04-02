@@ -8,7 +8,6 @@ import '../../app_colors.dart';
 import '../../models/activity_log.dart';
 import '../../presenters/activity_presenter.dart';
 
-final _dateFmt = DateFormat('MMM d');
 final _numFmt = NumberFormat('#,###');
 final _dayFmt = DateFormat('E'); // Mon, Tue…
 
@@ -274,7 +273,7 @@ class _MetricCardsRow extends StatelessWidget {
           iconColor: const Color(0xFFFF6D00),
           label: 'CALORIES',
           value: presenter.caloriesBurned(log) != null
-              ? '${_numFmt.format(presenter.caloriesBurned(log)!.round())}'
+              ? _numFmt.format(presenter.caloriesBurned(log)!.round())
               : '—',
           sub: presenter.todayCaloriesLabel,
         ),
@@ -702,15 +701,15 @@ class _CalendarSectionState extends State<_CalendarSection> {
               final hasDist = !isFuture && log != null && log.distanceMeters != null && log.distanceMeters! > 0;
               final hasData = hasSteps || hasDist;
               final stepsProgress = hasSteps && goalSteps > 0
-                  ? (log!.steps / goalSteps).clamp(0.0, 1.0).toDouble()
+                  ? (log.steps / goalSteps).clamp(0.0, 1.0).toDouble()
                   : 0.0;
               final ringColor = !hasSteps
                   ? Colors.transparent
-                  : log!.goalMet
+                  : log.goalMet
                       ? AppColors.success
                       : AppColors.gold;
               final distProgress = hasDist && goalDist > 0
-                  ? (log!.distanceMeters! / goalDist).clamp(0.0, 1.0).toDouble()
+                  ? (log.distanceMeters! / goalDist).clamp(0.0, 1.0).toDouble()
                   : 0.0;
               final distColor = hasDist && goalDist > 0
                   ? AppColors.accent
@@ -759,7 +758,7 @@ class _CalendarSectionState extends State<_CalendarSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasSteps ? _compactSteps(log!.steps) : hasDist ? _compactDist(log!.distanceMeters!) : '',
+                      hasSteps ? _compactSteps(log.steps) : hasDist ? _compactDist(log.distanceMeters!) : '',
                       style: TextStyle(
                         color: hasData
                             ? labelColor.withValues(alpha: 0.85)
@@ -1280,15 +1279,15 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
               final hasDist = !isFuture && log != null && log.distanceMeters != null && log.distanceMeters! > 0;
               final hasData = hasSteps || hasDist;
               final stepsProgress = hasSteps && widget.goalSteps > 0
-                  ? (log!.steps / widget.goalSteps).clamp(0.0, 1.0).toDouble()
+                  ? (log.steps / widget.goalSteps).clamp(0.0, 1.0).toDouble()
                   : 0.0;
               final ringColor = !hasSteps
                   ? Colors.transparent
-                  : log!.goalMet
+                  : log.goalMet
                       ? AppColors.success
                       : AppColors.gold;
               final distProgress = hasDist && widget.goalDistanceMeters > 0
-                  ? (log!.distanceMeters! / widget.goalDistanceMeters).clamp(0.0, 1.0).toDouble()
+                  ? (log.distanceMeters! / widget.goalDistanceMeters).clamp(0.0, 1.0).toDouble()
                   : 0.0;
               final distColor = hasDist && widget.goalDistanceMeters > 0
                   ? AppColors.accent
@@ -1339,7 +1338,7 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasSteps ? _compactSteps(log!.steps) : hasDist ? _compactDist(log!.distanceMeters!) : '',
+                      hasSteps ? _compactSteps(log.steps) : hasDist ? _compactDist(log.distanceMeters!) : '',
                       style: TextStyle(
                         color: hasData
                             ? labelColor.withValues(alpha: 0.85)

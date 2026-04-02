@@ -417,6 +417,36 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
       ) as _i10.Future<List<_i5.ActivityLog>>);
 
   @override
+  _i10.Future<Set<String>> loadActivityLogKeys() => (super.noSuchMethod(
+        Invocation.method(
+          #loadActivityLogKeys,
+          [],
+        ),
+        returnValue: _i10.Future<Set<String>>.value(<String>{}),
+      ) as _i10.Future<Set<String>>);
+
+  @override
+  _i10.Future<void> clearActivityHistory() => (super.noSuchMethod(
+        Invocation.method(
+          #clearActivityHistory,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> saveActivityLogs(List<_i5.ActivityLog>? logs) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveActivityLogs,
+          [logs],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
   _i10.Future<void> saveActivityGoals(_i6.ActivityGoals? goals) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -441,6 +471,26 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
           ),
         )),
       ) as _i10.Future<_i6.ActivityGoals>);
+
+  @override
+  _i10.Future<String?> loadPreferredStepsSource() => (super.noSuchMethod(
+        Invocation.method(
+          #loadPreferredStepsSource,
+          [],
+        ),
+        returnValue: _i10.Future<String?>.value(),
+      ) as _i10.Future<String?>);
+
+  @override
+  _i10.Future<void> savePreferredStepsSource(String? sourceId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #savePreferredStepsSource,
+          [sourceId],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
 
   @override
   _i10.Future<void> saveActivityGoalMetDate(String? date) =>
@@ -543,31 +593,154 @@ class MockHealthService extends _i1.Mock implements _i16.HealthService {
       ) as _i10.Future<bool>);
 
   @override
-  _i10.Future<int> readTodaySteps() => (super.noSuchMethod(
+  _i10.Future<void> openHealthConnectSettings() => (super.noSuchMethod(
+        Invocation.method(
+          #openHealthConnectSettings,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<int> readTodaySteps({String? sourceId}) => (super.noSuchMethod(
         Invocation.method(
           #readTodaySteps,
           [],
+          {#sourceId: sourceId},
         ),
         returnValue: _i10.Future<int>.value(0),
       ) as _i10.Future<int>);
 
   @override
-  _i10.Future<double?> readTodayActiveCalories() => (super.noSuchMethod(
+  _i10.Future<double?> readTodayActiveCalories({String? sourceId}) =>
+      (super.noSuchMethod(
         Invocation.method(
           #readTodayActiveCalories,
           [],
+          {#sourceId: sourceId},
         ),
         returnValue: _i10.Future<double?>.value(),
       ) as _i10.Future<double?>);
 
   @override
-  _i10.Future<double?> readTodayDistance() => (super.noSuchMethod(
+  _i10.Future<double?> readTodayTotalCalories({String? sourceId}) =>
+      (super.noSuchMethod(
         Invocation.method(
-          #readTodayDistance,
+          #readTodayTotalCalories,
           [],
+          {#sourceId: sourceId},
         ),
         returnValue: _i10.Future<double?>.value(),
       ) as _i10.Future<double?>);
+
+  @override
+  _i10.Future<double?> readTodayDistance({String? sourceId}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #readTodayDistance,
+          [],
+          {#sourceId: sourceId},
+        ),
+        returnValue: _i10.Future<double?>.value(),
+      ) as _i10.Future<double?>);
+
+  @override
+  _i10.Future<
+      ({
+        double? activeCalories,
+        double? distance,
+        int steps,
+        double? totalCalories
+      })> readDayData(
+    DateTime? date, {
+    String? stepsSourceId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #readDayData,
+          [date],
+          {#stepsSourceId: stepsSourceId},
+        ),
+        returnValue: _i10.Future<
+            ({
+              double? activeCalories,
+              double? distance,
+              int steps,
+              double? totalCalories
+            })>.value((
+          activeCalories: null,
+          distance: null,
+          steps: 0,
+          totalCalories: null
+        )),
+      ) as _i10.Future<
+          ({
+            double? activeCalories,
+            double? distance,
+            int steps,
+            double? totalCalories
+          })>);
+
+  @override
+  _i10.Future<
+      Map<
+          String,
+          ({
+            double? activeCalories,
+            double? distance,
+            int steps,
+            double? totalCalories
+          })>> readRangeDataByDay(
+    DateTime? start,
+    DateTime? end, {
+    String? stepsSourceId,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #readRangeDataByDay,
+          [
+            start,
+            end,
+          ],
+          {#stepsSourceId: stepsSourceId},
+        ),
+        returnValue: _i10.Future<
+            Map<
+                String,
+                ({
+                  double? activeCalories,
+                  double? distance,
+                  int steps,
+                  double? totalCalories
+                })>>.value(<String,
+            ({
+          double? activeCalories,
+          double? distance,
+          int steps,
+          double? totalCalories
+        })>{}),
+      ) as _i10.Future<
+          Map<
+              String,
+              ({
+                double? activeCalories,
+                double? distance,
+                int steps,
+                double? totalCalories
+              })>>);
+
+  @override
+  _i10.Future<List<({String sourceId, String sourceName})>> readStepSources() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #readStepSources,
+          [],
+        ),
+        returnValue:
+            _i10.Future<List<({String sourceId, String sourceName})>>.value(
+                <({String sourceId, String sourceName})>[]),
+      ) as _i10.Future<List<({String sourceId, String sourceName})>>);
 }
 
 /// A class which mocks [NotificationService].
@@ -1565,6 +1738,31 @@ class MockActivityPresenter extends _i1.Mock implements _i24.ActivityPresenter {
       ) as bool);
 
   @override
+  bool get isBackfilling => (super.noSuchMethod(
+        Invocation.getter(#isBackfilling),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  bool get isConnecting => (super.noSuchMethod(
+        Invocation.getter(#isConnecting),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  bool get healthPermissionDenied => (super.noSuchMethod(
+        Invocation.getter(#healthPermissionDenied),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  List<({String sourceId, String sourceName})> get stepSources =>
+      (super.noSuchMethod(
+        Invocation.getter(#stepSources),
+        returnValue: <({String sourceId, String sourceName})>[],
+      ) as List<({String sourceId, String sourceName})>);
+
+  @override
   int get todaySteps => (super.noSuchMethod(
         Invocation.getter(#todaySteps),
         returnValue: 0,
@@ -1583,11 +1781,50 @@ class MockActivityPresenter extends _i1.Mock implements _i24.ActivityPresenter {
       ) as bool);
 
   @override
+  double get distanceProgress => (super.noSuchMethod(
+        Invocation.getter(#distanceProgress),
+        returnValue: 0.0,
+      ) as double);
+
+  @override
+  bool get isDistanceGoalMet => (super.noSuchMethod(
+        Invocation.getter(#isDistanceGoalMet),
+        returnValue: false,
+      ) as bool);
+
+  @override
   String get summaryLabel => (super.noSuchMethod(
         Invocation.getter(#summaryLabel),
         returnValue: _i15.dummyValue<String>(
           this,
           Invocation.getter(#summaryLabel),
+        ),
+      ) as String);
+
+  @override
+  List<_i5.ActivityLog> get weeklyLogs => (super.noSuchMethod(
+        Invocation.getter(#weeklyLogs),
+        returnValue: <_i5.ActivityLog>[],
+      ) as List<_i5.ActivityLog>);
+
+  @override
+  int get weeklyMaxSteps => (super.noSuchMethod(
+        Invocation.getter(#weeklyMaxSteps),
+        returnValue: 0,
+      ) as int);
+
+  @override
+  Map<String, _i5.ActivityLog> get historyByDate => (super.noSuchMethod(
+        Invocation.getter(#historyByDate),
+        returnValue: <String, _i5.ActivityLog>{},
+      ) as Map<String, _i5.ActivityLog>);
+
+  @override
+  String get todayCaloriesLabel => (super.noSuchMethod(
+        Invocation.getter(#todayCaloriesLabel),
+        returnValue: _i15.dummyValue<String>(
+          this,
+          Invocation.getter(#todayCaloriesLabel),
         ),
       ) as String);
 
@@ -1605,6 +1842,13 @@ class MockActivityPresenter extends _i1.Mock implements _i24.ActivityPresenter {
         Invocation.getter(#hasListeners),
         returnValue: false,
       ) as bool);
+
+  @override
+  double? caloriesBurned(_i5.ActivityLog? log) =>
+      (super.noSuchMethod(Invocation.method(
+        #caloriesBurned,
+        [log],
+      )) as double?);
 
   @override
   _i10.Future<void> loadState() => (super.noSuchMethod(
@@ -1652,6 +1896,68 @@ class MockActivityPresenter extends _i1.Mock implements _i24.ActivityPresenter {
         Invocation.method(
           #requestHealthPermission,
           [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> openHealthConnectSettings() => (super.noSuchMethod(
+        Invocation.method(
+          #openHealthConnectSettings,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> recheckPermissions() => (super.noSuchMethod(
+        Invocation.method(
+          #recheckPermissions,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> loadStepSources() => (super.noSuchMethod(
+        Invocation.method(
+          #loadStepSources,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> setPreferredStepsSource(String? sourceId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setPreferredStepsSource,
+          [sourceId],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> clearAndRebackfill() => (super.noSuchMethod(
+        Invocation.method(
+          #clearAndRebackfill,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> backfillHistory({int? days = 90}) => (super.noSuchMethod(
+        Invocation.method(
+          #backfillHistory,
+          [],
+          {#days: days},
         ),
         returnValue: _i10.Future<void>.value(),
         returnValueForMissingStub: _i10.Future<void>.value(),

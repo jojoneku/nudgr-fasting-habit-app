@@ -80,7 +80,6 @@ class ActivityPresenter extends ChangeNotifier {
 
   /// Last 7 days (oldest→newest), including today, for the weekly chart.
   List<ActivityLog> get weeklyLogs {
-    final today = _todayKey();
     final all = [_todayLog, ..._history];
     final byDate = {for (final l in all) l.date: l};
     return List.generate(7, (i) {
