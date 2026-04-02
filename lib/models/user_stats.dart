@@ -100,6 +100,6 @@ class UserStats {
           attributes == other.attributes;
 
   @override
-  int get hashCode =>
-      Object.hash(name, level, currentXp, currentHp, statPoints, streak, attributes);
+  int get hashCode => Object.hash(
+      name, level, currentXp, currentHp, statPoints, streak, attributes);
 }

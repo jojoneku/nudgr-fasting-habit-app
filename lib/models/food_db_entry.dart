@@ -45,6 +45,5 @@ class FoodDbEntry {
   }
 
   /// Display string for calorie density, e.g. "165 kcal / 100g"
-  String get densityLabel =>
-      '${caloriesPer100g.round()} kcal / 100g';
+  String get densityLabel => '${caloriesPer100g.round()} kcal / 100g';
 }

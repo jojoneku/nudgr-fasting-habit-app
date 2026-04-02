@@ -32,7 +32,8 @@ void main() {
 
     test('loadActivityHistory excludes today', () async {
       final today = _todayKey();
-      final yesterday = _dateKey(DateTime.now().subtract(const Duration(days: 1)));
+      final yesterday =
+          _dateKey(DateTime.now().subtract(const Duration(days: 1)));
       await svc.saveActivityLog(ActivityLog(date: today, steps: 1000));
       await svc.saveActivityLog(ActivityLog(date: yesterday, steps: 2000));
       final history = await svc.loadActivityHistory();
@@ -60,7 +61,8 @@ void main() {
       expect(await svc.loadActivityStreak(), 0);
     });
 
-    test('saveActivityGoalMetDate / loadActivityGoalMetDate round-trip', () async {
+    test('saveActivityGoalMetDate / loadActivityGoalMetDate round-trip',
+        () async {
       await svc.saveActivityGoalMetDate('2026-03-25');
       expect(await svc.loadActivityGoalMetDate(), '2026-03-25');
     });

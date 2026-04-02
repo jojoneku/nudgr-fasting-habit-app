@@ -29,7 +29,12 @@ void main() {
     });
 
     test('fromJson handles missing optional macros', () {
-      final json = {'id': 'x', 'name': 'Test', 'calories': 100, 'loggedAt': DateTime.now().toIso8601String()};
+      final json = {
+        'id': 'x',
+        'name': 'Test',
+        'calories': 100,
+        'loggedAt': DateTime.now().toIso8601String()
+      };
       final e = FoodEntry.fromJson(json);
       expect(e.protein, isNull);
       expect(e.carbs, isNull);

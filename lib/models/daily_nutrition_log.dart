@@ -21,13 +21,11 @@ class DailyNutritionLog {
   int get totalCalories => allEntries.fold(0, (s, e) => s + e.calories);
   double get totalProtein =>
       allEntries.fold(0.0, (s, e) => s + (e.protein ?? 0.0));
-  double get totalCarbs =>
-      allEntries.fold(0.0, (s, e) => s + (e.carbs ?? 0.0));
-  double get totalFat =>
-      allEntries.fold(0.0, (s, e) => s + (e.fat ?? 0.0));
+  double get totalCarbs => allEntries.fold(0.0, (s, e) => s + (e.carbs ?? 0.0));
+  double get totalFat => allEntries.fold(0.0, (s, e) => s + (e.fat ?? 0.0));
 
-  bool get hasMacros =>
-      allEntries.any((e) => e.protein != null || e.carbs != null || e.fat != null);
+  bool get hasMacros => allEntries
+      .any((e) => e.protein != null || e.carbs != null || e.fat != null);
 
   int caloriesForSlot(MealSlot slot) =>
       (meals[slot] ?? []).fold(0, (s, e) => s + e.calories);
@@ -97,9 +95,8 @@ class DailyNutritionLog {
     final updated = Map<MealSlot, List<FoodEntry>>.from(
       meals.map((k, v) => MapEntry(k, List<FoodEntry>.from(v))),
     );
-    updated[slot] = (updated[slot] ?? [])
-        .where((e) => e.id != entryId)
-        .toList();
+    updated[slot] =
+        (updated[slot] ?? []).where((e) => e.id != entryId).toList();
     return DailyNutritionLog(date: date, meals: updated);
   }
 

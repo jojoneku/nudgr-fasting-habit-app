@@ -49,8 +49,8 @@ class _NutritionBody extends StatelessWidget {
         _ModeChip(mode: presenter.goals.mode),
         IconButton(
           icon: const Icon(Icons.history),
-          onPressed: () => _push(context,
-              NutritionHistoryScreen(presenter: presenter)),
+          onPressed: () =>
+              _push(context, NutritionHistoryScreen(presenter: presenter)),
         ),
         IconButton(
           icon: const Icon(Icons.tune),
@@ -80,8 +80,8 @@ class _NutritionBody extends StatelessWidget {
   }
 
   Widget _buildFab(BuildContext context) {
-    final locked = presenter.goals.ifSyncEnabled &&
-        !presenter.isEatingWindowOpen;
+    final locked =
+        presenter.goals.ifSyncEnabled && !presenter.isEatingWindowOpen;
     return FloatingActionButton.extended(
       onPressed: locked ? null : () => _showLogMealSheet(context),
       backgroundColor: locked ? AppColors.neutral : AppColors.gold,
@@ -122,7 +122,7 @@ class _IfSyncBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final open = presenter.isEatingWindowOpen;
     final color = open ? AppColors.success : AppColors.danger;
-    final icon  = open ? Icons.lock_open : Icons.lock_outline;
+    final icon = open ? Icons.lock_open : Icons.lock_outline;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -137,7 +137,8 @@ class _IfSyncBanner extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             presenter.windowStatusLabel,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: color, fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ],
       ),
@@ -153,7 +154,7 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final goalMet  = presenter.isCalorieGoalMet;
+    final goalMet = presenter.isCalorieGoalMet;
     final barColor = goalMet ? AppColors.success : AppColors.gold;
     final progress = presenter.calorieProgress.clamp(0.0, 1.0);
 
@@ -175,13 +176,16 @@ class _SummaryCard extends StatelessWidget {
               Text(
                 presenter.summaryLabel,
                 style: TextStyle(
-                  color: barColor, fontSize: 20,
-                  fontWeight: FontWeight.bold, letterSpacing: 0.5,
+                  color: barColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
               if (goalMet) ...[
                 const SizedBox(width: 8),
-                const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+                const Icon(Icons.check_circle,
+                    color: AppColors.success, size: 20),
               ],
             ],
           ),
@@ -195,7 +199,8 @@ class _SummaryCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '🔥 ${presenter.goalStreak}-day goal streak',
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ],
         ],
@@ -226,7 +231,8 @@ class _AnimatedBar extends StatelessWidget {
             height: 8,
             width: constraints.maxWidth * progress,
             decoration: BoxDecoration(
-              color: color, borderRadius: BorderRadius.circular(4),
+              color: color,
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
         ),
@@ -243,11 +249,14 @@ class _MacroBars extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _MacroRow('P', presenter.todayProtein, presenter.goals.proteinGrams, AppColors.primary),
+        _MacroRow('P', presenter.todayProtein, presenter.goals.proteinGrams,
+            AppColors.primary),
         const SizedBox(height: 6),
-        _MacroRow('C', presenter.todayCarbs,   presenter.goals.carbsGrams,   AppColors.gold),
+        _MacroRow('C', presenter.todayCarbs, presenter.goals.carbsGrams,
+            AppColors.gold),
         const SizedBox(height: 6),
-        _MacroRow('F', presenter.todayFat,     presenter.goals.fatGrams,     AppColors.danger),
+        _MacroRow('F', presenter.todayFat, presenter.goals.fatGrams,
+            AppColors.danger),
       ],
     );
   }
@@ -262,9 +271,8 @@ class _MacroRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final progress = goal != null && goal! > 0
-        ? (current / goal!).clamp(0.0, 1.0)
-        : 0.0;
+    final progress =
+        goal != null && goal! > 0 ? (current / goal!).clamp(0.0, 1.0) : 0.0;
     final text = goal != null
         ? '$label: ${current.toStringAsFixed(0)}/${goal!.toStringAsFixed(0)}g'
         : '$label: ${current.toStringAsFixed(0)}g';
@@ -273,7 +281,8 @@ class _MacroRow extends StatelessWidget {
         SizedBox(
           width: 80,
           child: Text(text,
-              style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+              style: TextStyle(
+                  color: color, fontSize: 11, fontWeight: FontWeight.w600)),
         ),
         Expanded(child: _AnimatedBar(progress: progress, color: color)),
       ],
@@ -314,7 +323,6 @@ class _QuickAddRow extends StatelessWidget {
       ),
     );
   }
-
 }
 
 class _QuickChip extends StatelessWidget {
@@ -337,7 +345,8 @@ class _QuickChip extends StatelessWidget {
             border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
           ),
           child: Text(label,
-              style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 12)),
         ),
       ),
     );
@@ -365,7 +374,7 @@ class _MealSectionState extends State<_MealSection> {
 
   @override
   Widget build(BuildContext context) {
-    final entries  = widget.presenter.todayLog.entriesForSlot(widget.slot);
+    final entries = widget.presenter.todayLog.entriesForSlot(widget.slot);
     final calories = widget.presenter.caloriesForSlot(widget.slot);
     final hasItems = entries.isNotEmpty;
 
@@ -386,8 +395,8 @@ class _MealSectionState extends State<_MealSection> {
               _EmptySlot(slot: widget.slot, onAddTap: widget.onAddTap),
             ...entries.map((entry) => _EntryRow(
                   entry: entry,
-                  onDelete: () => widget.presenter
-                      .removeFoodEntry(entry.id, widget.slot),
+                  onDelete: () =>
+                      widget.presenter.removeFoodEntry(entry.id, widget.slot),
                 )),
           ],
         ],
@@ -436,7 +445,8 @@ class _SectionHeader extends StatelessWidget {
               const SizedBox(width: 4),
               Icon(
                 expanded ? Icons.expand_less : Icons.expand_more,
-                color: AppColors.textSecondary, size: 16,
+                color: AppColors.textSecondary,
+                size: 16,
               ),
             ],
           ),
@@ -531,7 +541,9 @@ class _EntryRow extends StatelessWidget {
           ),
           Text('${entry.calories} kcal',
               style: const TextStyle(
-                  color: AppColors.gold, fontSize: 13, fontWeight: FontWeight.w600)),
+                  color: AppColors.gold,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
           SizedBox(
             width: 44,
             height: 44,
@@ -567,7 +579,9 @@ class _ModeChip extends StatelessWidget {
         child: Text(
           mode.label.toUpperCase(),
           style: const TextStyle(
-              color: AppColors.gold, fontSize: 9, letterSpacing: 1.2,
+              color: AppColors.gold,
+              fontSize: 9,
+              letterSpacing: 1.2,
               fontWeight: FontWeight.w700),
         ),
       ),

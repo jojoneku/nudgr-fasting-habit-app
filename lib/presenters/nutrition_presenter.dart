@@ -26,19 +26,17 @@ class NutritionPresenter extends ChangeNotifier {
   TdeeProfile? _tdeeProfile;
   List<FoodTemplate> _library = [];
 
-  int _goalStreak = 0;       // consecutive days calorie goal met
-  String? _goalMetDate;      // last date calorie goal was met
-  int _logStreak = 0;        // consecutive days with ≥1 entry
-  String? _logStreakDate;    // last date an entry was logged
+  int _goalStreak = 0; // consecutive days calorie goal met
+  String? _goalMetDate; // last date calorie goal was met
+  int _logStreak = 0; // consecutive days with ≥1 entry
+  String? _logStreakDate; // last date an entry was logged
 
   bool _proteinGoalMetToday = false;
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
-  String? _aiError;
-  bool _aiJustInstalled = false;
 
   static final _dateFmt = DateFormat('yyyy-MM-dd');
-  static final _calFmt  = NumberFormat('#,###');
+  static final _calFmt = NumberFormat('#,###');
 
   NutritionPresenter({
     required StatsPresenter statsPresenter,
@@ -56,24 +54,25 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Core state ───────────────────────────────────────────────────────────────
 
-  DailyNutritionLog       get todayLog      => _todayLog;
-  NutritionGoals          get goals         => _goals;
-  List<DailyNutritionLog> get history       => _history;
-  TdeeProfile?            get tdeeProfile   => _tdeeProfile;
+  DailyNutritionLog get todayLog => _todayLog;
+  NutritionGoals get goals => _goals;
+  List<DailyNutritionLog> get history => _history;
+  TdeeProfile? get tdeeProfile => _tdeeProfile;
 
   // ── Calorie getters ──────────────────────────────────────────────────────────
 
   int get todayCalories => _todayLog.totalCalories;
 
-  int get effectiveGoal => _goals.mode == TrackingMode.standard && _tdeeProfile != null
-      ? _tdeeProfile!.targetCalories
-      : _goals.dailyCalories;
+  int get effectiveGoal =>
+      _goals.mode == TrackingMode.standard && _tdeeProfile != null
+          ? _tdeeProfile!.targetCalories
+          : _goals.dailyCalories;
 
   double get calorieProgress =>
       effectiveGoal > 0 ? (todayCalories / effectiveGoal).clamp(0.0, 1.5) : 0.0;
 
   bool get isCalorieGoalMet => todayCalories >= effectiveGoal;
-  bool get isOverGoal        => todayCalories > effectiveGoal * 1.2;
+  bool get isOverGoal => todayCalories > effectiveGoal * 1.2;
 
   String get summaryLabel =>
       '${_calFmt.format(todayCalories)} / ${_calFmt.format(effectiveGoal)} kcal';
@@ -89,16 +88,18 @@ class NutritionPresenter extends ChangeNotifier {
   // ── Macro getters ────────────────────────────────────────────────────────────
 
   double get todayProtein => _todayLog.totalProtein;
-  double get todayCarbs   => _todayLog.totalCarbs;
-  double get todayFat     => _todayLog.totalFat;
+  double get todayCarbs => _todayLog.totalCarbs;
+  double get todayFat => _todayLog.totalFat;
 
-  double get proteinProgress => _goals.proteinGrams != null && _goals.proteinGrams! > 0
-      ? (todayProtein / _goals.proteinGrams!).clamp(0.0, 1.0)
-      : 0.0;
+  double get proteinProgress =>
+      _goals.proteinGrams != null && _goals.proteinGrams! > 0
+          ? (todayProtein / _goals.proteinGrams!).clamp(0.0, 1.0)
+          : 0.0;
 
-  double get carbsProgress => _goals.carbsGrams != null && _goals.carbsGrams! > 0
-      ? (todayCarbs / _goals.carbsGrams!).clamp(0.0, 1.0)
-      : 0.0;
+  double get carbsProgress =>
+      _goals.carbsGrams != null && _goals.carbsGrams! > 0
+          ? (todayCarbs / _goals.carbsGrams!).clamp(0.0, 1.0)
+          : 0.0;
 
   double get fatProgress => _goals.fatGrams != null && _goals.fatGrams! > 0
       ? (todayFat / _goals.fatGrams!).clamp(0.0, 1.0)
@@ -120,8 +121,8 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Streak getters ───────────────────────────────────────────────────────────
 
-  int  get goalStreak => _goalStreak;
-  int  get logStreak  => _logStreak;
+  int get goalStreak => _goalStreak;
+  int get logStreak => _logStreak;
 
   // ── Food library getters ─────────────────────────────────────────────────────
 
@@ -161,16 +162,13 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── AI getters ───────────────────────────────────────────────────────────────
 
-  FoodDbService   get foodDb             => _foodDb;
-  bool            get isAiAvailable      => _ai.isModelAvailable;
-  bool            get isAiEstimating     => _isAiEstimating;
-  bool            get isAiDownloading    => _ai.isDownloading;
-  int             get aiDownloadProgress => _ai.downloadProgress;
-  String          get aiSizeLabel        => _ai.modelSizeLabel;
-  AiMealEstimate? get lastEstimate       => _lastEstimate;
-  String?         get aiError            => _aiError;
-  String?         get aiDownloadError    => _ai.downloadError;
-  bool            get aiJustInstalled    => _aiJustInstalled;
+  FoodDbService get foodDb => _foodDb;
+  bool get isAiAvailable => _ai.isModelAvailable;
+  bool get isAiEstimating => _isAiEstimating;
+  bool get isAiDownloading => _ai.isDownloading;
+  int get aiDownloadProgress => _ai.downloadProgress;
+  String get aiSizeLabel => _ai.modelSizeLabel;
+  AiMealEstimate? get lastEstimate => _lastEstimate;
 
   // ── Actions — entries ────────────────────────────────────────────────────────
 
@@ -211,7 +209,8 @@ class NutritionPresenter extends ChangeNotifier {
     // Increment useCount on template
     final idx = _library.indexWhere((t) => t.id == meal.id);
     if (idx != -1) {
-      _library[idx] = _library[idx].copyWith(useCount: _library[idx].useCount + 1);
+      _library[idx] =
+          _library[idx].copyWith(useCount: _library[idx].useCount + 1);
       await _storage.saveFoodLibrary(_library);
     }
     notifyListeners();
@@ -263,14 +262,11 @@ class NutritionPresenter extends ChangeNotifier {
     if (!isAiAvailable) return;
     _isAiEstimating = true;
     _lastEstimate = null;
-    _aiError = null;
-    _aiJustInstalled = false;
     notifyListeners();
     try {
       _lastEstimate = await _ai.estimate(description);
-    } catch (e) {
+    } catch (_) {
       _lastEstimate = null;
-      _aiError = 'Estimation failed — try rephrasing your meal.';
     } finally {
       _isAiEstimating = false;
       notifyListeners();
@@ -289,7 +285,6 @@ class NutritionPresenter extends ChangeNotifier {
 
   void clearEstimate() {
     _lastEstimate = null;
-    _aiError = null;
     notifyListeners();
   }
 
@@ -297,21 +292,20 @@ class NutritionPresenter extends ChangeNotifier {
     if (_ai.isDownloading) return;
     notifyListeners();
     await _ai.downloadModel(onProgress: (_) => notifyListeners());
-    if (_ai.isModelAvailable) _aiJustInstalled = true;
     notifyListeners();
   }
 
   // ── Load state ───────────────────────────────────────────────────────────────
 
   Future<void> loadState() async {
-    _todayLog     = await _storage.loadTodayNutritionLog();
-    _goals        = await _storage.loadNutritionGoals();
-    _history      = await _storage.loadNutritionHistory();
-    _tdeeProfile  = await _storage.loadTdeeProfile();
-    _library      = await _storage.loadFoodLibrary();
-    _goalStreak   = await _storage.loadNutritionStreak();
-    _goalMetDate  = await _storage.loadNutritionGoalMetDate();
-    _logStreak    = await _storage.loadLogStreak();
+    _todayLog = await _storage.loadTodayNutritionLog();
+    _goals = await _storage.loadNutritionGoals();
+    _history = await _storage.loadNutritionHistory();
+    _tdeeProfile = await _storage.loadTdeeProfile();
+    _library = await _storage.loadFoodLibrary();
+    _goalStreak = await _storage.loadNutritionStreak();
+    _goalMetDate = await _storage.loadNutritionGoalMetDate();
+    _logStreak = await _storage.loadLogStreak();
     _logStreakDate = await _storage.loadLogStreakDate();
     notifyListeners();
   }
@@ -333,7 +327,8 @@ class NutritionPresenter extends ChangeNotifier {
       await _statsPresenter.addXp(10);
     }
 
-    final yesterday = _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
+    final yesterday =
+        _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
     _goalStreak = (_goalMetDate == yesterday) ? _goalStreak + 1 : 1;
     _goalMetDate = today;
 
@@ -360,7 +355,8 @@ class NutritionPresenter extends ChangeNotifier {
   Future<void> _updateLogStreak() async {
     final today = _dateFmt.format(DateTime.now());
     if (_logStreakDate == today) return; // already counted today
-    final yesterday = _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
+    final yesterday =
+        _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
     _logStreak = (_logStreakDate == yesterday) ? _logStreak + 1 : 1;
     _logStreakDate = today;
     await _onLogStreakUpdate();

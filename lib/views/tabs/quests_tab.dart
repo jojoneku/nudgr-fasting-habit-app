@@ -110,8 +110,7 @@ class _QuestsTabState extends State<QuestsTab> {
               children: [
                 const Text('Missed',
                     style: TextStyle(
-                        color: AppColors.error,
-                        fontWeight: FontWeight.bold)),
+                        color: AppColors.error, fontWeight: FontWeight.bold)),
                 const Spacer(),
                 Text('Tap to complete',
                     style: TextStyle(
@@ -217,8 +216,7 @@ class _QuestsTabState extends State<QuestsTab> {
                   color: isCompleted
                       ? AppColors.neutral
                       : (isMissed ? AppColors.error : null),
-                  decoration:
-                      isCompleted ? TextDecoration.lineThrough : null,
+                  decoration: isCompleted ? TextDecoration.lineThrough : null,
                   decorationThickness: 2.0,
                 ),
               ),
@@ -226,14 +224,12 @@ class _QuestsTabState extends State<QuestsTab> {
             if (!isCompleted) ...[
               const SizedBox(width: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.gold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                      color: AppColors.gold.withValues(alpha: 0.5),
-                      width: 0.5),
+                      color: AppColors.gold.withValues(alpha: 0.5), width: 0.5),
                 ),
                 child: Text(
                   '+${item.xpReward} XP',
@@ -396,8 +392,8 @@ class _QuestsTabState extends State<QuestsTab> {
                     DropdownButtonFormField<int?>(
                       initialValue: reminderMinutes,
                       decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 5),
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         border: OutlineInputBorder(),
                       ),
                       items: const [
@@ -409,8 +405,7 @@ class _QuestsTabState extends State<QuestsTab> {
                         DropdownMenuItem(
                             value: 60, child: Text('1 hour before')),
                       ],
-                      onChanged: (val) =>
-                          setState(() => reminderMinutes = val),
+                      onChanged: (val) => setState(() => reminderMinutes = val),
                     ),
                     const SizedBox(height: 20),
                     SwitchListTile(
@@ -429,8 +424,7 @@ class _QuestsTabState extends State<QuestsTab> {
                           const Text('Repeat on'),
                           const SizedBox(height: 10),
                           Row(
-                            mainAxisAlignment:
-                                MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: List.generate(7, (index) {
                               final isSelected = days[index];
                               return Padding(
@@ -502,8 +496,8 @@ class _QuestsTabState extends State<QuestsTab> {
     if (quest != null) {
       final index = presenter.quests.indexOf(quest);
       if (index != -1) {
-        await presenter.updateQuest(index, safeTitle, time.hour, time.minute,
-            days,
+        await presenter.updateQuest(
+            index, safeTitle, time.hour, time.minute, days,
             isOneTime: isOneTime, reminderMinutes: reminderMinutes);
       }
     } else {

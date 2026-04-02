@@ -56,8 +56,10 @@ void main() {
 
     test('totalProtein sums protein across all entries', () {
       final log = DailyNutritionLog.empty('2026-03-25')
-          .addEntry(_entry(id: 'a', calories: 100, protein: 20.0), MealSlot.meal)
-          .addEntry(_entry(id: 'b', calories: 100, protein: 30.0), MealSlot.meal);
+          .addEntry(
+              _entry(id: 'a', calories: 100, protein: 20.0), MealSlot.meal)
+          .addEntry(
+              _entry(id: 'b', calories: 100, protein: 30.0), MealSlot.meal);
       expect(log.totalProtein, 50.0);
     });
 
@@ -68,8 +70,8 @@ void main() {
     });
 
     test('hasMacros is true when any entry has macros', () {
-      final log = DailyNutritionLog.empty('2026-03-25')
-          .addEntry(_entry(id: 'a', calories: 200, protein: 30.0), MealSlot.meal);
+      final log = DailyNutritionLog.empty('2026-03-25').addEntry(
+          _entry(id: 'a', calories: 200, protein: 30.0), MealSlot.meal);
       expect(log.hasMacros, true);
     });
 

@@ -126,7 +126,8 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('START FAST'));
-      await tester.pump(); // synchronous part of startFast runs + notifyListeners
+      await tester
+          .pump(); // synchronous part of startFast runs + notifyListeners
 
       expect(presenter.isFasting, true);
       await cancelTicker();

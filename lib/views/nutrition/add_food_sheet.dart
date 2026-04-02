@@ -82,7 +82,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           width: 44,
           height: 44,
           child: IconButton(
-            icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+            icon: const Icon(Icons.close,
+                color: AppColors.textSecondary, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -174,7 +175,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.textSecondary,
-                side: const BorderSide(color: AppColors.textSecondary, width: 0.5),
+                side: const BorderSide(
+                    color: AppColors.textSecondary, width: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -200,7 +202,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
               onPressed: _isLogging ? null : _logFood,
               child: const Text(
                 'LOG FOOD',
-                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                style:
+                    TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
               ),
             ),
           ),
@@ -214,7 +217,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       labelText: label,
       hintText: hint,
       labelStyle: const TextStyle(color: AppColors.textSecondary),
-      hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
+      hintStyle:
+          TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
       filled: true,
       fillColor: AppColors.background,
       border: OutlineInputBorder(

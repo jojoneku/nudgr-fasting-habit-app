@@ -2,11 +2,11 @@ import 'meal_slot.dart';
 
 class NutritionGoals {
   final TrackingMode mode;
-  final int dailyCalories;       // used in simple mode; fallback in standard
+  final int dailyCalories; // used in simple mode; fallback in standard
   final double? proteinGrams;
   final double? carbsGrams;
   final double? fatGrams;
-  final bool ifSyncEnabled;      // standard mode: lock logging during fast
+  final bool ifSyncEnabled; // standard mode: lock logging during fast
   final bool overshootPenaltyEnabled;
 
   const NutritionGoals({
@@ -19,15 +19,14 @@ class NutritionGoals {
     this.overshootPenaltyEnabled = false,
   });
 
-  factory NutritionGoals.initial() =>
-      const NutritionGoals(dailyCalories: 2000);
+  factory NutritionGoals.initial() => const NutritionGoals(dailyCalories: 2000);
 
   factory NutritionGoals.fromJson(Map<String, dynamic> json) {
     final modeKey = json['mode'] as String? ?? 'simple';
     final mode = TrackingMode.fromJson(modeKey);
     // Migrate: old ifSync mode had implicit IF lock enabled
-    final ifSyncEnabled = json['ifSyncEnabled'] as bool? ??
-        (modeKey == 'ifSync');
+    final ifSyncEnabled =
+        json['ifSyncEnabled'] as bool? ?? (modeKey == 'ifSync');
     return NutritionGoals(
       mode: mode,
       dailyCalories: json['dailyCalories'] as int,
@@ -69,20 +68,4 @@ class NutritionGoals {
         overshootPenaltyEnabled:
             overshootPenaltyEnabled ?? this.overshootPenaltyEnabled,
       );
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is NutritionGoals &&
-          mode == other.mode &&
-          dailyCalories == other.dailyCalories &&
-          proteinGrams == other.proteinGrams &&
-          carbsGrams == other.carbsGrams &&
-          fatGrams == other.fatGrams &&
-          ifSyncEnabled == other.ifSyncEnabled &&
-          overshootPenaltyEnabled == other.overshootPenaltyEnabled;
-
-  @override
-  int get hashCode => Object.hash(mode, dailyCalories, proteinGrams, carbsGrams,
-      fatGrams, ifSyncEnabled, overshootPenaltyEnabled);
 }

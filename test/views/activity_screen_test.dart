@@ -10,6 +10,12 @@ import '../mocks.mocks.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: child);
 
+/// Pump enough to complete the 300 ms ring animation without using
+/// pumpAndSettle, which hangs when an indeterminate CircularProgressIndicator
+/// is visible (its animation never settles).
+Future<void> _settle(WidgetTester tester) =>
+    tester.pump(const Duration(milliseconds: 500));
+
 void main() {
   late MockStorageService mockStorage;
   late MockHealthService mockHealth;
@@ -30,6 +36,8 @@ void main() {
     when(mockStorage.loadActivityHistory()).thenAnswer((_) async => []);
     when(mockStorage.loadActivityGoalMetDate()).thenAnswer((_) async => null);
     when(mockStorage.loadActivityStreak()).thenAnswer((_) async => 0);
+    when(mockStorage.loadPreferredStepsSource()).thenAnswer((_) async => null);
+    when(mockStorage.loadTdeeProfile()).thenAnswer((_) async => null);
     when(mockStorage.saveActivityLog(any)).thenAnswer((_) async {});
     when(mockStorage.saveActivityGoalMetDate(any)).thenAnswer((_) async {});
     when(mockStorage.saveActivityStreak(any)).thenAnswer((_) async {});
@@ -52,84 +60,76 @@ void main() {
   group('ActivityScreen', () {
     testWidgets('displays today step count', (tester) async {
       await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
-      await tester.pumpAndSettle();
+      await _settle(tester);
 
       expect(find.text('4,000'), findsOneWidget);
     });
 
-    testWidgets('displays step goal summary label', (tester) async {
+    testWidgets('displays steps-to-goal label', (tester) async {
       await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
-      await tester.pumpAndSettle();
+      await _settle(tester);
 
-      expect(find.text('4,000 / 8,000 steps'), findsOneWidget);
+      expect(find.text('4,000 steps to goal'), findsOneWidget);
     });
 
-    testWidgets('shows manual mode when HC unavailable', (tester) async {
+    testWidgets('shows Enter manually when HC unavailable', (tester) async {
       await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
-      await tester.pumpAndSettle();
+      await _settle(tester);
 
-      expect(find.text('Manual mode'), findsOneWidget);
-      expect(find.text('Enter Steps'), findsOneWidget);
+      expect(find.text('Enter manually'), findsOneWidget);
     });
 
-    testWidgets('shows Sync Now when HC connected', (tester) async {
-      when(mockHealth.isAvailable()).thenAnswer((_) async => true);
-      when(mockHealth.hasPermissions()).thenAnswer((_) async => true);
-      when(mockHealth.readTodaySteps()).thenAnswer((_) async => 4000);
-      when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
-      when(mockHealth.readTodayDistance()).thenAnswer((_) async => null);
+    testWidgets('shows Connect chip when HC not connected', (tester) async {
+      await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
+      await _settle(tester);
 
-      final connectedPresenter = ActivityPresenter(
-        statsPresenter: mockStats,
-        healthService: mockHealth,
-        storage: mockStorage,
-      );
-      await Future.delayed(Duration.zero);
-
-      await tester.pumpWidget(_wrap(ActivityScreen(presenter: connectedPresenter)));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Sync Now'), findsOneWidget);
+      // Not-connected state shows the Connect chip
+      expect(find.text('Connect'), findsOneWidget);
     });
 
-    testWidgets('manual entry sheet opens on Enter Steps tap', (tester) async {
+    testWidgets('manual entry sheet opens on Enter manually tap',
+        (tester) async {
       await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
-      await tester.pumpAndSettle();
+      await _settle(tester);
 
-      await tester.tap(find.text('Enter Steps'));
-      await tester.pumpAndSettle();
+      await tester.tap(find.text('Enter manually'));
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text("Today's Steps"), findsOneWidget);
     });
 
-    testWidgets('settings icon opens goal sheet', (tester) async {
+    testWidgets('goal sheet opens on tune icon tap', (tester) async {
       await tester.pumpWidget(_wrap(ActivityScreen(presenter: presenter)));
-      await tester.pumpAndSettle();
+      await _settle(tester);
 
-      await tester.tap(find.byIcon(Icons.settings_outlined));
-      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.tune_outlined));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Daily Step Goal'), findsOneWidget);
+      expect(find.text('Daily Goals'), findsOneWidget);
     });
 
-    testWidgets('shows check icon when goal is met', (tester) async {
+    testWidgets('shows trophy icon when goal is met', (tester) async {
       when(mockStorage.loadTodayActivityLog())
           .thenAnswer((_) async => ActivityLog(date: today, steps: 8000));
-
-      final goalMetPresenter = ActivityPresenter(
-        statsPresenter: mockStats,
-        healthService: mockHealth,
-        storage: mockStorage,
-      );
-      // goalMetDate already set so no XP re-award
       when(mockStorage.loadActivityGoalMetDate())
           .thenAnswer((_) async => today);
-      await Future.delayed(Duration.zero);
 
-      await tester.pumpWidget(_wrap(ActivityScreen(presenter: goalMetPresenter)));
-      await tester.pumpAndSettle();
+      // tester.runAsync runs outside FakeAsync so Future.delayed works normally
+      late ActivityPresenter goalMetPresenter;
+      await tester.runAsync(() async {
+        goalMetPresenter = ActivityPresenter(
+          statsPresenter: mockStats,
+          healthService: mockHealth,
+          storage: mockStorage,
+        );
+        await Future.delayed(Duration.zero);
+      });
 
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      await tester
+          .pumpWidget(_wrap(ActivityScreen(presenter: goalMetPresenter)));
+      await _settle(tester);
+
+      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
     });
   });
 }

@@ -35,27 +35,27 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   late bool _ifSync;
   late bool _overshootPenalty;
 
-  final _calCtrl     = TextEditingController();
+  final _calCtrl = TextEditingController();
   final _proteinCtrl = TextEditingController();
-  final _carbsCtrl   = TextEditingController();
-  final _fatCtrl     = TextEditingController();
+  final _carbsCtrl = TextEditingController();
+  final _fatCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     final g = widget.presenter.goals;
-    _mode             = g.mode;
-    _dailyCalories    = g.dailyCalories;
-    _protein          = g.proteinGrams;
-    _carbs            = g.carbsGrams;
-    _fat              = g.fatGrams;
-    _ifSync           = g.ifSyncEnabled;
+    _mode = g.mode;
+    _dailyCalories = g.dailyCalories;
+    _protein = g.proteinGrams;
+    _carbs = g.carbsGrams;
+    _fat = g.fatGrams;
+    _ifSync = g.ifSyncEnabled;
     _overshootPenalty = g.overshootPenaltyEnabled;
 
-    _calCtrl.text     = _dailyCalories.toString();
+    _calCtrl.text = _dailyCalories.toString();
     _proteinCtrl.text = _protein?.toStringAsFixed(0) ?? '';
-    _carbsCtrl.text   = _carbs?.toStringAsFixed(0) ?? '';
-    _fatCtrl.text     = _fat?.toStringAsFixed(0) ?? '';
+    _carbsCtrl.text = _carbs?.toStringAsFixed(0) ?? '';
+    _fatCtrl.text = _fat?.toStringAsFixed(0) ?? '';
   }
 
   @override
@@ -102,7 +102,8 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
           children: [
             Center(
               child: Container(
-                width: 40, height: 4,
+                width: 40,
+                height: 4,
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(
                   color: AppColors.textSecondary.withValues(alpha: 0.3),
@@ -141,7 +142,6 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
             if (isStandard) ...[
               _TdeeCard(presenter: widget.presenter),
               const SizedBox(height: 20),
-
               _label('MACRO TARGETS (optional, g)'),
               const SizedBox(height: 8),
               Row(children: [
@@ -152,7 +152,6 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                 Expanded(child: _numField(_fatCtrl, 'Fat', 'g')),
               ]),
               const SizedBox(height: 20),
-
               _ToggleRow(
                 label: 'Lock logging during fast',
                 subtitle: 'Pause food logging while fasting window is active',
@@ -197,8 +196,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
       style: const TextStyle(
           color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.8));
 
-  Widget _numField(
-      TextEditingController ctrl, String label, String hint) {
+  Widget _numField(TextEditingController ctrl, String label, String hint) {
     return TextField(
       controller: ctrl,
       keyboardType: TextInputType.number,
@@ -264,9 +262,8 @@ class _ModeTile extends StatelessWidget {
               children: [
                 Text(mode.label,
                     style: TextStyle(
-                        color: selected
-                            ? AppColors.gold
-                            : AppColors.textPrimary,
+                        color:
+                            selected ? AppColors.gold : AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14)),
                 Text(_modeDescription(mode),
@@ -282,8 +279,10 @@ class _ModeTile extends StatelessWidget {
 
   String _modeDescription(TrackingMode m) {
     switch (m) {
-      case TrackingMode.simple:   return 'Manual calorie goal — quick and minimal';
-      case TrackingMode.standard: return 'TDEE goal · optional macros · optional fasting lock';
+      case TrackingMode.simple:
+        return 'Manual calorie goal — quick and minimal';
+      case TrackingMode.standard:
+        return 'TDEE goal · optional macros · optional fasting lock';
     }
   }
 }
@@ -302,22 +301,18 @@ class _TdeeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border:
-            Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
+        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('TDEE PROFILE',
               style: TextStyle(
-                  color: AppColors.gold,
-                  fontSize: 10,
-                  letterSpacing: 2.0)),
+                  color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
           const SizedBox(height: 8),
           if (profile == null)
             const Text('No profile set — tap below to configure',
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 12))
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12))
           else
             Text(
               '${profile.targetCalories} kcal/day  ·  ${profile.goal.toUpperCase()}',
@@ -340,13 +335,11 @@ class _TdeeCard extends StatelessWidget {
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) =>
-                        TdeeSetupScreen(presenter: presenter)),
+                    builder: (_) => TdeeSetupScreen(presenter: presenter)),
               ),
               child: Text(
                 profile == null ? 'SET UP TDEE' : 'EDIT TDEE PROFILE',
-                style: const TextStyle(
-                    fontSize: 12, letterSpacing: 1.4),
+                style: const TextStyle(fontSize: 12, letterSpacing: 1.4),
               ),
             ),
           ),

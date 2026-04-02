@@ -33,7 +33,8 @@ class FastingApp extends StatelessWidget {
         surfaceTintColor: Colors.transparent,
         indicatorColor: AppColors.primary.withValues(alpha: 0.15),
         labelTextStyle: WidgetStateProperty.all(
-          const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+          const TextStyle(
+              fontWeight: FontWeight.w600, color: AppColors.textSecondary),
         ),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -50,9 +51,10 @@ class FastingApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Nudgr',
-      theme: _buildTheme(Brightness.dark), // Force dark theme for Solo Leveling vibe
+      theme: _buildTheme(
+          Brightness.dark), // Force dark theme for Solo Leveling vibe
       darkTheme: _buildTheme(Brightness.dark),
-      themeMode: ThemeMode.dark, 
+      themeMode: ThemeMode.dark,
       home: const HomeScreen(),
     );
   }

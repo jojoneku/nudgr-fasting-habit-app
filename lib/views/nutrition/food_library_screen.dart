@@ -18,7 +18,7 @@ class FoodLibraryScreen extends StatelessWidget {
 
   Widget _buildScaffold(BuildContext context) {
     final singles = presenter.savedTemplates.where((t) => !t.isMeal).toList();
-    final meals   = presenter.savedTemplates.where((t) => t.isMeal).toList();
+    final meals = presenter.savedTemplates.where((t) => t.isMeal).toList();
     final recents = presenter.recentFoods;
 
     return Scaffold(
@@ -80,8 +80,8 @@ class FoodLibraryScreen extends StatelessWidget {
   Widget _emptyLabel(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(text,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12)),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
       );
 }
 
@@ -130,8 +130,8 @@ class _TemplateRow extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: const Icon(Icons.add_circle,
-                  color: AppColors.gold, size: 22),
+              icon:
+                  const Icon(Icons.add_circle, color: AppColors.gold, size: 22),
               tooltip: template.isMeal ? 'Add all items' : 'Add',
               onPressed: () => _showSlotPicker(context),
             ),
@@ -143,8 +143,7 @@ class _TemplateRow extends StatelessWidget {
               child: IconButton(
                 icon: const Icon(Icons.delete_outline,
                     color: AppColors.textSecondary, size: 18),
-                onPressed: () =>
-                    presenter.deleteFoodTemplate(template.id),
+                onPressed: () => presenter.deleteFoodTemplate(template.id),
               ),
             ),
         ],
@@ -158,8 +157,7 @@ class _TemplateRow extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (_) => _SlotPicker(
         title: template.name,
-        onSlotSelected: (slot) =>
-            presenter.addMealFromTemplate(template, slot),
+        onSlotSelected: (slot) => presenter.addMealFromTemplate(template, slot),
       ),
     );
   }
@@ -176,7 +174,8 @@ class _SlotPicker extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

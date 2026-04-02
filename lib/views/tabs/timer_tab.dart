@@ -50,8 +50,12 @@ class _TimerTabState extends State<TimerTab> {
       if (hasEatingWindow) {
         eatingRemainingSeconds = eatingTargetSeconds - presenter.elapsedSeconds;
         if (eatingRemainingSeconds < 0) eatingRemainingSeconds = 0;
-        progress = eatingTargetSeconds > 0 ? (eatingRemainingSeconds / eatingTargetSeconds) : 0;
-        eatingElapsedPercent = eatingTargetSeconds > 0 ? (presenter.elapsedSeconds / eatingTargetSeconds) : 0;
+        progress = eatingTargetSeconds > 0
+            ? (eatingRemainingSeconds / eatingTargetSeconds)
+            : 0;
+        eatingElapsedPercent = eatingTargetSeconds > 0
+            ? (presenter.elapsedSeconds / eatingTargetSeconds)
+            : 0;
         if (eatingElapsedPercent < 0) eatingElapsedPercent = 0;
         if (eatingElapsedPercent > 1) eatingElapsedPercent = 1;
       } else {
@@ -59,26 +63,32 @@ class _TimerTabState extends State<TimerTab> {
         progress = 0;
         eatingElapsedPercent = 0;
       }
-      statusLabel = hasEatingWindow ? "Eating Window Left" : "Eating Window Disabled";
+      statusLabel =
+          hasEatingWindow ? "Eating Window Left" : "Eating Window Disabled";
     }
     if (progress > 1.0) progress = 1.0;
 
     final theme = Theme.of(context);
     const Color fastingAccent = AppColors.secondary;
     const Color eatingAccent = AppColors.primary;
-    final bool showEatingProgress = presenter.eatingStartTime != null && hasEatingWindow;
+    final bool showEatingProgress =
+        presenter.eatingStartTime != null && hasEatingWindow;
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
         ? _formatTime(presenter.elapsedSeconds)
         : (presenter.eatingStartTime != null
-        ? (hasEatingWindow ? _formatTime(eatingRemainingSeconds) : '00:00:00')
-        : "${presenter.fastingGoalHours}:00:00");
-    double displayProgress = (presenter.isFasting || presenter.eatingStartTime != null)
-        ? progress
-        : 0.0;
+            ? (hasEatingWindow
+                ? _formatTime(eatingRemainingSeconds)
+                : '00:00:00')
+            : "${presenter.fastingGoalHours}:00:00");
+    double displayProgress =
+        (presenter.isFasting || presenter.eatingStartTime != null)
+            ? progress
+            : 0.0;
     displayProgress = math.max(0.0, math.min(1.0, displayProgress));
 
-    final bool reverseProgress = !presenter.isFasting && presenter.eatingStartTime != null;
+    final bool reverseProgress =
+        !presenter.isFasting && presenter.eatingStartTime != null;
 
     final timerCore = Stack(
       alignment: Alignment.center,
@@ -92,7 +102,9 @@ class _TimerTabState extends State<TimerTab> {
               trackColor: AppColors.neutral.withValues(alpha: 0.2),
               progressColor: presenter.isFasting
                   ? fastingAccent
-                  : (presenter.eatingStartTime != null ? eatingAccent : AppColors.neutral),
+                  : (presenter.eatingStartTime != null
+                      ? eatingAccent
+                      : AppColors.neutral),
               strokeWidth: 20,
               reverse: reverseProgress,
             ),
@@ -137,7 +149,8 @@ class _TimerTabState extends State<TimerTab> {
       );
       rightPanel = _buildTimerInfoPanel(
         title: 'Goal End',
-        value: date_utils.formatTimeWithDay(start.add(Duration(hours: presenter.fastingGoalHours)), start),
+        value: date_utils.formatTimeWithDay(
+            start.add(Duration(hours: presenter.fastingGoalHours)), start),
         accentColor: fastingAccent,
       );
     } else if (presenter.eatingStartTime != null) {
@@ -150,7 +163,9 @@ class _TimerTabState extends State<TimerTab> {
       );
       rightPanel = _buildTimerInfoPanel(
         title: 'Window End',
-        value: date_utils.formatTimeWithDay(eatingStart.add(Duration(hours: 24 - presenter.fastingGoalHours)), eatingStart),
+        value: date_utils.formatTimeWithDay(
+            eatingStart.add(Duration(hours: 24 - presenter.fastingGoalHours)),
+            eatingStart),
         accentColor: eatingAccent,
       );
     }
@@ -164,16 +179,26 @@ class _TimerTabState extends State<TimerTab> {
               Padding(
                 padding: const EdgeInsets.only(bottom: 24.0),
                 child: ToggleButtons(
-                  isSelected: [16, 18, 20, 24].map((e) => e == presenter.fastingGoalHours).toList(),
+                  isSelected: [16, 18, 20, 24]
+                      .map((e) => e == presenter.fastingGoalHours)
+                      .toList(),
                   onPressed: (int index) {
                     presenter.updateFastingGoal([16, 18, 20, 24][index]);
                   },
                   borderRadius: BorderRadius.circular(10),
                   children: const [
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text("16:8")),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text("18:6")),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text("20:4")),
-                    Padding(padding: EdgeInsets.symmetric(horizontal: 12), child: Text("OMAD")),
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("16:8")),
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("18:6")),
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("20:4")),
+                    Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text("OMAD")),
                   ],
                 ),
               ),
@@ -181,11 +206,13 @@ class _TimerTabState extends State<TimerTab> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Card(
                 elevation: 8,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(32)),
                 clipBehavior: Clip.antiAlias,
                 child: Container(
                   color: theme.colorScheme.surface,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -200,8 +227,7 @@ class _TimerTabState extends State<TimerTab> {
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              if (leftPanel != null)
-                                Expanded(child: leftPanel),
+                              if (leftPanel != null) Expanded(child: leftPanel),
                               if (rightPanel != null)
                                 Expanded(child: rightPanel),
                             ],
@@ -233,16 +259,19 @@ class _TimerTabState extends State<TimerTab> {
                             backgroundColor: presenter.isFasting
                                 ? fastingAccent
                                 : (presenter.eatingStartTime != null
-                                ? eatingAccent
-                                : theme.colorScheme.primary),
+                                    ? eatingAccent
+                                    : theme.colorScheme.primary),
                           ),
                           child: Text(
                             presenter.isFasting ? "END FAST" : "START FAST",
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                         ),
                       ),
-                      if (presenter.eatingStartTime != null && !presenter.isFasting && hasEatingWindow) ...[
+                      if (presenter.eatingStartTime != null &&
+                          !presenter.isFasting &&
+                          hasEatingWindow) ...[
                         const SizedBox(height: 12),
                         Align(
                           alignment: Alignment.center,
@@ -278,7 +307,9 @@ class _TimerTabState extends State<TimerTab> {
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+        Text(title,
+            style:
+                const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -319,8 +350,12 @@ class _TimerTabState extends State<TimerTab> {
         title: const Text("End Fast?"),
         content: const Text("Are you sure you want to end your fast now?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("End Fast")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("End Fast")),
         ],
       ),
     );
@@ -571,14 +606,16 @@ class _TimerTabState extends State<TimerTab> {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.neutral.withValues(alpha: 0.1)),
+              border:
+                  Border.all(color: AppColors.neutral.withValues(alpha: 0.1)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: (isSuccess ? AppColors.primary : AppColors.error).withValues(alpha: 0.1),
+                    color: (isSuccess ? AppColors.primary : AppColors.error)
+                        .withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(

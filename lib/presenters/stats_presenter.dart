@@ -30,7 +30,7 @@ class StatsPresenter extends ChangeNotifier {
   // --- Getters ---
 
   int get maxHp => 100 + (_stats.attributes.vit * 10);
-  
+
   int get nextLevelXp => (_stats.level * _stats.level) * 100;
 
   String get rank {
@@ -61,7 +61,7 @@ class StatsPresenter extends ChangeNotifier {
     // Apply STR bonus to XP gain (e.g., 1% per STR point)
     final bonusMultiplier = 1 + (_stats.attributes.str * 0.01);
     final adjustedXp = (amount * bonusMultiplier).round();
-    
+
     int newXp = _stats.currentXp + adjustedXp;
     int newLevel = _stats.level;
     int newStatPoints = _stats.statPoints;
@@ -84,7 +84,7 @@ class StatsPresenter extends ChangeNotifier {
       statPoints: newStatPoints,
       currentHp: newHp,
     );
-    
+
     notifyListeners();
     await _storageService.saveUserStats(_stats);
   }
@@ -109,35 +109,45 @@ class StatsPresenter extends ChangeNotifier {
     int sen = _stats.attributes.sen;
 
     switch (stat.toLowerCase()) {
-      case 'str': str++; break;
-      case 'vit': vit++; break;
-      case 'agi': agi++; break;
-      case 'int': intl++; break;
-      case 'sen': sen++; break;
+      case 'str':
+        str++;
+        break;
+      case 'vit':
+        vit++;
+        break;
+      case 'agi':
+        agi++;
+        break;
+      case 'int':
+        intl++;
+        break;
+      case 'sen':
+        sen++;
+        break;
     }
 
     _stats = _stats.copyWith(
       statPoints: _stats.statPoints - 1,
       attributes: (str: str, vit: vit, agi: agi, intl: intl, sen: sen),
     );
-    
+
     // If VIT increased, current HP stays same but max increases (handled by getter)
     // Optionally heal slightly? No, keep it strict.
 
     notifyListeners();
     await _storageService.saveUserStats(_stats);
   }
-  
+
   Future<void> incrementStreak() async {
-      _stats = _stats.copyWith(streak: _stats.streak + 1);
-      notifyListeners();
-      await _storageService.saveUserStats(_stats);
+    _stats = _stats.copyWith(streak: _stats.streak + 1);
+    notifyListeners();
+    await _storageService.saveUserStats(_stats);
   }
-  
+
   Future<void> resetStreak() async {
-      _stats = _stats.copyWith(streak: 0);
-      notifyListeners();
-      await _storageService.saveUserStats(_stats);
+    _stats = _stats.copyWith(streak: 0);
+    notifyListeners();
+    await _storageService.saveUserStats(_stats);
   }
 
   /// Awards a stat point directly (RPG system reward, not user-allocated).
@@ -149,12 +159,23 @@ class StatsPresenter extends ChangeNotifier {
     int sen = _stats.attributes.sen;
 
     switch (stat.toLowerCase()) {
-      case 'str': str++; break;
-      case 'vit': vit++; break;
-      case 'agi': agi++; break;
-      case 'int': intl++; break;
-      case 'sen': sen++; break;
-      default: return;
+      case 'str':
+        str++;
+        break;
+      case 'vit':
+        vit++;
+        break;
+      case 'agi':
+        agi++;
+        break;
+      case 'int':
+        intl++;
+        break;
+      case 'sen':
+        sen++;
+        break;
+      default:
+        return;
     }
 
     _stats = _stats.copyWith(

@@ -32,7 +32,8 @@ class _RadarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = min(size.width, size.height) / 2 * 0.8; // 80% of available space
+    final radius =
+        min(size.width, size.height) / 2 * 0.8; // 80% of available space
 
     final paintOutline = Paint()
       ..color = AppColors.textSecondary.withValues(alpha: 0.3)
@@ -50,9 +51,10 @@ class _RadarChartPainter extends CustomPainter {
 
     final keys = stats.keys.toList();
     final values = stats.values.toList();
-    final maxValue = values.reduce(max) > 0 ? values.reduce(max).toDouble() : 10.0;
+    final maxValue =
+        values.reduce(max) > 0 ? values.reduce(max).toDouble() : 10.0;
     // Ensure a minimum scale so the chart doesn't look tiny at level 1
-    final scaleMax = max(maxValue, 20.0); 
+    final scaleMax = max(maxValue, 20.0);
 
     final angleStep = (2 * pi) / keys.length;
 
