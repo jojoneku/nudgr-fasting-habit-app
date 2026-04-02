@@ -22,7 +22,8 @@ void main() async {
           child: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text('Error during startup:\n$e', textAlign: TextAlign.center),
+              child: Text('Error during startup:\n$e',
+                  textAlign: TextAlign.center),
             ),
           ),
         ),
