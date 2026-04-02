@@ -301,6 +301,7 @@ class StorageService {
   static const String keyActivityGoals = 'activityGoals';
   static const String keyActivityGoalMetDate = 'activityGoalMetDate';
   static const String keyActivityStreak = 'activityStreak';
+  static const String keyPreferredStepsSource = 'preferredStepsSourceId';
 
   Future<void> saveActivityLog(ActivityLog log) async {
     final prefs = await SharedPreferences.getInstance();
@@ -342,11 +343,57 @@ class StorageService {
           .map((e) => ActivityLog.fromJson(e.value as Map<String, dynamic>))
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
-      return logs.take(30).toList();
+      return logs.take(180).toList();
     } catch (e) {
       debugPrint('StorageService: Error loading activity history: $e');
       return [];
     }
+  }
+
+  /// Returns the set of date keys ('yyyy-MM-dd') already stored in activity logs.
+  /// Used by backfill logic to skip days already present.
+  Future<Set<String>> loadActivityLogKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyActivityLogs);
+    if (raw == null) return {};
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>).keys.toSet();
+    } catch (e) {
+      debugPrint('StorageService: Error loading activity log keys: $e');
+      return {};
+    }
+  }
+
+  /// Clears all historical activity logs, preserving only today's entry.
+  Future<void> clearActivityHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final raw = prefs.getString(keyActivityLogs);
+    if (raw == null) return;
+    try {
+      final Map<String, dynamic> all =
+          jsonDecode(raw) as Map<String, dynamic>;
+      final todayEntry = all[todayKey];
+      await prefs.setString(
+        keyActivityLogs,
+        jsonEncode(todayEntry != null ? {todayKey: todayEntry} : {}),
+      );
+    } catch (e) {
+      debugPrint('StorageService: Error clearing activity history: $e');
+    }
+  }
+
+  /// Bulk upserts [logs] into activity log storage in a single read/write cycle.
+  Future<void> saveActivityLogs(List<ActivityLog> logs) async {
+    if (logs.isEmpty) return;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyActivityLogs);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    for (final log in logs) {
+      all[log.date] = log.toJson();
+    }
+    await prefs.setString(keyActivityLogs, jsonEncode(all));
   }
 
   Future<void> saveActivityGoals(ActivityGoals goals) async {
@@ -366,6 +413,20 @@ class StorageService {
       }
     }
     return ActivityGoals.initial();
+  }
+
+  Future<String?> loadPreferredStepsSource() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(keyPreferredStepsSource);
+  }
+
+  Future<void> savePreferredStepsSource(String? sourceId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (sourceId == null) {
+      await prefs.remove(keyPreferredStepsSource);
+    } else {
+      await prefs.setString(keyPreferredStepsSource, sourceId);
+    }
   }
 
   Future<void> saveActivityGoalMetDate(String date) async {

@@ -2,6 +2,7 @@
     <!-- Health Connect permissions -->
     <uses-permission android:name="android.permission.health.READ_STEPS"/>
     <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED"/>
+    <uses-permission android:name="android.permission.health.READ_TOTAL_CALORIES_BURNED"/>
     <uses-permission android:name="android.permission.health.READ_DISTANCE"/>
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
@@ -48,13 +49,18 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-        </activity>
-        <!-- Health Connect: required privacy policy activity for permission rationale -->
-        <activity android:name="com.nudgr.app.HealthPermissionRationaleActivity"
-            android:exported="true">
+            <!-- Health Connect: rationale route back to main activity -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE"/>
             </intent-filter>
+            <!-- Required on Android 14+: permission usage disclosure -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE"/>
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS"/>
+            </intent-filter>
+            <meta-data
+                android:name="health_permissions_rationale_intent"
+                android:value=".MainActivity"/>
         </activity>
 
         <!-- Don't delete the meta-data below.
