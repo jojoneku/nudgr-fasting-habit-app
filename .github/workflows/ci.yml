@@ -16,7 +16,6 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.24.x'
           channel: stable
           cache: true
 
@@ -27,7 +26,7 @@ jobs:
         run: flutter analyze --no-fatal-infos
 
       - name: Run tests
-        run: flutter test --coverage
+        run: flutter test test/ --coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
