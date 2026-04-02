@@ -27,10 +27,13 @@ class TdeeProfile {
 
   int get targetCalories {
     switch (goal) {
-      case 'cut':      return tdee - 300;
-      case 'bulk':     return tdee + 250;
+      case 'cut':
+        return tdee - 300;
+      case 'bulk':
+        return tdee + 250;
       case 'maintain':
-      default:         return tdee;
+      default:
+        return tdee;
     }
   }
 
@@ -40,9 +43,9 @@ class TdeeProfile {
   // Carbs: whatever is left
   int get suggestedProteinG {
     final multiplier = switch (goal) {
-      'cut'  => 2.2,
+      'cut' => 2.2,
       'bulk' => 2.0,
-      _      => 1.8, // maintain
+      _ => 1.8, // maintain
     };
     return (weightKg * multiplier).round();
   }
@@ -50,13 +53,14 @@ class TdeeProfile {
   int get suggestedFatG {
     final pct = switch (goal) {
       'bulk' => 0.25,
-      _      => 0.28, // cut / maintain
+      _ => 0.28, // cut / maintain
     };
     return (targetCalories * pct / 9).round();
   }
 
   int get suggestedCarbsG {
-    final remaining = targetCalories - (suggestedProteinG * 4) - (suggestedFatG * 9);
+    final remaining =
+        targetCalories - (suggestedProteinG * 4) - (suggestedFatG * 9);
     return (remaining / 4).round().clamp(0, 9999);
   }
 

@@ -25,7 +25,8 @@ class ActivityGoals {
         'dailyDistanceGoalMeters': dailyDistanceGoalMeters,
       };
 
-  ActivityGoals copyWith({int? dailyStepGoal, double? dailyDistanceGoalMeters}) {
+  ActivityGoals copyWith(
+      {int? dailyStepGoal, double? dailyDistanceGoalMeters}) {
     return ActivityGoals(
       dailyStepGoal: dailyStepGoal ?? this.dailyStepGoal,
       dailyDistanceGoalMeters:

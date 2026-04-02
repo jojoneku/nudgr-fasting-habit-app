@@ -102,7 +102,8 @@ class ActivityPresenter extends ChangeNotifier {
   }
 
   /// Calories burned for a given log — active if available, otherwise total.
-  double? caloriesBurned(ActivityLog log) => log.activeCalories ?? log.totalCalories;
+  double? caloriesBurned(ActivityLog log) =>
+      log.activeCalories ?? log.totalCalories;
 
   /// Subtitle for the calories metric card — includes TDEE reminder when set.
   String get todayCaloriesLabel {
@@ -118,7 +119,8 @@ class ActivityPresenter extends ChangeNotifier {
 
   /// Subtitle shown on the Hub card.
   String get hubSubtitle {
-    if (todaySteps == 0 && !_hasHealthPermission) return 'Tap to connect Health';
+    if (todaySteps == 0 && !_hasHealthPermission)
+      return 'Tap to connect Health';
     if (isGoalMet) {
       return '${NumberFormat('#,###').format(todaySteps)} steps ✓';
     }
@@ -163,7 +165,8 @@ class ActivityPresenter extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final steps = await _healthService.readTodaySteps(sourceId: _preferredStepsSourceId);
+      final steps = await _healthService.readTodaySteps(
+          sourceId: _preferredStepsSourceId);
       final activeCalories = await _healthService.readTodayActiveCalories();
       final totalCalories = await _healthService.readTodayTotalCalories();
       final distance = await _healthService.readTodayDistance();
@@ -270,8 +273,10 @@ class ActivityPresenter extends ChangeNotifier {
     try {
       final existingKeys = await _storage.loadActivityLogKeys();
       final today = DateTime.now();
-      final rangeStart = DateTime(today.year, today.month, today.day).subtract(Duration(days: days));
-      final rangeEnd = DateTime(today.year, today.month, today.day); // exclusive of today
+      final rangeStart = DateTime(today.year, today.month, today.day)
+          .subtract(Duration(days: days));
+      final rangeEnd =
+          DateTime(today.year, today.month, today.day); // exclusive of today
 
       // 4 API calls total for the entire range (one per data type)
       final rangeData = await _healthService.readRangeDataByDay(
@@ -286,7 +291,10 @@ class ActivityPresenter extends ChangeNotifier {
         if (existingKeys.contains(dateKey)) continue;
 
         final data = entry.value;
-        if (data.steps == 0 && data.activeCalories == null && data.totalCalories == null && data.distance == null) continue;
+        if (data.steps == 0 &&
+            data.activeCalories == null &&
+            data.totalCalories == null &&
+            data.distance == null) continue;
 
         newLogs.add(ActivityLog(
           date: dateKey,

@@ -30,7 +30,8 @@ class FastingLog {
       fastDuration: json['fastDuration'].toDouble(),
       success: json['success'],
       eatingStart: DateTime.parse(json['eatingStart']),
-      eatingEnd: json['eatingEnd'] != null ? DateTime.parse(json['eatingEnd']) : null,
+      eatingEnd:
+          json['eatingEnd'] != null ? DateTime.parse(json['eatingEnd']) : null,
       eatingDuration: json['eatingDuration']?.toDouble(),
       note: json['note'],
       goalDuration: json['goalDuration'],
@@ -66,7 +67,6 @@ class FastingLog {
           goalDuration == other.goalDuration;
 
   @override
-  int get hashCode => Object.hash(
-      fastStart, fastEnd, fastDuration, success, eatingStart, eatingEnd,
-      eatingDuration, note, goalDuration);
+  int get hashCode => Object.hash(fastStart, fastEnd, fastDuration, success,
+      eatingStart, eatingEnd, eatingDuration, note, goalDuration);
 }

@@ -17,7 +17,8 @@ void main() {
 
   final today = _todayKey();
 
-  FoodEntry makeEntry({int calories = 500, double protein = 0, String name = 'Food'}) =>
+  FoodEntry makeEntry(
+          {int calories = 500, double protein = 0, String name = 'Food'}) =>
       FoodEntry(
         id: FoodEntry.generateId(),
         name: name,
@@ -145,8 +146,8 @@ void main() {
 
   group('RPG — protein goal', () {
     setUp(() async {
-      when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
-          NutritionGoals(dailyCalories: 2000, proteinGrams: 150));
+      when(mockStorage.loadNutritionGoals()).thenAnswer(
+          (_) async => NutritionGoals(dailyCalories: 2000, proteinGrams: 150));
       presenter = NutritionPresenter(
         statsPresenter: mockStats,
         fastingPresenter: mockFasting,
@@ -158,14 +159,17 @@ void main() {
     });
 
     test('awards 15 XP + STR when protein goal met', () async {
-      await presenter.addFoodEntry(makeEntry(calories: 100, protein: 150), MealSlot.meal);
+      await presenter.addFoodEntry(
+          makeEntry(calories: 100, protein: 150), MealSlot.meal);
       verify(mockStats.addXp(15)).called(1);
       verify(mockStats.awardStat('str')).called(1);
     });
 
     test('does not double-award protein XP in same session', () async {
-      await presenter.addFoodEntry(makeEntry(calories: 100, protein: 150), MealSlot.meal);
-      await presenter.addFoodEntry(makeEntry(calories: 100, protein: 10), MealSlot.meal);
+      await presenter.addFoodEntry(
+          makeEntry(calories: 100, protein: 150), MealSlot.meal);
+      await presenter.addFoodEntry(
+          makeEntry(calories: 100, protein: 10), MealSlot.meal);
       verify(mockStats.addXp(15)).called(1); // only once
     });
   });

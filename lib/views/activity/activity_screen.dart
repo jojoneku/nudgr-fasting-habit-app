@@ -183,20 +183,24 @@ class _HeroSection extends StatelessWidget {
                 ringColor: p.isGoalMet ? AppColors.success : AppColors.gold,
                 trackColor: AppColors.surface,
                 distanceProgress: p.distanceProgress,
-                distanceColor: p.isDistanceGoalMet ? AppColors.success : AppColors.accent,
+                distanceColor:
+                    p.isDistanceGoalMet ? AppColors.success : AppColors.accent,
               ),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (p.isGoalMet)
-                      const Icon(Icons.emoji_events, color: AppColors.success, size: 18),
+                      const Icon(Icons.emoji_events,
+                          color: AppColors.success, size: 18),
                     Text(
                       _numFmt.format(p.todaySteps),
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
-                        color: p.isGoalMet ? AppColors.success : AppColors.textPrimary,
+                        color: p.isGoalMet
+                            ? AppColors.success
+                            : AppColors.textPrimary,
                         letterSpacing: -1,
                       ),
                     ),
@@ -256,7 +260,8 @@ class _MetricCardsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final log = presenter.todayLog;
     final goalSteps = presenter.goals.dailyStepGoal;
-    final progress = (presenter.todaySteps / goalSteps).clamp(0.0, 1.0).toDouble();
+    final progress =
+        (presenter.todaySteps / goalSteps).clamp(0.0, 1.0).toDouble();
 
     return Row(
       children: [
@@ -397,7 +402,8 @@ class _WeeklyChart extends StatelessWidget {
               const Spacer(),
               Text(
                 '${_compactNum(logs.fold(0, (s, l) => s + l.steps))} this week',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 11),
               ),
             ],
           ),
@@ -446,9 +452,13 @@ class _WeeklyChart extends StatelessWidget {
                                 child: Text(
                                   _compactNum(log.steps),
                                   style: TextStyle(
-                                    color: isToday ? AppColors.textPrimary : AppColors.textSecondary,
+                                    color: isToday
+                                        ? AppColors.textPrimary
+                                        : AppColors.textSecondary,
                                     fontSize: 9,
-                                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                                    fontWeight: isToday
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
                                   ),
                                 ),
                               ),
@@ -472,9 +482,8 @@ class _WeeklyChart extends StatelessWidget {
                         width: 4,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: isToday
-                              ? AppColors.accent
-                              : Colors.transparent,
+                          color:
+                              isToday ? AppColors.accent : Colors.transparent,
                           shape: BoxShape.circle,
                         ),
                       ),
@@ -489,15 +498,20 @@ class _WeeklyChart extends StatelessWidget {
             children: [
               _legendDot(AppColors.success),
               const SizedBox(width: 4),
-              const Text('Goal met', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+              const Text('Goal met',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 10)),
               const SizedBox(width: 12),
               _legendDot(AppColors.gold),
               const SizedBox(width: 4),
-              const Text('Active', style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+              const Text('Active',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 10)),
               const Spacer(),
               Text(
                 'Goal ${_numFmt.format(goalSteps)}',
-                style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 10),
               ),
             ],
           ),
@@ -509,7 +523,8 @@ class _WeeklyChart extends StatelessWidget {
   Widget _legendDot(Color color) => Container(
         width: 8,
         height: 8,
-        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
+        decoration:
+            BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)),
       );
 
   String _compactNum(int n) {
@@ -535,7 +550,8 @@ class _HcStatusChip extends StatelessWidget {
         padding: const EdgeInsets.only(right: 4),
         child: Tooltip(
           message: 'Health Connect active',
-          child: Icon(Icons.favorite, color: AppColors.success.withValues(alpha: 0.8), size: 18),
+          child: Icon(Icons.favorite,
+              color: AppColors.success.withValues(alpha: 0.8), size: 18),
         ),
       );
     }
@@ -547,7 +563,8 @@ class _HcStatusChip extends StatelessWidget {
         child: SizedBox(
           width: 16,
           height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.accent),
+          child: CircularProgressIndicator(
+              strokeWidth: 2, color: AppColors.accent),
         ),
       );
     }
@@ -576,7 +593,10 @@ class _HcStatusChip extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(color: AppColors.gold, fontSize: 11, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                    color: AppColors.gold,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -649,20 +669,25 @@ class _CalendarSectionState extends State<_CalendarSection> {
                 const SizedBox(
                   width: 10,
                   height: 10,
-                  child: CircularProgressIndicator(strokeWidth: 1.5, color: AppColors.textSecondary),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 1.5, color: AppColors.textSecondary),
                 ),
               ],
               const Spacer(),
               TextButton(
                 onPressed: () => _openFullList(context),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: const Size(44, 44),
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
                   'Full History →',
-                  style: TextStyle(color: AppColors.accent, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: AppColors.accent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -670,11 +695,17 @@ class _CalendarSectionState extends State<_CalendarSection> {
           const SizedBox(height: 12),
           // DOW headers
           Row(
-            children: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => Expanded(
-              child: Center(
-                child: Text(d, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
-              ),
-            )).toList(),
+            children: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+                .map((d) => Expanded(
+                      child: Center(
+                        child: Text(d,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600)),
+                      ),
+                    ))
+                .toList(),
           ),
           const SizedBox(height: 6),
           // Grid — compact cells with mini ring progress
@@ -698,7 +729,10 @@ class _CalendarSectionState extends State<_CalendarSection> {
               final goalSteps = p.goals.dailyStepGoal;
               final goalDist = p.goals.dailyDistanceGoalMeters;
               final hasSteps = !isFuture && log != null && log.steps > 0;
-              final hasDist = !isFuture && log != null && log.distanceMeters != null && log.distanceMeters! > 0;
+              final hasDist = !isFuture &&
+                  log != null &&
+                  log.distanceMeters != null &&
+                  log.distanceMeters! > 0;
               final hasData = hasSteps || hasDist;
               final stepsProgress = hasSteps && goalSteps > 0
                   ? (log.steps / goalSteps).clamp(0.0, 1.0).toDouble()
@@ -745,12 +779,15 @@ class _CalendarSectionState extends State<_CalendarSection> {
                             day.toString(),
                             style: TextStyle(
                               color: isFuture
-                                  ? AppColors.textSecondary.withValues(alpha: 0.25)
+                                  ? AppColors.textSecondary
+                                      .withValues(alpha: 0.25)
                                   : hasData
                                       ? labelColor
                                       : AppColors.textSecondary,
                               fontSize: 10,
-                              fontWeight: hasData || isToday ? FontWeight.bold : FontWeight.normal,
+                              fontWeight: hasData || isToday
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
                             ),
                           ),
                         ),
@@ -758,7 +795,11 @@ class _CalendarSectionState extends State<_CalendarSection> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasSteps ? _compactSteps(log.steps) : hasDist ? _compactDist(log.distanceMeters!) : '',
+                      hasSteps
+                          ? _compactSteps(log.steps)
+                          : hasDist
+                              ? _compactDist(log.distanceMeters!)
+                              : '',
                       style: TextStyle(
                         color: hasData
                             ? labelColor.withValues(alpha: 0.85)
@@ -775,7 +816,10 @@ class _CalendarSectionState extends State<_CalendarSection> {
           // Selected day inline detail
           if (_selected != null) ...[
             const SizedBox(height: 12),
-            _DayDetail(log: _selected!, goalSteps: p.goals.dailyStepGoal, calories: p.caloriesBurned(_selected!)),
+            _DayDetail(
+                log: _selected!,
+                goalSteps: p.goals.dailyStepGoal,
+                calories: p.caloriesBurned(_selected!)),
           ],
           // Legend
           const SizedBox(height: 10),
@@ -807,9 +851,15 @@ class _CalendarSectionState extends State<_CalendarSection> {
   Widget _calLegend(Color color, String label) => Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(width: 8, height: 8, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(2))),
+          Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                  color: color, borderRadius: BorderRadius.circular(2))),
           const SizedBox(width: 5),
-          Text(label, style: const TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 10)),
         ],
       );
 
@@ -907,7 +957,8 @@ class _GoalSheetState extends State<_GoalSheet> {
               const SizedBox(height: 12),
               TextField(
                 controller: _distCtrl,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
                 decoration: const InputDecoration(
                   labelText: 'Distance (km)',
                   border: OutlineInputBorder(),
@@ -928,7 +979,8 @@ class _GoalSheetState extends State<_GoalSheet> {
                 const SizedBox(height: 4),
                 const Text(
                   'Pick one source to prevent double-counting.',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 11),
                 ),
                 const SizedBox(height: 8),
                 ...sources.map((s) {
@@ -938,7 +990,8 @@ class _GoalSheetState extends State<_GoalSheet> {
                         isSelected ? null : s.sourceId),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 6),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? AppColors.accent.withValues(alpha: 0.12)
@@ -956,7 +1009,9 @@ class _GoalSheetState extends State<_GoalSheet> {
                             isSelected
                                 ? Icons.radio_button_checked
                                 : Icons.radio_button_off,
-                            color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                            color: isSelected
+                                ? AppColors.accent
+                                : AppColors.textSecondary,
                             size: 18,
                           ),
                           const SizedBox(width: 10),
@@ -1158,7 +1213,8 @@ class _FullHistorySheet extends StatelessWidget {
                     const Spacer(),
                     Text(
                       '${history.length} days tracked',
-                      style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                      style: const TextStyle(
+                          color: AppColors.textSecondary, fontSize: 13),
                     ),
                   ],
                 ),
@@ -1276,7 +1332,10 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
               final log = widget.historyByDate[dateKey];
               final isSelected = _selected?.date == dateKey;
               final hasSteps = !isFuture && log != null && log.steps > 0;
-              final hasDist = !isFuture && log != null && log.distanceMeters != null && log.distanceMeters! > 0;
+              final hasDist = !isFuture &&
+                  log != null &&
+                  log.distanceMeters != null &&
+                  log.distanceMeters! > 0;
               final hasData = hasSteps || hasDist;
               final stepsProgress = hasSteps && widget.goalSteps > 0
                   ? (log.steps / widget.goalSteps).clamp(0.0, 1.0).toDouble()
@@ -1287,7 +1346,9 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
                       ? AppColors.success
                       : AppColors.gold;
               final distProgress = hasDist && widget.goalDistanceMeters > 0
-                  ? (log.distanceMeters! / widget.goalDistanceMeters).clamp(0.0, 1.0).toDouble()
+                  ? (log.distanceMeters! / widget.goalDistanceMeters)
+                      .clamp(0.0, 1.0)
+                      .toDouble()
                   : 0.0;
               final distColor = hasDist && widget.goalDistanceMeters > 0
                   ? AppColors.accent
@@ -1323,7 +1384,8 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
                             day.toString(),
                             style: TextStyle(
                               color: isFuture
-                                  ? AppColors.textSecondary.withValues(alpha: 0.25)
+                                  ? AppColors.textSecondary
+                                      .withValues(alpha: 0.25)
                                   : hasData
                                       ? labelColor
                                       : AppColors.textSecondary,
@@ -1338,7 +1400,11 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasSteps ? _compactSteps(log.steps) : hasDist ? _compactDist(log.distanceMeters!) : '',
+                      hasSteps
+                          ? _compactSteps(log.steps)
+                          : hasDist
+                              ? _compactDist(log.distanceMeters!)
+                              : '',
                       style: TextStyle(
                         color: hasData
                             ? labelColor.withValues(alpha: 0.85)
@@ -1376,7 +1442,8 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
     return '${km.toStringAsFixed(1)}k';
   }
 
-  double? _selectedCalories(ActivityLog log) => log.activeCalories ?? log.totalCalories;
+  double? _selectedCalories(ActivityLog log) =>
+      log.activeCalories ?? log.totalCalories;
 }
 
 class _DayDetail extends StatelessWidget {
@@ -1403,19 +1470,27 @@ class _DayDetail extends StatelessWidget {
         children: [
           Text(
             DateFormat('EEEE, MMMM d').format(date),
-            style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold, fontSize: 13),
+            style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 13),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              _chip(Icons.directions_walk, '${_numFmt.format(log.steps)} steps', accentColor),
+              _chip(Icons.directions_walk, '${_numFmt.format(log.steps)} steps',
+                  accentColor),
               if (calories != null) ...[
                 const SizedBox(width: 8),
-                _chip(MdiIcons.fire, '${calories!.round()} kcal', const Color(0xFFFF6D00)),
+                _chip(MdiIcons.fire, '${calories!.round()} kcal',
+                    const Color(0xFFFF6D00)),
               ],
               if (log.distanceMeters != null) ...[
                 const SizedBox(width: 8),
-                _chip(MdiIcons.mapMarkerDistance, '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km', AppColors.accent),
+                _chip(
+                    MdiIcons.mapMarkerDistance,
+                    '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
+                    AppColors.accent),
               ],
             ],
           ),
@@ -1423,7 +1498,9 @@ class _DayDetail extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
-              value: goalSteps > 0 ? (log.steps / goalSteps).clamp(0.0, 1.0).toDouble() : 0,
+              value: goalSteps > 0
+                  ? (log.steps / goalSteps).clamp(0.0, 1.0).toDouble()
+                  : 0,
               minHeight: 4,
               backgroundColor: Colors.white.withValues(alpha: 0.1),
               valueColor: AlwaysStoppedAnimation<Color>(accentColor),
@@ -1439,7 +1516,9 @@ class _DayDetail extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 3),
-          Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(label,
+              style: TextStyle(
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       );
 }
@@ -1503,7 +1582,8 @@ class _MiniRingPainter extends CustomPainter {
     // Outer ring — steps
     _drawRing(canvas, center, outerRadius, outerStroke, progress, ringColor);
     // Inner ring — distance
-    _drawRing(canvas, center, innerRadius, innerStroke, distanceProgress, distanceRingColor);
+    _drawRing(canvas, center, innerRadius, innerStroke, distanceProgress,
+        distanceRingColor);
   }
 
   @override
@@ -1571,7 +1651,8 @@ class _RingPainter extends CustomPainter {
 
     _drawRing(canvas, center, outerRadius, outerStroke, progress, ringColor);
     if (distanceProgress > 0 || true) {
-      _drawRing(canvas, center, innerRadius, innerStroke, distanceProgress, distanceColor);
+      _drawRing(canvas, center, innerRadius, innerStroke, distanceProgress,
+          distanceColor);
     }
   }
 

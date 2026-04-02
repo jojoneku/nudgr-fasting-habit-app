@@ -118,8 +118,7 @@ void main() {
           .thenReturn(UserStats.initial().copyWith(currentHp: 50));
       await presenter.startFast();
       // Backdate startTime to simulate 17h fast
-      presenter.startTime =
-          DateTime.now().subtract(const Duration(hours: 17));
+      presenter.startTime = DateTime.now().subtract(const Duration(hours: 17));
     });
 
     test('sets isFasting to false', () async {
@@ -162,8 +161,7 @@ void main() {
     setUp(() async {
       await presenter.startFast();
       // Only 8h — fails the 16h goal
-      presenter.startTime =
-          DateTime.now().subtract(const Duration(hours: 8));
+      presenter.startTime = DateTime.now().subtract(const Duration(hours: 8));
     });
 
     test('returns negative HP change', () async {

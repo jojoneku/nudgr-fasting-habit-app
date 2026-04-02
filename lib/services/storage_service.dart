@@ -60,15 +60,17 @@ class StorageService {
     } else {
       await prefs.remove(keyStartTime);
     }
-    
+
     if (eatingStartTime != null) {
-      await prefs.setString(keyEatingStartTime, eatingStartTime.toIso8601String());
+      await prefs.setString(
+          keyEatingStartTime, eatingStartTime.toIso8601String());
     } else {
       await prefs.remove(keyEatingStartTime);
     }
 
     if (lastPenaltyCheckDate != null) {
-      await prefs.setString(keyLastPenaltyCheckDate, lastPenaltyCheckDate.toIso8601String());
+      await prefs.setString(
+          keyLastPenaltyCheckDate, lastPenaltyCheckDate.toIso8601String());
     }
 
     await prefs.setInt(keyElapsedSeconds, elapsedSeconds);
@@ -85,22 +87,26 @@ class StorageService {
   Future<Map<String, dynamic>> loadState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload(); // Force reload from disk
-    
+
     bool isFasting = prefs.getBool(keyIsFasting) ?? false;
     debugPrint('StorageService: Loaded isFasting=$isFasting');
-    
+
     String? startTimeStr = prefs.getString(keyStartTime);
-    DateTime? startTime = startTimeStr != null ? DateTime.parse(startTimeStr) : null;
-    
+    DateTime? startTime =
+        startTimeStr != null ? DateTime.parse(startTimeStr) : null;
+
     String? eatingStartTimeStr = prefs.getString(keyEatingStartTime);
-    DateTime? eatingStartTime = eatingStartTimeStr != null ? DateTime.parse(eatingStartTimeStr) : null;
-    
+    DateTime? eatingStartTime =
+        eatingStartTimeStr != null ? DateTime.parse(eatingStartTimeStr) : null;
+
     String? lastPenaltyCheckDateStr = prefs.getString(keyLastPenaltyCheckDate);
-    DateTime? lastPenaltyCheckDate = lastPenaltyCheckDateStr != null ? DateTime.parse(lastPenaltyCheckDateStr) : null;
+    DateTime? lastPenaltyCheckDate = lastPenaltyCheckDateStr != null
+        ? DateTime.parse(lastPenaltyCheckDateStr)
+        : null;
 
     int elapsedSeconds = prefs.getInt(keyElapsedSeconds) ?? 0;
     int fastingGoalHours = prefs.getInt(keyFastingGoalHours) ?? 16;
-    
+
     String? historyJson = prefs.getString(keyHistory);
     List<FastingLog> history = [];
     if (historyJson != null) {
@@ -111,7 +117,7 @@ class StorageService {
         // Error parsing history
       }
     }
-    
+
     String? questsJson = prefs.getString(keyQuests);
     List<Quest> quests = [];
     if (questsJson != null) {
@@ -175,8 +181,7 @@ class StorageService {
     final raw = prefs.getString(keyNutritionLogs);
     if (raw == null) return [];
     try {
-      final Map<String, dynamic> all =
-          jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
       final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final logs = all.entries
           .where((e) => e.key != todayKey)
@@ -201,8 +206,7 @@ class StorageService {
     final raw = prefs.getString(keyNutritionGoals);
     if (raw != null) {
       try {
-        return NutritionGoals.fromJson(
-            jsonDecode(raw) as Map<String, dynamic>);
+        return NutritionGoals.fromJson(jsonDecode(raw) as Map<String, dynamic>);
       } catch (e) {
         debugPrint('StorageService: Error loading nutrition goals: $e');
       }
@@ -232,9 +236,9 @@ class StorageService {
 
   // ─── Nutrition v2 — TDEE, food library, log streak ───────────────────────────
 
-  static const String keyTdeeProfile  = 'tdeeProfile';
-  static const String keyFoodLibrary  = 'foodLibrary';
-  static const String keyLogStreak    = 'nutritionLogStreak';
+  static const String keyTdeeProfile = 'tdeeProfile';
+  static const String keyFoodLibrary = 'foodLibrary';
+  static const String keyLogStreak = 'nutritionLogStreak';
   static const String keyLogStreakDate = 'nutritionLogStreakDate';
 
   Future<void> saveTdeeProfile(TdeeProfile profile) async {
@@ -335,8 +339,7 @@ class StorageService {
     final raw = prefs.getString(keyActivityLogs);
     if (raw == null) return [];
     try {
-      final Map<String, dynamic> all =
-          jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
       final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final logs = all.entries
           .where((e) => e.key != todayKey)
@@ -371,8 +374,7 @@ class StorageService {
     final raw = prefs.getString(keyActivityLogs);
     if (raw == null) return;
     try {
-      final Map<String, dynamic> all =
-          jsonDecode(raw) as Map<String, dynamic>;
+      final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
       final todayEntry = all[todayKey];
       await prefs.setString(
         keyActivityLogs,
@@ -406,8 +408,7 @@ class StorageService {
     final raw = prefs.getString(keyActivityGoals);
     if (raw != null) {
       try {
-        return ActivityGoals.fromJson(
-            jsonDecode(raw) as Map<String, dynamic>);
+        return ActivityGoals.fromJson(jsonDecode(raw) as Map<String, dynamic>);
       } catch (e) {
         debugPrint('StorageService: Error loading activity goals: $e');
       }
@@ -455,11 +456,11 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     final allData = <String, dynamic>{};
     final keys = prefs.getKeys();
-    
+
     for (String key in keys) {
       allData[key] = prefs.get(key);
     }
-    
+
     return jsonEncode(allData);
   }
 
@@ -467,7 +468,7 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     try {
       final Map<String, dynamic> data = jsonDecode(jsonString);
-      
+
       // Clear existing first? Maybe safer to just overwrite.
       // But clearing ensures no stale keys remain.
       await prefs.clear();
@@ -483,10 +484,11 @@ class StorageService {
         } else if (value is String) {
           await prefs.setString(key, value);
         } else if (value is List) {
-           await prefs.setStringList(key, List<String>.from(value));
+          await prefs.setStringList(key, List<String>.from(value));
         }
       }
-      debugPrint('StorageService: Import successful. Keys: ${data.keys.toList()}');
+      debugPrint(
+          'StorageService: Import successful. Keys: ${data.keys.toList()}');
     } catch (e) {
       debugPrint('StorageService: Import failed: $e');
       throw Exception('Invalid data format');

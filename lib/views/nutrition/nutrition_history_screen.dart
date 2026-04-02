@@ -43,11 +43,11 @@ class _HistoryContent extends StatelessWidget {
   final List<DailyNutritionLog> history;
   final int goalCalories;
 
-  const _HistoryContent(
-      {required this.history, required this.goalCalories});
+  const _HistoryContent({required this.history, required this.goalCalories});
 
   /// Last 7 days from history (most-recent first → reverse for chart left→right).
-  List<DailyNutritionLog> get _last7 => history.take(7).toList().reversed.toList();
+  List<DailyNutritionLog> get _last7 =>
+      history.take(7).toList().reversed.toList();
 
   @override
   Widget build(BuildContext context) {
@@ -145,32 +145,30 @@ class _BarChartPainter extends CustomPainter {
     );
     if (maxCal == 0) return;
 
-    final barWidth  = size.width / (days.length * 2 - 1);
-    final goalY     = size.height * (1 - goalCalories / maxCal);
+    final barWidth = size.width / (days.length * 2 - 1);
+    final goalY = size.height * (1 - goalCalories / maxCal);
 
     // Goal line
     final goalPaint = Paint()
       ..color = AppColors.gold.withValues(alpha: 0.4)
       ..strokeWidth = 1
       ..style = PaintingStyle.stroke;
-    canvas.drawLine(
-        Offset(0, goalY), Offset(size.width, goalY), goalPaint);
+    canvas.drawLine(Offset(0, goalY), Offset(size.width, goalY), goalPaint);
 
     // Bars
     for (int i = 0; i < days.length; i++) {
-      final cal    = days[i].totalCalories;
-      final ratio  = (cal / maxCal).clamp(0.0, 1.0);
-      final barH   = size.height * ratio;
-      final left   = i * barWidth * 2;
-      final rect   = RRect.fromRectAndRadius(
+      final cal = days[i].totalCalories;
+      final ratio = (cal / maxCal).clamp(0.0, 1.0);
+      final barH = size.height * ratio;
+      final left = i * barWidth * 2;
+      final rect = RRect.fromRectAndRadius(
         Rect.fromLTWH(left, size.height - barH, barWidth, barH),
         const Radius.circular(4),
       );
 
       final isGoalMet = goalCalories > 0 && cal >= goalCalories;
-      final barColor = isGoalMet
-          ? AppColors.gold
-          : AppColors.gold.withValues(alpha: 0.3);
+      final barColor =
+          isGoalMet ? AppColors.gold : AppColors.gold.withValues(alpha: 0.3);
 
       canvas.drawRRect(rect, Paint()..color = barColor);
     }
@@ -206,16 +204,17 @@ class _HistoryRow extends StatelessWidget {
   final int goalCalories;
 
   static final _dateFmt = DateFormat('EEE, MMM d');
-  static final _calFmt  = NumberFormat('#,###');
+  static final _calFmt = NumberFormat('#,###');
 
   const _HistoryRow({required this.log, required this.goalCalories});
 
   @override
   Widget build(BuildContext context) {
-    final cal       = log.totalCalories;
-    final goalMet   = goalCalories > 0 && cal >= goalCalories;
-    final ratio     = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
-    final barColor  = goalMet ? AppColors.gold : AppColors.gold.withValues(alpha: 0.4);
+    final cal = log.totalCalories;
+    final goalMet = goalCalories > 0 && cal >= goalCalories;
+    final ratio = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
+    final barColor =
+        goalMet ? AppColors.gold : AppColors.gold.withValues(alpha: 0.4);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -247,8 +246,7 @@ class _HistoryRow extends StatelessWidget {
             ),
             if (goalMet) ...[
               const SizedBox(width: 6),
-              const Icon(Icons.check_circle,
-                  color: AppColors.gold, size: 14),
+              const Icon(Icons.check_circle, color: AppColors.gold, size: 14),
             ],
           ]),
           const SizedBox(height: 8),

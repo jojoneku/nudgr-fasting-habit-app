@@ -84,7 +84,8 @@ void main() {
       expect(find.byIcon(Icons.lock_outline), findsNWidgets(1)); // only Finance
     });
 
-    testWidgets('Fasting card shows "Fasting now" when fasting', (tester) async {
+    testWidgets('Fasting card shows "Fasting now" when fasting',
+        (tester) async {
       when(mockFasting.isFasting).thenReturn(true);
 
       await tester.pumpWidget(_wrap(HubScreen(
@@ -97,4 +98,3 @@ void main() {
     });
   });
 }
-

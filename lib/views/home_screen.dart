@@ -32,34 +32,34 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    _storage        = StorageService();
+    _storage = StorageService();
     _statsPresenter = StatsPresenter(_storage);
     _fastingPresenter = FastingPresenter(
       statsPresenter: _statsPresenter,
       storage: _storage,
     );
-    _foodDb       = FoodDbService();
+    _foodDb = FoodDbService();
     _aiEstimation = AiEstimationService(
       huggingFaceToken: const String.fromEnvironment('HF_TOKEN'),
     );
     _healthService = HealthService();
     _activityPresenter = ActivityPresenter(
       statsPresenter: _statsPresenter,
-      healthService:  _healthService,
-      storage:        _storage,
+      healthService: _healthService,
+      storage: _storage,
     );
     _nutritionPresenter = NutritionPresenter(
-      statsPresenter:   _statsPresenter,
+      statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
-      storage:          _storage,
-      foodDb:           _foodDb,
-      aiEstimation:     _aiEstimation,
+      storage: _storage,
+      foodDb: _foodDb,
+      aiEstimation: _aiEstimation,
     );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _foodDb.init();       // copy asset → documents dir if needed
-      _aiEstimation.init();       // non-blocking — loads Gemma if installed
+      await _foodDb.init(); // copy asset → documents dir if needed
+      _aiEstimation.init(); // non-blocking — loads Gemma if installed
     });
   }
 
@@ -84,10 +84,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final screens = [
       HubScreen(
-        fastingPresenter:   _fastingPresenter,
-        statsPresenter:     _statsPresenter,
+        fastingPresenter: _fastingPresenter,
+        statsPresenter: _statsPresenter,
         nutritionPresenter: _nutritionPresenter,
-        activityPresenter:  _activityPresenter,
+        activityPresenter: _activityPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,

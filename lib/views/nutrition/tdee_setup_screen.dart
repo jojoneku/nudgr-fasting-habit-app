@@ -18,7 +18,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
   // Step 1
   final _weightCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
-  final _ageCtrl    = TextEditingController();
+  final _ageCtrl = TextEditingController();
   String _sex = 'male';
 
   // Step 2
@@ -34,10 +34,10 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     if (p != null) {
       _weightCtrl.text = p.weightKg.toString();
       _heightCtrl.text = p.heightCm.toString();
-      _ageCtrl.text    = p.ageYears.toString();
-      _sex             = p.sex;
-      _activityLevel   = p.activityLevel;
-      _goal            = p.goal;
+      _ageCtrl.text = p.ageYears.toString();
+      _sex = p.sex;
+      _activityLevel = p.activityLevel;
+      _goal = p.goal;
     }
   }
 
@@ -55,8 +55,12 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     final a = int.tryParse(_ageCtrl.text.trim());
     if (w == null || h == null || a == null) return null;
     return TdeeProfile(
-      weightKg: w, heightCm: h, ageYears: a,
-      sex: _sex, activityLevel: _activityLevel, goal: _goal,
+      weightKg: w,
+      heightCm: h,
+      ageYears: a,
+      sex: _sex,
+      activityLevel: _activityLevel,
+      goal: _goal,
     );
   }
 
@@ -89,10 +93,14 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
 
   Widget _buildStep() {
     switch (_step) {
-      case 0: return _buildBodyStats();
-      case 1: return _buildActivity();
-      case 2: return _buildGoalStep();
-      default: return const SizedBox.shrink();
+      case 0:
+        return _buildBodyStats();
+      case 1:
+        return _buildActivity();
+      case 2:
+        return _buildGoalStep();
+      default:
+        return const SizedBox.shrink();
     }
   }
 
@@ -102,26 +110,38 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
       children: [
         const Text('BODY STATS',
             style: TextStyle(
-                color: AppColors.gold, fontSize: 11,
-                letterSpacing: 2.0, fontWeight: FontWeight.w600)),
+                color: AppColors.gold,
+                fontSize: 11,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 20),
         Row(children: [
-          Expanded(child: _field(_weightCtrl, 'Weight', 'kg', TextInputType.number)),
+          Expanded(
+              child: _field(_weightCtrl, 'Weight', 'kg', TextInputType.number)),
           const SizedBox(width: 12),
-          Expanded(child: _field(_heightCtrl, 'Height', 'cm', TextInputType.number)),
+          Expanded(
+              child: _field(_heightCtrl, 'Height', 'cm', TextInputType.number)),
           const SizedBox(width: 12),
           Expanded(child: _field(_ageCtrl, 'Age', 'yrs', TextInputType.number)),
         ]),
         const SizedBox(height: 20),
         const Text('SEX',
             style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 11, letterSpacing: 1.5)),
+                color: AppColors.textSecondary,
+                fontSize: 11,
+                letterSpacing: 1.5)),
         const SizedBox(height: 10),
         Row(children: [
-          _SexButton(label: 'Male',   value: 'male',   selected: _sex,
+          _SexButton(
+              label: 'Male',
+              value: 'male',
+              selected: _sex,
               onTap: (v) => setState(() => _sex = v)),
           const SizedBox(width: 12),
-          _SexButton(label: 'Female', value: 'female', selected: _sex,
+          _SexButton(
+              label: 'Female',
+              value: 'female',
+              selected: _sex,
               onTap: (v) => setState(() => _sex = v)),
         ]),
       ],
@@ -134,8 +154,10 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
       children: [
         const Text('ACTIVITY LEVEL',
             style: TextStyle(
-                color: AppColors.gold, fontSize: 11,
-                letterSpacing: 2.0, fontWeight: FontWeight.w600)),
+                color: AppColors.gold,
+                fontSize: 11,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 20),
         ...ActivityLevel.values.map((level) => _RadioTile(
               label: level.label,
@@ -155,23 +177,28 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
       children: [
         const Text('GOAL',
             style: TextStyle(
-                color: AppColors.gold, fontSize: 11,
-                letterSpacing: 2.0, fontWeight: FontWeight.w600)),
+                color: AppColors.gold,
+                fontSize: 11,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600)),
         const SizedBox(height: 20),
         _RadioTile(
             label: 'Cut — Lose weight',
             subtitle: 'Calorie deficit (–300 kcal)',
-            value: 'cut', groupValue: _goal,
+            value: 'cut',
+            groupValue: _goal,
             onChanged: (v) => setState(() => _goal = v!)),
         _RadioTile(
             label: 'Maintain',
             subtitle: 'Hold current weight',
-            value: 'maintain', groupValue: _goal,
+            value: 'maintain',
+            groupValue: _goal,
             onChanged: (v) => setState(() => _goal = v!)),
         _RadioTile(
             label: 'Bulk — Gain muscle',
             subtitle: 'Calorie surplus (+250 kcal)',
-            value: 'bulk', groupValue: _goal,
+            value: 'bulk',
+            groupValue: _goal,
             onChanged: (v) => setState(() => _goal = v!)),
         if (profile != null) ...[
           const SizedBox(height: 24),
@@ -187,7 +214,9 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
               children: [
                 const Text('YOUR TARGET',
                     style: TextStyle(
-                        color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
+                        color: AppColors.gold,
+                        fontSize: 10,
+                        letterSpacing: 2.0)),
                 const SizedBox(height: 8),
                 Text('${profile.targetCalories} kcal / day',
                     style: const TextStyle(
@@ -201,18 +230,23 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                 const SizedBox(height: 16),
                 const Text('SUGGESTED MACROS',
                     style: TextStyle(
-                        color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
+                        color: AppColors.gold,
+                        fontSize: 10,
+                        letterSpacing: 2.0)),
                 const SizedBox(height: 8),
                 Row(children: [
-                  _MacroChip(label: 'Protein', value: '${profile.suggestedProteinG}g'),
+                  _MacroChip(
+                      label: 'Protein', value: '${profile.suggestedProteinG}g'),
                   const SizedBox(width: 8),
-                  _MacroChip(label: 'Carbs',   value: '${profile.suggestedCarbsG}g'),
+                  _MacroChip(
+                      label: 'Carbs', value: '${profile.suggestedCarbsG}g'),
                   const SizedBox(width: 8),
-                  _MacroChip(label: 'Fat',     value: '${profile.suggestedFatG}g'),
+                  _MacroChip(label: 'Fat', value: '${profile.suggestedFatG}g'),
                 ]),
                 const SizedBox(height: 8),
                 const Text('These will be applied to your macro targets.',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 11)),
               ],
             ),
           ),
@@ -232,7 +266,8 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
               child: OutlinedButton(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppColors.textSecondary,
-                  side: const BorderSide(color: AppColors.textSecondary, width: 0.5),
+                  side: const BorderSide(
+                      color: AppColors.textSecondary, width: 0.5),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
@@ -285,8 +320,8 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     await widget.presenter.updateGoals(
       widget.presenter.goals.copyWith(
         proteinGrams: profile.suggestedProteinG.toDouble(),
-        carbsGrams:   profile.suggestedCarbsG.toDouble(),
-        fatGrams:     profile.suggestedFatG.toDouble(),
+        carbsGrams: profile.suggestedCarbsG.toDouble(),
+        fatGrams: profile.suggestedFatG.toDouble(),
       ),
     );
     if (mounted) Navigator.pop(context);
@@ -294,10 +329,14 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
 
   String _activityDescription(ActivityLevel level) {
     switch (level) {
-      case ActivityLevel.sedentary:        return 'Little or no exercise';
-      case ActivityLevel.lightlyActive:    return '1–3 days/week';
-      case ActivityLevel.moderatelyActive: return '3–5 days/week';
-      case ActivityLevel.veryActive:       return '6–7 days/week';
+      case ActivityLevel.sedentary:
+        return 'Little or no exercise';
+      case ActivityLevel.lightlyActive:
+        return '1–3 days/week';
+      case ActivityLevel.moderatelyActive:
+        return '3–5 days/week';
+      case ActivityLevel.veryActive:
+        return '6–7 days/week';
     }
   }
 
@@ -355,8 +394,10 @@ class _SexButton extends StatelessWidget {
   final String selected;
   final void Function(String) onTap;
   const _SexButton({
-    required this.label, required this.value,
-    required this.selected, required this.onTap,
+    required this.label,
+    required this.value,
+    required this.selected,
+    required this.onTap,
   });
 
   @override
@@ -373,7 +414,9 @@ class _SexButton extends StatelessWidget {
                 : AppColors.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? AppColors.gold : AppColors.textSecondary.withValues(alpha: 0.3),
+              color: isSelected
+                  ? AppColors.gold
+                  : AppColors.textSecondary.withValues(alpha: 0.3),
             ),
           ),
           alignment: Alignment.center,
@@ -427,8 +470,10 @@ class _RadioTile<T> extends StatelessWidget {
   final T groupValue;
   final void Function(T?) onChanged;
   const _RadioTile({
-    required this.label, this.subtitle,
-    required this.value, required this.groupValue,
+    required this.label,
+    this.subtitle,
+    required this.value,
+    required this.groupValue,
     required this.onChanged,
   });
 
@@ -454,7 +499,8 @@ class _RadioTile<T> extends StatelessWidget {
         child: Row(
           children: [
             Radio<T>(
-              value: value, groupValue: groupValue,
+              value: value,
+              groupValue: groupValue,
               onChanged: onChanged,
               activeColor: AppColors.gold,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -466,7 +512,8 @@ class _RadioTile<T> extends StatelessWidget {
                 children: [
                   Text(label,
                       style: TextStyle(
-                        color: selected ? AppColors.gold : AppColors.textPrimary,
+                        color:
+                            selected ? AppColors.gold : AppColors.textPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
                       )),

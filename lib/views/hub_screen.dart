@@ -82,12 +82,11 @@ class HubScreen extends StatelessWidget {
   }
 
   List<Widget> _buildModuleDefinitions(BuildContext context) {
-    final fastingSubtitle = moduleSubtitleGetters['fasting']
-            ?.call() ??
+    final fastingSubtitle = moduleSubtitleGetters['fasting']?.call() ??
         (fastingPresenter.isFasting ? 'Fasting now' : 'Not fasting');
 
-    final questsSubtitle = moduleSubtitleGetters['quests']?.call() ??
-        _questsSummary();
+    final questsSubtitle =
+        moduleSubtitleGetters['quests']?.call() ?? _questsSummary();
 
     return [
       ModuleCard(
@@ -96,8 +95,7 @@ class HubScreen extends StatelessWidget {
         icon: Icons.timer,
         accentColor: AppColors.primary,
         subtitle: fastingSubtitle,
-        onTap: moduleOnTapOverrides['fasting'] ??
-            () => _pushTimerTab(context),
+        onTap: moduleOnTapOverrides['fasting'] ?? () => _pushTimerTab(context),
       ),
       ModuleCard(
         title: 'Quests',
@@ -105,8 +103,7 @@ class HubScreen extends StatelessWidget {
         icon: MdiIcons.swordCross,
         accentColor: AppColors.secondary,
         subtitle: questsSubtitle,
-        onTap: moduleOnTapOverrides['quests'] ??
-            () => _pushQuestsTab(context),
+        onTap: moduleOnTapOverrides['quests'] ?? () => _pushQuestsTab(context),
       ),
       ModuleCard(
         title: 'Calories',
@@ -154,12 +151,10 @@ class HubScreen extends StatelessWidget {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final todayWeekday = now.weekday;
-    final todaysQuests = quests
-        .where((q) => q.isEnabled && q.days[todayWeekday - 1])
-        .toList();
+    final todaysQuests =
+        quests.where((q) => q.isEnabled && q.days[todayWeekday - 1]).toList();
     if (todaysQuests.isEmpty) return 'None today';
-    final done =
-        todaysQuests.where((q) => q.isCompletedOn(today)).length;
+    final done = todaysQuests.where((q) => q.isCompletedOn(today)).length;
     return '$done/${todaysQuests.length} done today';
   }
 

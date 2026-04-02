@@ -7,8 +7,8 @@ class FoodEntry {
   final double? protein;
   final double? carbs;
   final double? fat;
-  final double? grams;       // stored for reference (from food DB lookup)
-  final bool aiEstimated;    // true → show ~ prefix in UI
+  final double? grams; // stored for reference (from food DB lookup)
+  final bool aiEstimated; // true → show ~ prefix in UI
   final DateTime loggedAt;
 
   const FoodEntry({

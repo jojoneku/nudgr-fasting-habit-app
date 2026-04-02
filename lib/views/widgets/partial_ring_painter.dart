@@ -22,7 +22,7 @@ class PartialRingPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final offset = strokeWidth / 2;
     final rect = Offset(offset, offset) &
-    Size(size.width - strokeWidth, size.height - strokeWidth);
+        Size(size.width - strokeWidth, size.height - strokeWidth);
 
     final paintBase = Paint()
       ..color = trackColor

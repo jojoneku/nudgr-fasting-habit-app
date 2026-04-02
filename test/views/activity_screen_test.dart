@@ -86,7 +86,8 @@ void main() {
       );
       await Future.delayed(Duration.zero);
 
-      await tester.pumpWidget(_wrap(ActivityScreen(presenter: connectedPresenter)));
+      await tester
+          .pumpWidget(_wrap(ActivityScreen(presenter: connectedPresenter)));
       await tester.pumpAndSettle();
 
       expect(find.text('Sync Now'), findsOneWidget);
@@ -126,7 +127,8 @@ void main() {
           .thenAnswer((_) async => today);
       await Future.delayed(Duration.zero);
 
-      await tester.pumpWidget(_wrap(ActivityScreen(presenter: goalMetPresenter)));
+      await tester
+          .pumpWidget(_wrap(ActivityScreen(presenter: goalMetPresenter)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.check_circle), findsOneWidget);

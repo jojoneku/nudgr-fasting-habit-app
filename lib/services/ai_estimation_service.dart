@@ -28,8 +28,7 @@ class AiEstimationService {
   AiEstimationService({this.huggingFaceToken});
 
   // System prompt that constrains the model to JSON-only output.
-  static const _systemPrompt =
-      'You are a nutrition database API. '
+  static const _systemPrompt = 'You are a nutrition database API. '
       'Given a meal description, respond with ONLY a valid JSON object — '
       'no preamble, no markdown fences, no explanation.\n'
       'Required format:\n'
@@ -44,10 +43,10 @@ class AiEstimationService {
 
   // ── State getters ────────────────────────────────────────────────────────────
 
-  bool get isModelAvailable  => _model != null;
-  bool get isDownloading     => _isDownloading;
-  int  get downloadProgress  => _downloadProgress;
-  String get modelSizeLabel  => _modelSizeLabel;
+  bool get isModelAvailable => _model != null;
+  bool get isDownloading => _isDownloading;
+  int get downloadProgress => _downloadProgress;
+  String get modelSizeLabel => _modelSizeLabel;
 
   // ── Init ─────────────────────────────────────────────────────────────────────
 
@@ -79,7 +78,7 @@ class AiEstimationService {
   /// Safe to call multiple times; no-ops if already downloading.
   Future<void> downloadModel({void Function(int progress)? onProgress}) async {
     if (_isDownloading) return;
-    _isDownloading   = true;
+    _isDownloading = true;
     _downloadProgress = 0;
 
     try {
@@ -87,10 +86,9 @@ class AiEstimationService {
       await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
           .fromNetwork(_modelUrl)
           .withProgress((p) {
-            _downloadProgress = p;
-            onProgress?.call(p);
-          })
-          .install();
+        _downloadProgress = p;
+        onProgress?.call(p);
+      }).install();
 
       // Load the model after successful installation.
       try {
@@ -169,24 +167,24 @@ class AiEstimationService {
       throw FormatException('Failed to decode AI response JSON: $e');
     }
 
-    final json     = decoded as Map<String, dynamic>;
+    final json = decoded as Map<String, dynamic>;
     final rawItems = json['items'] as List<dynamic>? ?? [];
 
     final items = rawItems.map((raw) {
       final item = raw as Map<String, dynamic>;
       return AiItemEstimate(
-        name:     (item['name']     as String?) ?? 'Unknown',
+        name: (item['name'] as String?) ?? 'Unknown',
         calories: (item['calories'] as num?)?.toInt() ?? 0,
-        protein:  (item['protein']  as num?)?.toDouble(),
-        carbs:    (item['carbs']    as num?)?.toDouble(),
-        fat:      (item['fat']      as num?)?.toDouble(),
+        protein: (item['protein'] as num?)?.toDouble(),
+        carbs: (item['carbs'] as num?)?.toDouble(),
+        fat: (item['fat'] as num?)?.toDouble(),
       );
     }).toList();
 
     return AiMealEstimate(
       totalCalories: items.fold(0, (sum, i) => sum + i.calories),
-      items:         items,
-      confidence:    (json['confidence'] as num?)?.toDouble() ?? 0.7,
+      items: items,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.7,
     );
   }
 }

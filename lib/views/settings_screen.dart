@@ -150,8 +150,7 @@ class SettingsScreen extends StatelessWidget {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content:
-                                      Text('Data imported successfully!')),
+                                  content: Text('Data imported successfully!')),
                             );
                           }
                         } catch (e) {
@@ -172,8 +171,7 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(),
           ListTile(
-            leading:
-                const Icon(Icons.delete_forever, color: AppColors.neutral),
+            leading: const Icon(Icons.delete_forever, color: AppColors.neutral),
             title: const Text('Clear All Data'),
             subtitle: const Text('Delete all fasting history and quests'),
             onTap: () async {

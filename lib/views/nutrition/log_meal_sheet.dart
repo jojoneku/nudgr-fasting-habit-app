@@ -23,15 +23,15 @@ class LogMealSheet extends StatefulWidget {
 
 class _LogMealSheetState extends State<LogMealSheet> {
   late MealSlot _slot;
-  final _aiCtrl     = TextEditingController();
+  final _aiCtrl = TextEditingController();
   final _searchCtrl = TextEditingController();
 
   List<FoodDbEntry> _searchResults = [];
   final List<_PendingEntry> _pendingEntries = [];
 
   bool _saveAsTemplate = false;
-  bool _isSearching    = false;
-  bool _isLogging      = false;
+  bool _isSearching = false;
+  bool _isLogging = false;
 
   @override
   void initState() {
@@ -55,7 +55,11 @@ class _LogMealSheetState extends State<LogMealSheet> {
     }
     setState(() => _isSearching = true);
     final results = await widget.presenter.foodDb.search(q);
-    if (mounted) setState(() { _searchResults = results; _isSearching = false; });
+    if (mounted)
+      setState(() {
+        _searchResults = results;
+        _isSearching = false;
+      });
   }
 
   @override
@@ -65,7 +69,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
       decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -94,20 +99,23 @@ class _LogMealSheetState extends State<LogMealSheet> {
       children: [
         const Text('LOG MEAL',
             style: TextStyle(
-                color: AppColors.gold, fontSize: 12,
-                letterSpacing: 2.0, fontWeight: FontWeight.w600)),
+                color: AppColors.gold,
+                fontSize: 12,
+                letterSpacing: 2.0,
+                fontWeight: FontWeight.w600)),
         const Spacer(),
         SizedBox(
-          width: 44, height: 44,
+          width: 44,
+          height: 44,
           child: IconButton(
-            icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+            icon: const Icon(Icons.close,
+                color: AppColors.textSecondary, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
       ],
     );
   }
-
 
   Widget _buildAiSection() {
     final available = widget.presenter.isAiAvailable;
@@ -116,7 +124,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
       children: [
         const Text('AI QUICK-LOG',
             style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.5)),
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                letterSpacing: 1.5)),
         const SizedBox(height: 8),
         if (!available)
           _AiUnavailableBanner(presenter: widget.presenter)
@@ -126,7 +136,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
               Expanded(
                 child: TextField(
                   controller: _aiCtrl,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+                  style: const TextStyle(
+                      color: AppColors.textPrimary, fontSize: 13),
                   decoration: _inputDecoration(
                     'Describe your meal...',
                     'e.g. rice, grilled fish, mixed veggies',
@@ -159,13 +170,15 @@ class _LogMealSheetState extends State<LogMealSheet> {
                   padding: EdgeInsets.only(top: 10),
                   child: Row(
                     children: [
-                      SizedBox(width: 14, height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2,
-                              color: AppColors.accent)),
+                      SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: AppColors.accent)),
                       SizedBox(width: 10),
                       Text('System analyzing meal composition...',
-                          style: TextStyle(
-                              color: AppColors.accent, fontSize: 12)),
+                          style:
+                              TextStyle(color: AppColors.accent, fontSize: 12)),
                     ],
                   ),
                 );
@@ -195,7 +208,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
       children: [
         const Text('SEARCH & ADD',
             style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.5)),
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                letterSpacing: 1.5)),
         const SizedBox(height: 8),
         TextField(
           controller: _searchCtrl,
@@ -249,7 +264,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
       children: [
         Text('ITEMS ADDED — $total kcal total',
             style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.5)),
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                letterSpacing: 1.5)),
         const SizedBox(height: 8),
         ..._pendingEntries.map((p) => _PendingRow(
               pending: p,
@@ -302,7 +319,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: _pendingEntries.isEmpty || _isLogging ? null : _logMeal,
+              onPressed:
+                  _pendingEntries.isEmpty || _isLogging ? null : _logMeal,
               child: const Text('LOG MEAL',
                   style: TextStyle(
                       fontWeight: FontWeight.bold, letterSpacing: 1.2)),
@@ -343,7 +361,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _ManualEntrySheet(
-        onAdd: (entry) => setState(() => _pendingEntries.add(_PendingEntry(entry))),
+        onAdd: (entry) =>
+            setState(() => _pendingEntries.add(_PendingEntry(entry))),
       ),
     );
   }
@@ -353,7 +372,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
       hintText: hint,
       labelText: label,
       labelStyle: const TextStyle(color: AppColors.textSecondary),
-      hintStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
+      hintStyle:
+          TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
       filled: true,
       fillColor: AppColors.background,
       border: OutlineInputBorder(
@@ -377,7 +397,7 @@ class _AiUnavailableBanner extends StatelessWidget {
       listenable: presenter,
       builder: (_, __) {
         final downloading = presenter.isAiDownloading;
-        final progress    = presenter.aiDownloadProgress;
+        final progress = presenter.aiDownloadProgress;
 
         return Container(
           padding: const EdgeInsets.all(14),
@@ -390,7 +410,8 @@ class _AiUnavailableBanner extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(children: [
-                const Icon(Icons.auto_awesome, color: AppColors.accent, size: 14),
+                const Icon(Icons.auto_awesome,
+                    color: AppColors.accent, size: 14),
                 const SizedBox(width: 8),
                 const Expanded(
                   child: Text(
@@ -421,8 +442,7 @@ class _AiUnavailableBanner extends StatelessWidget {
                       child: LinearProgressIndicator(
                         value: progress / 100.0,
                         minHeight: 6,
-                        backgroundColor:
-                            AppColors.surface,
+                        backgroundColor: AppColors.surface,
                         valueColor: const AlwaysStoppedAnimation<Color>(
                             AppColors.accent),
                       ),
@@ -442,15 +462,14 @@ class _AiUnavailableBanner extends StatelessWidget {
                   child: OutlinedButton.icon(
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppColors.accent,
-                      side: const BorderSide(
-                          color: AppColors.accent, width: 0.8),
+                      side:
+                          const BorderSide(color: AppColors.accent, width: 0.8),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     icon: const Icon(Icons.download, size: 16),
                     label: const Text('DOWNLOAD AI MODEL',
-                        style: TextStyle(
-                            fontSize: 12, letterSpacing: 1.2)),
+                        style: TextStyle(fontSize: 12, letterSpacing: 1.2)),
                     onPressed: () => presenter.downloadAiModel(),
                   ),
                 ),
@@ -506,7 +525,8 @@ class _AiResultCardState extends State<_AiResultCard> {
                 '~${widget.estimate.totalCalories} kcal estimated',
                 style: const TextStyle(
                     color: AppColors.accent,
-                    fontWeight: FontWeight.bold, fontSize: 13),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13),
               ),
               const Spacer(),
               GestureDetector(
@@ -536,7 +556,8 @@ class _AiResultCardState extends State<_AiResultCard> {
               ),
               onPressed: () => widget.onConfirm(_items),
               child: const Text('CONFIRM',
-                  style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, letterSpacing: 1.2)),
             ),
           ),
         ],
@@ -582,7 +603,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
             child: TextField(
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style:
+                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
               decoration: InputDecoration(
                 hintText: '100g',
                 hintStyle: TextStyle(
@@ -608,8 +630,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: const Icon(Icons.add_circle,
-                  color: AppColors.gold, size: 22),
+              icon:
+                  const Icon(Icons.add_circle, color: AppColors.gold, size: 22),
               onPressed: () => widget.onAdd(_grams),
             ),
           ),
@@ -642,7 +664,8 @@ class _PendingRow extends StatelessWidget {
           ),
           Text('${pending.entry.calories} kcal',
               style: const TextStyle(
-                  color: AppColors.gold, fontSize: 12,
+                  color: AppColors.gold,
+                  fontSize: 12,
                   fontWeight: FontWeight.w600)),
           SizedBox(
             width: 44,
@@ -669,16 +692,19 @@ class _ManualEntrySheet extends StatefulWidget {
 
 class _ManualEntrySheetState extends State<_ManualEntrySheet> {
   final _nameCtrl = TextEditingController();
-  final _calCtrl  = TextEditingController();
-  final _pCtrl    = TextEditingController();
-  final _cCtrl    = TextEditingController();
-  final _fCtrl    = TextEditingController();
+  final _calCtrl = TextEditingController();
+  final _pCtrl = TextEditingController();
+  final _cCtrl = TextEditingController();
+  final _fCtrl = TextEditingController();
   bool _showMacros = false;
 
   @override
   void dispose() {
-    _nameCtrl.dispose(); _calCtrl.dispose();
-    _pCtrl.dispose(); _cCtrl.dispose(); _fCtrl.dispose();
+    _nameCtrl.dispose();
+    _calCtrl.dispose();
+    _pCtrl.dispose();
+    _cCtrl.dispose();
+    _fCtrl.dispose();
     super.dispose();
   }
 
@@ -689,16 +715,20 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
       decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(controller: _nameCtrl, autofocus: true,
+          TextField(
+              controller: _nameCtrl,
+              autofocus: true,
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: _dec('Food name', 'e.g. Chicken breast 150g')),
           const SizedBox(height: 10),
-          TextField(controller: _calCtrl,
+          TextField(
+              controller: _calCtrl,
               keyboardType: TextInputType.number,
               style: const TextStyle(color: AppColors.textPrimary),
               decoration: _dec('Calories', 'kcal')),
@@ -706,32 +736,42 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
           GestureDetector(
             onTap: () => setState(() => _showMacros = !_showMacros),
             child: Text(
-              _showMacros ? '▲ Hide macros' : '▼ Add macros (optional)',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12)),
+                _showMacros ? '▲ Hide macros' : '▼ Add macros (optional)',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
           ),
           if (_showMacros) ...[
             const SizedBox(height: 10),
             Row(children: [
-              Expanded(child: TextField(controller: _pCtrl,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
-                  decoration: _dec('Protein', 'g'))),
+              Expanded(
+                  child: TextField(
+                      controller: _pCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Protein', 'g'))),
               const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _cCtrl,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
-                  decoration: _dec('Carbs', 'g'))),
+              Expanded(
+                  child: TextField(
+                      controller: _cCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Carbs', 'g'))),
               const SizedBox(width: 8),
-              Expanded(child: TextField(controller: _fCtrl,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
-                  decoration: _dec('Fat', 'g'))),
+              Expanded(
+                  child: TextField(
+                      controller: _fCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Fat', 'g'))),
             ]),
           ],
           const SizedBox(height: 16),
           SizedBox(
-            width: double.infinity, height: 48,
+            width: double.infinity,
+            height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
@@ -750,11 +790,14 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
   }
 
   InputDecoration _dec(String label, String hint) => InputDecoration(
-        labelText: label, hintText: hint,
+        labelText: label,
+        hintText: hint,
         labelStyle: const TextStyle(color: AppColors.textSecondary),
         hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.5), fontSize: 11),
-        filled: true, fillColor: AppColors.background,
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            fontSize: 11),
+        filled: true,
+        fillColor: AppColors.background,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),
@@ -765,13 +808,15 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
 
   void _add() {
     final name = _nameCtrl.text.trim();
-    final cal  = int.tryParse(_calCtrl.text.trim());
+    final cal = int.tryParse(_calCtrl.text.trim());
     if (name.isEmpty || cal == null || cal <= 0) return;
     widget.onAdd(FoodEntry(
-      id: FoodEntry.generateId(), name: name, calories: cal,
+      id: FoodEntry.generateId(),
+      name: name,
+      calories: cal,
       protein: double.tryParse(_pCtrl.text.trim()),
-      carbs:   double.tryParse(_cCtrl.text.trim()),
-      fat:     double.tryParse(_fCtrl.text.trim()),
+      carbs: double.tryParse(_cCtrl.text.trim()),
+      fat: double.tryParse(_fCtrl.text.trim()),
       loggedAt: DateTime.now(),
     ));
     Navigator.pop(context);

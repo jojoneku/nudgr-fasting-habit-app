@@ -35,7 +35,8 @@ void main() {
     });
 
     test('copyWith preserves unchanged fields', () {
-      final log = ActivityLog(date: '2026-03-25', steps: 100, isManualEntry: false);
+      final log =
+          ActivityLog(date: '2026-03-25', steps: 100, isManualEntry: false);
       final updated = log.copyWith(steps: 5000, isManualEntry: true);
       expect(updated.steps, 5000);
       expect(updated.isManualEntry, true);

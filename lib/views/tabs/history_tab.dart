@@ -6,7 +6,6 @@ import '../../presenters/fasting_presenter.dart';
 import '../../models/fasting_log.dart';
 import '../../app_colors.dart';
 
-
 class HistoryList extends StatefulWidget {
   final FastingPresenter presenter;
 
@@ -31,7 +30,8 @@ class _HistoryListState extends State<HistoryList> {
 
   Widget _buildHistoryView() {
     if (presenter.history.isEmpty) {
-      return const Center(child: Padding(
+      return const Center(
+          child: Padding(
         padding: EdgeInsets.all(24.0),
         child: Text("No fasts recorded yet."),
       ));
@@ -59,7 +59,8 @@ class _HistoryListState extends State<HistoryList> {
             color: AppColors.surface,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
-              side: BorderSide(color: AppColors.surface.withValues(alpha: 0.5), width: 1),
+              side: BorderSide(
+                  color: AppColors.surface.withValues(alpha: 0.5), width: 1),
             ),
             margin: EdgeInsets.zero,
             child: InkWell(
@@ -73,7 +74,8 @@ class _HistoryListState extends State<HistoryList> {
                     // Header: Icon + Ratio
                     Row(
                       children: [
-                        const Icon(Icons.bolt, color: AppColors.primary, size: 20),
+                        const Icon(Icons.bolt,
+                            color: AppColors.primary, size: 20),
                         const SizedBox(width: 8),
                         Text(
                           '${log.goalDuration}:${24 - log.goalDuration}',
@@ -85,12 +87,13 @@ class _HistoryListState extends State<HistoryList> {
                         ),
                         if (note != null && note.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          const Icon(Icons.note, size: 16, color: AppColors.textSecondary),
+                          const Icon(Icons.note,
+                              size: 16, color: AppColors.textSecondary),
                         ],
                       ],
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Duration
                     Text(
                       '${fastDuration.toStringAsFixed(1)} Hours',
@@ -120,16 +123,17 @@ class _HistoryListState extends State<HistoryList> {
                             children: [
                               const Text(
                                 'Start',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 DateFormat('MMM d, h:mm a').format(fastStart),
                                 style: const TextStyle(
-                                  color: AppColors.textPrimary, 
-                                  fontSize: 14, 
-                                  fontWeight: FontWeight.w600
-                                ),
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -146,16 +150,17 @@ class _HistoryListState extends State<HistoryList> {
                             children: [
                               const Text(
                                 'End',
-                                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                                style: TextStyle(
+                                    color: AppColors.textSecondary,
+                                    fontSize: 12),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 DateFormat('MMM d, h:mm a').format(fastEnd),
                                 style: const TextStyle(
-                                  color: AppColors.textPrimary, 
-                                  fontSize: 14, 
-                                  fontWeight: FontWeight.w600
-                                ),
+                                    color: AppColors.textPrimary,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600),
                               ),
                             ],
                           ),
@@ -168,11 +173,9 @@ class _HistoryListState extends State<HistoryList> {
             ),
           ),
         );
-
       },
     );
   }
-
 
   void _showHistoryContextMenu(BuildContext context, int index) {
     showModalBottomSheet(
@@ -220,7 +223,8 @@ class _HistoryListState extends State<HistoryList> {
                         _deleteHistoryItem(index);
                       },
                     ),
-                    const Text('Delete', style: TextStyle(fontSize: 12, color: Colors.red)),
+                    const Text('Delete',
+                        style: TextStyle(fontSize: 12, color: Colors.red)),
                   ],
                 ),
               ],
@@ -250,7 +254,8 @@ class _HistoryListState extends State<HistoryList> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text('Fast Start', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('Fast Start',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 200,
@@ -277,7 +282,8 @@ class _HistoryListState extends State<HistoryList> {
                         ),
                       ),
                       const Divider(height: 32),
-                      const Text('Fast End', style: TextStyle(fontWeight: FontWeight.bold)),
+                      const Text('Fast End',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       SizedBox(
                         height: 200,
@@ -305,7 +311,8 @@ class _HistoryListState extends State<HistoryList> {
                       ),
                       if (newEatingEnd != null) ...[
                         const Divider(height: 32),
-                        const Text('Eating End', style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text('Eating End',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 8),
                         SizedBox(
                           height: 200,
@@ -343,23 +350,27 @@ class _HistoryListState extends State<HistoryList> {
                 ),
                 TextButton(
                   onPressed: () {
-                    final newFastDuration = newFastEnd.difference(newFastStart).inSeconds / 3600;
+                    final newFastDuration =
+                        newFastEnd.difference(newFastStart).inSeconds / 3600;
                     final newEatingDuration = newEatingEnd != null
                         ? newEatingEnd!.difference(newFastEnd).inSeconds / 3600
                         : null;
 
                     // Replace the entry with a new FastingLog object
-                    presenter.updateLog(index, FastingLog(
-                      fastStart: newFastStart,
-                      fastEnd: newFastEnd,
-                      fastDuration: newFastDuration,
-                      success: newFastDuration >= presenter.fastingGoalHours,
-                      eatingStart: newFastEnd,
-                      eatingEnd: newEatingEnd,
-                      eatingDuration: newEatingDuration,
-                      note: log.note,
-                      goalDuration: log.goalDuration,
-                    ));
+                    presenter.updateLog(
+                        index,
+                        FastingLog(
+                          fastStart: newFastStart,
+                          fastEnd: newFastEnd,
+                          fastDuration: newFastDuration,
+                          success:
+                              newFastDuration >= presenter.fastingGoalHours,
+                          eatingStart: newFastEnd,
+                          eatingEnd: newEatingEnd,
+                          eatingDuration: newEatingDuration,
+                          note: log.note,
+                          goalDuration: log.goalDuration,
+                        ));
                     Navigator.pop(context);
                   },
                   child: const Text('Save'),
@@ -406,17 +417,19 @@ class _HistoryListState extends State<HistoryList> {
 
     if (result != null) {
       final log = presenter.history[index];
-      presenter.updateLog(index, FastingLog(
-        fastStart: log.fastStart,
-        fastEnd: log.fastEnd,
-        fastDuration: log.fastDuration,
-        success: log.success,
-        eatingStart: log.eatingStart,
-        eatingEnd: log.eatingEnd,
-        eatingDuration: log.eatingDuration,
-        note: result.isEmpty ? null : result,
-        goalDuration: log.goalDuration,
-      ));
+      presenter.updateLog(
+          index,
+          FastingLog(
+            fastStart: log.fastStart,
+            fastEnd: log.fastEnd,
+            fastDuration: log.fastDuration,
+            success: log.success,
+            eatingStart: log.eatingStart,
+            eatingEnd: log.eatingEnd,
+            eatingDuration: log.eatingDuration,
+            note: result.isEmpty ? null : result,
+            goalDuration: log.goalDuration,
+          ));
     }
   }
 
@@ -427,8 +440,12 @@ class _HistoryListState extends State<HistoryList> {
         title: const Text("Delete Record"),
         content: const Text("Are you sure you want to delete this record?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Delete")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Delete")),
         ],
       ),
     );

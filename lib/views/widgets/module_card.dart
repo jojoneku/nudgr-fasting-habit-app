@@ -90,7 +90,8 @@ class ModuleCard extends StatelessWidget {
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: 6),
-                      Text(subtitle!,
+                      Text(
+                        subtitle!,
                         style: const TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 11,

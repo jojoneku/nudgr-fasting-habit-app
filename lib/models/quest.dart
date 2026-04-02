@@ -6,7 +6,7 @@ class Quest {
   bool isEnabled;
   List<bool> days;
   // stored as "YYYY-MM-DD"
-  List<String> completedDates; 
+  List<String> completedDates;
   DateTime? lastXpAwarded;
   int xpReward;
   bool isOneTime;
@@ -28,7 +28,7 @@ class Quest {
 
   DateTime? get lastCompleted {
     if (completedDates.isEmpty) return null;
-    // Assuming sorted or just getting last added? 
+    // Assuming sorted or just getting last added?
     // Ideally we should parse and find max, but usually we append.
     // Let's parse the last one.
     try {
@@ -39,12 +39,13 @@ class Quest {
   }
 
   set lastCompleted(DateTime? date) {
-    if (date == null) return; // Can't really unset only the last one easily without context
+    if (date == null)
+      return; // Can't really unset only the last one easily without context
     final dateStr = date.toIso8601String().split('T')[0];
     if (!completedDates.contains(dateStr)) {
       completedDates.add(dateStr);
       // Keep sorted?
-      completedDates.sort(); 
+      completedDates.sort();
     }
   }
 
@@ -66,7 +67,7 @@ class Quest {
       try {
         final date = DateTime.parse(json['lastCompleted']);
         loadedDates.add(date.toIso8601String().split('T')[0]);
-      } catch (e) { /* ignore */ }
+      } catch (e) {/* ignore */}
     }
 
     return Quest(
@@ -77,8 +78,8 @@ class Quest {
       isEnabled: json['isEnabled'],
       days: List<bool>.from(json['days']),
       completedDates: loadedDates,
-      lastXpAwarded: json['lastXpAwarded'] != null 
-          ? DateTime.parse(json['lastXpAwarded']) 
+      lastXpAwarded: json['lastXpAwarded'] != null
+          ? DateTime.parse(json['lastXpAwarded'])
           : null,
       xpReward: json['xpReward'] ?? 10,
       isOneTime: json['isOneTime'] ?? false,
