@@ -27,6 +27,8 @@ void main() {
     when(mockStorage.loadActivityHistory()).thenAnswer((_) async => []);
     when(mockStorage.loadActivityGoalMetDate()).thenAnswer((_) async => null);
     when(mockStorage.loadActivityStreak()).thenAnswer((_) async => 0);
+    when(mockStorage.loadPreferredStepsSource()).thenAnswer((_) async => null);
+    when(mockStorage.loadTdeeProfile()).thenAnswer((_) async => null);
     when(mockStorage.saveActivityLog(any)).thenAnswer((_) async {});
     when(mockStorage.saveActivityGoals(any)).thenAnswer((_) async {});
     when(mockStorage.saveActivityGoalMetDate(any)).thenAnswer((_) async {});
@@ -157,7 +159,10 @@ void main() {
       when(mockHealth.hasPermissions()).thenAnswer((_) async => true);
       when(mockHealth.readTodaySteps()).thenAnswer((_) async => 7500);
       when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayTotalCalories()).thenAnswer((_) async => null);
       when(mockHealth.readTodayDistance()).thenAnswer((_) async => null);
+      when(mockStorage.loadActivityLogKeys()).thenAnswer((_) async => {});
+      when(mockHealth.readRangeDataByDay(any, any)).thenAnswer((_) async => {});
 
       presenter = ActivityPresenter(
         statsPresenter: mockStats,
@@ -175,7 +180,10 @@ void main() {
       when(mockHealth.requestPermissions()).thenAnswer((_) async => true);
       when(mockHealth.readTodaySteps()).thenAnswer((_) async => 3000);
       when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayTotalCalories()).thenAnswer((_) async => null);
       when(mockHealth.readTodayDistance()).thenAnswer((_) async => null);
+      when(mockStorage.loadActivityLogKeys()).thenAnswer((_) async => {});
+      when(mockHealth.readRangeDataByDay(any, any)).thenAnswer((_) async => {});
 
       presenter = ActivityPresenter(
         statsPresenter: mockStats,
