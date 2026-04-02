@@ -11,6 +11,14 @@ import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
 import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
+import '../models/finance/bill.dart';
+import '../models/finance/budget.dart';
+import '../models/finance/budgeted_expense.dart';
+import '../models/finance/finance_category.dart';
+import '../models/finance/financial_account.dart';
+import '../models/finance/monthly_summary.dart';
+import '../models/finance/receivable.dart';
+import '../models/finance/transaction_record.dart';
 
 class StorageService {
   static const String keyIsFasting = 'isFasting';
@@ -448,6 +456,178 @@ class StorageService {
   Future<int> loadActivityStreak() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(keyActivityStreak) ?? 0;
+  }
+
+  // ─── Finance / Treasury ──────────────────────────────────────────────────────
+
+  static const String keyFinancialAccounts = 'finance_accounts';
+  static const String keyTransactions = 'finance_transactions';
+  static const String keyFinanceCategories = 'finance_categories';
+  static const String keyBudgets = 'finance_budgets';
+  static const String keyBudgetedExpenses = 'finance_budgeted_expenses';
+  static const String keyBills = 'finance_bills';
+  static const String keyReceivables = 'finance_receivables';
+  static const String keyMonthlySummaries = 'finance_monthly_summaries';
+
+  Future<void> saveAccounts(List<FinancialAccount> accounts) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyFinancialAccounts, jsonEncode(accounts.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<FinancialAccount>> loadAccounts() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyFinancialAccounts);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => FinancialAccount.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading accounts: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveTransactions(List<TransactionRecord> transactions) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyTransactions, jsonEncode(transactions.map((e) => e.toJson()).toList()));
+    // TODO: migrate to SQLite when txn count > 500
+  }
+
+  Future<List<TransactionRecord>> loadTransactions() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyTransactions);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => TransactionRecord.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading transactions: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveFinanceCategories(List<FinanceCategory> categories) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyFinanceCategories, jsonEncode(categories.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<FinanceCategory>> loadFinanceCategories() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyFinanceCategories);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => FinanceCategory.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading finance categories: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveBudgets(List<Budget> budgets) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyBudgets, jsonEncode(budgets.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<Budget>> loadBudgets() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyBudgets);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => Budget.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading budgets: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveBudgetedExpenses(List<BudgetedExpense> expenses) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyBudgetedExpenses, jsonEncode(expenses.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<BudgetedExpense>> loadBudgetedExpenses() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyBudgetedExpenses);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => BudgetedExpense.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading budgeted expenses: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveBills(List<Bill> bills) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyBills, jsonEncode(bills.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<Bill>> loadBills() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyBills);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => Bill.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading bills: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveReceivables(List<Receivable> receivables) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyReceivables, jsonEncode(receivables.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<Receivable>> loadReceivables() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyReceivables);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => Receivable.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading receivables: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveMonthlySummaries(List<MonthlySummary> summaries) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyMonthlySummaries, jsonEncode(summaries.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<MonthlySummary>> loadMonthlySummaries() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyMonthlySummaries);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => MonthlySummary.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading monthly summaries: $e');
+      return [];
+    }
   }
 
   // ─── Export / Import ─────────────────────────────────────────────────────────
