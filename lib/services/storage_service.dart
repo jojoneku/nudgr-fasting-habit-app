@@ -13,6 +13,7 @@ import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budget.dart';
+import '../models/finance/installment.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/finance_category.dart';
 import '../models/finance/financial_account.dart';
@@ -468,6 +469,7 @@ class StorageService {
   static const String keyBills = 'finance_bills';
   static const String keyReceivables = 'finance_receivables';
   static const String keyMonthlySummaries = 'finance_monthly_summaries';
+  static const String keyInstallments = 'finance_installments';
 
   Future<void> saveAccounts(List<FinancialAccount> accounts) async {
     final prefs = await SharedPreferences.getInstance();
@@ -606,6 +608,26 @@ class StorageService {
           .toList();
     } catch (e) {
       debugPrint('StorageService: Error loading receivables: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveInstallments(List<Installment> installments) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyInstallments, jsonEncode(installments.map((e) => e.toJson()).toList()));
+  }
+
+  Future<List<Installment>> loadInstallments() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyInstallments);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List<dynamic>)
+          .map((e) => Installment.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading installments: $e');
       return [];
     }
   }

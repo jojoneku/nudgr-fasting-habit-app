@@ -3,6 +3,7 @@ import '../presenters/activity_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
@@ -36,6 +37,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final BillsReceivablesPresenter _billsPresenter;
   late final BudgetPresenter _budgetPresenter;
   late final TreasuryHistoryPresenter _historyPresenter;
+  late final InstallmentPresenter _installmentPresenter;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
@@ -63,6 +65,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _billsPresenter = BillsReceivablesPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _budgetPresenter = BudgetPresenter(_storage, _statsPresenter);
     _historyPresenter = TreasuryHistoryPresenter(_storage);
+    _installmentPresenter = InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -90,6 +93,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _billsPresenter.dispose();
     _budgetPresenter.dispose();
     _historyPresenter.dispose();
+    _installmentPresenter.dispose();
     super.dispose();
   }
 
@@ -113,7 +117,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         billsPresenter: _billsPresenter,
         budgetPresenter: _budgetPresenter,
         historyPresenter: _historyPresenter,
+        installmentPresenter: _installmentPresenter,
       ),
+
       StatsView(
         presenter: _statsPresenter,
         fastingPresenter: _fastingPresenter,

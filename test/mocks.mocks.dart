@@ -4,7 +4,7 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i10;
-import 'dart:ui' as _i30;
+import 'dart:ui' as _i31;
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     as _i7;
@@ -21,30 +21,31 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart'
     as _i17;
 import 'package:intermittent_fasting/models/finance/financial_account.dart'
     as _i15;
+import 'package:intermittent_fasting/models/finance/installment.dart' as _i22;
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart'
-    as _i22;
+    as _i23;
 import 'package:intermittent_fasting/models/finance/receivable.dart' as _i21;
 import 'package:intermittent_fasting/models/finance/transaction_record.dart'
     as _i16;
-import 'package:intermittent_fasting/models/food_db_entry.dart' as _i28;
+import 'package:intermittent_fasting/models/food_db_entry.dart' as _i29;
 import 'package:intermittent_fasting/models/food_template.dart' as _i14;
 import 'package:intermittent_fasting/models/nutrition_goals.dart' as _i4;
 import 'package:intermittent_fasting/models/quest.dart' as _i12;
 import 'package:intermittent_fasting/models/tdee_profile.dart' as _i13;
 import 'package:intermittent_fasting/models/user_stats.dart' as _i2;
 import 'package:intermittent_fasting/presenters/activity_presenter.dart'
-    as _i32;
-import 'package:intermittent_fasting/presenters/fasting_presenter.dart' as _i31;
-import 'package:intermittent_fasting/presenters/stats_presenter.dart' as _i29;
+    as _i33;
+import 'package:intermittent_fasting/presenters/fasting_presenter.dart' as _i32;
+import 'package:intermittent_fasting/presenters/stats_presenter.dart' as _i30;
 import 'package:intermittent_fasting/services/ai_estimation_service.dart'
-    as _i26;
-import 'package:intermittent_fasting/services/food_db_service.dart' as _i27;
-import 'package:intermittent_fasting/services/health_service.dart' as _i24;
+    as _i27;
+import 'package:intermittent_fasting/services/food_db_service.dart' as _i28;
+import 'package:intermittent_fasting/services/health_service.dart' as _i25;
 import 'package:intermittent_fasting/services/notification_service.dart'
-    as _i25;
+    as _i26;
 import 'package:intermittent_fasting/services/storage_service.dart' as _i9;
 import 'package:mockito/mockito.dart' as _i1;
-import 'package:mockito/src/dummies.dart' as _i23;
+import 'package:mockito/src/dummies.dart' as _i24;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -696,8 +697,29 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
       ) as _i10.Future<List<_i21.Receivable>>);
 
   @override
+  _i10.Future<void> saveInstallments(List<_i22.Installment>? installments) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveInstallments,
+          [installments],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<List<_i22.Installment>> loadInstallments() => (super.noSuchMethod(
+        Invocation.method(
+          #loadInstallments,
+          [],
+        ),
+        returnValue:
+            _i10.Future<List<_i22.Installment>>.value(<_i22.Installment>[]),
+      ) as _i10.Future<List<_i22.Installment>>);
+
+  @override
   _i10.Future<void> saveMonthlySummaries(
-          List<_i22.MonthlySummary>? summaries) =>
+          List<_i23.MonthlySummary>? summaries) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveMonthlySummaries,
@@ -708,15 +730,15 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<List<_i22.MonthlySummary>> loadMonthlySummaries() =>
+  _i10.Future<List<_i23.MonthlySummary>> loadMonthlySummaries() =>
       (super.noSuchMethod(
         Invocation.method(
           #loadMonthlySummaries,
           [],
         ),
-        returnValue: _i10.Future<List<_i22.MonthlySummary>>.value(
-            <_i22.MonthlySummary>[]),
-      ) as _i10.Future<List<_i22.MonthlySummary>>);
+        returnValue: _i10.Future<List<_i23.MonthlySummary>>.value(
+            <_i23.MonthlySummary>[]),
+      ) as _i10.Future<List<_i23.MonthlySummary>>);
 
   @override
   _i10.Future<String> exportAllData() => (super.noSuchMethod(
@@ -724,7 +746,7 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
           #exportAllData,
           [],
         ),
-        returnValue: _i10.Future<String>.value(_i23.dummyValue<String>(
+        returnValue: _i10.Future<String>.value(_i24.dummyValue<String>(
           this,
           Invocation.method(
             #exportAllData,
@@ -747,7 +769,7 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
 /// A class which mocks [HealthService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockHealthService extends _i1.Mock implements _i24.HealthService {
+class MockHealthService extends _i1.Mock implements _i25.HealthService {
   MockHealthService() {
     _i1.throwOnMissingStub(this);
   }
@@ -934,7 +956,7 @@ class MockHealthService extends _i1.Mock implements _i24.HealthService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNotificationService extends _i1.Mock
-    implements _i25.NotificationService {
+    implements _i26.NotificationService {
   MockNotificationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1140,7 +1162,7 @@ class MockNotificationService extends _i1.Mock
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockAiEstimationService extends _i1.Mock
-    implements _i26.AiEstimationService {
+    implements _i27.AiEstimationService {
   MockAiEstimationService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1166,7 +1188,7 @@ class MockAiEstimationService extends _i1.Mock
   @override
   String get modelSizeLabel => (super.noSuchMethod(
         Invocation.getter(#modelSizeLabel),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#modelSizeLabel),
         ),
@@ -1215,7 +1237,7 @@ class MockAiEstimationService extends _i1.Mock
 /// A class which mocks [FoodDbService].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockFoodDbService extends _i1.Mock implements _i27.FoodDbService {
+class MockFoodDbService extends _i1.Mock implements _i28.FoodDbService {
   MockFoodDbService() {
     _i1.throwOnMissingStub(this);
   }
@@ -1247,30 +1269,30 @@ class MockFoodDbService extends _i1.Mock implements _i27.FoodDbService {
       ) as _i10.Future<void>);
 
   @override
-  _i10.Future<List<_i28.FoodDbEntry>> search(String? query) =>
+  _i10.Future<List<_i29.FoodDbEntry>> search(String? query) =>
       (super.noSuchMethod(
         Invocation.method(
           #search,
           [query],
         ),
         returnValue:
-            _i10.Future<List<_i28.FoodDbEntry>>.value(<_i28.FoodDbEntry>[]),
-      ) as _i10.Future<List<_i28.FoodDbEntry>>);
+            _i10.Future<List<_i29.FoodDbEntry>>.value(<_i29.FoodDbEntry>[]),
+      ) as _i10.Future<List<_i29.FoodDbEntry>>);
 
   @override
-  _i10.Future<_i28.FoodDbEntry?> getById(String? id) => (super.noSuchMethod(
+  _i10.Future<_i29.FoodDbEntry?> getById(String? id) => (super.noSuchMethod(
         Invocation.method(
           #getById,
           [id],
         ),
-        returnValue: _i10.Future<_i28.FoodDbEntry?>.value(),
-      ) as _i10.Future<_i28.FoodDbEntry?>);
+        returnValue: _i10.Future<_i29.FoodDbEntry?>.value(),
+      ) as _i10.Future<_i29.FoodDbEntry?>);
 }
 
 /// A class which mocks [StatsPresenter].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
+class MockStatsPresenter extends _i1.Mock implements _i30.StatsPresenter {
   MockStatsPresenter() {
     _i1.throwOnMissingStub(this);
   }
@@ -1305,7 +1327,7 @@ class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
   @override
   String get rank => (super.noSuchMethod(
         Invocation.getter(#rank),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#rank),
         ),
@@ -1314,7 +1336,7 @@ class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
   @override
   String get jobTitle => (super.noSuchMethod(
         Invocation.getter(#jobTitle),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#jobTitle),
         ),
@@ -1425,7 +1447,7 @@ class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
       ) as _i10.Future<void>);
 
   @override
-  void addListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -1434,7 +1456,7 @@ class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
       );
 
   @override
-  void removeListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -1464,7 +1486,7 @@ class MockStatsPresenter extends _i1.Mock implements _i29.StatsPresenter {
 /// A class which mocks [FastingPresenter].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockFastingPresenter extends _i1.Mock implements _i31.FastingPresenter {
+class MockFastingPresenter extends _i1.Mock implements _i32.FastingPresenter {
   MockFastingPresenter() {
     _i1.throwOnMissingStub(this);
   }
@@ -1818,7 +1840,7 @@ class MockFastingPresenter extends _i1.Mock implements _i31.FastingPresenter {
           #exportData,
           [],
         ),
-        returnValue: _i10.Future<String>.value(_i23.dummyValue<String>(
+        returnValue: _i10.Future<String>.value(_i24.dummyValue<String>(
           this,
           Invocation.method(
             #exportData,
@@ -1847,7 +1869,7 @@ class MockFastingPresenter extends _i1.Mock implements _i31.FastingPresenter {
       );
 
   @override
-  void addListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -1856,7 +1878,7 @@ class MockFastingPresenter extends _i1.Mock implements _i31.FastingPresenter {
       );
 
   @override
-  void removeListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],
@@ -1877,7 +1899,7 @@ class MockFastingPresenter extends _i1.Mock implements _i31.FastingPresenter {
 /// A class which mocks [ActivityPresenter].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
+class MockActivityPresenter extends _i1.Mock implements _i33.ActivityPresenter {
   MockActivityPresenter() {
     _i1.throwOnMissingStub(this);
   }
@@ -1982,7 +2004,7 @@ class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
   @override
   String get summaryLabel => (super.noSuchMethod(
         Invocation.getter(#summaryLabel),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#summaryLabel),
         ),
@@ -2009,7 +2031,7 @@ class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
   @override
   String get todayCaloriesLabel => (super.noSuchMethod(
         Invocation.getter(#todayCaloriesLabel),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#todayCaloriesLabel),
         ),
@@ -2018,7 +2040,7 @@ class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
   @override
   String get hubSubtitle => (super.noSuchMethod(
         Invocation.getter(#hubSubtitle),
-        returnValue: _i23.dummyValue<String>(
+        returnValue: _i24.dummyValue<String>(
           this,
           Invocation.getter(#hubSubtitle),
         ),
@@ -2151,7 +2173,7 @@ class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
       ) as _i10.Future<void>);
 
   @override
-  void addListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void addListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #addListener,
           [listener],
@@ -2160,7 +2182,7 @@ class MockActivityPresenter extends _i1.Mock implements _i32.ActivityPresenter {
       );
 
   @override
-  void removeListener(_i30.VoidCallback? listener) => super.noSuchMethod(
+  void removeListener(_i31.VoidCallback? listener) => super.noSuchMethod(
         Invocation.method(
           #removeListener,
           [listener],

@@ -8,18 +8,27 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
+import 'package:intermittent_fasting/views/treasury/bills/installment_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/receivable_list_tile.dart';
 
 class BillsReceivablesView extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
+  final InstallmentPresenter installmentPresenter;
 
-  const BillsReceivablesView({super.key, required this.presenter});
+  const BillsReceivablesView({
+    super.key,
+    required this.presenter,
+    required this.installmentPresenter,
+  });
 
   @override
   State<BillsReceivablesView> createState() => _BillsReceivablesViewState();
@@ -30,6 +39,12 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   void initState() {
     super.initState();
     widget.presenter.load();
+    widget.installmentPresenter.load();
+  }
+
+  void _setMonth(String month) {
+    widget.presenter.setMonth(month);
+    widget.installmentPresenter.setMonth(month);
   }
 
   void _showAddBillSheet([Bill? existing]) {
@@ -109,6 +124,33 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
+  void _showAddInstallmentSheet([Installment? existing]) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => AddInstallmentSheet(
+          presenter: widget.installmentPresenter, existing: existing),
+    );
+  }
+
+  void _showMarkInstallmentPaidSheet(Installment installment) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _MarkInstallmentPaidSheet(
+          installment: installment,
+          presenter: widget.installmentPresenter),
+    );
+  }
+
   void _showFabMenu() {
     showModalBottomSheet(
       context: context,
@@ -147,6 +189,17 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                 _showAddBudgetedExpenseSheet();
               },
             ),
+            ListTile(
+              leading: Icon(Icons.credit_score_outlined, color: AppColors.accent),
+              title: Text('Add Installment',
+                  style: TextStyle(color: AppColors.textPrimary)),
+              subtitle: Text('Track a purchase split into monthly payments',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              onTap: () {
+                Navigator.pop(context);
+                _showAddInstallmentSheet();
+              },
+            ),
           ],
         ),
       ),
@@ -156,14 +209,20 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: widget.presenter,
+      listenable: Listenable.merge([widget.presenter, widget.installmentPresenter]),
       builder: (context, _) {
         return Scaffold(
           backgroundColor: AppColors.background,
           body: Column(
             children: [
-              _MonthSelector(presenter: widget.presenter),
-              _StatsBar(presenter: widget.presenter),
+              _MonthSelector(
+                selectedMonth: widget.presenter.selectedMonth,
+                onChanged: _setMonth,
+              ),
+              _StatsBar(
+                presenter: widget.presenter,
+                installmentPresenter: widget.installmentPresenter,
+              ),
               Expanded(
                 child: ListView(
                   children: [
@@ -181,6 +240,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                       presenter: widget.presenter,
                       onMarkPaid: _showMarkExpensePaidSheet,
                       onEdit: _showAddBudgetedExpenseSheet,
+                    ),
+                    _InstallmentsSection(
+                      presenter: widget.installmentPresenter,
+                      onMarkPaid: _showMarkInstallmentPaidSheet,
+                      onEdit: _showAddInstallmentSheet,
                     ),
                     const SizedBox(height: 80),
                   ],
@@ -203,9 +267,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
 // ─── Month Selector ───────────────────────────────────────────────────────────
 
 class _MonthSelector extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
+  final String selectedMonth;
+  final ValueChanged<String> onChanged;
 
-  const _MonthSelector({required this.presenter});
+  const _MonthSelector({required this.selectedMonth, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
@@ -220,12 +285,11 @@ class _MonthSelector extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
-              onPressed: () =>
-                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
+              onPressed: () => onChanged(previousMonth(selectedMonth)),
             ),
           ),
           Text(
-            monthLabel(presenter.selectedMonth),
+            monthLabel(selectedMonth),
             style: TextStyle(
               color: AppColors.textPrimary,
               fontSize: 15,
@@ -237,8 +301,7 @@ class _MonthSelector extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
-              onPressed: () =>
-                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
+              onPressed: () => onChanged(nextMonth(selectedMonth)),
             ),
           ),
         ],
@@ -251,8 +314,9 @@ class _MonthSelector extends StatelessWidget {
 
 class _StatsBar extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
+  final InstallmentPresenter installmentPresenter;
 
-  const _StatsBar({required this.presenter});
+  const _StatsBar({required this.presenter, required this.installmentPresenter});
 
   @override
   Widget build(BuildContext context) {
@@ -274,8 +338,8 @@ class _StatsBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           _StatChip(
-            label: 'Receivables',
-            value: formatPesoCompact(presenter.totalReceivablesAmount),
+            label: 'Installments',
+            value: formatPesoCompact(installmentPresenter.totalDueThisMonth),
             color: AppColors.accent,
           ),
         ],
@@ -1295,6 +1359,275 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                 ),
               ),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Installments Section ─────────────────────────────────────────────────────
+
+class _InstallmentsSection extends StatelessWidget {
+  final InstallmentPresenter presenter;
+  final ValueChanged<Installment> onMarkPaid;
+  final ValueChanged<Installment> onEdit;
+
+  const _InstallmentsSection({
+    required this.presenter,
+    required this.onMarkPaid,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final installments = presenter.dueThisMonth;
+    final paidCount =
+        installments.where((i) => presenter.isPaidForMonth(i.id)).length;
+    final subtitle = installments.isEmpty
+        ? 'None due this month'
+        : '$paidCount/${installments.length} paid · ${formatPeso(presenter.totalDueThisMonth)} due';
+
+    return _SectionCard(
+      title: 'INSTALLMENTS',
+      count: installments.length,
+      subtitle: subtitle,
+      accentColor: const Color(0xFF9C27B0),
+      initiallyExpanded: installments.isNotEmpty,
+      emptyMessage: 'No installments due this month',
+      children: installments.map((i) {
+        final account =
+            presenter.accounts.where((a) => a.id == i.accountId).firstOrNull;
+        return InstallmentListTile(
+          key: ValueKey(i.id),
+          installment: i,
+          presenter: presenter,
+          account: account,
+          onMarkPaid: () => onMarkPaid(i),
+          onEdit: () => onEdit(i),
+          onDelete: () => _confirmDelete(context, presenter, i),
+        );
+      }).toList(),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    InstallmentPresenter presenter,
+    Installment installment,
+  ) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Delete Installment',
+            style: TextStyle(color: AppColors.textPrimary)),
+        content: Text(
+          'Delete "${installment.name}"? All linked payment transactions will also be removed.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child:
+                Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              presenter.deleteInstallment(installment.id);
+            },
+            child: Text('Delete', style: TextStyle(color: AppColors.danger)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Mark Installment Paid Sheet ──────────────────────────────────────────────
+
+class _MarkInstallmentPaidSheet extends StatefulWidget {
+  final Installment installment;
+  final InstallmentPresenter presenter;
+
+  const _MarkInstallmentPaidSheet({
+    required this.installment,
+    required this.presenter,
+  });
+
+  @override
+  State<_MarkInstallmentPaidSheet> createState() =>
+      _MarkInstallmentPaidSheetState();
+}
+
+class _MarkInstallmentPaidSheetState
+    extends State<_MarkInstallmentPaidSheet> {
+  late final TextEditingController _amountCtrl;
+  DateTime _date = DateTime.now();
+  bool _saving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountCtrl = TextEditingController(
+        text: widget.installment.monthlyAmount.toStringAsFixed(2));
+  }
+
+  @override
+  void dispose() {
+    _amountCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _confirm() async {
+    final amount = double.tryParse(_amountCtrl.text);
+    if (amount == null || amount <= 0) return;
+    setState(() => _saving = true);
+    await widget.presenter.markPaid(
+      widget.installment.id,
+      overrideAmount: amount,
+      date: _date,
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final count = widget.presenter.paidCount(widget.installment.id) + 1;
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.textSecondary.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(
+                'Mark Payment $count/${widget.installment.totalMonths}',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Text(
+                widget.installment.name,
+                style:
+                    TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 20),
+              Text('Amount',
+                  style: TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 6),
+              TextFormField(
+                controller: _amountCtrl,
+                style: TextStyle(color: AppColors.textPrimary),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+                ],
+                decoration: InputDecoration(
+                  prefixText: '₱ ',
+                  prefixStyle:
+                      TextStyle(color: AppColors.textSecondary),
+                  filled: true,
+                  fillColor: AppColors.background,
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                        color:
+                            AppColors.textSecondary.withOpacity(0.2)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(
+                        color:
+                            AppColors.textSecondary.withOpacity(0.2)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide:
+                        const BorderSide(color: AppColors.accent),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text('Date',
+                    style: TextStyle(
+                        color: AppColors.textSecondary, fontSize: 12)),
+                subtitle: Text(
+                  '${_date.day}/${_date.month}/${_date.year}',
+                  style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.w500),
+                ),
+                trailing: Icon(Icons.calendar_today_outlined,
+                    color: AppColors.accent, size: 18),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _date,
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                    builder: (context, child) => Theme(
+                      data: ThemeData.dark().copyWith(
+                        colorScheme: const ColorScheme.dark(
+                          primary: AppColors.accent,
+                          surface: AppColors.surface,
+                        ),
+                      ),
+                      child: child!,
+                    ),
+                  );
+                  if (picked != null) setState(() => _date = picked);
+                },
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _saving ? null : _confirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.background,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: _saving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.background),
+                        )
+                      : const Text('Confirm Payment',
+                          style: TextStyle(
+                              fontWeight: FontWeight.w700, fontSize: 15)),
+                ),
+              ),
             ],
           ),
         ),

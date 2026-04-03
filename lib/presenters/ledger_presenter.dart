@@ -33,6 +33,7 @@ class LedgerPresenter extends ChangeNotifier {
   String? get selectedAccountId => _selectedAccountId;
   List<FinancialAccount> get accounts => _accounts;
   List<FinanceCategory> get categories => _categories;
+  List<TransactionRecord> get allTransactions => List.unmodifiable(_allTransactions);
 
   // --- Filtered summary ---
 

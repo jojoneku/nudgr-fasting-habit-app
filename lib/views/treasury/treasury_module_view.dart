@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
@@ -17,6 +18,7 @@ class TreasuryModuleView extends StatefulWidget {
   final BillsReceivablesPresenter billsPresenter;
   final BudgetPresenter budgetPresenter;
   final TreasuryHistoryPresenter historyPresenter;
+  final InstallmentPresenter installmentPresenter;
 
   const TreasuryModuleView({
     super.key,
@@ -25,6 +27,7 @@ class TreasuryModuleView extends StatefulWidget {
     required this.billsPresenter,
     required this.budgetPresenter,
     required this.historyPresenter,
+    required this.installmentPresenter,
   });
 
   @override
@@ -76,7 +79,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
           children: [
             TreasuryDashboardView(presenter: widget.dashPresenter),
             LedgerView(presenter: widget.ledgerPresenter),
-            BillsReceivablesView(presenter: widget.billsPresenter),
+            BillsReceivablesView(
+              presenter: widget.billsPresenter,
+              installmentPresenter: widget.installmentPresenter,
+            ),
             BudgetView(presenter: widget.budgetPresenter),
             TreasuryHistoryView(presenter: widget.historyPresenter),
           ],

@@ -8,6 +8,7 @@ import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
+import '../presenters/installment_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
 import '../app_colors.dart';
 import 'activity/activity_permission_screen.dart';
@@ -28,6 +29,7 @@ class HubScreen extends StatelessWidget {
   final BillsReceivablesPresenter? billsPresenter;
   final BudgetPresenter? budgetPresenter;
   final TreasuryHistoryPresenter? historyPresenter;
+  final InstallmentPresenter? installmentPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
   /// Populated by AppShell as new modules (Activity, Treasury) are added.
@@ -47,6 +49,7 @@ class HubScreen extends StatelessWidget {
     this.billsPresenter,
     this.budgetPresenter,
     this.historyPresenter,
+    this.installmentPresenter,
     this.moduleSubtitleGetters = const {},
     this.moduleOnTapOverrides = const {},
   });
@@ -219,7 +222,9 @@ class HubScreen extends StatelessWidget {
     final bills = billsPresenter;
     final budget = budgetPresenter;
     final history = historyPresenter;
-    if (dash == null || ledger == null || bills == null || budget == null || history == null) return;
+    final installments = installmentPresenter;
+    if (dash == null || ledger == null || bills == null || budget == null ||
+        history == null || installments == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -229,6 +234,7 @@ class HubScreen extends StatelessWidget {
           billsPresenter: bills,
           budgetPresenter: budget,
           historyPresenter: history,
+          installmentPresenter: installments,
         ),
       ),
     );

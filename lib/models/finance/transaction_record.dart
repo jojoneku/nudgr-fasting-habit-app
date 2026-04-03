@@ -15,6 +15,7 @@ class TransactionRecord {
   final String? receivableId; // links to Receivable
   final String? transferToAccountId; // outbound leg of transfer
   final String? transferGroupId; // shared by both legs of a transfer pair
+  final String? installmentId; // links to Installment
 
   const TransactionRecord({
     required this.id,
@@ -30,6 +31,7 @@ class TransactionRecord {
     this.receivableId,
     this.transferToAccountId,
     this.transferGroupId,
+    this.installmentId,
   });
 
   factory TransactionRecord.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class TransactionRecord {
       receivableId: json['receivableId'] as String?,
       transferToAccountId: json['transferToAccountId'] as String?,
       transferGroupId: json['transferGroupId'] as String?,
+      installmentId: json['installmentId'] as String?,
     );
   }
 
@@ -64,6 +67,7 @@ class TransactionRecord {
         'receivableId': receivableId,
         'transferToAccountId': transferToAccountId,
         'transferGroupId': transferGroupId,
+        'installmentId': installmentId,
       };
 
   TransactionRecord copyWith({
@@ -79,6 +83,7 @@ class TransactionRecord {
     String? receivableId,
     String? transferToAccountId,
     String? transferGroupId,
+    String? installmentId,
   }) {
     return TransactionRecord(
       id: id,
@@ -94,6 +99,7 @@ class TransactionRecord {
       receivableId: receivableId ?? this.receivableId,
       transferToAccountId: transferToAccountId ?? this.transferToAccountId,
       transferGroupId: transferGroupId ?? this.transferGroupId,
+      installmentId: installmentId ?? this.installmentId,
     );
   }
 }
