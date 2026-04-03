@@ -48,12 +48,13 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
             style: TextStyle(letterSpacing: 2.0, fontSize: 14),
           ),
           centerTitle: true,
-          bottom: const TabBar(
+        ),
+        bottomNavigationBar: const Material(
+          color: AppColors.surface,
+          child: TabBar(
             indicatorColor: AppColors.accent,
             labelColor: AppColors.accent,
             unselectedLabelColor: AppColors.textSecondary,
-            isScrollable: true,
-            tabAlignment: TabAlignment.start,
             tabs: [
               Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
               Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
