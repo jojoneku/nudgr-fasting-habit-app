@@ -77,10 +77,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   double get netWorth {
     final assets = _accounts
-        .where((a) => a.isActive && !a.isLiability)
+        .where((a) => a.isActive && !a.isLiability && !a.isCustodian)
         .fold(0.0, (sum, a) => sum + a.balance);
     return assets - totalLiabilities;
   }
+
+  List<FinancialAccount> get custodianAccounts =>
+      _accounts.where((a) => a.isActive && a.isCustodian).toList();
 
   // --- Account CRUD ---
 

@@ -9,9 +9,11 @@
 //                                  each product is a separate FinancialAccount
 //   4. Traditional multi-acct   → BPI, BDO — each product is its own account
 //   5. Credit-only              → BNPL (SPayLater, BillEase) — balance = outstanding debt
+//   6. Custodian                → money handed to you but not yours (friend's cash, group
+//                                  fund, collected payments). Excluded from net worth.
 //
 // Top-level (parentAccountId == null):
-//   bank, ewallet, cash, creditCard, creditLine, bnpl, investment
+//   bank, ewallet, cash, creditCard, creditLine, bnpl, investment, custodian
 // Sub-account (parentAccountId != null):
 //   savings, goal, timeDeposit, investment (can also be a top-level product)
 //
@@ -32,6 +34,8 @@ enum AccountCategory {
   bnpl,
   // Non-liquid asset accounts
   investment,
+  // Custodian — money held on behalf of others, not part of personal net worth
+  custodian,
 }
 
 // Supports both main accounts and sub-accounts (savings pots, goals, time deposits).
@@ -86,6 +90,8 @@ class FinancialAccount {
       category == AccountCategory.creditCard ||
       category == AccountCategory.creditLine ||
       category == AccountCategory.bnpl;
+  // balance = funds held for others — excluded from net worth and liquid cash
+  bool get isCustodian => category == AccountCategory.custodian;
 
   factory FinancialAccount.fromJson(Map<String, dynamic> json) {
     return FinancialAccount(

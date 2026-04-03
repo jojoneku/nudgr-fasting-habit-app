@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -25,6 +26,7 @@ const _topLevelCategories = [
   AccountCategory.creditLine,
   AccountCategory.bnpl,
   AccountCategory.investment,
+  AccountCategory.custodian,
 ];
 
 const _subAccountCategories = [
@@ -275,6 +277,8 @@ class _CategoryDropdown extends StatelessWidget {
         return 'BNPL';
       case AccountCategory.investment:
         return 'Investment';
+      case AccountCategory.custodian:
+        return 'Custodian (not mine)';
     }
   }
 
@@ -362,8 +366,53 @@ class _ColorPicker extends StatelessWidget {
     }
   }
 
+  String _toHex(Color color) =>
+      '#${color.red.toRadixString(16).padLeft(2, '0')}'
+      '${color.green.toRadixString(16).padLeft(2, '0')}'
+      '${color.blue.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
+
+  bool _isPreset(String hex) => options.contains(hex.toUpperCase()) ||
+      options.contains(hex.toLowerCase()) ||
+      options.any((o) => o.toLowerCase() == hex.toLowerCase());
+
+  void _openCustomPicker(BuildContext context) {
+    Color pickerColor = _parse(selected);
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Custom Color',
+            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        content: SingleChildScrollView(
+          child: HueRingPicker(
+            pickerColor: pickerColor,
+            onColorChanged: (c) => pickerColor = c,
+            enableAlpha: false,
+            displayThumbColor: true,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onSelected(_toHex(pickerColor));
+            },
+            child: Text('Apply', style: TextStyle(color: AppColors.accent)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isCustom = !_isPreset(selected);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -371,24 +420,61 @@ class _ColorPicker extends StatelessWidget {
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
-          children: options.map((hex) {
-            final color = _parse(hex);
-            final isSelected = hex == selected;
-            return GestureDetector(
-              onTap: () => onSelected(hex),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                  border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
-                  boxShadow: isSelected ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)] : null,
+          runSpacing: 12,
+          children: [
+            ...options.map((hex) {
+              final color = _parse(hex);
+              final isSelected = hex.toLowerCase() == selected.toLowerCase();
+              return Semantics(
+                label: 'Color $hex',
+                selected: isSelected,
+                child: GestureDetector(
+                  onTap: () => onSelected(hex),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                      boxShadow: isSelected
+                          ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)]
+                          : null,
+                    ),
+                    child: isSelected
+                        ? const Icon(Icons.check, color: Colors.white, size: 18)
+                        : null,
+                  ),
                 ),
-                child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 18) : null,
+              );
+            }),
+            // Custom color swatch
+            Semantics(
+              label: 'Pick custom color',
+              child: GestureDetector(
+                onTap: () => _openCustomPicker(context),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isCustom ? Colors.white : AppColors.textSecondary.withOpacity(0.4),
+                      width: isCustom ? 2.5 : 1.5,
+                    ),
+                    color: isCustom ? _parse(selected) : Colors.transparent,
+                    boxShadow: isCustom
+                        ? [BoxShadow(color: _parse(selected).withOpacity(0.5), blurRadius: 6)]
+                        : null,
+                  ),
+                  child: isCustom
+                      ? const Icon(Icons.check, color: Colors.white, size: 18)
+                      : Icon(Icons.colorize_rounded,
+                          color: AppColors.textSecondary.withOpacity(0.6), size: 18),
+                ),
               ),
-            );
-          }).toList(),
+            ),
+          ],
         ),
       ],
     );

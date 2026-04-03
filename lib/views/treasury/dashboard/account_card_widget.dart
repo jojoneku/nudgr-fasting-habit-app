@@ -40,6 +40,8 @@ class AccountCardWidget extends StatelessWidget {
         return 'BNPL';
       case AccountCategory.investment:
         return 'Invest';
+      case AccountCategory.custodian:
+        return 'Custodian';
     }
   }
 
