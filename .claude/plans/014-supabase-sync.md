@@ -1,7 +1,7 @@
-# Plan 013 — Supabase Sync (Local-First)
+# Plan 014 — Supabase Sync (Local-First)
 **Status:** DRAFT — Awaiting Approval
 **Phase:** 1 of 1
-**Depends on:** Plan 014 (Authentication) — `userId` required to scope Supabase data
+**Depends on:** Plan 013 (Authentication) — `userId` required to scope Supabase data
 
 ---
 
@@ -55,7 +55,7 @@ If remote `updatedAt` > local → remote wins (pull and overwrite local).
 ## New Dependencies
 
 ```yaml
-supabase_flutter: ^2.0.0   # already added by Plan 014
+supabase_flutter: ^2.0.0   # already added by Plan 013
 connectivity_plus: ^6.0.0  # watch online/offline state
 ```
 
@@ -226,7 +226,7 @@ A small sync status row added to the existing `SettingsScreen`:
 7. [ ] Create `SyncPresenter`
 8. [ ] Wire `SyncService` into `AppShell` (after auth — requires `userId`)
 9. [ ] Add sync status row to `SettingsScreen`
-10. [ ] Hook `pullAll()` on first sign-in (via Plan 014's `onFirstSignIn` callback)
+10. [ ] Hook `pullAll()` on first sign-in (via Plan 013's `onFirstSignIn` callback)
 
 ---
 
@@ -265,4 +265,4 @@ None. Sync is infrastructure — no XP or stat changes.
 ---
 
 *Present this plan for approval before writing any code.*
-*Implementation order: Plan 014 (Auth) first → Plan 013 (Sync).*
+*Implementation order: Plan 013 (Auth) first → Plan 014 (Sync).*
