@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/transaction_list_tile.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
@@ -29,6 +30,19 @@ class LedgerView extends StatelessWidget {
     );
   }
 
+  void _showManageCategoriesSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => ManageCategoriesSheet(presenter: presenter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -44,11 +58,25 @@ class LedgerView extends StatelessWidget {
               Expanded(child: _TransactionList(presenter: presenter)),
             ],
           ),
-          floatingActionButton: FloatingActionButton(
-            onPressed: () => _showAddTransactionSheet(context),
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.background,
-            child: const Icon(Icons.add),
+          floatingActionButton: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'categories',
+                onPressed: () => _showManageCategoriesSheet(context),
+                backgroundColor: AppColors.surface,
+                foregroundColor: AppColors.textSecondary,
+                child: const Icon(Icons.label_outline),
+              ),
+              const SizedBox(height: 12),
+              FloatingActionButton(
+                heroTag: 'add_txn',
+                onPressed: () => _showAddTransactionSheet(context),
+                backgroundColor: AppColors.accent,
+                foregroundColor: AppColors.background,
+                child: const Icon(Icons.add),
+              ),
+            ],
           ),
         );
       },

@@ -183,6 +183,20 @@ class LedgerPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  // --- Category CRUD ---
+
+  Future<void> addCategory(FinanceCategory category) async {
+    _categories = [..._categories, category];
+    await _storage.saveFinanceCategories(_categories);
+    notifyListeners();
+  }
+
+  Future<void> deleteCategory(String id) async {
+    _categories = _categories.where((c) => c.id != id).toList();
+    await _storage.saveFinanceCategories(_categories);
+    notifyListeners();
+  }
+
   // --- Private helpers ---
 
   String _generateId() =>
