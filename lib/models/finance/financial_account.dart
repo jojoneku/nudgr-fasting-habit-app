@@ -34,7 +34,7 @@ enum AccountCategory {
   bnpl,
   // Non-liquid asset accounts
   investment,
-  // Custodian — money held on behalf of others, not part of personal net worth
+  // External — money held on behalf of others, not part of personal net worth
   custodian,
 }
 

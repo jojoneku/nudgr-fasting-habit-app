@@ -278,7 +278,7 @@ class _CategoryDropdown extends StatelessWidget {
       case AccountCategory.investment:
         return 'Investment';
       case AccountCategory.custodian:
-        return 'Custodian (not mine)';
+        return 'External';
     }
   }
 
