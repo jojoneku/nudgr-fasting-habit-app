@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/activity_presenter.dart';
+import '../presenters/bills_receivables_presenter.dart';
+import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
+import '../presenters/treasury_history_presenter.dart';
 import '../app_colors.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
@@ -22,6 +25,9 @@ class HubScreen extends StatelessWidget {
   final ActivityPresenter? activityPresenter;
   final TreasuryDashboardPresenter? treasuryPresenter;
   final LedgerPresenter? ledgerPresenter;
+  final BillsReceivablesPresenter? billsPresenter;
+  final BudgetPresenter? budgetPresenter;
+  final TreasuryHistoryPresenter? historyPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
   /// Populated by AppShell as new modules (Activity, Treasury) are added.
@@ -38,6 +44,9 @@ class HubScreen extends StatelessWidget {
     this.activityPresenter,
     this.treasuryPresenter,
     this.ledgerPresenter,
+    this.billsPresenter,
+    this.budgetPresenter,
+    this.historyPresenter,
     this.moduleSubtitleGetters = const {},
     this.moduleOnTapOverrides = const {},
   });
@@ -205,12 +214,21 @@ class HubScreen extends StatelessWidget {
   }
 
   void _pushTreasuryScreen(BuildContext context) {
+    final dash = treasuryPresenter;
+    final ledger = ledgerPresenter;
+    final bills = billsPresenter;
+    final budget = budgetPresenter;
+    final history = historyPresenter;
+    if (dash == null || ledger == null || bills == null || budget == null || history == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => TreasuryModuleView(
-          dashPresenter: treasuryPresenter!,
-          ledgerPresenter: ledgerPresenter!,
+          dashPresenter: dash,
+          ledgerPresenter: ledger,
+          billsPresenter: bills,
+          budgetPresenter: budget,
+          historyPresenter: history,
         ),
       ),
     );
