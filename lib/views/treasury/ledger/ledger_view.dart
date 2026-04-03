@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -212,7 +214,9 @@ class _SummaryRow extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 formatPeso(presenter.filteredMonthInflow),
-                style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 13),
+                style: GoogleFonts.jetBrainsMono(
+                  textStyle: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -222,7 +226,9 @@ class _SummaryRow extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 formatPeso(presenter.filteredMonthOutflow),
-                style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 13),
+                style: GoogleFonts.jetBrainsMono(
+                  textStyle: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 13),
+                ),
               ),
             ],
           ),
@@ -330,6 +336,7 @@ class _DateGroup extends StatelessWidget {
             direction: DismissDirection.endToStart,
             background: _SwipeDeleteBackground(),
             onDismissed: (_) {
+              HapticFeedback.mediumImpact();
               final deleted = txn;
               presenter.deleteTransaction(deleted.id);
               ScaffoldMessenger.of(context).showSnackBar(

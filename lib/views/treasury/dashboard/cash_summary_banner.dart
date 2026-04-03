@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -50,10 +51,16 @@ class _TotalLiquidRow extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           formatPeso(presenter.totalLiquidCash),
-          style: TextStyle(
-            color: AppColors.accent,
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: const TextStyle(
+              color: AppColors.accent,
+              fontSize: 32,
+              fontWeight: FontWeight.w800,
+              shadows: [
+                Shadow(color: AppColors.accentGlow, blurRadius: 16),
+                Shadow(color: AppColors.accentGlow, blurRadius: 32),
+              ],
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -68,10 +75,12 @@ class _TotalLiquidRow extends StatelessWidget {
             ),
             Text(
               formatPeso(presenter.netWorth),
-              style: TextStyle(
-                color: presenter.netWorth >= 0 ? AppColors.success : AppColors.danger,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: TextStyle(
+                  color: presenter.netWorth >= 0 ? AppColors.success : AppColors.danger,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -153,10 +162,12 @@ class _MetricItem extends StatelessWidget {
         const SizedBox(height: 2),
         Text(
           value,
-          style: TextStyle(
-            color: color,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: TextStyle(
+              color: color,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -41,7 +42,7 @@ class AccountCardWidget extends StatelessWidget {
       case AccountCategory.investment:
         return 'Invest';
       case AccountCategory.custodian:
-        return 'Custodian';
+        return 'External';
     }
   }
 
@@ -65,6 +66,9 @@ class AccountCardWidget extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border(
                 left: BorderSide(color: accentColor, width: 3),
+                top: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
+                right: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
+                bottom: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
               ),
             ),
             child: Padding(
@@ -143,10 +147,12 @@ class _CardBalance extends StatelessWidget {
           account.isLiability
               ? 'Owed: ${formatPesoCompact(account.balance)}'
               : formatPesoCompact(account.balance),
-          style: TextStyle(
-            color: account.isLiability ? AppColors.danger : AppColors.textSecondary,
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: TextStyle(
+              color: account.isLiability ? AppColors.danger : AppColors.textSecondary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],

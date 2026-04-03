@@ -16,4 +16,9 @@ class AppColors {
 
   static const Color error = Color(0xFFFF3333);
   static const Color neutral = Color(0xFF808080);
+
+  // Glow — use as TextStyle shadows or BoxDecoration shadows
+  static const Color accentGlow = Color(0x4D00E5FF); // accent @ 30%
+  static const Color successGlow = Color(0x3300E676); // success @ 20%
+  static const Color dangerGlow = Color(0x33FF1744); // danger @ 20%
 }

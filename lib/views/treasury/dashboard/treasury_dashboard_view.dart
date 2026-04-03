@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -100,6 +102,10 @@ class _DashboardScrollBody extends StatelessWidget {
             const SizedBox(height: 16),
           if (presenter.liabilityAccounts.isNotEmpty)
             _LiabilitiesCard(presenter: presenter, onEdit: onEditAccount),
+          if (presenter.custodianAccounts.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _HeldFundsCard(presenter: presenter, onEdit: onEditAccount),
+          ],
         ],
       ),
     );
@@ -169,7 +175,7 @@ class _LiquidAccountsRow extends StatelessWidget {
         itemBuilder: (context, index) {
           return AccountCardWidget(
             account: accounts[index],
-            onTap: () => onEdit(accounts[index]),
+            onTap: () { HapticFeedback.selectionClick(); onEdit(accounts[index]); },
           );
         },
       ),
@@ -200,7 +206,7 @@ class _GoalSection extends StatelessWidget {
               for (int i = 0; i < goals.length; i++) ...[
                 GoalProgressCard(
                   account: goals[i],
-                  onTap: () => onEdit(goals[i]),
+                  onTap: () { HapticFeedback.selectionClick(); onEdit(goals[i]); },
                 ),
                 if (i < goals.length - 1)
                   Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.textSecondary.withOpacity(0.1)),
@@ -237,7 +243,7 @@ class _LiabilitiesCard extends StatelessWidget {
         collapsedIconColor: AppColors.textSecondary,
         children: [
           for (final account in liabilities)
-            _LiabilityListTile(account: account, onTap: () => onEdit(account)),
+            _LiabilityListTile(account: account, onTap: () { HapticFeedback.selectionClick(); onEdit(account); }),
         ],
       ),
     );
@@ -261,12 +267,86 @@ class _LiabilityListTile extends StatelessWidget {
         children: [
           Text(
             formatPeso(account.balance),
-            style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+            style: GoogleFonts.jetBrainsMono(
+              textStyle: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+            ),
           ),
           const SizedBox(width: 4),
           Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 16),
         ],
       ),
+    );
+  }
+}
+
+class _HeldFundsCard extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  final ValueChanged<FinancialAccount> onEdit;
+
+  const _HeldFundsCard({required this.presenter, required this.onEdit});
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = presenter.custodianAccounts;
+    final total = accounts.fold(0.0, (sum, a) => sum + a.balance);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(label: 'EXTERNAL'),
+        const SizedBox(height: 8),
+        Card(
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.swap_horiz_rounded, color: AppColors.textSecondary, size: 16),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Not included in net worth',
+                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                    ),
+                    const Spacer(),
+                    Text(
+                      formatPeso(total),
+                      style: GoogleFonts.jetBrainsMono(
+                        textStyle: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
+              for (int i = 0; i < accounts.length; i++) ...[
+                ListTile(
+                  onTap: () { HapticFeedback.selectionClick(); onEdit(accounts[i]); },
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                  title: Text(accounts[i].name, style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        formatPeso(accounts[i].balance),
+                        style: GoogleFonts.jetBrainsMono(
+                          textStyle: const TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 16),
+                    ],
+                  ),
+                ),
+                if (i < accounts.length - 1)
+                  Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.textSecondary.withOpacity(0.1)),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

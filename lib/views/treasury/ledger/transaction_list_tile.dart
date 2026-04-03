@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -59,7 +61,7 @@ class TransactionListTile extends StatelessWidget {
     return Semantics(
       label: '${txn.description}, $_amountText, ${account?.name ?? ''}',
       child: ListTile(
-        onTap: onTap,
+        onTap: onTap != null ? () { HapticFeedback.selectionClick(); onTap!(); } : null,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: _LeadingCircle(txn: txn, category: category, parseColor: _parseColor),
         title: Text(
@@ -74,7 +76,9 @@ class TransactionListTile extends StatelessWidget {
         ),
         trailing: Text(
           _amountText,
-          style: TextStyle(color: _amountColor, fontWeight: FontWeight.w700, fontSize: 14),
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: TextStyle(color: _amountColor, fontWeight: FontWeight.w700, fontSize: 14),
+          ),
         ),
       ),
     );

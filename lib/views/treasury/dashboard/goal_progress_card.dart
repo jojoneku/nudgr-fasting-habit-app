@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -65,10 +66,12 @@ class GoalProgressCard extends StatelessWidget {
                 account.goalTarget != null
                     ? '${((_progress) * 100).round()}%'
                     : formatPeso(account.balance),
-                style: TextStyle(
-                  color: color,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                style: GoogleFonts.jetBrainsMono(
+                  textStyle: TextStyle(
+                    color: color,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
             ],
@@ -87,18 +90,22 @@ class GoalProgressCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               _subtitleText,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
               ),
             ),
           ] else ...[
             const SizedBox(height: 2),
             Text(
               formatPeso(account.balance),
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 12,
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ),
           ],

@@ -51,6 +51,7 @@ dependencies:
   http: ^1.2.0
   health: ^12.2.0
   flutter_colorpicker: ^1.1.0
+  google_fonts: ^6.2.1
 
 
 dev_dependencies:

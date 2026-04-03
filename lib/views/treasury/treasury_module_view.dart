@@ -49,10 +49,17 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
           ),
           centerTitle: true,
         ),
-        bottomNavigationBar: const Material(
-          color: AppColors.surface,
-          child: TabBar(
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            border: Border(
+              top: BorderSide(color: AppColors.accent.withOpacity(0.18), width: 1),
+            ),
+          ),
+          child: const TabBar(
             indicatorColor: AppColors.accent,
+            indicatorWeight: 3,
+            indicatorSize: TabBarIndicatorSize.label,
             labelColor: AppColors.accent,
             unselectedLabelColor: AppColors.textSecondary,
             tabs: [
@@ -64,6 +71,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
             ],
           ),
         ),
+
         body: TabBarView(
           children: [
             TreasuryDashboardView(presenter: widget.dashPresenter),
