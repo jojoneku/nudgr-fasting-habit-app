@@ -13,7 +13,7 @@ class TreasuryDashboardView extends StatelessWidget {
 
   const TreasuryDashboardView({super.key, required this.presenter});
 
-  void _showAddAccountSheet(BuildContext context) {
+  void _showAccountSheet(BuildContext context, [FinancialAccount? existing]) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -22,7 +22,7 @@ class TreasuryDashboardView extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => AccountSetupView(presenter: presenter),
+      builder: (_) => AccountSetupView(presenter: presenter, existing: existing),
     );
   }
 
@@ -40,10 +40,11 @@ class TreasuryDashboardView extends StatelessWidget {
           backgroundColor: AppColors.background,
           body: _DashboardScrollBody(
             presenter: presenter,
-            onAddAccount: () => _showAddAccountSheet(context),
+            onAddAccount: () => _showAccountSheet(context),
+            onEditAccount: (account) => _showAccountSheet(context, account),
           ),
           floatingActionButton: _AddAccountFab(
-            onTap: () => _showAddAccountSheet(context),
+            onTap: () => _showAccountSheet(context),
           ),
         );
       },
@@ -71,8 +72,13 @@ class _AddAccountFab extends StatelessWidget {
 class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final VoidCallback onAddAccount;
+  final ValueChanged<FinancialAccount> onEditAccount;
 
-  const _DashboardScrollBody({required this.presenter, required this.onAddAccount});
+  const _DashboardScrollBody({
+    required this.presenter,
+    required this.onAddAccount,
+    required this.onEditAccount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -86,14 +92,14 @@ class _DashboardScrollBody extends StatelessWidget {
           if (!presenter.hasAccounts)
             _EmptyAccountsCard(onAddAccount: onAddAccount)
           else
-            _LiquidAccountsRow(presenter: presenter),
+            _LiquidAccountsRow(presenter: presenter, onEdit: onEditAccount),
           const SizedBox(height: 16),
           if (presenter.goalAccounts.isNotEmpty || presenter.savingsAccounts.isNotEmpty)
-            _GoalSection(presenter: presenter),
+            _GoalSection(presenter: presenter, onEdit: onEditAccount),
           if (presenter.goalAccounts.isNotEmpty || presenter.savingsAccounts.isNotEmpty)
             const SizedBox(height: 16),
           if (presenter.liabilityAccounts.isNotEmpty)
-            _LiabilitiesCard(presenter: presenter),
+            _LiabilitiesCard(presenter: presenter, onEdit: onEditAccount),
         ],
       ),
     );
@@ -148,8 +154,9 @@ class _EmptyAccountsCard extends StatelessWidget {
 
 class _LiquidAccountsRow extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
+  final ValueChanged<FinancialAccount> onEdit;
 
-  const _LiquidAccountsRow({required this.presenter});
+  const _LiquidAccountsRow({required this.presenter, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +167,10 @@ class _LiquidAccountsRow extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         itemCount: accounts.length,
         itemBuilder: (context, index) {
-          return AccountCardWidget(account: accounts[index]);
+          return AccountCardWidget(
+            account: accounts[index],
+            onTap: () => onEdit(accounts[index]),
+          );
         },
       ),
     );
@@ -169,8 +179,9 @@ class _LiquidAccountsRow extends StatelessWidget {
 
 class _GoalSection extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
+  final ValueChanged<FinancialAccount> onEdit;
 
-  const _GoalSection({required this.presenter});
+  const _GoalSection({required this.presenter, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -187,7 +198,10 @@ class _GoalSection extends StatelessWidget {
           child: Column(
             children: [
               for (int i = 0; i < goals.length; i++) ...[
-                GoalProgressCard(account: goals[i]),
+                GoalProgressCard(
+                  account: goals[i],
+                  onTap: () => onEdit(goals[i]),
+                ),
                 if (i < goals.length - 1)
                   Divider(height: 1, indent: 16, endIndent: 16, color: AppColors.textSecondary.withOpacity(0.1)),
               ],
@@ -201,8 +215,9 @@ class _GoalSection extends StatelessWidget {
 
 class _LiabilitiesCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
+  final ValueChanged<FinancialAccount> onEdit;
 
-  const _LiabilitiesCard({required this.presenter});
+  const _LiabilitiesCard({required this.presenter, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -222,7 +237,7 @@ class _LiabilitiesCard extends StatelessWidget {
         collapsedIconColor: AppColors.textSecondary,
         children: [
           for (final account in liabilities)
-            _LiabilityListTile(account: account),
+            _LiabilityListTile(account: account, onTap: () => onEdit(account)),
         ],
       ),
     );
@@ -231,17 +246,26 @@ class _LiabilitiesCard extends StatelessWidget {
 
 class _LiabilityListTile extends StatelessWidget {
   final FinancialAccount account;
+  final VoidCallback onTap;
 
-  const _LiabilityListTile({required this.account});
+  const _LiabilityListTile({required this.account, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
+      onTap: onTap,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       title: Text(account.name, style: TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-      trailing: Text(
-        formatPeso(account.balance),
-        style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            formatPeso(account.balance),
+            style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 4),
+          Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 16),
+        ],
       ),
     );
   }

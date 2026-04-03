@@ -5,8 +5,9 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class GoalProgressCard extends StatelessWidget {
   final FinancialAccount account;
+  final VoidCallback? onTap;
 
-  const GoalProgressCard({super.key, required this.account});
+  const GoalProgressCard({super.key, required this.account, this.onTap});
 
   Color _parseColor() {
     try {
@@ -34,7 +35,10 @@ class GoalProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _parseColor();
 
-    return Padding(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -100,6 +104,7 @@ class GoalProgressCard extends StatelessWidget {
           ],
         ],
       ),
+    ),
     );
   }
 }
