@@ -168,13 +168,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   onChanged: (v) => setState(() => _transferToAccountId = v),
                 ),
               ],
-              if (_type != TransactionType.transfer && _filteredCategories.isNotEmpty) ...[
+              if (_type != TransactionType.transfer) ...[
                 const SizedBox(height: 16),
-                _CategoryChips(
-                  categories: _filteredCategories,
-                  selected: _selectedCategoryId,
-                  onSelected: (id) => setState(() => _selectedCategoryId = id),
-                ),
+                if (_filteredCategories.isEmpty)
+                  _NoCategoriesHint(type: _type)
+                else
+                  _CategoryChips(
+                    categories: _filteredCategories,
+                    selected: _selectedCategoryId,
+                    onSelected: (id) => setState(() => _selectedCategoryId = id),
+                  ),
               ],
               const SizedBox(height: 12),
               _DescriptionField(controller: _descriptionController),
@@ -497,6 +500,37 @@ class _NoteField extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: AppColors.accent),
         ),
+      ),
+    );
+  }
+}
+
+class _NoCategoriesHint extends StatelessWidget {
+  final TransactionType type;
+
+  const _NoCategoriesHint({required this.type});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = type == TransactionType.inflow ? 'income' : 'expense';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: AppColors.textSecondary, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No $label categories yet — add some in the Ledger first.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
