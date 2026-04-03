@@ -47,28 +47,35 @@ class AccountCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final accentColor = _parseColor();
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 160,
-        height: 110,
-        margin: const EdgeInsets.only(right: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+    return Semantics(
+      label: "${account.name}, ${account.isLiability ? 'Owed' : 'Balance'}: ${formatPesoCompact(account.balance)}",
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          border: Border(
-            left: BorderSide(color: accentColor, width: 3),
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _CardHeader(account: account, accentColor: accentColor, categoryLabel: _categoryLabel()),
-              _CardBalance(account: account),
-            ],
+          onTap: onTap,
+          child: Container(
+            width: 160,
+            height: 130,
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border(
+                left: BorderSide(color: accentColor, width: 3),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _CardHeader(account: account, accentColor: accentColor, categoryLabel: _categoryLabel()),
+                  _CardBalance(account: account),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -101,7 +108,7 @@ class _CardHeader extends StatelessWidget {
           ),
           child: Text(
             categoryLabel,
-            style: TextStyle(color: accentColor, fontSize: 9, fontWeight: FontWeight.w600),
+            style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -136,7 +143,7 @@ class _CardBalance extends StatelessWidget {
               : formatPesoCompact(account.balance),
           style: TextStyle(
             color: account.isLiability ? AppColors.danger : AppColors.textSecondary,
-            fontSize: 13,
+            fontSize: 15,
             fontWeight: FontWeight.w700,
           ),
         ),

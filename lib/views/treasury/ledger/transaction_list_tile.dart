@@ -56,22 +56,26 @@ class TransactionListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      onTap: onTap,
-      leading: _LeadingCircle(txn: txn, category: category, parseColor: _parseColor),
-      title: Text(
-        txn.description,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
-      ),
-      subtitle: Text(
-        '${account?.name ?? ''} · ${_dateFmt.format(txn.date)}',
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-      ),
-      trailing: Text(
-        _amountText,
-        style: TextStyle(color: _amountColor, fontWeight: FontWeight.w700, fontSize: 13),
+    return Semantics(
+      label: '${txn.description}, $_amountText, ${account?.name ?? ''}',
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: _LeadingCircle(txn: txn, category: category, parseColor: _parseColor),
+        title: Text(
+          txn.description,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
+        ),
+        subtitle: Text(
+          '${account?.name ?? ''} · ${_dateFmt.format(txn.date)}',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+        ),
+        trailing: Text(
+          _amountText,
+          style: TextStyle(color: _amountColor, fontWeight: FontWeight.w700, fontSize: 14),
+        ),
       ),
     );
   }
@@ -92,8 +96,8 @@ class _LeadingCircle extends StatelessWidget {
   Widget build(BuildContext context) {
     if (txn.type == TransactionType.transfer) {
       return Container(
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: Colors.amber.withOpacity(0.15),
           shape: BoxShape.circle,
@@ -106,8 +110,8 @@ class _LeadingCircle extends StatelessWidget {
     final letter = category?.name.isNotEmpty == true ? category!.name[0].toUpperCase() : '?';
 
     return Container(
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       decoration: BoxDecoration(
         color: catColor.withOpacity(0.15),
         shape: BoxShape.circle,

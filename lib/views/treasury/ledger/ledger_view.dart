@@ -243,9 +243,23 @@ class _TransactionList extends StatelessWidget {
 
     if (grouped.isEmpty) {
       return Center(
-        child: Text(
-          'No transactions this month',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.receipt_long_outlined,
+                color: AppColors.textSecondary.withOpacity(0.3), size: 48),
+            const SizedBox(height: 12),
+            Text(
+              'No transactions this month',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Tap + to log your first one',
+              style: TextStyle(
+                  color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
+            ),
+          ],
         ),
       );
     }
@@ -291,6 +305,19 @@ class _DateGroup extends StatelessWidget {
     }
   }
 
+  void _showEditSheet(BuildContext context, TransactionRecord txn) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => AddTransactionSheet(presenter: presenter, existing: txn),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -302,11 +329,28 @@ class _DateGroup extends StatelessWidget {
             key: ValueKey(txn.id),
             direction: DismissDirection.endToStart,
             background: _SwipeDeleteBackground(),
-            onDismissed: (_) => presenter.deleteTransaction(txn.id),
+            onDismissed: (_) {
+              final deleted = txn;
+              presenter.deleteTransaction(deleted.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Deleted "${deleted.description}"'),
+                  duration: const Duration(seconds: 4),
+                  backgroundColor: AppColors.surface,
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'Undo',
+                    textColor: AppColors.accent,
+                    onPressed: () => presenter.addTransaction(deleted),
+                  ),
+                ),
+              );
+            },
             child: TransactionListTile(
               txn: txn,
               account: _findAccount(txn.accountId),
               category: _findCategory(txn.categoryId),
+              onTap: () => _showEditSheet(context, txn),
             ),
           ),
         ),

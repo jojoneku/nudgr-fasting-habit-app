@@ -34,50 +34,70 @@ class GoalProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _parseColor();
 
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      leading: Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-      ),
-      title: Text(
-        account.name,
-        style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        _subtitleText,
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-      ),
-      trailing: account.goalTarget != null ? _ProgressIndicator(progress: _progress, color: color) : null,
-    );
-  }
-}
-
-class _ProgressIndicator extends StatelessWidget {
-  final double progress;
-  final Color color;
-
-  const _ProgressIndicator({required this.progress, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        alignment: Alignment.center,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircularProgressIndicator(
-            value: progress,
-            backgroundColor: color.withOpacity(0.15),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            strokeWidth: 3,
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  account.name,
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                account.goalTarget != null
+                    ? '${((_progress) * 100).round()}%'
+                    : formatPeso(account.balance),
+                style: TextStyle(
+                  color: color,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-          Text(
-            '${(progress * 100).round()}%',
-            style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
-          ),
+          if (account.goalTarget != null) ...[
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: _progress,
+                backgroundColor: color.withOpacity(0.15),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _subtitleText,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+          ] else ...[
+            const SizedBox(height: 2),
+            Text(
+              formatPeso(account.balance),
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ],
       ),
     );

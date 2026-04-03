@@ -32,20 +32,19 @@ class TreasuryDashboardView extends StatelessWidget {
       listenable: presenter,
       builder: (context, _) {
         if (presenter.isLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: CircularProgressIndicator(color: AppColors.accent),
+          );
         }
-        return Stack(
-          children: [
-            _DashboardScrollBody(
-              presenter: presenter,
-              onAddAccount: () => _showAddAccountSheet(context),
-            ),
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: _AddAccountFab(onTap: () => _showAddAccountSheet(context)),
-            ),
-          ],
+        return Scaffold(
+          backgroundColor: AppColors.background,
+          body: _DashboardScrollBody(
+            presenter: presenter,
+            onAddAccount: () => _showAddAccountSheet(context),
+          ),
+          floatingActionButton: _AddAccountFab(
+            onTap: () => _showAddAccountSheet(context),
+          ),
         );
       },
     );
@@ -156,7 +155,7 @@ class _LiquidAccountsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accounts = presenter.liquidAccounts;
     return SizedBox(
-      height: 120,
+      height: 140,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: accounts.length,
@@ -255,14 +254,27 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: TextStyle(
-        color: AppColors.textSecondary,
-        fontSize: 11,
-        letterSpacing: 1.4,
-        fontWeight: FontWeight.w600,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 3,
+          height: 14,
+          decoration: BoxDecoration(
+            color: AppColors.accent,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            letterSpacing: 1.4,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

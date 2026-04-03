@@ -56,6 +56,26 @@ class _TotalLiquidRow extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text(
+              'Net Worth  ',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+              ),
+            ),
+            Text(
+              formatPeso(presenter.netWorth),
+              style: TextStyle(
+                color: presenter.netWorth >= 0 ? AppColors.success : AppColors.danger,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -68,8 +88,10 @@ class _SummaryMetricsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         _MetricItem(
           label: 'Ending Cash',
@@ -89,6 +111,7 @@ class _SummaryMetricsRow extends StatelessWidget {
           color: AppColors.danger,
         ),
       ],
+      ),
     );
   }
 }
