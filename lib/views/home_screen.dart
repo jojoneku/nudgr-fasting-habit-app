@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import '../presenters/activity_presenter.dart';
+import '../presenters/bills_receivables_presenter.dart';
+import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/installment_presenter.dart';
+import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
+import '../presenters/treasury_dashboard_presenter.dart';
+import '../presenters/treasury_history_presenter.dart';
 import '../services/ai_estimation_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
@@ -26,6 +32,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final AiEstimationService _aiEstimation;
   late final HealthService _healthService;
   late final ActivityPresenter _activityPresenter;
+  late final TreasuryDashboardPresenter _treasuryPresenter;
+  late final LedgerPresenter _ledgerPresenter;
+  late final BillsReceivablesPresenter _billsPresenter;
+  late final BudgetPresenter _budgetPresenter;
+  late final TreasuryHistoryPresenter _historyPresenter;
+  late final InstallmentPresenter _installmentPresenter;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
@@ -48,6 +60,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       healthService: _healthService,
       storage: _storage,
     );
+    _treasuryPresenter = TreasuryDashboardPresenter(_storage);
+    _ledgerPresenter = LedgerPresenter(_storage, _statsPresenter);
+    _billsPresenter =
+        BillsReceivablesPresenter(_storage, _ledgerPresenter, _statsPresenter);
+    _budgetPresenter = BudgetPresenter(_storage, _statsPresenter);
+    _historyPresenter = TreasuryHistoryPresenter(_storage);
+    _installmentPresenter =
+        InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -70,6 +90,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _statsPresenter.dispose();
     _nutritionPresenter?.dispose();
     _activityPresenter.dispose();
+    _treasuryPresenter.dispose();
+    _ledgerPresenter.dispose();
+    _billsPresenter.dispose();
+    _budgetPresenter.dispose();
+    _historyPresenter.dispose();
+    _installmentPresenter.dispose();
     super.dispose();
   }
 
@@ -88,6 +114,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         statsPresenter: _statsPresenter,
         nutritionPresenter: _nutritionPresenter,
         activityPresenter: _activityPresenter,
+        treasuryPresenter: _treasuryPresenter,
+        ledgerPresenter: _ledgerPresenter,
+        billsPresenter: _billsPresenter,
+        budgetPresenter: _budgetPresenter,
+        historyPresenter: _historyPresenter,
+        installmentPresenter: _installmentPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,
