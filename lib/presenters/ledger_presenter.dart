@@ -48,6 +48,48 @@ class LedgerPresenter extends ChangeNotifier {
 
   double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
 
+  /// Map of 'yyyy-MM-dd' → total outflow for that day (respects account filter).
+  Map<String, double> get dailyOutflowMap {
+    final map = <String, double>{};
+    for (final t in _filteredTransactions) {
+      if (t.type != TransactionType.outflow) continue;
+      final key = '${t.date.year.toString().padLeft(4, '0')}-'
+          '${t.date.month.toString().padLeft(2, '0')}-'
+          '${t.date.day.toString().padLeft(2, '0')}';
+      map[key] = (map[key] ?? 0) + t.amount;
+    }
+    return map;
+  }
+
+  /// Map of 'yyyy-MM-dd' → total inflow for that day (respects account filter).
+  Map<String, double> get dailyInflowMap {
+    final map = <String, double>{};
+    for (final t in _filteredTransactions) {
+      if (t.type != TransactionType.inflow) continue;
+      final key = '${t.date.year.toString().padLeft(4, '0')}-'
+          '${t.date.month.toString().padLeft(2, '0')}-'
+          '${t.date.day.toString().padLeft(2, '0')}';
+      map[key] = (map[key] ?? 0) + t.amount;
+    }
+    return map;
+  }
+
+  /// Average daily outflow for the selected month (excludes zero-spend days).
+  double get averageDailyOutflow {
+    final values = dailyOutflowMap.values;
+    if (values.isEmpty) return 1.0; // avoid division by zero
+    return values.reduce((a, b) => a + b) / values.length;
+  }
+
+  /// Optional date filter — when set, [groupedTransactions] shows only that day.
+  DateTime? _selectedDate;
+  DateTime? get selectedDate => _selectedDate;
+
+  void setSelectedDate(DateTime? d) {
+    _selectedDate = d;
+    notifyListeners();
+  }
+
   double get filteredAccountBalance {
     if (_selectedAccountId == null) return 0.0;
     final account = _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
@@ -58,7 +100,16 @@ class LedgerPresenter extends ChangeNotifier {
   /// In "All" view: deduplicates transfers — keeps only the outflow leg.
   /// In single-account view: shows both legs belonging to that account.
   Map<DateTime, List<TransactionRecord>> get groupedTransactions {
-    final txns = _filteredTransactions;
+    var txns = _filteredTransactions;
+
+    // Apply optional single-day filter (from calendar tap)
+    if (_selectedDate != null) {
+      txns = txns.where((t) =>
+          t.date.year == _selectedDate!.year &&
+          t.date.month == _selectedDate!.month &&
+          t.date.day == _selectedDate!.day).toList();
+    }
+
     final grouped = <DateTime, List<TransactionRecord>>{};
     for (final txn in txns) {
       final day = DateTime(txn.date.year, txn.date.month, txn.date.day);
@@ -75,6 +126,7 @@ class LedgerPresenter extends ChangeNotifier {
 
   void setMonth(String month) {
     _selectedMonth = month;
+    _selectedDate = null; // clear day filter when navigating months
     notifyListeners();
   }
 

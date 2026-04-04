@@ -10,16 +10,27 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/ledger/spending_calendar.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/transaction_list_tile.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
+final _filterChipFmt = DateFormat('MMM d');
 
-class LedgerView extends StatelessWidget {
+class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
 
   const LedgerView({super.key, required this.presenter});
 
-  void _showAddTransactionSheet(BuildContext context) {
+  @override
+  State<LedgerView> createState() => _LedgerViewState();
+}
+
+class _LedgerViewState extends State<LedgerView> {
+  bool _showCalendar = false;
+
+  LedgerPresenter get presenter => widget.presenter;
+
+  void _showAddTransactionSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -32,7 +43,7 @@ class LedgerView extends StatelessWidget {
     );
   }
 
-  void _showManageCategoriesSheet(BuildContext context) {
+  void _showManageCategoriesSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -45,6 +56,20 @@ class LedgerView extends StatelessWidget {
     );
   }
 
+  void _onDaySelected(DateTime day) {
+    HapticFeedback.selectionClick();
+    final current = presenter.selectedDate;
+    // Tap same day again → clear filter
+    if (current != null &&
+        current.year == day.year &&
+        current.month == day.month &&
+        current.day == day.day) {
+      presenter.setSelectedDate(null);
+    } else {
+      presenter.setSelectedDate(day);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -55,7 +80,24 @@ class LedgerView extends StatelessWidget {
           body: Column(
             children: [
               _AccountFilterRow(presenter: presenter),
-              _MonthSelectorRow(presenter: presenter),
+              _MonthSelectorRow(
+                presenter: presenter,
+                showCalendar: _showCalendar,
+                onToggleCalendar: () => setState(() => _showCalendar = !_showCalendar),
+              ),
+              if (_showCalendar) ...[
+                const SizedBox(height: 4),
+                SpendingCalendar(
+                  presenter: presenter,
+                  onDaySelected: _onDaySelected,
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (presenter.selectedDate != null)
+                _DateFilterChip(
+                  date: presenter.selectedDate!,
+                  onClear: () => presenter.setSelectedDate(null),
+                ),
               _SummaryCard(presenter: presenter),
               Expanded(child: _TransactionList(presenter: presenter)),
             ],
@@ -65,7 +107,7 @@ class LedgerView extends StatelessWidget {
             children: [
               FloatingActionButton.small(
                 heroTag: 'categories',
-                onPressed: () => _showManageCategoriesSheet(context),
+                onPressed: _showManageCategoriesSheet,
                 backgroundColor: AppColors.surface,
                 foregroundColor: AppColors.textSecondary,
                 elevation: 2,
@@ -74,7 +116,7 @@ class LedgerView extends StatelessWidget {
               const SizedBox(height: 12),
               FloatingActionButton(
                 heroTag: 'add_txn',
-                onPressed: () => _showAddTransactionSheet(context),
+                onPressed: _showAddTransactionSheet,
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.background,
                 elevation: 4,
@@ -183,8 +225,14 @@ class _AccountPill extends StatelessWidget {
 
 class _MonthSelectorRow extends StatelessWidget {
   final LedgerPresenter presenter;
+  final bool showCalendar;
+  final VoidCallback onToggleCalendar;
 
-  const _MonthSelectorRow({required this.presenter});
+  const _MonthSelectorRow({
+    required this.presenter,
+    required this.showCalendar,
+    required this.onToggleCalendar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -219,6 +267,70 @@ class _MonthSelectorRow extends StatelessWidget {
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
               onPressed: () => presenter.setMonth(nextMonth(presenter.selectedMonth)),
+            ),
+          ),
+          SizedBox(
+            width: 40,
+            height: 44,
+            child: IconButton(
+              icon: Icon(
+                showCalendar ? Icons.view_list_rounded : Icons.calendar_month_outlined,
+                color: showCalendar ? AppColors.accent : AppColors.textSecondary,
+                size: 20,
+              ),
+              onPressed: () {
+                HapticFeedback.selectionClick();
+                onToggleCalendar();
+              },
+              tooltip: showCalendar ? 'List view' : 'Calendar view',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Date Filter Chip ─────────────────────────────────────────────────────────
+
+class _DateFilterChip extends StatelessWidget {
+  final DateTime date;
+  final VoidCallback onClear;
+
+  const _DateFilterChip({required this.date, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.accent.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.accent),
+                const SizedBox(width: 6),
+                Text(
+                  'Filtered: ${_filterChipFmt.format(date)}',
+                  style: TextStyle(
+                    color: AppColors.accent,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: onClear,
+                  child: Icon(Icons.close_rounded, size: 14, color: AppColors.accent),
+                ),
+              ],
             ),
           ),
         ],
