@@ -60,6 +60,7 @@ class FinancialAccount {
   final bool isActive;
   final double? goalTarget; // only used when category == goal
   final DateTime? maturityDate; // only used when category == timeDeposit
+  final String? linkedAccountId; // custodian only: the liquid account where these funds physically live
 
   const FinancialAccount({
     required this.id,
@@ -73,6 +74,7 @@ class FinancialAccount {
     this.isActive = true,
     this.goalTarget,
     this.maturityDate,
+    this.linkedAccountId,
   });
 
   bool get isSubAccount => parentAccountId != null;
@@ -108,6 +110,7 @@ class FinancialAccount {
       maturityDate: json['maturityDate'] != null
           ? DateTime.parse(json['maturityDate'] as String)
           : null,
+      linkedAccountId: json['linkedAccountId'] as String?,
     );
   }
 
@@ -123,6 +126,7 @@ class FinancialAccount {
         'isActive': isActive,
         'goalTarget': goalTarget,
         'maturityDate': maturityDate?.toIso8601String(),
+        'linkedAccountId': linkedAccountId,
       };
 
   FinancialAccount copyWith({
@@ -136,6 +140,7 @@ class FinancialAccount {
     bool? isActive,
     double? goalTarget,
     DateTime? maturityDate,
+    String? linkedAccountId,
   }) {
     return FinancialAccount(
       id: id,
@@ -149,6 +154,7 @@ class FinancialAccount {
       isActive: isActive ?? this.isActive,
       goalTarget: goalTarget ?? this.goalTarget,
       maturityDate: maturityDate ?? this.maturityDate,
+      linkedAccountId: linkedAccountId ?? this.linkedAccountId,
     );
   }
 }

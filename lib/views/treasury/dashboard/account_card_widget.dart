@@ -7,8 +7,14 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 class AccountCardWidget extends StatelessWidget {
   final FinancialAccount account;
   final VoidCallback? onTap;
+  final double heldAmount;
 
-  const AccountCardWidget({super.key, required this.account, this.onTap});
+  const AccountCardWidget({
+    super.key,
+    required this.account,
+    this.onTap,
+    this.heldAmount = 0.0,
+  });
 
   Color _parseColor() {
     try {
@@ -58,27 +64,36 @@ class AccountCardWidget extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           onTap: onTap,
           child: Container(
-            width: 160,
-            height: 130,
+            width: 140,
+            height: 90,
             margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border(
-                left: BorderSide(color: accentColor, width: 3),
-                top: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
-                right: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
-                bottom: BorderSide(color: AppColors.accent.withOpacity(0.10), width: 1),
-              ),
+              border: Border.all(color: AppColors.accent.withOpacity(0.10), width: 1),
             ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(11),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _CardHeader(account: account, accentColor: accentColor, categoryLabel: _categoryLabel()),
-                  _CardBalance(account: account),
+                  Container(
+                    width: 3,
+                    color: accentColor,
+                  ),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _CardHeader(account: account, accentColor: accentColor, categoryLabel: _categoryLabel()),
+                          _CardBalance(account: account, heldAmount: heldAmount),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -124,8 +139,9 @@ class _CardHeader extends StatelessWidget {
 
 class _CardBalance extends StatelessWidget {
   final FinancialAccount account;
+  final double heldAmount;
 
-  const _CardBalance({required this.account});
+  const _CardBalance({required this.account, this.heldAmount = 0.0});
 
   @override
   Widget build(BuildContext context) {
@@ -138,7 +154,7 @@ class _CardBalance extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: AppColors.textPrimary,
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -150,11 +166,22 @@ class _CardBalance extends StatelessWidget {
           style: GoogleFonts.jetBrainsMono(
             textStyle: TextStyle(
               color: account.isLiability ? AppColors.danger : AppColors.textSecondary,
-              fontSize: 15,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
             ),
           ),
         ),
+        if (heldAmount > 0) ...[
+          const SizedBox(height: 2),
+          Text(
+            '${formatPesoCompact(heldAmount)} held',
+            style: TextStyle(
+              color: AppColors.textSecondary.withOpacity(0.55),
+              fontSize: 9,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
       ],
     );
   }

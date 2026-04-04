@@ -56,7 +56,7 @@ class LedgerView extends StatelessWidget {
             children: [
               _AccountFilterRow(presenter: presenter),
               _MonthSelectorRow(presenter: presenter),
-              _SummaryRow(presenter: presenter),
+              _SummaryCard(presenter: presenter),
               Expanded(child: _TransactionList(presenter: presenter)),
             ],
           ),
@@ -68,6 +68,7 @@ class LedgerView extends StatelessWidget {
                 onPressed: () => _showManageCategoriesSheet(context),
                 backgroundColor: AppColors.surface,
                 foregroundColor: AppColors.textSecondary,
+                elevation: 2,
                 child: const Icon(Icons.label_outline),
               ),
               const SizedBox(height: 12),
@@ -76,6 +77,7 @@ class LedgerView extends StatelessWidget {
                 onPressed: () => _showAddTransactionSheet(context),
                 backgroundColor: AppColors.accent,
                 foregroundColor: AppColors.background,
+                elevation: 4,
                 child: const Icon(Icons.add),
               ),
             ],
@@ -86,6 +88,8 @@ class LedgerView extends StatelessWidget {
   }
 }
 
+// ── Account Filter ──────────────────────────────────────────────────────────
+
 class _AccountFilterRow extends StatelessWidget {
   final LedgerPresenter presenter;
 
@@ -93,62 +97,89 @@ class _AccountFilterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accounts = presenter.accounts;
-
     return SizedBox(
-      height: 52,
-      child: SingleChildScrollView(
+      height: 48,
+      child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
-          children: [
-            _AccountChip(
-              label: 'All',
-              selected: presenter.selectedAccountId == null,
-              onSelected: (_) => presenter.setAccount(null),
-            ),
-            ...accounts.map(
-              (a) => _AccountChip(
+        children: [
+          _AccountPill(
+            label: 'All',
+            icon: Icons.account_balance_wallet_outlined,
+            selected: presenter.selectedAccountId == null,
+            onTap: () => presenter.setAccount(null),
+          ),
+          ...presenter.accounts.map((a) => _AccountPill(
                 label: a.name,
                 selected: presenter.selectedAccountId == a.id,
-                onSelected: (_) => presenter.setAccount(a.id),
-              ),
-            ),
-          ],
-        ),
+                onTap: () => presenter.setAccount(a.id),
+              )),
+        ],
       ),
     );
   }
 }
 
-class _AccountChip extends StatelessWidget {
+class _AccountPill extends StatelessWidget {
   final String label;
+  final IconData? icon;
   final bool selected;
-  final ValueChanged<bool> onSelected;
+  final VoidCallback onTap;
 
-  const _AccountChip({required this.label, required this.selected, required this.onSelected});
+  const _AccountPill({
+    required this.label,
+    this.icon,
+    required this.selected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: onSelected,
-        selectedColor: AppColors.accent.withOpacity(0.2),
-        checkmarkColor: AppColors.accent,
-        labelStyle: TextStyle(
-          color: selected ? AppColors.accent : AppColors.textSecondary,
-          fontSize: 12,
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
+          decoration: BoxDecoration(
+            color: selected
+                ? AppColors.accent.withOpacity(0.15)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected
+                  ? AppColors.accent
+                  : AppColors.textSecondary.withOpacity(0.25),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 13, color: selected ? AppColors.accent : AppColors.textSecondary),
+                const SizedBox(width: 5),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: selected ? AppColors.accent : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
-        backgroundColor: AppColors.surface,
-        side: BorderSide(color: selected ? AppColors.accent : AppColors.textSecondary.withOpacity(0.3)),
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
       ),
     );
   }
 }
+
+// ── Month Selector ──────────────────────────────────────────────────────────
 
 class _MonthSelectorRow extends StatelessWidget {
   final LedgerPresenter presenter;
@@ -158,9 +189,8 @@ class _MonthSelectorRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           SizedBox(
             width: 44,
@@ -176,8 +206,9 @@ class _MonthSelectorRow extends StatelessWidget {
                 monthLabel(presenter.selectedMonth),
                 style: TextStyle(
                   color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
@@ -196,47 +227,141 @@ class _MonthSelectorRow extends StatelessWidget {
   }
 }
 
-class _SummaryRow extends StatelessWidget {
+// ── Summary Card ─────────────────────────────────────────────────────────────
+
+class _SummaryCard extends StatelessWidget {
   final LedgerPresenter presenter;
 
-  const _SummaryRow({required this.presenter});
+  const _SummaryCard({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
+    final inflow  = presenter.filteredMonthInflow;
+    final outflow = presenter.filteredMonthOutflow;
+    final net     = presenter.filteredMonthNet;
+    final netColor = net >= 0 ? AppColors.success : AppColors.danger;
+    final netPrefix = net >= 0 ? '+' : '';
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.arrow_upward, color: AppColors.success, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                formatPeso(presenter.filteredMonthInflow),
-                style: GoogleFonts.jetBrainsMono(
-                  textStyle: const TextStyle(color: AppColors.success, fontWeight: FontWeight.w600, fontSize: 13),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _SummaryStatColumn(
+                    label: 'INCOME',
+                    icon: Icons.arrow_upward_rounded,
+                    iconColor: AppColors.success,
+                    amount: inflow,
+                    amountColor: AppColors.success,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              Icon(Icons.arrow_downward, color: AppColors.danger, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                formatPeso(presenter.filteredMonthOutflow),
-                style: GoogleFonts.jetBrainsMono(
-                  textStyle: const TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600, fontSize: 13),
+                Container(width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
+                Expanded(
+                  child: _SummaryStatColumn(
+                    label: 'EXPENSES',
+                    icon: Icons.arrow_downward_rounded,
+                    iconColor: AppColors.danger,
+                    amount: outflow,
+                    amountColor: AppColors.danger,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+            const SizedBox(height: 10),
+            Container(height: 1, color: Colors.white.withOpacity(0.07)),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'NET BALANCE',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                Text(
+                  '$netPrefix${formatPeso(net.abs())}',
+                  style: GoogleFonts.jetBrainsMono(
+                    textStyle: TextStyle(
+                      color: netColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
+
+class _SummaryStatColumn extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+  final double amount;
+  final Color amountColor;
+
+  const _SummaryStatColumn({
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+    required this.amount,
+    required this.amountColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 12, color: iconColor),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          formatPeso(amount),
+          style: GoogleFonts.jetBrainsMono(
+            textStyle: TextStyle(
+              color: amountColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Transaction List ─────────────────────────────────────────────────────────
 
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
@@ -252,18 +377,33 @@ class _TransactionList extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.receipt_long_outlined,
-                color: AppColors.textSecondary.withOpacity(0.3), size: 48),
-            const SizedBox(height: 12),
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
+              ),
+              child: Icon(
+                Icons.receipt_long_outlined,
+                color: AppColors.textSecondary.withOpacity(0.4),
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               'No transactions this month',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 6),
             Text(
               'Tap + to log your first one',
-              style: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -273,7 +413,7 @@ class _TransactionList extends StatelessWidget {
     final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
 
     return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: const EdgeInsets.only(bottom: 100),
       itemCount: sortedDates.length,
       itemBuilder: (context, index) {
         final date = sortedDates[index];
@@ -283,6 +423,8 @@ class _TransactionList extends StatelessWidget {
     );
   }
 }
+
+// ── Date Group ───────────────────────────────────────────────────────────────
 
 class _DateGroup extends StatelessWidget {
   final DateTime date;
@@ -295,20 +437,20 @@ class _DateGroup extends StatelessWidget {
     required this.presenter,
   });
 
+  double get _dailyNet => transactions.fold(0.0, (sum, txn) => switch (txn.type) {
+    TransactionType.inflow   => sum + txn.amount,
+    TransactionType.outflow  => sum - txn.amount,
+    TransactionType.transfer => sum,
+  });
+
   FinancialAccount? _findAccount(String id) {
-    try {
-      return presenter.accounts.firstWhere((a) => a.id == id);
-    } catch (_) {
-      return null;
-    }
+    try { return presenter.accounts.firstWhere((a) => a.id == id); }
+    catch (_) { return null; }
   }
 
   FinanceCategory? _findCategory(String id) {
-    try {
-      return presenter.categories.firstWhere((c) => c.id == id);
-    } catch (_) {
-      return null;
-    }
+    try { return presenter.categories.firstWhere((c) => c.id == id); }
+    catch (_) { return null; }
   }
 
   void _showEditSheet(BuildContext context, TransactionRecord txn) {
@@ -329,7 +471,7 @@ class _DateGroup extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _DateHeader(date: date),
+        _DateHeader(date: date, dailyNet: _dailyNet),
         ...transactions.map(
           (txn) => Dismissible(
             key: ValueKey(txn.id),
@@ -361,41 +503,99 @@ class _DateGroup extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(height: 4),
       ],
     );
   }
 }
 
+// ── Date Header ──────────────────────────────────────────────────────────────
+
 class _DateHeader extends StatelessWidget {
   final DateTime date;
+  final double dailyNet;
 
-  const _DateHeader({required this.date});
+  const _DateHeader({required this.date, required this.dailyNet});
+
+  String get _label {
+    final now = DateTime.now();
+    final today     = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final d = DateTime(date.year, date.month, date.day);
+    if (d == today)     return 'Today';
+    if (d == yesterday) return 'Yesterday';
+    return _dateHeaderFmt.format(date);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final netColor = dailyNet > 0
+        ? AppColors.success
+        : dailyNet < 0
+            ? AppColors.danger
+            : AppColors.textSecondary;
+    final prefix = dailyNet > 0 ? '+' : '';
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-      child: Text(
-        _dateHeaderFmt.format(date),
-        style: TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 11,
-          letterSpacing: 0.8,
-          fontWeight: FontWeight.w600,
-        ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            _label.toUpperCase(),
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 11,
+              letterSpacing: 1.0,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (dailyNet != 0)
+            Text(
+              '$prefix${formatPeso(dailyNet.abs())}',
+              style: GoogleFonts.jetBrainsMono(
+                textStyle: TextStyle(
+                  color: netColor,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
 }
 
+// ── Swipe Delete Background ──────────────────────────────────────────────────
+
 class _SwipeDeleteBackground extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.danger.withOpacity(0.8),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: AppColors.danger.withOpacity(0.85),
+        borderRadius: BorderRadius.circular(12),
+      ),
       alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 16),
-      child: const Icon(Icons.delete_outline, color: Colors.white),
+      padding: const EdgeInsets.only(right: 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.delete_outline, color: Colors.white, size: 22),
+          const SizedBox(height: 2),
+          Text(
+            'DELETE',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.85),
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

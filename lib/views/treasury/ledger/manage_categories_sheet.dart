@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 
 class ManageCategoriesSheet extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -19,6 +20,13 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   final _formKey = GlobalKey<FormState>();
   CategoryType _type = CategoryType.expense;
   bool _isSubmitting = false;
+
+  String _nextColor() {
+    final index = widget.presenter.categories
+        .where((c) => c.type == _type)
+        .length;
+    return categoryColorAt(index, isExpense: _type == CategoryType.expense);
+  }
 
   @override
   void dispose() {
@@ -37,7 +45,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
         name: _nameController.text.trim(),
         type: _type,
         icon: 'tag',
-        colorHex: '#FFFFFF',
+        colorHex: _nextColor(),
       ));
       _nameController.clear();
     } finally {
@@ -262,6 +270,7 @@ class _TypeToggle extends StatelessWidget {
         border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           _TypeOption(
             label: 'Expense',
@@ -317,6 +326,7 @@ class _TypeOption extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOut,
+            height: double.infinity,
             decoration: BoxDecoration(
               color: selected ? color.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.horizontal(

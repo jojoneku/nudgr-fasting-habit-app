@@ -61,6 +61,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   AccountCategory _category = AccountCategory.bank;
   String _selectedColor = _colorOptions[0];
   DateTime? _maturityDate;
+  String? _linkedAccountId;
   bool _isSubmitting = false;
 
   List<AccountCategory> get _availableCategories =>
@@ -68,6 +69,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
+  bool get _isCustodian => _category == AccountCategory.custodian;
 
   @override
   void initState() {
@@ -84,6 +86,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       _category = existing.category;
       _selectedColor = existing.colorHex;
       _maturityDate = existing.maturityDate;
+      _linkedAccountId = existing.linkedAccountId;
       if (existing.goalTarget != null) {
         _goalTargetController.text = existing.goalTarget!.toStringAsFixed(2);
       }
@@ -138,6 +141,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         icon: _iconController.text.trim().isEmpty ? 'wallet' : _iconController.text.trim(),
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
+        linkedAccountId: _category == AccountCategory.custodian ? _linkedAccountId : null,
       );
 
       if (widget.existing != null) {
@@ -147,6 +151,58 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       }
 
       if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _confirmDelete() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Delete Account?',
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'This will permanently remove "${widget.existing!.name}". This cannot be undone.',
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text('Delete', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.presenter.deleteAccount(widget.existing!.id);
+      if (mounted) Navigator.pop(context);
+    } on StateError catch (e) {
+      if (e.message == 'has_sub_accounts' && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Remove all sub-accounts first before deleting this account.',
+              style: TextStyle(color: AppColors.textPrimary),
+            ),
+            backgroundColor: AppColors.surface,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -194,8 +250,20 @@ class _AccountSetupViewState extends State<AccountSetupView> {
                 const SizedBox(height: 12),
                 _MaturityDateRow(date: _maturityDate, onTap: _pickMaturityDate),
               ],
+              if (_isCustodian) ...[
+                const SizedBox(height: 12),
+                _StoredInDropdown(
+                  accounts: widget.presenter.liquidAccounts,
+                  selectedId: _linkedAccountId,
+                  onChanged: (id) => setState(() => _linkedAccountId = id),
+                ),
+              ],
               const SizedBox(height: 20),
               _SubmitButton(isEdit: isEdit, isSubmitting: _isSubmitting, onPressed: _submit),
+              if (isEdit) ...[
+                const SizedBox(height: 8),
+                _DeleteButton(isSubmitting: _isSubmitting, onPressed: _confirmDelete),
+              ],
               const SizedBox(height: 8),
             ],
           ),
@@ -549,6 +617,63 @@ class _SubmitButton extends StatelessWidget {
                 isEdit ? 'Save' : 'Add Account',
                 style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
+      ),
+    );
+  }
+}
+
+class _StoredInDropdown extends StatelessWidget {
+  final List<FinancialAccount> accounts;
+  final String? selectedId;
+  final ValueChanged<String?> onChanged;
+
+  const _StoredInDropdown({
+    required this.accounts,
+    required this.selectedId,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<String>(
+      value: selectedId,
+      dropdownColor: AppColors.surface,
+      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+      decoration: _inputDecoration('Stored in account (optional)').copyWith(
+        helperText: 'These funds physically live in this account',
+        helperStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.6), fontSize: 11),
+      ),
+      items: [
+        DropdownMenuItem<String>(value: null, child: Text('— Not linked —', style: TextStyle(color: AppColors.textSecondary))),
+        ...accounts.map((a) => DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
+      ],
+      onChanged: onChanged,
+    );
+  }
+}
+
+class _DeleteButton extends StatelessWidget {
+  final bool isSubmitting;
+  final VoidCallback onPressed;
+
+  const _DeleteButton({required this.isSubmitting, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: isSubmitting ? null : onPressed,
+        icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+        label: Text(
+          'Delete Account',
+          style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: AppColors.danger.withOpacity(0.5)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       ),
     );
   }

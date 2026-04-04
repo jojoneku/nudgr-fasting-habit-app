@@ -6,8 +6,13 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/account_card_widget.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/budget_overview_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/cash_summary_banner.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
 
 class TreasuryDashboardView extends StatelessWidget {
@@ -90,12 +95,31 @@ class _DashboardScrollBody extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CashSummaryBanner(presenter: presenter),
+          const SizedBox(height: 8),
+          MetricCardsGrid(presenter: presenter),
           const SizedBox(height: 16),
           if (!presenter.hasAccounts)
             _EmptyAccountsCard(onAddAccount: onAddAccount)
-          else
+          else ...[
+            _SectionHeader(label: 'ACCOUNTS'),
+            const SizedBox(height: 8),
             _LiquidAccountsRow(presenter: presenter, onEdit: onEditAccount),
+          ],
           const SizedBox(height: 16),
+          SpendingAnalyticsCard(presenter: presenter),
+          const SizedBox(height: 16),
+          if (presenter.hasCategorySpend) ...[
+            CategoryPieChartCard(presenter: presenter),
+            const SizedBox(height: 16),
+          ],
+          if (presenter.hasBills) ...[
+            UpcomingBillsCard(presenter: presenter),
+            const SizedBox(height: 16),
+          ],
+          if (presenter.hasBudget) ...[
+            BudgetOverviewCard(presenter: presenter),
+            const SizedBox(height: 16),
+          ],
           if (presenter.goalAccounts.isNotEmpty || presenter.savingsAccounts.isNotEmpty)
             _GoalSection(presenter: presenter, onEdit: onEditAccount),
           if (presenter.goalAccounts.isNotEmpty || presenter.savingsAccounts.isNotEmpty)
@@ -167,14 +191,16 @@ class _LiquidAccountsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accounts = presenter.liquidAccounts;
+    final held = presenter.heldAmountByAccountId;
     return SizedBox(
-      height: 140,
+      height: 100,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: accounts.length,
         itemBuilder: (context, index) {
           return AccountCardWidget(
             account: accounts[index],
+            heldAmount: held[accounts[index].id] ?? 0.0,
             onTap: () { HapticFeedback.selectionClick(); onEdit(accounts[index]); },
           );
         },

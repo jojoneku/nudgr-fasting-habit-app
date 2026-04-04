@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -33,9 +34,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   bool _isSubmitting = false;
 
+  // Cached presenter data — updated only when presenter fires, not on keystrokes
+  List<FinancialAccount> _accounts = [];
+  List<FinanceCategory> _categories = [];
+
   @override
   void initState() {
     super.initState();
+    _syncFromPresenter();
+    widget.presenter.addListener(_onPresenterChange);
     final existing = widget.existing;
     if (existing != null) {
       _type = existing.type;
@@ -49,8 +56,21 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
   }
 
+  void _syncFromPresenter() {
+    _accounts = widget.presenter.accounts
+        .where((a) => a.isActive && !a.isSubAccount)
+        .toList();
+    _categories = widget.presenter.categories;
+  }
+
+  void _onPresenterChange() {
+    if (!mounted) return;
+    setState(_syncFromPresenter);
+  }
+
   @override
   void dispose() {
+    widget.presenter.removeListener(_onPresenterChange);
     _amountController.dispose();
     _descriptionController.dispose();
     _noteController.dispose();
@@ -58,14 +78,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   List<FinanceCategory> get _filteredCategories {
-    final all = widget.presenter.categories;
     if (_type == TransactionType.inflow) {
-      return all.where((c) => c.type == CategoryType.income).toList();
+      return _categories.where((c) => c.type == CategoryType.income).toList();
     }
     if (_type == TransactionType.outflow) {
-      return all.where((c) => c.type == CategoryType.expense).toList();
+      return _categories.where((c) => c.type == CategoryType.expense).toList();
     }
-    return all;
+    return _categories;
   }
 
   Future<void> _submit() async {
@@ -93,7 +112,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           note: note.isEmpty ? null : note,
         );
       } else {
-        final id = '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+        final id = widget.existing?.id
+            ?? '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
         final txn = TransactionRecord(
           id: id,
           date: _date,
@@ -137,61 +157,69 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _SheetTitle(isEdit: isEdit),
-              const SizedBox(height: 16),
-              _TypeToggle(selected: _type, onChanged: (t) => setState(() => _type = t)),
-              const SizedBox(height: 16),
-              _AmountField(controller: _amountController),
-              const SizedBox(height: 12),
-              _AccountDropdown(
-                presenter: widget.presenter,
-                label: _type == TransactionType.transfer ? 'From Account' : 'Account',
-                value: _selectedAccountId,
-                onChanged: (v) => setState(() => _selectedAccountId = v),
-              ),
-              if (_type == TransactionType.transfer) ...[
-                const SizedBox(height: 12),
-                _AccountDropdown(
-                  presenter: widget.presenter,
-                  label: 'To Account',
-                  value: _transferToAccountId,
-                  onChanged: (v) => setState(() => _transferToAccountId = v),
-                ),
-              ],
-              if (_type != TransactionType.transfer) ...[
-                const SizedBox(height: 16),
-                if (_filteredCategories.isEmpty)
-                  _NoCategoriesHint(type: _type)
-                else
-                  _CategoryChips(
-                    categories: _filteredCategories,
-                    selected: _selectedCategoryId,
-                    onSelected: (id) => setState(() => _selectedCategoryId = id),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _SheetTitle(isEdit: isEdit),
+                  const SizedBox(height: 16),
+                  _TypeToggle(selected: _type, onChanged: (t) => setState(() {
+                    _type = t;
+                    _selectedCategoryId = null;
+                  })),
+                  const SizedBox(height: 16),
+                  _AmountField(controller: _amountController),
+                  const SizedBox(height: 12),
+                  _AccountDropdown(
+                    accounts: _accounts,
+                    label: _type == TransactionType.transfer ? 'From Account' : 'Account',
+                    value: _selectedAccountId,
+                    onChanged: (v) => setState(() => _selectedAccountId = v),
                   ),
-              ],
-              const SizedBox(height: 12),
-              _DescriptionField(controller: _descriptionController),
-              const SizedBox(height: 12),
-              _DatePickerRow(date: _date, onTap: _pickDate),
-              const SizedBox(height: 12),
-              _NoteField(controller: _noteController),
-              const SizedBox(height: 20),
-              _SubmitButton(isEdit: isEdit, isSubmitting: _isSubmitting, onPressed: _submit),
-              const SizedBox(height: 8),
-            ],
+                  if (_type == TransactionType.transfer) ...[
+                    const SizedBox(height: 12),
+                    _AccountDropdown(
+                      accounts: _accounts,
+                      label: 'To Account',
+                      value: _transferToAccountId,
+                      onChanged: (v) => setState(() => _transferToAccountId = v),
+                    ),
+                  ],
+                  if (_type != TransactionType.transfer) ...[
+                    const SizedBox(height: 16),
+                    if (_filteredCategories.isEmpty)
+                      _NoCategoriesHint(type: _type)
+                    else
+                      _CategoryChips(
+                        categories: _filteredCategories,
+                        selected: _selectedCategoryId,
+                        onSelected: (id) => setState(() => _selectedCategoryId = id),
+                      ),
+                  ],
+                  const SizedBox(height: 12),
+                  _DescriptionField(controller: _descriptionController),
+                  const SizedBox(height: 12),
+                  _DatePickerRow(date: _date, onTap: _pickDate),
+                  const SizedBox(height: 12),
+                  _NoteField(controller: _noteController),
+                  const SizedBox(height: 20),
+                  _SubmitButton(isEdit: isEdit, isSubmitting: _isSubmitting, onPressed: _submit),
+                  const SizedBox(height: 8),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
+        const _KeyboardSpacer(),
+      ],
     );
   }
 }
@@ -324,13 +352,13 @@ class _AmountField extends StatelessWidget {
 }
 
 class _AccountDropdown extends StatelessWidget {
-  final LedgerPresenter presenter;
+  final List<FinancialAccount> accounts;
   final String label;
   final String? value;
   final ValueChanged<String?> onChanged;
 
   const _AccountDropdown({
-    required this.presenter,
+    required this.accounts,
     required this.label,
     required this.value,
     required this.onChanged,
@@ -358,7 +386,7 @@ class _AccountDropdown extends StatelessWidget {
           borderSide: BorderSide(color: AppColors.accent),
         ),
       ),
-      items: presenter.accounts
+      items: accounts
           .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
           .toList(),
       onChanged: onChanged,
@@ -567,5 +595,16 @@ class _SubmitButton extends StatelessWidget {
               ),
       ),
     );
+  }
+}
+
+/// Isolated widget so only this rebuilds on keyboard animation frames,
+/// not the entire form above it.
+class _KeyboardSpacer extends StatelessWidget {
+  const _KeyboardSpacer();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(height: MediaQuery.of(context).viewInsets.bottom);
   }
 }

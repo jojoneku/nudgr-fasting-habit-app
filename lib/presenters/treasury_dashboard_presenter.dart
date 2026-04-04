@@ -1,10 +1,19 @@
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+
+class DailySpend {
+  final DateTime date;
+  final double amount;
+  const DailySpend(this.date, this.amount);
+}
 
 class TreasuryDashboardPresenter extends ChangeNotifier {
   TreasuryDashboardPresenter(StorageService storage) : _storage = storage {
@@ -18,6 +27,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<TransactionRecord> _transactions = [];
   List<Bill> _bills = [];
   List<Receivable> _receivables = [];
+  List<Budget> _budgets = [];
+  List<BudgetedExpense> _budgetedExpenses = [];
+  List<FinanceCategory> _categories = [];
   String _currentMonth = toMonthKey(DateTime.now());
 
   // --- Public state ---
@@ -85,6 +97,158 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<FinancialAccount> get custodianAccounts =>
       _accounts.where((a) => a.isActive && a.isCustodian).toList();
 
+  /// Returns the total held (custodian) amount linked to each liquid account id.
+  Map<String, double> get heldAmountByAccountId {
+    final result = <String, double>{};
+    for (final c in custodianAccounts) {
+      if (c.linkedAccountId != null) {
+        result[c.linkedAccountId!] =
+            (result[c.linkedAccountId!] ?? 0.0) + c.balance;
+      }
+    }
+    return result;
+  }
+
+  // --- Bills ---
+
+  List<Bill> get upcomingBills => _bills
+      .where((b) => b.month == _currentMonth && !b.isPaid)
+      .toList()
+    ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
+
+  bool get hasBills => upcomingBills.isNotEmpty;
+
+  bool isBillOverdue(Bill bill) => bill.dueDay < DateTime.now().day;
+
+  // --- Budget ---
+
+  bool get hasBudget =>
+      _budgets.any((b) => b.month == _currentMonth) ||
+      _budgetedExpenses.any((e) => e.month == _currentMonth);
+
+  double get totalBudgetAllocated => _budgets
+      .where((b) => b.month == _currentMonth)
+      .fold(0.0, (sum, b) => sum + b.allocatedAmount);
+
+  double get totalBudgetSpent => _budgetedExpenses
+      .where((e) => e.month == _currentMonth)
+      .fold(0.0, (sum, e) => sum + e.spentAmount);
+
+  double get totalBudgetRemaining =>
+      (totalBudgetAllocated - totalBudgetSpent).clamp(0.0, double.infinity);
+
+  double get forecastedNetBalance => endingCash - totalBudgetRemaining;
+
+  Map<BudgetGroup, double> get budgetAllocatedByGroup {
+    final result = <BudgetGroup, double>{};
+    for (final b in _budgets.where((b) => b.month == _currentMonth)) {
+      result[b.group] = (result[b.group] ?? 0.0) + b.allocatedAmount;
+    }
+    return result;
+  }
+
+  Map<BudgetGroup, double> get budgetSpentByGroup {
+    final result = <BudgetGroup, double>{};
+    for (final e in _budgetedExpenses.where((e) => e.month == _currentMonth)) {
+      final budget = _budgets
+          .where((b) => b.month == _currentMonth && b.categoryId == e.categoryId)
+          .firstOrNull;
+      if (budget != null) {
+        result[budget.group] = (result[budget.group] ?? 0.0) + e.spentAmount;
+      }
+    }
+    return result;
+  }
+
+  // --- Category spend (pie chart) ---
+
+  /// Returns top expense categories by spend for the current month.
+  /// Each entry: (category, amount). Sorted descending. Max 6 slices + "Other".
+  List<(FinanceCategory, double)> get categorySpendThisMonth =>
+      _categorySpendRanked(limit: 10);
+
+  /// All categories with spend, no limit — used by the full breakdown sheet.
+  List<(FinanceCategory, double)> get allCategorySpendThisMonth =>
+      _categorySpendRanked(limit: null);
+
+  bool get hasCategorySpend => categorySpendThisMonth.isNotEmpty;
+
+  List<(FinanceCategory, double)> _categorySpendRanked({required int? limit}) {
+    final spendMap = <String, double>{};
+    for (final t in _transactions) {
+      if (t.month == _currentMonth && t.type == TransactionType.outflow) {
+        spendMap[t.categoryId] = (spendMap[t.categoryId] ?? 0.0) + t.amount;
+      }
+    }
+    if (spendMap.isEmpty) return [];
+
+    final sorted = spendMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final resolved = <(FinanceCategory, double)>[];
+    double otherTotal = 0.0;
+
+    for (int i = 0; i < sorted.length; i++) {
+      final cat = _categories.where((c) => c.id == sorted[i].key).firstOrNull;
+      if ((limit == null || i < limit) && cat != null) {
+        resolved.add((cat, sorted[i].value));
+      } else {
+        otherTotal += sorted[i].value;
+      }
+    }
+
+    if (otherTotal > 0 && limit != null) {
+      const other = FinanceCategory(
+        id: '__other__',
+        name: 'Other',
+        type: CategoryType.expense,
+        icon: 'dots-horizontal',
+        colorHex: '#607D8B',
+      );
+      resolved.add((other, otherTotal));
+    }
+
+    return resolved;
+  }
+
+  // --- Spending analytics ---
+
+  List<DailySpend> get last7DaysSpending => _lastNDaysSpending(7);
+
+  /// Flexible — used by the full spending history sheet.
+  List<DailySpend> lastNDaysSpending(int n) => _lastNDaysSpending(n);
+
+  List<DailySpend> _lastNDaysSpending(int n) {
+    final now = DateTime.now();
+    return List.generate(n, (i) {
+      final day = DateTime(now.year, now.month, now.day - (n - 1 - i));
+      final total = _transactions
+          .where((t) =>
+              t.type == TransactionType.outflow &&
+              t.date.year == day.year &&
+              t.date.month == day.month &&
+              t.date.day == day.day)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      return DailySpend(day, total);
+    });
+  }
+
+  double get avgDailySpend7 {
+    final days = last7DaysSpending;
+    final nonZero = days.where((d) => d.amount > 0).toList();
+    if (nonZero.isEmpty) return 0.0;
+    return nonZero.fold(0.0, (s, d) => s + d.amount) / nonZero.length;
+  }
+
+  double get peakDaySpend7 =>
+      last7DaysSpending.fold(0.0, (max, d) => d.amount > max ? d.amount : max);
+
+  DateTime? get peakSpendDay {
+    final days = last7DaysSpending;
+    if (days.every((d) => d.amount == 0)) return null;
+    return days.reduce((a, b) => a.amount >= b.amount ? a : b).date;
+  }
+
   // --- Account CRUD ---
 
   Future<void> addAccount(FinancialAccount account) async {
@@ -118,6 +282,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _transactions = await _storage.loadTransactions();
     _bills = await _storage.loadBills();
     _receivables = await _storage.loadReceivables();
+    _budgets = await _storage.loadBudgets();
+    _budgetedExpenses = await _storage.loadBudgetedExpenses();
+    _categories = await _storage.loadFinanceCategories();
     _currentMonth = toMonthKey(DateTime.now());
 
     _isLoading = false;

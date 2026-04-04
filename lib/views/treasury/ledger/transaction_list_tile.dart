@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-
-final _dateFmt = DateFormat('MMM d');
 
 class TransactionListTile extends StatelessWidget {
   final TransactionRecord txn;
@@ -24,33 +21,24 @@ class TransactionListTile extends StatelessWidget {
     this.onTap,
   });
 
-  Color get _amountColor {
-    switch (txn.type) {
-      case TransactionType.inflow:
-        return AppColors.success;
-      case TransactionType.outflow:
-        return AppColors.danger;
-      case TransactionType.transfer:
-        return Colors.amber;
-    }
-  }
+  Color get _typeColor => switch (txn.type) {
+    TransactionType.inflow   => AppColors.success,
+    TransactionType.outflow  => AppColors.danger,
+    TransactionType.transfer => Colors.amber,
+  };
 
   String get _amountText {
-    final formatted = formatPeso(txn.amount);
-    switch (txn.type) {
-      case TransactionType.inflow:
-        return '+$formatted';
-      case TransactionType.outflow:
-        return '-$formatted';
-      case TransactionType.transfer:
-        return '→ $formatted';
-    }
+    final f = formatPeso(txn.amount);
+    return switch (txn.type) {
+      TransactionType.inflow   => '+$f',
+      TransactionType.outflow  => '-$f',
+      TransactionType.transfer => '⇄ $f',
+    };
   }
 
   Color _parseColor(String hex) {
     try {
-      final clean = hex.replaceFirst('#', '');
-      return Color(int.parse('FF$clean', radix: 16));
+      return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
     } catch (_) {
       return AppColors.accent;
     }
@@ -58,26 +46,88 @@ class TransactionListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isTransfer = txn.type == TransactionType.transfer;
+    final catColor = isTransfer
+        ? Colors.amber
+        : (category != null ? _parseColor(category!.colorHex) : AppColors.accent);
+    final categoryLabel = isTransfer ? 'Transfer' : (category?.name ?? 'Uncategorized');
+    final accountLabel  = account?.name ?? '';
+    final subtitleParts = [categoryLabel, if (accountLabel.isNotEmpty) accountLabel];
+
     return Semantics(
-      label: '${txn.description}, $_amountText, ${account?.name ?? ''}',
-      child: ListTile(
-        onTap: onTap != null ? () { HapticFeedback.selectionClick(); onTap!(); } : null,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: _LeadingCircle(txn: txn, category: category, parseColor: _parseColor),
-        title: Text(
-          txn.description,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(color: AppColors.textPrimary, fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        subtitle: Text(
-          '${account?.name ?? ''} · ${_dateFmt.format(txn.date)}',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-        ),
-        trailing: Text(
-          _amountText,
-          style: GoogleFonts.jetBrainsMono(
-            textStyle: TextStyle(color: _amountColor, fontWeight: FontWeight.w700, fontSize: 14),
+      label: '${txn.description}, $_amountText, $accountLabel',
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        child: Material(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            onTap: onTap != null
+                ? () {
+                    HapticFeedback.selectionClick();
+                    onTap!();
+                  }
+                : null,
+            borderRadius: BorderRadius.circular(12),
+            splashColor: catColor.withOpacity(0.08),
+            highlightColor: catColor.withOpacity(0.04),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.06)),
+              ),
+              child: Row(
+                children: [
+                  _CategoryIcon(
+                    isTransfer: isTransfer,
+                    catColor: catColor,
+                    letter: category?.name.isNotEmpty == true
+                        ? category!.name[0].toUpperCase()
+                        : '?',
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          txn.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          subtitleParts.join(' · '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    _amountText,
+                    style: GoogleFonts.jetBrainsMono(
+                      textStyle: TextStyle(
+                        color: _typeColor,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -85,46 +135,38 @@ class TransactionListTile extends StatelessWidget {
   }
 }
 
-class _LeadingCircle extends StatelessWidget {
-  final TransactionRecord txn;
-  final FinanceCategory? category;
-  final Color Function(String) parseColor;
+class _CategoryIcon extends StatelessWidget {
+  final bool isTransfer;
+  final Color catColor;
+  final String letter;
 
-  const _LeadingCircle({
-    required this.txn,
-    required this.category,
-    required this.parseColor,
+  const _CategoryIcon({
+    required this.isTransfer,
+    required this.catColor,
+    required this.letter,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (txn.type == TransactionType.transfer) {
-      return Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: Colors.amber.withOpacity(0.15),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.swap_horiz, color: Colors.amber, size: 20),
-      );
-    }
-
-    final catColor = category != null ? parseColor(category!.colorHex) : AppColors.accent;
-    final letter = category?.name.isNotEmpty == true ? category!.name[0].toUpperCase() : '?';
-
     return Container(
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: catColor.withOpacity(0.15),
+        color: catColor.withOpacity(0.12),
         shape: BoxShape.circle,
+        border: Border.all(color: catColor.withOpacity(0.35), width: 1),
       ),
       child: Center(
-        child: Text(
-          letter,
-          style: TextStyle(color: catColor, fontWeight: FontWeight.bold, fontSize: 16),
-        ),
+        child: isTransfer
+            ? Icon(Icons.swap_horiz, color: catColor, size: 20)
+            : Text(
+                letter,
+                style: TextStyle(
+                  color: catColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+              ),
       ),
     );
   }

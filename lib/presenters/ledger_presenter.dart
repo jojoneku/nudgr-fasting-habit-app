@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class LedgerPresenter extends ChangeNotifier {
@@ -44,6 +45,8 @@ class LedgerPresenter extends ChangeNotifier {
   double get filteredMonthOutflow => _filteredTransactions
       .where((t) => t.type == TransactionType.outflow)
       .fold(0.0, (sum, t) => sum + t.amount);
+
+  double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
 
   double get filteredAccountBalance {
     if (_selectedAccountId == null) return 0.0;
@@ -90,9 +93,38 @@ class LedgerPresenter extends ChangeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
 
+    // One-time migration: reassign any category that still has the old
+    // white default (#FFFFFF / near-white luminance > 0.65) to a palette color.
+    final migrated = _migrateCategories(_categories);
+    if (migrated != null) {
+      _categories = migrated;
+      await _storage.saveFinanceCategories(_categories);
+    }
+
     _isLoading = false;
     notifyListeners();
   }
+
+  /// Returns a new list with corrected colors if any category needed migration,
+  /// or null if everything was already fine.
+  List<FinanceCategory>? _migrateCategories(List<FinanceCategory> cats) {
+    bool anyChanged = false;
+    int expenseIdx = 0;
+    int incomeIdx  = 0;
+
+    final result = cats.map((cat) {
+      if (!isDefaultWhite(cat.colorHex)) return cat;
+
+      anyChanged = true;
+      final isExpense = cat.type == CategoryType.expense;
+      final idx = isExpense ? expenseIdx++ : incomeIdx++;
+      return cat.copyWith(colorHex: categoryColorAt(idx, isExpense: isExpense));
+    }).toList();
+
+    return anyChanged ? result : null;
+  }
+
+  bool _isWhiteOrNearWhite(String hex) => isDefaultWhite(hex);
 
   // --- Transaction CRUD ---
 
