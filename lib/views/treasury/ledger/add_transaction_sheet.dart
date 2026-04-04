@@ -14,7 +14,8 @@ class AddTransactionSheet extends StatefulWidget {
   final LedgerPresenter presenter;
   final TransactionRecord? existing;
 
-  const AddTransactionSheet({super.key, required this.presenter, this.existing});
+  const AddTransactionSheet(
+      {super.key, required this.presenter, this.existing});
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -90,7 +91,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccountId == null) return;
-    if (_type == TransactionType.transfer && _transferToAccountId == null) return;
+    if (_type == TransactionType.transfer && _transferToAccountId == null)
+      return;
 
     setState(() => _isSubmitting = true);
 
@@ -112,8 +114,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           note: note.isEmpty ? null : note,
         );
       } else {
-        final id = widget.existing?.id
-            ?? '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+        final id = widget.existing?.id ??
+            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
         final txn = TransactionRecord(
           id: id,
           date: _date,
@@ -171,16 +173,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                 children: [
                   _SheetTitle(isEdit: isEdit),
                   const SizedBox(height: 16),
-                  _TypeToggle(selected: _type, onChanged: (t) => setState(() {
-                    _type = t;
-                    _selectedCategoryId = null;
-                  })),
+                  _TypeToggle(
+                      selected: _type,
+                      onChanged: (t) => setState(() {
+                            _type = t;
+                            _selectedCategoryId = null;
+                          })),
                   const SizedBox(height: 16),
                   _AmountField(controller: _amountController),
                   const SizedBox(height: 12),
                   _AccountDropdown(
                     accounts: _accounts,
-                    label: _type == TransactionType.transfer ? 'From Account' : 'Account',
+                    label: _type == TransactionType.transfer
+                        ? 'From Account'
+                        : 'Account',
                     value: _selectedAccountId,
                     onChanged: (v) => setState(() => _selectedAccountId = v),
                   ),
@@ -190,7 +196,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       accounts: _accounts,
                       label: 'To Account',
                       value: _transferToAccountId,
-                      onChanged: (v) => setState(() => _transferToAccountId = v),
+                      onChanged: (v) =>
+                          setState(() => _transferToAccountId = v),
                     ),
                   ],
                   if (_type != TransactionType.transfer) ...[
@@ -201,7 +208,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       _CategoryChips(
                         categories: _filteredCategories,
                         selected: _selectedCategoryId,
-                        onSelected: (id) => setState(() => _selectedCategoryId = id),
+                        onSelected: (id) =>
+                            setState(() => _selectedCategoryId = id),
                       ),
                   ],
                   const SizedBox(height: 12),
@@ -211,7 +219,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   const SizedBox(height: 12),
                   _NoteField(controller: _noteController),
                   const SizedBox(height: 20),
-                  _SubmitButton(isEdit: isEdit, isSubmitting: _isSubmitting, onPressed: _submit),
+                  _SubmitButton(
+                      isEdit: isEdit,
+                      isSubmitting: _isSubmitting,
+                      onPressed: _submit),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -233,7 +244,10 @@ class _SheetTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       isEdit ? 'Edit Transaction' : 'Log Transaction',
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+      style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.bold),
     );
   }
 }
@@ -300,12 +314,18 @@ class _TypeButton extends StatelessWidget {
         child: OutlinedButton(
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
-            backgroundColor: isSelected ? color.withOpacity(0.15) : Colors.transparent,
-            side: BorderSide(color: isSelected ? color : AppColors.textSecondary.withOpacity(0.4)),
+            backgroundColor:
+                isSelected ? color.withOpacity(0.15) : Colors.transparent,
+            side: BorderSide(
+                color: isSelected
+                    ? color
+                    : AppColors.textSecondary.withOpacity(0.4)),
             foregroundColor: isSelected ? color : AppColors.textSecondary,
             padding: EdgeInsets.zero,
           ),
-          child: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+          child: Text(label,
+              style:
+                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
         ),
       ),
     );
@@ -334,7 +354,8 @@ class _AmountField extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+          borderSide:
+              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -368,7 +389,8 @@ class _AccountDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
       initialValue: value,
-      hint: Text(label, style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
+      hint: Text(label,
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
       dropdownColor: AppColors.surface,
       style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
       decoration: InputDecoration(
@@ -379,7 +401,8 @@ class _AccountDropdown extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+          borderSide:
+              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -411,7 +434,8 @@ class _CategoryChips extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Category', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        Text('Category',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -427,7 +451,10 @@ class _CategoryChips extends StatelessWidget {
                 fontSize: 12,
               ),
               backgroundColor: AppColors.surface,
-              side: BorderSide(color: isSelected ? AppColors.accent : AppColors.textSecondary.withOpacity(0.3)),
+              side: BorderSide(
+                  color: isSelected
+                      ? AppColors.accent
+                      : AppColors.textSecondary.withOpacity(0.3)),
               onSelected: (_) => onSelected(cat.id),
             );
           }).toList(),
@@ -457,14 +484,16 @@ class _DescriptionField extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+          borderSide:
+              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: AppColors.accent),
         ),
       ),
-      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
+      validator: (v) =>
+          (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
     );
   }
 }
@@ -490,7 +519,8 @@ class _DatePickerRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined, color: AppColors.textSecondary, size: 18),
+            Icon(Icons.calendar_today_outlined,
+                color: AppColors.textSecondary, size: 18),
             const SizedBox(width: 12),
             Text(
               DateFormat('MMMM d, yyyy').format(date),
@@ -522,7 +552,8 @@ class _NoteField extends StatelessWidget {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+          borderSide:
+              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
@@ -569,7 +600,10 @@ class _SubmitButton extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onPressed;
 
-  const _SubmitButton({required this.isEdit, required this.isSubmitting, required this.onPressed});
+  const _SubmitButton(
+      {required this.isEdit,
+      required this.isSubmitting,
+      required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -581,17 +615,20 @@ class _SubmitButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
           foregroundColor: AppColors.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: isSubmitting
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.background),
               )
             : Text(
                 isEdit ? 'Save' : 'Log Transaction',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
       ),
     );

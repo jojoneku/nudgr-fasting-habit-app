@@ -135,8 +135,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
                   Expanded(
                     child: TextFormField(
                       controller: _amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       inputFormatters: [
                         FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
                       ],
@@ -154,9 +154,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
                     child: TextFormField(
                       controller: _dueDayController,
                       keyboardType: TextInputType.number,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly
-                      ],
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: TextStyle(color: AppColors.textPrimary),
                       decoration: _inputDecoration('Due Day (1–31)'),
                       validator: (v) {
@@ -228,8 +226,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
                 value: _isRecurring,
                 onChanged: (v) => setState(() => _isRecurring = v),
                 title: Text('Recurring',
-                    style: TextStyle(
-                        color: AppColors.textPrimary, fontSize: 14)),
+                    style:
+                        TextStyle(color: AppColors.textPrimary, fontSize: 14)),
                 subtitle: Text('Auto-generate next month',
                     style: TextStyle(
                         color: AppColors.textSecondary, fontSize: 12)),
@@ -241,8 +239,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
                 DropdownButtonFormField<RecurrenceType>(
                   value: _recurrenceType,
                   dropdownColor: AppColors.surface,
-                  style:
-                      TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: _inputDecoration('Recurrence'),
                   items: RecurrenceType.values
                       .map((r) => DropdownMenuItem(
@@ -297,8 +294,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide:
-            BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
+        borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -349,9 +345,7 @@ class _BillTypeSelector extends StatelessWidget {
               selected: isSelected,
               selectedColor: AppColors.accent.withOpacity(0.15),
               labelStyle: TextStyle(
-                color: isSelected
-                    ? AppColors.accent
-                    : AppColors.textSecondary,
+                color: isSelected ? AppColors.accent : AppColors.textSecondary,
                 fontSize: 12,
               ),
               backgroundColor: AppColors.surface,

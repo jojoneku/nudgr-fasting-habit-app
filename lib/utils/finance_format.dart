@@ -15,12 +15,14 @@ String formatPeso(double amount) {
 String formatPesoCompact(double amount) {
   if (amount.abs() >= 1000000) {
     final v = amount / 1000000;
-    final s = v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+    final s =
+        v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
     return '₱${s}M';
   }
   if (amount.abs() >= 1000) {
     final v = amount / 1000;
-    final s = v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
+    final s =
+        v == v.truncateToDouble() ? v.toInt().toString() : v.toStringAsFixed(1);
     return '₱${s}k';
   }
   return formatPeso(amount);

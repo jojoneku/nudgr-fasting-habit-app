@@ -18,7 +18,7 @@ class CategoryPieChartCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final slices = presenter.categorySpendThisMonth;
-    final total  = slices.fold(0.0, (s, e) => s + e.$2);
+    final total = slices.fold(0.0, (s, e) => s + e.$2);
     final hasMore = presenter.allCategorySpendThisMonth.length > slices.length;
 
     return Column(
@@ -29,9 +29,11 @@ class CategoryPieChartCard extends StatelessWidget {
             Expanded(child: _SectionHeader(label: 'EXPENSE BREAKDOWN')),
             if (hasMore)
               GestureDetector(
-                onTap: () => FullCategoryBreakdownSheet.show(context, presenter),
+                onTap: () =>
+                    FullCategoryBreakdownSheet.show(context, presenter),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                   child: Row(
                     children: [
                       Text(
@@ -43,7 +45,8 @@ class CategoryPieChartCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 2),
-                      Icon(Icons.chevron_right, color: AppColors.accent, size: 16),
+                      Icon(Icons.chevron_right,
+                          color: AppColors.accent, size: 16),
                     ],
                   ),
                 ),
@@ -53,7 +56,8 @@ class CategoryPieChartCard extends StatelessWidget {
         const SizedBox(height: 8),
         Card(
           color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: slices.isEmpty
@@ -163,7 +167,7 @@ class _PieChartPainter extends CustomPainter {
   final double total;
   final double progress;
 
-  static const double _gapAngle   = 0.04;
+  static const double _gapAngle = 0.04;
   static const double _strokeWidth = 22.0;
 
   _PieChartPainter({
@@ -178,10 +182,10 @@ class _PieChartPainter extends CustomPainter {
 
     final center = Offset(size.width / 2, size.height / 2);
     final radius = (size.width / 2) - _strokeWidth / 2;
-    final rect   = Rect.fromCircle(center: center, radius: radius);
+    final rect = Rect.fromCircle(center: center, radius: radius);
 
-    double startAngle  = -math.pi / 2;
-    final totalGap     = _gapAngle * slices.length;
+    double startAngle = -math.pi / 2;
+    final totalGap = _gapAngle * slices.length;
     final availableAngle = (2 * math.pi - totalGap) * progress;
 
     for (int i = 0; i < slices.length; i++) {
@@ -190,23 +194,29 @@ class _PieChartPainter extends CustomPainter {
       final color = resolveSliceColor(cat.colorHex, i);
 
       canvas.drawArc(
-        rect, startAngle, sweepAngle, false,
+        rect,
+        startAngle,
+        sweepAngle,
+        false,
         Paint()
-          ..color      = color
-          ..style      = PaintingStyle.stroke
+          ..color = color
+          ..style = PaintingStyle.stroke
           ..strokeWidth = _strokeWidth
-          ..strokeCap  = StrokeCap.butt,
+          ..strokeCap = StrokeCap.butt,
       );
 
       // Subtle glow
       canvas.drawArc(
-        rect, startAngle, sweepAngle, false,
+        rect,
+        startAngle,
+        sweepAngle,
+        false,
         Paint()
-          ..color       = color.withOpacity(0.18)
-          ..style       = PaintingStyle.stroke
-          ..strokeWidth  = _strokeWidth + 6
-          ..maskFilter  = const MaskFilter.blur(BlurStyle.normal, 4)
-          ..strokeCap   = StrokeCap.butt,
+          ..color = color.withOpacity(0.18)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _strokeWidth + 6
+          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
+          ..strokeCap = StrokeCap.butt,
       );
 
       startAngle += sweepAngle + _gapAngle;
@@ -234,7 +244,8 @@ class _PieChartPainter extends CustomPainter {
       final subTp = TextPainter(
         text: TextSpan(
           text: 'spent',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 9, letterSpacing: 0.5),
+          style: TextStyle(
+              color: AppColors.textSecondary, fontSize: 9, letterSpacing: 0.5),
         ),
         textDirection: ui.TextDirection.ltr,
         textAlign: TextAlign.center,
@@ -297,7 +308,9 @@ class _LegendRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)],
+            boxShadow: [
+              BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)
+            ],
           ),
         ),
         const SizedBox(width: 7),

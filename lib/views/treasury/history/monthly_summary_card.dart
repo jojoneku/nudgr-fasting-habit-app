@@ -52,13 +52,13 @@ class MonthlySummaryCard extends StatelessWidget {
                 ),
                 if (isLive)
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
                       color: AppColors.accent.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                          color: AppColors.accent.withOpacity(0.4)),
+                      border:
+                          Border.all(color: AppColors.accent.withOpacity(0.4)),
                     ),
                     child: Text(
                       'LIVE',
@@ -97,8 +97,7 @@ class MonthlySummaryCard extends StatelessWidget {
               children: [
                 _SummaryMetric(
                   label: 'Bills',
-                  value:
-                      '${summary.billsPaidCount}/${summary.billCount} paid',
+                  value: '${summary.billsPaidCount}/${summary.billCount} paid',
                   color: summary.billsPaidCount == summary.billCount
                       ? AppColors.success
                       : AppColors.gold,
@@ -156,8 +155,7 @@ class _SummaryMetric extends StatelessWidget {
               ],
               Text(
                 label,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 10),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
               ),
             ],
           ),

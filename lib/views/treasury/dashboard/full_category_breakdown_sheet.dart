@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+
 class FullCategoryBreakdownSheet extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
@@ -26,7 +27,7 @@ class FullCategoryBreakdownSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final slices = presenter.allCategorySpendThisMonth;
-    final total  = slices.fold(0.0, (s, e) => s + e.$2);
+    final total = slices.fold(0.0, (s, e) => s + e.$2);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.65,
@@ -154,7 +155,7 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color   = resolveSliceColor(category.colorHex, index);
+    final color = resolveSliceColor(category.colorHex, index);
     final percent = total > 0 ? amount / total : 0.0;
 
     return Padding(
@@ -177,7 +178,9 @@ class _CategoryRow extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: color,
                     shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)],
+                    boxShadow: [
+                      BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)
+                    ],
                   ),
                 ),
                 const SizedBox(width: 10),

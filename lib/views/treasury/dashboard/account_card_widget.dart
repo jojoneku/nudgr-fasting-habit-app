@@ -57,7 +57,8 @@ class AccountCardWidget extends StatelessWidget {
     final accentColor = _parseColor();
 
     return Semantics(
-      label: "${account.name}, ${account.isLiability ? 'Owed' : 'Balance'}: ${formatPesoCompact(account.balance)}",
+      label:
+          "${account.name}, ${account.isLiability ? 'Owed' : 'Balance'}: ${formatPesoCompact(account.balance)}",
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -70,7 +71,8 @@ class AccountCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.accent.withOpacity(0.10), width: 1),
+              border: Border.all(
+                  color: AppColors.accent.withOpacity(0.10), width: 1),
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(11),
@@ -88,8 +90,12 @@ class AccountCardWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          _CardHeader(account: account, accentColor: accentColor, categoryLabel: _categoryLabel()),
-                          _CardBalance(account: account, heldAmount: heldAmount),
+                          _CardHeader(
+                              account: account,
+                              accentColor: accentColor,
+                              categoryLabel: _categoryLabel()),
+                          _CardBalance(
+                              account: account, heldAmount: heldAmount),
                         ],
                       ),
                     ),
@@ -129,7 +135,8 @@ class _CardHeader extends StatelessWidget {
           ),
           child: Text(
             categoryLabel,
-            style: TextStyle(color: accentColor, fontSize: 10, fontWeight: FontWeight.w600),
+            style: TextStyle(
+                color: accentColor, fontSize: 10, fontWeight: FontWeight.w600),
           ),
         ),
       ],
@@ -165,7 +172,9 @@ class _CardBalance extends StatelessWidget {
               : formatPesoCompact(account.balance),
           style: GoogleFonts.jetBrainsMono(
             textStyle: TextStyle(
-              color: account.isLiability ? AppColors.danger : AppColors.textSecondary,
+              color: account.isLiability
+                  ? AppColors.danger
+                  : AppColors.textSecondary,
               fontSize: 14,
               fontWeight: FontWeight.w700,
             ),

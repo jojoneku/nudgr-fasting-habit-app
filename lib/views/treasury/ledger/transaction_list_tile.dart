@@ -22,16 +22,16 @@ class TransactionListTile extends StatelessWidget {
   });
 
   Color get _typeColor => switch (txn.type) {
-    TransactionType.inflow   => AppColors.success,
-    TransactionType.outflow  => AppColors.danger,
-    TransactionType.transfer => Colors.amber,
-  };
+        TransactionType.inflow => AppColors.success,
+        TransactionType.outflow => AppColors.danger,
+        TransactionType.transfer => Colors.amber,
+      };
 
   String get _amountText {
     final f = formatPeso(txn.amount);
     return switch (txn.type) {
-      TransactionType.inflow   => '+$f',
-      TransactionType.outflow  => '-$f',
+      TransactionType.inflow => '+$f',
+      TransactionType.outflow => '-$f',
       TransactionType.transfer => '⇄ $f',
     };
   }
@@ -49,10 +49,16 @@ class TransactionListTile extends StatelessWidget {
     final isTransfer = txn.type == TransactionType.transfer;
     final catColor = isTransfer
         ? Colors.amber
-        : (category != null ? _parseColor(category!.colorHex) : AppColors.accent);
-    final categoryLabel = isTransfer ? 'Transfer' : (category?.name ?? 'Uncategorized');
-    final accountLabel  = account?.name ?? '';
-    final subtitleParts = [categoryLabel, if (accountLabel.isNotEmpty) accountLabel];
+        : (category != null
+            ? _parseColor(category!.colorHex)
+            : AppColors.accent);
+    final categoryLabel =
+        isTransfer ? 'Transfer' : (category?.name ?? 'Uncategorized');
+    final accountLabel = account?.name ?? '';
+    final subtitleParts = [
+      categoryLabel,
+      if (accountLabel.isNotEmpty) accountLabel
+    ];
 
     return Semantics(
       label: '${txn.description}, $_amountText, $accountLabel',

@@ -15,9 +15,9 @@ class SpendingAnalyticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final days    = presenter.last7DaysSpending;
-    final peak    = presenter.peakDaySpend7;
-    final avg     = presenter.avgDailySpend7;
+    final days = presenter.last7DaysSpending;
+    final peak = presenter.peakDaySpend7;
+    final avg = presenter.avgDailySpend7;
     final hasData = days.any((d) => d.amount > 0);
 
     return Column(
@@ -41,7 +41,8 @@ class SpendingAnalyticsCard extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 2),
-                    Icon(Icons.chevron_right, color: AppColors.accent, size: 16),
+                    Icon(Icons.chevron_right,
+                        color: AppColors.accent, size: 16),
                   ],
                 ),
               ),
@@ -51,7 +52,8 @@ class SpendingAnalyticsCard extends StatelessWidget {
         const SizedBox(height: 8),
         Card(
           color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
@@ -63,7 +65,8 @@ class SpendingAnalyticsCard extends StatelessWidget {
                       : _EmptyChartState(),
                 ),
                 const SizedBox(height: 12),
-                Divider(height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
+                Divider(
+                    height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
                 const SizedBox(height: 12),
                 _StatsRow(
                   avgDaily: avg,
@@ -169,11 +172,11 @@ class _BarChartPainter extends CustomPainter {
   final double progress;
 
   static const double _labelHeight = 20.0;
-  static const double _topPad     = 16.0;  // space for value labels above bars
-  static const double _barRadius  = 4.0;
+  static const double _topPad = 16.0; // space for value labels above bars
+  static const double _barRadius = 4.0;
   static const double _barSpacing = 6.0;
   // Softer red — avoids the hallation/vibration of pure #FF1744 on dark bg
-  static const Color _peakColor   = Color(0xFFEF9A9A);
+  static const Color _peakColor = Color(0xFFEF9A9A);
 
   _BarChartPainter({
     required this.days,
@@ -185,13 +188,13 @@ class _BarChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (days.isEmpty) return;
 
-    final barAreaTop    = _topPad;
+    final barAreaTop = _topPad;
     final barAreaBottom = size.height - _labelHeight - 4;
-    final barAreaH      = barAreaBottom - barAreaTop;
+    final barAreaH = barAreaBottom - barAreaTop;
 
     final totalBars = days.length;
-    final barWidth  = (size.width - (_barSpacing * (totalBars - 1))) / totalBars;
-    final today     = DateTime.now();
+    final barWidth = (size.width - (_barSpacing * (totalBars - 1))) / totalBars;
+    final today = DateTime.now();
 
     final labelStyle = TextStyle(
       color: AppColors.textSecondary.withOpacity(0.7),
@@ -200,15 +203,15 @@ class _BarChartPainter extends CustomPainter {
     );
 
     for (int i = 0; i < totalBars; i++) {
-      final day  = days[i];
-      final x    = i * (barWidth + _barSpacing);
-      final isToday = day.date.day   == today.day   &&
-                      day.date.month == today.month &&
-                      day.date.year  == today.year;
+      final day = days[i];
+      final x = i * (barWidth + _barSpacing);
+      final isToday = day.date.day == today.day &&
+          day.date.month == today.month &&
+          day.date.year == today.year;
       final isPeak = peak > 0 && day.amount == peak;
 
       final ratio = peak > 0 ? (day.amount / peak) * progress : 0.0;
-      final barH  = barAreaH * ratio;
+      final barH = barAreaH * ratio;
 
       // Colors
       final Color barColor;
@@ -235,7 +238,7 @@ class _BarChartPainter extends CustomPainter {
 
       // Bar
       if (barH > 0) {
-        final barTop  = barAreaBottom - barH;
+        final barTop = barAreaBottom - barH;
         final barRect = RRect.fromRectAndRadius(
           Rect.fromLTWH(x, barTop, barWidth, barH),
           const Radius.circular(_barRadius),
@@ -245,7 +248,7 @@ class _BarChartPainter extends CustomPainter {
         if (isToday) {
           barPaint.shader = LinearGradient(
             begin: Alignment.bottomCenter,
-            end:   Alignment.topCenter,
+            end: Alignment.topCenter,
             colors: [
               AppColors.accent.withOpacity(0.6),
               AppColors.accent,
@@ -262,7 +265,7 @@ class _BarChartPainter extends CustomPainter {
           canvas.drawRRect(
             barRect,
             Paint()
-              ..color      = AppColors.accent.withOpacity(0.18)
+              ..color = AppColors.accent.withOpacity(0.18)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
           );
         }
@@ -290,11 +293,14 @@ class _BarChartPainter extends CustomPainter {
       }
 
       // Day label at bottom
-      final dayLabel  = DateFormat('E').format(day.date).substring(0, 1);
+      final dayLabel = DateFormat('E').format(day.date).substring(0, 1);
       final labelSpan = TextSpan(
         text: isToday ? '•' : dayLabel,
         style: isToday
-            ? TextStyle(color: AppColors.accent, fontSize: 11, fontWeight: FontWeight.w800)
+            ? TextStyle(
+                color: AppColors.accent,
+                fontSize: 11,
+                fontWeight: FontWeight.w800)
             : labelStyle,
       );
       final tp = TextPainter(
@@ -349,9 +355,8 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final peakLabel = peakDay != null
-        ? DateFormat('EEE, MMM d').format(peakDay!)
-        : '—';
+    final peakLabel =
+        peakDay != null ? DateFormat('EEE, MMM d').format(peakDay!) : '—';
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,

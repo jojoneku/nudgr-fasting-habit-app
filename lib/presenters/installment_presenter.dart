@@ -14,7 +14,8 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 const _installmentCategoryId = '__installment__';
 
 class InstallmentPresenter extends ChangeNotifier {
-  InstallmentPresenter(StorageService storage, LedgerPresenter ledger, StatsPresenter stats)
+  InstallmentPresenter(
+      StorageService storage, LedgerPresenter ledger, StatsPresenter stats)
       : _storage = storage,
         _ledger = ledger,
         _stats = stats {
@@ -45,19 +46,22 @@ class InstallmentPresenter extends ChangeNotifier {
   List<Installment> get installments =>
       _installments.where((i) => i.isActive).toList();
 
-  List<Installment> get dueThisMonth =>
-      _installments.where((i) => i.isActive && i.isDueIn(_selectedMonth)).toList();
+  List<Installment> get dueThisMonth => _installments
+      .where((i) => i.isActive && i.isDueIn(_selectedMonth))
+      .toList();
 
   bool isPaidForMonth(String installmentId) => _ledger.allTransactions.any(
         (t) => t.installmentId == installmentId && t.month == _selectedMonth,
       );
 
-  int paidCount(String installmentId) =>
-      _ledger.allTransactions.where((t) => t.installmentId == installmentId).length;
+  int paidCount(String installmentId) => _ledger.allTransactions
+      .where((t) => t.installmentId == installmentId)
+      .length;
 
   int remainingMonths(String installmentId) {
     final inst = _findById(installmentId);
-    return (inst.totalMonths - paidCount(installmentId)).clamp(0, inst.totalMonths);
+    return (inst.totalMonths - paidCount(installmentId))
+        .clamp(0, inst.totalMonths);
   }
 
   double remainingAmount(String installmentId) {
@@ -91,15 +95,16 @@ class InstallmentPresenter extends ChangeNotifier {
   }
 
   Future<void> updateInstallment(Installment i) async {
-    _installments = [for (final inst in _installments) inst.id == i.id ? i : inst];
+    _installments = [
+      for (final inst in _installments) inst.id == i.id ? i : inst
+    ];
     await _storage.saveInstallments(_installments);
     notifyListeners();
   }
 
   Future<void> deleteInstallment(String id) async {
-    final linked = _ledger.allTransactions
-        .where((t) => t.installmentId == id)
-        .toList();
+    final linked =
+        _ledger.allTransactions.where((t) => t.installmentId == id).toList();
     for (final txn in linked) {
       await _ledger.deleteTransaction(txn.id);
     }
@@ -161,7 +166,8 @@ class InstallmentPresenter extends ChangeNotifier {
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
   Future<void> _ensureInstallmentCategory() async {
-    final exists = _ledger.categories.any((c) => c.id == _installmentCategoryId);
+    final exists =
+        _ledger.categories.any((c) => c.id == _installmentCategoryId);
     if (!exists) {
       await _ledger.addCategory(const FinanceCategory(
         id: _installmentCategoryId,

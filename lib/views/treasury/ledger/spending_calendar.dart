@@ -63,28 +63,52 @@ class SpendingCalendar extends StatelessWidget {
           ),
           calendarStyle: CalendarStyle(
             outsideDaysVisible: false,
-            defaultTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            weekendTextStyle: TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            defaultTextStyle:
+                TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            weekendTextStyle:
+                TextStyle(color: AppColors.textPrimary, fontSize: 13),
             todayDecoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.accent, width: 1.5),
             ),
-            todayTextStyle: TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w700),
+            todayTextStyle: TextStyle(
+                color: AppColors.accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w700),
             selectedDecoration: BoxDecoration(
               color: AppColors.accent.withOpacity(0.25),
               shape: BoxShape.circle,
               border: Border.all(color: AppColors.accent),
             ),
-            selectedTextStyle: TextStyle(color: AppColors.accent, fontSize: 13, fontWeight: FontWeight.w700),
+            selectedTextStyle: TextStyle(
+                color: AppColors.accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w700),
           ),
           calendarBuilders: CalendarBuilders(
-            defaultBuilder: (context, day, focusedDay) =>
-                _HeatmapCell(day: day, outflowMap: outflowMap, inflowMap: inflowMap, avg: avg, isSelected: false, isToday: false),
-            todayBuilder: (context, day, focusedDay) =>
-                _HeatmapCell(day: day, outflowMap: outflowMap, inflowMap: inflowMap, avg: avg, isSelected: false, isToday: true),
-            selectedBuilder: (context, day, focusedDay) =>
-                _HeatmapCell(day: day, outflowMap: outflowMap, inflowMap: inflowMap, avg: avg, isSelected: true, isToday: false),
-            outsideBuilder: (context, day, focusedDay) => const SizedBox.shrink(),
+            defaultBuilder: (context, day, focusedDay) => _HeatmapCell(
+                day: day,
+                outflowMap: outflowMap,
+                inflowMap: inflowMap,
+                avg: avg,
+                isSelected: false,
+                isToday: false),
+            todayBuilder: (context, day, focusedDay) => _HeatmapCell(
+                day: day,
+                outflowMap: outflowMap,
+                inflowMap: inflowMap,
+                avg: avg,
+                isSelected: false,
+                isToday: true),
+            selectedBuilder: (context, day, focusedDay) => _HeatmapCell(
+                day: day,
+                outflowMap: outflowMap,
+                inflowMap: inflowMap,
+                avg: avg,
+                isSelected: true,
+                isToday: false),
+            outsideBuilder: (context, day, focusedDay) =>
+                const SizedBox.shrink(),
           ),
         ),
       ),
@@ -160,7 +184,8 @@ class _HeatmapCell extends StatelessWidget {
                 style: TextStyle(
                   color: isSelected ? AppColors.accent : textColor,
                   fontSize: 12,
-                  fontWeight: isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
+                  fontWeight:
+                      isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
                 ),
               ),
               if (hasBoth)

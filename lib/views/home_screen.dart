@@ -62,10 +62,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     );
     _treasuryPresenter = TreasuryDashboardPresenter(_storage);
     _ledgerPresenter = LedgerPresenter(_storage, _statsPresenter);
-    _billsPresenter = BillsReceivablesPresenter(_storage, _ledgerPresenter, _statsPresenter);
+    _billsPresenter =
+        BillsReceivablesPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _budgetPresenter = BudgetPresenter(_storage, _statsPresenter);
     _historyPresenter = TreasuryHistoryPresenter(_storage);
-    _installmentPresenter = InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
+    _installmentPresenter =
+        InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -119,7 +121,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         historyPresenter: _historyPresenter,
         installmentPresenter: _installmentPresenter,
       ),
-
       StatsView(
         presenter: _statsPresenter,
         fastingPresenter: _fastingPresenter,

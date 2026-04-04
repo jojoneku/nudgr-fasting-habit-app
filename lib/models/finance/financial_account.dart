@@ -60,7 +60,8 @@ class FinancialAccount {
   final bool isActive;
   final double? goalTarget; // only used when category == goal
   final DateTime? maturityDate; // only used when category == timeDeposit
-  final String? linkedAccountId; // custodian only: the liquid account where these funds physically live
+  final String?
+      linkedAccountId; // custodian only: the liquid account where these funds physically live
 
   const FinancialAccount({
     required this.id,

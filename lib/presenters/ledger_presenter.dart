@@ -34,7 +34,8 @@ class LedgerPresenter extends ChangeNotifier {
   String? get selectedAccountId => _selectedAccountId;
   List<FinancialAccount> get accounts => _accounts;
   List<FinanceCategory> get categories => _categories;
-  List<TransactionRecord> get allTransactions => List.unmodifiable(_allTransactions);
+  List<TransactionRecord> get allTransactions =>
+      List.unmodifiable(_allTransactions);
 
   // --- Filtered summary ---
 
@@ -92,7 +93,8 @@ class LedgerPresenter extends ChangeNotifier {
 
   double get filteredAccountBalance {
     if (_selectedAccountId == null) return 0.0;
-    final account = _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
+    final account =
+        _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
     return account?.balance ?? 0.0;
   }
 
@@ -104,10 +106,12 @@ class LedgerPresenter extends ChangeNotifier {
 
     // Apply optional single-day filter (from calendar tap)
     if (_selectedDate != null) {
-      txns = txns.where((t) =>
-          t.date.year == _selectedDate!.year &&
-          t.date.month == _selectedDate!.month &&
-          t.date.day == _selectedDate!.day).toList();
+      txns = txns
+          .where((t) =>
+              t.date.year == _selectedDate!.year &&
+              t.date.month == _selectedDate!.month &&
+              t.date.day == _selectedDate!.day)
+          .toList();
     }
 
     final grouped = <DateTime, List<TransactionRecord>>{};
@@ -162,7 +166,7 @@ class LedgerPresenter extends ChangeNotifier {
   List<FinanceCategory>? _migrateCategories(List<FinanceCategory> cats) {
     bool anyChanged = false;
     int expenseIdx = 0;
-    int incomeIdx  = 0;
+    int incomeIdx = 0;
 
     final result = cats.map((cat) {
       if (!isDefaultWhite(cat.colorHex)) return cat;

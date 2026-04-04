@@ -50,7 +50,10 @@ class InstallmentListTile extends StatelessWidget {
       label:
           '${installment.name}, ${paid ? 'paid' : 'unpaid'}, $count of ${installment.totalMonths} payments',
       child: InkWell(
-        onTap: () { HapticFeedback.selectionClick(); onEdit(); },
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onEdit();
+        },
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
           child: Column(
@@ -62,7 +65,8 @@ class InstallmentListTile extends StatelessWidget {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration:
+                        BoxDecoration(color: color, shape: BoxShape.circle),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -129,7 +133,8 @@ class InstallmentListTile extends StatelessWidget {
                   if (remaining > 0) ...[
                     Text(
                       '  ·  ',
-                      style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                      style: TextStyle(
+                          color: AppColors.textSecondary, fontSize: 11),
                     ),
                     Text(
                       '${formatPeso(remainingAmt)} left',
@@ -173,7 +178,10 @@ class _MarkPaidButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () { HapticFeedback.mediumImpact(); onTap(); },
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        onTap();
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
         decoration: BoxDecoration(
@@ -183,7 +191,8 @@ class _MarkPaidButton extends StatelessWidget {
         ),
         child: Text(
           'Mark Paid',
-          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: color, fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
     );
@@ -238,7 +247,8 @@ class _DeleteButton extends StatelessWidget {
       height: 32,
       child: IconButton(
         padding: EdgeInsets.zero,
-        icon: Icon(Icons.delete_outline, size: 16, color: AppColors.textSecondary),
+        icon: Icon(Icons.delete_outline,
+            size: 16, color: AppColors.textSecondary),
         onPressed: onDelete,
         tooltip: 'Delete installment',
       ),

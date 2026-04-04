@@ -28,8 +28,7 @@ class CategoryBudgetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final allocated = budget?.allocatedAmount ?? 0.0;
     final actual = isIncome ? received : spent;
-    final progress =
-        allocated > 0 ? (actual / allocated).clamp(0.0, 2.0) : 0.0;
+    final progress = allocated > 0 ? (actual / allocated).clamp(0.0, 2.0) : 0.0;
     final isOver = actual > allocated && allocated > 0;
     final isUnder = actual < allocated && allocated > 0 && isIncome;
 
@@ -43,8 +42,7 @@ class CategoryBudgetTile extends StatelessWidget {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: ExpansionTile(
-        tilePadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         childrenPadding: EdgeInsets.zero,
         title: _TileHeader(
           category: category,
@@ -63,14 +61,12 @@ class CategoryBudgetTile extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
                   child: Text(
                     'No transactions this month',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12),
+                    style:
+                        TextStyle(color: AppColors.textSecondary, fontSize: 12),
                   ),
                 ),
               ]
-            : transactions
-                .map((t) => _TransactionRow(transaction: t))
-                .toList(),
+            : transactions.map((t) => _TransactionRow(transaction: t)).toList(),
       ),
     );
   }
@@ -101,8 +97,7 @@ class _TileHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pct =
-        allocated > 0 ? '${(actual / allocated * 100).round()}%' : '—';
+    final pct = allocated > 0 ? '${(actual / allocated * 100).round()}%' : '—';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -139,10 +134,8 @@ class _TileHeader extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress.clamp(0.0, 1.0),
                   minHeight: 5,
-                  backgroundColor:
-                      AppColors.textSecondary.withOpacity(0.15),
-                  valueColor:
-                      AlwaysStoppedAnimation<Color>(progressColor),
+                  backgroundColor: AppColors.textSecondary.withOpacity(0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                 ),
               ),
             ),
@@ -188,14 +181,11 @@ class _AmountPair extends StatelessWidget {
         Text(
           formatPesoCompact(actual),
           style: TextStyle(
-              color: actualColor,
-              fontSize: 13,
-              fontWeight: FontWeight.w700),
+              color: actualColor, fontSize: 13, fontWeight: FontWeight.w700),
         ),
         Text(
           ' / ${formatPesoCompact(allocated)}',
-          style:
-              TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
       ],
     );
@@ -261,15 +251,13 @@ class _TransactionRow extends StatelessWidget {
           Expanded(
             child: Text(
               transaction.description,
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
               overflow: TextOverflow.ellipsis,
             ),
           ),
           Text(
             DateFormat('MMM d').format(transaction.date),
-            style:
-                TextStyle(color: AppColors.textSecondary, fontSize: 11),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
           ),
           const SizedBox(width: 8),
           Text(

@@ -83,7 +83,8 @@ class _LedgerViewState extends State<LedgerView> {
               _MonthSelectorRow(
                 presenter: presenter,
                 showCalendar: _showCalendar,
-                onToggleCalendar: () => setState(() => _showCalendar = !_showCalendar),
+                onToggleCalendar: () =>
+                    setState(() => _showCalendar = !_showCalendar),
               ),
               if (_showCalendar) ...[
                 const SizedBox(height: 4),
@@ -202,7 +203,10 @@ class _AccountPill extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 13, color: selected ? AppColors.accent : AppColors.textSecondary),
+                Icon(icon,
+                    size: 13,
+                    color:
+                        selected ? AppColors.accent : AppColors.textSecondary),
                 const SizedBox(width: 5),
               ],
               Text(
@@ -245,7 +249,8 @@ class _MonthSelectorRow extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
-              onPressed: () => presenter.setMonth(previousMonth(presenter.selectedMonth)),
+              onPressed: () =>
+                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
             ),
           ),
           Expanded(
@@ -266,7 +271,8 @@ class _MonthSelectorRow extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
-              onPressed: () => presenter.setMonth(nextMonth(presenter.selectedMonth)),
+              onPressed: () =>
+                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
             ),
           ),
           SizedBox(
@@ -274,8 +280,11 @@ class _MonthSelectorRow extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(
-                showCalendar ? Icons.view_list_rounded : Icons.calendar_month_outlined,
-                color: showCalendar ? AppColors.accent : AppColors.textSecondary,
+                showCalendar
+                    ? Icons.view_list_rounded
+                    : Icons.calendar_month_outlined,
+                color:
+                    showCalendar ? AppColors.accent : AppColors.textSecondary,
                 size: 20,
               ),
               onPressed: () {
@@ -315,7 +324,8 @@ class _DateFilterChip extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.calendar_today_outlined, size: 12, color: AppColors.accent),
+                Icon(Icons.calendar_today_outlined,
+                    size: 12, color: AppColors.accent),
                 const SizedBox(width: 6),
                 Text(
                   'Filtered: ${_filterChipFmt.format(date)}',
@@ -328,7 +338,8 @@ class _DateFilterChip extends StatelessWidget {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onClear,
-                  child: Icon(Icons.close_rounded, size: 14, color: AppColors.accent),
+                  child: Icon(Icons.close_rounded,
+                      size: 14, color: AppColors.accent),
                 ),
               ],
             ),
@@ -348,9 +359,9 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inflow  = presenter.filteredMonthInflow;
+    final inflow = presenter.filteredMonthInflow;
     final outflow = presenter.filteredMonthOutflow;
-    final net     = presenter.filteredMonthNet;
+    final net = presenter.filteredMonthNet;
     final netColor = net >= 0 ? AppColors.success : AppColors.danger;
     final netPrefix = net >= 0 ? '+' : '';
 
@@ -376,7 +387,8 @@ class _SummaryCard extends StatelessWidget {
                     amountColor: AppColors.success,
                   ),
                 ),
-                Container(width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
+                Container(
+                    width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
                 Expanded(
                   child: _SummaryStatColumn(
                     label: 'EXPENSES',
@@ -495,7 +507,8 @@ class _TransactionList extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
+                border: Border.all(
+                    color: AppColors.textSecondary.withOpacity(0.15)),
               ),
               child: Icon(
                 Icons.receipt_long_outlined,
@@ -549,20 +562,28 @@ class _DateGroup extends StatelessWidget {
     required this.presenter,
   });
 
-  double get _dailyNet => transactions.fold(0.0, (sum, txn) => switch (txn.type) {
-    TransactionType.inflow   => sum + txn.amount,
-    TransactionType.outflow  => sum - txn.amount,
-    TransactionType.transfer => sum,
-  });
+  double get _dailyNet => transactions.fold(
+      0.0,
+      (sum, txn) => switch (txn.type) {
+            TransactionType.inflow => sum + txn.amount,
+            TransactionType.outflow => sum - txn.amount,
+            TransactionType.transfer => sum,
+          });
 
   FinancialAccount? _findAccount(String id) {
-    try { return presenter.accounts.firstWhere((a) => a.id == id); }
-    catch (_) { return null; }
+    try {
+      return presenter.accounts.firstWhere((a) => a.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   FinanceCategory? _findCategory(String id) {
-    try { return presenter.categories.firstWhere((c) => c.id == id); }
-    catch (_) { return null; }
+    try {
+      return presenter.categories.firstWhere((c) => c.id == id);
+    } catch (_) {
+      return null;
+    }
   }
 
   void _showEditSheet(BuildContext context, TransactionRecord txn) {
@@ -631,10 +652,10 @@ class _DateHeader extends StatelessWidget {
 
   String get _label {
     final now = DateTime.now();
-    final today     = DateTime(now.year, now.month, now.day);
+    final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final d = DateTime(date.year, date.month, date.day);
-    if (d == today)     return 'Today';
+    if (d == today) return 'Today';
     if (d == yesterday) return 'Yesterday';
     return _dateHeaderFmt.format(date);
   }

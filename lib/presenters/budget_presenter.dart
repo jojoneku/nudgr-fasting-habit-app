@@ -34,11 +34,11 @@ class BudgetPresenter extends ChangeNotifier {
 
   // ─── Summary getters ─────────────────────────────────────────────────────────
 
-  double get totalAllocated => _budgetsForMonth
-      .fold(0.0, (sum, b) => sum + b.allocatedAmount);
+  double get totalAllocated =>
+      _budgetsForMonth.fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
-  double get totalSpent => _outflowsForMonth
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double get totalSpent =>
+      _outflowsForMonth.fold(0.0, (sum, t) => sum + t.amount);
 
   double get totalRemaining => totalAllocated - totalSpent;
 
@@ -160,7 +160,8 @@ class BudgetPresenter extends ChangeNotifier {
 
   Future<void> removeBudget(String categoryId) async {
     _allBudgets = _allBudgets
-        .where((b) => !(b.categoryId == categoryId && b.month == _selectedMonth))
+        .where(
+            (b) => !(b.categoryId == categoryId && b.month == _selectedMonth))
         .toList();
     await _storage.saveBudgets(_allBudgets);
     notifyListeners();
@@ -184,8 +185,8 @@ class BudgetPresenter extends ChangeNotifier {
       _allBudgets.where((b) => b.month == _selectedMonth).toList();
 
   List<TransactionRecord> get _outflowsForMonth => _allTransactions
-      .where((t) =>
-          t.month == _selectedMonth && t.type == TransactionType.outflow)
+      .where(
+          (t) => t.month == _selectedMonth && t.type == TransactionType.outflow)
       .toList();
 
   Future<void> _checkBudgetNotExceededXp() async {

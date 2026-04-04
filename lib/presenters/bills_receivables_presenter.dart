@@ -44,11 +44,11 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   List<Bill> get bills =>
       _allBills.where((b) => b.month == _selectedMonth).toList();
 
-  double get totalBillsAmount =>
-      bills.fold(0.0, (sum, b) => sum + b.amount);
+  double get totalBillsAmount => bills.fold(0.0, (sum, b) => sum + b.amount);
 
-  double get totalBillsPaid =>
-      bills.where((b) => b.isPaid).fold(0.0, (sum, b) => sum + (b.paidAmount ?? b.amount));
+  double get totalBillsPaid => bills
+      .where((b) => b.isPaid)
+      .fold(0.0, (sum, b) => sum + (b.paidAmount ?? b.amount));
 
   double get totalBillsPending =>
       bills.where((b) => !b.isPaid).fold(0.0, (sum, b) => sum + b.amount);
@@ -74,10 +74,9 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   double get totalReceivablesAmount =>
       receivables.fold(0.0, (sum, r) => sum + r.amount);
 
-  double get totalReceived =>
-      receivables
-          .where((r) => r.isReceived)
-          .fold(0.0, (sum, r) => sum + (r.receivedAmount ?? r.amount));
+  double get totalReceived => receivables
+      .where((r) => r.isReceived)
+      .fold(0.0, (sum, r) => sum + (r.receivedAmount ?? r.amount));
 
   // ─── Budgeted Expense getters ─────────────────────────────────────────────────
 
@@ -327,9 +326,8 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     if (existing.isNotEmpty) return;
 
     final prev = previousMonth(month);
-    final recurringFromPrev = _allBills
-        .where((b) => b.month == prev && b.isRecurring)
-        .toList();
+    final recurringFromPrev =
+        _allBills.where((b) => b.month == prev && b.isRecurring).toList();
     if (recurringFromPrev.isEmpty) return;
 
     final copies = recurringFromPrev.map((b) => Bill(
@@ -354,13 +352,13 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     if (existing.isNotEmpty) return;
 
     final prev = previousMonth(month);
-    final recurringFromPrev = _allReceivables
-        .where((r) => r.month == prev && r.isRecurring)
-        .toList();
+    final recurringFromPrev =
+        _allReceivables.where((r) => r.month == prev && r.isRecurring).toList();
     if (recurringFromPrev.isEmpty) return;
 
     final copies = recurringFromPrev.map((r) {
-      final expectedDate = DateTime.parse('$month-${r.expectedDate.day.toString().padLeft(2, '0')}');
+      final expectedDate = DateTime.parse(
+          '$month-${r.expectedDate.day.toString().padLeft(2, '0')}');
       return Receivable(
         id: _generateId(),
         name: r.name,

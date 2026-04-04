@@ -31,8 +31,7 @@ class _BudgetViewState extends State<BudgetView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => AddBudgetSheet(
-          presenter: widget.presenter,
-          preselectedCategoryId: categoryId),
+          presenter: widget.presenter, preselectedCategoryId: categoryId),
     );
   }
 
@@ -42,8 +41,7 @@ class _BudgetViewState extends State<BudgetView> {
       listenable: widget.presenter,
       builder: (context, _) {
         final byGroup = widget.presenter.categoriesByGroup;
-        final hasAny =
-            byGroup.values.any((list) => list.isNotEmpty);
+        final hasAny = byGroup.values.any((list) => list.isNotEmpty);
 
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -101,8 +99,7 @@ class _MonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left,
-                  color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
               onPressed: () =>
                   presenter.setMonth(previousMonth(presenter.selectedMonth)),
             ),
@@ -119,8 +116,7 @@ class _MonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_right,
-                  color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
               onPressed: () =>
                   presenter.setMonth(nextMonth(presenter.selectedMonth)),
             ),
@@ -176,9 +172,7 @@ class _BannerStat extends StatelessWidget {
   final Color color;
 
   const _BannerStat(
-      {required this.label,
-      required this.value,
-      required this.color});
+      {required this.label, required this.value, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -195,12 +189,9 @@ class _BannerStat extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+                    color: color, fontWeight: FontWeight.w700, fontSize: 13)),
             Text(label,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 10)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
           ],
         ),
       ),
@@ -239,8 +230,7 @@ class _GroupSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppColors.textSecondary.withOpacity(0.15)),
+        border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -250,8 +240,7 @@ class _GroupSection extends StatelessWidget {
             allocated: sectionAllocated,
             spent: sectionSpent,
           ),
-          const Divider(
-              height: 1, color: Color(0xFF2A3240)),
+          const Divider(height: 1, color: Color(0xFF2A3240)),
           ...categories.map((cat) => Column(
                 children: [
                   CategoryBudgetTile(
@@ -260,12 +249,9 @@ class _GroupSection extends StatelessWidget {
                     spent: presenter.spentFor(cat.id),
                     received: presenter.receivedFor(cat.id),
                     isIncome: presenter.isCategoryIncome(cat.id),
-                    transactions:
-                        presenter.transactionsForCategory(cat.id),
+                    transactions: presenter.transactionsForCategory(cat.id),
                   ),
-                  const Divider(
-                      height: 1,
-                      color: Color(0xFF2A3240)),
+                  const Divider(height: 1, color: Color(0xFF2A3240)),
                 ],
               )),
         ],
@@ -288,8 +274,7 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         children: [
           Expanded(
@@ -305,8 +290,7 @@ class _SectionHeader extends StatelessWidget {
           ),
           Text(
             '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
-            style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 11),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
           ),
         ],
       ),
@@ -341,8 +325,7 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Tap + to set spending limits',
-            style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
           const SizedBox(height: 20),
           SizedBox(

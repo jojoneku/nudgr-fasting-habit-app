@@ -12,7 +12,8 @@ class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
   final Installment? existing;
 
-  const AddInstallmentSheet({super.key, required this.presenter, this.existing});
+  const AddInstallmentSheet(
+      {super.key, required this.presenter, this.existing});
 
   @override
   State<AddInstallmentSheet> createState() => _AddInstallmentSheetState();
@@ -87,7 +88,8 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     final e = widget.existing;
 
     final installment = Installment(
-      id: e?.id ?? '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+      id: e?.id ??
+          '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
       name: _nameCtrl.text.trim(),
       accountId: _accountId!,
       totalAmount: total,
@@ -116,7 +118,8 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -217,7 +220,8 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                   inputFormatters: [
                     FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
                   ],
-                  onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
+                  onChanged: (_) =>
+                      setState(() => _monthlyManuallyEdited = true),
                   validator: (v) {
                     if (v == null || double.tryParse(v) == null) {
                       return 'Enter a valid amount';
@@ -430,8 +434,8 @@ class _CustomMonthsFieldState extends State<_CustomMonthsField> {
         style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
         decoration: InputDecoration(
           hintText: 'Custom',
-          hintStyle:
-              TextStyle(color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
+          hintStyle: TextStyle(
+              color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
           filled: true,
           fillColor: AppColors.background,
           contentPadding:
@@ -475,8 +479,7 @@ class _StartMonthSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(8),
-        border:
-            Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
+        border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
       ),
       child: Row(
         children: [
@@ -484,8 +487,7 @@ class _StartMonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left,
-                  color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
               onPressed: () => onAdjust(-1),
             ),
           ),
@@ -505,8 +507,7 @@ class _StartMonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_right,
-                  color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
               onPressed: () => onAdjust(1),
             ),
           ),

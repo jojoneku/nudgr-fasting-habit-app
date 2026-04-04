@@ -89,8 +89,7 @@ class _IncomeExpenseSection extends StatelessWidget {
                   color: summary.netSavings >= 0
                       ? AppColors.success
                       : AppColors.danger,
-                  prefix:
-                      summary.netSavings >= 0 ? '+' : '-',
+                  prefix: summary.netSavings >= 0 ? '+' : '-',
                 ),
               ),
             ],
@@ -144,17 +143,14 @@ class _FlowMetric extends StatelessWidget {
               const SizedBox(width: 3),
             ],
             Text(label,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 10)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
           ],
         ),
         const SizedBox(height: 2),
         Text(
           '$prefix$value',
           style: TextStyle(
-              color: color,
-              fontSize: 13,
-              fontWeight: FontWeight.w700),
+              color: color, fontSize: 13, fontWeight: FontWeight.w700),
           overflow: TextOverflow.ellipsis,
         ),
       ],
@@ -231,8 +227,8 @@ class _DetailRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 11)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 11)),
               const SizedBox(height: 2),
               Text(value,
                   style: TextStyle(
@@ -268,9 +264,9 @@ class _CategorySpendSection extends StatelessWidget {
       child: Column(
         children: sorted.map((entry) {
           final cat = categories.cast<FinanceCategory?>().firstWhere(
-            (c) => c?.id == entry.key,
-            orElse: () => null,
-          );
+                (c) => c?.id == entry.key,
+                orElse: () => null,
+              );
           final pct =
               maxSpend > 0 ? (entry.value / maxSpend).clamp(0.0, 1.0) : 0.0;
           return Padding(
@@ -302,10 +298,8 @@ class _CategorySpendSection extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: pct,
                     minHeight: 5,
-                    backgroundColor:
-                        AppColors.textSecondary.withOpacity(0.15),
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    backgroundColor: AppColors.textSecondary.withOpacity(0.15),
+                    valueColor: AlwaysStoppedAnimation<Color>(AppColors.accent),
                   ),
                 ),
               ],
@@ -377,8 +371,7 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-            color: AppColors.textSecondary.withOpacity(0.15)),
+        border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

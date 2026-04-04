@@ -36,7 +36,8 @@ class BudgetOverviewCard extends StatelessWidget {
         const SizedBox(height: 8),
         Card(
           color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
@@ -48,7 +49,8 @@ class BudgetOverviewCard extends StatelessWidget {
                   isTotal: true,
                 ),
                 const SizedBox(height: 12),
-                Divider(height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
+                Divider(
+                    height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
                 const SizedBox(height: 12),
                 for (final group in _groups) ...[
                   _BudgetProgressRow(
@@ -135,12 +137,10 @@ class _BudgetProgressRow extends StatelessWidget {
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isTotal
-                      ? AppColors.textPrimary
-                      : AppColors.textSecondary,
+                  color:
+                      isTotal ? AppColors.textPrimary : AppColors.textSecondary,
                   fontSize: isTotal ? 13 : 12,
-                  fontWeight:
-                      isTotal ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),

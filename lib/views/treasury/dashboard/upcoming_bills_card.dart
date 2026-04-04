@@ -34,7 +34,8 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
         const SizedBox(height: 8),
         Card(
           color: AppColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Column(
             children: [
               for (int i = 0; i < shown.length; i++) ...[
@@ -57,7 +58,8 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
                 ),
               if (_expanded && bills.length > _previewCount)
                 _CollapseRow(onTap: () => setState(() => _expanded = false)),
-              Divider(height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
+              Divider(
+                  height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
               _TotalFooter(total: total, hasOverdue: hasOverdue),
             ],
           ),

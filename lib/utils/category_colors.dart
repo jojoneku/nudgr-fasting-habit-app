@@ -47,8 +47,8 @@ String categoryColorAt(int index, {required bool isExpense}) {
   final color = HSLColor.fromAHSL(
     1.0,
     hue,
-    0.45,   // 45% saturation — visible but not vibrating
-    0.68,   // 68% lightness — readable on #0A0E14 background
+    0.45, // 45% saturation — visible but not vibrating
+    0.68, // 68% lightness — readable on #0A0E14 background
   ).toColor();
 
   return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
@@ -76,6 +76,7 @@ Color _parseHex(String hex) {
     return const Color(0xFF94A3B8);
   }
 }
+
 /// i.e. the old default color that needs migration.
 bool isDefaultWhite(String hex) {
   try {

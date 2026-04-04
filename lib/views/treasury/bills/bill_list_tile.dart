@@ -52,7 +52,8 @@ class BillListTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -77,7 +78,8 @@ class BillListTile extends StatelessWidget {
             if (onEdit != null)
               ListTile(
                 leading: Icon(Icons.edit_outlined, color: AppColors.accent),
-                title: Text('Edit', style: TextStyle(color: AppColors.textPrimary)),
+                title: Text('Edit',
+                    style: TextStyle(color: AppColors.textPrimary)),
                 onTap: () {
                   Navigator.pop(context);
                   onEdit?.call();
@@ -86,7 +88,8 @@ class BillListTile extends StatelessWidget {
             if (onDelete != null)
               ListTile(
                 leading: Icon(Icons.delete_outline, color: AppColors.danger),
-                title: Text('Delete', style: TextStyle(color: AppColors.danger)),
+                title:
+                    Text('Delete', style: TextStyle(color: AppColors.danger)),
                 onTap: () {
                   Navigator.pop(context);
                   onDelete?.call();
@@ -112,7 +115,8 @@ class _TileTitle extends StatelessWidget {
           child: Text(
             bill.name,
             style: TextStyle(
-              color: bill.isPaid ? AppColors.textSecondary : AppColors.textPrimary,
+              color:
+                  bill.isPaid ? AppColors.textSecondary : AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 14,
               decoration: bill.isPaid ? TextDecoration.lineThrough : null,
@@ -142,7 +146,9 @@ class _TileSubtitle extends StatelessWidget {
             Text(
               formatPeso(bill.amount),
               style: TextStyle(
-                color: bill.isPaid ? AppColors.textSecondary : AppColors.textPrimary,
+                color: bill.isPaid
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -158,7 +164,8 @@ class _TileSubtitle extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             'Paid ${formatPeso(bill.paidAmount!)}${bill.paidDate != null ? '  ·  ${DateFormat('MMM d').format(bill.paidDate!)}' : ''}',
-            style: TextStyle(color: AppColors.success.withOpacity(0.8), fontSize: 12),
+            style: TextStyle(
+                color: AppColors.success.withOpacity(0.8), fontSize: 12),
           ),
         ],
         if (bill.paymentNote != null && bill.paymentNote!.isNotEmpty) ...[
@@ -231,7 +238,11 @@ class _BillTypeBadge extends StatelessWidget {
       ),
       child: Text(
         _label,
-        style: TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+        style: TextStyle(
+            color: _color,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3),
       ),
     );
   }

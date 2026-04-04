@@ -473,8 +473,8 @@ class StorageService {
 
   Future<void> saveAccounts(List<FinancialAccount> accounts) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyFinancialAccounts, jsonEncode(accounts.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyFinancialAccounts,
+        jsonEncode(accounts.map((e) => e.toJson()).toList()));
   }
 
   Future<List<FinancialAccount>> loadAccounts() async {
@@ -493,8 +493,8 @@ class StorageService {
 
   Future<void> saveTransactions(List<TransactionRecord> transactions) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyTransactions, jsonEncode(transactions.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyTransactions,
+        jsonEncode(transactions.map((e) => e.toJson()).toList()));
     // TODO: migrate to SQLite when txn count > 500
   }
 
@@ -514,8 +514,8 @@ class StorageService {
 
   Future<void> saveFinanceCategories(List<FinanceCategory> categories) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyFinanceCategories, jsonEncode(categories.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyFinanceCategories,
+        jsonEncode(categories.map((e) => e.toJson()).toList()));
   }
 
   Future<List<FinanceCategory>> loadFinanceCategories() async {
@@ -554,8 +554,8 @@ class StorageService {
 
   Future<void> saveBudgetedExpenses(List<BudgetedExpense> expenses) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyBudgetedExpenses, jsonEncode(expenses.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyBudgetedExpenses,
+        jsonEncode(expenses.map((e) => e.toJson()).toList()));
   }
 
   Future<List<BudgetedExpense>> loadBudgetedExpenses() async {
@@ -594,8 +594,8 @@ class StorageService {
 
   Future<void> saveReceivables(List<Receivable> receivables) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyReceivables, jsonEncode(receivables.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyReceivables,
+        jsonEncode(receivables.map((e) => e.toJson()).toList()));
   }
 
   Future<List<Receivable>> loadReceivables() async {
@@ -614,8 +614,8 @@ class StorageService {
 
   Future<void> saveInstallments(List<Installment> installments) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyInstallments, jsonEncode(installments.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyInstallments,
+        jsonEncode(installments.map((e) => e.toJson()).toList()));
   }
 
   Future<List<Installment>> loadInstallments() async {
@@ -634,8 +634,8 @@ class StorageService {
 
   Future<void> saveMonthlySummaries(List<MonthlySummary> summaries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        keyMonthlySummaries, jsonEncode(summaries.map((e) => e.toJson()).toList()));
+    await prefs.setString(keyMonthlySummaries,
+        jsonEncode(summaries.map((e) => e.toJson()).toList()));
   }
 
   Future<List<MonthlySummary>> loadMonthlySummaries() async {

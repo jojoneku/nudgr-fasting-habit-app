@@ -68,8 +68,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => AddReceivableSheet(
-          presenter: widget.presenter, existing: existing),
+      builder: (_) =>
+          AddReceivableSheet(presenter: widget.presenter, existing: existing),
     );
   }
 
@@ -81,8 +81,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) =>
-          _AddBudgetedExpenseSheet(presenter: widget.presenter, existing: existing),
+      builder: (_) => _AddBudgetedExpenseSheet(
+          presenter: widget.presenter, existing: existing),
     );
   }
 
@@ -94,7 +94,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) => _MarkBillPaidSheet(bill: bill, presenter: widget.presenter),
+      builder: (_) =>
+          _MarkBillPaidSheet(bill: bill, presenter: widget.presenter),
     );
   }
 
@@ -106,8 +107,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (_) =>
-          _MarkReceivedSheet(receivable: receivable, presenter: widget.presenter),
+      builder: (_) => _MarkReceivedSheet(
+          receivable: receivable, presenter: widget.presenter),
     );
   }
 
@@ -146,8 +147,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (_) => _MarkInstallmentPaidSheet(
-          installment: installment,
-          presenter: widget.installmentPresenter),
+          installment: installment, presenter: widget.installmentPresenter),
     );
   }
 
@@ -163,7 +163,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined, color: AppColors.accent),
+              leading:
+                  Icon(Icons.receipt_long_outlined, color: AppColors.accent),
               title: Text('Add Bill',
                   style: TextStyle(color: AppColors.textPrimary)),
               onTap: () {
@@ -190,11 +191,13 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.credit_score_outlined, color: AppColors.accent),
+              leading:
+                  Icon(Icons.credit_score_outlined, color: AppColors.accent),
               title: Text('Add Installment',
                   style: TextStyle(color: AppColors.textPrimary)),
               subtitle: Text('Track a purchase split into monthly payments',
-                  style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               onTap: () {
                 Navigator.pop(context);
                 _showAddInstallmentSheet();
@@ -209,7 +212,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
-      listenable: Listenable.merge([widget.presenter, widget.installmentPresenter]),
+      listenable:
+          Listenable.merge([widget.presenter, widget.installmentPresenter]),
       builder: (context, _) {
         return Scaffold(
           backgroundColor: AppColors.background,
@@ -316,7 +320,8 @@ class _StatsBar extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final InstallmentPresenter installmentPresenter;
 
-  const _StatsBar({required this.presenter, required this.installmentPresenter});
+  const _StatsBar(
+      {required this.presenter, required this.installmentPresenter});
 
   @override
   Widget build(BuildContext context) {
@@ -371,12 +376,9 @@ class _StatChip extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13)),
+                    color: color, fontWeight: FontWeight.w700, fontSize: 13)),
             Text(label,
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 10)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
           ],
         ),
       ),
@@ -570,8 +572,7 @@ class _SectionCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 14),
             child: Text(
               subtitle,
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ),
           iconColor: AppColors.textSecondary,
@@ -579,8 +580,8 @@ class _SectionCard extends StatelessWidget {
           children: children.isEmpty
               ? [
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 20),
                     child: Text(
                       emptyMessage,
                       style: TextStyle(
@@ -601,8 +602,7 @@ class _MarkBillPaidSheet extends StatefulWidget {
   final Bill bill;
   final BillsReceivablesPresenter presenter;
 
-  const _MarkBillPaidSheet(
-      {required this.bill, required this.presenter});
+  const _MarkBillPaidSheet({required this.bill, required this.presenter});
 
   @override
   State<_MarkBillPaidSheet> createState() => _MarkBillPaidSheetState();
@@ -647,8 +647,7 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
   }
 
   Future<void> _confirm() async {
-    final amount =
-        double.tryParse(_amountController.text.replaceAll(',', ''));
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
     if (_selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
@@ -788,8 +787,7 @@ class _MarkReceivedSheet extends StatefulWidget {
   final Receivable receivable;
   final BillsReceivablesPresenter presenter;
 
-  const _MarkReceivedSheet(
-      {required this.receivable, required this.presenter});
+  const _MarkReceivedSheet({required this.receivable, required this.presenter});
 
   @override
   State<_MarkReceivedSheet> createState() => _MarkReceivedSheetState();
@@ -829,8 +827,7 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   }
 
   Future<void> _confirm() async {
-    final amount =
-        double.tryParse(_amountController.text.replaceAll(',', ''));
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
     setState(() => _isSubmitting = true);
     try {
@@ -953,8 +950,7 @@ class _MarkExpensePaidSheet extends StatefulWidget {
   final BudgetedExpense expense;
   final BillsReceivablesPresenter presenter;
 
-  const _MarkExpensePaidSheet(
-      {required this.expense, required this.presenter});
+  const _MarkExpensePaidSheet({required this.expense, required this.presenter});
 
   @override
   State<_MarkExpensePaidSheet> createState() => _MarkExpensePaidSheetState();
@@ -998,8 +994,7 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
   }
 
   Future<void> _confirm() async {
-    final amount =
-        double.tryParse(_amountController.text.replaceAll(',', ''));
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
     if (_selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
@@ -1154,8 +1149,7 @@ class _AddBudgetedExpenseSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final BudgetedExpense? existing;
 
-  const _AddBudgetedExpenseSheet(
-      {required this.presenter, this.existing});
+  const _AddBudgetedExpenseSheet({required this.presenter, this.existing});
 
   @override
   State<_AddBudgetedExpenseSheet> createState() =>
@@ -1197,8 +1191,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
     try {
-      final amount =
-          double.parse(_amountController.text.replaceAll(',', ''));
+      final amount = double.parse(_amountController.text.replaceAll(',', ''));
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
       final expense = BudgetedExpense(
@@ -1350,9 +1343,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                               strokeWidth: 2, color: Colors.white),
                         )
                       : Text(
-                          widget.existing != null
-                              ? 'Save'
-                              : 'Add Expense',
+                          widget.existing != null ? 'Save' : 'Add Expense',
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 15),
                         ),
@@ -1430,8 +1421,8 @@ class _InstallmentsSection extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child:
-                Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -1462,8 +1453,7 @@ class _MarkInstallmentPaidSheet extends StatefulWidget {
       _MarkInstallmentPaidSheetState();
 }
 
-class _MarkInstallmentPaidSheetState
-    extends State<_MarkInstallmentPaidSheet> {
+class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
   late final TextEditingController _amountCtrl;
   DateTime _date = DateTime.now();
   bool _saving = false;
@@ -1527,13 +1517,12 @@ class _MarkInstallmentPaidSheetState
               ),
               Text(
                 widget.installment.name,
-                style:
-                    TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 20),
               Text('Amount',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 6),
               TextFormField(
                 controller: _amountCtrl,
@@ -1545,28 +1534,24 @@ class _MarkInstallmentPaidSheetState
                 ],
                 decoration: InputDecoration(
                   prefixText: '₱ ',
-                  prefixStyle:
-                      TextStyle(color: AppColors.textSecondary),
+                  prefixStyle: TextStyle(color: AppColors.textSecondary),
                   filled: true,
                   fillColor: AppColors.background,
-                  contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                        color:
-                            AppColors.textSecondary.withOpacity(0.2)),
+                        color: AppColors.textSecondary.withOpacity(0.2)),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide(
-                        color:
-                            AppColors.textSecondary.withOpacity(0.2)),
+                        color: AppColors.textSecondary.withOpacity(0.2)),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide:
-                        const BorderSide(color: AppColors.accent),
+                    borderSide: const BorderSide(color: AppColors.accent),
                   ),
                 ),
               ),
@@ -1620,8 +1605,7 @@ class _MarkInstallmentPaidSheetState
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.background),
+                              strokeWidth: 2, color: AppColors.background),
                         )
                       : const Text('Confirm Payment',
                           style: TextStyle(

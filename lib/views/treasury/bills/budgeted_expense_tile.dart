@@ -54,7 +54,8 @@ class BudgetedExpenseTile extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Delete Expense', style: TextStyle(color: AppColors.textPrimary)),
+        title: Text('Delete Expense',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Text(
           'Delete "${expense.name}"?',
           style: TextStyle(color: AppColors.textSecondary),
@@ -62,7 +63,8 @@ class BudgetedExpenseTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -88,7 +90,9 @@ class _TileHeader extends StatelessWidget {
           child: Text(
             expense.name,
             style: TextStyle(
-              color: expense.isPaid ? AppColors.textSecondary : AppColors.textPrimary,
+              color: expense.isPaid
+                  ? AppColors.textSecondary
+                  : AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 14,
               decoration: expense.isPaid ? TextDecoration.lineThrough : null,

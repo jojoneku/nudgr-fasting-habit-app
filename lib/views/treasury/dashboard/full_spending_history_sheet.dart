@@ -35,8 +35,8 @@ class _FullSpendingHistorySheetState extends State<FullSpendingHistorySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final data  = widget.presenter.lastNDaysSpending(_days);
-    final peak  = data.fold(0.0, (m, d) => d.amount > m ? d.amount : m);
+    final data = widget.presenter.lastNDaysSpending(_days);
+    final peak = data.fold(0.0, (m, d) => d.amount > m ? d.amount : m);
     final total = data.fold(0.0, (s, d) => s + d.amount);
     final nonZero = data.where((d) => d.amount > 0).toList();
     final avg = nonZero.isEmpty
@@ -52,7 +52,8 @@ class _FullSpendingHistorySheetState extends State<FullSpendingHistorySheet> {
         children: [
           _Handle(),
           _Header(total: total, avg: avg, peak: peak),
-          _RangeSelector(selected: _days, onChanged: (v) => setState(() => _days = v)),
+          _RangeSelector(
+              selected: _days, onChanged: (v) => setState(() => _days = v)),
           Expanded(
             child: SingleChildScrollView(
               controller: scrollController,
@@ -179,7 +180,7 @@ class _RangeSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const options = [7, 14, 30, 90];
-    const labels  = ['7D', '2W', '30D', '90D'];
+    const labels = ['7D', '2W', '30D', '90D'];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
@@ -190,7 +191,8 @@ class _RangeSelector extends StatelessWidget {
               onTap: () => onChanged(options[i]),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                 decoration: BoxDecoration(
                   color: selected == options[i]
                       ? AppColors.accent.withOpacity(0.15)
@@ -316,7 +318,7 @@ class _FullBarPainter extends CustomPainter {
       );
 
       if (barH > 0) {
-        final barTop  = _topPad + barAreaH - barH;
+        final barTop = _topPad + barAreaH - barH;
         final barRect = RRect.fromRectAndRadius(
           Rect.fromLTWH(x, barTop, barW, barH),
           const Radius.circular(3),
@@ -348,7 +350,9 @@ class _FullBarPainter extends CustomPainter {
           text: TextSpan(
             text: label,
             style: TextStyle(
-              color: isToday ? AppColors.accent : AppColors.textSecondary.withOpacity(0.5),
+              color: isToday
+                  ? AppColors.accent
+                  : AppColors.textSecondary.withOpacity(0.5),
               fontSize: totalBars <= 14 ? 9.0 : 8.0,
               fontWeight: isToday ? FontWeight.w800 : FontWeight.normal,
             ),
@@ -368,7 +372,9 @@ class _FullBarPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_FullBarPainter old) =>
-      old.progress != progress || old.peak != peak || old.days.length != days.length;
+      old.progress != progress ||
+      old.peak != peak ||
+      old.days.length != days.length;
 }
 
 class _DayRow extends StatelessWidget {
@@ -380,7 +386,7 @@ class _DayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPeak = peak > 0 && day.amount == peak;
-    final ratio  = peak > 0 ? day.amount / peak : 0.0;
+    final ratio = peak > 0 ? day.amount / peak : 0.0;
     final barColor = isPeak ? const Color(0xFFEF9A9A) : AppColors.accent;
 
     return Padding(
@@ -418,7 +424,8 @@ class _DayRow extends StatelessWidget {
               textAlign: TextAlign.right,
               style: GoogleFonts.jetBrainsMono(
                 textStyle: TextStyle(
-                  color: isPeak ? const Color(0xFFEF9A9A) : AppColors.textPrimary,
+                  color:
+                      isPeak ? const Color(0xFFEF9A9A) : AppColors.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),

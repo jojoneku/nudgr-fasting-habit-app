@@ -223,8 +223,12 @@ class HubScreen extends StatelessWidget {
     final budget = budgetPresenter;
     final history = historyPresenter;
     final installments = installmentPresenter;
-    if (dash == null || ledger == null || bills == null || budget == null ||
-        history == null || installments == null) return;
+    if (dash == null ||
+        ledger == null ||
+        bills == null ||
+        budget == null ||
+        history == null ||
+        installments == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(

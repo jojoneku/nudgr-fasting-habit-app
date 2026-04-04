@@ -104,12 +104,11 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                       style: TextStyle(
                           color: AppColors.textSecondary, fontSize: 14)),
                   dropdownColor: AppColors.surface,
-                  style:
-                      TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
                   decoration: _inputDec('Category'),
                   items: allCategories
-                      .map((c) => DropdownMenuItem(
-                          value: c.id, child: Text(c.name)))
+                      .map((c) =>
+                          DropdownMenuItem(value: c.id, child: Text(c.name)))
                       .toList(),
                   onChanged: (v) => setState(() => _selectedCategoryId = v),
                   validator: (v) => v == null ? 'Select a category' : null,
@@ -118,9 +117,9 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               ] else ...[
                 _CategoryDisplay(
                   category: allCategories.cast<FinanceCategory?>().firstWhere(
-                    (c) => c?.id == _selectedCategoryId,
-                    orElse: () => null,
-                  ),
+                        (c) => c?.id == _selectedCategoryId,
+                        orElse: () => null,
+                      ),
                 ),
                 const SizedBox(height: 12),
               ],
@@ -141,8 +140,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               ),
               const SizedBox(height: 16),
               Text('Budget Group',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 8),
               _GroupSelector(
                 value: _group,
@@ -150,8 +149,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               ),
               const SizedBox(height: 16),
               Text('Budget Type',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               const SizedBox(height: 8),
               _TypeSelector(
                 value: _budgetType,
@@ -190,12 +189,11 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   height: 44,
                   child: TextButton(
                     onPressed: () async {
-                      await widget.presenter
-                          .removeBudget(_selectedCategoryId!);
+                      await widget.presenter.removeBudget(_selectedCategoryId!);
                       if (context.mounted) Navigator.pop(context);
                     },
-                    style: TextButton.styleFrom(
-                        foregroundColor: AppColors.danger),
+                    style:
+                        TextButton.styleFrom(foregroundColor: AppColors.danger),
                     child: const Text('Remove Budget'),
                   ),
                 ),
@@ -208,16 +206,14 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     );
   }
 
-  InputDecoration _inputDec(String label, {String? prefix}) =>
-      InputDecoration(
+  InputDecoration _inputDec(String label, {String? prefix}) => InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: AppColors.textSecondary),
         prefixText: prefix,
         prefixStyle: TextStyle(color: AppColors.accent),
         filled: true,
         fillColor: AppColors.background,
-        border:
-            OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide:
@@ -243,14 +239,12 @@ class _CategoryDisplay extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-            color: AppColors.textSecondary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
       ),
       child: Row(
         children: [
           Text('Category',
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12)),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           const SizedBox(width: 12),
           Text(
             category?.name ?? '—',
@@ -269,8 +263,7 @@ class _GroupSelector extends StatelessWidget {
   final BudgetGroup value;
   final ValueChanged<BudgetGroup> onChanged;
 
-  const _GroupSelector(
-      {required this.value, required this.onChanged});
+  const _GroupSelector({required this.value, required this.onChanged});
 
   static const _labels = {
     BudgetGroup.nonNegotiables: 'Non-Negotiables',
@@ -309,8 +302,7 @@ class _TypeSelector extends StatelessWidget {
   final BudgetType value;
   final ValueChanged<BudgetType> onChanged;
 
-  const _TypeSelector(
-      {required this.value, required this.onChanged});
+  const _TypeSelector({required this.value, required this.onChanged});
 
   static const _labels = {
     BudgetType.monthly: 'Monthly',

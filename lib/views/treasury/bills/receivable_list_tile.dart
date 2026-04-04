@@ -28,7 +28,8 @@ class ReceivableListTile extends StatelessWidget {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: _TileTitle(receivable: receivable),
         subtitle: _TileSubtitle(receivable: receivable),
-        trailing: _TileTrailing(receivable: receivable, onMarkReceived: onMarkReceived),
+        trailing: _TileTrailing(
+            receivable: receivable, onMarkReceived: onMarkReceived),
       ),
     );
   }
@@ -38,7 +39,8 @@ class ReceivableListTile extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.surface,
-        title: Text('Delete Receivable', style: TextStyle(color: AppColors.textPrimary)),
+        title: Text('Delete Receivable',
+            style: TextStyle(color: AppColors.textPrimary)),
         content: Text(
           'Delete "${receivable.name}"?',
           style: TextStyle(color: AppColors.textSecondary),
@@ -46,7 +48,8 @@ class ReceivableListTile extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -71,10 +74,13 @@ class _TileTitle extends StatelessWidget {
           child: Text(
             receivable.name,
             style: TextStyle(
-              color: receivable.isReceived ? AppColors.textSecondary : AppColors.textPrimary,
+              color: receivable.isReceived
+                  ? AppColors.textSecondary
+                  : AppColors.textPrimary,
               fontWeight: FontWeight.w600,
               fontSize: 14,
-              decoration: receivable.isReceived ? TextDecoration.lineThrough : null,
+              decoration:
+                  receivable.isReceived ? TextDecoration.lineThrough : null,
             ),
           ),
         ),
@@ -101,7 +107,9 @@ class _TileSubtitle extends StatelessWidget {
             Text(
               formatPeso(receivable.amount),
               style: TextStyle(
-                color: receivable.isReceived ? AppColors.textSecondary : AppColors.textPrimary,
+                color: receivable.isReceived
+                    ? AppColors.textSecondary
+                    : AppColors.textPrimary,
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
               ),
@@ -117,7 +125,8 @@ class _TileSubtitle extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             'Received ${formatPeso(receivable.receivedAmount!)}${receivable.receivedDate != null ? '  ·  ${DateFormat('MMM d').format(receivable.receivedDate!)}' : ''}',
-            style: TextStyle(color: AppColors.success.withOpacity(0.8), fontSize: 12),
+            style: TextStyle(
+                color: AppColors.success.withOpacity(0.8), fontSize: 12),
           ),
         ],
       ],
@@ -169,7 +178,11 @@ class _ReceivableTypeBadge extends StatelessWidget {
       ),
       child: Text(
         _label,
-        style: TextStyle(color: _color, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 0.3),
+        style: TextStyle(
+            color: _color,
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.3),
       ),
     );
   }

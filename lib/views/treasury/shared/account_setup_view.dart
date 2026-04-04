@@ -65,7 +65,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   bool _isSubmitting = false;
 
   List<AccountCategory> get _availableCategories =>
-      widget.parentAccountId == null ? _topLevelCategories : _subAccountCategories;
+      widget.parentAccountId == null
+          ? _topLevelCategories
+          : _subAccountCategories;
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
@@ -105,7 +107,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   Future<void> _pickMaturityDate() async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _maturityDate ?? DateTime.now().add(const Duration(days: 180)),
+      initialDate:
+          _maturityDate ?? DateTime.now().add(const Duration(days: 180)),
       firstDate: DateTime.now(),
       lastDate: DateTime(2035),
       builder: (context, child) => Theme(
@@ -126,7 +129,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     try {
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-      final balance = double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0;
+      final balance =
+          double.tryParse(_balanceController.text.replaceAll(',', '')) ?? 0;
       final goalTarget = _isGoal && _goalTargetController.text.isNotEmpty
           ? double.tryParse(_goalTargetController.text.replaceAll(',', ''))
           : null;
@@ -138,10 +142,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         parentAccountId: widget.parentAccountId,
         balance: balance,
         colorHex: _selectedColor,
-        icon: _iconController.text.trim().isEmpty ? 'wallet' : _iconController.text.trim(),
+        icon: _iconController.text.trim().isEmpty
+            ? 'wallet'
+            : _iconController.text.trim(),
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
-        linkedAccountId: _category == AccountCategory.custodian ? _linkedAccountId : null,
+        linkedAccountId:
+            _category == AccountCategory.custodian ? _linkedAccountId : null,
       );
 
       if (widget.existing != null) {
@@ -164,7 +171,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Delete Account?',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+          style: TextStyle(
+              color: AppColors.textPrimary, fontWeight: FontWeight.bold),
         ),
         content: Text(
           'This will permanently remove "${widget.existing!.name}". This cannot be undone.',
@@ -173,11 +181,14 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700)),
+            child: Text('Delete',
+                style: TextStyle(
+                    color: AppColors.danger, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -199,7 +210,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             ),
             backgroundColor: AppColors.surface,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -214,7 +226,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     final isSubAccount = widget.parentAccountId != null;
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         child: Form(
@@ -259,10 +272,14 @@ class _AccountSetupViewState extends State<AccountSetupView> {
                 ),
               ],
               const SizedBox(height: 20),
-              _SubmitButton(isEdit: isEdit, isSubmitting: _isSubmitting, onPressed: _submit),
+              _SubmitButton(
+                  isEdit: isEdit,
+                  isSubmitting: _isSubmitting,
+                  onPressed: _submit),
               if (isEdit) ...[
                 const SizedBox(height: 8),
-                _DeleteButton(isSubmitting: _isSubmitting, onPressed: _confirmDelete),
+                _DeleteButton(
+                    isSubmitting: _isSubmitting, onPressed: _confirmDelete),
               ],
               const SizedBox(height: 8),
             ],
@@ -291,7 +308,10 @@ class _SheetTitle extends StatelessWidget {
     }
     return Text(
       title,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 18, fontWeight: FontWeight.bold),
+      style: TextStyle(
+          color: AppColors.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.bold),
     );
   }
 }
@@ -307,7 +327,8 @@ class _NameField extends StatelessWidget {
       controller: controller,
       style: TextStyle(color: AppColors.textPrimary),
       decoration: _inputDecoration('Account Name'),
-      validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter account name' : null,
+      validator: (v) =>
+          (v == null || v.trim().isEmpty) ? 'Enter account name' : null,
     );
   }
 }
@@ -377,7 +398,8 @@ class _BalanceField extends StatelessWidget {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
       style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Opening Balance').copyWith(prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
+      decoration: _inputDecoration('Opening Balance').copyWith(
+          prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
     );
   }
 }
@@ -394,7 +416,8 @@ class _GoalTargetField extends StatelessWidget {
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
       style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Goal Target').copyWith(prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
+      decoration: _inputDecoration('Goal Target').copyWith(
+          prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
     );
   }
 }
@@ -409,7 +432,10 @@ class _IconField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Icon name').copyWith(hintText: 'e.g. bank, wallet', hintStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.5))),
+      decoration: _inputDecoration('Icon name').copyWith(
+          hintText: 'e.g. bank, wallet',
+          hintStyle:
+              TextStyle(color: AppColors.textSecondary.withOpacity(0.5))),
     );
   }
 }
@@ -436,10 +462,12 @@ class _ColorPicker extends StatelessWidget {
 
   String _toHex(Color color) =>
       '#${color.red.toRadixString(16).padLeft(2, '0')}'
-      '${color.green.toRadixString(16).padLeft(2, '0')}'
-      '${color.blue.toRadixString(16).padLeft(2, '0')}'.toUpperCase();
+              '${color.green.toRadixString(16).padLeft(2, '0')}'
+              '${color.blue.toRadixString(16).padLeft(2, '0')}'
+          .toUpperCase();
 
-  bool _isPreset(String hex) => options.contains(hex.toUpperCase()) ||
+  bool _isPreset(String hex) =>
+      options.contains(hex.toUpperCase()) ||
       options.contains(hex.toLowerCase()) ||
       options.any((o) => o.toLowerCase() == hex.toLowerCase());
 
@@ -451,7 +479,8 @@ class _ColorPicker extends StatelessWidget {
         backgroundColor: AppColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Custom Color',
-            style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+            style: TextStyle(
+                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: HueRingPicker(
             pickerColor: pickerColor,
@@ -463,7 +492,8 @@ class _ColorPicker extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
           ),
           TextButton(
             onPressed: () {
@@ -484,7 +514,8 @@ class _ColorPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Color', style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        Text('Color',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -504,9 +535,14 @@ class _ColorPicker extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: color,
                       shape: BoxShape.circle,
-                      border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
+                      border: isSelected
+                          ? Border.all(color: Colors.white, width: 2.5)
+                          : null,
                       boxShadow: isSelected
-                          ? [BoxShadow(color: color.withOpacity(0.5), blurRadius: 6)]
+                          ? [
+                              BoxShadow(
+                                  color: color.withOpacity(0.5), blurRadius: 6)
+                            ]
                           : null,
                     ),
                     child: isSelected
@@ -527,18 +563,25 @@ class _ColorPicker extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: isCustom ? Colors.white : AppColors.textSecondary.withOpacity(0.4),
+                      color: isCustom
+                          ? Colors.white
+                          : AppColors.textSecondary.withOpacity(0.4),
                       width: isCustom ? 2.5 : 1.5,
                     ),
                     color: isCustom ? _parse(selected) : Colors.transparent,
                     boxShadow: isCustom
-                        ? [BoxShadow(color: _parse(selected).withOpacity(0.5), blurRadius: 6)]
+                        ? [
+                            BoxShadow(
+                                color: _parse(selected).withOpacity(0.5),
+                                blurRadius: 6)
+                          ]
                         : null,
                   ),
                   child: isCustom
                       ? const Icon(Icons.check, color: Colors.white, size: 18)
                       : Icon(Icons.colorize_rounded,
-                          color: AppColors.textSecondary.withOpacity(0.6), size: 18),
+                          color: AppColors.textSecondary.withOpacity(0.6),
+                          size: 18),
                 ),
               ),
             ),
@@ -570,14 +613,17 @@ class _MaturityDateRow extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.event_outlined, color: AppColors.textSecondary, size: 18),
+            Icon(Icons.event_outlined,
+                color: AppColors.textSecondary, size: 18),
             const SizedBox(width: 12),
             Text(
               date != null
                   ? 'Matures: ${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}'
                   : 'Maturity Date',
               style: TextStyle(
-                color: date != null ? AppColors.textPrimary : AppColors.textSecondary,
+                color: date != null
+                    ? AppColors.textPrimary
+                    : AppColors.textSecondary,
                 fontSize: 14,
               ),
             ),
@@ -593,7 +639,10 @@ class _SubmitButton extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onPressed;
 
-  const _SubmitButton({required this.isEdit, required this.isSubmitting, required this.onPressed});
+  const _SubmitButton(
+      {required this.isEdit,
+      required this.isSubmitting,
+      required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -605,17 +654,20 @@ class _SubmitButton extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accent,
           foregroundColor: AppColors.background,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
         child: isSubmitting
             ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.background),
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.background),
               )
             : Text(
                 isEdit ? 'Save' : 'Add Account',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
       ),
     );
@@ -641,11 +693,16 @@ class _StoredInDropdown extends StatelessWidget {
       style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
       decoration: _inputDecoration('Stored in account (optional)').copyWith(
         helperText: 'These funds physically live in this account',
-        helperStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.6), fontSize: 11),
+        helperStyle: TextStyle(
+            color: AppColors.textSecondary.withOpacity(0.6), fontSize: 11),
       ),
       items: [
-        DropdownMenuItem<String>(value: null, child: Text('— Not linked —', style: TextStyle(color: AppColors.textSecondary))),
-        ...accounts.map((a) => DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
+        DropdownMenuItem<String>(
+            value: null,
+            child: Text('— Not linked —',
+                style: TextStyle(color: AppColors.textSecondary))),
+        ...accounts.map(
+            (a) => DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
       ],
       onChanged: onChanged,
     );
@@ -665,14 +722,17 @@ class _DeleteButton extends StatelessWidget {
       height: 48,
       child: OutlinedButton.icon(
         onPressed: isSubmitting ? null : onPressed,
-        icon: Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.danger),
+        icon: Icon(Icons.delete_outline_rounded,
+            size: 18, color: AppColors.danger),
         label: Text(
           'Delete Account',
-          style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
+          style:
+              TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
         ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: AppColors.danger.withOpacity(0.5)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );

@@ -40,78 +40,79 @@ class GoalProgressCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration:
+                      BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    account.name,
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                Text(
+                  account.goalTarget != null
+                      ? '${((_progress) * 100).round()}%'
+                      : formatPeso(account.balance),
+                  style: GoogleFonts.jetBrainsMono(
+                    textStyle: TextStyle(
+                      color: color,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (account.goalTarget != null) ...[
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _progress,
+                  backgroundColor: color.withOpacity(0.15),
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                  minHeight: 6,
+                ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  account.name,
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
+              const SizedBox(height: 4),
+              Text(
+                _subtitleText,
+                style: GoogleFonts.jetBrainsMono(
+                  textStyle: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 11,
                   ),
                 ),
               ),
+            ] else ...[
+              const SizedBox(height: 2),
               Text(
-                account.goalTarget != null
-                    ? '${((_progress) * 100).round()}%'
-                    : formatPeso(account.balance),
+                formatPeso(account.balance),
                 style: GoogleFonts.jetBrainsMono(
-                  textStyle: TextStyle(
-                    color: color,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
+                  textStyle: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
                   ),
                 ),
               ),
             ],
-          ),
-          if (account.goalTarget != null) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: LinearProgressIndicator(
-                value: _progress,
-                backgroundColor: color.withOpacity(0.15),
-                valueColor: AlwaysStoppedAnimation<Color>(color),
-                minHeight: 6,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _subtitleText,
-              style: GoogleFonts.jetBrainsMono(
-                textStyle: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                ),
-              ),
-            ),
-          ] else ...[
-            const SizedBox(height: 2),
-            Text(
-              formatPeso(account.balance),
-              style: GoogleFonts.jetBrainsMono(
-                textStyle: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 12,
-                ),
-              ),
-            ),
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 }

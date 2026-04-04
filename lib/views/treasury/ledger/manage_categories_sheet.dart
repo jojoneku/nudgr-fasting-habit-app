@@ -22,9 +22,8 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   bool _isSubmitting = false;
 
   String _nextColor() {
-    final index = widget.presenter.categories
-        .where((c) => c.type == _type)
-        .length;
+    final index =
+        widget.presenter.categories.where((c) => c.type == _type).length;
     return categoryColorAt(index, isExpense: _type == CategoryType.expense);
   }
 
@@ -78,8 +77,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _SheetHeader(
-                          onClose: () => Navigator.pop(context)),
+                      _SheetHeader(onClose: () => Navigator.pop(context)),
                       const SizedBox(height: 20),
                       _TypeToggle(
                         value: _type,
@@ -154,8 +152,8 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
         ),
         content: Text(
           '"${category.name}" will be removed. Existing transactions will keep the ID but won\'t display a label.',
-          style:
-              TextStyle(color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+          style: TextStyle(
+              color: AppColors.textSecondary, fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -168,8 +166,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
               Navigator.pop(ctx);
               widget.presenter.deleteCategory(category.id);
             },
-            child:
-                Text('Delete', style: TextStyle(color: AppColors.danger)),
+            child: Text('Delete', style: TextStyle(color: AppColors.danger)),
           ),
         ],
       ),
@@ -349,8 +346,7 @@ class _TypeOption extends StatelessWidget {
                   style: TextStyle(
                     color: selected ? color : AppColors.textSecondary,
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -396,14 +392,14 @@ class _AddCategoryForm extends StatelessWidget {
               textCapitalization: TextCapitalization.words,
               decoration: InputDecoration(
                 labelText: 'Category name',
-                labelStyle: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13),
+                labelStyle:
+                    TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 filled: true,
                 fillColor: AppColors.background,
-                contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 14),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10)),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                border:
+                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide(
@@ -449,8 +445,7 @@ class _AddCategoryForm extends StatelessWidget {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.background),
+                            strokeWidth: 2, color: AppColors.background),
                       )
                     : const Icon(Icons.add_rounded, size: 22),
               ),
@@ -548,8 +543,8 @@ class _CategoryTile extends StatelessWidget {
             height: 52,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                  color: AppColors.textSecondary.withOpacity(0.1)),
+              border:
+                  Border.all(color: AppColors.textSecondary.withOpacity(0.1)),
             ),
             child: Row(
               children: [

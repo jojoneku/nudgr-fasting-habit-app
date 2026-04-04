@@ -56,7 +56,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
           decoration: BoxDecoration(
             color: AppColors.surface,
             border: Border(
-              top: BorderSide(color: AppColors.accent.withOpacity(0.18), width: 1),
+              top: BorderSide(
+                  color: AppColors.accent.withOpacity(0.18), width: 1),
             ),
           ),
           child: const TabBar(
@@ -74,7 +75,6 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
             ],
           ),
         ),
-
         body: TabBarView(
           children: [
             TreasuryDashboardView(presenter: widget.dashPresenter),

@@ -78,13 +78,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       totalLiquidCash + pendingReceivables - monthUnpaidBills;
 
   double get monthTotalInflow => _transactions
-      .where((t) =>
-          t.month == _currentMonth && t.type == TransactionType.inflow)
+      .where(
+          (t) => t.month == _currentMonth && t.type == TransactionType.inflow)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get monthTotalOutflow => _transactions
-      .where((t) =>
-          t.month == _currentMonth && t.type == TransactionType.outflow)
+      .where(
+          (t) => t.month == _currentMonth && t.type == TransactionType.outflow)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get netWorth {
@@ -111,10 +111,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   // --- Bills ---
 
-  List<Bill> get upcomingBills => _bills
-      .where((b) => b.month == _currentMonth && !b.isPaid)
-      .toList()
-    ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
+  List<Bill> get upcomingBills =>
+      _bills.where((b) => b.month == _currentMonth && !b.isPaid).toList()
+        ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
 
   bool get hasBills => upcomingBills.isNotEmpty;
 
@@ -151,7 +150,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final result = <BudgetGroup, double>{};
     for (final e in _budgetedExpenses.where((e) => e.month == _currentMonth)) {
       final budget = _budgets
-          .where((b) => b.month == _currentMonth && b.categoryId == e.categoryId)
+          .where(
+              (b) => b.month == _currentMonth && b.categoryId == e.categoryId)
           .firstOrNull;
       if (budget != null) {
         result[budget.group] = (result[budget.group] ?? 0.0) + e.spentAmount;
