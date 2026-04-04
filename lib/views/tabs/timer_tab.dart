@@ -362,7 +362,7 @@ class _TimerTabState extends State<TimerTab> {
 
     if (shouldStop == true) {
       final (xp, hpChange) = await presenter.stopFast();
-      if (context.mounted) {
+      if (mounted) {
         if (hpChange < 0) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
