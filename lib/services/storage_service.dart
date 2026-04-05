@@ -114,7 +114,9 @@ class StorageService {
     if (questsJson == null) return [];
     try {
       final List<dynamic> list = jsonDecode(questsJson);
-      return list.map((e) => Quest.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => Quest.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('StorageService: Error loading quests: $e');
       return [];
@@ -192,7 +194,9 @@ class StorageService {
     if (raw == null) return [];
     try {
       final list = jsonDecode(raw) as List;
-      return list.map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>)).toList();
+      return list
+          .map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('StorageService: Error loading routines: $e');
       return [];

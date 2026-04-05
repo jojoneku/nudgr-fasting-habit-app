@@ -69,7 +69,8 @@ class _BadgeTile extends StatelessWidget {
                 value: progress,
                 strokeWidth: 3,
                 backgroundColor: AppColors.neutral.withValues(alpha: 0.15),
-                valueColor: AlwaysStoppedAnimation(color.withValues(alpha: 0.7)),
+                valueColor:
+                    AlwaysStoppedAnimation(color.withValues(alpha: 0.7)),
               ),
               Container(
                 width: 36,
@@ -80,7 +81,9 @@ class _BadgeTile extends StatelessWidget {
                       : AppColors.surface,
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isUnlocked ? color : AppColors.neutral.withValues(alpha: 0.3),
+                    color: isUnlocked
+                        ? color
+                        : AppColors.neutral.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
@@ -89,7 +92,9 @@ class _BadgeTile extends StatelessWidget {
                     _emoji(),
                     style: TextStyle(
                       fontSize: 16,
-                      color: isUnlocked ? color : AppColors.neutral.withValues(alpha: 0.4),
+                      color: isUnlocked
+                          ? color
+                          : AppColors.neutral.withValues(alpha: 0.4),
                     ),
                   ),
                 ),

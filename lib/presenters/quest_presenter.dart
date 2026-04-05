@@ -68,7 +68,9 @@ class QuestPresenter extends ChangeNotifier {
       if (!q.isEnabled || !q.days[now.weekday - 1]) return false;
       final questTime =
           DateTime(now.year, now.month, now.day, q.hour, q.minute);
-      return !q.isCompletedToday && !q.isPartialToday && questTime.isBefore(now);
+      return !q.isCompletedToday &&
+          !q.isPartialToday &&
+          questTime.isBefore(now);
     }).toList()
       ..sort(_byTime);
   }
@@ -224,8 +226,7 @@ class QuestPresenter extends ChangeNotifier {
   /// Complete yesterday's quest within the 30-min grace window after midnight.
   Future<(int, bool)> graceCompleteQuest(int questId) async {
     if (!canGraceComplete(questId)) return (0, false);
-    final yesterday =
-        DateTime.now().subtract(const Duration(days: 1));
+    final yesterday = DateTime.now().subtract(const Duration(days: 1));
     return completeQuest(questId, date: yesterday);
   }
 
@@ -309,7 +310,8 @@ class QuestPresenter extends ChangeNotifier {
     _routines.removeWhere((r) => r.id == routineId);
     // Unlink quests from this routine
     _quests = _quests
-        .map((q) => q.routineId == routineId ? q.copyWith(clearRoutineId: true) : q)
+        .map((q) =>
+            q.routineId == routineId ? q.copyWith(clearRoutineId: true) : q)
         .toList();
     notifyListeners();
     await _storage.saveRoutines(_routines);
@@ -352,8 +354,8 @@ class QuestPresenter extends ChangeNotifier {
         final quest = updatedQuests[i];
         if (!quest.isEnabled || !quest.days[dayIdx]) continue;
 
-        final wasCompleted = quest.isCompletedOn(checkDate) ||
-            quest.isPartialOn(checkDate);
+        final wasCompleted =
+            quest.isCompletedOn(checkDate) || quest.isPartialOn(checkDate);
 
         if (!wasCompleted) {
           if (quest.streakFreezes > 0) {
@@ -403,8 +405,7 @@ class QuestPresenter extends ChangeNotifier {
     }
   }
 
-  static String _dateKey(DateTime date) =>
-      date.toIso8601String().split('T')[0];
+  static String _dateKey(DateTime date) => date.toIso8601String().split('T')[0];
 
   static int _byTime(Quest a, Quest b) {
     if (a.hour != b.hour) return a.hour.compareTo(b.hour);
@@ -444,8 +445,8 @@ class QuestPresenter extends ChangeNotifier {
   Future<void> _checkMilestones(Quest quest) async {
     for (final milestone in _streakMilestones) {
       if (quest.streakCount < milestone) continue;
-      final alreadyUnlocked = _achievements.any((a) =>
-          a.questId == quest.id && a.streakMilestone == milestone);
+      final alreadyUnlocked = _achievements
+          .any((a) => a.questId == quest.id && a.streakMilestone == milestone);
       if (alreadyUnlocked) continue;
 
       final achievement = QuestAchievement(

@@ -31,11 +31,9 @@ class HabitHeatmap extends StatelessWidget {
                     children: week
                         .map((day) => _DayCell(
                               date: day,
-                              state: day != null
-                                  ? dateStates[_key(day)]
-                                  : null,
-                              isScheduled: day != null &&
-                                  scheduledDays[day.weekday - 1],
+                              state: day != null ? dateStates[_key(day)] : null,
+                              isScheduled:
+                                  day != null && scheduledDays[day.weekday - 1],
                             ))
                         .toList(),
                   ))
@@ -155,8 +153,8 @@ class _LegendDot extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label,
-            style: const TextStyle(
-                fontSize: 10, color: AppColors.textSecondary)),
+            style:
+                const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
       ],
     );
   }

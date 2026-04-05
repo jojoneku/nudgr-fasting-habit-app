@@ -83,8 +83,7 @@ class Quest {
       minute: minute ?? this.minute,
       isEnabled: isEnabled ?? this.isEnabled,
       days: days ?? List.from(this.days),
-      completedDates:
-          completedDates ?? List.from(this.completedDates),
+      completedDates: completedDates ?? List.from(this.completedDates),
       partialDates: partialDates ?? List.from(this.partialDates),
       lastXpAwarded:
           clearLastXpAwarded ? null : (lastXpAwarded ?? this.lastXpAwarded),
@@ -93,13 +92,10 @@ class Quest {
       reminderMinutes: clearReminderMinutes
           ? null
           : (reminderMinutes ?? this.reminderMinutes),
-      linkedStat:
-          clearLinkedStat ? null : (linkedStat ?? this.linkedStat),
-      anchorNote:
-          clearAnchorNote ? null : (anchorNote ?? this.anchorNote),
-      minimumVersion: clearMinimumVersion
-          ? null
-          : (minimumVersion ?? this.minimumVersion),
+      linkedStat: clearLinkedStat ? null : (linkedStat ?? this.linkedStat),
+      anchorNote: clearAnchorNote ? null : (anchorNote ?? this.anchorNote),
+      minimumVersion:
+          clearMinimumVersion ? null : (minimumVersion ?? this.minimumVersion),
       streakCount: streakCount ?? this.streakCount,
       streakFreezes: streakFreezes ?? this.streakFreezes,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
@@ -130,8 +126,7 @@ class Quest {
   bool get isCompletedToday => isCompletedOn(DateTime.now());
   bool get isPartialToday => isPartialOn(DateTime.now());
 
-  static String _dateKey(DateTime date) =>
-      date.toIso8601String().split('T')[0];
+  static String _dateKey(DateTime date) => date.toIso8601String().split('T')[0];
 
   // ─── Serialization ─────────────────────────────────────────────────────────
 

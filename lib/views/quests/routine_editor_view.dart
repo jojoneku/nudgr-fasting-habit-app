@@ -24,7 +24,12 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
   String _selectedIcon = 'lightning-bolt';
 
   static const _colorOptions = [
-    '#29B6F6', '#66BB6A', '#CE93D8', '#FFCA28', '#EF5350', '#26C6DA',
+    '#29B6F6',
+    '#66BB6A',
+    '#CE93D8',
+    '#FFCA28',
+    '#EF5350',
+    '#26C6DA',
   ];
 
   @override
@@ -71,8 +76,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
           const SizedBox(height: 8),
           TextField(
             controller: _nameCtrl,
-            decoration:
-                const InputDecoration(hintText: 'e.g., Morning Ritual'),
+            decoration: const InputDecoration(hintText: 'e.g., Morning Ritual'),
             autofocus: !isEditing,
           ),
           const SizedBox(height: 20),
@@ -81,9 +85,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
           const Text('Suggested Start Time',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           const SizedBox(height: 8),
-          _TimeTile(
-              time: _time,
-              onChanged: (t) => setState(() => _time = t)),
+          _TimeTile(time: _time, onChanged: (t) => setState(() => _time = t)),
           const SizedBox(height: 20),
 
           // Color
@@ -128,8 +130,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
             const SizedBox(height: 8),
             const Text(
               '💡 Quests execute in the order selected above.',
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
           ],
           const SizedBox(height: 40),
@@ -191,8 +192,7 @@ class _TimeTile extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(time.format(context),
-                style: const TextStyle(fontSize: 16)),
+            Text(time.format(context), style: const TextStyle(fontSize: 16)),
             const Icon(Icons.access_time, size: 20),
           ],
         ),
@@ -220,18 +220,15 @@ class _TimeTile extends StatelessWidget {
             child: CupertinoDatePicker(
               backgroundColor: AppColors.surface,
               mode: CupertinoDatePickerMode.time,
-              initialDateTime:
-                  DateTime(2024, 1, 1, time.hour, time.minute),
+              initialDateTime: DateTime(2024, 1, 1, time.hour, time.minute),
               onDateTimeChanged: (dt) => temp = TimeOfDay.fromDateTime(dt),
-              use24hFormat:
-                  MediaQuery.of(context).alwaysUse24HourFormat,
+              use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
             ),
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () {
                 onChanged(temp);
@@ -277,7 +274,10 @@ class _ColorPicker extends StatelessWidget {
                 width: 2.5,
               ),
               boxShadow: isSelected
-                  ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)]
+                  ? [
+                      BoxShadow(
+                          color: color.withValues(alpha: 0.5), blurRadius: 8)
+                    ]
                   : null,
             ),
           ),

@@ -75,9 +75,8 @@ class _QuestsTabState extends State<QuestsTab> {
 
     for (final q in [...active, ...overdue]) {
       if (q.routineId != null) {
-        final routine = presenter.routines
-            .where((r) => r.id == q.routineId)
-            .firstOrNull;
+        final routine =
+            presenter.routines.where((r) => r.id == q.routineId).firstOrNull;
         if (routine != null) {
           routineQuests.putIfAbsent(routine, () => []).add(q);
           continue;
@@ -205,16 +204,14 @@ class _QuestsTabState extends State<QuestsTab> {
     );
   }
 
-  void _addRoutine(BuildContext context) =>
-      _showRoutineEditor(context);
+  void _addRoutine(BuildContext context) => _showRoutineEditor(context);
   void _editRoutine(BuildContext context, HabitRoutine routine) =>
       _showRoutineEditor(context, routine: routine);
 
   Future<void> _showRoutineEditor(BuildContext context,
       {HabitRoutine? routine}) async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          RoutineEditorView(presenter: presenter, routine: routine),
+      builder: (_) => RoutineEditorView(presenter: presenter, routine: routine),
     ));
   }
 

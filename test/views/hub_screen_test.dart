@@ -82,7 +82,8 @@ void main() {
       final mockActivity = MockActivityPresenter();
       when(mockActivity.hubSubtitle).thenReturn('6,240 / 8,000 steps');
 
-      await tester.pumpWidget(_wrap(_buildHub(activityPresenter: mockActivity)));
+      await tester
+          .pumpWidget(_wrap(_buildHub(activityPresenter: mockActivity)));
       await tester.pump();
 
       expect(find.text('6,240 / 8,000 steps'), findsOneWidget);

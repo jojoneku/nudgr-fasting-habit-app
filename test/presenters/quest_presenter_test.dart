@@ -53,8 +53,7 @@ Future<QuestPresenter> _buildPresenter({
   List<Quest>? quests,
   DateTime? penaltyCheckDate,
 }) async {
-  when(storage.loadQuests())
-      .thenAnswer((_) async => quests ?? <Quest>[]);
+  when(storage.loadQuests()).thenAnswer((_) async => quests ?? <Quest>[]);
   when(storage.loadRoutines()).thenAnswer((_) async => <HabitRoutine>[]);
   when(storage.loadAchievements())
       .thenAnswer((_) async => <QuestAchievement>[]);
@@ -65,10 +64,8 @@ Future<QuestPresenter> _buildPresenter({
   when(storage.saveAchievements(any)).thenAnswer((_) async {});
   when(storage.saveQuestPenaltyCheckDate(any)).thenAnswer((_) async {});
   when(notifications.init()).thenAnswer((_) async {});
-  when(notifications.scheduleQuestNotifications(any))
-      .thenAnswer((_) async {});
-  when(notifications.cancelQuestNotifications(any))
-      .thenAnswer((_) async {});
+  when(notifications.scheduleQuestNotifications(any)).thenAnswer((_) async {});
+  when(notifications.cancelQuestNotifications(any)).thenAnswer((_) async {});
   when(notifications.scheduleStreakAtRiskNotification(any, any, any))
       .thenAnswer((_) async {});
   when(notifications.showSimpleNotification(
@@ -109,7 +106,9 @@ void main() {
     test('Given empty list, When addQuest called, Then quest appears in list',
         () async {
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       final q = _quest(id: 42, title: 'Meditate');
       await presenter.addQuest(q);
@@ -118,20 +117,26 @@ void main() {
       expect(presenter.quests.first.title, 'Meditate');
     });
 
-    test('Given enabled quest, When addQuest called, Then notifications scheduled',
+    test(
+        'Given enabled quest, When addQuest called, Then notifications scheduled',
         () async {
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       await presenter.addQuest(_quest(id: 1));
 
       verify(mockNotifications.scheduleQuestNotifications(any)).called(1);
     });
 
-    test('Given disabled quest, When addQuest called, Then no notification scheduled',
+    test(
+        'Given disabled quest, When addQuest called, Then no notification scheduled',
         () async {
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       await presenter.addQuest(_quest(id: 1, isEnabled: false));
 
@@ -140,7 +145,8 @@ void main() {
   });
 
   group('deleteQuest', () {
-    test('Given 1 quest, When deleteQuest called, Then list is empty', () async {
+    test('Given 1 quest, When deleteQuest called, Then list is empty',
+        () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
           stats: mockStats,
@@ -227,14 +233,17 @@ void main() {
       verify(mockStats.addXp(any)).called(1);
     });
 
-    test('Given already completed today, When tapped again, Then completion is toggled off',
+    test(
+        'Given already completed today, When tapped again, Then completion is toggled off',
         () async {
       final today = DateTime.now().toIso8601String().split('T')[0];
       final presenter = await _buildPresenter(
           storage: mockStorage,
           stats: mockStats,
           notifications: mockNotifications,
-          quests: [_quest(id: 1, completedDates: [today])]);
+          quests: [
+            _quest(id: 1, completedDates: [today])
+          ]);
 
       final (xp, _) = await presenter.completeQuest(1);
 
@@ -255,13 +264,16 @@ void main() {
       expect(presenter.quests.first.streakCount, 6);
     });
 
-    test('Given partial completion, When completed, Then streak does NOT increment',
+    test(
+        'Given partial completion, When completed, Then streak does NOT increment',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
           stats: mockStats,
           notifications: mockNotifications,
-          quests: [_quest(id: 1, streakCount: 5, minimumVersion: 'At least 5 min')]);
+          quests: [
+            _quest(id: 1, streakCount: 5, minimumVersion: 'At least 5 min')
+          ]);
 
       await presenter.completeQuest(1, type: CompletionType.partial);
 
@@ -288,7 +300,8 @@ void main() {
       expect(capturedXp, 10);
     });
 
-    test('Given one-time quest, When completed, Then quest is removed', () async {
+    test('Given one-time quest, When completed, Then quest is removed',
+        () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
           stats: mockStats,
@@ -300,7 +313,8 @@ void main() {
       expect(presenter.quests, isEmpty);
     });
 
-    test('Given quest at 7-day streak milestone, When completed, Then achievement unlocked',
+    test(
+        'Given quest at 7-day streak milestone, When completed, Then achievement unlocked',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
@@ -314,7 +328,8 @@ void main() {
       expect(presenter.unseenAchievements.first.streakMilestone, 7);
     });
 
-    test('Given quest at 7-day milestone, When completed, Then freeze shield awarded',
+    test(
+        'Given quest at 7-day milestone, When completed, Then freeze shield awarded',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
@@ -327,7 +342,8 @@ void main() {
       expect(presenter.quests.first.streakFreezes, 1);
     });
 
-    test('Given stat-linked quest at 21 completions, When completed, Then stat auto-incremented',
+    test(
+        'Given stat-linked quest at 21 completions, When completed, Then stat auto-incremented',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
@@ -340,7 +356,8 @@ void main() {
       verify(mockStats.awardStat('str')).called(1);
     });
 
-    test('Given stat-linked quest NOT at threshold, When completed, Then stat NOT auto-incremented',
+    test(
+        'Given stat-linked quest NOT at threshold, When completed, Then stat NOT auto-incremented',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
@@ -357,7 +374,8 @@ void main() {
   // ── streak freeze ────────────────────────────────────────────────────────────
 
   group('spendStreakFreeze', () {
-    test('Given quest with 2 freezes, When freeze spent, Then freezes decrements to 1',
+    test(
+        'Given quest with 2 freezes, When freeze spent, Then freezes decrements to 1',
         () async {
       final presenter = await _buildPresenter(
           storage: mockStorage,
@@ -390,7 +408,9 @@ void main() {
     test('Given first run, When penalty checked, Then sets date and no damage',
         () async {
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       final damage = await presenter.checkMissedQuestsAndApplyPenalty();
 
@@ -398,7 +418,8 @@ void main() {
       verifyNever(mockStats.modifyHp(any));
     });
 
-    test('Given quest missed yesterday, When penalty checked, Then HP damage applied',
+    test(
+        'Given quest missed yesterday, When penalty checked, Then HP damage applied',
         () async {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
@@ -414,7 +435,8 @@ void main() {
       verify(mockStats.modifyHp(any)).called(1);
     });
 
-    test('Given missed quest with streak freeze, When penalty checked, Then freeze spent and no HP damage',
+    test(
+        'Given missed quest with streak freeze, When penalty checked, Then freeze spent and no HP damage',
         () async {
       final yesterday = DateTime.now().subtract(const Duration(days: 1));
 
@@ -431,14 +453,17 @@ void main() {
       expect(presenter.quests.first.streakFreezes, 0);
     });
 
-    test('Given already checked today, When penalty checked again, Then returns 0',
+    test(
+        'Given already checked today, When penalty checked again, Then returns 0',
         () async {
       final today = DateTime.now();
       when(mockStorage.loadQuestPenaltyCheckDate())
           .thenAnswer((_) async => today);
 
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       final damage = await presenter.checkMissedQuestsAndApplyPenalty();
 
@@ -471,7 +496,9 @@ void main() {
           storage: mockStorage,
           stats: mockStats,
           notifications: mockNotifications,
-          quests: [_quest(id: 1, completedDates: [yesterdayKey])]);
+          quests: [
+            _quest(id: 1, completedDates: [yesterdayKey])
+          ]);
 
       expect(presenter.canGraceComplete(1), isFalse);
     });
@@ -585,7 +612,9 @@ void main() {
   group('routines', () {
     test('addRoutine appends to routines list', () async {
       final presenter = await _buildPresenter(
-          storage: mockStorage, stats: mockStats, notifications: mockNotifications);
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications);
 
       await presenter.addRoutine(HabitRoutine(
         id: 'r1',
@@ -618,7 +647,8 @@ void main() {
           ]);
       when(mockStorage.loadAchievements())
           .thenAnswer((_) async => <QuestAchievement>[]);
-      when(mockStorage.loadQuestPenaltyCheckDate()).thenAnswer((_) async => null);
+      when(mockStorage.loadQuestPenaltyCheckDate())
+          .thenAnswer((_) async => null);
       when(mockStorage.saveQuests(any)).thenAnswer((_) async {});
       when(mockStorage.saveRoutines(any)).thenAnswer((_) async {});
       when(mockStorage.saveAchievements(any)).thenAnswer((_) async {});
@@ -654,7 +684,8 @@ void main() {
     test('Given unseen achievement, When marked seen, Then seen is true',
         () async {
       when(mockStorage.loadQuests()).thenAnswer((_) async => <Quest>[]);
-      when(mockStorage.loadRoutines()).thenAnswer((_) async => <HabitRoutine>[]);
+      when(mockStorage.loadRoutines())
+          .thenAnswer((_) async => <HabitRoutine>[]);
       when(mockStorage.loadAchievements()).thenAnswer((_) async => [
             QuestAchievement(
               id: '1_7',
@@ -664,7 +695,8 @@ void main() {
               seen: false,
             )
           ]);
-      when(mockStorage.loadQuestPenaltyCheckDate()).thenAnswer((_) async => null);
+      when(mockStorage.loadQuestPenaltyCheckDate())
+          .thenAnswer((_) async => null);
       when(mockStorage.saveQuests(any)).thenAnswer((_) async {});
       when(mockStorage.saveRoutines(any)).thenAnswer((_) async {});
       when(mockStorage.saveAchievements(any)).thenAnswer((_) async {});

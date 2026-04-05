@@ -59,7 +59,10 @@ class QuestMissionTile extends StatelessWidget {
 
     if (isEditing) {
       return _EditTile(
-          quest: quest, onEdit: onEdit, onDelete: onDelete, statColor: statColor);
+          quest: quest,
+          onEdit: onEdit,
+          onDelete: onDelete,
+          statColor: statColor);
     }
 
     return GestureDetector(
@@ -88,8 +91,10 @@ class QuestMissionTile extends StatelessWidget {
             isCompleted: isCompleted,
             isMissed: isMissed,
           ),
-          title: _TitleRow(quest: quest, isCompleted: isCompleted, isMissed: isMissed),
-          subtitle: _SubtitleRow(quest: quest, isMissed: isMissed, isCompleted: isCompleted),
+          title: _TitleRow(
+              quest: quest, isCompleted: isCompleted, isMissed: isMissed),
+          subtitle: _SubtitleRow(
+              quest: quest, isMissed: isMissed, isCompleted: isCompleted),
           trailing: _CompletionButton(
             quest: quest,
             presenter: presenter,
@@ -351,8 +356,7 @@ class _CompletionButton extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             ListTile(
-              leading:
-                  const Icon(Icons.check_circle, color: AppColors.success),
+              leading: const Icon(Icons.check_circle, color: AppColors.success),
               title: const Text('Full Completion'),
               subtitle: Text('+${quest.xpReward} XP'),
               onTap: () {
@@ -363,10 +367,8 @@ class _CompletionButton extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.adjust, color: AppColors.secondary),
               title: const Text('Minimum Version'),
-              subtitle: Text(
-                  quest.minimumVersion ?? '',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
+              subtitle: Text(quest.minimumVersion ?? '',
+                  maxLines: 1, overflow: TextOverflow.ellipsis),
               onTap: () async {
                 Navigator.pop(context);
                 HapticFeedback.lightImpact();

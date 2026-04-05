@@ -7,7 +7,7 @@ void main() {
   // ── Quest model ──────────────────────────────────────────────────────────────
 
   group('Quest', () {
-    Quest _base() => Quest(
+    Quest base() => Quest(
           id: 1,
           title: 'Morning Run',
           hour: 7,
@@ -19,7 +19,7 @@ void main() {
 
     group('copyWith', () {
       test('preserves unchanged fields', () {
-        final q = _base();
+        final q = base();
         final copy = q.copyWith(title: 'Evening Run');
         expect(copy.id, q.id);
         expect(copy.hour, q.hour);
@@ -27,7 +27,7 @@ void main() {
       });
 
       test('updates specified fields', () {
-        final q = _base();
+        final q = base();
         final copy = q.copyWith(title: 'New Title', hour: 18, streakCount: 5);
         expect(copy.title, 'New Title');
         expect(copy.hour, 18);
@@ -35,19 +35,19 @@ void main() {
       });
 
       test('clearLinkedStat removes linkedStat', () {
-        final q = _base().copyWith(linkedStat: LinkedStat.str);
+        final q = base().copyWith(linkedStat: LinkedStat.str);
         final copy = q.copyWith(clearLinkedStat: true);
         expect(copy.linkedStat, isNull);
       });
 
       test('clearReminderMinutes removes reminderMinutes', () {
-        final q = _base().copyWith(reminderMinutes: 15);
+        final q = base().copyWith(reminderMinutes: 15);
         final copy = q.copyWith(clearReminderMinutes: true);
         expect(copy.reminderMinutes, isNull);
       });
 
       test('clearRoutineId removes routineId', () {
-        final q = _base().copyWith(routineId: 'routine-1');
+        final q = base().copyWith(routineId: 'routine-1');
         final copy = q.copyWith(clearRoutineId: true);
         expect(copy.routineId, isNull);
       });
@@ -198,7 +198,7 @@ void main() {
     group('LinkedStat', () {
       test('all values round-trip through toJson name', () {
         for (final stat in LinkedStat.values) {
-          final q = _base().copyWith(linkedStat: stat);
+          final q = base().copyWith(linkedStat: stat);
           final restored = Quest.fromJson(q.toJson());
           expect(restored.linkedStat, stat);
         }

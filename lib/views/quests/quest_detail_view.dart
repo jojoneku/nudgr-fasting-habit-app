@@ -25,9 +25,9 @@ class QuestDetailView extends StatelessWidget {
         listenable: presenter,
         builder: (context, _) {
           // Re-fetch from presenter to get latest data
-          final latest = presenter.quests
-              .where((q) => q.id == quest.id)
-              .firstOrNull ?? quest;
+          final latest =
+              presenter.quests.where((q) => q.id == quest.id).firstOrNull ??
+                  quest;
           return _buildBody(context, latest);
         },
       ),
@@ -68,8 +68,8 @@ class QuestDetailView extends StatelessWidget {
             title: '⚓ Anchor',
             child: Text(
               q.anchorNote!,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 14),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ),
         ],
@@ -79,8 +79,8 @@ class QuestDetailView extends StatelessWidget {
             title: '🔩 Minimum Version',
             child: Text(
               q.minimumVersion!,
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 14),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
             ),
           ),
         ],
@@ -134,10 +134,12 @@ class _StatsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _Stat(label: 'Current Streak', value: '${quest.streakCount} 🔥'),
-        _Stat(label: '30-Day Rate', value: '${(completionRate * 100).round()}%'),
+        _Stat(
+            label: '30-Day Rate', value: '${(completionRate * 100).round()}%'),
         _Stat(
             label: 'Total',
-            value: '${quest.completedDates.length + quest.partialDates.length}'),
+            value:
+                '${quest.completedDates.length + quest.partialDates.length}'),
       ],
     );
   }
@@ -178,8 +180,8 @@ class _Stat extends StatelessWidget {
                 color: AppColors.primary)),
         const SizedBox(height: 4),
         Text(label,
-            style: const TextStyle(
-                fontSize: 11, color: AppColors.textSecondary)),
+            style:
+                const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
       ],
     );
   }
@@ -189,8 +191,7 @@ class _StatContributionBar extends StatelessWidget {
   final Quest quest;
   final QuestPresenter presenter;
 
-  const _StatContributionBar(
-      {required this.quest, required this.presenter});
+  const _StatContributionBar({required this.quest, required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -207,15 +208,13 @@ class _StatContributionBar extends StatelessWidget {
           children: [
             Text(
               '$completions / 21 completions toward +1 $label',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
             Text(
               '${(progress * 100).round()}%',
               style: TextStyle(
-                  color: color,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold),
+                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ],
         ),

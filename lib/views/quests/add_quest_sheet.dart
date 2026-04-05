@@ -92,8 +92,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
             // Time picker
             _label('Time'),
             _TimePicker(
-                time: _time,
-                onChanged: (t) => setState(() => _time = t)),
+                time: _time, onChanged: (t) => setState(() => _time = t)),
             const SizedBox(height: 20),
 
             // Stat link
@@ -193,8 +192,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(text,
-          style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12)),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
     );
   }
 
@@ -214,7 +212,8 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
         clearReminderMinutes: _reminderMinutes == null,
         linkedStat: _linkedStat,
         clearLinkedStat: _linkedStat == null,
-        anchorNote: _anchorCtrl.text.trim().isEmpty ? null : _anchorCtrl.text.trim(),
+        anchorNote:
+            _anchorCtrl.text.trim().isEmpty ? null : _anchorCtrl.text.trim(),
         clearAnchorNote: _anchorCtrl.text.trim().isEmpty,
         minimumVersion: _minVersionCtrl.text.trim().isEmpty
             ? null
@@ -266,8 +265,7 @@ class _TimePicker extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(time.format(context),
-                style: const TextStyle(fontSize: 16)),
+            Text(time.format(context), style: const TextStyle(fontSize: 16)),
             const Icon(Icons.access_time, size: 20),
           ],
         ),
@@ -295,18 +293,15 @@ class _TimePicker extends StatelessWidget {
             child: CupertinoDatePicker(
               backgroundColor: AppColors.surface,
               mode: CupertinoDatePickerMode.time,
-              initialDateTime:
-                  DateTime(2024, 1, 1, time.hour, time.minute),
+              initialDateTime: DateTime(2024, 1, 1, time.hour, time.minute),
               onDateTimeChanged: (dt) => temp = TimeOfDay.fromDateTime(dt),
-              use24hFormat:
-                  MediaQuery.of(context).alwaysUse24HourFormat,
+              use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
             ),
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () {
                 onChanged(temp);
@@ -345,7 +340,8 @@ class _StatPicker extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (stat != null) ...[
-            Icon(linkedStatIcon(stat), size: 14, color: isSelected ? Colors.white : color),
+            Icon(linkedStatIcon(stat),
+                size: 14, color: isSelected ? Colors.white : color),
             const SizedBox(width: 4),
           ],
           Text(label,
@@ -357,7 +353,8 @@ class _StatPicker extends StatelessWidget {
       selected: isSelected,
       selectedColor: color,
       backgroundColor: AppColors.surface,
-      side: BorderSide(color: isSelected ? color : AppColors.neutral.withValues(alpha: 0.4)),
+      side: BorderSide(
+          color: isSelected ? color : AppColors.neutral.withValues(alpha: 0.4)),
       onSelected: (_) => onChanged(stat),
     );
   }
