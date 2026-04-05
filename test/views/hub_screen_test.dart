@@ -12,15 +12,23 @@ Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 void main() {
   late MockFastingPresenter mockFasting;
   late MockStatsPresenter mockStats;
+  late MockQuestPresenter mockQuest;
 
   setUp(() {
     mockFasting = MockFastingPresenter();
     mockStats = MockStatsPresenter();
+    mockQuest = MockQuestPresenter();
 
     // Fasting presenter stubs
     when(mockFasting.isFasting).thenReturn(false);
-    when(mockFasting.quests).thenReturn(<Quest>[]);
     when(mockFasting.history).thenReturn(<FastingLog>[]);
+
+    // Quest presenter stubs
+    when(mockQuest.todayActiveQuests).thenReturn(<Quest>[]);
+    when(mockQuest.todayOverdueQuests).thenReturn(<Quest>[]);
+    when(mockQuest.todayCompletedQuests).thenReturn(<Quest>[]);
+    when(mockQuest.addListener(any)).thenReturn(null);
+    when(mockQuest.removeListener(any)).thenReturn(null);
 
     // Stats presenter stubs
     when(mockStats.stats).thenReturn(UserStats.initial());
@@ -28,12 +36,19 @@ void main() {
     when(mockFasting.addListener(any)).thenReturn(null);
   });
 
-  group('HubScreen — module cards', () {
-    testWidgets('renders all module card titles', (tester) async {
-      await tester.pumpWidget(_wrap(HubScreen(
+  HubScreen _buildHub({
+    MockActivityPresenter? activityPresenter,
+  }) =>
+      HubScreen(
         fastingPresenter: mockFasting,
         statsPresenter: mockStats,
-      )));
+        questPresenter: mockQuest,
+        activityPresenter: activityPresenter,
+      );
+
+  group('HubScreen — module cards', () {
+    testWidgets('renders all module card titles', (tester) async {
+      await tester.pumpWidget(_wrap(_buildHub()));
       await tester.pump();
 
       expect(find.text('Fasting'), findsOneWidget);
@@ -45,10 +60,7 @@ void main() {
     });
 
     testWidgets('renders RPG names on cards', (tester) async {
-      await tester.pumpWidget(_wrap(HubScreen(
-        fastingPresenter: mockFasting,
-        statsPresenter: mockStats,
-      )));
+      await tester.pumpWidget(_wrap(_buildHub()));
       await tester.pump();
 
       expect(find.text('DISCIPLINE PROTOCOL'), findsOneWidget);
@@ -58,11 +70,7 @@ void main() {
 
     testWidgets('Activity card is locked when activityPresenter is null',
         (tester) async {
-      await tester.pumpWidget(_wrap(HubScreen(
-        fastingPresenter: mockFasting,
-        statsPresenter: mockStats,
-        activityPresenter: null,
-      )));
+      await tester.pumpWidget(_wrap(_buildHub(activityPresenter: null)));
       await tester.pump();
 
       // Lock icon appears for locked cards (Activity + Finance = 2)
@@ -74,11 +82,8 @@ void main() {
       final mockActivity = MockActivityPresenter();
       when(mockActivity.hubSubtitle).thenReturn('6,240 / 8,000 steps');
 
-      await tester.pumpWidget(_wrap(HubScreen(
-        fastingPresenter: mockFasting,
-        statsPresenter: mockStats,
-        activityPresenter: mockActivity,
-      )));
+      await tester
+          .pumpWidget(_wrap(_buildHub(activityPresenter: mockActivity)));
       await tester.pump();
 
       expect(find.text('6,240 / 8,000 steps'), findsOneWidget);
@@ -89,10 +94,7 @@ void main() {
         (tester) async {
       when(mockFasting.isFasting).thenReturn(true);
 
-      await tester.pumpWidget(_wrap(HubScreen(
-        fastingPresenter: mockFasting,
-        statsPresenter: mockStats,
-      )));
+      await tester.pumpWidget(_wrap(_buildHub()));
       await tester.pump();
 
       expect(find.text('Fasting now'), findsOneWidget);

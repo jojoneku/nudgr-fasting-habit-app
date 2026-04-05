@@ -6,6 +6,7 @@ import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
+import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/installment_presenter.dart';
@@ -15,13 +16,14 @@ import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
 import 'widgets/module_card.dart';
 import 'tabs/timer_tab.dart';
-import 'tabs/quests_tab.dart';
+import 'quests/quests_tab.dart';
 import 'nutrition/nutrition_screen.dart';
 import 'treasury/treasury_module_view.dart';
 
 class HubScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final StatsPresenter statsPresenter;
+  final QuestPresenter questPresenter;
   final NutritionPresenter? nutritionPresenter;
   final ActivityPresenter? activityPresenter;
   final TreasuryDashboardPresenter? treasuryPresenter;
@@ -32,16 +34,16 @@ class HubScreen extends StatelessWidget {
   final InstallmentPresenter? installmentPresenter;
 
   /// Extra subtitle overrides: moduleId → subtitle string getter.
-  /// Populated by AppShell as new modules (Activity, Treasury) are added.
   final Map<String, String Function()> moduleSubtitleGetters;
 
-  /// Optional onTap overrides per module. If absent, defaults are used.
+  /// Optional onTap overrides per module.
   final Map<String, VoidCallback> moduleOnTapOverrides;
 
   const HubScreen({
     super.key,
     required this.fastingPresenter,
     required this.statsPresenter,
+    required this.questPresenter,
     this.nutritionPresenter,
     this.activityPresenter,
     this.treasuryPresenter,
@@ -60,6 +62,7 @@ class HubScreen extends StatelessWidget {
       listenable: Listenable.merge([
         fastingPresenter,
         statsPresenter,
+        questPresenter,
         if (nutritionPresenter != null) nutritionPresenter!,
         if (activityPresenter != null) activityPresenter!,
         if (treasuryPresenter != null) treasuryPresenter!,
@@ -171,16 +174,12 @@ class HubScreen extends StatelessWidget {
   }
 
   String _questsSummary() {
-    final quests = fastingPresenter.quests;
-    if (quests.isEmpty) return 'No quests';
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayWeekday = now.weekday;
-    final todaysQuests =
-        quests.where((q) => q.isEnabled && q.days[todayWeekday - 1]).toList();
-    if (todaysQuests.isEmpty) return 'None today';
-    final done = todaysQuests.where((q) => q.isCompletedOn(today)).length;
-    return '$done/${todaysQuests.length} done today';
+    final active = questPresenter.todayActiveQuests.length;
+    final overdue = questPresenter.todayOverdueQuests.length;
+    final completed = questPresenter.todayCompletedQuests.length;
+    final total = active + overdue + completed;
+    if (total == 0) return 'No missions today';
+    return '$completed/$total done today';
   }
 
   void _pushTimerTab(BuildContext context) {
@@ -248,7 +247,7 @@ class HubScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => QuestsTab(presenter: fastingPresenter),
+        builder: (_) => QuestsTab(presenter: questPresenter),
       ),
     );
   }
