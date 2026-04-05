@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/services/food_db_service.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/fasting_presenter.dart';
 import 'package:intermittent_fasting/presenters/activity_presenter.dart';
+import 'package:intermittent_fasting/presenters/quest_presenter.dart';
 
 @GenerateMocks([
   StorageService,
@@ -17,5 +18,6 @@ import 'package:intermittent_fasting/presenters/activity_presenter.dart';
   StatsPresenter,
   FastingPresenter,
   ActivityPresenter,
+  QuestPresenter,
 ])
 void main() {}

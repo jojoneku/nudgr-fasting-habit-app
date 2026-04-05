@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/fasting_log.dart';
-import '../models/quest.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'stats_presenter.dart';
@@ -17,8 +16,6 @@ class FastingPresenter extends ChangeNotifier {
   int elapsedSeconds = 0;
   int fastingGoalHours = 16;
   List<FastingLog> history = [];
-  List<Quest> quests = [];
-  DateTime? lastPenaltyCheckDate;
   Timer? _ticker;
 
   FastingPresenter({
@@ -32,17 +29,10 @@ class FastingPresenter extends ChangeNotifier {
 
   Future<void> _init() async {
     debugPrint('FastingPresenter: Initializing...');
-    // Load state first to ensure UI is correct immediately
     await loadState();
 
     await _notificationService.init();
     await _notificationService.requestPermissions();
-
-    // Reschedule all quests to ensure they are on the correct channel and active
-    // This fixes the issue where channel cleanup wipes existing alarms
-    await _rescheduleAllQuests();
-
-    // Also reschedule active fasting/eating alarms
     await _rescheduleActiveAlarms();
 
     debugPrint('FastingPresenter: Initialization complete');
@@ -52,13 +42,8 @@ class FastingPresenter extends ChangeNotifier {
     debugPrint('FastingPresenter: Rescheduling active alarms...');
     if (isFasting && startTime != null) {
       try {
-        // Show persistent notification
         final endTime = startTime!.add(Duration(hours: fastingGoalHours));
         await _notificationService.showFastingTimerNotification(endTime);
-
-        // Schedule end alarm and milestones
-        // We do not cancel old ones here because scheduleFastingAlarm uses fixed IDs (0, 100+)
-        // and usually overwrites them. But for safety against "stuck" eating alarms:
         await _notificationService.cancelEatingNotifications();
         await _notificationService.scheduleFastingAlarm(
             startTime!, fastingGoalHours);
@@ -67,27 +52,15 @@ class FastingPresenter extends ChangeNotifier {
       }
     } else if (eatingStartTime != null) {
       try {
-        // Show persistent notification
         int eatingWindowHours = 24 - fastingGoalHours;
         final eatingEndTime =
             eatingStartTime!.add(Duration(hours: eatingWindowHours));
         await _notificationService.showEatingTimerNotification(eatingEndTime);
-
-        // Schedule end alarm and milestones
         await _notificationService.cancelFastingNotifications();
         await _notificationService.scheduleEatingAlarm(
             eatingStartTime!, fastingGoalHours);
       } catch (e) {
         debugPrint('Error rescheduling eating alarm: $e');
-      }
-    }
-  }
-
-  Future<void> _rescheduleAllQuests() async {
-    debugPrint('FastingPresenter: Rescheduling all enabled quests...');
-    for (final quest in quests) {
-      if (quest.isEnabled) {
-        await _notificationService.scheduleQuestNotifications(quest);
       }
     }
   }
@@ -101,36 +74,26 @@ class FastingPresenter extends ChangeNotifier {
     elapsedSeconds = state['elapsedSeconds'];
     fastingGoalHours = state['fastingGoalHours'];
     history = state['history'];
-    quests = state['quests'];
-    lastPenaltyCheckDate = state['lastPenaltyCheckDate'];
 
     debugPrint(
         'FastingPresenter: State loaded - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');
 
-    _checkMissedQuests();
-
     if (isFasting && startTime != null) {
-      // Calculate elapsed time immediately to prevent UI jump to 0
       elapsedSeconds = DateTime.now().difference(startTime!).inSeconds;
       _startTicker();
       try {
         final endTime = startTime!.add(Duration(hours: fastingGoalHours));
         await _notificationService.showFastingTimerNotification(endTime);
-      } catch (e) {
-        // Error showing resume notification
-      }
+      } catch (_) {}
     } else if (eatingStartTime != null) {
-      // Calculate elapsed time immediately to prevent UI jump to 0
       elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
-      _startTicker(); // Also tick for eating window
+      _startTicker();
       try {
         int eatingWindowHours = 24 - fastingGoalHours;
         final eatingEndTime =
             eatingStartTime!.add(Duration(hours: eatingWindowHours));
         await _notificationService.showEatingTimerNotification(eatingEndTime);
-      } catch (e) {
-        // Error showing resume notification
-      }
+      } catch (_) {}
     }
     notifyListeners();
   }
@@ -145,79 +108,8 @@ class FastingPresenter extends ChangeNotifier {
       elapsedSeconds: elapsedSeconds,
       fastingGoalHours: fastingGoalHours,
       history: history,
-      quests: quests,
-      lastPenaltyCheckDate: lastPenaltyCheckDate,
+      quests: const [], // Quests are now owned by QuestPresenter
     );
-  }
-
-  void _checkMissedQuests() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    if (lastPenaltyCheckDate == null) {
-      // First run, just set the date
-      lastPenaltyCheckDate = today;
-      saveState();
-      return;
-    }
-
-    if (lastPenaltyCheckDate!.isBefore(today)) {
-      debugPrint(
-          'FastingPresenter: Checking missed quests from $lastPenaltyCheckDate to $today');
-
-      int totalDamage = 0;
-      int missedCount = 0;
-
-      // Iterate from last check date until yesterday
-      DateTime checkDate = lastPenaltyCheckDate!;
-      while (checkDate.isBefore(today)) {
-        final dayIndex = checkDate.weekday - 1; // Mon=0, Sun=6
-
-        for (final quest in quests) {
-          if (quest.isEnabled && quest.days[dayIndex]) {
-            // Check if completed on this specific date
-            bool completedOnDate = false;
-            if (quest.lastCompleted != null) {
-              final completedDate = DateTime(
-                quest.lastCompleted!.year,
-                quest.lastCompleted!.month,
-                quest.lastCompleted!.day,
-              );
-              if (completedDate.isAtSameMomentAs(checkDate)) {
-                completedOnDate = true;
-              }
-            }
-
-            if (!completedOnDate) {
-              // Missed quest!
-              totalDamage += 10;
-              missedCount++;
-            }
-          }
-        }
-
-        checkDate = checkDate.add(const Duration(days: 1));
-      }
-
-      if (totalDamage > 0) {
-        debugPrint(
-            'FastingPresenter: Missed $missedCount quests. Applying $totalDamage damage.');
-        statsPresenter?.modifyHp(-totalDamage);
-        statsPresenter
-            ?.resetStreak(); // Reset streak on missed quest? Maybe too harsh? Let's keep it.
-
-        // Show notification or snackbar?
-        // Since this happens on load, we might not have context for SnackBar.
-        // We can use the notification service to show a local notification.
-        _notificationService.showSimpleNotification(
-          title: 'Penalty Applied',
-          body: 'You missed $missedCount quests. Took $totalDamage damage.',
-        );
-      }
-
-      lastPenaltyCheckDate = today;
-      saveState();
-    }
   }
 
   void _startTicker() {
@@ -383,7 +275,7 @@ class FastingPresenter extends ChangeNotifier {
   Future<void> updateFastingGoal(int hours) async {
     debugPrint('FastingPresenter: Updating fasting goal to $hours hours');
     fastingGoalHours = hours;
-    await saveState(); // Save immediately
+    await saveState();
 
     if (isFasting && startTime != null) {
       final endTime = startTime!.add(Duration(hours: fastingGoalHours));
@@ -392,126 +284,9 @@ class FastingPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Quest Methods
-  Future<void> addQuest(String title, int hour, int minute, List<bool> days,
-      {bool isOneTime = false, int? reminderMinutes}) async {
-    debugPrint('FastingPresenter: Adding quest - $title');
-    int id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final quest = Quest(
-      id: id,
-      title: title,
-      hour: hour,
-      minute: minute,
-      days: days,
-      isEnabled: true,
-      isOneTime: isOneTime,
-      reminderMinutes: reminderMinutes,
-    );
-    quests.add(quest);
-    notifyListeners(); // Notify immediately
-
-    await _notificationService.scheduleQuestNotifications(quest);
-    saveState();
-  }
-
-  Future<void> toggleQuest(int index, bool isEnabled) async {
-    debugPrint('FastingPresenter: Toggling quest index $index to $isEnabled');
-    quests[index].isEnabled = isEnabled;
-    notifyListeners(); // Notify immediately
-
-    if (isEnabled) {
-      await _notificationService.scheduleQuestNotifications(quests[index]);
-    } else {
-      await _notificationService.cancelQuestNotifications(quests[index]);
-    }
-    saveState();
-  }
-
-  Future<void> deleteQuest(int index) async {
-    debugPrint('FastingPresenter: Deleting quest index $index');
-    final quest = quests[index];
-    quests.removeAt(index);
-    notifyListeners(); // Notify immediately
-
-    await _notificationService.cancelQuestNotifications(quest);
-    saveState();
-  }
-
-  Future<void> updateQuest(
-      int index, String title, int hour, int minute, List<bool> days,
-      {bool isOneTime = false, int? reminderMinutes}) async {
-    debugPrint('FastingPresenter: Updating quest index $index - $title');
-    final quest = quests[index];
-
-    quest.title = title;
-    quest.hour = hour;
-    quest.minute = minute;
-    quest.days = days;
-    quest.isOneTime = isOneTime;
-    quest.reminderMinutes = reminderMinutes;
-    notifyListeners(); // Notify immediately
-
-    await _notificationService.cancelQuestNotifications(quest);
-    if (quest.isEnabled) {
-      await _notificationService.scheduleQuestNotifications(quest);
-    }
-
-    saveState();
-  }
-
-  Future<int> completeQuest(int index, {DateTime? date}) async {
-    debugPrint('FastingPresenter: Completing quest index $index');
-    int xpGained = 0;
-    final quest = quests[index];
-    final completionDate = date ?? DateTime.now();
-
-    if (quest.isCompletedOn(completionDate)) {
-      // Toggle off (undo) - Remove date
-      final dateStr = completionDate.toIso8601String().split('T')[0];
-      quest.completedDates.remove(dateStr);
-      // Do not remove XP, do not reset lastXpAwarded to prevent farming
-    } else {
-      // Mark as completed
-      quest.lastCompleted = completionDate; // Uses setter to add to list
-
-      // Check if XP was already awarded today (or on the completion date?)
-      // The requirement says "daily quests".
-      // If I complete yesterday's quest today, should I gain XP? Yes.
-      // But avoid double dipping for the SAME day.
-      // lastXpAwarded tracks WHEN we gave XP.
-      // If we give XP now, we update lastXpAwarded to now.
-
-      bool alreadyAwardedToday = false;
-      final now = DateTime.now();
-
-      if (quest.lastXpAwarded != null) {
-        if (quest.lastXpAwarded!.year == now.year &&
-            quest.lastXpAwarded!.month == now.month &&
-            quest.lastXpAwarded!.day == now.day) {
-          alreadyAwardedToday = true;
-        }
-      }
-
-      if (!alreadyAwardedToday) {
-        xpGained = quest.xpReward;
-        statsPresenter?.addXp(xpGained);
-        quest.lastXpAwarded = now; // Awarded NOW
-      }
-
-      if (quest.isOneTime) {
-        await deleteQuest(index);
-        return xpGained;
-      }
-    }
-    notifyListeners(); // Notify immediately
-    saveState();
-    return xpGained;
-  }
-
   Future<void> clearAllData() async {
     debugPrint('FastingPresenter: Clearing all data');
     history.clear();
-    quests.clear();
     isFasting = false;
     startTime = null;
     eatingStartTime = null;
@@ -680,7 +455,6 @@ class FastingPresenter extends ChangeNotifier {
       // Reschedule alarms based on new data
       await _notificationService.cancelAll();
       await _rescheduleActiveAlarms();
-      await _rescheduleAllQuests();
 
       notifyListeners();
     } catch (e) {

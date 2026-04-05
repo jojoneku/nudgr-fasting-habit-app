@@ -586,6 +586,31 @@ class NotificationService {
     }
   }
 
+  /// Schedules a "streak at risk" notification at 9 PM today.
+  /// Only effective if quest is still incomplete and streakCount > 3.
+  Future<void> scheduleStreakAtRiskNotification(
+      int questId, String questTitle, int streakCount) async {
+    const int notificationId = 997;
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 21, 0);
+    if (scheduled.isBefore(now)) return; // Already past 9 PM — skip
+    await _scheduleOneShotNotification(
+      notificationId,
+      '⚔️ Streak at risk: $questTitle',
+      "Don't lose your $streakCount-day streak. You still have time.",
+      scheduled,
+      channelId: channelIdQuests,
+      channelName: channelNameQuests,
+    );
+    debugPrint(
+        'NotificationService: Streak-at-risk notification scheduled for $questTitle at 9 PM');
+  }
+
+  Future<void> cancelStreakAtRiskNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(997);
+  }
+
   Future<void> cancelFastingNotifications() async {
     debugPrint('NotificationService: Cancelling fasting notifications');
     await flutterLocalNotificationsPlugin.cancel(0); // Goal reached
