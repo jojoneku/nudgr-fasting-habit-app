@@ -7,8 +7,10 @@ import '../models/activity_log.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
 import '../models/food_template.dart';
+import '../models/habit_routine.dart';
 import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
+import '../models/quest_achievement.dart';
 import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 import '../models/finance/bill.dart';
@@ -31,6 +33,9 @@ class StorageService {
   static const String keyQuests = 'quests';
   static const String keyUserStats = 'userStats';
   static const String keyLastPenaltyCheckDate = 'lastPenaltyCheckDate';
+  static const String keyQuestRoutines = 'quest_routines';
+  static const String keyQuestAchievements = 'quest_achievements';
+  static const String keyQuestPenaltyCheckDate = 'questPenaltyCheckDate';
 
   Future<void> saveUserStats(UserStats stats) async {
     final prefs = await SharedPreferences.getInstance();
@@ -93,6 +98,29 @@ class StorageService {
     debugPrint('StorageService: State saved. isFasting=$isFasting');
   }
 
+  /// Saves only the quests list without touching any other state field.
+  Future<void> saveQuests(List<Quest> quests) async {
+    final prefs = await SharedPreferences.getInstance();
+    final questsJson = jsonEncode(quests.map((e) => e.toJson()).toList());
+    await prefs.setString(keyQuests, questsJson);
+    debugPrint('StorageService: Quests saved (${quests.length} items)');
+  }
+
+  /// Loads only the quests list.
+  Future<List<Quest>> loadQuests() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.reload();
+    final questsJson = prefs.getString(keyQuests);
+    if (questsJson == null) return [];
+    try {
+      final List<dynamic> list = jsonDecode(questsJson);
+      return list.map((e) => Quest.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading quests: $e');
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>> loadState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.reload(); // Force reload from disk
@@ -148,6 +176,64 @@ class StorageService {
       'quests': quests,
       'lastPenaltyCheckDate': lastPenaltyCheckDate,
     };
+  }
+
+  // ─── Quest Routines & Achievements ───────────────────────────────────────────
+
+  Future<void> saveRoutines(List<HabitRoutine> routines) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        keyQuestRoutines, jsonEncode(routines.map((r) => r.toJson()).toList()));
+  }
+
+  Future<List<HabitRoutine>> loadRoutines() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyQuestRoutines);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading routines: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveAchievements(List<QuestAchievement> achievements) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyQuestAchievements,
+        jsonEncode(achievements.map((a) => a.toJson()).toList()));
+  }
+
+  Future<List<QuestAchievement>> loadAchievements() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyQuestAchievements);
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list
+          .map((e) => QuestAchievement.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('StorageService: Error loading achievements: $e');
+      return [];
+    }
+  }
+
+  Future<void> saveQuestPenaltyCheckDate(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(keyQuestPenaltyCheckDate, date.toIso8601String());
+  }
+
+  Future<DateTime?> loadQuestPenaltyCheckDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyQuestPenaltyCheckDate);
+    if (raw == null) return null;
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      return null;
+    }
   }
 
   // ─── Nutrition ───────────────────────────────────────────────────────────────
