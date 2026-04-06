@@ -94,14 +94,15 @@ void main() {
       expect(find.text('Ready?'), findsOneWidget);
     });
 
-    testWidgets('shows goal selector toggle buttons', (tester) async {
+    testWidgets('shows protocol selector cards when not fasting', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
 
+      // Protocol cards are in a horizontal scrollable list; check visible ones
+      expect(find.text('12:12'), findsOneWidget);
+      expect(find.text('14:10'), findsOneWidget);
       expect(find.text('16:8'), findsOneWidget);
       expect(find.text('18:6'), findsOneWidget);
-      expect(find.text('20:4'), findsOneWidget);
-      expect(find.text('OMAD'), findsOneWidget);
     });
 
     testWidgets('shows default 16:00:00 timer display', (tester) async {

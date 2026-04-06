@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/fasting_log.dart';
+import '../models/fasting_phase.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'stats_presenter.dart';
@@ -52,13 +53,15 @@ class FastingPresenter extends ChangeNotifier {
       }
     } else if (eatingStartTime != null) {
       try {
-        int eatingWindowHours = 24 - fastingGoalHours;
-        final eatingEndTime =
-            eatingStartTime!.add(Duration(hours: eatingWindowHours));
-        await _notificationService.showEatingTimerNotification(eatingEndTime);
-        await _notificationService.cancelFastingNotifications();
-        await _notificationService.scheduleEatingAlarm(
-            eatingStartTime!, fastingGoalHours);
+        int eatingWindowHours = fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+        if (eatingWindowHours > 0) {
+          final eatingEndTime =
+              eatingStartTime!.add(Duration(hours: eatingWindowHours));
+          await _notificationService.showEatingTimerNotification(eatingEndTime);
+          await _notificationService.cancelFastingNotifications();
+          await _notificationService.scheduleEatingAlarm(
+              eatingStartTime!, fastingGoalHours);
+        }
       } catch (e) {
         debugPrint('Error rescheduling eating alarm: $e');
       }
@@ -126,6 +129,87 @@ class FastingPresenter extends ChangeNotifier {
       elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
     }
     notifyListeners();
+  }
+
+  // ── Computed getters ────────────────────────────────────────────────────────
+
+  int get targetSeconds => fastingGoalHours * 3600;
+
+  bool get isOvertime => isFasting && elapsedSeconds > targetSeconds;
+
+  int get overtimeSeconds =>
+      isOvertime ? (elapsedSeconds - targetSeconds).clamp(0, 999999) : 0;
+
+  FastingPhase get currentPhase =>
+      FastingPhase.fromElapsedSeconds(isFasting ? elapsedSeconds : 0);
+
+  /// True when elapsed fast time >= 24 hours — triggers refeeding protocol UI.
+  bool get requiresRefeedingProtocol =>
+      isFasting && elapsedSeconds >= 86400; // 24h
+
+  /// Consecutive days ending with a successful fast (most-recent-first history).
+  int get currentStreak {
+    if (history.isEmpty) return 0;
+    int streak = 0;
+    DateTime? prevDate;
+    for (final log in history) {
+      if (!log.success) break;
+      final day = DateUtils.dateOnly(log.fastEnd);
+      if (prevDate == null) {
+        streak = 1;
+        prevDate = day;
+      } else {
+        final diff = prevDate.difference(day).inDays;
+        if (diff <= 1) {
+          streak++;
+          prevDate = day;
+        } else {
+          break;
+        }
+      }
+    }
+    return streak;
+  }
+
+  int get longestStreak {
+    if (history.isEmpty) return 0;
+    int best = 0;
+    int current = 0;
+    DateTime? prevDate;
+    for (final log in history.reversed) {
+      if (log.success) {
+        final day = DateUtils.dateOnly(log.fastEnd);
+        if (prevDate == null) {
+          current = 1;
+        } else {
+          final diff = day.difference(prevDate).inDays;
+          current = diff <= 1 ? current + 1 : 1;
+        }
+        prevDate = day;
+        if (current > best) best = current;
+      } else {
+        current = 0;
+        prevDate = null;
+      }
+    }
+    return best;
+  }
+
+  double get totalHoursFasted =>
+      history.fold(0.0, (sum, log) => sum + log.fastDuration);
+
+  double get successRate {
+    if (history.isEmpty) return 0.0;
+    final successes = history.where((l) => l.success).length;
+    return successes / history.length * 100;
+  }
+
+  /// Returns fasts that started on the given calendar day.
+  List<FastingLog> fastsOnDay(DateTime day) {
+    final d = DateUtils.dateOnly(day);
+    return history
+        .where((log) => DateUtils.dateOnly(log.fastStart) == d)
+        .toList();
   }
 
   Future<void> startFast() async {
@@ -216,6 +300,11 @@ class FastingPresenter extends ChangeNotifier {
 
     if (durationHours >= fastingGoalHours) {
       xp = (50 + (durationHours * 10)).round();
+      // Overtime bonus: +5 XP per overtime hour
+      if (isOvertime) {
+        final overtimeHours = overtimeSeconds / 3600.0;
+        xp += (overtimeHours * 5).round();
+      }
       statsPresenter?.addXp(xp);
       statsPresenter?.incrementStreak();
 
@@ -255,16 +344,17 @@ class FastingPresenter extends ChangeNotifier {
     }
 
     try {
-      int eatingWindowHours = 24 - fastingGoalHours;
-      final eatingEndTime =
-          eatingStartTime!.add(Duration(hours: eatingWindowHours));
-      // Show persistent notification first for immediate feedback
-      await _notificationService.showEatingTimerNotification(eatingEndTime);
-
-      await _notificationService
-          .cancelFastingNotifications(); // Cancel fasting alarms
-      await _notificationService.scheduleEatingAlarm(
-          eatingStartTime!, fastingGoalHours);
+      int eatingWindowHours = fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+      if (eatingWindowHours > 0) {
+        final eatingEndTime =
+            eatingStartTime!.add(Duration(hours: eatingWindowHours));
+        await _notificationService.showEatingTimerNotification(eatingEndTime);
+        await _notificationService.cancelFastingNotifications();
+        await _notificationService.scheduleEatingAlarm(
+            eatingStartTime!, fastingGoalHours);
+      } else {
+        await _notificationService.cancelFastingNotifications();
+      }
     } catch (e) {
       debugPrint('Error scheduling notifications: $e');
     }
@@ -362,6 +452,19 @@ class FastingPresenter extends ChangeNotifier {
     eatingStartTime = null;
     elapsedSeconds = 0;
     notifyListeners();
+    await saveState();
+  }
+
+  /// Cancels the current fast with no XP, no HP penalty, no history entry.
+  Future<void> discardFast() async {
+    debugPrint('FastingPresenter: Discarding fast (no penalty)');
+    if (!isFasting) return;
+    isFasting = false;
+    startTime = null;
+    elapsedSeconds = 0;
+    _ticker?.cancel();
+    notifyListeners();
+    await _notificationService.cancelFastingNotifications();
     await saveState();
   }
 
