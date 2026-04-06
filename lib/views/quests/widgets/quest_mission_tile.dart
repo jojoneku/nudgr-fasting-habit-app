@@ -36,6 +36,7 @@ class QuestMissionTile extends StatelessWidget {
   final QuestPresenter presenter;
   final bool isMissed;
   final bool isEditing;
+  final bool isInsideGroup;
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
@@ -45,6 +46,7 @@ class QuestMissionTile extends StatelessWidget {
     required this.presenter,
     this.isMissed = false,
     this.isEditing = false,
+    this.isInsideGroup = false,
     this.onEdit,
     this.onDelete,
   });
@@ -63,6 +65,37 @@ class QuestMissionTile extends StatelessWidget {
           onEdit: onEdit,
           onDelete: onDelete,
           statColor: statColor);
+    }
+
+    // Inside a group: no outer card wrapping, just a compact ListTile
+    if (isInsideGroup) {
+      return GestureDetector(
+        onLongPress: () => _showDetail(context),
+        child: ListTile(
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          minVerticalPadding: 0,
+          leading: _StatRing(
+            quest: quest,
+            presenter: presenter,
+            statColor: statColor,
+            isCompleted: isCompleted,
+            isMissed: isMissed,
+          ),
+          title: _TitleRow(
+              quest: quest, isCompleted: isCompleted, isMissed: isMissed),
+          subtitle: _SubtitleRow(
+              quest: quest, isMissed: isMissed, isCompleted: isCompleted),
+          trailing: _CompletionButton(
+            quest: quest,
+            presenter: presenter,
+            isCompleted: isCompleted,
+            isPartial: isPartial,
+            isMissed: isMissed,
+            statColor: statColor,
+          ),
+        ),
+      );
     }
 
     return GestureDetector(
@@ -243,7 +276,7 @@ class _SubtitleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final timeStr =
         TimeOfDay(hour: quest.hour, minute: quest.minute).format(context);
-    return Row(
+    final infoRow = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
@@ -278,6 +311,29 @@ class _SubtitleRow extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+
+    final note = quest.anchorNote?.isNotEmpty == true ? quest.anchorNote : null;
+
+    if (note == null) return infoRow;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        infoRow,
+        const SizedBox(height: 2),
+        Text(
+          note,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: AppColors.textSecondary.withValues(alpha: 0.55),
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
       ],
     );
   }

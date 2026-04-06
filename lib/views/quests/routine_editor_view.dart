@@ -17,6 +17,7 @@ class RoutineEditorView extends StatefulWidget {
 }
 
 class _RoutineEditorViewState extends State<RoutineEditorView> {
+  final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameCtrl;
   late TimeOfDay _time;
   late List<String> _selectedQuestIds;
@@ -58,7 +59,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Routine' : 'New Routine'),
+        title: Text(isEditing ? 'Edit Group' : 'New Quest Group'),
         actions: [
           TextButton(
             onPressed: _save,
@@ -67,18 +68,26 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          // Name
-          const Text('Routine Name',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _nameCtrl,
-            decoration: const InputDecoration(hintText: 'e.g., Morning Ritual'),
-            autofocus: !isEditing,
-          ),
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(20),
+          children: [
+            // Name
+            const Text('Group Name',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(
+                hintText: 'e.g., Morning Ritual',
+                errorStyle: TextStyle(color: AppColors.danger, fontSize: 11),
+              ),
+              autofocus: !isEditing,
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? 'Group name is required'
+                  : null,
+            ),
           const SizedBox(height: 20),
 
           // Suggested start time
@@ -100,7 +109,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
           const SizedBox(height: 24),
 
           // Quest selection
-          const Text('Quests in this Routine',
+          const Text('Quests in this Group',
               style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
           const SizedBox(height: 8),
 
@@ -136,14 +145,16 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
           const SizedBox(height: 40),
         ],
       ),
-    );
+    ));
   }
 
   Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
     final name = _nameCtrl.text.trim();
-    if (name.isEmpty) return;
 
     final existing = widget.routine;
+    final messenger = ScaffoldMessenger.of(context);
+
     if (existing != null) {
       await widget.presenter.updateRoutine(existing.copyWith(
         name: name,
@@ -166,7 +177,29 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
       ));
     }
 
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: AppColors.success, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              existing != null
+                  ? 'Group updated.'
+                  : '⚡ Group "$name" added!',
+              style: const TextStyle(color: AppColors.textPrimary),
+            ),
+          ],
+        ),
+        backgroundColor: AppColors.surface,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 }
 
