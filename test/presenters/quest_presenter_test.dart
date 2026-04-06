@@ -607,7 +607,204 @@ void main() {
     });
   });
 
-  // ── routines ────────────────────────────────────────────────────────────────
+  // ── recurrence scheduling ───────────────────────────────────────────────────
+
+  group('recurrence scheduling', () {
+    final today = DateTime.now();
+    final todayKey = today.toIso8601String().split('T')[0];
+    final todayWeekday = today.weekday - 1; // 0=Mon..6=Sun
+    final tomorrowWeekday = today.weekday % 7; // next index, wrapping
+
+    // ── Weekly ──────────────────────────────────────────────────────────────
+
+    test('Weekly quest on today\'s weekday appears in todayCompletedQuests',
+        () async {
+      final q = Quest(
+        id: 1,
+        title: 'Weekly Run',
+        hour: 7,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.weekly,
+        weeklyWeekday: todayWeekday,
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests.length, 1);
+    });
+
+    test('Weekly quest on a different weekday does NOT appear today', () async {
+      final q = Quest(
+        id: 1,
+        title: 'Weekly Run',
+        hour: 7,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.weekly,
+        weeklyWeekday: tomorrowWeekday,
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests, isEmpty);
+    });
+
+    // ── Biweekly ─────────────────────────────────────────────────────────────
+
+    test('Biweekly quest with anchor = today (week 0) fires today', () async {
+      final q = Quest(
+        id: 1,
+        title: 'Biweekly Run',
+        hour: 7,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.biweekly,
+        weeklyWeekday: todayWeekday,
+        recurrenceAnchorDate: todayKey,
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests.length, 1);
+    });
+
+    test('Biweekly quest with anchor = 7 days ago (week 1) does NOT fire today',
+        () async {
+      final oneWeekAgo =
+          today.subtract(const Duration(days: 7)).toIso8601String().split('T')[0];
+      final q = Quest(
+        id: 1,
+        title: 'Biweekly Run',
+        hour: 7,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.biweekly,
+        weeklyWeekday: todayWeekday,
+        recurrenceAnchorDate: oneWeekAgo,
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests, isEmpty);
+    });
+
+    test('Biweekly quest with anchor = 14 days ago (week 2) fires today',
+        () async {
+      final twoWeeksAgo = today
+          .subtract(const Duration(days: 14))
+          .toIso8601String()
+          .split('T')[0];
+      final q = Quest(
+        id: 1,
+        title: 'Biweekly Run',
+        hour: 7,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.biweekly,
+        weeklyWeekday: todayWeekday,
+        recurrenceAnchorDate: twoWeeksAgo,
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests.length, 1);
+    });
+
+    // ── Monthly ──────────────────────────────────────────────────────────────
+
+    test('Monthly quest matching today\'s day-of-month appears today',
+        () async {
+      final q = Quest(
+        id: 1,
+        title: 'Monthly Review',
+        hour: 9,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.monthly,
+        monthlyDays: [today.day],
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests.length, 1);
+    });
+
+    test('Monthly quest on a different day-of-month does NOT appear today',
+        () async {
+      final differentDay = (today.day % 28) + 1; // always 1–28, never today
+      final q = Quest(
+        id: 1,
+        title: 'Monthly Review',
+        hour: 9,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.monthly,
+        monthlyDays: [differentDay],
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests, isEmpty);
+    });
+
+    test('Twice-monthly quest fires when today matches either day', () async {
+      final secondDay = (today.day % 28) + 1; // a different day
+      final q = Quest(
+        id: 1,
+        title: 'Twice Monthly',
+        hour: 9,
+        minute: 0,
+        days: List.filled(7, false),
+        recurrenceType: RecurrenceType.monthly,
+        monthlyDays: [today.day, secondDay],
+        completedDates: [todayKey],
+      );
+
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [q]);
+
+      expect(presenter.todayCompletedQuests.length, 1);
+    });
+  });
 
   group('routines', () {
     test('addRoutine appends to routines list', () async {

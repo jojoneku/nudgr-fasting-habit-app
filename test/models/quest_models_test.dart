@@ -193,12 +193,83 @@ void main() {
       });
     });
 
-    // ── LinkedStat enum ───────────────────────────────────────────────────────
+    // ── RecurrenceType ────────────────────────────────────────────────────────
 
-    group('LinkedStat', () {
+    group('RecurrenceType', () {
+      test('all RecurrenceType values round-trip through toJson name', () {
+        for (final type in RecurrenceType.values) {
+          final q = base().copyWith(recurrenceType: type);
+          final restored = Quest.fromJson(q.toJson());
+          expect(restored.recurrenceType, type);
+        }
+      });
+
+      test('unknown recurrenceType string in JSON defaults to daily', () {
+        final json = {
+          'id': 1,
+          'title': 'Test',
+          'hour': 7,
+          'minute': 0,
+          'isEnabled': true,
+          'days': List.filled(7, true),
+          'xpReward': 10,
+          'isOneTime': false,
+          'recurrenceType': 'INVALID_TYPE',
+        };
+        final q = Quest.fromJson(json);
+        expect(q.recurrenceType, RecurrenceType.daily);
+      });
+
+      test('round-trips weeklyWeekday, monthlyDays and recurrenceAnchorDate',
+          () {
+        final q = base().copyWith(
+          recurrenceType: RecurrenceType.biweekly,
+          weeklyWeekday: 4,
+          monthlyDays: [5, 20],
+          recurrenceAnchorDate: '2026-04-01',
+        );
+        final restored = Quest.fromJson(q.toJson());
+        expect(restored.recurrenceType, RecurrenceType.biweekly);
+        expect(restored.weeklyWeekday, 4);
+        expect(restored.monthlyDays, [5, 20]);
+        expect(restored.recurrenceAnchorDate, '2026-04-01');
+      });
+
+      test('clearRecurrenceAnchorDate removes anchor', () {
+        final q = base().copyWith(recurrenceAnchorDate: '2026-04-01');
+        final copy = q.copyWith(clearRecurrenceAnchorDate: true);
+        expect(copy.recurrenceAnchorDate, isNull);
+      });
+
+      test('migration: JSON missing recurrence fields defaults gracefully', () {
+        final json = {
+          'id': 1,
+          'title': 'Legacy Quest',
+          'hour': 7,
+          'minute': 0,
+          'isEnabled': true,
+          'days': List.filled(7, true),
+          'xpReward': 10,
+          'isOneTime': false,
+        };
+        final q = Quest.fromJson(json);
+        expect(q.recurrenceType, RecurrenceType.daily);
+        expect(q.weeklyWeekday, 0);
+        expect(q.monthlyDays, isEmpty);
+        expect(q.recurrenceAnchorDate, isNull);
+      });
+    });
+  });
+
+  // ── LinkedStat enum ───────────────────────────────────────────────────────
+
+  group('LinkedStat', () {
       test('all values round-trip through toJson name', () {
         for (final stat in LinkedStat.values) {
-          final q = base().copyWith(linkedStat: stat);
+          final q = Quest(
+            id: 1, title: 'Run', hour: 7, minute: 0,
+            days: List.filled(7, true),
+          ).copyWith(linkedStat: stat);
           final restored = Quest.fromJson(q.toJson());
           expect(restored.linkedStat, stat);
         }
@@ -220,7 +291,6 @@ void main() {
         expect(q.linkedStat, isNull);
       });
     });
-  });
 
   // ── HabitRoutine model ────────────────────────────────────────────────────────
 
