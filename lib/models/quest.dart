@@ -4,6 +4,21 @@ enum LinkedStat { str, vit, agi, intl, sen }
 /// How a quest was completed (affects XP and streak).
 enum CompletionType { full, partial, skipped }
 
+/// How often a quest recurs.
+enum RecurrenceType {
+  /// Fires on selected days of the week (Mon–Sun toggles).
+  daily,
+
+  /// Fires every week on a single chosen weekday.
+  weekly,
+
+  /// Fires every other week on a single chosen weekday.
+  biweekly,
+
+  /// Fires on one or two specific days of the month.
+  monthly,
+}
+
 class Quest {
   final int id;
   final String title;
@@ -28,6 +43,20 @@ class Quest {
   final int streakFreezes;
   final String? routineId;
 
+  // --- Recurrence fields ---
+  /// Determines how the quest recurs. Defaults to [RecurrenceType.daily].
+  final RecurrenceType recurrenceType;
+
+  /// For [weekly] and [biweekly]: 0 = Monday … 6 = Sunday.
+  final int weeklyWeekday;
+
+  /// For [monthly]: the day-of-month numbers (1–31) when the quest fires.
+  /// One entry = once/month; two entries = twice/month.
+  final List<int> monthlyDays;
+
+  /// ISO date string (YYYY-MM-DD) used as week-0 reference for [biweekly].
+  final String? recurrenceAnchorDate;
+
   Quest({
     required this.id,
     required this.title,
@@ -47,8 +76,13 @@ class Quest {
     this.streakCount = 0,
     this.streakFreezes = 0,
     this.routineId,
+    this.recurrenceType = RecurrenceType.daily,
+    this.weeklyWeekday = 0,
+    List<int>? monthlyDays,
+    this.recurrenceAnchorDate,
   })  : completedDates = completedDates ?? [],
-        partialDates = partialDates ?? [];
+        partialDates = partialDates ?? [],
+        monthlyDays = monthlyDays ?? [];
 
   Quest copyWith({
     int? id,
@@ -75,6 +109,11 @@ class Quest {
     int? streakFreezes,
     String? routineId,
     bool clearRoutineId = false,
+    RecurrenceType? recurrenceType,
+    int? weeklyWeekday,
+    List<int>? monthlyDays,
+    String? recurrenceAnchorDate,
+    bool clearRecurrenceAnchorDate = false,
   }) {
     return Quest(
       id: id ?? this.id,
@@ -99,6 +138,12 @@ class Quest {
       streakCount: streakCount ?? this.streakCount,
       streakFreezes: streakFreezes ?? this.streakFreezes,
       routineId: clearRoutineId ? null : (routineId ?? this.routineId),
+      recurrenceType: recurrenceType ?? this.recurrenceType,
+      weeklyWeekday: weeklyWeekday ?? this.weeklyWeekday,
+      monthlyDays: monthlyDays ?? List.from(this.monthlyDays),
+      recurrenceAnchorDate: clearRecurrenceAnchorDate
+          ? null
+          : (recurrenceAnchorDate ?? this.recurrenceAnchorDate),
     );
   }
 
@@ -150,6 +195,14 @@ class Quest {
       } catch (_) {/* ignore unknown */}
     }
 
+    RecurrenceType recurrenceType = RecurrenceType.daily;
+    if (json['recurrenceType'] != null) {
+      try {
+        recurrenceType = RecurrenceType.values
+            .firstWhere((e) => e.name == json['recurrenceType'] as String);
+      } catch (_) {/* ignore unknown, default daily */}
+    }
+
     return Quest(
       id: json['id'] as int,
       title: json['title'] as String,
@@ -174,6 +227,12 @@ class Quest {
       streakCount: json['streakCount'] as int? ?? 0,
       streakFreezes: json['streakFreezes'] as int? ?? 0,
       routineId: json['routineId'] as String?,
+      recurrenceType: recurrenceType,
+      weeklyWeekday: json['weeklyWeekday'] as int? ?? 0,
+      monthlyDays: json['monthlyDays'] != null
+          ? List<int>.from(json['monthlyDays'] as List)
+          : [],
+      recurrenceAnchorDate: json['recurrenceAnchorDate'] as String?,
     );
   }
 
@@ -197,6 +256,10 @@ class Quest {
       'streakCount': streakCount,
       'streakFreezes': streakFreezes,
       'routineId': routineId,
+      'recurrenceType': recurrenceType.name,
+      'weeklyWeekday': weeklyWeekday,
+      'monthlyDays': monthlyDays,
+      'recurrenceAnchorDate': recurrenceAnchorDate,
     };
   }
 }

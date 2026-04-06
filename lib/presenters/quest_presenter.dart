@@ -54,7 +54,7 @@ class QuestPresenter extends ChangeNotifier {
   List<Quest> get todayActiveQuests {
     final now = DateTime.now();
     return _quests.where((q) {
-      if (!q.isEnabled || !q.days[now.weekday - 1]) return false;
+      if (!q.isEnabled || !_isScheduledFor(q, now)) return false;
       final questTime =
           DateTime(now.year, now.month, now.day, q.hour, q.minute);
       return !q.isCompletedToday && !q.isPartialToday && questTime.isAfter(now);
@@ -65,7 +65,7 @@ class QuestPresenter extends ChangeNotifier {
   List<Quest> get todayOverdueQuests {
     final now = DateTime.now();
     return _quests.where((q) {
-      if (!q.isEnabled || !q.days[now.weekday - 1]) return false;
+      if (!q.isEnabled || !_isScheduledFor(q, now)) return false;
       final questTime =
           DateTime(now.year, now.month, now.day, q.hour, q.minute);
       return !q.isCompletedToday &&
@@ -78,7 +78,7 @@ class QuestPresenter extends ChangeNotifier {
   List<Quest> get todayCompletedQuests {
     final now = DateTime.now();
     return _quests.where((q) {
-      if (!q.isEnabled || !q.days[now.weekday - 1]) return false;
+      if (!q.isEnabled || !_isScheduledFor(q, now)) return false;
       return q.isCompletedToday || q.isPartialToday;
     }).toList()
       ..sort(_byTime);
@@ -105,7 +105,30 @@ class QuestPresenter extends ChangeNotifier {
     if (quest.isCompletedOn(yesterday) || quest.isPartialOn(yesterday)) {
       return false; // Already logged yesterday
     }
-    return quest.days[yesterday.weekday - 1];
+    return _isScheduledFor(quest, yesterday);
+  }
+
+  /// Returns true if [quest] is scheduled for the given [date].
+  bool _isScheduledFor(Quest quest, DateTime date) {
+    final weekdayIndex = date.weekday - 1; // 0 = Mon … 6 = Sun
+    switch (quest.recurrenceType) {
+      case RecurrenceType.daily:
+        return quest.days[weekdayIndex];
+      case RecurrenceType.weekly:
+        return quest.weeklyWeekday == weekdayIndex;
+      case RecurrenceType.biweekly:
+        if (quest.weeklyWeekday != weekdayIndex) return false;
+        if (quest.recurrenceAnchorDate == null) return true;
+        final anchor = DateTime.parse(quest.recurrenceAnchorDate!);
+        final anchorMonday =
+            anchor.subtract(Duration(days: anchor.weekday - 1));
+        final thisMonday = date.subtract(Duration(days: date.weekday - 1));
+        final weeksDiff =
+            thisMonday.difference(anchorMonday).inDays ~/ 7;
+        return weeksDiff.abs() % 2 == 0;
+      case RecurrenceType.monthly:
+        return quest.monthlyDays.contains(date.day);
+    }
   }
 
   /// 0.0–1.0 progress toward the 21-consecutive-day stat point for a quest.
@@ -318,6 +341,47 @@ class QuestPresenter extends ChangeNotifier {
     await _saveQuests();
   }
 
+  /// Assigns [questId] to [groupId] (or removes from any group if null).
+  /// Keeps both quest.routineId and group.questIds in sync.
+  Future<void> assignQuestToGroup(int questId, String? groupId) async {
+    final questIdStr = questId.toString();
+
+    // Remove from any existing group that contains this quest
+    for (int i = 0; i < _routines.length; i++) {
+      if (_routines[i].questIds.contains(questIdStr)) {
+        _routines[i] = _routines[i].copyWith(
+          questIds: _routines[i].questIds
+              .where((id) => id != questIdStr)
+              .toList(),
+        );
+      }
+    }
+
+    // Update the quest's routineId
+    final questIdx = _quests.indexWhere((q) => q.id == questId);
+    if (questIdx != -1) {
+      _quests[questIdx] = _quests[questIdx].copyWith(
+        routineId: groupId,
+        clearRoutineId: groupId == null,
+      );
+    }
+
+    // Add to the new group's questIds
+    if (groupId != null) {
+      final groupIdx = _routines.indexWhere((r) => r.id == groupId);
+      if (groupIdx != -1 &&
+          !_routines[groupIdx].questIds.contains(questIdStr)) {
+        _routines[groupIdx] = _routines[groupIdx].copyWith(
+          questIds: [..._routines[groupIdx].questIds, questIdStr],
+        );
+      }
+    }
+
+    notifyListeners();
+    await _storage.saveRoutines(_routines);
+    await _saveQuests();
+  }
+
   // ─── Achievements ────────────────────────────────────────────────────────────
 
   Future<void> markAchievementSeen(String achievementId) async {
@@ -348,11 +412,9 @@ class QuestPresenter extends ChangeNotifier {
 
     DateTime checkDate = _lastPenaltyCheckDate!;
     while (checkDate.isBefore(today)) {
-      final dayIdx = checkDate.weekday - 1;
-
       for (int i = 0; i < updatedQuests.length; i++) {
         final quest = updatedQuests[i];
-        if (!quest.isEnabled || !quest.days[dayIdx]) continue;
+        if (!quest.isEnabled || !_isScheduledFor(quest, checkDate)) continue;
 
         final wasCompleted =
             quest.isCompletedOn(checkDate) || quest.isPartialOn(checkDate);
@@ -479,7 +541,6 @@ class QuestPresenter extends ChangeNotifier {
   }
 
   void _scheduleStreakAtRiskIfNeeded() {
-    final now = DateTime.now();
     for (final quest in todayOverdueQuests) {
       if (quest.streakCount > 3) {
         _notifications.scheduleStreakAtRiskNotification(
