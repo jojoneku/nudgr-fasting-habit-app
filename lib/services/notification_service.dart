@@ -461,7 +461,6 @@ class NotificationService {
   Future<void> scheduleQuestNotifications(Quest quest) async {
     debugPrint(
         'NotificationService: Scheduling quest notifications for ${quest.title}');
-    int baseId = quest.id;
 
     final AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -469,7 +468,7 @@ class NotificationService {
       channelNameQuests,
       channelDescription: 'Recurring reminders for habits and quests',
       importance: Importance.max,
-      priority: Priority.max, // Upgrade to Priority.max for heads-up
+      priority: Priority.max,
       fullScreenIntent: true,
       playSound: true,
       enableVibration: true,
@@ -480,110 +479,266 @@ class NotificationService {
     final NotificationDetails details =
         NotificationDetails(android: androidDetails);
 
+    switch (quest.recurrenceType) {
+      case RecurrenceType.daily:
+        await _scheduleDailyQuest(quest, details);
+      case RecurrenceType.weekly:
+        await _scheduleWeeklyQuest(quest, details);
+      case RecurrenceType.biweekly:
+        await _scheduleBiweeklyQuest(quest, details);
+      case RecurrenceType.monthly:
+        await _scheduleMonthlyQuest(quest, details);
+    }
+  }
+
+  /// Daily: schedule one recurring notification per enabled day-of-week.
+  Future<void> _scheduleDailyQuest(
+      Quest quest, NotificationDetails details) async {
+    final int baseId = quest.id;
+    final now = tz.TZDateTime.now(tz.local);
+
     for (int i = 0; i < 7; i++) {
-      if (quest.days[i]) {
-        int dayOfWeekISO = i + 1;
-        tz.TZDateTime scheduledDate =
-            _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
-        int notificationId = baseId + i;
+      if (!quest.days[i]) continue;
+      int dayOfWeekISO = i + 1;
+      tz.TZDateTime scheduledDate =
+          _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
+      int notificationId = baseId + i;
 
-        // Safety Check:
-        // If the calculated "next instance" is extremely close to now (or in the past due to race conditions),
-        // scheduling it as a recurring event might fail or be dropped.
-        // Logic: If it's effectively "now", fire an immediate trigger for today, and defer the recurrence start to next week.
-        final now = tz.TZDateTime.now(tz.local);
-        if (scheduledDate.isBefore(now.add(const Duration(seconds: 10)))) {
-          debugPrint(
-              'NotificationService: Quest "$quest.title" scheduled time ($scheduledDate) is too close/past. Firing immediate and deferring schedule.');
-
-          // Fire immediate one-off for "today"
-          await _scheduleOneShotNotification(
-            notificationId +
-                10000, // offset ID to strictly strictly separate single-fire from schedule
-            quest.title,
-            "It's time for your quest!",
-            now.add(const Duration(seconds: 1)), // immediate
-            channelId: channelIdQuests,
-            channelName: channelNameQuests,
-          );
-
-          // Push the recurring schedule to the next week
-          scheduledDate = scheduledDate.add(const Duration(days: 7));
-        }
-
-        debugPrint(
-            'NotificationService: Scheduling "${quest.title}" (ID:$notificationId) for $scheduledDate');
-
-        try {
-          await flutterLocalNotificationsPlugin.zonedSchedule(
-            notificationId,
-            quest.title,
-            "It's time for your quest!",
-            scheduledDate,
-            details,
-            androidScheduleMode: AndroidScheduleMode.alarmClock,
-            uiLocalNotificationDateInterpretation:
-                UILocalNotificationDateInterpretation.absoluteTime,
-            matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-          );
-        } catch (e) {
-          debugPrint(
-              'NotificationService: Error scheduling quest "$quest.title": $e');
-        }
-
-        // Schedule Reminder if configured
-        if (quest.reminderMinutes != null && quest.reminderMinutes! > 0) {
-          int reminderId = baseId + 100 + i; // Offset for reminders
-          tz.TZDateTime reminderDate =
-              scheduledDate.subtract(Duration(minutes: quest.reminderMinutes!));
-
-          // If reminder time is in the past for this recurrence instance (e.g. quest is in 2 mins, reminder is 5 mins before)
-          // We should skip it for *this* recurrence if it's too late, OR if scheduledDate was pushed to next week,
-          // reminderDate will be next week too, so it's fine.
-          // However, if scheduledDate was "today" but not pushed (e.g. 1 hour from now), remainder checks are valid.
-
-          if (reminderDate.isBefore(now)) {
-            // This specific reminder is in the past, so for recurring schedule logic,
-            // zonedSchedule might handle it if matchDateTimeComponents is set, BUT
-            // if we use a relative date that is in the past for "now", it throws.
-            // We should probably rely on matchDateTimeComponents but base date must be future.
-            // If reminderDate < now, add 7 days to start from next week.
-            reminderDate = reminderDate.add(const Duration(days: 7));
-          }
-
-          debugPrint(
-              'NotificationService: Scheduling REMINDER for "${quest.title}" (ID:$reminderId) for $reminderDate');
-
-          try {
-            await flutterLocalNotificationsPlugin.zonedSchedule(
-              reminderId,
-              "Upcoming Quest: ${quest.title}",
-              "${quest.reminderMinutes} minutes until your quest!",
-              reminderDate,
-              details, // Reuse mostly same details (maybe sound different?)
-              androidScheduleMode: AndroidScheduleMode.alarmClock,
-              uiLocalNotificationDateInterpretation:
-                  UILocalNotificationDateInterpretation.absoluteTime,
-              matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
-            );
-          } catch (e) {
-            debugPrint(
-                'NotificationService: Error scheduling reminder for "$quest.title": $e');
-          }
-        }
+      if (scheduledDate.isBefore(now.add(const Duration(seconds: 10)))) {
+        await _scheduleOneShotNotification(
+          notificationId + 10000,
+          quest.title,
+          "It's time for your quest!",
+          now.add(const Duration(seconds: 1)),
+          channelId: channelIdQuests,
+          channelName: channelNameQuests,
+        );
+        scheduledDate = scheduledDate.add(const Duration(days: 7));
       }
+
+      try {
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          notificationId,
+          quest.title,
+          "It's time for your quest!",
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        );
+      } catch (e) {
+        debugPrint(
+            'NotificationService: Error scheduling quest "${quest.title}": $e');
+      }
+
+      await _scheduleQuestReminder(quest, scheduledDate, baseId + 100 + i,
+          details, DateTimeComponents.dayOfWeekAndTime);
+    }
+  }
+
+  /// Weekly: one recurring notification on the chosen weekday.
+  Future<void> _scheduleWeeklyQuest(
+      Quest quest, NotificationDetails details) async {
+    final int dayOfWeekISO = quest.weeklyWeekday + 1;
+    tz.TZDateTime scheduledDate =
+        _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
+    final now = tz.TZDateTime.now(tz.local);
+
+    if (scheduledDate.isBefore(now.add(const Duration(seconds: 10)))) {
+      await _scheduleOneShotNotification(
+        quest.id + 10000,
+        quest.title,
+        "It's time for your quest!",
+        now.add(const Duration(seconds: 1)),
+        channelId: channelIdQuests,
+        channelName: channelNameQuests,
+      );
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        quest.id,
+        quest.title,
+        "It's time for your quest!",
+        scheduledDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+      );
+    } catch (e) {
+      debugPrint(
+          'NotificationService: Error scheduling weekly quest "${quest.title}": $e');
+    }
+
+    await _scheduleQuestReminder(quest, scheduledDate, quest.id + 100, details,
+        DateTimeComponents.dayOfWeekAndTime);
+  }
+
+  /// Biweekly: schedule the next 6 occurrences as one-shot notifications.
+  Future<void> _scheduleBiweeklyQuest(
+      Quest quest, NotificationDetails details) async {
+    final int dayOfWeekISO = quest.weeklyWeekday + 1;
+    tz.TZDateTime next =
+        _nextInstanceOfDay(dayOfWeekISO, quest.hour, quest.minute);
+
+    // If this week is not an "on" week, skip to next occurrence (+7 days).
+    if (quest.recurrenceAnchorDate != null) {
+      final anchor = DateTime.parse(quest.recurrenceAnchorDate!);
+      final anchorMonday = anchor.subtract(Duration(days: anchor.weekday - 1));
+      final now = DateTime.now();
+      final thisMonday = now.subtract(Duration(days: now.weekday - 1));
+      final weeksDiff = thisMonday.difference(anchorMonday).inDays ~/ 7;
+      if (weeksDiff.abs() % 2 != 0) {
+        next = next.add(const Duration(days: 7));
+      }
+    }
+
+    for (int occurrence = 0; occurrence < 6; occurrence++) {
+      final int notifId = quest.id + 200 + occurrence;
+      await _scheduleOneShotNotification(
+        notifId,
+        quest.title,
+        "It's time for your bi-weekly quest!",
+        next,
+        channelId: channelIdQuests,
+        channelName: channelNameQuests,
+      );
+      if (quest.reminderMinutes != null && quest.reminderMinutes! > 0) {
+        final reminderDate =
+            next.subtract(Duration(minutes: quest.reminderMinutes!));
+        await _scheduleOneShotNotification(
+          notifId + 100,
+          "Upcoming Quest: ${quest.title}",
+          "${quest.reminderMinutes} minutes until your quest!",
+          reminderDate,
+          channelId: channelIdQuests,
+          channelName: channelNameQuests,
+        );
+      }
+      next = next.add(const Duration(days: 14));
+    }
+  }
+
+  /// Monthly: one recurring notification per selected day-of-month.
+  Future<void> _scheduleMonthlyQuest(
+      Quest quest, NotificationDetails details) async {
+    for (int idx = 0; idx < quest.monthlyDays.length; idx++) {
+      final int dayOfMonth = quest.monthlyDays[idx];
+      final int notifId = quest.id + 300 + idx;
+      tz.TZDateTime scheduledDate =
+          _nextInstanceOfMonthDay(dayOfMonth, quest.hour, quest.minute);
+
+      try {
+        await flutterLocalNotificationsPlugin.zonedSchedule(
+          notifId,
+          quest.title,
+          "It's time for your quest!",
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.alarmClock,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+        );
+      } catch (e) {
+        debugPrint(
+            'NotificationService: Error scheduling monthly quest "${quest.title}": $e');
+      }
+
+      await _scheduleQuestReminder(quest, scheduledDate, notifId + 10, details,
+          DateTimeComponents.dayOfMonthAndTime);
+    }
+  }
+
+  /// Schedules a reminder notification before a quest, reusing the match component.
+  Future<void> _scheduleQuestReminder(
+    Quest quest,
+    tz.TZDateTime questDate,
+    int reminderId,
+    NotificationDetails details,
+    DateTimeComponents matchComponent,
+  ) async {
+    if (quest.reminderMinutes == null || quest.reminderMinutes! <= 0) return;
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime reminderDate =
+        questDate.subtract(Duration(minutes: quest.reminderMinutes!));
+
+    if (reminderDate.isBefore(now)) {
+      reminderDate = reminderDate.add(const Duration(days: 7));
+    }
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        reminderId,
+        "Upcoming Quest: ${quest.title}",
+        "${quest.reminderMinutes} minutes until your quest!",
+        reminderDate,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: matchComponent,
+      );
+    } catch (e) {
+      debugPrint(
+          'NotificationService: Error scheduling reminder for "${quest.title}": $e');
     }
   }
 
   Future<void> cancelQuestNotifications(Quest quest) async {
     debugPrint(
         'NotificationService: Cancelling quest notifications for ${quest.title}');
-    int baseId = quest.id;
+    final int baseId = quest.id;
+    // Daily: IDs baseId+0..6 and reminders baseId+100..106
     for (int i = 0; i < 7; i++) {
-      await flutterLocalNotificationsPlugin.cancel(baseId + i); // Main quest
-      await flutterLocalNotificationsPlugin
-          .cancel(baseId + 100 + i); // Reminder
+      await flutterLocalNotificationsPlugin.cancel(baseId + i);
+      await flutterLocalNotificationsPlugin.cancel(baseId + 100 + i);
     }
+    // Weekly: baseId, reminder baseId+100
+    await flutterLocalNotificationsPlugin.cancel(baseId);
+    await flutterLocalNotificationsPlugin.cancel(baseId + 100);
+    // Biweekly: baseId+200..205 and baseId+300..305 (reminders)
+    for (int i = 0; i < 6; i++) {
+      await flutterLocalNotificationsPlugin.cancel(baseId + 200 + i);
+      await flutterLocalNotificationsPlugin.cancel(baseId + 300 + i);
+    }
+    // Monthly: baseId+300..301 and reminders baseId+310..311
+    for (int i = 0; i < 2; i++) {
+      await flutterLocalNotificationsPlugin.cancel(baseId + 300 + i);
+      await flutterLocalNotificationsPlugin.cancel(baseId + 310 + i);
+    }
+    // Immediate one-shots
+    await flutterLocalNotificationsPlugin.cancel(baseId + 10000);
+  }
+
+  /// Schedules a "streak at risk" notification at 9 PM today.
+  /// Only effective if quest is still incomplete and streakCount > 3.
+  Future<void> scheduleStreakAtRiskNotification(
+      int questId, String questTitle, int streakCount) async {
+    const int notificationId = 997;
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, 21, 0);
+    if (scheduled.isBefore(now)) return; // Already past 9 PM — skip
+    await _scheduleOneShotNotification(
+      notificationId,
+      '⚔️ Streak at risk: $questTitle',
+      "Don't lose your $streakCount-day streak. You still have time.",
+      scheduled,
+      channelId: channelIdQuests,
+      channelName: channelNameQuests,
+    );
+    debugPrint(
+        'NotificationService: Streak-at-risk notification scheduled for $questTitle at 9 PM');
+  }
+
+  Future<void> cancelStreakAtRiskNotification() async {
+    await flutterLocalNotificationsPlugin.cancel(997);
   }
 
   Future<void> cancelFastingNotifications() async {
@@ -628,6 +783,21 @@ class NotificationService {
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
     return scheduledDate;
+  }
+
+  /// Returns the next [tz.TZDateTime] matching a specific day-of-month.
+  tz.TZDateTime _nextInstanceOfMonthDay(int dayOfMonth, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime candidate =
+        tz.TZDateTime(tz.local, now.year, now.month, dayOfMonth, hour, minute);
+    if (candidate.isBefore(now.subtract(const Duration(minutes: 1)))) {
+      // Roll to next month
+      final nextMonth = now.month == 12 ? 1 : now.month + 1;
+      final nextYear = now.month == 12 ? now.year + 1 : now.year;
+      candidate = tz.TZDateTime(
+          tz.local, nextYear, nextMonth, dayOfMonth, hour, minute);
+    }
+    return candidate;
   }
 
   Future<void> _scheduleOneShotNotification(

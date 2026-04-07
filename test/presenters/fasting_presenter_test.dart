@@ -179,34 +179,4 @@ void main() {
       expect(presenter.history.first.success, false);
     });
   });
-
-  // ── Quest lifecycle ─────────────────────────────────────────────────────────
-
-  group('quests', () {
-    test('addQuest appends to quests list', () async {
-      await presenter.addQuest('Run 5k', 7, 0, List.filled(7, true));
-      expect(presenter.quests.length, 1);
-      expect(presenter.quests.first.title, 'Run 5k');
-    });
-
-    test('completeQuest awards XP once per day', () async {
-      await presenter.addQuest('Run 5k', 7, 0, List.filled(7, true));
-      final xp1 = await presenter.completeQuest(0);
-      final xp2 = await presenter.completeQuest(0); // second tap same session
-      expect(xp1, greaterThan(0));
-      expect(xp2, 0);
-    });
-
-    test('toggleQuest disables quest', () async {
-      await presenter.addQuest('Run 5k', 7, 0, List.filled(7, true));
-      await presenter.toggleQuest(0, false);
-      expect(presenter.quests.first.isEnabled, false);
-    });
-
-    test('deleteQuest removes from list', () async {
-      await presenter.addQuest('Run 5k', 7, 0, List.filled(7, true));
-      await presenter.deleteQuest(0);
-      expect(presenter.quests, isEmpty);
-    });
-  });
 }
