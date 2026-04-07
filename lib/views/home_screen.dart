@@ -6,6 +6,7 @@ import '../presenters/fasting_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
+import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
@@ -28,6 +29,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final StorageService _storage;
   late final StatsPresenter _statsPresenter;
   late final FastingPresenter _fastingPresenter;
+  late final QuestPresenter _questPresenter;
   late final FoodDbService _foodDb;
   late final AiEstimationService _aiEstimation;
   late final HealthService _healthService;
@@ -49,6 +51,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _fastingPresenter = FastingPresenter(
       statsPresenter: _statsPresenter,
       storage: _storage,
+    );
+    _questPresenter = QuestPresenter(
+      storage: _storage,
+      stats: _statsPresenter,
     );
     _foodDb = FoodDbService();
     _aiEstimation = AiEstimationService(
@@ -88,6 +94,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _fastingPresenter.dispose();
     _statsPresenter.dispose();
+    _questPresenter.dispose();
     _nutritionPresenter?.dispose();
     _activityPresenter.dispose();
     _treasuryPresenter.dispose();
@@ -112,6 +119,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       HubScreen(
         fastingPresenter: _fastingPresenter,
         statsPresenter: _statsPresenter,
+        questPresenter: _questPresenter,
         nutritionPresenter: _nutritionPresenter,
         activityPresenter: _activityPresenter,
         treasuryPresenter: _treasuryPresenter,
