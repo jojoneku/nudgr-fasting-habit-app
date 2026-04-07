@@ -117,13 +117,14 @@ class _QuestsTabState extends State<QuestsTab> {
         // Standalone active
         if (standaloneActive.isNotEmpty) ...[
           _sectionLabel('Active'),
-          ...standaloneActive.map((q) =>
-              QuestMissionTile(quest: q, presenter: presenter)),
+          ...standaloneActive
+              .map((q) => QuestMissionTile(quest: q, presenter: presenter)),
         ],
 
         // Missed
         if (standaloneOverdue.isNotEmpty) ...[
-          _sectionLabel('Missed', color: AppColors.error, hint: 'Tap to complete'),
+          _sectionLabel('Missed',
+              color: AppColors.error, hint: 'Tap to complete'),
           ...standaloneOverdue.map((q) =>
               QuestMissionTile(quest: q, presenter: presenter, isMissed: true)),
         ],
@@ -131,8 +132,8 @@ class _QuestsTabState extends State<QuestsTab> {
         // Completed
         if (completed.isNotEmpty) ...[
           _sectionLabel('Completed', color: AppColors.neutral),
-          ...completed.map((q) =>
-              QuestMissionTile(quest: q, presenter: presenter)),
+          ...completed
+              .map((q) => QuestMissionTile(quest: q, presenter: presenter)),
         ],
       ],
     );
@@ -148,8 +149,9 @@ class _QuestsTabState extends State<QuestsTab> {
 
     // Quests that belong to a group
     final groupedQuestIds = groups.expand((r) => r.questIds).toSet();
-    final groupedQuests =
-        allQuests.where((q) => groupedQuestIds.contains(q.id.toString())).toList();
+    final groupedQuests = allQuests
+        .where((q) => groupedQuestIds.contains(q.id.toString()))
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.only(bottom: 100),
@@ -169,15 +171,14 @@ class _QuestsTabState extends State<QuestsTab> {
             );
           }),
           const Divider(
-              indent: 16,
-              endIndent: 16,
-              height: 24,
-              color: AppColors.neutral),
+              indent: 16, endIndent: 16, height: 24, color: AppColors.neutral),
         ],
 
         // ── All Quests ─────────────────────────────────────────────────────
         _editSectionLabel('All Quests',
-            hint: groups.isNotEmpty ? 'Grouped quests shown in their group above' : null),
+            hint: groups.isNotEmpty
+                ? 'Grouped quests shown in their group above'
+                : null),
         if (allQuests.isEmpty)
           const Padding(
             padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -207,7 +208,8 @@ class _QuestsTabState extends State<QuestsTab> {
           const SizedBox(height: 16),
           Text(
             _isEditing ? 'No quests yet.' : 'No missions today.',
-            style: const TextStyle(color: AppColors.textSecondary, fontSize: 16),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 16),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -244,8 +246,7 @@ class _QuestsTabState extends State<QuestsTab> {
   Future<void> _showRoutineEditor(BuildContext context,
       {HabitRoutine? routine}) async {
     await Navigator.of(context).push(MaterialPageRoute(
-      builder: (_) =>
-          RoutineEditorView(presenter: presenter, routine: routine),
+      builder: (_) => RoutineEditorView(presenter: presenter, routine: routine),
     ));
   }
 
@@ -304,8 +305,7 @@ class _DailyProgressHeader extends StatelessWidget {
   final int completed;
   final int total;
 
-  const _DailyProgressHeader(
-      {required this.completed, required this.total});
+  const _DailyProgressHeader({required this.completed, required this.total});
 
   @override
   Widget build(BuildContext context) {
@@ -332,8 +332,7 @@ class _DailyProgressHeader extends StatelessWidget {
               Text(
                 allDone ? 'All missions complete!' : 'Today\'s Missions',
                 style: TextStyle(
-                  color:
-                      allDone ? AppColors.success : AppColors.textPrimary,
+                  color: allDone ? AppColors.success : AppColors.textPrimary,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -388,8 +387,7 @@ class _QuestGroupSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final completedCount = quests
-        .where((q) =>
-            presenter.todayCompletedQuests.any((c) => c.id == q.id))
+        .where((q) => presenter.todayCompletedQuests.any((c) => c.id == q.id))
         .length;
     final accentColor =
         Color(int.parse(routine.colorHex.replaceFirst('#', '0xFF')));
@@ -400,16 +398,15 @@ class _QuestGroupSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: accentColor.withValues(alpha: 0.25), width: 1),
+          border:
+              Border.all(color: accentColor.withValues(alpha: 0.25), width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Group header
             Padding(
-              padding:
-                  const EdgeInsets.fromLTRB(14, 12, 14, 10),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
               child: Row(
                 children: [
                   // Colored pill accent
@@ -511,8 +508,7 @@ class _GroupEditTile extends StatelessWidget {
       ),
       onDismissed: (_) => onDelete(),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: Container(
           width: 4,
           height: 40,
@@ -522,19 +518,15 @@ class _GroupEditTile extends StatelessWidget {
           ),
         ),
         title: Text(routine.name,
-            style: const TextStyle(
-                fontWeight: FontWeight.bold, fontSize: 15)),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
         subtitle: Text(
           '$memberCount quest${memberCount != 1 ? 's' : ''} in this group',
-          style: const TextStyle(
-              color: AppColors.textSecondary, fontSize: 12),
+          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
         ),
-        trailing: const Icon(Icons.chevron_right,
-            color: AppColors.neutral, size: 20),
+        trailing:
+            const Icon(Icons.chevron_right, color: AppColors.neutral, size: 20),
         onTap: onEdit,
       ),
     );
   }
 }
-
-

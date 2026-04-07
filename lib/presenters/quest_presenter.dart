@@ -123,8 +123,7 @@ class QuestPresenter extends ChangeNotifier {
         final anchorMonday =
             anchor.subtract(Duration(days: anchor.weekday - 1));
         final thisMonday = date.subtract(Duration(days: date.weekday - 1));
-        final weeksDiff =
-            thisMonday.difference(anchorMonday).inDays ~/ 7;
+        final weeksDiff = thisMonday.difference(anchorMonday).inDays ~/ 7;
         return weeksDiff.abs() % 2 == 0;
       case RecurrenceType.monthly:
         return quest.monthlyDays.contains(date.day);
@@ -350,9 +349,8 @@ class QuestPresenter extends ChangeNotifier {
     for (int i = 0; i < _routines.length; i++) {
       if (_routines[i].questIds.contains(questIdStr)) {
         _routines[i] = _routines[i].copyWith(
-          questIds: _routines[i].questIds
-              .where((id) => id != questIdStr)
-              .toList(),
+          questIds:
+              _routines[i].questIds.where((id) => id != questIdStr).toList(),
         );
       }
     }

@@ -220,8 +220,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                     TextFormField(
                       controller: _minVersionCtrl,
                       decoration: const InputDecoration(
-                        hintText:
-                            'Minimum version — e.g., at least 5 push-ups',
+                        hintText: 'Minimum version — e.g., at least 5 push-ups',
                         border: InputBorder.none,
                         isDense: true,
                         contentPadding: EdgeInsets.zero,
@@ -241,8 +240,8 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                 onChanged: (id) => setState(() => _selectedGroupId = id),
                 onCreateGroup: () async {
                   await Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => RoutineEditorView(
-                        presenter: widget.presenter),
+                    builder: (_) =>
+                        RoutineEditorView(presenter: widget.presenter),
                   ));
                   // Refresh so new group appears in the list
                   if (mounted) setState(() {});
@@ -370,8 +369,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(children: [
-            Icon(Icons.warning_amber_rounded,
-                color: AppColors.gold, size: 18),
+            Icon(Icons.warning_amber_rounded, color: AppColors.gold, size: 18),
             SizedBox(width: 10),
             Text('Pick at least one day of the month.',
                 style: TextStyle(color: AppColors.textPrimary)),
@@ -390,8 +388,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
     final existing = widget.quest;
 
     final today = DateTime.now().toIso8601String().split('T')[0];
-    final anchorDate =
-        existing?.recurrenceAnchorDate ?? today;
+    final anchorDate = existing?.recurrenceAnchorDate ?? today;
 
     if (existing != null) {
       await widget.presenter.updateQuest(existing.copyWith(
@@ -504,8 +501,8 @@ class _SectionCard extends StatelessWidget {
                 ),
                 textStyle: const TextStyle(
                     color: AppColors.textSecondary, fontSize: 11),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: const Icon(
                   Icons.info_outline,
                   size: 13,
@@ -597,10 +594,10 @@ class _RecurrenceTypePicker extends StatelessWidget {
                 _labels[type]!,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.textSecondary,
+                  color:
+                      isSelected ? AppColors.primary : AppColors.textSecondary,
                   fontSize: 11,
-                  fontWeight:
-                      isSelected ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
             ),
@@ -644,7 +641,8 @@ class _WeekdayPicker extends StatelessWidget {
             child: Text(
               _labels[i],
               style: TextStyle(
-                color: isSelected ? AppColors.background : AppColors.textPrimary,
+                color:
+                    isSelected ? AppColors.background : AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -704,8 +702,7 @@ class _MonthDayPicker extends StatelessWidget {
               '$day',
               style: TextStyle(
                 color: isSelected ? AppColors.primary : AppColors.textSecondary,
-                fontWeight:
-                    isSelected ? FontWeight.bold : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                 fontSize: 12,
               ),
             ),
@@ -755,8 +752,7 @@ class _TimePicker extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
         decoration: BoxDecoration(
-          border:
-              Border.all(color: AppColors.neutral.withValues(alpha: 0.5)),
+          border: Border.all(color: AppColors.neutral.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -800,8 +796,7 @@ class _TimePicker extends StatelessWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () {
                 onChanged(temp);
@@ -837,8 +832,7 @@ class _ReminderDropdown extends StatelessWidget {
           isDense: true,
           isExpanded: true,
           dropdownColor: AppColors.surface,
-          style: const TextStyle(
-              color: AppColors.textPrimary, fontSize: 13),
+          style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
           items: const [
             DropdownMenuItem(value: null, child: Text('None')),
             DropdownMenuItem(value: 5, child: Text('5 min')),
@@ -946,14 +940,14 @@ class _DayPicker extends StatelessWidget {
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primary : Colors.transparent,
               border: Border.all(
-                  color:
-                      isSelected ? AppColors.primary : AppColors.neutral),
+                  color: isSelected ? AppColors.primary : AppColors.neutral),
               shape: BoxShape.circle,
             ),
             child: Text(
               labels[i],
               style: TextStyle(
-                color: isSelected ? AppColors.background : AppColors.textPrimary,
+                color:
+                    isSelected ? AppColors.background : AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 12,
               ),
@@ -1076,9 +1070,8 @@ class _GroupOption extends StatelessWidget {
               : AppColors.background.withValues(alpha: 0.4),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected
-                ? color
-                : AppColors.neutral.withValues(alpha: 0.2),
+            color:
+                isSelected ? color : AppColors.neutral.withValues(alpha: 0.2),
             width: isSelected ? 1.5 : 1,
           ),
         ),
@@ -1109,8 +1102,7 @@ class _GroupOption extends StatelessWidget {
                 ],
               ),
             ),
-            if (isSelected)
-              Icon(Icons.check_circle, color: color, size: 18),
+            if (isSelected) Icon(Icons.check_circle, color: color, size: 18),
           ],
         ),
       ),

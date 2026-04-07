@@ -58,94 +58,100 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
     final allQuests = widget.presenter.quests;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Group' : 'New Quest Group'),
-        actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('Save',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(20),
-          children: [
-            // Name
-            const Text('Group Name',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: const InputDecoration(
-                hintText: 'e.g., Morning Ritual',
-                errorStyle: TextStyle(color: AppColors.danger, fontSize: 11),
-              ),
-              autofocus: !isEditing,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'Group name is required'
-                  : null,
-            ),
-          const SizedBox(height: 20),
-
-          // Suggested start time
-          const Text('Suggested Start Time',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-          const SizedBox(height: 8),
-          _TimeTile(time: _time, onChanged: (t) => setState(() => _time = t)),
-          const SizedBox(height: 20),
-
-          // Color
-          const Text('Color',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-          const SizedBox(height: 8),
-          _ColorPicker(
-            colors: _colorOptions,
-            selected: _selectedColor,
-            onChanged: (c) => setState(() => _selectedColor = c),
-          ),
-          const SizedBox(height: 24),
-
-          // Quest selection
-          const Text('Quests in this Group',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-          const SizedBox(height: 8),
-
-          if (allQuests.isEmpty)
-            const Text('No quests available. Add quests first.',
-                style: TextStyle(color: AppColors.textSecondary))
-          else
-            ...allQuests.map((q) => _QuestPickerTile(
-                  quest: q,
-                  isSelected: _selectedQuestIds.contains(q.id.toString()),
-                  onToggle: (selected) {
-                    setState(() {
-                      final id = q.id.toString();
-                      if (selected) {
-                        if (!_selectedQuestIds.contains(id)) {
-                          _selectedQuestIds.add(id);
-                        }
-                      } else {
-                        _selectedQuestIds.remove(id);
-                      }
-                    });
-                  },
-                )),
-
-          // Order info
-          if (_selectedQuestIds.length > 1) ...[
-            const SizedBox(height: 8),
-            const Text(
-              '💡 Quests execute in the order selected above.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+        appBar: AppBar(
+          title: Text(isEditing ? 'Edit Group' : 'New Quest Group'),
+          actions: [
+            TextButton(
+              onPressed: _save,
+              child: const Text('Save',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
-          const SizedBox(height: 40),
-        ],
-      ),
-    ));
+        ),
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              // Name
+              const Text('Group Name',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: const InputDecoration(
+                  hintText: 'e.g., Morning Ritual',
+                  errorStyle: TextStyle(color: AppColors.danger, fontSize: 11),
+                ),
+                autofocus: !isEditing,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'Group name is required'
+                    : null,
+              ),
+              const SizedBox(height: 20),
+
+              // Suggested start time
+              const Text('Suggested Start Time',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 8),
+              _TimeTile(
+                  time: _time, onChanged: (t) => setState(() => _time = t)),
+              const SizedBox(height: 20),
+
+              // Color
+              const Text('Color',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 8),
+              _ColorPicker(
+                colors: _colorOptions,
+                selected: _selectedColor,
+                onChanged: (c) => setState(() => _selectedColor = c),
+              ),
+              const SizedBox(height: 24),
+
+              // Quest selection
+              const Text('Quests in this Group',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              const SizedBox(height: 8),
+
+              if (allQuests.isEmpty)
+                const Text('No quests available. Add quests first.',
+                    style: TextStyle(color: AppColors.textSecondary))
+              else
+                ...allQuests.map((q) => _QuestPickerTile(
+                      quest: q,
+                      isSelected: _selectedQuestIds.contains(q.id.toString()),
+                      onToggle: (selected) {
+                        setState(() {
+                          final id = q.id.toString();
+                          if (selected) {
+                            if (!_selectedQuestIds.contains(id)) {
+                              _selectedQuestIds.add(id);
+                            }
+                          } else {
+                            _selectedQuestIds.remove(id);
+                          }
+                        });
+                      },
+                    )),
+
+              // Order info
+              if (_selectedQuestIds.length > 1) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  '💡 Quests execute in the order selected above.',
+                  style:
+                      TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
+              ],
+              const SizedBox(height: 40),
+            ],
+          ),
+        ));
   }
 
   Future<void> _save() async {
@@ -187,9 +193,7 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
             const Icon(Icons.check_circle, color: AppColors.success, size: 20),
             const SizedBox(width: 12),
             Text(
-              existing != null
-                  ? 'Group updated.'
-                  : '⚡ Group "$name" added!',
+              existing != null ? 'Group updated.' : '⚡ Group "$name" added!',
               style: const TextStyle(color: AppColors.textPrimary),
             ),
           ],
