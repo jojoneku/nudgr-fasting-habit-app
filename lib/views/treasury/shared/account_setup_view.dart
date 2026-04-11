@@ -55,7 +55,6 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
-  final _iconController = TextEditingController();
   final _goalTargetController = TextEditingController();
 
   AccountCategory _category = AccountCategory.bank;
@@ -84,7 +83,6 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     if (existing != null) {
       _nameController.text = existing.name;
       _balanceController.text = existing.balance.toStringAsFixed(2);
-      _iconController.text = existing.icon;
       _category = existing.category;
       _selectedColor = existing.colorHex;
       _maturityDate = existing.maturityDate;
@@ -99,7 +97,6 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   void dispose() {
     _nameController.dispose();
     _balanceController.dispose();
-    _iconController.dispose();
     _goalTargetController.dispose();
     super.dispose();
   }
@@ -142,9 +139,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         parentAccountId: widget.parentAccountId,
         balance: balance,
         colorHex: _selectedColor,
-        icon: _iconController.text.trim().isEmpty
-            ? 'wallet'
-            : _iconController.text.trim(),
+        icon: _category.name,
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
@@ -240,21 +235,28 @@ class _AccountSetupViewState extends State<AccountSetupView> {
               const SizedBox(height: 16),
               _NameField(controller: _nameController),
               const SizedBox(height: 12),
-              _CategoryDropdown(
-                categories: _availableCategories,
-                value: _category,
-                onChanged: (c) => setState(() => _category = c!),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _CategoryDropdown(
+                      categories: _availableCategories,
+                      value: _category,
+                      onChanged: (c) => setState(() => _category = c!),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _BalanceField(controller: _balanceController),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
-              _BalanceField(controller: _balanceController),
               const SizedBox(height: 16),
               _ColorPicker(
                 options: _colorOptions,
                 selected: _selectedColor,
                 onSelected: (hex) => setState(() => _selectedColor = hex),
               ),
-              const SizedBox(height: 12),
-              _IconField(controller: _iconController),
               if (_isGoal) ...[
                 const SizedBox(height: 12),
                 _GoalTargetField(controller: _goalTargetController),
@@ -418,24 +420,6 @@ class _GoalTargetField extends StatelessWidget {
       style: TextStyle(color: AppColors.textPrimary),
       decoration: _inputDecoration('Goal Target').copyWith(
           prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
-    );
-  }
-}
-
-class _IconField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _IconField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Icon name').copyWith(
-          hintText: 'e.g. bank, wallet',
-          hintStyle:
-              TextStyle(color: AppColors.textSecondary.withOpacity(0.5))),
     );
   }
 }
