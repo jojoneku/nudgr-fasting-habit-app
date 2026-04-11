@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -155,7 +155,7 @@ class _BudgetProgressRow extends StatelessWidget {
             const SizedBox(width: 8),
             Text(
               '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
-              style: GoogleFonts.jetBrainsMono(
+              style: AppTextStyles.mono(
                 textStyle: TextStyle(
                   color: AppColors.textSecondary,
                   fontSize: isTotal ? 12 : 11,
