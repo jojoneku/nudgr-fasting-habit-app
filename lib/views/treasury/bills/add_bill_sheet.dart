@@ -183,12 +183,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
                   onChanged: (v) => setState(() => _selectedAccountId = v),
                 ),
               ],
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _paymentNoteController,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: _inputDecoration('Payment Note (optional)'),
-              ),
               if (_expenseCategories.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text('Category',
@@ -221,6 +215,12 @@ class _AddBillSheetState extends State<AddBillSheet> {
                   }).toList(),
                 ),
               ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _paymentNoteController,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                decoration: _inputDecoration('Payment Note (optional)'),
+              ),
               const SizedBox(height: 16),
               SwitchListTile(
                 value: _isRecurring,

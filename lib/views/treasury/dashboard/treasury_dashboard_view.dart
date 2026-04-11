@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -202,22 +202,26 @@ class _LiquidAccountsRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accounts = presenter.liquidAccounts;
     final held = presenter.heldAmountByAccountId;
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: accounts.length,
-        itemBuilder: (context, index) {
-          return AccountCardWidget(
-            account: accounts[index],
-            heldAmount: held[accounts[index].id] ?? 0.0,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              onEdit(accounts[index]);
-            },
-          );
-        },
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 4,
+        mainAxisSpacing: 4,
+        mainAxisExtent: 90,
       ),
+      itemCount: accounts.length,
+      itemBuilder: (context, index) {
+        return AccountCardWidget(
+          account: accounts[index],
+          heldAmount: held[accounts[index].id] ?? 0.0,
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onEdit(accounts[index]);
+          },
+        );
+      },
     );
   }
 }
@@ -323,7 +327,7 @@ class _LiabilityListTile extends StatelessWidget {
         children: [
           Text(
             formatPeso(account.balance),
-            style: GoogleFonts.jetBrainsMono(
+            style: AppTextStyles.mono(
               textStyle: const TextStyle(
                   color: AppColors.danger, fontWeight: FontWeight.w600),
             ),
@@ -373,7 +377,7 @@ class _HeldFundsCard extends StatelessWidget {
                     const Spacer(),
                     Text(
                       formatPeso(total),
-                      style: GoogleFonts.jetBrainsMono(
+                      style: AppTextStyles.mono(
                         textStyle: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 12,
@@ -401,7 +405,7 @@ class _HeldFundsCard extends StatelessWidget {
                     children: [
                       Text(
                         formatPeso(accounts[i].balance),
-                        style: GoogleFonts.jetBrainsMono(
+                        style: AppTextStyles.mono(
                           textStyle: const TextStyle(
                               color: AppColors.textSecondary,
                               fontWeight: FontWeight.w600),
