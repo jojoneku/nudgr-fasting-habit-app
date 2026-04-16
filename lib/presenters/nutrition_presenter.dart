@@ -34,6 +34,7 @@ class NutritionPresenter extends ChangeNotifier {
   bool _proteinGoalMetToday = false;
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
+  String? _aiEstimateError;
 
   static final _dateFmt = DateFormat('yyyy-MM-dd');
   static final _calFmt = NumberFormat('#,###');
@@ -169,6 +170,7 @@ class NutritionPresenter extends ChangeNotifier {
   int get aiDownloadProgress => _ai.downloadProgress;
   String get aiSizeLabel => _ai.modelSizeLabel;
   AiMealEstimate? get lastEstimate => _lastEstimate;
+  String? get aiEstimateError => _aiEstimateError;
 
   // ── Actions — entries ────────────────────────────────────────────────────────
 
@@ -258,19 +260,39 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Actions — AI estimation ───────────────────────────────────────────────────
 
+  /// Initialises the on-device AI model (loads it if already installed).
+  /// Notifies listeners when done so the UI can switch to the AI input form.
+  Future<void> initAi() async {
+    await _ai.init();
+    notifyListeners();
+  }
+
   Future<void> estimateMeal(String description) async {
     if (!isAiAvailable) return;
     _isAiEstimating = true;
     _lastEstimate = null;
+    _aiEstimateError = null;
     notifyListeners();
     try {
       _lastEstimate = await _ai.estimate(description);
-    } catch (_) {
+    } catch (e) {
       _lastEstimate = null;
+      _aiEstimateError = _errorMessage(e);
     } finally {
       _isAiEstimating = false;
       notifyListeners();
     }
+  }
+
+  String _errorMessage(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timeoutexception')) {
+      return 'Analysis timed out. Try a shorter description.';
+    }
+    if (msg.contains('json') || msg.contains('format')) {
+      return 'Model output unreadable. Please try again.';
+    }
+    return 'Analysis failed. Please try again.';
   }
 
   Future<void> confirmAiEstimate(
@@ -285,13 +307,18 @@ class NutritionPresenter extends ChangeNotifier {
 
   void clearEstimate() {
     _lastEstimate = null;
+    _aiEstimateError = null;
     notifyListeners();
   }
 
   Future<void> downloadAiModel() async {
     if (_ai.isDownloading) return;
     notifyListeners();
-    await _ai.downloadModel(onProgress: (_) => notifyListeners());
+    try {
+      await _ai.downloadModel(onProgress: (_) => notifyListeners());
+    } catch (_) {
+      // Download failed — model remains unavailable; banner will stay visible.
+    }
     notifyListeners();
   }
 

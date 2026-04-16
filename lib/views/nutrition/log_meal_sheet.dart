@@ -55,11 +55,12 @@ class _LogMealSheetState extends State<LogMealSheet> {
     }
     setState(() => _isSearching = true);
     final results = await widget.presenter.foodDb.search(q);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _searchResults = results;
         _isSearching = false;
       });
+    }
   }
 
   @override
@@ -118,88 +119,119 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildAiSection() {
-    final available = widget.presenter.isAiAvailable;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('AI QUICK-LOG',
-            style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 10,
-                letterSpacing: 1.5)),
-        const SizedBox(height: 8),
-        if (!available)
-          _AiUnavailableBanner(presenter: widget.presenter)
-        else ...[
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _aiCtrl,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 13),
-                  decoration: _inputDecoration(
-                    'Describe your meal...',
-                    'e.g. rice, grilled fish, mixed veggies',
+    // Wrap in ListenableBuilder so the branch re-evaluates when isAiAvailable
+    // changes (e.g., after init() completes post-startup).
+    return ListenableBuilder(
+      listenable: widget.presenter,
+      builder: (_, __) {
+        final available = widget.presenter.isAiAvailable;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('AI QUICK-LOG',
+                style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                    letterSpacing: 1.5)),
+            const SizedBox(height: 8),
+            if (!available)
+              _AiUnavailableBanner(presenter: widget.presenter)
+            else ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _aiCtrl,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 13),
+                      decoration: _inputDecoration(
+                        'Describe your meal...',
+                        'e.g. rice, grilled fish, mixed veggies',
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent.withValues(alpha: 0.2),
-                    foregroundColor: AppColors.accent,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accent.withValues(alpha: 0.2),
+                        foregroundColor: AppColors.accent,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: _estimate,
+                      child: const Text('ESTIMATE',
+                          style: TextStyle(fontSize: 11, letterSpacing: 1.0)),
+                    ),
                   ),
-                  onPressed: _estimate,
-                  child: const Text('ESTIMATE',
-                      style: TextStyle(fontSize: 11, letterSpacing: 1.0)),
-                ),
+                ],
               ),
+              _buildAiStatus(),
             ],
-          ),
-          ListenableBuilder(
-            listenable: widget.presenter,
-            builder: (_, __) {
-              if (widget.presenter.isAiEstimating) {
-                return const Padding(
-                  padding: EdgeInsets.only(top: 10),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.accent)),
-                      SizedBox(width: 10),
-                      Text('System analyzing meal composition...',
-                          style:
-                              TextStyle(color: AppColors.accent, fontSize: 12)),
-                    ],
-                  ),
-                );
-              }
-              final estimate = widget.presenter.lastEstimate;
-              if (estimate != null) {
-                return _AiResultCard(
-                  estimate: estimate,
-                  onConfirm: (items) {
-                    widget.presenter.confirmAiEstimate(items, _slot);
-                    Navigator.pop(context);
-                  },
-                  onDismiss: widget.presenter.clearEstimate,
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ],
+          ],
+        );
+      },
     );
+  }
+
+  Widget _buildAiStatus() {
+    if (widget.presenter.isAiEstimating) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 10),
+        child: Row(
+          children: [
+            SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.accent)),
+            SizedBox(width: 10),
+            Text('System analyzing meal composition...',
+                style: TextStyle(color: AppColors.accent, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    final error = widget.presenter.aiEstimateError;
+    if (error != null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 10),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.danger, size: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(error,
+                  style: const TextStyle(
+                      color: AppColors.danger, fontSize: 12)),
+            ),
+            GestureDetector(
+              onTap: widget.presenter.clearEstimate,
+              child: const Icon(Icons.close,
+                  color: AppColors.textSecondary, size: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final estimate = widget.presenter.lastEstimate;
+    if (estimate != null) {
+      return _AiResultCard(
+        estimate: estimate,
+        onConfirm: (items) {
+          widget.presenter.confirmAiEstimate(items, _slot);
+          Navigator.pop(context);
+        },
+        onDismiss: widget.presenter.clearEstimate,
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   Widget _buildSearchSection() {
