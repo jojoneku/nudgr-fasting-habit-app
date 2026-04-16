@@ -85,7 +85,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _foodDb.init(); // copy asset → documents dir if needed
-      _nutritionPresenter?.initAi(); // non-blocking — loads Gemma if installed, notifies UI when ready
+      _nutritionPresenter
+          ?.initAi(); // non-blocking — loads Gemma if installed, notifies UI when ready
     });
   }
 
