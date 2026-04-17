@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -52,6 +52,20 @@ class AccountCardWidget extends StatelessWidget {
     }
   }
 
+  IconData _categoryIcon() => switch (account.category) {
+        AccountCategory.bank => Icons.account_balance_outlined,
+        AccountCategory.ewallet => Icons.phone_android_outlined,
+        AccountCategory.cash => Icons.payments_outlined,
+        AccountCategory.savings => Icons.savings_outlined,
+        AccountCategory.goal => Icons.flag_outlined,
+        AccountCategory.timeDeposit => Icons.lock_clock_outlined,
+        AccountCategory.creditCard => Icons.credit_card_outlined,
+        AccountCategory.creditLine => Icons.credit_score_outlined,
+        AccountCategory.bnpl => Icons.shopping_bag_outlined,
+        AccountCategory.investment => Icons.trending_up_rounded,
+        AccountCategory.custodian => Icons.swap_horiz_rounded,
+      };
+
   @override
   Widget build(BuildContext context) {
     final accentColor = _parseColor();
@@ -67,7 +81,6 @@ class AccountCardWidget extends StatelessWidget {
           child: Container(
             width: 140,
             height: 90,
-            margin: const EdgeInsets.only(right: 12),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
@@ -93,7 +106,8 @@ class AccountCardWidget extends StatelessWidget {
                           _CardHeader(
                               account: account,
                               accentColor: accentColor,
-                              categoryLabel: _categoryLabel()),
+                              categoryLabel: _categoryLabel(),
+                              categoryIcon: _categoryIcon()),
                           _CardBalance(
                               account: account, heldAmount: heldAmount),
                         ],
@@ -114,11 +128,13 @@ class _CardHeader extends StatelessWidget {
   final FinancialAccount account;
   final Color accentColor;
   final String categoryLabel;
+  final IconData categoryIcon;
 
   const _CardHeader({
     required this.account,
     required this.accentColor,
     required this.categoryLabel,
+    required this.categoryIcon,
   });
 
   @override
@@ -126,7 +142,7 @@ class _CardHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(Icons.account_balance_wallet, color: accentColor, size: 18),
+        Icon(categoryIcon, color: accentColor, size: 18),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
@@ -170,7 +186,7 @@ class _CardBalance extends StatelessWidget {
           account.isLiability
               ? 'Owed: ${formatPesoCompact(account.balance)}'
               : formatPesoCompact(account.balance),
-          style: GoogleFonts.jetBrainsMono(
+          style: AppTextStyles.mono(
             textStyle: TextStyle(
               color: account.isLiability
                   ? AppColors.danger

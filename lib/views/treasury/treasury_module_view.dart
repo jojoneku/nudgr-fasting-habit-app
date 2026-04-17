@@ -76,6 +76,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
           ),
         ),
         body: TabBarView(
+          physics: const NeverScrollableScrollPhysics(),
           children: [
             TreasuryDashboardView(presenter: widget.dashPresenter),
             LedgerView(presenter: widget.ledgerPresenter),

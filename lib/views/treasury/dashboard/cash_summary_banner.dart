@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -44,7 +44,7 @@ class _TotalLiquidRow extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           formatPeso(presenter.totalLiquidCash),
-          style: GoogleFonts.jetBrainsMono(
+          style: AppTextStyles.mono(
             textStyle: const TextStyle(
               color: AppColors.accent,
               fontSize: 30,
@@ -65,7 +65,7 @@ class _TotalLiquidRow extends StatelessWidget {
             ),
             Text(
               formatPeso(presenter.netWorth),
-              style: GoogleFonts.jetBrainsMono(
+              style: AppTextStyles.mono(
                 textStyle: TextStyle(
                   color: presenter.netWorth >= 0
                       ? AppColors.success

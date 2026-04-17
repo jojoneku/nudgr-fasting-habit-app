@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -124,7 +124,7 @@ class _SheetHeader extends StatelessWidget {
               ),
               Text(
                 formatPeso(total),
-                style: GoogleFonts.jetBrainsMono(
+                style: AppTextStyles.mono(
                   textStyle: TextStyle(
                     color: AppColors.danger,
                     fontSize: 16,
@@ -196,7 +196,7 @@ class _CategoryRow extends StatelessWidget {
                 ),
                 Text(
                   formatPeso(amount),
-                  style: GoogleFonts.jetBrainsMono(
+                  style: AppTextStyles.mono(
                     textStyle: TextStyle(
                       color: AppColors.textPrimary,
                       fontSize: 13,

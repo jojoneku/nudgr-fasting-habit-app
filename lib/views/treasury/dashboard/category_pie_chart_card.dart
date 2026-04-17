@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -228,7 +228,7 @@ class _PieChartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: GoogleFonts.jetBrainsMono(
+          style: AppTextStyles.mono(
             textStyle: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 13,
@@ -338,7 +338,7 @@ class _LegendRow extends StatelessWidget {
         const SizedBox(width: 6),
         Text(
           formatPesoCompact(amount),
-          style: GoogleFonts.jetBrainsMono(
+          style: AppTextStyles.mono(
             textStyle: TextStyle(
               color: AppColors.textSecondary,
               fontSize: 10,

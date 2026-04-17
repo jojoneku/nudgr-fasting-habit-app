@@ -139,6 +139,14 @@ class LedgerPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Refreshes the account list from storage. Call this before showing any
+  /// sheet that needs accounts — TreasuryDashboardPresenter may have added
+  /// or removed accounts since LedgerPresenter last loaded.
+  Future<void> reloadAccounts() async {
+    _accounts = await _storage.loadAccounts();
+    notifyListeners();
+  }
+
   // --- Load ---
 
   Future<void> load() async {
