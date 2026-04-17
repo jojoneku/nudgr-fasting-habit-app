@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -202,7 +202,7 @@ class _BillRow extends StatelessWidget {
           ),
           Text(
             formatPeso(bill.amount),
-            style: GoogleFonts.jetBrainsMono(
+            style: AppTextStyles.mono(
               textStyle: TextStyle(
                 color: isOverdue ? AppColors.danger : AppColors.textSecondary,
                 fontSize: 13,
@@ -302,7 +302,7 @@ class _TotalFooter extends StatelessWidget {
           ),
           Text(
             formatPeso(total),
-            style: GoogleFonts.jetBrainsMono(
+            style: AppTextStyles.mono(
               textStyle: TextStyle(
                 color: hasOverdue ? AppColors.danger : AppColors.textPrimary,
                 fontSize: 14,

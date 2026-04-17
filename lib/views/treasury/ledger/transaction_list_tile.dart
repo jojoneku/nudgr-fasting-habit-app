@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -123,7 +123,7 @@ class TransactionListTile extends StatelessWidget {
                   const SizedBox(width: 12),
                   Text(
                     _amountText,
-                    style: GoogleFonts.jetBrainsMono(
+                    style: AppTextStyles.mono(
                       textStyle: TextStyle(
                         color: _typeColor,
                         fontWeight: FontWeight.w700,

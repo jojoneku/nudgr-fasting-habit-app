@@ -44,6 +44,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     super.initState();
     _syncFromPresenter();
     widget.presenter.addListener(_onPresenterChange);
+    // LedgerPresenter may have stale accounts if they were added/edited via
+    // TreasuryDashboardPresenter. Reload from storage; the listener will
+    // call _syncFromPresenter once the load completes.
+    widget.presenter.reloadAccounts();
     final existing = widget.existing;
     if (existing != null) {
       _type = existing.type;
@@ -180,7 +184,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             _selectedCategoryId = null;
                           })),
                   const SizedBox(height: 16),
-                  _AmountField(controller: _amountController),
+                  _DescriptionField(controller: _descriptionController),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: _AmountField(controller: _amountController),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: _DatePickerRow(
+                            date: _date, onTap: _pickDate, compact: true),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
                   _AccountDropdown(
                     accounts: _accounts,
@@ -212,10 +232,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             setState(() => _selectedCategoryId = id),
                       ),
                   ],
-                  const SizedBox(height: 12),
-                  _DescriptionField(controller: _descriptionController),
-                  const SizedBox(height: 12),
-                  _DatePickerRow(date: _date, onTap: _pickDate),
                   const SizedBox(height: 12),
                   _NoteField(controller: _noteController),
                   const SizedBox(height: 20),
@@ -388,7 +404,7 @@ class _AccountDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      initialValue: value,
+      value: value,
       hint: Text(label,
           style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
       dropdownColor: AppColors.surface,
@@ -501,8 +517,10 @@ class _DescriptionField extends StatelessWidget {
 class _DatePickerRow extends StatelessWidget {
   final DateTime date;
   final VoidCallback onTap;
+  final bool compact;
 
-  const _DatePickerRow({required this.date, required this.onTap});
+  const _DatePickerRow(
+      {required this.date, required this.onTap, this.compact = false});
 
   @override
   Widget build(BuildContext context) {
@@ -521,10 +539,15 @@ class _DatePickerRow extends StatelessWidget {
           children: [
             Icon(Icons.calendar_today_outlined,
                 color: AppColors.textSecondary, size: 18),
-            const SizedBox(width: 12),
-            Text(
-              DateFormat('MMMM d, yyyy').format(date),
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                compact
+                    ? DateFormat('MMM d, yyyy').format(date)
+                    : DateFormat('MMMM d, yyyy').format(date),
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              ),
             ),
           ],
         ),

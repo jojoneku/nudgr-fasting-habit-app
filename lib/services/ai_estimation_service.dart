@@ -75,6 +75,7 @@ class AiEstimationService {
   // ── Download ──────────────────────────────────────────────────────────────────
 
   /// Downloads and installs the model. Reports 0–100 progress via [onProgress].
+  /// If the model is already installed, loads it immediately without re-downloading.
   /// Safe to call multiple times; no-ops if already downloading.
   Future<void> downloadModel({void Function(int progress)? onProgress}) async {
     if (_isDownloading) return;
@@ -83,6 +84,13 @@ class AiEstimationService {
 
     try {
       await FlutterGemma.initialize(huggingFaceToken: huggingFaceToken);
+
+      // If the model is already installed, just load it — skip re-download.
+      if (FlutterGemma.hasActiveModel()) {
+        await _loadModel();
+        return;
+      }
+
       await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
           .fromNetwork(_modelUrl)
           .withProgress((p) {
@@ -90,20 +98,23 @@ class AiEstimationService {
         onProgress?.call(p);
       }).install();
 
-      // Load the model after successful installation.
-      try {
-        _model = await FlutterGemma.getActiveModel(
-          maxTokens: 512,
-          preferredBackend: PreferredBackend.gpu,
-        );
-      } catch (_) {
-        _model = await FlutterGemma.getActiveModel(
-          maxTokens: 512,
-          preferredBackend: PreferredBackend.cpu,
-        );
-      }
+      await _loadModel();
     } finally {
       _isDownloading = false;
+    }
+  }
+
+  Future<void> _loadModel() async {
+    try {
+      _model = await FlutterGemma.getActiveModel(
+        maxTokens: 512,
+        preferredBackend: PreferredBackend.gpu,
+      );
+    } catch (_) {
+      _model = await FlutterGemma.getActiveModel(
+        maxTokens: 512,
+        preferredBackend: PreferredBackend.cpu,
+      );
     }
   }
 
@@ -112,6 +123,7 @@ class AiEstimationService {
   /// Returns a structured calorie breakdown for [description].
   /// Throws [UnsupportedError] if the model is not loaded.
   /// Throws [FormatException] if the model output cannot be parsed.
+  /// Throws [TimeoutException] if inference exceeds 60 seconds.
   Future<AiMealEstimate> estimate(String description) async {
     final model = _model;
     if (model == null) throw UnsupportedError('AI model not loaded.');
@@ -129,13 +141,24 @@ class AiEstimationService {
 
     ModelResponse response;
     try {
-      response = await chat.generateChatResponse();
+      response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 60));
     } finally {
       // Always release the native session to avoid memory accumulation.
-      await chat.session.close();
+      try {
+        await chat.session.close();
+      } catch (_) {}
     }
 
-    return _parseResponse(response, description);
+    final result = _parseResponse(response, description);
+
+    // If the model returned no usable data, treat it as a parsing failure.
+    if (result.items.isEmpty || result.totalCalories == 0) {
+      throw const FormatException('Model returned no usable nutrition data.');
+    }
+
+    return result;
   }
 
   // ── Parsing ───────────────────────────────────────────────────────────────────

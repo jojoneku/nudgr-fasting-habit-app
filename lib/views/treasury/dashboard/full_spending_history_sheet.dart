@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -124,7 +124,7 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   formatPeso(total),
-                  style: GoogleFonts.jetBrainsMono(
+                  style: AppTextStyles.mono(
                     textStyle: TextStyle(
                       color: AppColors.danger,
                       fontSize: 20,
@@ -155,7 +155,7 @@ class _Header extends StatelessWidget {
               ),
               Text(
                 formatPesoCompact(peak),
-                style: GoogleFonts.jetBrainsMono(
+                style: AppTextStyles.mono(
                   textStyle: const TextStyle(
                     color: Color(0xFFEF9A9A),
                     fontSize: 16,
@@ -422,7 +422,7 @@ class _DayRow extends StatelessWidget {
             child: Text(
               formatPesoCompact(day.amount),
               textAlign: TextAlign.right,
-              style: GoogleFonts.jetBrainsMono(
+              style: AppTextStyles.mono(
                 textStyle: TextStyle(
                   color:
                       isPeak ? const Color(0xFFEF9A9A) : AppColors.textPrimary,

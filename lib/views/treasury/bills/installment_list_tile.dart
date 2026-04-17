@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
@@ -96,7 +96,7 @@ class InstallmentListTile extends StatelessWidget {
                   ),
                   Text(
                     '${formatPeso(installment.monthlyAmount)}/mo',
-                    style: GoogleFonts.jetBrainsMono(
+                    style: AppTextStyles.mono(
                       textStyle: TextStyle(
                         color: color,
                         fontSize: 13,
@@ -123,7 +123,7 @@ class InstallmentListTile extends StatelessWidget {
                 children: [
                   Text(
                     '$count/${installment.totalMonths} paid',
-                    style: GoogleFonts.jetBrainsMono(
+                    style: AppTextStyles.mono(
                       textStyle: TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 11,
@@ -138,7 +138,7 @@ class InstallmentListTile extends StatelessWidget {
                     ),
                     Text(
                       '${formatPeso(remainingAmt)} left',
-                      style: GoogleFonts.jetBrainsMono(
+                      style: AppTextStyles.mono(
                         textStyle: TextStyle(
                           color: AppColors.textSecondary,
                           fontSize: 11,
