@@ -1,7 +1,7 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -413,7 +413,7 @@ class _StatChip extends StatelessWidget {
         const SizedBox(height: 3),
         Text(
           value,
-          style: GoogleFonts.jetBrainsMono(
+          style: AppTextStyles.mono(
             textStyle: TextStyle(
               color: color,
               fontSize: 12,
@@ -425,7 +425,7 @@ class _StatChip extends StatelessWidget {
           const SizedBox(height: 1),
           Text(
             subValue!,
-            style: GoogleFonts.jetBrainsMono(
+            style: AppTextStyles.mono(
               textStyle: TextStyle(
                 color: color.withOpacity(0.75),
                 fontSize: 10,

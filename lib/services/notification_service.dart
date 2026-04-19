@@ -589,8 +589,7 @@ class NotificationService {
     // If this week is not an "on" week, skip to next occurrence (+7 days).
     if (quest.recurrenceAnchorDate != null) {
       final anchor = DateTime.parse(quest.recurrenceAnchorDate!);
-      final anchorMonday =
-          anchor.subtract(Duration(days: anchor.weekday - 1));
+      final anchorMonday = anchor.subtract(Duration(days: anchor.weekday - 1));
       final now = DateTime.now();
       final thisMonday = now.subtract(Duration(days: now.weekday - 1));
       final weeksDiff = thisMonday.difference(anchorMonday).inDays ~/ 7;

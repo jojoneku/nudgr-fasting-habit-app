@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -181,7 +181,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                 _FieldLabel('Total Amount'),
                 TextFormField(
                   controller: _totalCtrl,
-                  style: GoogleFonts.jetBrainsMono(
+                  style: AppTextStyles.mono(
                     textStyle: TextStyle(color: AppColors.textPrimary),
                   ),
                   decoration: _inputDecor('0.00'),
@@ -211,7 +211,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
                 _FieldLabel('Monthly Payment (auto-computed, editable)'),
                 TextFormField(
                   controller: _monthlyCtrl,
-                  style: GoogleFonts.jetBrainsMono(
+                  style: AppTextStyles.mono(
                     textStyle: TextStyle(color: AppColors.textPrimary),
                   ),
                   decoration: _inputDecor('0.00'),

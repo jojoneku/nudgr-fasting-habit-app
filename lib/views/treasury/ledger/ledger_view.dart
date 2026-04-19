@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -26,8 +26,6 @@ class LedgerView extends StatefulWidget {
 }
 
 class _LedgerViewState extends State<LedgerView> {
-  bool _showCalendar = false;
-
   LedgerPresenter get presenter => widget.presenter;
 
   void _showAddTransactionSheet() {
@@ -56,20 +54,6 @@ class _LedgerViewState extends State<LedgerView> {
     );
   }
 
-  void _onDaySelected(DateTime day) {
-    HapticFeedback.selectionClick();
-    final current = presenter.selectedDate;
-    // Tap same day again → clear filter
-    if (current != null &&
-        current.year == day.year &&
-        current.month == day.month &&
-        current.day == day.day) {
-      presenter.setSelectedDate(null);
-    } else {
-      presenter.setSelectedDate(day);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -79,27 +63,14 @@ class _LedgerViewState extends State<LedgerView> {
           backgroundColor: AppColors.background,
           body: Column(
             children: [
-              _AccountFilterRow(presenter: presenter),
-              _MonthSelectorRow(
-                presenter: presenter,
-                showCalendar: _showCalendar,
-                onToggleCalendar: () =>
-                    setState(() => _showCalendar = !_showCalendar),
-              ),
-              if (_showCalendar) ...[
-                const SizedBox(height: 4),
-                SpendingCalendar(
-                  presenter: presenter,
-                  onDaySelected: _onDaySelected,
-                ),
-                const SizedBox(height: 8),
-              ],
+              _MonthSelectorRow(presenter: presenter),
               if (presenter.selectedDate != null)
                 _DateFilterChip(
                   date: presenter.selectedDate!,
                   onClear: () => presenter.setSelectedDate(null),
                 ),
               _SummaryCard(presenter: presenter),
+              _AccountFilterRow(presenter: presenter),
               Expanded(child: _TransactionList(presenter: presenter)),
             ],
           ),
@@ -227,21 +198,42 @@ class _AccountPill extends StatelessWidget {
 
 // ── Month Selector ──────────────────────────────────────────────────────────
 
-class _MonthSelectorRow extends StatelessWidget {
+class _MonthSelectorRow extends StatefulWidget {
   final LedgerPresenter presenter;
-  final bool showCalendar;
-  final VoidCallback onToggleCalendar;
 
-  const _MonthSelectorRow({
-    required this.presenter,
-    required this.showCalendar,
-    required this.onToggleCalendar,
-  });
+  const _MonthSelectorRow({required this.presenter});
+
+  @override
+  State<_MonthSelectorRow> createState() => _MonthSelectorRowState();
+}
+
+class _MonthSelectorRowState extends State<_MonthSelectorRow> {
+  final _labelKey = GlobalKey();
+
+  Future<void> _showCalendarPopover() async {
+    HapticFeedback.selectionClick();
+    final box = _labelKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final size = box.size;
+    final topOffset = offset.dy + size.height + 6;
+
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (dialogContext) => _CalendarPopover(
+        presenter: widget.presenter,
+        topOffset: topOffset,
+        onDismiss: () => Navigator.of(dialogContext).pop(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
           SizedBox(
@@ -249,19 +241,33 @@ class _MonthSelectorRow extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
-              onPressed: () =>
-                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
+              onPressed: () => widget.presenter
+                  .setMonth(previousMonth(widget.presenter.selectedMonth)),
             ),
           ),
           Expanded(
             child: Center(
-              child: Text(
-                monthLabel(presenter.selectedMonth),
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  letterSpacing: 0.3,
+              child: GestureDetector(
+                key: _labelKey,
+                onTap: _showCalendarPopover,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      monthLabel(widget.presenter.selectedMonth),
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(
+                      Icons.arrow_drop_down_rounded,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -271,30 +277,69 @@ class _MonthSelectorRow extends StatelessWidget {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
-              onPressed: () =>
-                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
-            ),
-          ),
-          SizedBox(
-            width: 40,
-            height: 44,
-            child: IconButton(
-              icon: Icon(
-                showCalendar
-                    ? Icons.view_list_rounded
-                    : Icons.calendar_month_outlined,
-                color:
-                    showCalendar ? AppColors.accent : AppColors.textSecondary,
-                size: 20,
-              ),
-              onPressed: () {
-                HapticFeedback.selectionClick();
-                onToggleCalendar();
-              },
-              tooltip: showCalendar ? 'List view' : 'Calendar view',
+              onPressed: () => widget.presenter
+                  .setMonth(nextMonth(widget.presenter.selectedMonth)),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Calendar Popover ─────────────────────────────────────────────────────────
+
+class _CalendarPopover extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final double topOffset;
+  final VoidCallback onDismiss;
+
+  const _CalendarPopover({
+    required this.presenter,
+    required this.topOffset,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onDismiss,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: GestureDetector(
+          // Swallow taps inside so they don't propagate to the dismiss handler
+          onTap: () {},
+          child: Container(
+            margin: EdgeInsets.only(top: topOffset, left: 12, right: 12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.35),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: SpendingCalendar(
+              presenter: presenter,
+              onDaySelected: (day) {
+                HapticFeedback.selectionClick();
+                final current = presenter.selectedDate;
+                if (current != null &&
+                    current.year == day.year &&
+                    current.month == day.month &&
+                    current.day == day.day) {
+                  presenter.setSelectedDate(null);
+                } else {
+                  presenter.setSelectedDate(day);
+                }
+                onDismiss();
+              },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -365,122 +410,80 @@ class _SummaryCard extends StatelessWidget {
     final netColor = net >= 0 ? AppColors.success : AppColors.danger;
     final netPrefix = net >= 0 ? '+' : '';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: _SummaryStatColumn(
-                    label: 'INCOME',
-                    icon: Icons.arrow_upward_rounded,
-                    iconColor: AppColors.success,
-                    amount: inflow,
-                    amountColor: AppColors.success,
-                  ),
-                ),
-                Container(
-                    width: 1, height: 36, color: Colors.white.withOpacity(0.1)),
-                Expanded(
-                  child: _SummaryStatColumn(
-                    label: 'EXPENSES',
-                    icon: Icons.arrow_downward_rounded,
-                    iconColor: AppColors.danger,
-                    amount: outflow,
-                    amountColor: AppColors.danger,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Container(height: 1, color: Colors.white.withOpacity(0.07)),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'NET BALANCE',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.8,
-                  ),
-                ),
-                Text(
-                  '$netPrefix${formatPeso(net.abs())}',
-                  style: GoogleFonts.jetBrainsMono(
-                    textStyle: TextStyle(
-                      color: netColor,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return Container(
+      color: AppColors.surface,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: [
+          _SummaryChip(
+            label: 'Income',
+            value: formatPeso(inflow),
+            color: AppColors.success,
+          ),
+          const SizedBox(width: 8),
+          _SummaryChip(
+            label: 'Expenses',
+            value: formatPeso(outflow),
+            color: AppColors.danger,
+          ),
+          const SizedBox(width: 8),
+          _SummaryChip(
+            label: 'Net',
+            value: '$netPrefix${formatPeso(net.abs())}',
+            color: netColor,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryStatColumn extends StatelessWidget {
+class _SummaryChip extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final Color iconColor;
-  final double amount;
-  final Color amountColor;
+  final String value;
+  final Color color;
 
-  const _SummaryStatColumn({
+  const _SummaryChip({
     required this.label,
-    required this.icon,
-    required this.iconColor,
-    required this.amount,
-    required this.amountColor,
+    required this.value,
+    required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 12, color: iconColor),
-            const SizedBox(width: 4),
+            Text(
+              value,
+              style: AppTextStyles.mono(
+                textStyle: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             Text(
               label,
               style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.8,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 4),
-        Text(
-          formatPeso(amount),
-          style: GoogleFonts.jetBrainsMono(
-            textStyle: TextStyle(
-              color: amountColor,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -686,7 +689,7 @@ class _DateHeader extends StatelessWidget {
           if (dailyNet != 0)
             Text(
               '$prefix${formatPeso(dailyNet.abs())}',
-              style: GoogleFonts.jetBrainsMono(
+              style: AppTextStyles.mono(
                 textStyle: TextStyle(
                   color: netColor,
                   fontSize: 11,

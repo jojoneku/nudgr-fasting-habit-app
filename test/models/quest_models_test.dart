@@ -264,33 +264,36 @@ void main() {
   // ── LinkedStat enum ───────────────────────────────────────────────────────
 
   group('LinkedStat', () {
-      test('all values round-trip through toJson name', () {
-        for (final stat in LinkedStat.values) {
-          final q = Quest(
-            id: 1, title: 'Run', hour: 7, minute: 0,
-            days: List.filled(7, true),
-          ).copyWith(linkedStat: stat);
-          final restored = Quest.fromJson(q.toJson());
-          expect(restored.linkedStat, stat);
-        }
-      });
-
-      test('unknown linkedStat string in JSON defaults to null', () {
-        final json = {
-          'id': 1,
-          'title': 'Test',
-          'hour': 7,
-          'minute': 0,
-          'isEnabled': true,
-          'days': List.filled(7, true),
-          'xpReward': 10,
-          'isOneTime': false,
-          'linkedStat': 'UNKNOWN_STAT',
-        };
-        final q = Quest.fromJson(json);
-        expect(q.linkedStat, isNull);
-      });
+    test('all values round-trip through toJson name', () {
+      for (final stat in LinkedStat.values) {
+        final q = Quest(
+          id: 1,
+          title: 'Run',
+          hour: 7,
+          minute: 0,
+          days: List.filled(7, true),
+        ).copyWith(linkedStat: stat);
+        final restored = Quest.fromJson(q.toJson());
+        expect(restored.linkedStat, stat);
+      }
     });
+
+    test('unknown linkedStat string in JSON defaults to null', () {
+      final json = {
+        'id': 1,
+        'title': 'Test',
+        'hour': 7,
+        'minute': 0,
+        'isEnabled': true,
+        'days': List.filled(7, true),
+        'xpReward': 10,
+        'isOneTime': false,
+        'linkedStat': 'UNKNOWN_STAT',
+      };
+      final q = Quest.fromJson(json);
+      expect(q.linkedStat, isNull);
+    });
+  });
 
   // ── HabitRoutine model ────────────────────────────────────────────────────────
 

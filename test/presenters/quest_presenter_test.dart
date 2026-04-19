@@ -686,8 +686,10 @@ void main() {
 
     test('Biweekly quest with anchor = 7 days ago (week 1) does NOT fire today',
         () async {
-      final oneWeekAgo =
-          today.subtract(const Duration(days: 7)).toIso8601String().split('T')[0];
+      final oneWeekAgo = today
+          .subtract(const Duration(days: 7))
+          .toIso8601String()
+          .split('T')[0];
       final q = Quest(
         id: 1,
         title: 'Biweekly Run',
