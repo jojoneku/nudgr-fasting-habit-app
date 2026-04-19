@@ -15,9 +15,10 @@ import '../models/food_db_entry.dart';
 /// schema bump triggers a fresh copy automatically.
 class FoodDbService {
   static const _assetPath = 'assets/food_db.sqlite';
-  static const _dbFilename = 'food_db_v1.sqlite';
+  static const _dbFilename = 'food_db_v4.sqlite';
 
   Database? _db;
+  bool _fts5Available = false;
 
   bool get isReady => _db != null;
 
@@ -27,9 +28,23 @@ class FoodDbService {
     try {
       final path = await _resolveDbPath();
       _db = await openDatabase(path, readOnly: true);
+      _fts5Available = await _checkFts5();
+      debugPrint('FoodDbService: fts5=${_fts5Available}');
     } catch (e) {
       // Asset not bundled or copy failed — search will return empty results.
       debugPrint('FoodDbService: init failed: $e');
+    }
+  }
+
+  Future<bool> _checkFts5() async {
+    try {
+      await _db!.rawQuery(
+        'SELECT rowid FROM foods_fts WHERE foods_fts MATCH ? LIMIT 1',
+        ['test*'],
+      );
+      return true;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -40,27 +55,29 @@ class FoodDbService {
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  /// FTS5 prefix search — returns up to 20 matches for [query].
-  /// Returns [] when the DB is not initialised or query is blank.
+  /// Full-text search with automatic FTS5 → LIKE fallback.
+  /// FTS5 availability is detected once at init to avoid per-query exceptions.
   Future<List<FoodDbEntry>> search(String query) async {
     if (_db == null || query.trim().isEmpty) return [];
 
-    final q = '${query.trim().replaceAll('"', '""')}*';
-
-    try {
-      final rows = await _db!.rawQuery(
-        'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
-        'FROM foods f '
-        'JOIN foods_fts ON foods_fts.rowid = f.rowid '
-        'WHERE foods_fts MATCH ? '
-        'LIMIT 20',
-        [q],
-      );
-      return rows.map(FoodDbEntry.fromRow).toList();
-    } catch (_) {
-      // FTS5 not available on this SQLite build — fall back to LIKE
-      return _searchLike(query);
+    if (_fts5Available) {
+      final q = '${query.trim().replaceAll('"', '""')}*';
+      try {
+        final rows = await _db!.rawQuery(
+          'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
+          'FROM foods f '
+          'JOIN foods_fts ON foods_fts.rowid = f.rowid '
+          'WHERE foods_fts MATCH ? '
+          'LIMIT 20',
+          [q],
+        );
+        return rows.map(FoodDbEntry.fromRow).toList();
+      } catch (_) {
+        _fts5Available = false;
+      }
     }
+
+    return _searchLike(query);
   }
 
   /// Exact lookup by USDA FDC id.
@@ -93,13 +110,20 @@ class FoodDbService {
   }
 
   Future<List<FoodDbEntry>> _searchLike(String query) async {
-    final pattern = '%${query.trim()}%';
-    final rows = await _db!.query(
-      'foods',
-      where: 'name LIKE ?',
-      whereArgs: [pattern],
-      limit: 20,
+    final term = query.trim().toLowerCase();
+    // Two-pass: prefix matches first (index-friendly), then contains matches.
+    final prefix = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods WHERE lower(name) LIKE ? LIMIT 20',
+      ['$term%'],
     );
-    return rows.map(FoodDbEntry.fromRow).toList();
+    if (prefix.length >= 20) return prefix.map(FoodDbEntry.fromRow).toList();
+
+    final contains = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods WHERE lower(name) LIKE ? AND lower(name) NOT LIKE ? LIMIT ?',
+      ['%$term%', '$term%', 20 - prefix.length],
+    );
+    return [...prefix, ...contains].map(FoodDbEntry.fromRow).toList();
   }
 }

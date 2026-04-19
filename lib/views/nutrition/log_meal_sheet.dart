@@ -35,6 +35,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
   bool _isSearching = false;
   bool _isLogging = false;
 
+  // Incremented on every search to discard stale results from earlier queries.
+  int _searchGeneration = 0;
+
   int get _totalCalories =>
       _pendingEntries.fold(0, (s, e) => s + e.entry.calories);
 
@@ -54,12 +57,20 @@ class _LogMealSheetState extends State<LogMealSheet> {
   void _onInputChanged() async {
     final q = _inputCtrl.text.trim();
     if (q.isEmpty) {
-      setState(() => _searchResults = []);
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
       return;
     }
+
+    // Capture generation before the async gap so stale completions are ignored.
+    final generation = ++_searchGeneration;
     setState(() => _isSearching = true);
+
     final results = await widget.presenter.foodDb.search(q);
-    if (mounted) {
+
+    if (mounted && _searchGeneration == generation) {
       setState(() {
         _searchResults = results;
         _isSearching = false;
@@ -635,20 +646,25 @@ class _LogMealSheetState extends State<LogMealSheet> {
   Future<void> _logMeal() async {
     setState(() => _isLogging = true);
     HapticFeedback.mediumImpact();
-    for (final p in _pendingEntries) {
-      await widget.presenter.addFoodEntry(p.entry, MealSlot.meal);
+    try {
+      for (final p in _pendingEntries) {
+        await widget.presenter.addFoodEntry(p.entry, MealSlot.meal);
+      }
+      if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
+        final template = FoodTemplate(
+          id: FoodEntry.generateId(),
+          name: '${DateTime.now().day}/${DateTime.now().month} meal',
+          isMeal: _pendingEntries.length > 1,
+          defaultSlot: MealSlot.meal,
+          entries: _pendingEntries.map((p) => p.entry).toList(),
+        );
+        await widget.presenter.saveFoodTemplate(template);
+      }
+    } finally {
+      // Always dismiss — if the sheet stays open with _isLogging=true the
+      // transparent modal barrier blocks the entire screen behind it.
+      if (mounted) Navigator.pop(context);
     }
-    if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
-      final template = FoodTemplate(
-        id: FoodEntry.generateId(),
-        name: '${DateTime.now().day}/${DateTime.now().month} meal',
-        isMeal: _pendingEntries.length > 1,
-        defaultSlot: MealSlot.meal,
-        entries: _pendingEntries.map((p) => p.entry).toList(),
-      );
-      await widget.presenter.saveFoodTemplate(template);
-    }
-    if (mounted) Navigator.pop(context);
   }
 
   void _showManualEntry() {
