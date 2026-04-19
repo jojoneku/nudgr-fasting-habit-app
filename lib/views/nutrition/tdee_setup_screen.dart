@@ -78,7 +78,15 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
           children: [
             _StepIndicator(current: _step),
             const SizedBox(height: 32),
-            Expanded(child: _buildStep()),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: KeyedSubtree(
+                  key: ValueKey(_step),
+                  child: _buildStep(),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             _buildNavButtons(),
           ],
@@ -358,7 +366,8 @@ class _StepIndicator extends StatelessWidget {
       children: List.generate(3, (i) {
         final active = i <= current;
         return Expanded(
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
             margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
             height: 3,
             decoration: BoxDecoration(

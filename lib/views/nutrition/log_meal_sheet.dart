@@ -112,7 +112,13 @@ class _LogMealSheetState extends State<LogMealSheet> {
           Flexible(
             child: Padding(
               padding: EdgeInsets.only(bottom: bottom),
-              child: _buildContent(),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: KeyedSubtree(
+                  key: ValueKey(_contentPhase),
+                  child: _buildContent(),
+                ),
+              ),
             ),
           ),
           _buildAiState(),
@@ -210,6 +216,14 @@ class _LogMealSheetState extends State<LogMealSheet> {
         ),
       ),
     );
+  }
+
+  String get _contentPhase {
+    final hasInput = _inputCtrl.text.trim().isNotEmpty;
+    if (!hasInput) return 'quick';
+    if (_searchResults.isNotEmpty) return 'results';
+    if (!_isSearching) return 'no-results';
+    return 'searching';
   }
 
   Widget _buildContent() {
@@ -684,13 +698,12 @@ class _CartRow extends StatelessWidget {
                 fontWeight: FontWeight.w500),
           ),
           const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onRemove,
-            child: const Padding(
-              padding: EdgeInsets.all(6),
-              child:
-                  Icon(Icons.close, color: AppColors.textSecondary, size: 14),
-            ),
+          IconButton(
+            icon: const Icon(Icons.close,
+                color: AppColors.textSecondary, size: 14),
+            onPressed: onRemove,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
         ],
       ),
@@ -942,10 +955,12 @@ class _AiResultCardState extends State<_AiResultCard> {
                     fontSize: 13),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: widget.onDismiss,
-                child: const Icon(Icons.close,
+              IconButton(
+                icon: const Icon(Icons.close,
                     color: AppColors.textSecondary, size: 16),
+                onPressed: widget.onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ],
           ),
@@ -975,10 +990,13 @@ class _AiResultCardState extends State<_AiResultCard> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => setState(() => _items.removeAt(i)),
-                    child: const Icon(Icons.remove_circle_outline,
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline,
                         color: AppColors.danger, size: 14),
+                    onPressed: () => setState(() => _items.removeAt(i)),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
                   ),
                 ],
               ),
@@ -1109,7 +1127,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
           ),
           const SizedBox(height: 6),
           SizedBox(
-            height: 26,
+            height: 44,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
@@ -1125,7 +1143,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     child: Container(
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 10, vertical: 11),
                       decoration: BoxDecoration(
                         color: selected
                             ? AppColors.gold.withValues(alpha: 0.15)

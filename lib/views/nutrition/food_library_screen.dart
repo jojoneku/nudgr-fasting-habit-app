@@ -76,9 +76,16 @@ class FoodLibraryScreen extends StatelessWidget {
 
   Widget _emptyLabel(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
-        child: Text(text,
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+        child: Row(
+          children: [
+            const Icon(Icons.inbox_outlined,
+                color: AppColors.textSecondary, size: 14),
+            const SizedBox(width: 6),
+            Text(text,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 12)),
+          ],
+        ),
       );
 }
 
@@ -184,8 +191,6 @@ class _SlotPicker extends StatelessWidget {
                   fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           ...MealSlot.values.map((slot) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                minVerticalPadding: 0,
                 title: Text(slot.label,
                     style: const TextStyle(color: AppColors.textPrimary)),
                 onTap: () {
