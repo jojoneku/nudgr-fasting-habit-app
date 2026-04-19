@@ -2,10 +2,14 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
+import '../../models/fasting_phase.dart';
 import '../../presenters/fasting_presenter.dart';
 import '../../app_colors.dart';
 import '../../utils/date_utils.dart' as date_utils;
 import '../widgets/partial_ring_painter.dart';
+import '../widgets/protocol_card.dart';
+import '../widgets/refeeding_warning_sheet.dart';
+import '../widgets/fast_completion_modal.dart';
 import 'history_tab.dart';
 
 class TimerTab extends StatefulWidget {
@@ -34,7 +38,8 @@ class _TimerTabState extends State<TimerTab> {
     double progress = 0.0;
     int targetSeconds = 1;
     String statusLabel = "Ready?";
-    int eatingHours = 24 - presenter.fastingGoalHours;
+    final bool isExtendedFast = presenter.fastingGoalHours >= 36;
+    int eatingHours = isExtendedFast ? 0 : (24 - presenter.fastingGoalHours);
     if (eatingHours < 0) eatingHours = 0;
     final bool hasEatingWindow = eatingHours > 0;
     int eatingRemainingSeconds = 0;
@@ -42,8 +47,8 @@ class _TimerTabState extends State<TimerTab> {
 
     if (presenter.isFasting) {
       targetSeconds = presenter.fastingGoalHours * 3600;
-      progress = (presenter.elapsedSeconds / targetSeconds);
-      statusLabel = "Fasting Time";
+      progress = (presenter.elapsedSeconds / targetSeconds).clamp(0.0, 1.0);
+      statusLabel = presenter.isOvertime ? "OVERDRIVE" : "Fasting Time";
     } else if (presenter.eatingStartTime != null) {
       final int eatingTargetSeconds = hasEatingWindow ? eatingHours * 3600 : 1;
       targetSeconds = eatingTargetSeconds;
@@ -69,13 +74,19 @@ class _TimerTabState extends State<TimerTab> {
     if (progress > 1.0) progress = 1.0;
 
     final theme = Theme.of(context);
-    const Color fastingAccent = AppColors.secondary;
+    final Color fastingAccent = presenter.isFasting
+        ? (presenter.isOvertime
+            ? AppColors.danger
+            : presenter.currentPhase.color)
+        : AppColors.secondary;
     const Color eatingAccent = AppColors.primary;
     final bool showEatingProgress =
         presenter.eatingStartTime != null && hasEatingWindow;
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
-        ? _formatTime(presenter.elapsedSeconds)
+        ? (presenter.isOvertime
+            ? '⚡ +${_formatTime(presenter.overtimeSeconds)}'
+            : _formatTime(presenter.elapsedSeconds))
         : (presenter.eatingStartTime != null
             ? (hasEatingWindow
                 ? _formatTime(eatingRemainingSeconds)
@@ -131,6 +142,10 @@ class _TimerTabState extends State<TimerTab> {
                   color: presenter.isFasting ? fastingAccent : eatingAccent,
                 ),
               ),
+            if (presenter.isFasting) ...[
+              const SizedBox(height: 6),
+              _buildPhaseLabel(presenter.currentPhase),
+            ],
           ],
         )
       ],
@@ -177,30 +192,8 @@ class _TimerTabState extends State<TimerTab> {
           children: [
             if (!presenter.isFasting)
               Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: ToggleButtons(
-                  isSelected: [16, 18, 20, 24]
-                      .map((e) => e == presenter.fastingGoalHours)
-                      .toList(),
-                  onPressed: (int index) {
-                    presenter.updateFastingGoal([16, 18, 20, 24][index]);
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  children: const [
-                    Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("16:8")),
-                    Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("18:6")),
-                    Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("20:4")),
-                    Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text("OMAD")),
-                  ],
-                ),
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: _buildProtocolSelector(),
               ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -296,6 +289,45 @@ class _TimerTabState extends State<TimerTab> {
     );
   }
 
+  Widget _buildProtocolSelector() {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        itemCount: FastingProtocol.all.length,
+        itemBuilder: (context, index) {
+          final protocol = FastingProtocol.all[index];
+          return ProtocolCard(
+            protocol: protocol,
+            isSelected: presenter.fastingGoalHours == protocol.hours,
+            onTap: () => presenter.updateFastingGoal(protocol.hours),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPhaseLabel(FastingPhase phase) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: phase.color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: phase.color.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Text(
+        '⬡ ${phase.rpgTitle} — ${phase.label.toUpperCase()}',
+        style: TextStyle(
+          color: phase.color,
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
   Widget _buildTimerInfoPanel({
     required String title,
     required String value,
@@ -344,6 +376,46 @@ class _TimerTabState extends State<TimerTab> {
   }
 
   Future<void> _showStopFastDialog() async {
+    final isShortFast = presenter.elapsedSeconds < 600;
+    final needsRefeedingProtocol = presenter.requiresRefeedingProtocol;
+
+    if (isShortFast) {
+      // Short fast — offer discard (no penalty)
+      final shouldDiscard = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text("Discard Session?"),
+          content: const Text(
+              "You've fasted less than 10 minutes. Discard with no penalty, or continue?"),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Keep Fasting")),
+            TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                child: const Text("Discard")),
+          ],
+        ),
+      );
+      if (shouldDiscard == true && mounted) {
+        await presenter.discardFast();
+      }
+      return;
+    }
+
+    if (needsRefeedingProtocol) {
+      // Extended fast — show refeeding protocol warning
+      if (!mounted) return;
+      final shouldEnd =
+          await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
+      if (shouldEnd && mounted) {
+        await _doEndFast();
+      }
+      return;
+    }
+
+    // Standard confirmation
     final shouldStop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -359,29 +431,34 @@ class _TimerTabState extends State<TimerTab> {
         ],
       ),
     );
-
-    if (shouldStop == true) {
-      final (xp, hpChange) = await presenter.stopFast();
-      if (mounted) {
-        if (hpChange < 0) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Fast Failed. +$xp XP\nPenalty: $hpChange HP"),
-              backgroundColor: AppColors.danger,
-              duration: const Duration(seconds: 4),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Fast Complete! +$xp XP\nRecovered: +$hpChange HP"),
-              backgroundColor: AppColors.success,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      }
+    if (shouldStop == true && mounted) {
+      await _doEndFast();
     }
+  }
+
+  Future<void> _doEndFast() async {
+    final durationHours = presenter.elapsedSeconds / 3600.0;
+    final currentStreak = presenter.currentStreak;
+    final (xp, hpChange) = await presenter.stopFast();
+    if (!mounted) return;
+    await FastCompletionModal.show(
+      context,
+      FastCompletionData(
+        xpEarned: xp,
+        hpChange: hpChange,
+        durationHours: durationHours,
+        wasSuccess: durationHours >= presenter.fastingGoalHours,
+        currentStreak: currentStreak +
+            (durationHours >= presenter.fastingGoalHours ? 1 : 0),
+      ),
+      onDismiss: (note) async {
+        if (note != null && presenter.history.isNotEmpty) {
+          final updatedLog = presenter.history.first;
+          updatedLog.note = note;
+          await presenter.updateLog(0, updatedLog);
+        }
+      },
+    );
   }
 
   Future<void> _skipEatingWindow() async {

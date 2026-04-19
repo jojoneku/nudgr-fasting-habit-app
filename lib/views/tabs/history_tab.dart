@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
+import '../../models/fasting_phase.dart';
 import '../../presenters/fasting_presenter.dart';
 import '../../models/fasting_log.dart';
 import '../../app_colors.dart';
@@ -37,143 +38,430 @@ class _HistoryListState extends State<HistoryList> {
       ));
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: presenter.history.length,
-      itemBuilder: (context, index) {
-        final log = presenter.history[index];
-        final fastStart = log.fastStart;
-        final fastEnd = log.fastEnd;
-        final fastDuration = log.fastDuration;
-
-        final eatingDuration = log.eatingDuration;
-        double eatingDurVal = eatingDuration ?? (24.0 - fastDuration);
-        if (eatingDurVal < 0) eatingDurVal = 0;
-
-        final note = log.note;
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: Card(
-            elevation: 0,
-            color: AppColors.surface,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-              side: BorderSide(
-                  color: AppColors.surface.withValues(alpha: 0.5), width: 1),
-            ),
-            margin: EdgeInsets.zero,
-            child: InkWell(
-              onTap: () => _showHistoryContextMenu(context, index),
-              borderRadius: BorderRadius.circular(16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header: Icon + Ratio
-                    Row(
-                      children: [
-                        const Icon(Icons.bolt,
-                            color: AppColors.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${log.goalDuration}:${24 - log.goalDuration}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        if (note != null && note.isNotEmpty) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.note,
-                              size: 16, color: AppColors.textSecondary),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Duration
-                    Text(
-                      '${fastDuration.toStringAsFixed(1)} Hours',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        height: 1.0,
-                      ),
-                    ),
-                    Text(
-                      '${eatingDurVal.toStringAsFixed(1)} Hours Eating',
-                      style: const TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Start / End Times
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Start',
-                                style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('MMM d, h:mm a').format(fastStart),
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 30,
-                          color: AppColors.textSecondary.withValues(alpha: 0.2),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'End',
-                                style: TextStyle(
-                                    color: AppColors.textSecondary,
-                                    fontSize: 12),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                DateFormat('MMM d, h:mm a').format(fastEnd),
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              const SizedBox(height: 16),
+              _buildStatsBanner(),
+              const SizedBox(height: 16),
+              _buildWeekHeatmap(),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final log = presenter.history[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildHistoryCard(log, index),
+                );
+              },
+              childCount: presenter.history.length,
             ),
           ),
-        );
-      },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsBanner() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          _buildStatTile(
+            icon: Icons.local_fire_department_rounded,
+            iconColor: AppColors.danger,
+            label: 'STREAK',
+            value: '${presenter.currentStreak}d',
+          ),
+          _buildStatDivider(),
+          _buildStatTile(
+            icon: Icons.bolt,
+            iconColor: AppColors.gold,
+            label: 'BEST',
+            value: '${presenter.longestStreak}d',
+          ),
+          _buildStatDivider(),
+          _buildStatTile(
+            icon: Icons.timer_outlined,
+            iconColor: AppColors.secondary,
+            label: 'TOTAL',
+            value: '${presenter.totalHoursFasted.toStringAsFixed(0)}h',
+          ),
+          _buildStatDivider(),
+          _buildStatTile(
+            icon: Icons.verified_rounded,
+            iconColor: AppColors.success,
+            label: 'SUCCESS',
+            value: '${presenter.successRate.toStringAsFixed(0)}%',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatTile({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required String value,
+  }) =>
+      Expanded(
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: iconColor, size: 20),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  height: 1.0,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 9,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildStatDivider() => const SizedBox(width: 8);
+
+  Widget _buildWeekHeatmap() {
+    final now = DateTime.now();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: List.generate(7, (i) {
+          final day = DateUtils.dateOnly(now.subtract(Duration(days: 6 - i)));
+          final fasts = presenter.fastsOnDay(day);
+          final hasSuccess = fasts.any((f) => f.success);
+          final hasAny = fasts.isNotEmpty;
+          final isToday = day == DateUtils.dateOnly(now);
+          final label = DateFormat('E').format(day).substring(0, 1);
+
+          Color circleColor;
+          if (hasSuccess) {
+            circleColor = AppColors.secondary;
+          } else if (hasAny) {
+            circleColor = AppColors.gold;
+          } else {
+            circleColor = AppColors.surface;
+          }
+
+          return Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: circleColor,
+                    shape: BoxShape.circle,
+                    border: isToday
+                        ? Border.all(color: AppColors.textSecondary, width: 1.5)
+                        : null,
+                  ),
+                  child: hasAny
+                      ? Center(
+                          child: Icon(
+                            hasSuccess
+                                ? Icons.check_rounded
+                                : Icons.remove_rounded,
+                            color: AppColors.background,
+                            size: 16,
+                          ),
+                        )
+                      : null,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: isToday
+                        ? AppColors.textPrimary
+                        : AppColors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(FastingLog log, int index) {
+    final fastDuration = log.fastDuration;
+    final eatingDuration = log.eatingDuration;
+    double eatingDurVal = eatingDuration ?? (24.0 - fastDuration);
+    if (eatingDurVal < 0) eatingDurVal = 0;
+    final note = log.note;
+    final goalHours = log.goalDuration.toDouble();
+    final progress = (fastDuration / goalHours).clamp(0.0, 1.0);
+    final isOvertime = fastDuration > goalHours;
+    final highestPhase =
+        FastingPhase.fromElapsedSeconds((fastDuration * 3600).round());
+    final xpEarned = log.success
+        ? (50 + (fastDuration * 10)).round()
+        : (fastDuration * 5).round();
+
+    return Card(
+      elevation: 0,
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+            color: (log.success ? AppColors.secondary : AppColors.danger)
+                .withValues(alpha: 0.15),
+            width: 1),
+      ),
+      margin: EdgeInsets.zero,
+      child: InkWell(
+        onTap: () => _showHistoryContextMenu(context, index),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header row
+              Row(
+                children: [
+                  Icon(
+                    log.success ? Icons.bolt : Icons.bolt_outlined,
+                    color: log.success
+                        ? AppColors.secondary
+                        : AppColors.textSecondary,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${log.goalDuration}:${log.goalDuration >= 36 ? 0 : 24 - log.goalDuration}',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Phase badge
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: highestPhase.color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      highestPhase.label.toUpperCase(),
+                      style: TextStyle(
+                        color: highestPhase.color,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  // XP earned
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.gold.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '+$xpEarned XP',
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  if (note != null && note.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    const Icon(Icons.note_rounded,
+                        size: 14, color: AppColors.textSecondary),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 10),
+
+              // Duration
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    '${fastDuration.toStringAsFixed(1)}h',
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'of ${goalHours.toStringAsFixed(0)}h goal',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (isOvertime) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text(
+                        '⚡ OVERTIME',
+                        style: TextStyle(
+                          color: AppColors.danger,
+                          fontSize: 9,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+
+              // Progress bar
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress,
+                  minHeight: 5,
+                  backgroundColor: AppColors.neutral.withValues(alpha: 0.15),
+                  color: log.success ? AppColors.secondary : AppColors.danger,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Start / End Times
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Start',
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormat('MMM d, h:mm a').format(log.fastStart),
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    width: 1,
+                    height: 28,
+                    color: AppColors.textSecondary.withValues(alpha: 0.2),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'End',
+                          style: TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormat('MMM d, h:mm a').format(log.fastEnd),
+                          style: const TextStyle(
+                              color: AppColors.textPrimary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Note
+              if (note != null && note.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.format_quote_rounded,
+                          color: AppColors.textSecondary, size: 14),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          note,
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 12,
+                            fontStyle: FontStyle.italic,
+                            height: 1.4,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 
