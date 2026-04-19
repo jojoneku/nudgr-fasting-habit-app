@@ -112,16 +112,15 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
               ),
             ),
 
-            const Text('NUTRITION SETTINGS',
+            const Text('Settings',
                 style: TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 11,
-                    letterSpacing: 2.5,
-                    fontWeight: FontWeight.w700)),
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 24),
 
             // ── Tracking mode ─────────────────────────────────────────────
-            _label('TRACKING MODE'),
+            _label('Tracking mode'),
             const SizedBox(height: 10),
             ...TrackingMode.values.map((m) => _ModeTile(
                   mode: m,
@@ -132,7 +131,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
 
             // ── Simple: manual calorie goal ────────────────────────────────
             if (!isStandard) ...[
-              _label('DAILY CALORIE GOAL'),
+              _label('Daily calorie goal'),
               const SizedBox(height: 8),
               _numField(_calCtrl, 'kcal / day', 'e.g. 2000'),
               const SizedBox(height: 20),
@@ -142,7 +141,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
             if (isStandard) ...[
               _TdeeCard(presenter: widget.presenter),
               const SizedBox(height: 20),
-              _label('MACRO TARGETS (optional, g)'),
+              _label('Macro targets (optional, g)'),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _numField(_proteinCtrl, 'Protein', 'g')),
@@ -181,9 +180,8 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: _save,
-                child: const Text('SAVE',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                child: const Text('Save',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -193,8 +191,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   }
 
   Widget _label(String text) => Text(text,
-      style: const TextStyle(
-          color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.8));
+      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11));
 
   Widget _numField(TextEditingController ctrl, String label, String hint) {
     return TextField(
@@ -301,14 +298,12 @@ class _TdeeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TDEE PROFILE',
-              style: TextStyle(
-                  color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
+          const Text('TDEE profile',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
           const SizedBox(height: 8),
           if (profile == null)
             const Text('No profile set — tap below to configure',
@@ -338,8 +333,8 @@ class _TdeeCard extends StatelessWidget {
                     builder: (_) => TdeeSetupScreen(presenter: presenter)),
               ),
               child: Text(
-                profile == null ? 'SET UP TDEE' : 'EDIT TDEE PROFILE',
-                style: const TextStyle(fontSize: 12, letterSpacing: 1.4),
+                profile == null ? 'Set up TDEE' : 'Edit TDEE profile',
+                style: const TextStyle(fontSize: 12),
               ),
             ),
           ),
@@ -382,10 +377,11 @@ class _ToggleRow extends StatelessWidget {
             ],
           ),
         ),
-        Switch(
+        Switch.adaptive(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.gold,
+          activeThumbColor: AppColors.gold,
+          activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
           inactiveTrackColor: AppColors.surface,
         ),
       ],

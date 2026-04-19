@@ -24,9 +24,7 @@ class FoodLibraryScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('FOOD LIBRARY',
-            style: TextStyle(letterSpacing: 2.5, fontSize: 13)),
-        centerTitle: true,
+        title: const Text('Food Library'),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
@@ -69,11 +67,10 @@ class FoodLibraryScreen extends StatelessWidget {
 
   Widget _sectionHeader(String label) => Text(
         label,
-        style: TextStyle(
-          color: AppColors.gold.withValues(alpha: 0.75),
-          fontSize: 10,
-          letterSpacing: 2.0,
-          fontWeight: FontWeight.w700,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
         ),
       );
 
@@ -103,7 +100,6 @@ class _TemplateRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [
