@@ -94,7 +94,8 @@ void main() {
       expect(find.text('Ready?'), findsOneWidget);
     });
 
-    testWidgets('shows protocol selector cards when not fasting', (tester) async {
+    testWidgets('shows protocol selector cards when not fasting',
+        (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
 

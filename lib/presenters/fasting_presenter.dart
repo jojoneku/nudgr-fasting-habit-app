@@ -53,7 +53,8 @@ class FastingPresenter extends ChangeNotifier {
       }
     } else if (eatingStartTime != null) {
       try {
-        int eatingWindowHours = fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+        int eatingWindowHours =
+            fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
         if (eatingWindowHours > 0) {
           final eatingEndTime =
               eatingStartTime!.add(Duration(hours: eatingWindowHours));
@@ -344,7 +345,8 @@ class FastingPresenter extends ChangeNotifier {
     }
 
     try {
-      int eatingWindowHours = fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+      int eatingWindowHours =
+          fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
       if (eatingWindowHours > 0) {
         final eatingEndTime =
             eatingStartTime!.add(Duration(hours: eatingWindowHours));

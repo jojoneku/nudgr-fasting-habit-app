@@ -393,8 +393,7 @@ class _TimerTabState extends State<TimerTab> {
                 child: const Text("Keep Fasting")),
             TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(
-                    foregroundColor: AppColors.danger),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                 child: const Text("Discard")),
           ],
         ),
@@ -408,8 +407,8 @@ class _TimerTabState extends State<TimerTab> {
     if (needsRefeedingProtocol) {
       // Extended fast — show refeeding protocol warning
       if (!mounted) return;
-      final shouldEnd = await RefeedingWarningSheet.show(
-          context, presenter.elapsedSeconds);
+      final shouldEnd =
+          await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
       if (shouldEnd && mounted) {
         await _doEndFast();
       }
@@ -449,7 +448,8 @@ class _TimerTabState extends State<TimerTab> {
         hpChange: hpChange,
         durationHours: durationHours,
         wasSuccess: durationHours >= presenter.fastingGoalHours,
-        currentStreak: currentStreak + (durationHours >= presenter.fastingGoalHours ? 1 : 0),
+        currentStreak: currentStreak +
+            (durationHours >= presenter.fastingGoalHours ? 1 : 0),
       ),
       onDismiss: (note) async {
         if (note != null && presenter.history.isNotEmpty) {

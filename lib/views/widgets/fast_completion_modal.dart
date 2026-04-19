@@ -279,8 +279,8 @@ class _FastCompletionModalState extends State<FastCompletionModal>
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide:
-                BorderSide(color: _accentColor.withValues(alpha: 0.6), width: 1),
+            borderSide: BorderSide(
+                color: _accentColor.withValues(alpha: 0.6), width: 1),
           ),
         ),
         maxLines: 2,

@@ -183,8 +183,7 @@ class _HistoryListState extends State<HistoryList> {
                     color: circleColor,
                     shape: BoxShape.circle,
                     border: isToday
-                        ? Border.all(
-                            color: AppColors.textSecondary, width: 1.5)
+                        ? Border.all(color: AppColors.textSecondary, width: 1.5)
                         : null,
                   ),
                   child: hasAny
@@ -207,8 +206,7 @@ class _HistoryListState extends State<HistoryList> {
                         ? AppColors.textPrimary
                         : AppColors.textSecondary,
                     fontSize: 10,
-                    fontWeight:
-                        isToday ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
@@ -228,8 +226,8 @@ class _HistoryListState extends State<HistoryList> {
     final goalHours = log.goalDuration.toDouble();
     final progress = (fastDuration / goalHours).clamp(0.0, 1.0);
     final isOvertime = fastDuration > goalHours;
-    final highestPhase = FastingPhase.fromElapsedSeconds(
-        (fastDuration * 3600).round());
+    final highestPhase =
+        FastingPhase.fromElapsedSeconds((fastDuration * 3600).round());
     final xpEarned = log.success
         ? (50 + (fastDuration * 10)).round()
         : (fastDuration * 5).round();
@@ -275,11 +273,10 @@ class _HistoryListState extends State<HistoryList> {
                   const SizedBox(width: 8),
                   // Phase badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color:
-                          highestPhase.color.withValues(alpha: 0.12),
+                      color: highestPhase.color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -295,8 +292,8 @@ class _HistoryListState extends State<HistoryList> {
                   const Spacer(),
                   // XP earned
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 2),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
                       color: AppColors.gold.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
@@ -370,11 +367,8 @@ class _HistoryListState extends State<HistoryList> {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 5,
-                  backgroundColor:
-                      AppColors.neutral.withValues(alpha: 0.15),
-                  color: log.success
-                      ? AppColors.secondary
-                      : AppColors.danger,
+                  backgroundColor: AppColors.neutral.withValues(alpha: 0.15),
+                  color: log.success ? AppColors.secondary : AppColors.danger,
                 ),
               ),
               const SizedBox(height: 12),
@@ -389,13 +383,11 @@ class _HistoryListState extends State<HistoryList> {
                         const Text(
                           'Start',
                           style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11),
+                              color: AppColors.textSecondary, fontSize: 11),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          DateFormat('MMM d, h:mm a')
-                              .format(log.fastStart),
+                          DateFormat('MMM d, h:mm a').format(log.fastStart),
                           style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 13,
@@ -417,13 +409,11 @@ class _HistoryListState extends State<HistoryList> {
                         const Text(
                           'End',
                           style: TextStyle(
-                              color: AppColors.textSecondary,
-                              fontSize: 11),
+                              color: AppColors.textSecondary, fontSize: 11),
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          DateFormat('MMM d, h:mm a')
-                              .format(log.fastEnd),
+                          DateFormat('MMM d, h:mm a').format(log.fastEnd),
                           style: const TextStyle(
                               color: AppColors.textPrimary,
                               fontSize: 13,
@@ -439,8 +429,8 @@ class _HistoryListState extends State<HistoryList> {
               if (note != null && note.isNotEmpty) ...[
                 const SizedBox(height: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: AppColors.background.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),

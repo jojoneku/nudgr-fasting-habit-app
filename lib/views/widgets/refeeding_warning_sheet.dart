@@ -85,8 +85,7 @@ class RefeedingWarningSheet extends StatelessWidget {
         children: [
           const Row(
             children: [
-              Icon(Icons.warning_rounded,
-                  color: AppColors.danger, size: 22),
+              Icon(Icons.warning_rounded, color: AppColors.danger, size: 22),
               SizedBox(width: 8),
               Text(
                 'EXTENDED FAST — REFEED SAFELY',
@@ -165,7 +164,8 @@ class RefeedingWarningSheet extends StatelessWidget {
           _buildStep(
             step: '01',
             timeframe: 'First 1–2 hours',
-            instruction: 'Start with bone broth, vegetable broth, or electrolytes. Small sips only.',
+            instruction:
+                'Start with bone broth, vegetable broth, or electrolytes. Small sips only.',
             icon: Icons.water_drop_outlined,
             color: AppColors.secondary,
           ),
@@ -173,7 +173,8 @@ class RefeedingWarningSheet extends StatelessWidget {
           _buildStep(
             step: '02',
             timeframe: '2–6 hours after',
-            instruction: 'Soft, easy-to-digest foods: banana, yogurt, soup, or plain rice. Small portions.',
+            instruction:
+                'Soft, easy-to-digest foods: banana, yogurt, soup, or plain rice. Small portions.',
             icon: Icons.restaurant_outlined,
             color: AppColors.gold,
           ),
@@ -181,7 +182,8 @@ class RefeedingWarningSheet extends StatelessWidget {
           _buildStep(
             step: '03',
             timeframe: '6+ hours after',
-            instruction: 'Gradually return to normal meals. Avoid heavy fats and large protein loads immediately.',
+            instruction:
+                'Gradually return to normal meals. Avoid heavy fats and large protein loads immediately.',
             icon: Icons.check_circle_outline,
             color: AppColors.success,
           ),
