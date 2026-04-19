@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/food_entry.dart';
 import '../../models/meal_slot.dart';
@@ -8,6 +8,8 @@ import 'food_library_screen.dart';
 import 'log_meal_sheet.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
+
+final _calFmt = NumberFormat('#,###');
 
 class NutritionScreen extends StatelessWidget {
   final NutritionPresenter presenter;
@@ -34,26 +36,23 @@ class _NutritionBody extends StatelessWidget {
       appBar: _buildAppBar(context),
       body: _buildBody(context),
       floatingActionButton: _buildFab(context),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
   AppBar _buildAppBar(BuildContext context) {
     return AppBar(
-      title: const Text(
-        'ALCHEMY LAB',
-        style: TextStyle(letterSpacing: 3.0, fontSize: 14),
-      ),
-      centerTitle: true,
+      title: const Text('Nutrition'),
+      centerTitle: false,
       actions: [
         _ModeChip(mode: presenter.goals.mode),
         IconButton(
-          icon: const Icon(Icons.history),
+          icon: const Icon(Icons.history_outlined, size: 22),
           onPressed: () =>
               _push(context, NutritionHistoryScreen(presenter: presenter)),
         ),
         IconButton(
-          icon: const Icon(Icons.tune),
+          icon: const Icon(Icons.tune_outlined, size: 22),
           onPressed: () => _showSettings(context),
         ),
       ],
@@ -74,7 +73,7 @@ class _NutritionBody extends StatelessWidget {
             onAddTap: () => _showLogMealSheet(context),
           ),
         ),
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        const SliverToBoxAdapter(child: SizedBox(height: 120)),
       ],
     );
   }
@@ -82,15 +81,12 @@ class _NutritionBody extends StatelessWidget {
   Widget _buildFab(BuildContext context) {
     final locked =
         presenter.goals.ifSyncEnabled && !presenter.isEatingWindowOpen;
-    return FloatingActionButton.extended(
+    return FloatingActionButton(
       onPressed: locked ? null : () => _showLogMealSheet(context),
-      backgroundColor: locked ? AppColors.neutral : AppColors.gold,
-      foregroundColor: AppColors.background,
-      icon: Icon(locked ? Icons.lock_outline : Icons.add),
-      label: Text(
-        locked ? 'FASTING' : 'LOG MEAL',
-        style: const TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
-      ),
+      backgroundColor: locked ? AppColors.surface : AppColors.gold,
+      foregroundColor: locked ? AppColors.textSecondary : AppColors.background,
+      elevation: locked ? 0 : 4,
+      child: Icon(locked ? Icons.lock_outline : Icons.add, size: 24),
     );
   }
 
@@ -122,23 +118,22 @@ class _IfSyncBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final open = presenter.isEatingWindowOpen;
     final color = open ? AppColors.success : AppColors.danger;
-    final icon = open ? Icons.lock_open : Icons.lock_outline;
+    final icon = open ? Icons.lock_open_outlined : Icons.lock_outline;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
-          Icon(icon, color: color, size: 16),
+          Icon(icon, color: color, size: 15),
           const SizedBox(width: 8),
           Text(
             presenter.windowStatusLabel,
             style: TextStyle(
-                color: color, fontSize: 12, fontWeight: FontWeight.w600),
+                color: color, fontSize: 12, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -155,41 +150,46 @@ class _SummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final goalMet = presenter.isCalorieGoalMet;
-    final barColor = goalMet ? AppColors.success : AppColors.gold;
+    final barColor = goalMet ? AppColors.success : AppColors.secondary;
     final progress = presenter.calorieProgress.clamp(0.0, 1.0);
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      margin: const EdgeInsets.fromLTRB(16, 14, 16, 0),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: barColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
-              Icon(MdiIcons.flask, color: barColor, size: 18),
-              const SizedBox(width: 8),
               Text(
-                presenter.summaryLabel,
-                style: TextStyle(
-                  color: barColor,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 0.5,
+                _calFmt.format(presenter.todayCalories),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 36,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
                 ),
               ),
+              const SizedBox(width: 6),
+              Text(
+                'of ${_calFmt.format(presenter.effectiveGoal)} kcal',
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13),
+              ),
               if (goalMet) ...[
-                const SizedBox(width: 8),
+                const Spacer(),
                 const Icon(Icons.check_circle,
-                    color: AppColors.success, size: 20),
+                    color: AppColors.success, size: 18),
               ],
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _AnimatedBar(progress: progress, color: barColor),
           if (presenter.goals.proteinGrams != null) ...[
             const SizedBox(height: 12),
@@ -198,7 +198,7 @@ class _SummaryCard extends StatelessWidget {
           if (presenter.goalStreak > 0) ...[
             const SizedBox(height: 8),
             Text(
-              '🔥 ${presenter.goalStreak}-day goal streak',
+              '${presenter.goalStreak}-day streak',
               style:
                   const TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
@@ -218,21 +218,21 @@ class _AnimatedBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
       return Container(
-        height: 8,
+        height: 6,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
         ),
         child: Align(
           alignment: Alignment.centerLeft,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeOut,
-            height: 8,
+            height: 6,
             width: constraints.maxWidth * progress,
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(4),
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
         ),
@@ -274,15 +274,15 @@ class _MacroRow extends StatelessWidget {
     final progress =
         goal != null && goal! > 0 ? (current / goal!).clamp(0.0, 1.0) : 0.0;
     final text = goal != null
-        ? '$label: ${current.toStringAsFixed(0)}/${goal!.toStringAsFixed(0)}g'
-        : '$label: ${current.toStringAsFixed(0)}g';
+        ? '$label ${current.toStringAsFixed(0)}/${goal!.toStringAsFixed(0)}g'
+        : '$label ${current.toStringAsFixed(0)}g';
     return Row(
       children: [
         SizedBox(
-          width: 80,
+          width: 76,
           child: Text(text,
               style: TextStyle(
-                  color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+                  color: color, fontSize: 11, fontWeight: FontWeight.w500)),
         ),
         Expanded(child: _AnimatedBar(progress: progress, color: color)),
       ],
@@ -311,7 +311,7 @@ class _QuickAddRow extends StatelessWidget {
                 onTap: () => presenter.addMealFromTemplate(t, MealSlot.meal),
               )),
           _QuickChip(
-            label: '+ Library',
+            label: 'Library',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -333,7 +333,7 @@ class _QuickChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
+      padding: const EdgeInsets.only(right: 8, top: 6, bottom: 6),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -342,7 +342,6 @@ class _QuickChip extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
           ),
           child: Text(label,
               style: const TextStyle(
@@ -378,115 +377,126 @@ class _MealSectionState extends State<_MealSection> {
     final calories = widget.presenter.caloriesForSlot(widget.slot);
     final hasItems = entries.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _SectionHeader(
-            slot: widget.slot,
-            calories: calories,
-            expanded: _expanded,
-            onAddTap: widget.onAddTap,
-            onToggle: () => setState(() => _expanded = !_expanded),
-          ),
-          if (_expanded) ...[
-            if (!hasItems)
-              _EmptySlot(slot: widget.slot, onAddTap: widget.onAddTap),
-            ...entries.map((entry) => _EntryRow(
-                  entry: entry,
-                  onDelete: () =>
-                      widget.presenter.removeFoodEntry(entry.id, widget.slot),
-                )),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SectionHeader(
+          calories: calories,
+          expanded: _expanded,
+          hasItems: hasItems,
+          onAddTap: widget.onAddTap,
+          onToggle: () => setState(() => _expanded = !_expanded),
+        ),
+        if (_expanded) ...[
+          if (!hasItems) _EmptySlot(onAddTap: widget.onAddTap),
+          ...entries.map((entry) => _EntryRow(
+                entry: entry,
+                onDelete: () =>
+                    widget.presenter.removeFoodEntry(entry.id, widget.slot),
+              )),
         ],
-      ),
+      ],
     );
   }
 }
 
 class _SectionHeader extends StatelessWidget {
-  final MealSlot slot;
   final int calories;
   final bool expanded;
+  final bool hasItems;
   final VoidCallback onAddTap;
   final VoidCallback onToggle;
   const _SectionHeader({
-    required this.slot,
     required this.calories,
     required this.expanded,
+    required this.hasItems,
     required this.onAddTap,
     required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        GestureDetector(
-          onTap: onToggle,
-          child: Row(
-            children: [
-              Text(
-                slot.label.toUpperCase(),
-                style: TextStyle(
-                  color: AppColors.gold.withValues(alpha: 0.8),
-                  fontSize: 11,
-                  letterSpacing: 1.5,
-                  fontWeight: FontWeight.w700,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 4, 4),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: hasItems ? onToggle : null,
+            child: Row(
+              children: [
+                const Text(
+                  'Today',
+                  style: TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-              if (calories > 0) ...[
-                const SizedBox(width: 6),
-                Text('· $calories kcal',
+                if (calories > 0) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '· ${_calFmt.format(calories)} kcal',
                     style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 11)),
+                        color: AppColors.textSecondary, fontSize: 12),
+                  ),
+                ],
+                if (hasItems) ...[
+                  const SizedBox(width: 2),
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppColors.textSecondary,
+                    size: 16,
+                  ),
+                ],
               ],
-              const SizedBox(width: 4),
-              Icon(
-                expanded ? Icons.expand_less : Icons.expand_more,
-                color: AppColors.textSecondary,
-                size: 16,
-              ),
-            ],
+            ),
           ),
-        ),
-        const Spacer(),
-        SizedBox(
-          width: 44,
-          height: 44,
-          child: IconButton(
-            icon: const Icon(Icons.add, color: AppColors.gold, size: 18),
-            onPressed: onAddTap,
-            tooltip: 'Add to ${slot.label}',
+          const Spacer(),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              icon:
+                  const Icon(Icons.add, color: AppColors.textPrimary, size: 20),
+              onPressed: onAddTap,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
 class _EmptySlot extends StatelessWidget {
-  final MealSlot slot;
   final VoidCallback onAddTap;
-  const _EmptySlot({required this.slot, required this.onAddTap});
+  const _EmptySlot({required this.onAddTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onAddTap,
-      child: Container(
-        margin: const EdgeInsets.only(top: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: AppColors.gold.withValues(alpha: 0.08), width: 1),
-        ),
-        child: Text(
-          'Tap + to log ${slot.label.toLowerCase()}',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surface.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.add_circle_outline,
+                  color: AppColors.textSecondary.withValues(alpha: 0.5),
+                  size: 16),
+              const SizedBox(width: 10),
+              Text(
+                'Log your first meal today',
+                style: TextStyle(
+                    color: AppColors.textSecondary.withValues(alpha: 0.7),
+                    fontSize: 13),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -500,61 +510,88 @@ class _EntryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          if (entry.aiEstimated)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: Text('~',
-                  style: TextStyle(
-                      color: AppColors.accent.withValues(alpha: 0.8),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14)),
-            ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(entry.name,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500)),
-                if (entry.protein != null)
-                  Text(
-                    'P: ${entry.protein!.toStringAsFixed(0)}g  '
-                    'C: ${(entry.carbs ?? 0).toStringAsFixed(0)}g  '
-                    'F: ${(entry.fat ?? 0).toStringAsFixed(0)}g',
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 10),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 4, 0),
+          child: Row(
+            children: [
+              if (entry.aiEstimated)
+                Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: Text(
+                    '~',
+                    style: TextStyle(
+                      color: AppColors.accent.withValues(alpha: 0.7),
+                      fontSize: 13,
+                    ),
                   ),
-              ],
-            ),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.name,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      if (entry.protein != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'P ${entry.protein!.round()}g · '
+                          'C ${(entry.carbs ?? 0).round()}g · '
+                          'F ${(entry.fat ?? 0).round()}g',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              RichText(
+                text: TextSpan(
+                  children: [
+                    TextSpan(
+                      text: '${entry.calories}',
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: ' kcal',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppColors.textSecondary, size: 16),
+                  onPressed: onDelete,
+                ),
+              ),
+            ],
           ),
-          Text('${entry.calories} kcal',
-              style: const TextStyle(
-                  color: AppColors.gold,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600)),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: const Icon(Icons.delete_outline,
-                  color: AppColors.textSecondary, size: 17),
-              onPressed: onDelete,
-            ),
-          ),
-        ],
-      ),
+        ),
+        const Divider(
+            height: 1, indent: 16, endIndent: 16, color: Color(0x12FFFFFF)),
+      ],
     );
   }
 }
@@ -572,17 +609,15 @@ class _ModeChip extends StatelessWidget {
         margin: const EdgeInsets.only(right: 4),
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: AppColors.gold.withValues(alpha: 0.12),
+          color: AppColors.textSecondary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
         ),
         child: Text(
-          mode.label.toUpperCase(),
+          mode.label.toLowerCase(),
           style: const TextStyle(
-              color: AppColors.gold,
-              fontSize: 9,
-              letterSpacing: 1.2,
-              fontWeight: FontWeight.w700),
+              color: AppColors.textSecondary,
+              fontSize: 11,
+              fontWeight: FontWeight.w500),
         ),
       ),
     );
