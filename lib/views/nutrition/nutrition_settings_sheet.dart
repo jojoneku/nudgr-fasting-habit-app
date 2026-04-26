@@ -3,23 +3,34 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../models/meal_slot.dart';
 import '../../models/nutrition_goals.dart';
+import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'tdee_setup_screen.dart';
 
 /// Bottom sheet: tracking mode, daily calorie goal, macro targets, TDEE wizard link, overshoot penalty.
 Future<void> showNutritionSettingsSheet(
-    BuildContext context, NutritionPresenter presenter) {
+  BuildContext context,
+  NutritionPresenter presenter, {
+  AiCoachPresenter? aiCoachPresenter,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _NutritionSettingsSheet(presenter: presenter),
+    builder: (_) => _NutritionSettingsSheet(
+      presenter: presenter,
+      aiCoachPresenter: aiCoachPresenter,
+    ),
   );
 }
 
 class _NutritionSettingsSheet extends StatefulWidget {
   final NutritionPresenter presenter;
-  const _NutritionSettingsSheet({required this.presenter});
+  final AiCoachPresenter? aiCoachPresenter;
+  const _NutritionSettingsSheet({
+    required this.presenter,
+    this.aiCoachPresenter,
+  });
 
   @override
   State<_NutritionSettingsSheet> createState() =>
@@ -167,7 +178,15 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
               value: _overshootPenalty,
               onChanged: (v) => setState(() => _overshootPenalty = v),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
+
+            // ── AI Coach download ──────────────────────────────────────────
+            if (widget.aiCoachPresenter != null) ...[
+              _label('AI COACH'),
+              const SizedBox(height: 10),
+              _AiCoachDownloadCard(presenter: widget.aiCoachPresenter!),
+              const SizedBox(height: 24),
+            ],
 
             SizedBox(
               width: double.infinity,
@@ -385,6 +404,130 @@ class _ToggleRow extends StatelessWidget {
           inactiveTrackColor: AppColors.surface,
         ),
       ],
+    );
+  }
+}
+
+// ── AI Coach download card ─────────────────────────────────────────────────────
+
+class _AiCoachDownloadCard extends StatelessWidget {
+  final AiCoachPresenter presenter;
+  const _AiCoachDownloadCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (_, __) {
+        final available = presenter.isModelAvailable;
+        final downloading = presenter.isDownloading;
+        final progress = presenter.downloadProgress ?? 0;
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Text('🧠', style: TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Qwen3 0.6B',
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                        Text(
+                          available
+                              ? 'Ready — meal parsing & coaching active'
+                              : 'On-device · ~586 MB · Private',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (available)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('Ready',
+                          style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                ],
+              ),
+              if (downloading) ...[
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress / 100.0,
+                    minHeight: 6,
+                    backgroundColor: AppColors.surface,
+                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Downloading...',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 11)),
+                    Text('$progress%',
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ] else if (!available) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Download AI Coach',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
+                    onPressed: presenter.downloadModel,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

@@ -133,6 +133,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         questPresenter: _questPresenter,
         nutritionPresenter: _nutritionPresenter,
         activityPresenter: _activityPresenter,
+        aiCoachPresenter: _aiCoachPresenter,
         treasuryPresenter: _treasuryPresenter,
         ledgerPresenter: _ledgerPresenter,
         billsPresenter: _billsPresenter,
@@ -227,22 +228,16 @@ class _AiCoachFabState extends State<_AiCoachFab>
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [AppColors.primary, AppColors.accent],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: AppColors.surface,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: AppColors.accentGlow,
-                  blurRadius: 12,
-                  spreadRadius: 1,
-                ),
-              ],
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.25),
+                width: 1,
+              ),
             ),
             child: const Center(
-              child: Text('🧠', style: TextStyle(fontSize: 22)),
+              child: Icon(Icons.psychology_outlined,
+                  color: AppColors.primary, size: 24),
             ),
           ),
         ),

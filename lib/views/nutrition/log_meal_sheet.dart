@@ -4,6 +4,7 @@ import '../../app_colors.dart';
 import '../../models/ai_meal_estimate.dart';
 import '../../models/food_db_entry.dart';
 import '../../models/food_entry.dart';
+import '../../models/food_parse_result.dart';
 import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
@@ -407,13 +408,33 @@ class _LogMealSheetState extends State<LogMealSheet> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 20),
+          // NLP parse — always available, instant (regex + DB)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                foregroundColor: AppColors.primary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: widget.presenter.isParsing
+                  ? null
+                  : () => widget.presenter.parseMeal(_inputCtrl.text.trim()),
+              icon: const Icon(Icons.manage_search_outlined, size: 16),
+              label: const Text('Parse meal description'),
+            ),
+          ),
+          const SizedBox(height: 8),
           if (aiAvailable) ...[
             SizedBox(
               width: double.infinity,
-              height: 48,
+              height: 44,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent.withValues(alpha: 0.15),
+                  backgroundColor: AppColors.accent.withValues(alpha: 0.12),
                   foregroundColor: AppColors.accent,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
@@ -423,14 +444,15 @@ class _LogMealSheetState extends State<LogMealSheet> {
                     ? null
                     : () =>
                         widget.presenter.estimateMeal(_inputCtrl.text.trim()),
-                icon: const Icon(Icons.auto_awesome, size: 16),
-                label: const Text('Estimate with AI'),
+                icon: const Icon(Icons.auto_awesome, size: 15),
+                label: const Text('Estimate with AI',
+                    style: TextStyle(fontSize: 13)),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
           ] else ...[
             _AiUnavailableBanner(presenter: widget.presenter),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
           ],
           SizedBox(
             width: double.infinity,
@@ -454,6 +476,81 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildAiState() {
+    // ── NLP parse state (new primary path) ────────────────────────────────
+    if (widget.presenter.isParsing) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: AppColors.primary),
+            ),
+            SizedBox(width: 12),
+            Text('Parsing meal...',
+                style: TextStyle(color: AppColors.primary, fontSize: 12)),
+          ],
+        ),
+      );
+    }
+
+    final parseError = widget.presenter.parseError;
+    if (parseError != null) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.danger, size: 15),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(parseError,
+                  style:
+                      const TextStyle(color: AppColors.danger, fontSize: 12)),
+            ),
+            GestureDetector(
+              onTap: widget.presenter.clearParseResult,
+              child: const Icon(Icons.close,
+                  color: AppColors.textSecondary, size: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final parseResult = widget.presenter.lastParseResult;
+    if (parseResult != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: _ParseResultCard(
+          result: parseResult,
+          dbMatches: widget.presenter.parsedDbMatches,
+          onConfirm: (entries) {
+            for (final e in entries) {
+              _addEntry(e);
+            }
+            widget.presenter.clearParseResult();
+            _inputCtrl.clear();
+            setState(() => _searchResults = []);
+          },
+          onDismiss: widget.presenter.clearParseResult,
+        ),
+      );
+    }
+
+    // ── Old Gemma AI state (fallback / legacy) ─────────────────────────────
     if (widget.presenter.isAiEstimating) {
       return Container(
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -802,6 +899,184 @@ class _TemplateCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Parse Result Card ────────────────────────────────────────────────────────
+
+class _ParseResultCard extends StatefulWidget {
+  final FoodParseResult result;
+  final List<FoodDbEntry?> dbMatches;
+  final void Function(List<FoodEntry>) onConfirm;
+  final VoidCallback onDismiss;
+
+  const _ParseResultCard({
+    required this.result,
+    required this.dbMatches,
+    required this.onConfirm,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_ParseResultCard> createState() => _ParseResultCardState();
+}
+
+class _ParseResultCardState extends State<_ParseResultCard> {
+  late List<bool> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.filled(widget.result.items.length, true);
+  }
+
+  List<FoodEntry> _buildEntries() {
+    final entries = <FoodEntry>[];
+    for (int i = 0; i < widget.result.items.length; i++) {
+      if (!_selected[i]) continue;
+      final item = widget.result.items[i];
+      final db = i < widget.dbMatches.length ? widget.dbMatches[i] : null;
+      if (db != null) {
+        entries.add(db.toFoodEntry(item.grams));
+      } else {
+        // No DB match — create a rough entry from grams alone
+        entries.add(FoodEntry(
+          id: FoodEntry.generateId(),
+          name: item.name,
+          calories: (item.grams * 2).round(), // rough ~2 kcal/g fallback
+          grams: item.grams,
+          aiEstimated: true,
+          loggedAt: DateTime.now(),
+        ));
+      }
+    }
+    return entries;
+  }
+
+  int get _totalCalories => _buildEntries().fold(0, (s, e) => s + e.calories);
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = _selected.where((v) => v).length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.manage_search_outlined,
+                  color: AppColors.primary, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                widget.result.usedModel
+                    ? 'AI parsed ${widget.result.items.length} items'
+                    : '${widget.result.items.length} items matched',
+                style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close,
+                    color: AppColors.textSecondary, size: 16),
+                onPressed: widget.onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...widget.result.items.asMap().entries.map((entry) {
+            final i = entry.key;
+            final item = entry.value;
+            final db = i < widget.dbMatches.length ? widget.dbMatches[i] : null;
+            final cal = db != null
+                ? (db.caloriesPer100g * item.grams / 100).round()
+                : (item.grams * 2).round();
+            final hasDb = db != null;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _selected[i],
+                      onChanged: (v) =>
+                          setState(() => _selected[i] = v ?? false),
+                      activeColor: AppColors.primary,
+                      side: BorderSide(
+                          color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          db?.name ?? item.name,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${item.grams.round()}g${item.isEstimated ? ' ~est' : ''}',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${hasDb ? '' : '~'}$cal kcal',
+                    style: TextStyle(
+                        color: hasDb ? AppColors.gold : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: selectedCount == 0
+                  ? null
+                  : () => widget.onConfirm(_buildEntries()),
+              child: Text(
+                'Add $selectedCount item${selectedCount == 1 ? '' : 's'}  ·  $_totalCalories kcal',
+                style: const TextStyle(
+                    fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
