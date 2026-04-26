@@ -93,6 +93,10 @@ class NutritionPresenter extends ChangeNotifier {
   double get calorieProgress =>
       effectiveGoal > 0 ? (todayCalories / effectiveGoal).clamp(0.0, 1.5) : 0.0;
 
+  /// Net calories (eaten − burned) as a fraction of the goal.
+  double get netCalorieProgress =>
+      effectiveGoal > 0 ? (netCalories / effectiveGoal).clamp(0.0, 1.0) : 0.0;
+
   bool get isCalorieGoalMet => todayCalories >= effectiveGoal;
   bool get isOverGoal => todayCalories > effectiveGoal * 1.2;
 
@@ -112,6 +116,10 @@ class NutritionPresenter extends ChangeNotifier {
   double get todayProtein => _todayLog.totalProtein;
   double get todayCarbs => _todayLog.totalCarbs;
   double get todayFat => _todayLog.totalFat;
+
+  int? get proteinGoal => _goals.proteinGrams?.round();
+  int? get carbsGoal => _goals.carbsGrams?.round();
+  int? get fatGoal => _goals.fatGrams?.round();
 
   double get proteinProgress =>
       _goals.proteinGrams != null && _goals.proteinGrams! > 0
@@ -290,6 +298,18 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Actions — food library ────────────────────────────────────────────────────
 
+  /// Parses [text] using NLP + DB lookup and returns FoodEntry objects
+  /// WITHOUT adding them to the daily log. Used by the template builder.
+  Future<List<FoodEntry>> parseFoodItemsForTemplate(String text) async {
+    final result = FoodNlpParser.parse(text.trim());
+    if (result.isEmpty) return [];
+    final dbMatches = await _resolveDbMatches(result);
+    return [
+      for (var i = 0; i < result.items.length; i++)
+        _buildEntry(result.items[i], dbMatches[i]),
+    ];
+  }
+
   Future<void> saveFoodTemplate(FoodTemplate template) async {
     if (_library.length >= 50) return; // cap at 50
     final idx = _library.indexWhere((t) => t.id == template.id);
@@ -457,6 +477,7 @@ class NutritionPresenter extends ChangeNotifier {
     final dateKey = _dateFmt.format(date);
     final raw = await _storage.loadChatMessagesRaw(dateKey);
     _chatMessages = raw.map(ChatMessage.fromJson).toList();
+    _todayLog = await _storage.loadNutritionLogForDate(dateKey);
     notifyListeners();
   }
 

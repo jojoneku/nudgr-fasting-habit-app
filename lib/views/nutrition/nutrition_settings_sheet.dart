@@ -98,10 +98,12 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isStandard = _mode == TrackingMode.standard;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),

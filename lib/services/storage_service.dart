@@ -259,20 +259,29 @@ class StorageService {
   Future<DailyNutritionLog> loadTodayNutritionLog() async {
     final prefs = await SharedPreferences.getInstance();
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return _loadNutritionLogForKey(prefs, todayKey);
+  }
+
+  Future<DailyNutritionLog> loadNutritionLogForDate(String dateKey) async {
+    final prefs = await SharedPreferences.getInstance();
+    return _loadNutritionLogForKey(prefs, dateKey);
+  }
+
+  DailyNutritionLog _loadNutritionLogForKey(
+      SharedPreferences prefs, String key) {
     final raw = prefs.getString(keyNutritionLogs);
     if (raw != null) {
       try {
         final Map<String, dynamic> all =
             jsonDecode(raw) as Map<String, dynamic>;
-        if (all.containsKey(todayKey)) {
-          return DailyNutritionLog.fromJson(
-              all[todayKey] as Map<String, dynamic>);
+        if (all.containsKey(key)) {
+          return DailyNutritionLog.fromJson(all[key] as Map<String, dynamic>);
         }
       } catch (e) {
-        debugPrint('StorageService: Error loading today nutrition log: $e');
+        debugPrint('StorageService: Error loading nutrition log [$key]: $e');
       }
     }
-    return DailyNutritionLog.empty(todayKey);
+    return DailyNutritionLog.empty(key);
   }
 
   Future<List<DailyNutritionLog>> loadNutritionHistory() async {

@@ -26,12 +26,15 @@ class OnDeviceAiCoachService implements AiCoachService {
   InferenceModel? _model;
   bool _isDownloading = false;
   int _downloadProgress = 0;
+  bool _deviceIncompatible = false;
 
   @override
   AiCoachTier get tier => AiCoachTier.onDevice;
 
   @override
-  bool get isAvailable => _model != null;
+  bool get isAvailable => _model != null && !_deviceIncompatible;
+
+  bool get isDeviceIncompatible => _deviceIncompatible;
 
   @override
   int? get downloadProgress => _isDownloading ? _downloadProgress : null;
@@ -82,14 +85,23 @@ class OnDeviceAiCoachService implements AiCoachService {
         maxTokens: 4096,
         preferredBackend: PreferredBackend.gpu,
       );
-    } catch (_) {
+    } catch (gpuError) {
       try {
         _model = await FlutterGemma.getActiveModel(
           maxTokens: 4096,
           preferredBackend: PreferredBackend.cpu,
         );
-      } catch (e) {
-        debugPrint('OnDeviceAiCoachService: model load failed: $e');
+      } catch (cpuError) {
+        final msg = cpuError.toString().toLowerCase();
+        if (msg.contains('opencl') ||
+            msg.contains('can not find') ||
+            msg.contains('litert')) {
+          _deviceIncompatible = true;
+          debugPrint(
+              'OnDeviceAiCoachService: device incompatible — $cpuError');
+        } else {
+          debugPrint('OnDeviceAiCoachService: model load failed: $cpuError');
+        }
       }
     }
   }
@@ -144,6 +156,19 @@ class OnDeviceAiCoachService implements AiCoachService {
       // Strip <think>...</think> blocks — Qwen3 thinking tokens aren't
       // meant to be shown to the user.
       yield _stripThinking(text);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('opencl') ||
+          msg.contains('can not find') ||
+          msg.contains('litert')) {
+        _deviceIncompatible = true;
+        debugPrint('OnDeviceAiCoachService: device incompatible — $e');
+        yield 'AI Coach is not supported on this device (missing OpenCL/GPU). '
+            'The cloud coach may be available as a fallback.';
+      } else {
+        debugPrint('OnDeviceAiCoachService.respond error: $e');
+        yield 'AI Coach encountered an error. Please try again.';
+      }
     } finally {
       try {
         await chat.session.close();

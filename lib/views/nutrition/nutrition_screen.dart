@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/chat_message.dart';
 import '../../models/food_template.dart';
+import '../../models/food_entry.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
@@ -229,6 +230,15 @@ class _DayChip extends StatelessWidget {
 
 // ─── Stat Section ─────────────────────────────────────────────────────────────
 
+void _showNutritionDetailSheet(
+    BuildContext context, NutritionPresenter presenter) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    builder: (_) => _NutritionDetailSheet(presenter: presenter),
+  );
+}
+
 class _StatSection extends StatelessWidget {
   final NutritionPresenter presenter;
   const _StatSection({required this.presenter});
@@ -237,10 +247,12 @@ class _StatSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final p = presenter;
     final burned = p.selectedDateCaloriesBurned;
-    final remainColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
+    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Container(
+      child: GestureDetector(
+        onTap: () => _showNutritionDetailSheet(context, p),
+        child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -248,8 +260,9 @@ class _StatSection extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // ── Calories side ─────────────────────────────────────────────
+            // ── Calories side (60%) ───────────────────────────────────────
             Expanded(
+              flex: 3,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -265,7 +278,7 @@ class _StatSection extends StatelessWidget {
                   const SizedBox(height: 6),
                   _TinyBar(
                     progress: p.netCalorieProgress,
-                    color: p.isOverGoal ? AppColors.danger : AppColors.primary,
+                    color: barColor,
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -274,19 +287,18 @@ class _StatSection extends StatelessWidget {
                         value: '${p.todayCalories}',
                         label: 'Eaten',
                         color: AppColors.textPrimary,
-                        sub: '/ ${p.effectiveGoal}',
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: '${p.remainingCalories}',
-                        label: 'Remaining',
-                        color: remainColor,
+                        label: 'Left',
+                        color: AppColors.textPrimary,
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: burned > 0 ? '$burned' : '—',
                         label: 'Burned',
-                        color: AppColors.gold,
+                        color: AppColors.textPrimary,
                       ),
                     ],
                   ),
@@ -300,8 +312,9 @@ class _StatSection extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 12),
               color: AppColors.textSecondary.withValues(alpha: 0.20),
             ),
-            // ── Macros side ───────────────────────────────────────────────
+            // ── Macros side (40%) ─────────────────────────────────────────
             Expanded(
+              flex: 2,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -320,24 +333,24 @@ class _StatSection extends StatelessWidget {
                       _StatCell(
                         value: '${p.todayProtein.round()}g',
                         label: 'Protein',
-                        color: AppColors.primary,
-                        sub: p.proteinGoal != null ? '/ ${p.proteinGoal}g' : null,
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.primary,
                         progress: p.proteinProgress,
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: '${p.todayCarbs.round()}g',
                         label: 'Carbs',
-                        color: AppColors.gold,
-                        sub: p.carbsGoal != null ? '/ ${p.carbsGoal}g' : null,
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.gold,
                         progress: p.carbsProgress,
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: '${p.todayFat.round()}g',
                         label: 'Fat',
-                        color: AppColors.danger,
-                        sub: p.fatGoal != null ? '/ ${p.fatGoal}g' : null,
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.danger,
                         progress: p.fatProgress,
                       ),
                     ],
@@ -347,6 +360,7 @@ class _StatSection extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }
@@ -365,15 +379,15 @@ class _ColDivider extends StatelessWidget {
 
 class _StatCell extends StatelessWidget {
   final String value;
-  final String? sub; // e.g. "/ 150g" target
   final String label;
   final Color color;
-  final double? progress; // null = no bar
+  final Color? barColor;
+  final double? progress;
   const _StatCell({
     required this.value,
     required this.label,
     required this.color,
-    this.sub,
+    this.barColor,
     this.progress,
   });
 
@@ -384,34 +398,17 @@ class _StatCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (progress != null) ...[
-            _TinyBar(progress: progress!, color: color),
+            _TinyBar(progress: progress!, color: barColor ?? color),
             const SizedBox(height: 5),
           ],
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  height: 1,
-                ),
-              ),
-              if (sub != null) ...[
-                const SizedBox(width: 2),
-                Text(
-                  sub!,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
-                    height: 1,
-                  ),
-                ),
-              ],
-            ],
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+              height: 1,
+            ),
           ),
           const SizedBox(height: 3),
           Text(
@@ -459,6 +456,225 @@ class _TinyBar extends StatelessWidget {
   }
 }
 
+
+// ─── Nutrition Detail Sheet ───────────────────────────────────────────────────
+
+class _NutritionDetailSheet extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _NutritionDetailSheet({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = presenter;
+    final burned = p.selectedDateCaloriesBurned;
+    final calGoal = p.effectiveGoal;
+    final remaining = p.remainingCalories;
+    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.55,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: 18),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const Text(
+            'BREAKDOWN',
+            style: TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 1.0,
+            ),
+          ),
+          const SizedBox(height: 16),
+          // ── Calories row ────────────────────────────────────────────────
+          _DetailRow(
+            label: 'Calories',
+            value: p.todayCalories,
+            goal: calGoal,
+            remaining: remaining.clamp(0, calGoal),
+            unit: 'kcal',
+            color: barColor,
+            extra: burned > 0 ? '🔥 $burned kcal burned' : null,
+          ),
+          const SizedBox(height: 14),
+          const Divider(color: Color(0x18FFFFFF), height: 1),
+          const SizedBox(height: 14),
+          // ── Macros ──────────────────────────────────────────────────────
+          if (p.proteinGoal != null)
+            _DetailRow(
+              label: 'Protein',
+              value: p.todayProtein.round(),
+              goal: p.proteinGoal!,
+              remaining: (p.proteinGoal! - p.todayProtein.round()).clamp(0, p.proteinGoal!),
+              unit: 'g',
+              color: AppColors.primary,
+            ),
+          if (p.proteinGoal != null) const SizedBox(height: 10),
+          if (p.carbsGoal != null)
+            _DetailRow(
+              label: 'Carbs',
+              value: p.todayCarbs.round(),
+              goal: p.carbsGoal!,
+              remaining: (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
+              unit: 'g',
+              color: AppColors.gold,
+            ),
+          if (p.carbsGoal != null) const SizedBox(height: 10),
+          if (p.fatGoal != null)
+            _DetailRow(
+              label: 'Fat',
+              value: p.todayFat.round(),
+              goal: p.fatGoal!,
+              remaining: (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
+              unit: 'g',
+              color: AppColors.danger,
+            ),
+          if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
+            const Text(
+              'No macro targets set — configure them in Settings.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final String label;
+  final int value;
+  final int goal;
+  final int remaining;
+  final String unit;
+  final Color color;
+  final String? extra;
+
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    required this.goal,
+    required this.remaining,
+    required this.unit,
+    required this.color,
+    this.extra,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              '$value',
+              style: TextStyle(
+                color: color,
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+            ),
+            Text(
+              ' / $goal $unit',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 12,
+                height: 1,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _FullBar(progress: progress, color: color),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Text(
+              '$remaining $unit remaining',
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 11,
+              ),
+            ),
+            if (extra != null) ...[
+              const Spacer(),
+              Text(
+                extra!,
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FullBar extends StatelessWidget {
+  final double progress;
+  final Color color;
+  const _FullBar({required this.progress, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (_, box) {
+      return Container(
+        height: 8,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            height: 8,
+            width: box.maxWidth * progress,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      );
+    });
+  }
+}
 
 // ─── Chat Feed ────────────────────────────────────────────────────────────────
 
@@ -699,6 +915,80 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     });
   }
 
+  Future<void> _saveAsTemplate(BuildContext context) async {
+    final rawText = widget.message.rawText;
+    final suggested = rawText.length > 40 ? rawText.substring(0, 40) : rawText;
+    final nameCtrl = TextEditingController(text: suggested);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: const Text('Save as template',
+            style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          style: const TextStyle(color: AppColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Template name',
+            hintStyle: const TextStyle(color: AppColors.textSecondary),
+            filled: true,
+            fillColor: AppColors.background,
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide.none),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save',
+                style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+
+    nameCtrl.dispose();
+    if (confirmed != true || !mounted) return;
+
+    final items = widget.message.foodItems;
+    final template = FoodTemplate(
+      id: FoodEntry.generateId(),
+      name: nameCtrl.text.trim().isEmpty ? suggested : nameCtrl.text.trim(),
+      isMeal: items.length > 1,
+      entries: items
+          .map((item) => FoodEntry(
+                id: item.entryId,
+                name: item.name,
+                calories: item.calories,
+                protein: item.protein,
+                carbs: item.carbs,
+                fat: item.fat,
+                loggedAt: DateTime.now(),
+              ))
+          .toList(),
+    );
+    final messenger2 = messenger; // already captured above
+    await widget.presenter.saveFoodTemplate(template);
+    if (mounted) {
+      messenger2.showSnackBar(
+        SnackBar(
+          content: Text('Saved "${template.name}" to library'),
+          backgroundColor: AppColors.surface,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final message = widget.message;
@@ -740,7 +1030,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
             saving: _saving,
             onEdit: () => setState(() => _editing = true),
             onDelete: () => widget.presenter.removeChatMessage(message.id),
-            onSaveTemplate: () {/* TODO: save as template */},
+            onSaveTemplate: () => _saveAsTemplate(context),
             onConfirm: _save,
             onCancel: _cancel,
           ),

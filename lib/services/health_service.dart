@@ -9,9 +9,11 @@ class HealthService {
     HealthDataType.ACTIVE_ENERGY_BURNED,
     HealthDataType.TOTAL_CALORIES_BURNED,
     HealthDataType.DISTANCE_DELTA,
+    HealthDataType.WORKOUT,
   ];
 
   static const _permissions = [
+    HealthDataAccess.READ,
     HealthDataAccess.READ,
     HealthDataAccess.READ,
     HealthDataAccess.READ,
@@ -114,6 +116,30 @@ class HealthService {
           sourceId: sourceId);
     } catch (e) {
       debugPrint('HealthService: readTodayDistance error: $e');
+      return null;
+    }
+  }
+
+  /// Reads today's workout sessions (e.g. from Strava) and sums totalDistance.
+  /// GPS-accurate — preferred over DISTANCE_DELTA which device sensors don't populate.
+  Future<double?> readTodayWorkoutDistance() async {
+    try {
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+      final pts = await Health().getHealthDataFromTypes(
+        startTime: midnight,
+        endTime: now,
+        types: [HealthDataType.WORKOUT],
+      );
+      if (pts.isEmpty) return null;
+      final total = pts.fold<double>(
+        0.0,
+        (sum, p) => sum + (p.workoutSummary?.totalDistance.toDouble() ?? 0.0),
+      );
+      debugPrint('HealthService: readTodayWorkoutDistance total=${total}m from ${pts.length} sessions');
+      return total > 0 ? total : null;
+    } catch (e) {
+      debugPrint('HealthService: readTodayWorkoutDistance error: $e');
       return null;
     }
   }
@@ -252,12 +278,32 @@ class HealthService {
       debugPrint('HealthService: readRangeDataByDay DISTANCE error: $e');
     }
 
+    // WORKOUT SESSIONS — 1 API call (GPS-based, e.g. Strava).
+    // totalDistance from workoutSummary is preferred over DISTANCE_DELTA since
+    // device sensors don't populate DISTANCE_DELTA.
+    final workoutDistance = <String, double>{};
+    try {
+      final pts = await Health().getHealthDataFromTypes(
+          startTime: start, endTime: end, types: [HealthDataType.WORKOUT]);
+      for (final p in pts) {
+        final d = p.workoutSummary?.totalDistance.toDouble() ?? 0.0;
+        if (d <= 0) continue;
+        final day = _dayKey(p.dateFrom.toLocal());
+        workoutDistance[day] = (workoutDistance[day] ?? 0.0) + d;
+      }
+      debugPrint(
+          'HealthService: readRangeDataByDay WORKOUT distance days=${workoutDistance.length}');
+    } catch (e) {
+      debugPrint('HealthService: readRangeDataByDay WORKOUT error: $e');
+    }
+
     // Merge all keys
     final allDays = {
       ...steps.keys,
       ...activeCalories.keys,
       ...totalCalories.keys,
-      ...distance.keys
+      ...distance.keys,
+      ...workoutDistance.keys,
     };
     return {
       for (final day in allDays)
@@ -265,7 +311,8 @@ class HealthService {
           steps: steps[day] ?? 0,
           activeCalories: activeCalories[day],
           totalCalories: totalCalories[day],
-          distance: distance[day],
+          // Prefer GPS workout distance; fall back to DISTANCE_DELTA
+          distance: workoutDistance[day] ?? distance[day],
         ),
     };
   }
