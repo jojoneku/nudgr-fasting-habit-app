@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../models/ai_coach_context.dart';
 import '../presenters/activity_presenter.dart';
+import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
@@ -17,6 +19,7 @@ import '../services/storage_service.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
 import 'stats_view.dart';
+import 'widgets/ai_chat_sheet.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -40,6 +43,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final BudgetPresenter _budgetPresenter;
   late final TreasuryHistoryPresenter _historyPresenter;
   late final InstallmentPresenter _installmentPresenter;
+  late final AiCoachPresenter _aiCoachPresenter;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
@@ -81,6 +85,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       foodDb: _foodDb,
       aiEstimation: _aiEstimation,
     );
+    _aiCoachPresenter = AiCoachPresenter(
+      stats: _statsPresenter,
+      fasting: _fastingPresenter,
+      nutrition: _nutritionPresenter,
+    );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -104,6 +113,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _budgetPresenter.dispose();
     _historyPresenter.dispose();
     _installmentPresenter.dispose();
+    _aiCoachPresenter.dispose();
     super.dispose();
   }
 
@@ -139,6 +149,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: screens[_selectedIndex],
+      floatingActionButton: _AiCoachFab(
+        presenter: _aiCoachPresenter,
+        entryPoint: _selectedIndex == 1
+            ? AiCoachEntryPoint.stats
+            : AiCoachEntryPoint.general,
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
@@ -161,3 +178,73 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
 // Keep HomeScreen as an alias so fasting_app.dart compiles until updated.
 typedef HomeScreen = AppShell;
+
+class _AiCoachFab extends StatefulWidget {
+  final AiCoachPresenter presenter;
+  final AiCoachEntryPoint entryPoint;
+
+  const _AiCoachFab({required this.presenter, required this.entryPoint});
+
+  @override
+  State<_AiCoachFab> createState() => _AiCoachFabState();
+}
+
+class _AiCoachFabState extends State<_AiCoachFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+        onTapDown: (_) => _ctrl.forward(),
+        onTapUp: (_) {
+          _ctrl.reverse();
+          AiChatSheet.show(context,
+              presenter: widget.presenter, entryPoint: widget.entryPoint);
+        },
+        onTapCancel: () => _ctrl.reverse(),
+        child: ScaleTransition(
+          scale: _scale,
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [AppColors.primary, AppColors.accent],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: AppColors.accentGlow,
+                  blurRadius: 12,
+                  spreadRadius: 1,
+                ),
+              ],
+            ),
+            child: const Center(
+              child: Text('🧠', style: TextStyle(fontSize: 22)),
+            ),
+          ),
+        ),
+      );
+}

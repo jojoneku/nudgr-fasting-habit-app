@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
+import '../models/chat_message.dart';
 import '../models/daily_nutrition_log.dart';
+import '../models/exercise_entry.dart';
+import '../models/food_db_entry.dart';
 import '../models/food_entry.dart';
+import '../models/food_parse_result.dart';
 import '../models/food_template.dart';
 import '../models/meal_slot.dart';
 import '../models/nutrition_goals.dart';
@@ -10,6 +14,8 @@ import '../models/tdee_profile.dart';
 import '../services/ai_estimation_service.dart';
 import '../services/food_db_service.dart';
 import '../services/storage_service.dart';
+import '../utils/exercise_nlp_parser.dart';
+import '../utils/food_nlp_parser.dart';
 import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
 
@@ -35,6 +41,19 @@ class NutritionPresenter extends ChangeNotifier {
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
   String? _aiEstimateError;
+
+  // ── NLP parser state ─────────────────────────────────────────────────────
+  bool _isParsing = false;
+  FoodParseResult? _lastParseResult;
+  // Resolved DB entries matched to each parsed item (null = not found in DB).
+  List<FoodDbEntry?> _parsedDbMatches = [];
+  String? _parseError;
+
+  // ── Chat + exercise state ─────────────────────────────────────────────────
+  DateTime _selectedDate = DateTime.now();
+  List<ChatMessage> _chatMessages = [];
+  bool _isChatParsing = false;
+  String? _chatParseError;
 
   static final _dateFmt = DateFormat('yyyy-MM-dd');
   static final _calFmt = NumberFormat('#,###');
@@ -171,6 +190,35 @@ class NutritionPresenter extends ChangeNotifier {
   String get aiSizeLabel => _ai.modelSizeLabel;
   AiMealEstimate? get lastEstimate => _lastEstimate;
   String? get aiEstimateError => _aiEstimateError;
+
+  // ── NLP parser getters ───────────────────────────────────────────────────────
+
+  bool get isParsing => _isParsing;
+  FoodParseResult? get lastParseResult => _lastParseResult;
+  List<FoodDbEntry?> get parsedDbMatches => List.unmodifiable(_parsedDbMatches);
+  String? get parseError => _parseError;
+
+  // ── Chat + exercise getters ───────────────────────────────────────────────────
+
+  DateTime get selectedDate => _selectedDate;
+  bool get isSelectedDateToday =>
+      _dateFmt.format(_selectedDate) == _dateFmt.format(DateTime.now());
+  List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+  bool get isChatParsing => _isChatParsing;
+  String? get chatParseError => _chatParseError;
+
+  /// Sum of exercise calories burned from chat messages on [_selectedDate].
+  int get selectedDateCaloriesBurned => _chatMessages
+      .where((m) => m.kind == ChatMessageKind.exercise)
+      .fold(0, (sum, m) => sum + (m.exerciseEntry?.caloriesBurned ?? 0));
+
+  /// Remaining = goal − eaten + burned. Never negative.
+  int get remainingCalories =>
+      (effectiveGoal - todayCalories + selectedDateCaloriesBurned)
+          .clamp(0, 99999);
+
+  /// Net = eaten − burned.
+  int get netCalories => todayCalories - selectedDateCaloriesBurned;
 
   // ── Actions — entries ────────────────────────────────────────────────────────
 
@@ -311,6 +359,83 @@ class NutritionPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Actions — NLP food parser ─────────────────────────────────────────────
+
+  /// Parse [description] using the rule-based [FoodNlpParser], then look up
+  /// each item in the food DB. Notifies listeners when done.
+  Future<void> parseMeal(String description) async {
+    _isParsing = true;
+    _lastParseResult = null;
+    _parsedDbMatches = [];
+    _parseError = null;
+    notifyListeners();
+
+    try {
+      final result = FoodNlpParser.parse(description);
+      if (result.isEmpty) {
+        _parseError = 'Could not identify any food items. Try being more specific.';
+        return;
+      }
+      _lastParseResult = result;
+      _parsedDbMatches = await _resolveDbMatches(result);
+    } catch (e) {
+      _parseError = 'Failed to parse meal description.';
+    } finally {
+      _isParsing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Confirm and log the parsed items to [slot].
+  /// [overrides] optionally replaces a DB match at index with a custom entry.
+  Future<void> confirmParsedMeal(
+    MealSlot slot, {
+    Map<int, FoodEntry> overrides = const {},
+  }) async {
+    final result = _lastParseResult;
+    if (result == null) return;
+
+    for (var i = 0; i < result.items.length; i++) {
+      final entry = overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]);
+      await addFoodEntry(entry, slot);
+    }
+
+    _lastParseResult = null;
+    _parsedDbMatches = [];
+    notifyListeners();
+  }
+
+  void clearParseResult() {
+    _lastParseResult = null;
+    _parsedDbMatches = [];
+    _parseError = null;
+    notifyListeners();
+  }
+
+  Future<List<FoodDbEntry?>> _resolveDbMatches(FoodParseResult result) async {
+    return Future.wait(
+      result.items.map((item) async {
+        final hits = await _foodDb.search(item.name);
+        return hits.isEmpty ? null : hits.first;
+      }),
+    );
+  }
+
+  FoodEntry _buildEntry(ParsedFoodItem parsed, FoodDbEntry? dbEntry) {
+    if (dbEntry != null) {
+      return dbEntry.toFoodEntry(parsed.grams);
+    }
+    // No DB match — flag as AI-estimated (will show ~ prefix in UI).
+    return FoodEntry(
+      id: FoodEntry.generateId(),
+      name: parsed.name,
+      calories: 0,
+      grams: parsed.grams,
+      aiEstimated: true,
+      loggedAt: DateTime.now(),
+    );
+  }
+
   Future<void> downloadAiModel() async {
     if (_ai.isDownloading) return;
     notifyListeners();
@@ -320,6 +445,155 @@ class NutritionPresenter extends ChangeNotifier {
       // Download failed — model remains unavailable; banner will stay visible.
     }
     notifyListeners();
+  }
+
+  // ── Actions — chat feed ───────────────────────────────────────────────────────
+
+  /// Switch the viewed day. Loads that day's chat messages and nutrition log.
+  Future<void> setSelectedDate(DateTime date) async {
+    _selectedDate = date;
+    final dateKey = _dateFmt.format(date);
+    final raw = await _storage.loadChatMessagesRaw(dateKey);
+    _chatMessages = raw.map(ChatMessage.fromJson).toList();
+    notifyListeners();
+  }
+
+  /// Parse [text] as food or exercise, add to the chat feed, and persist.
+  Future<void> parseChat(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    _isChatParsing = true;
+    _chatParseError = null;
+    notifyListeners();
+
+    try {
+      if (ExerciseNlpParser.looksLikeExercise(trimmed)) {
+        await _parseChatAsExercise(trimmed);
+      } else {
+        await _parseChatAsFood(trimmed);
+      }
+    } catch (e) {
+      _chatParseError = 'Something went wrong. Please try again.';
+      debugPrint('NutritionPresenter: parseChat error: $e');
+    } finally {
+      _isChatParsing = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> _parseChatAsFood(String text) async {
+    final result = FoodNlpParser.parse(text);
+    if (result.isEmpty) {
+      _chatParseError = 'Could not identify any food items.';
+      return;
+    }
+    final dbMatches = await _resolveDbMatches(result);
+    final foodItems = <ChatFoodItem>[];
+    for (var i = 0; i < result.items.length; i++) {
+      final entry = _buildEntry(result.items[i], dbMatches[i]);
+      await addFoodEntry(entry, MealSlot.meal);
+      foodItems.add(ChatFoodItem.fromFoodEntry(entry));
+    }
+    final msg = ChatMessage(
+      id: ChatMessage.generateId(),
+      rawText: text,
+      timestamp: DateTime.now(),
+      kind: ChatMessageKind.food,
+      foodItems: foodItems,
+      mealSlot: MealSlot.meal,
+    );
+    _chatMessages.add(msg);
+    await _persistChatMessages();
+  }
+
+  Future<void> _parseChatAsExercise(String text) async {
+    final weightKg = _tdeeProfile?.weightKg ?? 70.0;
+    final result = ExerciseNlpParser.parse(text, weightKg: weightKg);
+    if (result == null) {
+      _chatParseError = 'Could not identify the exercise. Try: "walked 3km".';
+      return;
+    }
+    final entry = ExerciseEntry(
+      id: ExerciseEntry.generateId(),
+      name: result.activityName,
+      rawText: text,
+      distanceKm: result.distanceKm,
+      durationMinutes: result.durationMinutes,
+      caloriesBurned: result.caloriesBurned,
+      isEstimated: result.isEstimated,
+      loggedAt: DateTime.now(),
+    );
+    final msg = ChatMessage(
+      id: ChatMessage.generateId(),
+      rawText: text,
+      timestamp: DateTime.now(),
+      kind: ChatMessageKind.exercise,
+      exerciseEntry: entry,
+    );
+    _chatMessages.add(msg);
+    await _persistChatMessages();
+  }
+
+  /// Remove a chat message. Food items are also removed from [_todayLog].
+  Future<void> removeChatMessage(String messageId) async {
+    final msg = _chatMessages.cast<ChatMessage?>().firstWhere(
+          (m) => m!.id == messageId,
+          orElse: () => null,
+        );
+    if (msg == null) return;
+    if (msg.kind == ChatMessageKind.food) {
+      for (final item in msg.foodItems) {
+        await removeFoodEntry(item.entryId, msg.mealSlot);
+      }
+    }
+    _chatMessages.removeWhere((m) => m.id == messageId);
+    notifyListeners();
+    await _persistChatMessages();
+  }
+
+  /// Re-parse [newText] for item at [itemIndex] in [messageId], update in-place.
+  Future<void> editChatFoodItem(
+      String messageId, int itemIndex, String newText) async {
+    final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
+    if (msgIdx == -1) return;
+    final msg = _chatMessages[msgIdx];
+    if (itemIndex >= msg.foodItems.length) return;
+    final oldItem = msg.foodItems[itemIndex];
+
+    // Remove old food entry from today's log.
+    await removeFoodEntry(oldItem.entryId, msg.mealSlot);
+
+    // Re-parse and look up in DB.
+    final result = FoodNlpParser.parse(newText.trim());
+    final FoodEntry newEntry;
+    if (result.isNotEmpty) {
+      final dbMatches = await _resolveDbMatches(result);
+      newEntry = _buildEntry(result.items.first, dbMatches.first);
+    } else {
+      newEntry = FoodEntry(
+        id: FoodEntry.generateId(),
+        name: newText.trim(),
+        calories: oldItem.calories,
+        protein: oldItem.protein,
+        carbs: oldItem.carbs,
+        fat: oldItem.fat,
+        grams: oldItem.grams,
+        aiEstimated: true,
+        loggedAt: DateTime.now(),
+      );
+    }
+    await addFoodEntry(newEntry, msg.mealSlot);
+
+    final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
+    updatedItems[itemIndex] = ChatFoodItem.fromFoodEntry(newEntry);
+    _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
+    notifyListeners();
+    await _persistChatMessages();
+  }
+
+  Future<void> _persistChatMessages() async {
+    final dateKey = _dateFmt.format(_selectedDate);
+    await _storage.saveChatMessages(dateKey, _chatMessages);
   }
 
   // ── Load state ───────────────────────────────────────────────────────────────
@@ -334,6 +608,9 @@ class NutritionPresenter extends ChangeNotifier {
     _goalMetDate = await _storage.loadNutritionGoalMetDate();
     _logStreak = await _storage.loadLogStreak();
     _logStreakDate = await _storage.loadLogStreakDate();
+    final todayKey = _dateFmt.format(DateTime.now());
+    final rawChat = await _storage.loadChatMessagesRaw(todayKey);
+    _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
     notifyListeners();
   }
 
