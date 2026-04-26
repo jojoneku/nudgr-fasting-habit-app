@@ -7,11 +7,26 @@ import '../../presenters/ai_coach_presenter.dart';
 
 /// Entry point labels and icons per context.
 const _entryMeta = {
-  AiCoachEntryPoint.nutrition: (label: 'Nutrition Scan', icon: '🍱'),
-  AiCoachEntryPoint.fasting: (label: 'Fast Commander', icon: '⚡'),
-  AiCoachEntryPoint.stats: (label: 'Shadow Monarch', icon: '👁'),
-  AiCoachEntryPoint.treasury: (label: 'Ledger Protocol', icon: '💰'),
-  AiCoachEntryPoint.general: (label: 'The System', icon: '🖥'),
+  AiCoachEntryPoint.nutrition: (
+    label: 'Nutrition Scan',
+    icon: Icons.restaurant_outlined
+  ),
+  AiCoachEntryPoint.fasting: (
+    label: 'Fast Commander',
+    icon: Icons.timer_outlined
+  ),
+  AiCoachEntryPoint.stats: (
+    label: 'Shadow Monarch',
+    icon: Icons.bar_chart_outlined
+  ),
+  AiCoachEntryPoint.treasury: (
+    label: 'Ledger Protocol',
+    icon: Icons.account_balance_wallet_outlined
+  ),
+  AiCoachEntryPoint.general: (
+    label: 'The System',
+    icon: Icons.psychology_outlined
+  ),
 };
 
 /// Shows the AI Coach chat sheet. Opens as a draggable bottom sheet.
@@ -165,7 +180,7 @@ class _DragHandle extends StatelessWidget {
 }
 
 class _SheetHeader extends StatelessWidget {
-  final ({String label, String icon}) meta;
+  final ({String label, IconData icon}) meta;
   const _SheetHeader({required this.meta});
 
   @override
@@ -173,7 +188,7 @@ class _SheetHeader extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
         child: Row(
           children: [
-            Text(meta.icon, style: const TextStyle(fontSize: 20)),
+            Icon(meta.icon, color: AppColors.textSecondary, size: 18),
             const SizedBox(width: 10),
             Text(
               meta.label,
@@ -496,7 +511,8 @@ class _DownloadPrompt extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text('🧠', style: TextStyle(fontSize: 48)),
+            const Icon(Icons.psychology_outlined,
+                color: AppColors.primary, size: 48),
             const SizedBox(height: 20),
             const Text(
               'AI Coach',
@@ -552,15 +568,20 @@ class _DownloadProgress extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = presenter.downloadProgress ?? 0;
+    final isInitializing = progress >= 100;
+
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text('⬇️', style: TextStyle(fontSize: 40)),
+          const Icon(Icons.download_outlined,
+              color: AppColors.textSecondary, size: 40),
           const SizedBox(height: 20),
           Text(
-            'Downloading AI Coach… $progress%',
+            isInitializing
+                ? 'Initializing AI model…'
+                : 'Downloading AI Coach… $progress%',
             style: const TextStyle(
               color: AppColors.textPrimary,
               fontSize: 15,
@@ -570,17 +591,29 @@ class _DownloadProgress extends StatelessWidget {
           const SizedBox(height: 16),
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: progress / 100.0,
-              backgroundColor: AppColors.surface,
-              valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-              minHeight: 8,
-            ),
+            child: isInitializing
+                ? const LinearProgressIndicator(
+                    backgroundColor: Color(0xFF1C2128),
+                    valueColor:
+                        AlwaysStoppedAnimation(AppColors.primary),
+                    minHeight: 8,
+                  )
+                : LinearProgressIndicator(
+                    value: progress / 100.0,
+                    backgroundColor: AppColors.surface,
+                    valueColor:
+                        const AlwaysStoppedAnimation(AppColors.primary),
+                    minHeight: 8,
+                  ),
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Keep the app open during download.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          Text(
+            isInitializing
+                ? 'Loading model into memory — this takes a moment.'
+                : 'Keep the app open during download.',
+            style: const TextStyle(
+                color: AppColors.textSecondary, fontSize: 12),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

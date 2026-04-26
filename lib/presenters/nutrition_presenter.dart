@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
@@ -492,7 +494,8 @@ class NutritionPresenter extends ChangeNotifier {
     for (var i = 0; i < result.items.length; i++) {
       final entry = _buildEntry(result.items[i], dbMatches[i]);
       await addFoodEntry(entry, MealSlot.meal);
-      foodItems.add(ChatFoodItem.fromFoodEntry(entry));
+      foodItems.add(ChatFoodItem.fromFoodEntry(entry,
+          amountText: result.items[i].rawText));
     }
     final msg = ChatMessage(
       id: ChatMessage.generateId(),
@@ -585,10 +588,62 @@ class NutritionPresenter extends ChangeNotifier {
     await addFoodEntry(newEntry, msg.mealSlot);
 
     final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
-    updatedItems[itemIndex] = ChatFoodItem.fromFoodEntry(newEntry);
+    updatedItems[itemIndex] =
+        ChatFoodItem.fromFoodEntry(newEntry, amountText: newText.trim());
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
     notifyListeners();
     await _persistChatMessages();
+  }
+
+  /// Batch-edit all food items in a message at once.
+  /// [newTexts] must match [message.foodItems] by index.
+  Future<void> editAllChatFoodItems(
+      String messageId, List<String> newTexts) async {
+    final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
+    if (msgIdx == -1) return;
+    final msg = _chatMessages[msgIdx];
+
+    _isChatParsing = true;
+    notifyListeners();
+
+    final updatedItems = <ChatFoodItem>[];
+    for (var i = 0; i < min(newTexts.length, msg.foodItems.length); i++) {
+      final oldItem = msg.foodItems[i];
+      final newText = newTexts[i].trim();
+
+      // Swap in today's log: remove old, add new.
+      _todayLog = _todayLog.removeEntry(oldItem.entryId, msg.mealSlot);
+      final result = FoodNlpParser.parse(newText);
+      final FoodEntry newEntry;
+      if (result.isNotEmpty) {
+        final dbMatches = await _resolveDbMatches(result);
+        newEntry = _buildEntry(result.items.first, dbMatches.first);
+      } else {
+        newEntry = FoodEntry(
+          id: FoodEntry.generateId(),
+          name: newText,
+          calories: oldItem.calories,
+          protein: oldItem.protein,
+          carbs: oldItem.carbs,
+          fat: oldItem.fat,
+          grams: oldItem.grams,
+          aiEstimated: true,
+          loggedAt: DateTime.now(),
+        );
+      }
+      _todayLog = _todayLog.addEntry(newEntry, msg.mealSlot);
+      updatedItems.add(
+          ChatFoodItem.fromFoodEntry(newEntry, amountText: newText));
+    }
+
+    await _storage.saveNutritionLog(_todayLog);
+    _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
+    _isChatParsing = false;
+    notifyListeners();
+    await _persistChatMessages();
+    await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
   }
 
   Future<void> _persistChatMessages() async {

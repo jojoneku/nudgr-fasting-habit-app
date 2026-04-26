@@ -549,6 +549,44 @@ class StorageService {
     return prefs.getInt(keyActivityStreak) ?? 0;
   }
 
+  // ─── Chat messages (nutrition chat feed) ────────────────────────────────────
+
+  static const String keyChatMessages = 'nutritionChatMessages';
+
+  /// Persist [messages] for [date] (format: 'yyyy-MM-dd').
+  Future<void> saveChatMessages(
+      String date, List<dynamic> messages) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyChatMessages);
+    final Map<String, dynamic> all =
+        raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
+    all[date] = messages.map((m) => m.toJson()).toList();
+    // Keep at most 60 days of chat history to avoid storage bloat.
+    if (all.length > 60) {
+      final sorted = all.keys.toList()..sort();
+      for (final key in sorted.take(all.length - 60)) {
+        all.remove(key);
+      }
+    }
+    await prefs.setString(keyChatMessages, jsonEncode(all));
+  }
+
+  /// Load raw JSON list for [date]. Returns empty list if no data.
+  Future<List<Map<String, dynamic>>> loadChatMessagesRaw(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(keyChatMessages);
+    if (raw == null) return [];
+    try {
+      final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
+      final list = all[date] as List?;
+      if (list == null) return [];
+      return list.cast<Map<String, dynamic>>();
+    } catch (e) {
+      debugPrint('StorageService: Error loading chat messages for $date: $e');
+      return [];
+    }
+  }
+
   // ─── Finance / Treasury ──────────────────────────────────────────────────────
 
   static const String keyFinancialAccounts = 'finance_accounts';

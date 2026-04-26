@@ -43,46 +43,30 @@ class _NutritionBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final canPop = Navigator.canPop(context);
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            _Header(presenter: presenter, aiCoachPresenter: aiCoachPresenter),
-            _WeekStrip(presenter: presenter),
-            _StatSection(presenter: presenter),
-            Expanded(child: _ChatFeed(presenter: presenter)),
-            _ChatInputBar(presenter: presenter),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Header ───────────────────────────────────────────────────────────────────
-
-class _Header extends StatelessWidget {
-  final NutritionPresenter presenter;
-  final AiCoachPresenter? aiCoachPresenter;
-  const _Header({required this.presenter, this.aiCoachPresenter});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 8, 4),
-      child: Row(
-        children: [
-          const Text(
-            'Nutrition',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-            ),
+      appBar: AppBar(
+        backgroundColor: AppColors.background,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        titleSpacing: canPop ? 0 : 20,
+        leading: canPop
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_new,
+                    color: AppColors.textSecondary, size: 18),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+        title: const Text(
+          'Nutrition',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
           ),
-          const Spacer(),
+        ),
+        actions: [
           IconButton(
             icon: const Icon(Icons.history_outlined,
                 color: AppColors.textSecondary, size: 22),
@@ -100,7 +84,8 @@ class _Header extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => FoodLibraryScreen(presenter: presenter)),
+                  builder: (_) =>
+                      FoodLibraryScreen(presenter: presenter)),
             ),
             tooltip: 'Library',
           ),
@@ -115,6 +100,18 @@ class _Header extends StatelessWidget {
             tooltip: 'Settings',
           ),
         ],
+      ),
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: Column(
+          children: [
+            _WeekStrip(presenter: presenter),
+            _StatSection(presenter: presenter),
+            Expanded(child: _ChatFeed(presenter: presenter)),
+            _ChatInputBar(presenter: presenter),
+          ],
+        ),
       ),
     );
   }
@@ -238,211 +235,222 @@ class _StatSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasBurned = presenter.selectedDateCaloriesBurned > 0;
-
+    final p = presenter;
+    final burned = p.selectedDateCaloriesBurned;
+    final remainColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: Row(
-        children: [
-          Expanded(child: _CalorieCard(presenter: presenter)),
-          if (hasBurned) ...[
-            const SizedBox(width: 8),
-            _BurnedCard(presenter: presenter),
-          ],
-          const SizedBox(width: 8),
-          _MacroCard(presenter: presenter),
-        ],
-      ),
-    );
-  }
-}
-
-class _CalorieCard extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _CalorieCard({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final remaining = presenter.remainingCalories;
-    final eaten = presenter.todayCalories;
-    final goal = presenter.effectiveGoal;
-    final progress = presenter.calorieProgress.clamp(0.0, 1.0);
-    final isOver = presenter.isOverGoal;
-    final barColor = isOver ? AppColors.danger : AppColors.primary;
-
-    return _StatCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '$remaining',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.w700,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'kcal remaining',
-            style: TextStyle(
-                color: AppColors.textSecondary, fontSize: 11),
-          ),
-          const SizedBox(height: 8),
-          _ThinBar(progress: progress, color: barColor),
-          const SizedBox(height: 4),
-          Text(
-            '$eaten / $goal kcal',
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BurnedCard extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _BurnedCard({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    return _StatCard(
-      width: 84,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(Icons.local_fire_department_outlined,
-              color: AppColors.gold, size: 16),
-          const SizedBox(height: 4),
-          Text(
-            '${presenter.selectedDateCaloriesBurned}',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              height: 1,
-            ),
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'burned',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroCard extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _MacroCard({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    return _StatCard(
-      width: 84,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _MiniMacroRow('P', presenter.todayProtein,
-              presenter.goals.proteinGrams, AppColors.primary),
-          const SizedBox(height: 5),
-          _MiniMacroRow('C', presenter.todayCarbs,
-              presenter.goals.carbsGrams, AppColors.gold),
-          const SizedBox(height: 5),
-          _MiniMacroRow(
-              'F', presenter.todayFat, presenter.goals.fatGrams, AppColors.danger),
-        ],
-      ),
-    );
-  }
-}
-class _MiniMacroRow extends StatelessWidget {
-  final String label;
-  final double current;
-  final double? goal;
-  final Color color;
-  const _MiniMacroRow(this.label, this.current, this.goal, this.color);
-
-  @override
-  Widget build(BuildContext context) {
-    if (goal != null && goal! > 0) {
-      final progress = (current / goal!).clamp(0.0, 1.0);
-      return Row(
-        children: [
-          Text(label,
-              style: TextStyle(
-                  color: color, fontSize: 10, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 4),
-          Expanded(child: _ThinBar(progress: progress, color: color, height: 3)),
-        ],
-      );
-    }
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label,
-            style: TextStyle(
-                color: color, fontSize: 10, fontWeight: FontWeight.w600)),
-        Text(
-          '${current.round()}g',
-          style: const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
         ),
-      ],
+        child: Row(
+          children: [
+            // ── Calories side ─────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'CALORIES',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _TinyBar(
+                    progress: p.netCalorieProgress,
+                    color: p.isOverGoal ? AppColors.danger : AppColors.primary,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _StatCell(
+                        value: '${p.todayCalories}',
+                        label: 'Eaten',
+                        color: AppColors.textPrimary,
+                        sub: '/ ${p.effectiveGoal}',
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.remainingCalories}',
+                        label: 'Remaining',
+                        color: remainColor,
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: burned > 0 ? '$burned' : '—',
+                        label: 'Burned',
+                        color: AppColors.gold,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // ── Divider ───────────────────────────────────────────────────
+            Container(
+              width: 1,
+              height: 56,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: AppColors.textSecondary.withValues(alpha: 0.20),
+            ),
+            // ── Macros side ───────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'MACROS',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _StatCell(
+                        value: '${p.todayProtein.round()}g',
+                        label: 'Protein',
+                        color: AppColors.primary,
+                        sub: p.proteinGoal != null ? '/ ${p.proteinGoal}g' : null,
+                        progress: p.proteinProgress,
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.todayCarbs.round()}g',
+                        label: 'Carbs',
+                        color: AppColors.gold,
+                        sub: p.carbsGoal != null ? '/ ${p.carbsGoal}g' : null,
+                        progress: p.carbsProgress,
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.todayFat.round()}g',
+                        label: 'Fat',
+                        color: AppColors.danger,
+                        sub: p.fatGoal != null ? '/ ${p.fatGoal}g' : null,
+                        progress: p.fatProgress,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final Widget child;
-  final double? width;
-  const _StatCard({required this.child, this.width});
+class _ColDivider extends StatelessWidget {
+  const _ColDivider();
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 1,
+        height: 36,
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        color: AppColors.textSecondary.withValues(alpha: 0.20),
+      );
+}
+
+class _StatCell extends StatelessWidget {
+  final String value;
+  final String? sub; // e.g. "/ 150g" target
+  final String label;
+  final Color color;
+  final double? progress; // null = no bar
+  const _StatCell({
+    required this.value,
+    required this.label,
+    required this.color,
+    this.sub,
+    this.progress,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (progress != null) ...[
+            _TinyBar(progress: progress!, color: color),
+            const SizedBox(height: 5),
+          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  height: 1,
+                ),
+              ),
+              if (sub != null) ...[
+                const SizedBox(width: 2),
+                Text(
+                  sub!,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: 10,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 10,
+            ),
+          ),
+        ],
       ),
-      child: child,
     );
   }
 }
 
-class _ThinBar extends StatelessWidget {
+class _TinyBar extends StatelessWidget {
   final double progress;
   final Color color;
-  final double height;
-  const _ThinBar(
-      {required this.progress, required this.color, this.height = 4});
+  const _TinyBar({required this.progress, required this.color});
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
+    return LayoutBuilder(builder: (ctx, box) {
       return Container(
-        height: height,
+        height: 3,
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(height / 2),
+          borderRadius: BorderRadius.circular(2),
         ),
         child: Align(
           alignment: Alignment.centerLeft,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeOut,
-            height: height,
-            width: constraints.maxWidth * progress,
+            height: 3,
+            width: box.maxWidth * progress.clamp(0.0, 1.0),
             decoration: BoxDecoration(
               color: color,
-              borderRadius: BorderRadius.circular(height / 2),
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
         ),
@@ -450,6 +458,7 @@ class _ThinBar extends StatelessWidget {
     });
   }
 }
+
 
 // ─── Chat Feed ────────────────────────────────────────────────────────────────
 
