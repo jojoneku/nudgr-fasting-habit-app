@@ -12,7 +12,7 @@ void main() {
   late MockStorageService mockStorage;
   late MockStatsPresenter mockStats;
   late MockFastingPresenter mockFasting;
-  late MockAiEstimationService mockAi;
+  late MockAiCoachService mockAi;
   late NutritionPresenter presenter;
 
   final today = _todayKey();
@@ -31,7 +31,7 @@ void main() {
     mockStorage = MockStorageService();
     mockStats = MockStatsPresenter();
     mockFasting = MockFastingPresenter();
-    mockAi = MockAiEstimationService();
+    mockAi = MockAiCoachService();
 
     // Default storage stubs
     when(mockStorage.loadTodayNutritionLog())
@@ -61,18 +61,16 @@ void main() {
     // Fasting stubs — not fasting by default
     when(mockFasting.isFasting).thenReturn(false);
 
-    // AI stubs
-    when(mockAi.isModelAvailable).thenReturn(false);
-    when(mockAi.isDownloading).thenReturn(false);
-    when(mockAi.downloadProgress).thenReturn(0);
-    when(mockAi.modelSizeLabel).thenReturn('~700 MB');
+    // AI stubs — unavailable by default
+    when(mockAi.isAvailable).thenReturn(false);
+    when(mockAi.downloadProgress).thenReturn(null);
 
     presenter = NutritionPresenter(
       statsPresenter: mockStats,
       fastingPresenter: mockFasting,
       storage: mockStorage,
       foodDb: MockFoodDbService(),
-      aiEstimation: mockAi,
+      aiCoach: mockAi,
     );
     await Future.delayed(Duration.zero);
   });
@@ -117,7 +115,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
       await presenter.addFoodEntry(makeEntry(calories: 2000), MealSlot.meal);
@@ -132,7 +130,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
       await presenter.addFoodEntry(makeEntry(calories: 2000), MealSlot.meal);
@@ -153,7 +151,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
     });
@@ -185,7 +183,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
     });
@@ -214,7 +212,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
       await presenter.addFoodEntry(makeEntry(calories: 500), MealSlot.meal);
@@ -230,7 +228,7 @@ void main() {
         fastingPresenter: mockFasting,
         storage: mockStorage,
         foodDb: MockFoodDbService(),
-        aiEstimation: mockAi,
+        aiCoach: mockAi,
       );
       await Future.delayed(Duration.zero);
       await presenter.addFoodEntry(makeEntry(calories: 300), MealSlot.meal);
