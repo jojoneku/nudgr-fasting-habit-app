@@ -1274,6 +1274,156 @@ FOODS = [
     ("32036", "Goldilocks Ensaymada (per 100g)",             "PH Fast Food",  350,  8.0, 46.0, 15.0),
     ("32037", "Red Ribbon Black Forest Cake (per 100g)",     "PH Fast Food",  350,  4.0, 40.0, 20.0),
     ("32038", "Ministop Pork BBQ on Stick (per 100g)",       "PH Fast Food",  225, 17.0,  9.0, 14.0),
+
+    # ── PH Packaged & Branded ─────────────────────────────────────────────────
+    # Values per 100g unless stated. Sources: product labels / FNRI estimates.
+
+    # ▸ Powdered Milk
+    ("33001", "Birch Tree Full Cream Powdered Milk",         "PH Packaged",   500, 24.0, 55.0, 22.0),
+    ("33002", "Birch Tree Fortified Instant Powdered Milk",  "PH Packaged",   490, 25.0, 54.0, 20.0),
+    ("33003", "Bear Brand Powdered Milk",                    "PH Packaged",   490, 24.0, 57.0, 18.0),
+    ("33004", "Bear Brand Adult Plus Powdered Milk",         "PH Packaged",   430, 27.0, 52.0, 10.0),
+    ("33005", "Alaska Powdered Full Cream Milk",             "PH Packaged",   495, 25.0, 56.0, 21.0),
+    ("33006", "Alaska Slim & Fit Powdered Milk",             "PH Packaged",   350, 32.0, 52.0,  1.5),
+    ("33007", "Nido Fortified Powdered Milk",                "PH Packaged",   490, 24.0, 55.0, 21.0),
+    ("33008", "Nido Kinder 1+ Powdered Milk",                "PH Packaged",   500, 17.0, 57.0, 22.0),
+    ("33009", "Nestle Fresh Milk",                           "PH Packaged",    61,  3.1,  4.8,  3.5),
+    ("33010", "Magnolia Fresh Milk",                         "PH Packaged",    60,  3.0,  4.7,  3.4),
+    ("33011", "Alpine Full Cream Powdered Milk",             "PH Packaged",   505, 24.0, 55.0, 22.5),
+    ("33012", "Anchor Powdered Milk",                        "PH Packaged",   498, 25.0, 54.0, 22.0),
+    ("33013", "Carnation Evaporated Milk",                   "PH Packaged",   134,  6.8, 10.0,  7.6),
+    ("33014", "Carnation Condensed Milk",                    "PH Packaged",   321,  7.9, 55.0,  8.7),
+    ("33015", "Angel Evaporated Milk",                       "PH Packaged",   130,  6.5,  9.8,  7.5),
+
+    # ▸ Chocolate / Malt Drinks
+    ("33016", "Milo Powder",                                 "PH Packaged",   385,  6.5, 78.0,  4.5),
+    ("33017", "Milo Ready to Drink (per 100ml)",             "PH Packaged",    69,  1.5, 12.5,  1.5),
+    ("33018", "Ovaltine Powder",                             "PH Packaged",   390,  8.0, 77.0,  5.0),
+    ("33019", "Chuckie Chocolate Drink (per 100ml)",         "PH Packaged",    70,  2.0, 12.0,  1.5),
+    ("33020", "Nesquik Chocolate Powder",                    "PH Packaged",   375,  5.0, 79.0,  3.5),
+
+    # ▸ Instant Noodles
+    ("33021", "Lucky Me Instant Noodles Chicken Flavor",     "PH Packaged",   440, 10.0, 62.0, 17.0),
+    ("33022", "Lucky Me Pancit Canton Original",             "PH Packaged",   438, 10.0, 65.0, 15.0),
+    ("33023", "Lucky Me Pancit Canton Calamansi",            "PH Packaged",   430, 10.0, 64.0, 15.0),
+    ("33024", "Lucky Me Beef Mami Noodles",                  "PH Packaged",   435, 10.0, 62.0, 17.0),
+    ("33025", "Lucky Me La Paz Batchoy",                     "PH Packaged",   435,  9.5, 62.0, 17.0),
+    ("33026", "Maggi 2-Minute Noodles Chicken",              "PH Packaged",   435, 10.0, 62.0, 17.0),
+    ("33027", "Nissin Instant Noodles Chicken",              "PH Packaged",   440, 10.0, 63.0, 17.0),
+    ("33028", "Payless Instant Mami Noodles",                "PH Packaged",   425,  9.0, 63.0, 16.0),
+
+    # ▸ Crackers & Biscuits
+    ("33029", "Skyflakes Crackers",                          "PH Packaged",   436,  9.0, 68.0, 14.0),
+    ("33030", "Rebisco Crackers",                            "PH Packaged",   430,  8.0, 69.0, 14.0),
+    ("33031", "Fita Crackers",                               "PH Packaged",   432,  8.5, 68.0, 14.0),
+    ("33032", "Rebisco Graham Crackers",                     "PH Packaged",   430,  7.0, 72.0, 14.0),
+    ("33033", "Hansel Biscuits",                             "PH Packaged",   460,  7.0, 70.0, 17.0),
+    ("33034", "Cream-O Chocolate Sandwich Cookies",          "PH Packaged",   470,  5.5, 68.0, 19.0),
+    ("33035", "Hi-Ho Crackers",                              "PH Packaged",   500, 8.0,  63.0, 23.0),
+
+    # ▸ Chips & Snacks
+    ("33036", "Piattos Potato Crisps",                       "PH Packaged",   530,  5.0, 63.0, 27.0),
+    ("33037", "Oishi Prawn Crackers",                        "PH Packaged",   490,  8.0, 68.0, 20.0),
+    ("33038", "Chippy BBQ Corn Chips",                       "PH Packaged",   520,  6.0, 63.0, 27.0),
+    ("33039", "Clover Chips",                                "PH Packaged",   490,  5.0, 65.0, 23.0),
+    ("33040", "Nova Country Cheddar",                        "PH Packaged",   500,  6.0, 62.0, 25.0),
+    ("33041", "V-Cut Potato Chips",                          "PH Packaged",   520,  6.0, 60.0, 28.0),
+    ("33042", "Boy Bawang Cornick Garlic",                   "PH Packaged",   390, 10.0, 73.0,  6.0),
+    ("33043", "Jack n Jill Magic Flakes",                    "PH Packaged",   490,  6.0, 66.0, 22.0),
+    ("33044", "Oishi Kirei Pretzels",                        "PH Packaged",   390,  9.0, 78.0,  5.0),
+    ("33045", "Piatos Cheese Potato Chips",                  "PH Packaged",   540,  6.0, 58.0, 31.0),
+
+    # ▸ Bread & Bakery
+    ("33046", "Gardenia White Bread",                        "PH Packaged",   265,  9.0, 49.0,  3.5),
+    ("33047", "Gardenia Wheat Bread",                        "PH Packaged",   252,  9.0, 43.0,  4.5),
+    ("33048", "Gardenia Soft Bun",                           "PH Packaged",   310,  9.0, 53.0,  7.0),
+    ("33049", "Pinoy Pandesal",                              "PH Packaged",   280,  9.0, 50.0,  5.0),
+    ("33050", "Pan de Sal (store-bought)",                   "PH Packaged",   275,  9.0, 50.0,  4.5),
+    ("33051", "Monay Bread",                                 "PH Packaged",   295,  8.0, 54.0,  5.5),
+    ("33052", "Ensaymada (bakery-style)",                    "PH Packaged",   370,  7.0, 48.0, 17.0),
+    ("33053", "Spanish Bread",                               "PH Packaged",   340,  7.0, 51.0, 12.0),
+    ("33054", "Tasty Bread (Loaf)",                          "PH Packaged",   265,  9.0, 49.0,  3.5),
+    ("33055", "Nutribun",                                    "PH Packaged",   285, 11.0, 50.0,  5.0),
+
+    # ▸ Canned Goods
+    ("33056", "Argentina Corned Beef",                       "PH Packaged",   220, 18.0,  4.0, 15.0),
+    ("33057", "Swift Corned Beef",                           "PH Packaged",   215, 18.0,  3.0, 14.0),
+    ("33058", "Delimondo Corned Beef",                       "PH Packaged",   210, 19.0,  2.0, 14.0),
+    ("33059", "Ligo Sardines in Tomato Sauce",               "PH Packaged",   185, 20.0,  4.0, 10.0),
+    ("33060", "555 Sardines in Tomato Sauce",                "PH Packaged",   180, 20.0,  4.0,  9.0),
+    ("33061", "Mega Sardines in Tomato Sauce",               "PH Packaged",   182, 20.0,  4.5,  9.5),
+    ("33062", "Ligo Tuna in Oil",                            "PH Packaged",   200, 22.0,  0.0, 12.0),
+    ("33063", "Century Tuna in Water",                       "PH Packaged",   110, 24.0,  0.0,  1.0),
+    ("33064", "Century Tuna in Oil",                         "PH Packaged",   195, 23.0,  0.0, 11.0),
+    ("33065", "CDO Ulam Burger",                             "PH Packaged",   230, 12.0, 12.0, 15.0),
+    ("33066", "Palm Corned Tuna",                            "PH Packaged",   120, 24.0,  1.0,  2.0),
+    ("33067", "Young's Town Pork & Beans",                   "PH Packaged",   110,  5.0, 18.0,  2.5),
+
+    # ▸ Processed Meats
+    ("33068", "CDO Hotdog Regular",                          "PH Packaged",   310, 12.0,  6.0, 27.0),
+    ("33069", "Purefoods Chicken Hotdog",                    "PH Packaged",   240, 13.0,  7.0, 18.0),
+    ("33070", "Tender Juicy Hotdog",                         "PH Packaged",   295, 11.5,  6.5, 25.0),
+    ("33071", "Magnolia Chicken Tocino",                     "PH Packaged",   220, 17.0, 15.0, 10.0),
+    ("33072", "Purefoods Tocino Sweet",                      "PH Packaged",   280, 16.0, 20.0, 16.0),
+    ("33073", "CDO Sweet Ham",                               "PH Packaged",   180, 16.0,  8.0, 10.0),
+    ("33074", "San Miguel Bacon",                            "PH Packaged",   480, 25.0,  2.0, 42.0),
+    ("33075", "Pampanga's Best Longanisa",                   "PH Packaged",   310, 15.0, 10.0, 24.0),
+    ("33076", "Mekeni Skinless Longganisa",                  "PH Packaged",   300, 15.0, 11.0, 22.0),
+    ("33077", "CDO Bibbo Chicken Nuggets",                   "PH Packaged",   255, 15.0, 18.0, 13.0),
+
+    # ▸ Condiments & Sauces (PH)
+    ("33078", "UFC Banana Ketchup",                          "PH Packaged",   100,  1.0, 24.0,  0.0),
+    ("33079", "Jufran Banana Sauce",                         "PH Packaged",   105,  1.0, 25.0,  0.0),
+    ("33080", "Mang Tomas All-Purpose Sauce",                "PH Packaged",   115,  2.0, 22.0,  2.5),
+    ("33081", "Mama Sita's Caldereta Mix",                   "PH Packaged",   340,  4.0, 74.0,  4.0),
+    ("33082", "Knorr Sinigang Mix (powder, per 100g)",       "PH Packaged",   295,  2.0, 68.0,  1.0),
+    ("33083", "Mama Sita's Sinigang Mix (per 100g)",         "PH Packaged",   290,  2.0, 69.0,  0.5),
+    ("33084", "Del Monte Tomato Sauce",                      "PH Packaged",    35,  1.5,  7.5,  0.3),
+    ("33085", "Del Monte Original Style Pasta Sauce",        "PH Packaged",    65,  2.0, 12.0,  1.5),
+    ("33086", "Lady's Choice Real Mayonnaise",               "PH Packaged",   680,  1.0,  1.0, 75.0),
+    ("33087", "Nora Vinegar (per 100ml)",                    "PH Packaged",    19,  0.0,  0.6,  0.0),
+    ("33088", "Silver Swan Soy Sauce (per 100ml)",           "PH Packaged",    50,  7.5,  4.5,  0.5),
+
+    # ▸ Beverages (PH Brands)
+    ("33089", "C2 Green Tea Ready to Drink (per 100ml)",     "PH Packaged",    25,  0.0,  6.0,  0.0),
+    ("33090", "Nestea Iced Tea Lemon (per 100ml)",           "PH Packaged",    38,  0.0,  9.5,  0.0),
+    ("33091", "Nestea Iced Tea Powder (per 100g dry)",       "PH Packaged",   370,  0.0, 90.0,  0.0),
+    ("33092", "Zesto Orange Juice Drink (per 100ml)",        "PH Packaged",    50,  0.0, 12.0,  0.0),
+    ("33093", "Tang Powder Orange (per 100g dry)",           "PH Packaged",   380,  0.0, 95.0,  0.0),
+    ("33094", "Nescafe 3-in-1 Original (per 100g)",          "PH Packaged",   400,  4.0, 73.0, 11.0),
+    ("33095", "Nescafe Classic (black, per 100g powder)",    "PH Packaged",   355, 17.0, 60.0,  0.5),
+    ("33096", "Great Taste White Coffee (per 100g)",         "PH Packaged",   410,  3.0, 76.0, 11.0),
+    ("33097", "Kopiko Brown Coffee (per 100g)",              "PH Packaged",   395,  3.5, 74.0, 10.0),
+    ("33098", "Barako Coffee Black (brewed, per 100ml)",     "PH Packaged",     3,  0.3,  0.3,  0.0),
+    ("33099", "Gatorade Lemon-Lime PH (per 100ml)",          "PH Packaged",    26,  0.0,  7.0,  0.0),
+    ("33100", "Summit Mineral Water (per 100ml)",            "PH Packaged",     0,  0.0,  0.0,  0.0),
+    ("33101", "Royal TruOrange Soda (per 100ml)",            "PH Packaged",    46,  0.0, 11.5,  0.0),
+    ("33102", "Sarsi Root Beer PH (per 100ml)",              "PH Packaged",    44,  0.0, 11.0,  0.0),
+    ("33103", "San Miguel Pale Pilsen (per 100ml)",          "PH Packaged",    43,  0.4,  3.6,  0.0),
+    ("33104", "Red Horse Beer (per 100ml)",                  "PH Packaged",    57,  0.5,  5.1,  0.0),
+
+    # ▸ Sweets & Desserts (PH)
+    ("33105", "Polvoron (Goldilocks, per 100g)",             "PH Packaged",   440,  6.0, 66.0, 17.0),
+    ("33106", "Hopia Monggo (per 100g)",                     "PH Packaged",   330,  7.0, 58.0,  8.0),
+    ("33107", "Pastillas de Leche (per 100g)",               "PH Packaged",   390,  8.0, 75.0,  7.0),
+    ("33108", "Yema (per 100g)",                             "PH Packaged",   400, 10.0, 72.0,  9.0),
+    ("33109", "Suman Malagkit (per 100g)",                   "PH Packaged",   195,  3.5, 40.0,  2.0),
+    ("33110", "Biko (Kakanin, per 100g)",                    "PH Packaged",   225,  3.0, 45.0,  4.5),
+    ("33111", "Puto (rice cake, per 100g)",                  "PH Packaged",   185,  4.5, 38.0,  1.5),
+    ("33112", "Kutsinta (per 100g)",                         "PH Packaged",   160,  2.5, 37.5,  0.5),
+    ("33113", "Leche Flan (per 100g)",                       "PH Packaged",   240, 7.0,  34.0,  9.0),
+    ("33114", "Maja Blanca (per 100g)",                      "PH Packaged",   210,  2.5, 42.0,  4.0),
+    ("33115", "Halo-Halo (full glass ~300ml)",               "PH Packaged",   290,  5.0, 55.0,  7.0),
+    ("33116", "Magnolia Ice Cream Vanilla (per 100g)",       "PH Packaged",   200,  3.5, 23.0, 11.0),
+    ("33117", "Selecta Cornetto (per 100g)",                 "PH Packaged",   220,  3.0, 28.0, 11.0),
+    ("33118", "Selecta Double Dutch Ice Cream (per 100g)",   "PH Packaged",   210,  3.5, 25.0, 11.0),
+
+    # ▸ Rice & Grains (PH)
+    ("33119", "Sinangag Garlic Fried Rice (per 100g)",       "PH Packaged",   172,  3.0, 33.0,  3.5),
+    ("33120", "Champorado (per 100g)",                       "PH Packaged",   160,  3.5, 31.0,  3.0),
+    ("33121", "Arroz Caldo (per 100g)",                      "PH Packaged",    90,  5.5, 13.5,  1.5),
+    ("33122", "Goto (Rice Porridge with Tripe, per 100g)",   "PH Packaged",    95,  6.0, 14.0,  1.5),
+    ("33123", "Lugaw Plain Rice Porridge (per 100g)",        "PH Packaged",    65,  1.5, 14.0,  0.5),
 ]
 
 # ---------------------------------------------------------------------------
