@@ -13,7 +13,7 @@ import '../models/food_template.dart';
 import '../models/meal_slot.dart';
 import '../models/nutrition_goals.dart';
 import '../models/tdee_profile.dart';
-import '../services/ai_estimation_service.dart';
+import '../services/ai_coach_service.dart';
 import '../services/food_db_service.dart';
 import '../services/storage_service.dart';
 import '../utils/exercise_nlp_parser.dart';
@@ -26,7 +26,7 @@ class NutritionPresenter extends ChangeNotifier {
   final FastingPresenter _fastingPresenter;
   final StorageService _storage;
   final FoodDbService _foodDb;
-  final AiEstimationService _ai;
+  final AiCoachService _ai;
 
   DailyNutritionLog _todayLog = DailyNutritionLog.empty('');
   NutritionGoals _goals = NutritionGoals.initial();
@@ -65,12 +65,12 @@ class NutritionPresenter extends ChangeNotifier {
     required FastingPresenter fastingPresenter,
     required StorageService storage,
     required FoodDbService foodDb,
-    required AiEstimationService aiEstimation,
+    required AiCoachService aiCoach,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
         _storage = storage,
         _foodDb = foodDb,
-        _ai = aiEstimation {
+        _ai = aiCoach {
     loadState();
   }
 
@@ -156,7 +156,14 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Food library getters ─────────────────────────────────────────────────────
 
-  List<FoodTemplate> get savedTemplates => List.unmodifiable(_library);
+  List<FoodTemplate> get savedTemplates {
+    final sorted = List<FoodTemplate>.from(_library);
+    sorted.sort((a, b) {
+      if (a.isPinned == b.isPinned) return 0;
+      return a.isPinned ? -1 : 1;
+    });
+    return List.unmodifiable(sorted);
+  }
 
   List<FoodTemplate> get recentFoods {
     final seen = <String>{};
@@ -193,11 +200,11 @@ class NutritionPresenter extends ChangeNotifier {
   // ── AI getters ───────────────────────────────────────────────────────────────
 
   FoodDbService get foodDb => _foodDb;
-  bool get isAiAvailable => _ai.isModelAvailable;
+  bool get isAiAvailable => _ai.isAvailable;
   bool get isAiEstimating => _isAiEstimating;
-  bool get isAiDownloading => _ai.isDownloading;
-  int get aiDownloadProgress => _ai.downloadProgress;
-  String get aiSizeLabel => _ai.modelSizeLabel;
+  bool get isAiDownloading => _ai.downloadProgress != null;
+  int get aiDownloadProgress => _ai.downloadProgress ?? 0;
+  String get aiSizeLabel => '~586 MB';
   AiMealEstimate? get lastEstimate => _lastEstimate;
   String? get aiEstimateError => _aiEstimateError;
 
@@ -241,6 +248,26 @@ class NutritionPresenter extends ChangeNotifier {
     await _checkGoalMet();
     await _checkProteinGoalMet();
     await _checkOvershoot();
+  }
+
+  /// Log a food entry created from manual user input and add it to the chat feed.
+  Future<void> addManualFoodEntry(FoodEntry entry) async {
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    await addFoodEntry(entry, MealSlot.meal);
+    final msg = ChatMessage(
+      id: ChatMessage.generateId(),
+      rawText: entry.name,
+      timestamp: DateTime.now(),
+      kind: ChatMessageKind.food,
+      foodItems: [
+        ChatFoodItem.fromFoodEntry(entry,
+            amountText: '${entry.calories} kcal'),
+      ],
+      mealSlot: MealSlot.meal,
+    );
+    _chatMessages.add(msg);
+    notifyListeners();
+    await _persistChatMessages();
   }
 
   Future<void> removeFoodEntry(String entryId, MealSlot slot) async {
@@ -328,12 +355,27 @@ class NutritionPresenter extends ChangeNotifier {
     await _storage.saveFoodLibrary(_library);
   }
 
+  Future<void> renameTemplate(String templateId, String newName) async {
+    final idx = _library.indexWhere((t) => t.id == templateId);
+    if (idx == -1 || newName.trim().isEmpty) return;
+    _library[idx] = _library[idx].copyWith(name: newName.trim());
+    notifyListeners();
+    await _storage.saveFoodLibrary(_library);
+  }
+
+  Future<void> togglePinTemplate(String templateId) async {
+    final idx = _library.indexWhere((t) => t.id == templateId);
+    if (idx == -1) return;
+    _library[idx] = _library[idx].copyWith(isPinned: !_library[idx].isPinned);
+    notifyListeners();
+    await _storage.saveFoodLibrary(_library);
+  }
+
   // ── Actions — AI estimation ───────────────────────────────────────────────────
 
-  /// Initialises the on-device AI model (loads it if already installed).
-  /// Notifies listeners when done so the UI can switch to the AI input form.
+  /// No-op — kept for API compatibility. The shared Qwen model is initialised
+  /// by [OnDeviceAiCoachService.init] in [AiCoachPresenter].
   Future<void> initAi() async {
-    await _ai.init();
     notifyListeners();
   }
 
@@ -344,7 +386,10 @@ class NutritionPresenter extends ChangeNotifier {
     _aiEstimateError = null;
     notifyListeners();
     try {
-      _lastEstimate = await _ai.estimate(description);
+      _lastEstimate = await _ai.estimateMacros(description);
+      if (_lastEstimate == null) {
+        _aiEstimateError = 'Model returned no usable data. Try again.';
+      }
     } catch (e) {
       _lastEstimate = null;
       _aiEstimateError = _errorMessage(e);
@@ -435,31 +480,149 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<List<FoodDbEntry?>> _resolveDbMatches(FoodParseResult result) async {
-    return Future.wait(
-      result.items.map((item) async {
-        final hits = await _foodDb.search(item.name);
-        return hits.isEmpty ? null : hits.first;
-      }),
-    );
+    return Future.wait(result.items.map(_resolveOneDbItem));
+  }
+
+  /// Multi-token search + best-match scoring for one parsed item.
+  /// Searches the full name AND individual significant tokens to improve recall
+  /// for variant spellings (e.g. "skimmed milk" → "MILK, SKIM").
+  Future<FoodDbEntry?> _resolveOneDbItem(ParsedFoodItem item) async {
+    final allHits = <String, FoodDbEntry>{};
+
+    for (final h in await _foodDb.search(item.name)) {
+      allHits[h.id] = h;
+    }
+
+    // Per-token fallback to surface entries that share only one keyword.
+    final tokens = item.name
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.length > 2)
+        .toList();
+    if (tokens.length > 1) {
+      for (final token in tokens) {
+        for (final h in await _foodDb.search(token)) {
+          allHits.putIfAbsent(h.id, () => h);
+        }
+      }
+    }
+
+    if (allHits.isEmpty) return null;
+    return _pickBestDbMatch(allHits.values.toList(), item.name);
+  }
+
+  /// Picks the DB entry that best matches [query] from [hits].
+  FoodDbEntry? _pickBestDbMatch(List<FoodDbEntry> hits, String query) {
+    if (hits.isEmpty) return null;
+    if (hits.length == 1) return hits.first;
+
+    final q = query.toLowerCase();
+    final qWords =
+        q.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();
+
+    int bestScore = -999;
+    FoodDbEntry best = hits.first;
+
+    for (final entry in hits) {
+      final score = _dbMatchScore(entry, qWords, q);
+      if (score > bestScore) {
+        bestScore = score;
+        best = entry;
+      }
+    }
+    return best;
+  }
+
+  int _dbMatchScore(FoodDbEntry entry, List<String> qWords, String fullQuery) {
+    final eName = entry.name.toLowerCase();
+
+    if (eName == fullQuery) return 1000;
+
+    // Split entry name on commas, spaces, hyphens for word-level matching.
+    final eWords = eName
+        .split(RegExp(r'[,\s\-]+'))
+        .where((w) => w.length > 1)
+        .toList();
+
+    int score = 0;
+    for (final qw in qWords) {
+      if (eName.contains(qw)) {
+        score += 3; // direct substring hit
+      } else if (eWords.any((ew) => qw.startsWith(ew) && ew.length >= 3)) {
+        // Handles inflections: "skim" in DB matches "skimmed" in query.
+        score += 1;
+      }
+    }
+
+    // Penalise very verbose USDA-style names (prefer shorter, cleaner entries).
+    score -= entry.name.split(' ').length ~/ 4;
+
+    return score;
   }
 
   FoodEntry _buildEntry(ParsedFoodItem parsed, FoodDbEntry? dbEntry) {
     if (dbEntry != null) {
       return dbEntry.toFoodEntry(parsed.grams);
     }
-    // No DB match — flag as AI-estimated (will show ~ prefix in UI).
+    // No DB match — estimate calories by weight using a keyword-density table.
     return FoodEntry(
       id: FoodEntry.generateId(),
       name: parsed.name,
-      calories: 0,
+      calories: _estimateCalories(parsed.name, parsed.grams),
       grams: parsed.grams,
       aiEstimated: true,
       loggedAt: DateTime.now(),
     );
   }
 
+  /// Estimates calories from [grams] using a keyword-based calorie-density
+  /// lookup. Returns a rough but non-zero value when no DB entry is found.
+  int _estimateCalories(String name, double grams) {
+    final n = name.toLowerCase();
+    final double kcalPerGram;
+    if (_containsAny(n, ['oil', 'butter', 'ghee', 'lard', 'margarine'])) {
+      kcalPerGram = 7.5;
+    } else if (_containsAny(
+        n, ['nut', 'almond', 'peanut', 'cashew', 'pistachio', 'walnut', 'seed', 'buto'])) {
+      kcalPerGram = 5.5;
+    } else if (_containsAny(n, ['sugar', 'syrup', 'honey', 'jam', 'jelly'])) {
+      kcalPerGram = 3.5;
+    } else if (_containsAny(
+        n, ['cake', 'cookie', 'biscuit', 'pastry', 'donut', 'chocolate', 'candy', 'chips', 'cracker'])) {
+      kcalPerGram = 4.5;
+    } else if (_containsAny(
+        n, ['rice', 'pasta', 'noodle', 'spaghetti', 'bread', 'flour', 'oat', 'cereal', 'kanin', 'bigas', 'pancit'])) {
+      kcalPerGram = 1.3;
+    } else if (_containsAny(
+        n, ['beef', 'pork', 'chicken', 'turkey', 'lamb', 'meat', 'manok', 'baboy', 'baka', 'longganisa', 'hotdog', 'sausage', 'tocino', 'tapa', 'liempo'])) {
+      kcalPerGram = 2.0;
+    } else if (_containsAny(
+        n, ['fish', 'salmon', 'tuna', 'tilapia', 'bangus', 'sardine', 'shrimp', 'crab', 'squid', 'seafood', 'isda', 'hipon'])) {
+      kcalPerGram = 1.4;
+    } else if (_containsAny(n, ['egg', 'itlog'])) {
+      kcalPerGram = 1.5;
+    } else if (_containsAny(n, ['milk', 'cheese', 'yogurt', 'cream', 'gatas'])) {
+      kcalPerGram = 1.5;
+    } else if (_containsAny(
+        n, ['vegetable', 'salad', 'broccoli', 'spinach', 'cabbage', 'carrot', 'kangkong', 'sitaw', 'gulay', 'ampalaya', 'talong', 'okra'])) {
+      kcalPerGram = 0.35;
+    } else if (_containsAny(
+        n, ['fruit', 'apple', 'banana', 'mango', 'orange', 'grape', 'watermelon', 'saging', 'mangga', 'prutas'])) {
+      kcalPerGram = 0.6;
+    } else if (_containsAny(
+        n, ['soup', 'broth', 'sabaw', 'sinigang', 'nilaga', 'tinola', 'adobo', 'kare'])) {
+      kcalPerGram = 0.5;
+    } else {
+      kcalPerGram = 1.5; // generic mixed-dish default
+    }
+    return (grams * kcalPerGram).round().clamp(1, 9999);
+  }
+
+  bool _containsAny(String text, List<String> keywords) =>
+      keywords.any(text.contains);
+
   Future<void> downloadAiModel() async {
-    if (_ai.isDownloading) return;
+    if (isAiDownloading) return;
     notifyListeners();
     try {
       await _ai.downloadModel(onProgress: (_) => notifyListeners());
@@ -484,7 +647,7 @@ class NutritionPresenter extends ChangeNotifier {
   /// Parse [text] as food or exercise, add to the chat feed, and persist.
   Future<void> parseChat(String text) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty) return;
+    if (trimmed.isEmpty || _isChatParsing) return;
     _isChatParsing = true;
     _chatParseError = null;
     notifyListeners();
@@ -505,19 +668,83 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> _parseChatAsFood(String text) async {
-    final result = FoodNlpParser.parse(text);
-    if (result.isEmpty) {
+    // Step 1: NLP parse — splitting into fragments + quantity extraction.
+    // Always used as fallback if AI normalization fails or is unavailable.
+    final nlpResult = FoodNlpParser.parse(text);
+    if (nlpResult.isEmpty) {
       _chatParseError = 'Could not identify any food items.';
       return;
     }
-    final dbMatches = await _resolveDbMatches(result);
-    final foodItems = <ChatFoodItem>[];
-    for (var i = 0; i < result.items.length; i++) {
-      final entry = _buildEntry(result.items[i], dbMatches[i]);
-      await addFoodEntry(entry, MealSlot.meal);
-      foodItems.add(ChatFoodItem.fromFoodEntry(entry,
-          amountText: result.items[i].rawText));
+
+    // Step 2: AI name + grams normalization (best-effort).
+    // Qwen3 normalizes food names to USDA-friendly form and converts
+    // volume units using food-specific density (e.g. "3 cups rice" → 555g).
+    // Indexed JSON ensures any ordering mismatch is caught and rejected.
+    var items = nlpResult.items;
+    if (_ai.isAvailable) {
+      try {
+        final fragments = nlpResult.items.map((i) => i.rawText).toList();
+        final aiParsed = await _ai
+            .normalizeFoodInput(fragments)
+            .timeout(const Duration(seconds: 15));
+        if (aiParsed != null && aiParsed.length == fragments.length) {
+          items = List.generate(nlpResult.items.length, (i) {
+            final ai = aiParsed[i];
+            return ParsedFoodItem(
+              rawText: nlpResult.items[i].rawText,
+              name: ai.name,
+              grams: ai.grams,
+              isEstimated: false,
+            );
+          });
+        }
+      } catch (e) {
+        debugPrint(
+            'NutritionPresenter: AI normalization failed, using NLP: $e');
+      }
     }
+
+    // Step 3: DB lookup using normalized (or NLP) names.
+    final dbMatches = await Future.wait(items.map(_resolveOneDbItem));
+
+    // Step 4: For unresolved items only, ask AI for macro estimates.
+    // Passing only the unresolved names (not the full original input) keeps
+    // the estimation focused and reduces misassignment risk.
+    AiMealEstimate? aiEstimate;
+    final unresolvedNames = [
+      for (var i = 0; i < items.length; i++)
+        if (dbMatches[i] == null) items[i].name,
+    ];
+    if (unresolvedNames.isNotEmpty && _ai.isAvailable) {
+      try {
+        aiEstimate = await _ai
+            .estimateMacros(unresolvedNames.join(', '))
+            .timeout(const Duration(seconds: 20));
+      } catch (e) {
+        debugPrint('NutritionPresenter: AI macro estimate failed: $e');
+      }
+    }
+
+    // Step 5: Build and log each food entry.
+    final foodItems = <ChatFoodItem>[];
+    for (var i = 0; i < items.length; i++) {
+      final parsed = items[i];
+      final dbEntry = dbMatches[i];
+      final FoodEntry entry;
+      if (dbEntry != null) {
+        entry = _buildEntry(parsed, dbEntry);
+      } else {
+        final aiItem =
+            aiEstimate != null ? _findAiItem(aiEstimate, parsed.name) : null;
+        entry = aiItem != null
+            ? _aiItemToFoodEntry(aiItem, parsed)
+            : _buildEntry(parsed, null);
+      }
+      await addFoodEntry(entry, MealSlot.meal);
+      foodItems
+          .add(ChatFoodItem.fromFoodEntry(entry, amountText: parsed.rawText));
+    }
+
     final msg = ChatMessage(
       id: ChatMessage.generateId(),
       rawText: text,
@@ -529,6 +756,48 @@ class NutritionPresenter extends ChangeNotifier {
     _chatMessages.add(msg);
     await _persistChatMessages();
   }
+
+  /// Finds the AI item whose name best overlaps with [itemName].
+  /// Requires a minimum match score to avoid spurious assignments.
+  AiItemEstimate? _findAiItem(AiMealEstimate estimate, String itemName) {
+    if (estimate.items.isEmpty) return null;
+    final query = itemName.toLowerCase();
+    final qWords =
+        query.split(RegExp(r'\s+')).where((w) => w.length > 2).toList();
+
+    AiItemEstimate? best;
+    int bestScore = 1; // require at least 1 point
+
+    for (final ai in estimate.items) {
+      final aName = ai.name.toLowerCase();
+      int score = 0;
+      if (aName.contains(query) || query.contains(aName)) score += 5;
+      for (final w in qWords) {
+        if (aName.contains(w)) score += 2;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = ai;
+      }
+    }
+    // Fallback: if nothing matched but only one AI item, use it.
+    if (best == null && estimate.items.length == 1) return estimate.items.first;
+    return best;
+  }
+
+  /// Builds a [FoodEntry] from an AI estimate, preserving the NLP-parsed [grams].
+  FoodEntry _aiItemToFoodEntry(AiItemEstimate ai, ParsedFoodItem parsed) =>
+      FoodEntry(
+        id: FoodEntry.generateId(),
+        name: parsed.name,
+        calories: ai.calories,
+        protein: ai.protein,
+        carbs: ai.carbs,
+        fat: ai.fat,
+        grams: parsed.grams,
+        aiEstimated: true,
+        loggedAt: DateTime.now(),
+      );
 
   Future<void> _parseChatAsExercise(String text) async {
     final weightKg = _tdeeProfile?.weightKg ?? 70.0;

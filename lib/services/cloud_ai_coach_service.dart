@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_meal_estimate.dart';
+import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
 import 'ai_coach_service.dart';
 
@@ -41,6 +43,7 @@ class CloudAiCoachService implements AiCoachService {
   Stream<String> respond({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
+    bool isThinking = false,
   }) async* {
     if (!isAvailable) {
       yield 'Cloud AI Coach is not configured. '
@@ -90,6 +93,14 @@ class CloudAiCoachService implements AiCoachService {
     // No need to make a remote call just for NLP parsing.
     return null;
   }
+
+  @override
+  Future<AiMealEstimate?> estimateMacros(String description) async => null;
+
+  @override
+  Future<List<AiParsedFood>?> normalizeFoodInput(
+          List<String> fragments) async =>
+      null;
 
   // ── Internals ─────────────────────────────────────────────────────────────
 

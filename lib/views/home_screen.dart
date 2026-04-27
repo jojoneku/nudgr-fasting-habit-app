@@ -12,9 +12,9 @@ import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
-import '../services/ai_estimation_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
+import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
@@ -34,7 +34,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final FastingPresenter _fastingPresenter;
   late final QuestPresenter _questPresenter;
   late final FoodDbService _foodDb;
-  late final AiEstimationService _aiEstimation;
+  late final OnDeviceAiCoachService _onDeviceAi;
   late final HealthService _healthService;
   late final ActivityPresenter _activityPresenter;
   late final TreasuryDashboardPresenter _treasuryPresenter;
@@ -61,9 +61,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       stats: _statsPresenter,
     );
     _foodDb = FoodDbService();
-    _aiEstimation = AiEstimationService(
-      huggingFaceToken: const String.fromEnvironment('HF_TOKEN'),
-    );
+    _onDeviceAi = OnDeviceAiCoachService();
     _healthService = HealthService();
     _activityPresenter = ActivityPresenter(
       statsPresenter: _statsPresenter,
@@ -83,19 +81,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       fastingPresenter: _fastingPresenter,
       storage: _storage,
       foodDb: _foodDb,
-      aiEstimation: _aiEstimation,
+      aiCoach: _onDeviceAi,
     );
     _aiCoachPresenter = AiCoachPresenter(
       stats: _statsPresenter,
       fasting: _fastingPresenter,
       nutrition: _nutritionPresenter,
+      service: _onDeviceAi,
     );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _foodDb.init(); // copy asset → documents dir if needed
-      _nutritionPresenter
-          ?.initAi(); // non-blocking — loads Gemma if installed, notifies UI when ready
+      await _onDeviceAi.init(); // silently loads Qwen if already installed
+      _nutritionPresenter?.initAi(); // notifies UI when AI state changes
     });
   }
 

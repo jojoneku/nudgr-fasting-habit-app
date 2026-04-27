@@ -1,5 +1,7 @@
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_meal_estimate.dart';
+import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
 import 'ai_coach_service.dart';
 
@@ -26,12 +28,21 @@ class NullAiCoachService implements AiCoachService {
   Stream<String> respond({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
+    bool isThinking = false,
   }) async* {
     yield _cannedResponse(context);
   }
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;
+
+  @override
+  Future<AiMealEstimate?> estimateMacros(String description) async => null;
+
+  @override
+  Future<List<AiParsedFood>?> normalizeFoodInput(
+          List<String> fragments) async =>
+      null;
 
   @override
   void dispose() {}

@@ -6,6 +6,8 @@ import 'package:flutter_gemma/flutter_gemma.dart';
 
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/ai_meal_estimate.dart';
+import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
 import '../utils/food_nlp_parser.dart';
 import '../utils/food_unit_converter.dart';
@@ -117,6 +119,7 @@ class OnDeviceAiCoachService implements AiCoachService {
   Stream<String> respond({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
+    bool isThinking = false,
   }) async* {
     final model = _model;
     if (model == null) {
@@ -125,37 +128,55 @@ class OnDeviceAiCoachService implements AiCoachService {
     }
 
     final chat = await model.createChat(
-      temperature: 0.7,
-      topK: 40,
-      isThinking: true,
+      temperature: isThinking ? 0.7 : 0.5,
+      topK: isThinking ? 40 : 20,
+      isThinking: isThinking,
       modelType: ModelType.qwen,
     );
 
     try {
-      // Inject context as the first user message (system instruction pattern).
-      final systemTurn = _buildSystemTurn(context);
-      await chat.addQuery(Message(text: systemTurn, isUser: true));
+      // Rebuild multi-turn context in the fresh session.
+      // flutter_gemma has no systemInstruction param, so prepend the system
+      // prompt to the first user message. Replay both user AND assistant turns
+      // so the model has full conversation context.
+      final systemContext = _buildSystemTurn(context);
+      bool systemPrepended = false;
 
-      // Replay conversation history (skip first user message — already added).
-      for (final msg in messages.skip(messages.length > 1 ? 1 : 0)) {
+      for (final msg in messages) {
         if (msg.role == AiChatRole.user) {
-          await chat.addQuery(Message(text: msg.text, isUser: true));
+          final text = systemPrepended
+              ? msg.text
+              : '$systemContext\n\n${msg.text}';
+          systemPrepended = true;
+          await chat.addQuery(Message(text: text, isUser: true));
+        } else if (msg.text.isNotEmpty) {
+          // Replay previous assistant responses to rebuild context.
+          await chat.addQuery(Message(text: msg.text, isUser: false));
         }
-        // Assistant turns are part of the session context automatically.
       }
 
-      // Stream the response.
-      final response = await chat.generateChatResponse().timeout(
-            const Duration(seconds: 90),
-          );
+      if (!systemPrepended) {
+        // Edge case: no user messages yet — send system context alone.
+        await chat.addQuery(Message(text: systemContext, isUser: true));
+      }
 
-      final text = response is TextResponse
-          ? response.token
-          : response.toString();
+      // Stream tokens in real time. Think-block tokens (<think>…</think>)
+      // are silently stripped so they never appear in chat. During the
+      // thinking phase message.text stays empty → typing indicator shows.
+      bool hasContent = false;
+      await for (final token in _filterThinkTokens(
+        chat.generateChatResponseAsync().timeout(
+          const Duration(seconds: 90),
+          onTimeout: (sink) => sink.close(),
+        ),
+      )) {
+        hasContent = true;
+        yield token;
+      }
 
-      // Strip <think>...</think> blocks — Qwen3 thinking tokens aren't
-      // meant to be shown to the user.
-      yield _stripThinking(text);
+      if (!hasContent) {
+        yield 'I could not generate a response. Please try again.';
+      }
     } catch (e) {
       final msg = e.toString().toLowerCase();
       if (msg.contains('opencl') ||
@@ -226,6 +247,77 @@ class OnDeviceAiCoachService implements AiCoachService {
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
+  /// Strips `<think>…</think>` blocks and model-specific special tokens from
+  /// a raw token stream.
+  ///
+  /// Qwen3 wraps its reasoning in `<think>…</think>` before the real answer,
+  /// and may append end-of-sequence tokens like `<|im_end|>`. We silently
+  /// discard both so users only see the clean final answer.
+  Stream<String> _filterThinkTokens(Stream<ModelResponse> source) async* {
+    // Regex matches any <|...|> special token (im_end, endoftext, etc.)
+    final specialTokenRe = RegExp(r'<\|[^|>]+\|>');
+
+    bool inThink = false;
+    final buf = StringBuffer();
+
+    await for (final resp in source) {
+      if (resp is! TextResponse || resp.token.isEmpty) continue;
+      buf.write(resp.token);
+
+      // One incoming token can span multiple tag boundaries — loop until stable.
+      while (true) {
+        final text = buf.toString();
+        if (!inThink) {
+          final start = text.indexOf('<think>');
+          if (start == -1) {
+            // No opening tag — yield safe portion, keep a 7-char look-ahead
+            // in case the tag arrives split across the next token.
+            if (text.length > 7) {
+              final safe = text.substring(0, text.length - 7);
+              final cleaned = safe.replaceAll(specialTokenRe, '');
+              if (cleaned.isNotEmpty) yield cleaned;
+              buf
+                ..clear()
+                ..write(text.substring(text.length - 7));
+            }
+            break;
+          }
+          // Yield everything before the opening tag, then enter think mode.
+          if (start > 0) {
+            final before = text.substring(0, start).replaceAll(specialTokenRe, '');
+            if (before.isNotEmpty) yield before;
+          }
+          inThink = true;
+          buf
+            ..clear()
+            ..write(text.substring(start + 7)); // skip '<think>'
+        } else {
+          final end = text.indexOf('</think>');
+          if (end == -1) {
+            // Still inside thinking block — discard, keep 8-char look-ahead.
+            if (text.length > 8) {
+              buf
+                ..clear()
+                ..write(text.substring(text.length - 8));
+            }
+            break;
+          }
+          // Exit think mode and continue processing the remainder.
+          inThink = false;
+          buf
+            ..clear()
+            ..write(text.substring(end + 8)); // skip '</think>'
+        }
+      }
+    }
+
+    // Flush any buffered text that wasn't inside a think block.
+    if (!inThink && buf.isNotEmpty) {
+      final flushed = buf.toString().replaceAll(specialTokenRe, '').trim();
+      if (flushed.isNotEmpty) yield flushed;
+    }
+  }
+
   bool _allItemsHaveExactUnits(FoodParseResult result) =>
       result.items.every((i) => !i.isEstimated);
 
@@ -233,12 +325,6 @@ class OnDeviceAiCoachService implements AiCoachService {
     final persona = _personas[context.entryPoint] ?? _personas[AiCoachEntryPoint.general]!;
     return '$persona\n\n${context.toPromptSummary()}\n\nRespond concisely. '
         'Do not repeat the stats back. Be direct and helpful.';
-  }
-
-  String _stripThinking(String text) {
-    return text
-        .replaceAll(RegExp(r'<think>[\s\S]*?</think>', caseSensitive: false), '')
-        .trim();
   }
 
   String _unavailableMessage(AiCoachContext context) =>
@@ -303,7 +389,173 @@ class OnDeviceAiCoachService implements AiCoachService {
     return FoodParseResult(items: items, usedModel: true);
   }
 
+  // ── Estimate macros ───────────────────────────────────────────────────────
+
+  @override
+  Future<AiMealEstimate?> estimateMacros(String description) async {
+    final model = _model;
+    if (model == null) return null;
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      await chat.addQuery(
+        Message(text: '$_macroEstimatePrompt$description', isUser: true),
+      );
+
+      final response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 20));
+
+      final text = response is TextResponse
+          ? response.token
+          : response.toString();
+
+      return _parseMacroResponse(text, description);
+    } catch (e) {
+      debugPrint('OnDeviceAiCoachService.estimateMacros failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  AiMealEstimate? _parseMacroResponse(String text, String description) {
+    final match = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+    if (match == null) return null;
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(match.group(0)!);
+    } catch (_) {
+      return null;
+    }
+
+    final json = decoded as Map<String, dynamic>;
+    final rawItems = json['items'] as List<dynamic>? ?? [];
+    final items = rawItems.map((raw) {
+      final item = raw as Map<String, dynamic>;
+      return AiItemEstimate(
+        name: (item['name'] as String?) ?? description,
+        calories: (item['calories'] as num?)?.toInt() ?? 0,
+        protein: (item['protein'] as num?)?.toDouble(),
+        carbs: (item['carbs'] as num?)?.toDouble(),
+        fat: (item['fat'] as num?)?.toDouble(),
+      );
+    }).toList();
+
+    if (items.isEmpty) return null;
+    return AiMealEstimate(
+      totalCalories: items.fold(0, (s, i) => s + i.calories),
+      items: items,
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.7,
+    );
+  }
+
+  // ── Normalize food input ──────────────────────────────────────────────────
+
+  @override
+  Future<List<AiParsedFood>?> normalizeFoodInput(
+      List<String> fragments) async {
+    final model = _model;
+    if (model == null || fragments.isEmpty) return null;
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      // Indexed input so we can detect ordering/alignment issues in the output.
+      final inputJson = jsonEncode([
+        for (var i = 0; i < fragments.length; i++) {'i': i, 't': fragments[i]},
+      ]);
+      await chat.addQuery(
+        Message(text: '$_normalizePrompt$inputJson\nOutput:', isUser: true),
+      );
+
+      final response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 15));
+
+      final text =
+          response is TextResponse ? response.token : response.toString();
+
+      return _parseNormalizeResponse(text, fragments.length);
+    } catch (e) {
+      debugPrint('OnDeviceAiCoachService.normalizeFoodInput failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  List<AiParsedFood>? _parseNormalizeResponse(String text, int expectedCount) {
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(text);
+    if (match == null) return null;
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(match.group(0)!);
+    } catch (_) {
+      return null;
+    }
+
+    final rawItems = decoded as List<dynamic>;
+    if (rawItems.length != expectedCount) return null;
+
+    final items = List<AiParsedFood?>.filled(expectedCount, null);
+    for (final raw in rawItems) {
+      final map = raw as Map<String, dynamic>;
+      final idx = (map['i'] as num?)?.toInt();
+      // Strip commas and collapse whitespace so DB scoring isn't thrown off.
+      final rawName = (map['n'] as String?)?.trim() ?? '';
+      final name =
+          rawName.replaceAll(',', ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+      final grams = (map['g'] as num?)?.toDouble();
+
+      if (idx == null || idx < 0 || idx >= expectedCount) return null;
+      if (name.isEmpty || grams == null || grams <= 0) return null;
+      items[idx] = AiParsedFood(name: name, grams: grams);
+    }
+
+    if (items.any((i) => i == null)) return null;
+    return items.cast<AiParsedFood>();
+  }
+
   // ── Prompts ───────────────────────────────────────────────────────────────
+
+  static const _normalizePrompt =
+      'You are a food normalizer. Given a JSON array of {"i":index,"t":"raw food text"}, '
+      'output a JSON array of {"i":index,"n":"clean food name","g":gram_weight}.\n'
+      'Same indices, same order. Convert any volume/unit to grams using food-specific density. '
+      'No explanation, no markdown.\n'
+      'Examples:\n'
+      '[{"i":0,"t":"100gms skim milk"}] → [{"i":0,"n":"skim milk","g":100}]\n'
+      '[{"i":0,"t":"3 cups cooked rice"},{"i":1,"t":"1 tbspoon olive oil"}] → '
+      '[{"i":0,"n":"white rice cooked","g":555},{"i":1,"n":"olive oil","g":14}]\n'
+      'Input: ';
+
+  static const _macroEstimatePrompt =
+      'You are a nutrition database API. '
+      'Given a meal description, respond with ONLY a valid JSON object — '
+      'no preamble, no markdown fences, no explanation.\n'
+      'Required format:\n'
+      '{"items":[{"name":"string","calories":integer,'
+      '"protein":number,"carbs":number,"fat":number}],'
+      '"confidence":number}\n\n'
+      'Meal: ';
 
   static const _foodParsePrompt =
       'You are a food parser. Extract food items from the input.\n'

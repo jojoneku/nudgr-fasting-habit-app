@@ -24,6 +24,8 @@ class AiCoachPresenter extends ChangeNotifier {
   AiCoachEntryPoint _entryPoint = AiCoachEntryPoint.general;
   final List<AiChatMessage> _messages = [];
   bool _isResponding = false;
+  bool _isThinkingEnabled = false;
+  bool _isInitializing = true;
   String? _errorMessage;
 
   AiCoachPresenter({
@@ -35,7 +37,13 @@ class AiCoachPresenter extends ChangeNotifier {
         _fasting = fasting,
         _nutrition = nutrition,
         _service = service ?? NullAiCoachService() {
-    _initOnDevice();
+    // If a real service was injected (already initialised externally), skip
+    // the internal init. Only auto-init when no service is provided.
+    if (service == null) {
+      _initOnDevice();
+    } else {
+      _isInitializing = false;
+    }
   }
 
   // ── Getters ───────────────────────────────────────────────────────────────
@@ -45,9 +53,11 @@ class AiCoachPresenter extends ChangeNotifier {
   bool get isModelAvailable => _service.isAvailable;
   int? get downloadProgress => _service.downloadProgress;
   bool get isDownloading => downloadProgress != null;
+  bool get isInitializing => _isInitializing;
   AiCoachTier get activeTier => _activeTier;
   AiCoachEntryPoint get entryPoint => _entryPoint;
   String? get errorMessage => _errorMessage;
+  bool get isThinkingEnabled => _isThinkingEnabled;
 
   // ── Session ───────────────────────────────────────────────────────────────
 
@@ -82,6 +92,7 @@ class AiCoachPresenter extends ChangeNotifier {
       await for (final token in _service.respond(
         messages: _userVisibleMessages(),
         context: context,
+        isThinking: _isThinkingEnabled,
       )) {
         buffer.write(token);
         _updateLastMessage(buffer.toString(), isStreaming: true);
@@ -159,12 +170,18 @@ class AiCoachPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  void toggleThinking() {
+    _isThinkingEnabled = !_isThinkingEnabled;
+    notifyListeners();
+  }
+
   // ── Internals ─────────────────────────────────────────────────────────────
 
   Future<void> _initOnDevice() async {
     final svc = OnDeviceAiCoachService();
     await svc.init();
     _service = svc;
+    _isInitializing = false;
     notifyListeners();
   }
 

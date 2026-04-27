@@ -26,15 +26,16 @@ class FoodNlpParser {
     caseSensitive: false,
   );
 
-  // "(\d+.?\d*)(g|ml) food"  e.g. "150g chicken" or "200ml milk"
+  // "(\d+.?\d*)(unit) food" — any known unit, optional space before unit.
+  // e.g. "150g chicken", "150grams chicken", "2tbsp oil", "1cup milk"
   static final _patternInlineGram = RegExp(
-    r'^(\d+\.?\d*)\s*(g|ml|kg|oz|lb)s?\s+(.+)$',
+    r'^(\d+\.?\d*)\s*(' + _unitPattern + r')\s+(.+)$',
     caseSensitive: false,
   );
 
-  // "food (unit)?" where unit may trail  e.g. "chicken 150g"
+  // "food (qty)(unit)?" where unit may trail  e.g. "chicken 150g", "chicken 150grams"
   static final _patternTrailingGram = RegExp(
-    r'^(.+?)\s+(\d+\.?\d*)\s*(g|ml|kg|oz|lb)s?$',
+    r'^(.+?)\s+(\d+\.?\d*)\s*(' + _unitPattern + r')$',
     caseSensitive: false,
   );
 
@@ -91,7 +92,7 @@ class FoodNlpParser {
   static ParsedFoodItem? _parseFragment(String fragment) {
     if (fragment.isEmpty) return null;
 
-    // Pattern: "150g chicken breast" or "200ml milk"
+    // Pattern: "150g chicken breast" or "200ml milk" or "2tbsp oil"
     final inlineGram = _patternInlineGram.firstMatch(fragment);
     if (inlineGram != null) {
       final qty = double.tryParse(inlineGram.group(1)!) ?? 1.0;
@@ -103,7 +104,7 @@ class FoodNlpParser {
           rawText: fragment,
           name: name,
           grams: grams,
-          isEstimated: false,
+          isEstimated: !FoodUnitConverter.isExact(unit),
         );
       }
     }
@@ -120,7 +121,7 @@ class FoodNlpParser {
           rawText: fragment,
           name: name,
           grams: grams,
-          isEstimated: false,
+          isEstimated: !FoodUnitConverter.isExact(unit),
         );
       }
     }
