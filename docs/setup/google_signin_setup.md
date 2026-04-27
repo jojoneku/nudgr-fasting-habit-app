@@ -75,13 +75,13 @@ id("com.google.gms.google-services")
 
 ---
 
-## 7. Fill in the Constants
+## 7. Fill in the Secrets
 
-In `lib/services/auth_service.dart`, replace the placeholder values:
-```dart
-const _supabaseUrl = 'https://<your-ref>.supabase.co';
-const _supabaseAnonKey = '<your-anon-key>';
-const _googleWebClientId = '<your-web-client-id>.apps.googleusercontent.com';
+Edit `.env` in the project root (already gitignored — never commit this file):
+```env
+SUPABASE_URL=https://<your-ref>.supabase.co
+SUPABASE_ANON_KEY=<your-anon-key>
+GOOGLE_WEB_CLIENT_ID=<your-web-client-id>.apps.googleusercontent.com
 ```
 
 ---
