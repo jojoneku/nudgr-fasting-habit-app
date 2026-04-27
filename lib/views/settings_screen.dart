@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../app_colors.dart';
+import 'auth/login_view.dart';
 
 class SettingsScreen extends StatelessWidget {
-  final FastingPresenter presenter;
+  final FastingPresenter fastingPresenter;
+  final AuthPresenter authPresenter;
 
-  const SettingsScreen({super.key, required this.presenter});
+  const SettingsScreen({
+    super.key,
+    required this.fastingPresenter,
+    required this.authPresenter,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,14 +21,18 @@ class SettingsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Settings'),
       ),
-      body: ListView(
-        children: [
+      body: ListenableBuilder(
+        listenable: authPresenter,
+        builder: (context, _) => ListView(
+          children: [
+            _CloudSyncSection(authPresenter: authPresenter),
+            const Divider(),
           ListTile(
             leading: const Icon(Icons.science, color: AppColors.primary),
             title: const Text('Add Test Data'),
             subtitle: const Text('Add sample fasting records'),
             onTap: () {
-              presenter.addTestData();
+              fastingPresenter.addTestData();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Added test data!')),
               );
@@ -34,7 +45,7 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Test Notification'),
             subtitle: const Text('Check if notifications work'),
             onTap: () async {
-              await presenter.testNotification();
+              await fastingPresenter.testNotification();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -49,7 +60,7 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Export Data'),
             subtitle: const Text('Copy data to clipboard'),
             onTap: () async {
-              final data = await presenter.exportData();
+              final data = await fastingPresenter.exportData();
               if (context.mounted) {
                 await showDialog(
                   context: context,
@@ -145,7 +156,7 @@ class SettingsScreen extends StatelessWidget {
                       onPressed: () async {
                         if (controller.text.isEmpty) return;
                         try {
-                          await presenter.importData(controller.text);
+                          await fastingPresenter.importData(controller.text);
                           if (context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -197,7 +208,7 @@ class SettingsScreen extends StatelessWidget {
               );
 
               if (confirm == true) {
-                await presenter.clearAllData();
+                await fastingPresenter.clearAllData();
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
@@ -208,7 +219,105 @@ class SettingsScreen extends StatelessWidget {
             },
           ),
         ],
+        ),
       ),
+    );
+  }
+}
+
+// ── Cloud Sync Section ────────────────────────────────────────────────────────
+
+class _CloudSyncSection extends StatelessWidget {
+  final AuthPresenter authPresenter;
+
+  const _CloudSyncSection({required this.authPresenter});
+
+  @override
+  Widget build(BuildContext context) {
+    if (authPresenter.isSignedIn) {
+      return _SignedInTile(authPresenter: authPresenter);
+    }
+    return _SignInTile(authPresenter: authPresenter);
+  }
+}
+
+class _SignInTile extends StatelessWidget {
+  final AuthPresenter authPresenter;
+
+  const _SignInTile({required this.authPresenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: const Icon(Icons.cloud_outlined, color: AppColors.primary),
+      title: const Text('Cloud Sync'),
+      subtitle: const Text('Sign in to back up and sync your data'),
+      trailing: const Icon(Icons.chevron_right,
+          color: AppColors.textSecondary, size: 18),
+      onTap: () => LoginView.show(context, authPresenter),
+    );
+  }
+}
+
+class _SignedInTile extends StatelessWidget {
+  final AuthPresenter authPresenter;
+
+  const _SignedInTile({required this.authPresenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final email = authPresenter.userEmail ?? 'Signed in';
+    final avatarUrl = authPresenter.userAvatarUrl;
+
+    return Column(
+      children: [
+        ListTile(
+          leading: CircleAvatar(
+            radius: 18,
+            backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+            backgroundImage:
+                avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            child: avatarUrl == null
+                ? const Icon(Icons.person, color: AppColors.primary, size: 18)
+                : null,
+          ),
+          title: const Text('Cloud Sync',
+              style: TextStyle(color: AppColors.textPrimary)),
+          subtitle: Text(email,
+              style: const TextStyle(
+                  color: AppColors.success, fontSize: 12)),
+          trailing: const Icon(Icons.check_circle,
+              color: AppColors.success, size: 16),
+        ),
+        ListTile(
+          leading: const Icon(Icons.logout, color: AppColors.danger),
+          title: const Text('Sign Out',
+              style: TextStyle(color: AppColors.danger)),
+          onTap: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: const Text('Sign Out'),
+                content:
+                    const Text('Your local data stays safe on this device.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style:
+                        TextButton.styleFrom(foregroundColor: AppColors.danger),
+                    child: const Text('Sign Out'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) await authPresenter.signOut();
+          },
+        ),
+      ],
     );
   }
 }

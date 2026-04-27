@@ -52,6 +52,8 @@ dependencies:
   health: ^12.2.0
   flutter_colorpicker: ^1.1.0
   google_fonts: ^6.2.1
+  supabase_flutter: ^2.9.0
+  google_sign_in: ^6.2.2
 
 
 dev_dependencies:

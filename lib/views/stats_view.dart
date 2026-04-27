@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
+import '../presenters/auth_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../models/user_stats.dart';
@@ -10,11 +11,13 @@ import 'settings_screen.dart';
 class StatsView extends StatelessWidget {
   final StatsPresenter presenter;
   final FastingPresenter fastingPresenter;
+  final AuthPresenter authPresenter;
 
   const StatsView({
     super.key,
     required this.presenter,
     required this.fastingPresenter,
+    required this.authPresenter,
   });
 
   @override
@@ -71,7 +74,8 @@ class StatsView extends StatelessWidget {
                                       context,
                                       MaterialPageRoute(
                                         builder: (_) => SettingsScreen(
-                                            presenter: fastingPresenter),
+                                            fastingPresenter: fastingPresenter,
+                                            authPresenter: authPresenter),
                                       ),
                                     ),
                                   ),

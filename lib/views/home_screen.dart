@@ -12,10 +12,12 @@ import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
+import '../services/auth_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
+import '../presenters/auth_presenter.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
 import 'stats_view.dart';
@@ -44,6 +46,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final TreasuryHistoryPresenter _historyPresenter;
   late final InstallmentPresenter _installmentPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
+  late final AuthPresenter _authPresenter;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
@@ -89,12 +92,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       nutrition: _nutritionPresenter,
       service: _onDeviceAi,
     );
+    _authPresenter = AuthPresenter(AuthService.instance);
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _foodDb.init(); // copy asset → documents dir if needed
       await _onDeviceAi.init(); // silently loads Qwen if already installed
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
+      await AuthService.instance.init(); // init Supabase + restore session
+      _authPresenter.init();
     });
   }
 
@@ -113,6 +119,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter.dispose();
     _installmentPresenter.dispose();
     _aiCoachPresenter.dispose();
+    _authPresenter.dispose();
     super.dispose();
   }
 
@@ -143,6 +150,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       StatsView(
         presenter: _statsPresenter,
         fastingPresenter: _fastingPresenter,
+        authPresenter: _authPresenter,
       ),
     ];
 
