@@ -58,6 +58,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
   void _onInputChanged() async {
     final q = _inputCtrl.text.trim();
     if (q.isEmpty) {
+      widget.presenter.clearParseResult();
       setState(() {
         _searchResults = [];
         _isSearching = false;
@@ -67,6 +68,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
 
     // Capture generation before the async gap so stale completions are ignored.
     final generation = ++_searchGeneration;
+    widget.presenter.clearParseResult();
     setState(() => _isSearching = true);
 
     final results = await widget.presenter.foodDb.search(q);
@@ -76,6 +78,10 @@ class _LogMealSheetState extends State<LogMealSheet> {
         _searchResults = results;
         _isSearching = false;
       });
+      // Auto-analyze when DB has no matches.
+      if (results.isEmpty) {
+        widget.presenter.parseMeal(q);
+      }
     }
   }
 
@@ -234,8 +240,10 @@ class _LogMealSheetState extends State<LogMealSheet> {
     final hasInput = _inputCtrl.text.trim().isNotEmpty;
     if (!hasInput) return 'quick';
     if (_searchResults.isNotEmpty) return 'results';
-    if (!_isSearching) return 'no-results';
-    return 'searching';
+    if (_isSearching) return 'searching';
+    final p = widget.presenter;
+    if (p.isParsing || p.isAiEstimating) return 'analyzing';
+    return 'no-results';
   }
 
   Widget _buildContent() {
@@ -258,9 +266,39 @@ class _LogMealSheetState extends State<LogMealSheet> {
       );
     }
 
-    if (!_isSearching) return _buildNoResults();
+    if (_isSearching) return const SizedBox.shrink();
 
-    return const SizedBox.shrink();
+    final p = widget.presenter;
+    if (p.isParsing || p.isAiEstimating) return _buildAnalyzingPlaceholder();
+
+    return _buildNoResults();
+  }
+
+  Widget _buildAnalyzingPlaceholder() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              widget.presenter.isAiEstimating ? 'Estimating with AI…' : 'Analyzing…',
+              style: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildQuickSection() {
@@ -392,6 +430,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
 
   Widget _buildNoResults() {
     final aiAvailable = widget.presenter.isAiAvailable;
+    final hasParseError = widget.presenter.parseError != null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -402,32 +441,22 @@ class _LogMealSheetState extends State<LogMealSheet> {
               color: AppColors.textSecondary.withValues(alpha: 0.25), size: 32),
           const SizedBox(height: 8),
           Text(
-            'No results for "${_inputCtrl.text.trim()}"',
+            hasParseError
+                ? 'No matches found for "${_inputCtrl.text.trim()}"'
+                : 'No results for "${_inputCtrl.text.trim()}"',
             style:
                 const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 20),
-          // NLP parse — always available, instant (regex + DB)
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-                foregroundColor: AppColors.primary,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: widget.presenter.isParsing
-                  ? null
-                  : () => widget.presenter.parseMeal(_inputCtrl.text.trim()),
-              icon: const Icon(Icons.manage_search_outlined, size: 16),
-              label: const Text('Parse meal description'),
+          if (hasParseError) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Try AI estimation or enter nutrients manually.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 8),
+          ],
+          const SizedBox(height: 20),
           if (aiAvailable) ...[
             SizedBox(
               width: double.infinity,
@@ -476,31 +505,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildAiState() {
-    // ── NLP parse state (new primary path) ────────────────────────────────
-    if (widget.presenter.isParsing) {
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.primary),
-            ),
-            SizedBox(width: 12),
-            Text('Parsing meal...',
-                style: TextStyle(color: AppColors.primary, fontSize: 12)),
-          ],
-        ),
-      );
-    }
-
     final parseError = widget.presenter.parseError;
     if (parseError != null) {
       return Container(
@@ -546,31 +550,6 @@ class _LogMealSheetState extends State<LogMealSheet> {
             setState(() => _searchResults = []);
           },
           onDismiss: widget.presenter.clearParseResult,
-        ),
-      );
-    }
-
-    // ── Old Gemma AI state (fallback / legacy) ─────────────────────────────
-    if (widget.presenter.isAiEstimating) {
-      return Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                  strokeWidth: 2, color: AppColors.accent),
-            ),
-            SizedBox(width: 12),
-            Text('Analyzing meal...',
-                style: TextStyle(color: AppColors.accent, fontSize: 12)),
-          ],
         ),
       );
     }
@@ -716,7 +695,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
-              onPressed: !hasItems || _isLogging ? null : _logMeal,
+              onPressed: !hasItems || _isLogging ? null : _promptAndLog,
               child: _isLogging
                   ? const SizedBox(
                       width: 18,
@@ -740,7 +719,63 @@ class _LogMealSheetState extends State<LogMealSheet> {
     );
   }
 
-  Future<void> _logMeal() async {
+  Future<void> _promptAndLog() async {
+    if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
+      final defaultName = _pendingEntries.length == 1
+          ? _pendingEntries.first.entry.name
+          : '${DateTime.now().day}/${DateTime.now().month} meal';
+      final ctrl = TextEditingController(text: defaultName);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Name this template',
+              style:
+                  TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            style:
+                const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Template name',
+              hintStyle: const TextStyle(
+                  color: AppColors.textSecondary, fontSize: 13),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(
+                      color: AppColors.primary, width: 1)),
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12, vertical: 10),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save',
+                  style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await _logMeal(templateName: ctrl.text.trim());
+    } else {
+      await _logMeal();
+    }
+  }
+
+  Future<void> _logMeal({String? templateName}) async {
     setState(() => _isLogging = true);
     HapticFeedback.mediumImpact();
     try {
@@ -748,9 +783,14 @@ class _LogMealSheetState extends State<LogMealSheet> {
         await widget.presenter.addFoodEntry(p.entry, MealSlot.meal);
       }
       if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
+        final name = (templateName != null && templateName.isNotEmpty)
+            ? templateName
+            : (_pendingEntries.length == 1
+                ? _pendingEntries.first.entry.name
+                : '${DateTime.now().day}/${DateTime.now().month} meal');
         final template = FoodTemplate(
           id: FoodEntry.generateId(),
-          name: '${DateTime.now().day}/${DateTime.now().month} meal',
+          name: name,
           isMeal: _pendingEntries.length > 1,
           defaultSlot: MealSlot.meal,
           entries: _pendingEntries.map((p) => p.entry).toList(),

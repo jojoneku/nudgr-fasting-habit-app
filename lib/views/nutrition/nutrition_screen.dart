@@ -1431,8 +1431,12 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     final text = _ctrl.text.trim();
     if (text.isEmpty || widget.presenter.isChatParsing) return;
     _ctrl.clear();
-    _focus.unfocus();
-    widget.presenter.parseChat(text);
+    // Dismiss keyboard first, then defer parseChat to the next frame so the
+    // keyboard dismiss animation starts before triggering a rebuild.
+    FocusScope.of(context).unfocus();
+    Future.delayed(Duration.zero, () {
+      if (mounted) widget.presenter.parseChat(text);
+    });
   }
 
   void _showTemplates(BuildContext context) {
@@ -1443,6 +1447,17 @@ class _ChatInputBarState extends State<_ChatInputBar> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _TemplateSheet(presenter: widget.presenter),
+    );
+  }
+
+  void _showManualAdd(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ManualFoodSheet(
+        onAdd: (entry) => widget.presenter.addManualFoodEntry(entry),
+      ),
     );
   }
 
@@ -1463,6 +1478,15 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                 color: AppColors.textSecondary),
             onPressed: isToday ? () => _showTemplates(context) : null,
             tooltip: 'Templates',
+            constraints:
+                const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_outlined,
+                color: AppColors.textSecondary),
+            onPressed:
+                isToday && !locked ? () => _showManualAdd(context) : null,
+            tooltip: 'Add manually',
             constraints:
                 const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
@@ -1586,6 +1610,9 @@ class _TemplateSheet extends StatelessWidget {
       return ListTile(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+        leading: t.isPinned
+            ? const Icon(Icons.push_pin, color: AppColors.primary, size: 14)
+            : null,
         title: Text(t.name,
             style: const TextStyle(
                 color: AppColors.textPrimary, fontSize: 14)),
@@ -1617,3 +1644,177 @@ class _TemplateSheet extends StatelessWidget {
   }
 }
 
+// ─── Manual Food Sheet ────────────────────────────────────────────────────────
+
+class _ManualFoodSheet extends StatefulWidget {
+  final void Function(FoodEntry) onAdd;
+  const _ManualFoodSheet({required this.onAdd});
+
+  @override
+  State<_ManualFoodSheet> createState() => _ManualFoodSheetState();
+}
+
+class _ManualFoodSheetState extends State<_ManualFoodSheet> {
+  final _nameCtrl = TextEditingController();
+  final _calCtrl = TextEditingController();
+  final _pCtrl = TextEditingController();
+  final _cCtrl = TextEditingController();
+  final _fCtrl = TextEditingController();
+  bool _showMacros = false;
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _calCtrl.dispose();
+    _pCtrl.dispose();
+    _cCtrl.dispose();
+    _fCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Text(
+              'Custom food',
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
+            ),
+            const Spacer(),
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: IconButton(
+                icon: const Icon(Icons.close,
+                    color: AppColors.textSecondary, size: 18),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 14),
+          TextField(
+              controller: _nameCtrl,
+              autofocus: true,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: _dec('Food name', 'e.g. Chicken breast 150g')),
+          const SizedBox(height: 10),
+          TextField(
+              controller: _calCtrl,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: _dec('Calories (kcal)', 'e.g. 320')),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: () => setState(() => _showMacros = !_showMacros),
+            child: Row(children: [
+              Icon(
+                  _showMacros
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: AppColors.textSecondary,
+                  size: 16),
+              const SizedBox(width: 4),
+              Text(_showMacros ? 'Hide macros' : 'Add macros (optional)',
+                  style: const TextStyle(
+                      color: AppColors.textSecondary, fontSize: 12)),
+            ]),
+          ),
+          if (_showMacros) ...[
+            const SizedBox(height: 10),
+            Row(children: [
+              Expanded(
+                  child: TextField(
+                      controller: _pCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Protein', 'g'))),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: TextField(
+                      controller: _cCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Carbs', 'g'))),
+              const SizedBox(width: 8),
+              Expanded(
+                  child: TextField(
+                      controller: _fCtrl,
+                      keyboardType: TextInputType.number,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 12),
+                      decoration: _dec('Fat', 'g'))),
+            ]),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.background,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              onPressed: _add,
+              child: const Text('Add',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _dec(String label, String hint) => InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        hintStyle: TextStyle(
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            fontSize: 11),
+        filled: true,
+        fillColor: AppColors.background,
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: AppColors.primary, width: 1)),
+        isDense: true,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      );
+
+  void _add() {
+    final name = _nameCtrl.text.trim();
+    final cal = int.tryParse(_calCtrl.text.trim());
+    if (name.isEmpty || cal == null || cal <= 0) return;
+    widget.onAdd(FoodEntry(
+      id: FoodEntry.generateId(),
+      name: name,
+      calories: cal,
+      protein: double.tryParse(_pCtrl.text.trim()),
+      carbs: double.tryParse(_cCtrl.text.trim()),
+      fat: double.tryParse(_fCtrl.text.trim()),
+      loggedAt: DateTime.now(),
+    ));
+    Navigator.pop(context);
+  }
+}

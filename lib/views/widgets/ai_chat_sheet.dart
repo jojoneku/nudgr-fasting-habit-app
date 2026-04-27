@@ -83,8 +83,12 @@ class _AiChatSheetState extends State<AiChatSheet> {
     final text = _controller.text.trim();
     if (text.isEmpty) return;
     _controller.clear();
-    _presenter.send(text);
-    _scrollToBottom();
+    // Dismiss keyboard first so its animation starts before the rebuild.
+    FocusScope.of(context).unfocus();
+    Future.delayed(Duration.zero, () {
+      _presenter.send(text);
+      _scrollToBottom();
+    });
   }
 
   void _scrollToBottom() {
@@ -117,12 +121,33 @@ class _AiChatSheetState extends State<AiChatSheet> {
         child: Column(
           children: [
             _DragHandle(),
-            _SheetHeader(meta: meta),
+            _SheetHeader(meta: meta, presenter: _presenter),
             const Divider(height: 1, color: Color(0xFF2A3140)),
             Expanded(
               child: ListenableBuilder(
                 listenable: _presenter,
                 builder: (_, __) {
+                  if (_presenter.isInitializing) {
+                    return const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Color(0xFF00E5FF),
+                            strokeWidth: 2,
+                          ),
+                          SizedBox(height: 12),
+                          Text(
+                            'Loading AI Coach…',
+                            style: TextStyle(
+                              color: Color(0xFF00E5FF),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
                   if (!_presenter.isModelAvailable && !_presenter.isDownloading) {
                     return _DownloadPrompt(presenter: _presenter);
                   }
@@ -150,7 +175,7 @@ class _AiChatSheetState extends State<AiChatSheet> {
                 builder: (_, __) => _InputBar(
                   controller: _controller,
                   focusNode: _focusNode,
-                  enabled: _presenter.isModelAvailable && !_presenter.isResponding,
+                  enabled: _presenter.isModelAvailable && !_presenter.isResponding && !_presenter.isInitializing,
                   onSend: _send,
                 ),
               ),
@@ -181,7 +206,8 @@ class _DragHandle extends StatelessWidget {
 
 class _SheetHeader extends StatelessWidget {
   final ({String label, IconData icon}) meta;
-  const _SheetHeader({required this.meta});
+  final AiCoachPresenter presenter;
+  const _SheetHeader({required this.meta, required this.presenter});
 
   @override
   Widget build(BuildContext context) => Padding(
@@ -200,6 +226,55 @@ class _SheetHeader extends StatelessWidget {
               ),
             ),
             const Spacer(),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => GestureDetector(
+                onTap: presenter.isResponding ? null : presenter.toggleThinking,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: presenter.isThinkingEnabled
+                        ? AppColors.primary.withValues(alpha: 0.2)
+                        : AppColors.textSecondary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: presenter.isThinkingEnabled
+                          ? AppColors.primary.withValues(alpha: 0.5)
+                          : AppColors.textSecondary.withValues(alpha: 0.2),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        presenter.isThinkingEnabled
+                            ? Icons.psychology_outlined
+                            : Icons.bolt_outlined,
+                        color: presenter.isThinkingEnabled
+                            ? AppColors.primary
+                            : AppColors.textSecondary,
+                        size: 13,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        presenter.isThinkingEnabled ? 'Think' : 'Fast',
+                        style: TextStyle(
+                          color: presenter.isThinkingEnabled
+                              ? AppColors.primary
+                              : AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(

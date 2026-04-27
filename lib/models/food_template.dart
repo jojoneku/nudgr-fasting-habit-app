@@ -8,6 +8,7 @@ class FoodTemplate {
   final MealSlot? defaultSlot;
   final List<FoodEntry> entries;
   final int useCount;
+  final bool isPinned;
 
   const FoodTemplate({
     required this.id,
@@ -16,6 +17,7 @@ class FoodTemplate {
     this.defaultSlot,
     required this.entries,
     this.useCount = 0,
+    this.isPinned = false,
   });
 
   int get totalCalories => entries.fold(0, (s, e) => s + e.calories);
@@ -31,6 +33,7 @@ class FoodTemplate {
             .map((e) => FoodEntry.fromJson(e as Map<String, dynamic>))
             .toList(),
         useCount: json['useCount'] as int? ?? 0,
+        isPinned: json['isPinned'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -40,6 +43,7 @@ class FoodTemplate {
         'defaultSlot': defaultSlot?.jsonKey,
         'entries': entries.map((e) => e.toJson()).toList(),
         'useCount': useCount,
+        'isPinned': isPinned,
       };
 
   FoodTemplate copyWith({
@@ -48,6 +52,7 @@ class FoodTemplate {
     MealSlot? defaultSlot,
     List<FoodEntry>? entries,
     int? useCount,
+    bool? isPinned,
   }) =>
       FoodTemplate(
         id: id,
@@ -56,5 +61,6 @@ class FoodTemplate {
         defaultSlot: defaultSlot ?? this.defaultSlot,
         entries: entries ?? this.entries,
         useCount: useCount ?? this.useCount,
+        isPinned: isPinned ?? this.isPinned,
       );
 }
