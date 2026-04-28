@@ -69,28 +69,7 @@ keytool -list -v -keystore <path-to-release.keystore> -alias <your-alias>
 
 ---
 
-## 5. Download `google-services.json`
-
-1. Google Cloud Console → Credentials → Download `google-services.json`
-2. Place it at: `android/app/google-services.json`
-
----
-
-## 6. Enable google-services Gradle Plugin
-
-In `android/settings.gradle.kts`, add to the `plugins` block:
-```kotlin
-id("com.google.gms.google-services") version "4.4.2" apply false
-```
-
-In `android/app/build.gradle.kts`, add to the `plugins` block:
-```kotlin
-id("com.google.gms.google-services")
-```
-
----
-
-## 7. Fill in the Secrets
+## 5. Fill in the Secrets
 
 Edit `.env` in the project root (already gitignored — never commit this file):
 ```env
@@ -99,9 +78,13 @@ SUPABASE_ANON_KEY=<your-anon-key>
 GOOGLE_WEB_CLIENT_ID=<your-web-client-id>.apps.googleusercontent.com
 ```
 
+> **Note:** No `google-services.json` or Firebase needed. This setup uses
+> `google_sign_in` directly with Supabase — the Android OAuth client ID
+> registered in step 3 is enough for the SHA-1 binding. No Gradle plugin required.
+
 ---
 
-## 8. Smoke Test
+## 6. Smoke Test
 
 1. `flutter run` on a **real device** (Google Sign-In won't work on most emulators)
 2. Settings → Cloud Sync → tap "Continue with Google"
