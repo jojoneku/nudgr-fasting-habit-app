@@ -50,6 +50,13 @@ Complete this once before testing authentication. Takes ~20 minutes.
 ## 4. Get the SHA-1 Fingerprint
 
 ### Debug keystore (for development)
+
+**Windows (PowerShell):**
+```powershell
+keytool -list -v -keystore "$env:USERPROFILE\.android\debug.keystore" -alias androiddebugkey -storepass android -keypass android
+```
+
+**Mac/Linux:**
 ```bash
 keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
 ```
