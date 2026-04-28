@@ -23,19 +23,27 @@ Complete this once before testing authentication. Takes ~20 minutes.
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Create a project (or use existing)
-3. Enable **Google Sign-In API**: APIs & Services → Enable APIs → search "Google Sign-In"
-4. Go to **Credentials** → Create Credentials → OAuth 2.0 Client IDs
+
+### Configure OAuth Consent Screen (required first)
+1. **APIs & Services → OAuth consent screen**
+2. User type: **External** → Create
+3. Fill in: App name (e.g. "Nudgr"), User support email, Developer contact email
+4. Click through Scopes and Test users steps → Save and Continue
 
 ### Create the Web Client ID (required by Supabase)
-- Application type: **Web application**
-- Authorised redirect URIs: add your Supabase callback URL:  
-  `https://<your-project-ref>.supabase.co/auth/v1/callback`
-- Copy the **Client ID** and **Client Secret** → paste into Supabase Google provider settings (step 2)
+1. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+2. Application type: **Web application**
+3. Name: e.g. "Nudgr Web"
+4. Authorised redirect URIs → Add:  
+   `https://<your-project-ref>.supabase.co/auth/v1/callback`
+5. Click Create → copy the **Client ID** and **Client Secret**
+6. Paste both into Supabase → Authentication → Providers → Google
 
 ### Create the Android Client ID
-- Application type: **Android**
-- Package name: `com.nudgr.app`
-- SHA-1 certificate fingerprint: see step 4 below
+1. **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
+2. Application type: **Android**
+3. Package name: `com.nudgr.app`
+4. SHA-1 certificate fingerprint: see step 4 below
 
 ---
 

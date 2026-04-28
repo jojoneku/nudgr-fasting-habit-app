@@ -539,12 +539,21 @@ class OnDeviceAiCoachService implements AiCoachService {
   static const _normalizePrompt =
       'You are a food normalizer. Given a JSON array of {"i":index,"t":"raw food text"}, '
       'output a JSON array of {"i":index,"n":"clean food name","g":gram_weight}.\n'
-      'Same indices, same order. Convert any volume/unit to grams using food-specific density. '
+      'Same indices, same order. Convert any volume/unit to grams using food-specific density.\n'
+      'Rules:\n'
+      '1. Strip brand names — output only the generic food name. '
+      '   e.g. "birchtree powdered milk" → "powdered whole milk", "nestle milo" → "milo chocolate drink"\n'
+      '2. Do NOT add any preparation method not stated in the input. '
+      '   "potato" → "potato", NOT "potato chips" or "potato fries"\n'
+      '3. Preserve explicitly stated preparation: '
+      '   "fried potato" → "fried potato", "potato chips" → "potato chips"\n'
       'No explanation, no markdown.\n'
       'Examples:\n'
       '[{"i":0,"t":"100gms skim milk"}] → [{"i":0,"n":"skim milk","g":100}]\n'
       '[{"i":0,"t":"3 cups cooked rice"},{"i":1,"t":"1 tbspoon olive oil"}] → '
       '[{"i":0,"n":"white rice cooked","g":555},{"i":1,"n":"olive oil","g":14}]\n'
+      '[{"i":0,"t":"42g potato"}] → [{"i":0,"n":"potato","g":42}]\n'
+      '[{"i":0,"t":"birchtree powdered milk 33g"}] → [{"i":0,"n":"powdered whole milk","g":33}]\n'
       'Input: ';
 
   static const _macroEstimatePrompt =

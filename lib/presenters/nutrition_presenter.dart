@@ -300,6 +300,19 @@ class NutritionPresenter extends ChangeNotifier {
           _library[idx].copyWith(useCount: _library[idx].useCount + 1);
       await _storage.saveFoodLibrary(_library);
     }
+
+    // Add a chat message so the log appears in the nutrition chat feed.
+    final chatMsg = ChatMessage(
+      id: ChatMessage.generateId(),
+      rawText: meal.name,
+      timestamp: DateTime.now(),
+      kind: ChatMessageKind.food,
+      mealSlot: slot,
+      foodItems: entries.map((e) => ChatFoodItem.fromFoodEntry(e)).toList(),
+    );
+    _chatMessages.add(chatMsg);
+    await _persistChatMessages();
+
     notifyListeners();
     await _storage.saveNutritionLog(_todayLog);
     await _updateLogStreak();
@@ -533,6 +546,19 @@ class NutritionPresenter extends ChangeNotifier {
     return best;
   }
 
+  // Words that transform a base food into a distinct processed product.
+  // If these appear in a DB entry but NOT in the user's query, the entry is
+  // penalised — prevents "potato chips" winning over "potatoes, raw" for the
+  // bare query "potato".
+  static const _transformingWords = {
+    'chips', 'crisps', 'puffs', 'crackers', 'cracker',
+    'fried', 'battered', 'breaded', 'coated', 'deep-fried',
+    'sauce', 'gravy', 'soup', 'stew', 'casserole', 'curry',
+    'candy', 'candied', 'caramel',
+    'pie', 'cake', 'tart', 'pudding',
+    'instant', 'processed', 'imitation',
+  };
+
   int _dbMatchScore(FoodDbEntry entry, List<String> qWords, String fullQuery) {
     final eName = entry.name.toLowerCase();
 
@@ -551,6 +577,17 @@ class NutritionPresenter extends ChangeNotifier {
       } else if (eWords.any((ew) => qw.startsWith(ew) && ew.length >= 3)) {
         // Handles inflections: "skim" in DB matches "skimmed" in query.
         score += 1;
+      }
+    }
+
+    // Penalise transforming/processing words in the DB entry that the user
+    // did not mention. Each unmentioned transforming word deducts 5 points,
+    // ensuring e.g. "potato chips" loses to "potatoes, raw" for query "potato"
+    // while "fried chicken" still wins for query "fried chicken".
+    for (final ew in eWords) {
+      if (_transformingWords.contains(ew) &&
+          !qWords.any((qw) => qw == ew || qw.contains(ew) || ew.contains(qw))) {
+        score -= 5;
       }
     }
 
