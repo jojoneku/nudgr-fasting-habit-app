@@ -15,8 +15,9 @@ class MonthlySummary {
   final double endingCash; // sum of all liquid account balances at close
   final Map<String, double> accountSnapshots; // accountId → balance
   final Map<String, double> categorySpend; // categoryId → total spent
+  final DateTime updatedAt;
 
-  const MonthlySummary({
+  MonthlySummary({
     required this.month,
     required this.totalInflow,
     required this.totalOutflow,
@@ -31,7 +32,8 @@ class MonthlySummary {
     required this.endingCash,
     required this.accountSnapshots,
     required this.categorySpend,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory MonthlySummary.fromJson(Map<String, dynamic> json) {
     return MonthlySummary(
@@ -57,6 +59,7 @@ class MonthlySummary {
           (k, v) => MapEntry(k, (v as num).toDouble()),
         ),
       ),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -75,5 +78,6 @@ class MonthlySummary {
         'endingCash': endingCash,
         'accountSnapshots': accountSnapshots,
         'categorySpend': categorySpend,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 }

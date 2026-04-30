@@ -28,10 +28,6 @@ abstract class AiCoachService {
   Future<void> downloadModel({void Function(int progress)? onProgress});
 
   /// Stream a response token-by-token.
-  ///
-  /// [messages] is the conversation history (oldest first).
-  /// [context] is the current app state snapshot.
-  /// [isThinking] enables extended reasoning (slower but deeper).
   Stream<String> respond({
     required List<AiChatMessage> messages,
     required AiCoachContext context,
@@ -39,22 +35,23 @@ abstract class AiCoachService {
   });
 
   /// Attempt to parse [description] as a food log entry.
-  ///
-  /// Returns null if the text is clearly not a food description.
-  /// Implementations may use the model or fall back to rule-based logic.
   Future<FoodParseResult?> parseFood(String description);
 
   /// Estimate calories and macros for a natural-language food description.
-  ///
-  /// Returns null if the model is unavailable or inference fails.
+  /// Used for the standalone estimation UI (estimateMeal flow).
   Future<AiMealEstimate?> estimateMacros(String description);
 
-  /// Normalize raw food fragments into clean names and gram weights.
+  /// Estimate macros for a list of food items with known gram weights.
   ///
-  /// Each fragment is a single food item as typed by the user (e.g.
-  /// "100gms skim milk", "3 cups rice"). The returned list has the same
-  /// length and order as [fragments]. Returns null if AI is unavailable or
-  /// the response cannot be reliably aligned.
+  /// Each item is `{name, grams}`. Returns one [AiItemEstimate] per input item
+  /// in the same order, with calories already computed for the exact grams.
+  /// Returns null if the model is unavailable, inference fails, or the response
+  /// length doesn't match the input.
+  Future<List<AiItemEstimate>?> estimateMacrosForItems(
+    List<AiParsedFood> items,
+  );
+
+  /// Normalize raw food fragments into clean names and gram weights.
   Future<List<AiParsedFood>?> normalizeFoodInput(List<String> fragments);
 
   void dispose();

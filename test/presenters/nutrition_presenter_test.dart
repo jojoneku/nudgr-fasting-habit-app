@@ -51,6 +51,8 @@ void main() {
     when(mockStorage.saveNutritionGoalMetDate(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreak(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreakDate(any)).thenAnswer((_) async {});
+    when(mockStorage.loadPersonalDict()).thenAnswer((_) async => []);
+    when(mockStorage.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
 
     // Stats stubs
     when(mockStats.stats).thenReturn(UserStats.initial());

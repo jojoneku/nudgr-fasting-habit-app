@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'estimation_source.dart';
 import 'exercise_entry.dart';
 import 'food_entry.dart';
 import 'meal_slot.dart';
@@ -16,8 +17,9 @@ class ChatFoodItem {
   final double? carbs;
   final double? fat;
   final double? grams;
-  final String? amountText; // original user input e.g. "100g rice", "2 jumbo hotdog"
-  final bool isEstimated;
+  final String? amountText; // original user input e.g. "100g rice"
+  final EstimationSource estimationSource;
+  final double? confidence;
 
   const ChatFoodItem({
     required this.entryId,
@@ -28,8 +30,17 @@ class ChatFoodItem {
     this.fat,
     this.grams,
     this.amountText,
-    this.isEstimated = false,
+    this.estimationSource = EstimationSource.db,
+    this.confidence,
   });
+
+  bool get isEstimated => !estimationSource.isTrusted;
+
+  /// True when confidence is low, regardless of source. Covers AI estimates,
+  /// keyword density fallbacks, and weak DB matches (e.g. "egg noodles"
+  /// resolved against "Scrambled Eggs with Noodles" because the DB lacks an
+  /// exact entry). UI uses this to flag items the user should review.
+  bool get needsConfirmation => (confidence ?? 1.0) < 0.6;
 
   factory ChatFoodItem.fromFoodEntry(FoodEntry e, {String? amountText}) =>
       ChatFoodItem(
@@ -41,20 +52,29 @@ class ChatFoodItem {
         fat: e.fat,
         grams: e.grams,
         amountText: amountText,
-        isEstimated: e.aiEstimated,
+        estimationSource: e.estimationSource,
+        confidence: e.confidence,
       );
 
-  factory ChatFoodItem.fromJson(Map<String, dynamic> json) => ChatFoodItem(
-        entryId: json['entryId'] as String,
-        name: json['name'] as String,
-        calories: json['calories'] as int,
-        protein: (json['protein'] as num?)?.toDouble(),
-        carbs: (json['carbs'] as num?)?.toDouble(),
-        fat: (json['fat'] as num?)?.toDouble(),
-        grams: (json['grams'] as num?)?.toDouble(),
-        amountText: json['amountText'] as String?,
-        isEstimated: json['isEstimated'] as bool? ?? false,
-      );
+  factory ChatFoodItem.fromJson(Map<String, dynamic> json) {
+    final legacyEstimated = json['isEstimated'] as bool? ?? false;
+    return ChatFoodItem(
+      entryId: json['entryId'] as String,
+      name: json['name'] as String,
+      calories: json['calories'] as int,
+      protein: (json['protein'] as num?)?.toDouble(),
+      carbs: (json['carbs'] as num?)?.toDouble(),
+      fat: (json['fat'] as num?)?.toDouble(),
+      grams: (json['grams'] as num?)?.toDouble(),
+      amountText: json['amountText'] as String?,
+      estimationSource: json['estimationSource'] != null
+          ? EstimationSource.fromJson(json['estimationSource'] as String?)
+          : (legacyEstimated
+              ? EstimationSource.aiPerItem
+              : EstimationSource.db),
+      confidence: (json['confidence'] as num?)?.toDouble(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
         'entryId': entryId,
@@ -65,7 +85,9 @@ class ChatFoodItem {
         'fat': fat,
         'grams': grams,
         'amountText': amountText,
-        'isEstimated': isEstimated,
+        'estimationSource': estimationSource.name,
+        'isEstimated': isEstimated, // keep for backward compat
+        'confidence': confidence,
       };
 
   ChatFoodItem copyWith({
@@ -76,7 +98,8 @@ class ChatFoodItem {
     double? fat,
     double? grams,
     String? amountText,
-    bool? isEstimated,
+    EstimationSource? estimationSource,
+    double? confidence,
   }) =>
       ChatFoodItem(
         entryId: entryId,
@@ -87,7 +110,8 @@ class ChatFoodItem {
         fat: fat ?? this.fat,
         grams: grams ?? this.grams,
         amountText: amountText ?? this.amountText,
-        isEstimated: isEstimated ?? this.isEstimated,
+        estimationSource: estimationSource ?? this.estimationSource,
+        confidence: confidence ?? this.confidence,
       );
 }
 

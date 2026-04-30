@@ -3,8 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
+import '../models/ai_parsed_food.dart';
 import '../models/chat_message.dart';
 import '../models/daily_nutrition_log.dart';
+import '../models/estimation_source.dart';
 import '../models/exercise_entry.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_entry.dart';
@@ -15,8 +17,11 @@ import '../models/nutrition_goals.dart';
 import '../models/tdee_profile.dart';
 import '../services/ai_coach_service.dart';
 import '../services/food_db_service.dart';
+import '../models/personal_food_entry.dart';
+import '../services/personal_food_dictionary.dart';
 import '../services/storage_service.dart';
 import '../utils/exercise_nlp_parser.dart';
+import '../utils/food_match_scorer.dart';
 import '../utils/food_nlp_parser.dart';
 import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
@@ -43,6 +48,25 @@ class NutritionPresenter extends ChangeNotifier {
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
   String? _aiEstimateError;
+
+  // ── Personal food dictionary ──────────────────────────────────────────────
+  late final PersonalFoodDictionary _personalDict;
+
+  // ── Calorie density buckets (keyword fallback for unknown foods) ─────────
+  static const _calorieBuckets = [
+    (kcalPerG: 7.5, keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']),
+    (kcalPerG: 5.5, keywords: ['nut', 'almond', 'peanut', 'cashew', 'pistachio', 'walnut', 'seed', 'buto']),
+    (kcalPerG: 3.5, keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']),
+    (kcalPerG: 4.5, keywords: ['cake', 'cookie', 'biscuit', 'pastry', 'donut', 'chocolate', 'candy', 'chips', 'cracker']),
+    (kcalPerG: 1.3, keywords: ['rice', 'pasta', 'noodle', 'spaghetti', 'bread', 'flour', 'oat', 'cereal', 'kanin', 'bigas']),
+    (kcalPerG: 2.0, keywords: ['beef', 'pork', 'chicken', 'turkey', 'lamb', 'meat', 'manok', 'baboy', 'baka', 'hotdog', 'sausage']),
+    (kcalPerG: 1.4, keywords: ['fish', 'salmon', 'tuna', 'tilapia', 'bangus', 'sardine', 'shrimp', 'crab', 'squid', 'seafood', 'isda', 'hipon']),
+    (kcalPerG: 1.5, keywords: ['egg', 'itlog']),
+    (kcalPerG: 1.5, keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas']),
+    (kcalPerG: 0.35, keywords: ['vegetable', 'salad', 'broccoli', 'spinach', 'cabbage', 'carrot', 'kangkong', 'sitaw', 'gulay', 'ampalaya', 'talong', 'okra']),
+    (kcalPerG: 0.6, keywords: ['fruit', 'apple', 'banana', 'mango', 'orange', 'grape', 'watermelon', 'saging', 'mangga', 'prutas']),
+    (kcalPerG: 0.5, keywords: ['broth', 'sabaw', 'soup']),
+  ];
 
   // ── NLP parser state ─────────────────────────────────────────────────────
   bool _isParsing = false;
@@ -71,6 +95,7 @@ class NutritionPresenter extends ChangeNotifier {
         _storage = storage,
         _foodDb = foodDb,
         _ai = aiCoach {
+    _personalDict = PersonalFoodDictionary(storage);
     loadState();
   }
 
@@ -241,6 +266,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> addFoodEntry(FoodEntry entry, MealSlot slot) async {
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    await _ensureTodayLogFresh();
     _todayLog = _todayLog.addEntry(entry, slot);
     notifyListeners();
     await _storage.saveNutritionLog(_todayLog);
@@ -278,6 +304,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> addMealFromTemplate(FoodTemplate meal, MealSlot slot) async {
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    await _ensureTodayLogFresh();
     final entries = meal.entries
         .map((e) => e.copyWith())
         .map((e) => FoodEntry(
@@ -288,7 +315,7 @@ class NutritionPresenter extends ChangeNotifier {
               carbs: e.carbs,
               fat: e.fat,
               grams: e.grams,
-              aiEstimated: e.aiEstimated,
+              estimationSource: e.estimationSource,
               loggedAt: DateTime.now(),
             ))
         .toList();
@@ -311,12 +338,17 @@ class NutritionPresenter extends ChangeNotifier {
       foodItems: entries.map((e) => ChatFoodItem.fromFoodEntry(e)).toList(),
     );
     _chatMessages.add(chatMsg);
-    await _persistChatMessages();
-
     notifyListeners();
-    await _storage.saveNutritionLog(_todayLog);
+
+    // Persist log + chat together so a crash between them can't desync.
+    await Future.wait([
+      _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
     await _updateLogStreak();
     await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
   }
 
   // ── Actions — goals / TDEE ───────────────────────────────────────────────────
@@ -497,166 +529,90 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   /// Multi-token search + best-match scoring for one parsed item.
-  /// Searches the full name AND individual significant tokens to improve recall
-  /// for variant spellings (e.g. "skimmed milk" → "MILK, SKIM").
-  Future<FoodDbEntry?> _resolveOneDbItem(ParsedFoodItem item) async {
+  /// [altName] is searched in addition to [item.name] (e.g. original NLP name
+  /// before AI normalization). This catches cases where AI renamed "adobo" to
+  /// "braised chicken" — both searches run, best score wins.
+  Future<FoodDbEntry?> _resolveOneDbItem(
+    ParsedFoodItem item, {
+    String? altName,
+  }) async {
+    // Run primary + alt-name searches in parallel. FTS5's multi-token prefix
+    // match already handles per-token coverage, so no extra fallback needed.
+    final results = await Future.wait([
+      _foodDb.search(item.name),
+      if (altName != null && altName.toLowerCase() != item.name.toLowerCase())
+        _foodDb.search(altName),
+    ]);
+
     final allHits = <String, FoodDbEntry>{};
-
-    for (final h in await _foodDb.search(item.name)) {
-      allHits[h.id] = h;
-    }
-
-    // Per-token fallback to surface entries that share only one keyword.
-    final tokens = item.name
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((t) => t.length > 2)
-        .toList();
-    if (tokens.length > 1) {
-      for (final token in tokens) {
-        for (final h in await _foodDb.search(token)) {
-          allHits.putIfAbsent(h.id, () => h);
-        }
+    for (final hits in results) {
+      for (final h in hits) {
+        allHits.putIfAbsent(h.id, () => h);
       }
     }
 
     if (allHits.isEmpty) return null;
-    return _pickBestDbMatch(allHits.values.toList(), item.name);
-  }
-
-  /// Picks the DB entry that best matches [query] from [hits].
-  FoodDbEntry? _pickBestDbMatch(List<FoodDbEntry> hits, String query) {
-    if (hits.isEmpty) return null;
-    if (hits.length == 1) return hits.first;
-
-    final q = query.toLowerCase();
-    final qWords =
-        q.split(RegExp(r'\s+')).where((w) => w.length > 1).toList();
-
-    int bestScore = -999;
-    FoodDbEntry best = hits.first;
-
-    for (final entry in hits) {
-      final score = _dbMatchScore(entry, qWords, q);
-      if (score > bestScore) {
-        bestScore = score;
-        best = entry;
-      }
-    }
-    return best;
-  }
-
-  // Words that transform a base food into a distinct processed product.
-  // If these appear in a DB entry but NOT in the user's query, the entry is
-  // penalised — prevents "potato chips" winning over "potatoes, raw" for the
-  // bare query "potato".
-  static const _transformingWords = {
-    'chips', 'crisps', 'puffs', 'crackers', 'cracker',
-    'fried', 'battered', 'breaded', 'coated', 'deep-fried',
-    'sauce', 'gravy', 'soup', 'stew', 'casserole', 'curry',
-    'candy', 'candied', 'caramel',
-    'pie', 'cake', 'tart', 'pudding',
-    'instant', 'processed', 'imitation',
-  };
-
-  int _dbMatchScore(FoodDbEntry entry, List<String> qWords, String fullQuery) {
-    final eName = entry.name.toLowerCase();
-
-    if (eName == fullQuery) return 1000;
-
-    // Split entry name on commas, spaces, hyphens for word-level matching.
-    final eWords = eName
-        .split(RegExp(r'[,\s\-]+'))
-        .where((w) => w.length > 1)
-        .toList();
-
-    int score = 0;
-    for (final qw in qWords) {
-      if (eName.contains(qw)) {
-        score += 3; // direct substring hit
-      } else if (eWords.any((ew) => qw.startsWith(ew) && ew.length >= 3)) {
-        // Handles inflections: "skim" in DB matches "skimmed" in query.
-        score += 1;
-      }
-    }
-
-    // Penalise transforming/processing words in the DB entry that the user
-    // did not mention. Each unmentioned transforming word deducts 5 points,
-    // ensuring e.g. "potato chips" loses to "potatoes, raw" for query "potato"
-    // while "fried chicken" still wins for query "fried chicken".
-    for (final ew in eWords) {
-      if (_transformingWords.contains(ew) &&
-          !qWords.any((qw) => qw == ew || qw.contains(ew) || ew.contains(qw))) {
-        score -= 5;
-      }
-    }
-
-    // Penalise very verbose USDA-style names (prefer shorter, cleaner entries).
-    score -= entry.name.split(' ').length ~/ 4;
-
-    return score;
+    return FoodMatchScorer.pickBest(allHits.values.toList(), item.name);
   }
 
   FoodEntry _buildEntry(ParsedFoodItem parsed, FoodDbEntry? dbEntry) {
     if (dbEntry != null) {
-      return dbEntry.toFoodEntry(parsed.grams);
+      final base = dbEntry.toFoodEntry(parsed.grams);
+      if (FoodMatchScorer.isLearnableMatch(dbEntry, parsed.name)) {
+        return base; // confident match, no review needed
+      }
+      // Weak DB match (e.g. "egg noodles" → "Scrambled Eggs with Noodles").
+      // Keep the macros but flag for user review so they can edit if wrong.
+      return base.copyWith(confidence: 0.5);
     }
-    // No DB match — estimate calories by weight using a keyword-density table.
     return FoodEntry(
       id: FoodEntry.generateId(),
       name: parsed.name,
       calories: _estimateCalories(parsed.name, parsed.grams),
       grams: parsed.grams,
-      aiEstimated: true,
+      estimationSource: EstimationSource.keywordDensity,
+      confidence: 0.3,
       loggedAt: DateTime.now(),
     );
   }
 
-  /// Estimates calories from [grams] using a keyword-based calorie-density
-  /// lookup. Returns a rough but non-zero value when no DB entry is found.
-  int _estimateCalories(String name, double grams) {
-    final n = name.toLowerCase();
-    final double kcalPerGram;
-    if (_containsAny(n, ['oil', 'butter', 'ghee', 'lard', 'margarine'])) {
-      kcalPerGram = 7.5;
-    } else if (_containsAny(
-        n, ['nut', 'almond', 'peanut', 'cashew', 'pistachio', 'walnut', 'seed', 'buto'])) {
-      kcalPerGram = 5.5;
-    } else if (_containsAny(n, ['sugar', 'syrup', 'honey', 'jam', 'jelly'])) {
-      kcalPerGram = 3.5;
-    } else if (_containsAny(
-        n, ['cake', 'cookie', 'biscuit', 'pastry', 'donut', 'chocolate', 'candy', 'chips', 'cracker'])) {
-      kcalPerGram = 4.5;
-    } else if (_containsAny(
-        n, ['rice', 'pasta', 'noodle', 'spaghetti', 'bread', 'flour', 'oat', 'cereal', 'kanin', 'bigas', 'pancit'])) {
-      kcalPerGram = 1.3;
-    } else if (_containsAny(
-        n, ['beef', 'pork', 'chicken', 'turkey', 'lamb', 'meat', 'manok', 'baboy', 'baka', 'longganisa', 'hotdog', 'sausage', 'tocino', 'tapa', 'liempo'])) {
-      kcalPerGram = 2.0;
-    } else if (_containsAny(
-        n, ['fish', 'salmon', 'tuna', 'tilapia', 'bangus', 'sardine', 'shrimp', 'crab', 'squid', 'seafood', 'isda', 'hipon'])) {
-      kcalPerGram = 1.4;
-    } else if (_containsAny(n, ['egg', 'itlog'])) {
-      kcalPerGram = 1.5;
-    } else if (_containsAny(n, ['milk', 'cheese', 'yogurt', 'cream', 'gatas'])) {
-      kcalPerGram = 1.5;
-    } else if (_containsAny(
-        n, ['vegetable', 'salad', 'broccoli', 'spinach', 'cabbage', 'carrot', 'kangkong', 'sitaw', 'gulay', 'ampalaya', 'talong', 'okra'])) {
-      kcalPerGram = 0.35;
-    } else if (_containsAny(
-        n, ['fruit', 'apple', 'banana', 'mango', 'orange', 'grape', 'watermelon', 'saging', 'mangga', 'prutas'])) {
-      kcalPerGram = 0.6;
-    } else if (_containsAny(
-        n, ['soup', 'broth', 'sabaw', 'sinigang', 'nilaga', 'tinola', 'adobo', 'kare'])) {
-      kcalPerGram = 0.5;
-    } else {
-      kcalPerGram = 1.5; // generic mixed-dish default
-    }
-    return (grams * kcalPerGram).round().clamp(1, 9999);
+  FoodEntry _buildEntryFromDict(
+    ParsedFoodItem parsed,
+    PersonalFoodEntry dict,
+  ) {
+    final factor = parsed.grams / 100;
+    return FoodEntry(
+      id: FoodEntry.generateId(),
+      name: parsed.name,
+      calories: (dict.kcalPer100g * factor).round().clamp(1, 9999),
+      protein: dict.proteinPer100g != null
+          ? dict.proteinPer100g! * factor
+          : null,
+      carbs:
+          dict.carbsPer100g != null ? dict.carbsPer100g! * factor : null,
+      fat: dict.fatPer100g != null ? dict.fatPer100g! * factor : null,
+      grams: parsed.grams,
+      estimationSource: EstimationSource.personalDict,
+      loggedAt: DateTime.now(),
+    );
   }
 
-  bool _containsAny(String text, List<String> keywords) =>
-      keywords.any(text.contains);
+  /// Last-resort calorie estimate from keyword density buckets.
+  /// Matches keywords as whole words to avoid "eggplant" → egg or
+  /// "milkshake" → milk false positives.
+  int _estimateCalories(String name, double grams) {
+    final tokens = name
+        .toLowerCase()
+        .split(RegExp(r'[^a-z0-9ñ]+'))
+        .where((t) => t.isNotEmpty)
+        .toSet();
+    for (final bucket in _calorieBuckets) {
+      if (bucket.keywords.any(tokens.contains)) {
+        return (grams * bucket.kcalPerG).round().clamp(1, 9999);
+      }
+    }
+    return (grams * 1.5).round().clamp(1, 9999);
+  }
 
   Future<void> downloadAiModel() async {
     if (isAiDownloading) return;
@@ -681,10 +637,20 @@ class NutritionPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Maximum chat input length. Above this we reject — long pastes can blow
+  /// up AI prompt budgets and stall parsing for tens of seconds.
+  static const int _maxChatInputLength = 500;
+
   /// Parse [text] as food or exercise, add to the chat feed, and persist.
   Future<void> parseChat(String text) async {
     final trimmed = text.trim();
     if (trimmed.isEmpty || _isChatParsing) return;
+    if (trimmed.length > _maxChatInputLength) {
+      _chatParseError =
+          'Input too long ($_maxChatInputLength char limit). Split into smaller messages.';
+      notifyListeners();
+      return;
+    }
     _isChatParsing = true;
     _chatParseError = null;
     notifyListeners();
@@ -705,124 +671,180 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> _parseChatAsFood(String text) async {
-    // Step 1: NLP parse — splitting into fragments + quantity extraction.
-    // Always used as fallback if AI normalization fails or is unavailable.
+    // Step 1: NLP parse — always the source of truth for grams when exact.
     final nlpResult = FoodNlpParser.parse(text);
     if (nlpResult.isEmpty) {
       _chatParseError = 'Could not identify any food items.';
       return;
     }
 
-    // Step 2: AI name + grams normalization (best-effort).
-    // Qwen3 normalizes food names to USDA-friendly form and converts
-    // volume units using food-specific density (e.g. "3 cups rice" → 555g).
-    // Indexed JSON ensures any ordering mismatch is caught and rejected.
-    var items = nlpResult.items;
-    if (_ai.isAvailable) {
-      try {
-        final fragments = nlpResult.items.map((i) => i.rawText).toList();
-        final aiParsed = await _ai
-            .normalizeFoodInput(fragments)
-            .timeout(const Duration(seconds: 15));
-        if (aiParsed != null && aiParsed.length == fragments.length) {
-          items = List.generate(nlpResult.items.length, (i) {
-            final ai = aiParsed[i];
+    // Step 2 (parallel): kick off AI normalize AND speculative DB lookups
+    // using the raw NLP names. The AI normalize is only useful when DB misses
+    // on the raw name (it refines the name for retry) or when NLP grams are
+    // estimated (it refines grams). For the common case where DB hits on raw
+    // input, AI normalize is wasted but no longer blocking.
+    final aiNormalizeFuture = _ai.isAvailable
+        ? _ai
+            .normalizeFoodInput(
+                nlpResult.items.map((i) => i.rawText).toList())
+            .timeout(const Duration(seconds: 15))
+            .catchError((Object e) {
+            debugPrint('NutritionPresenter: AI normalize failed: $e');
+            return null;
+          })
+        : Future<List<AiParsedFood>?>.value(null);
+
+    final speculativeDbFuture = Future.wait(
+        nlpResult.items.map((i) => _resolveOneDbItem(i)));
+
+    final results = await Future.wait([aiNormalizeFuture, speculativeDbFuture]);
+    final aiNormalized = results[0] as List<AiParsedFood>?;
+    final speculativeDb = results[1] as List<FoodDbEntry?>;
+
+    // Merge AI normalize back in (preserving the same name/grams policy as
+    // before): adopt AI name only if it's a reasonable normalization, and
+    // adopt AI grams only when NLP couldn't determine an exact value.
+    final items = (aiNormalized != null &&
+            aiNormalized.length == nlpResult.items.length)
+        ? List.generate(nlpResult.items.length, (i) {
+            final ai = aiNormalized[i];
+            final nlp = nlpResult.items[i];
+            final keepName =
+                FoodMatchScorer.isReasonableNormalization(nlp.name, ai.name)
+                    ? ai.name
+                    : nlp.name;
+            final keepGrams = nlp.isEstimated ? ai.grams : nlp.grams;
             return ParsedFoodItem(
-              rawText: nlpResult.items[i].rawText,
-              name: ai.name,
-              grams: ai.grams,
-              isEstimated: false,
+              rawText: nlp.rawText,
+              name: keepName,
+              grams: keepGrams,
+              isEstimated: nlp.isEstimated,
             );
-          });
+          })
+        : nlpResult.items;
+
+    // Step 3: Personal dictionary — highest priority for user-confirmed foods.
+    final entries = List<FoodEntry?>.filled(items.length, null);
+    for (var i = 0; i < items.length; i++) {
+      final dictHit = _personalDict.lookup(items[i].name);
+      if (dictHit == null) {
+        // Also try the original NLP name in case normalization changed it.
+        final nlpHit = _personalDict.lookup(nlpResult.items[i].name);
+        if (nlpHit != null) {
+          entries[i] = _buildEntryFromDict(items[i], nlpHit);
         }
-      } catch (e) {
-        debugPrint(
-            'NutritionPresenter: AI normalization failed, using NLP: $e');
+      } else {
+        entries[i] = _buildEntryFromDict(items[i], dictHit);
       }
     }
 
-    // Step 3: DB lookup using normalized (or NLP) names.
-    final dbMatches = await Future.wait(items.map(_resolveOneDbItem));
+    // Step 4: DB resolution. If the speculative DB lookup (using NLP name)
+    // already hit, use it. Otherwise, retry with the AI-normalized name when
+    // it differs from NLP. Learn each DB hit into the personal dict so the
+    // next parse of the same food goes O(1).
+    final dbRetries = <Future<void>>[];
+    for (var i = 0; i < items.length; i++) {
+      if (entries[i] != null) continue;
 
-    // Step 4: For unresolved items only, ask AI for macro estimates.
-    // Passing only the unresolved names (not the full original input) keeps
-    // the estimation focused and reduces misassignment risk.
-    AiMealEstimate? aiEstimate;
-    final unresolvedNames = [
-      for (var i = 0; i < items.length; i++)
-        if (dbMatches[i] == null) items[i].name,
+      final nameSameAsNlp =
+          items[i].name.toLowerCase() == nlpResult.items[i].name.toLowerCase();
+
+      if (nameSameAsNlp && speculativeDb[i] != null) {
+        entries[i] = _buildEntry(items[i], speculativeDb[i]);
+        // ignore: unawaited_futures
+        _learnFromEntry(items[i].name, entries[i]!);
+        continue;
+      }
+
+      // Either the name was AI-normalized OR the speculative lookup missed.
+      // Retry with both names so scoring picks the best.
+      final idx = i;
+      dbRetries.add(() async {
+        final altName = nlpResult.items[idx].name != items[idx].name
+            ? nlpResult.items[idx].name
+            : null;
+        final dbEntry =
+            await _resolveOneDbItem(items[idx], altName: altName);
+        if (dbEntry != null) {
+          entries[idx] = _buildEntry(items[idx], dbEntry);
+          await _learnFromEntry(items[idx].name, entries[idx]!);
+        }
+      }());
+    }
+    await Future.wait(dbRetries);
+
+    // Step 5: AI per-item macro estimate for still-unresolved items.
+    final unresolvedIndices = [
+      for (var i = 0; i < items.length; i++) if (entries[i] == null) i,
     ];
-    if (unresolvedNames.isNotEmpty && _ai.isAvailable) {
+    if (unresolvedIndices.isNotEmpty && _ai.isAvailable) {
       try {
-        aiEstimate = await _ai
-            .estimateMacros(unresolvedNames.join(', '))
-            .timeout(const Duration(seconds: 20));
+        final aiInputs = unresolvedIndices
+            .map((i) =>
+                AiParsedFood(name: items[i].name, grams: items[i].grams))
+            .toList();
+        final aiResults = await _ai
+            .estimateMacrosForItems(aiInputs)
+            .timeout(const Duration(seconds: 25));
+        if (aiResults != null && aiResults.length == aiInputs.length) {
+          for (var j = 0; j < unresolvedIndices.length; j++) {
+            final i = unresolvedIndices[j];
+            entries[i] = _aiItemToFoodEntry(aiResults[j], items[i]);
+          }
+        }
       } catch (e) {
         debugPrint('NutritionPresenter: AI macro estimate failed: $e');
       }
     }
 
-    // Step 5: Build and log each food entry.
-    final foodItems = <ChatFoodItem>[];
+    // Step 6: Keyword density fallback (last resort).
     for (var i = 0; i < items.length; i++) {
-      final parsed = items[i];
-      final dbEntry = dbMatches[i];
-      final FoodEntry entry;
-      if (dbEntry != null) {
-        entry = _buildEntry(parsed, dbEntry);
-      } else {
-        final aiItem =
-            aiEstimate != null ? _findAiItem(aiEstimate, parsed.name) : null;
-        entry = aiItem != null
-            ? _aiItemToFoodEntry(aiItem, parsed)
-            : _buildEntry(parsed, null);
-      }
-      await addFoodEntry(entry, MealSlot.meal);
-      foodItems
-          .add(ChatFoodItem.fromFoodEntry(entry, amountText: parsed.rawText));
+      entries[i] ??= _buildEntry(items[i], null);
     }
+
+    // IF-Sync gate: same rule as addFoodEntry — drop the message if the user
+    // is fasting and ifSync is enabled.
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+
+    // If the parse spanned a midnight boundary, _todayLog may still be keyed
+    // for yesterday. Refresh before mutating so entries land on the right day.
+    await _ensureTodayLogFresh();
+
+    // Apply all entries to today's log in a single mutation, save once, and
+    // run goal checks once. Avoids N redundant storage saves and
+    // notifyListeners() calls when logging multiple items at once.
+    final resolvedEntries = [for (final e in entries) e!];
+    _todayLog = _todayLog.addEntries(resolvedEntries, MealSlot.meal);
 
     final msg = ChatMessage(
       id: ChatMessage.generateId(),
       rawText: text,
       timestamp: DateTime.now(),
       kind: ChatMessageKind.food,
-      foodItems: foodItems,
+      foodItems: [
+        for (var i = 0; i < items.length; i++)
+          ChatFoodItem.fromFoodEntry(resolvedEntries[i],
+              amountText: items[i].rawText),
+      ],
       mealSlot: MealSlot.meal,
     );
     _chatMessages.add(msg);
-    await _persistChatMessages();
+    notifyListeners();
+
+    // Persist log + chat together so a crash between them can't desync.
+    await Future.wait([
+      _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
+    await _updateLogStreak();
+    await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
   }
 
-  /// Finds the AI item whose name best overlaps with [itemName].
-  /// Requires a minimum match score to avoid spurious assignments.
-  AiItemEstimate? _findAiItem(AiMealEstimate estimate, String itemName) {
-    if (estimate.items.isEmpty) return null;
-    final query = itemName.toLowerCase();
-    final qWords =
-        query.split(RegExp(r'\s+')).where((w) => w.length > 2).toList();
-
-    AiItemEstimate? best;
-    int bestScore = 1; // require at least 1 point
-
-    for (final ai in estimate.items) {
-      final aName = ai.name.toLowerCase();
-      int score = 0;
-      if (aName.contains(query) || query.contains(aName)) score += 5;
-      for (final w in qWords) {
-        if (aName.contains(w)) score += 2;
-      }
-      if (score > bestScore) {
-        bestScore = score;
-        best = ai;
-      }
-    }
-    // Fallback: if nothing matched but only one AI item, use it.
-    if (best == null && estimate.items.length == 1) return estimate.items.first;
-    return best;
-  }
-
-  /// Builds a [FoodEntry] from an AI estimate, preserving the NLP-parsed [grams].
+  /// Builds a [FoodEntry] from an [AiItemEstimate] returned by
+  /// [estimateMacrosForItems]. Calories are already computed for the exact
+  /// gram weight (the prompt included grams), so no scaling is needed.
   FoodEntry _aiItemToFoodEntry(AiItemEstimate ai, ParsedFoodItem parsed) =>
       FoodEntry(
         id: FoodEntry.generateId(),
@@ -832,7 +854,8 @@ class NutritionPresenter extends ChangeNotifier {
         carbs: ai.carbs,
         fat: ai.fat,
         grams: parsed.grams,
-        aiEstimated: true,
+        estimationSource: EstimationSource.aiPerItem,
+        confidence: ai.confidence,
         loggedAt: DateTime.now(),
       );
 
@@ -866,66 +889,121 @@ class NutritionPresenter extends ChangeNotifier {
 
   /// Remove a chat message. Food items are also removed from [_todayLog].
   Future<void> removeChatMessage(String messageId) async {
+    if (_isChatParsing) return; // avoid racing with an in-flight parse
     final msg = _chatMessages.cast<ChatMessage?>().firstWhere(
           (m) => m!.id == messageId,
           orElse: () => null,
         );
     if (msg == null) return;
+
+    // Remove all food entries from today's log in a single mutation, save
+    // once. Avoids N storage writes for an N-item meal.
     if (msg.kind == ChatMessageKind.food) {
       for (final item in msg.foodItems) {
-        await removeFoodEntry(item.entryId, msg.mealSlot);
+        _todayLog = _todayLog.removeEntry(item.entryId, msg.mealSlot);
       }
     }
     _chatMessages.removeWhere((m) => m.id == messageId);
     notifyListeners();
-    await _persistChatMessages();
+
+    await Future.wait([
+      if (msg.kind == ChatMessageKind.food)
+        _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
   }
 
   /// Re-parse [newText] for item at [itemIndex] in [messageId], update in-place.
+  /// If [newText] parses to multiple items, the single item is replaced by all of them.
   Future<void> editChatFoodItem(
       String messageId, int itemIndex, String newText) async {
+    if (_isChatParsing) return; // avoid racing with an in-flight parse
     final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
     if (msgIdx == -1) return;
     final msg = _chatMessages[msgIdx];
     if (itemIndex >= msg.foodItems.length) return;
     final oldItem = msg.foodItems[itemIndex];
+    final trimmed = newText.trim();
 
     // Remove old food entry from today's log.
     await removeFoodEntry(oldItem.entryId, msg.mealSlot);
 
-    // Re-parse and look up in DB.
-    final result = FoodNlpParser.parse(newText.trim());
-    final FoodEntry newEntry;
+    // Re-parse and look up in DB. Multi-item parse replaces the single slot.
+    final result = FoodNlpParser.parse(trimmed);
+    final List<FoodEntry> newEntries;
+    final List<FoodDbEntry?> dbMatches;
     if (result.isNotEmpty) {
-      final dbMatches = await _resolveDbMatches(result);
-      newEntry = _buildEntry(result.items.first, dbMatches.first);
+      dbMatches = await _resolveDbMatches(result);
+      newEntries = [
+        for (var i = 0; i < result.items.length; i++)
+          _buildEntry(result.items[i], dbMatches[i]),
+      ];
+      // Teach the personal dict from each DB-resolved item.
+      for (var i = 0; i < newEntries.length; i++) {
+        if (dbMatches[i] != null) {
+          await _learnFromEntry(result.items[i].name, newEntries[i]);
+        }
+      }
     } else {
-      newEntry = FoodEntry(
-        id: FoodEntry.generateId(),
-        name: newText.trim(),
-        calories: oldItem.calories,
-        protein: oldItem.protein,
-        carbs: oldItem.carbs,
-        fat: oldItem.fat,
-        grams: oldItem.grams,
-        aiEstimated: true,
-        loggedAt: DateTime.now(),
-      );
+      // NLP couldn't parse — keep oldItem's macros as a placeholder under the
+      // new name. Do NOT learn this into the dict: the macros aren't
+      // user-confirmed knowledge about the new food, just inherited from old.
+      dbMatches = const [null];
+      newEntries = [
+        FoodEntry(
+          id: FoodEntry.generateId(),
+          name: trimmed,
+          calories: oldItem.calories,
+          protein: oldItem.protein,
+          carbs: oldItem.carbs,
+          fat: oldItem.fat,
+          grams: oldItem.grams,
+          estimationSource: EstimationSource.userManual,
+          loggedAt: DateTime.now(),
+        ),
+      ];
     }
-    await addFoodEntry(newEntry, msg.mealSlot);
+
+    for (final e in newEntries) {
+      await addFoodEntry(e, msg.mealSlot);
+    }
 
     final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
-    updatedItems[itemIndex] =
-        ChatFoodItem.fromFoodEntry(newEntry, amountText: newText.trim());
+    final replacementItems = [
+      for (var i = 0; i < newEntries.length; i++)
+        ChatFoodItem.fromFoodEntry(
+          newEntries[i],
+          amountText: result.isNotEmpty ? result.items[i].rawText : trimmed,
+        ),
+    ];
+    updatedItems.replaceRange(itemIndex, itemIndex + 1, replacementItems);
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
     notifyListeners();
     await _persistChatMessages();
+  }
+
+  /// Persist a confirmed name → per-100g mapping to the personal dictionary.
+  /// Skips entries that are not confident enough to cache:
+  ///   • missing/zero grams (can't compute per-100g)
+  ///   • low confidence (`< 0.6`) — weak DB matches and AI estimates set this,
+  ///     so the dict only ever caches reliable mappings.
+  Future<void> _learnFromEntry(String name, FoodEntry e) async {
+    if (e.grams == null || e.grams! <= 0) return;
+    if ((e.confidence ?? 1.0) < 0.6) return;
+    await _personalDict.upsert(
+      name: name,
+      kcalPer100g: e.calories * 100 / e.grams!,
+      proteinPer100g: e.protein != null ? e.protein! * 100 / e.grams! : null,
+      carbsPer100g: e.carbs != null ? e.carbs! * 100 / e.grams! : null,
+      fatPer100g: e.fat != null ? e.fat! * 100 / e.grams! : null,
+    );
   }
 
   /// Batch-edit all food items in a message at once.
   /// [newTexts] must match [message.foodItems] by index.
   Future<void> editAllChatFoodItems(
       String messageId, List<String> newTexts) async {
+    if (_isChatParsing) return; // avoid racing with parseChat or another edit
     final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
     if (msgIdx == -1) return;
     final msg = _chatMessages[msgIdx];
@@ -945,6 +1023,9 @@ class NutritionPresenter extends ChangeNotifier {
       if (result.isNotEmpty) {
         final dbMatches = await _resolveDbMatches(result);
         newEntry = _buildEntry(result.items.first, dbMatches.first);
+        if (dbMatches.first != null) {
+          await _learnFromEntry(result.items.first.name, newEntry);
+        }
       } else {
         newEntry = FoodEntry(
           id: FoodEntry.generateId(),
@@ -954,9 +1035,10 @@ class NutritionPresenter extends ChangeNotifier {
           carbs: oldItem.carbs,
           fat: oldItem.fat,
           grams: oldItem.grams,
-          aiEstimated: true,
+          estimationSource: EstimationSource.userManual,
           loggedAt: DateTime.now(),
         );
+        // Same rationale as editChatFoodItem: don't learn placeholder macros.
       }
       _todayLog = _todayLog.addEntry(newEntry, msg.mealSlot);
       updatedItems.add(
@@ -978,23 +1060,46 @@ class NutritionPresenter extends ChangeNotifier {
     await _storage.saveChatMessages(dateKey, _chatMessages);
   }
 
+  /// Before any log-mutating action, check if the calendar day has rolled
+  /// over since [_todayLog] was loaded. If the user was logging toward what
+  /// they thought was "today" (i.e. [_selectedDate] matches [_todayLog.date]),
+  /// advance to the actual current day so new entries land where the user
+  /// will look for them. If the user explicitly selected a past date,
+  /// preserve that view.
+  Future<void> _ensureTodayLogFresh() async {
+    final now = DateTime.now();
+    final today = _dateFmt.format(now);
+    if (_todayLog.date == today) return;
+    final loggingTowardToday =
+        _todayLog.date == _dateFmt.format(_selectedDate);
+    if (!loggingTowardToday) return; // user is intentionally on a past day
+    _todayLog = await _storage.loadNutritionLogForDate(today);
+    _selectedDate = now;
+    final raw = await _storage.loadChatMessagesRaw(today);
+    _chatMessages = raw.map(ChatMessage.fromJson).toList();
+  }
+
   // ── Load state ───────────────────────────────────────────────────────────────
 
   Future<void> loadState() async {
-    _todayLog = await _storage.loadTodayNutritionLog();
-    _goals = await _storage.loadNutritionGoals();
-    _history = await _storage.loadNutritionHistory();
-    _tdeeProfile = await _storage.loadTdeeProfile();
-    _library = await _storage.loadFoodLibrary();
-    _goalStreak = await _storage.loadNutritionStreak();
-    _goalMetDate = await _storage.loadNutritionGoalMetDate();
-    _logStreak = await _storage.loadLogStreak();
-    _logStreakDate = await _storage.loadLogStreakDate();
+    await Future.wait([
+      _storage.loadTodayNutritionLog().then((v) => _todayLog = v),
+      _storage.loadNutritionGoals().then((v) => _goals = v),
+      _storage.loadNutritionHistory().then((v) => _history = v),
+      _storage.loadTdeeProfile().then((v) => _tdeeProfile = v),
+      _storage.loadFoodLibrary().then((v) => _library = v),
+      _storage.loadNutritionStreak().then((v) => _goalStreak = v),
+      _storage.loadNutritionGoalMetDate().then((v) => _goalMetDate = v),
+      _storage.loadLogStreak().then((v) => _logStreak = v),
+      _storage.loadLogStreakDate().then((v) => _logStreakDate = v),
+      _personalDict.init(),
+    ]);
     final todayKey = _dateFmt.format(DateTime.now());
     final rawChat = await _storage.loadChatMessagesRaw(todayKey);
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
     notifyListeners();
   }
+
 
   // ── Internal RPG hooks ────────────────────────────────────────────────────────
 

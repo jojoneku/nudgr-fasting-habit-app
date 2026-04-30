@@ -61,7 +61,13 @@ class FoodDbService {
     if (_db == null || query.trim().isEmpty) return [];
 
     if (_fts5Available) {
-      final q = '${query.trim().replaceAll('"', '""')}*';
+      // Prefix-match every token so "chick adobo" matches "chicken adobo".
+      final q = query
+          .trim()
+          .split(RegExp(r'\s+'))
+          .where((t) => t.isNotEmpty)
+          .map((t) => '${t.replaceAll('"', '""')}*')
+          .join(' ');
       try {
         final rows = await _db!.rawQuery(
           'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '

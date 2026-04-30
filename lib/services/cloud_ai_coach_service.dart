@@ -98,6 +98,11 @@ class CloudAiCoachService implements AiCoachService {
   Future<AiMealEstimate?> estimateMacros(String description) async => null;
 
   @override
+  Future<List<AiItemEstimate>?> estimateMacrosForItems(
+          List<AiParsedFood> items) async =>
+      null;
+
+  @override
   Future<List<AiParsedFood>?> normalizeFoodInput(
           List<String> fragments) async =>
       null;

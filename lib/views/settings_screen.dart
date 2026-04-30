@@ -2,17 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/sync_presenter.dart';
 import '../app_colors.dart';
 import 'auth/login_view.dart';
 
 class SettingsScreen extends StatelessWidget {
   final FastingPresenter fastingPresenter;
   final AuthPresenter authPresenter;
+  final SyncPresenter? syncPresenter;
 
   const SettingsScreen({
     super.key,
     required this.fastingPresenter,
     required this.authPresenter,
+    this.syncPresenter,
   });
 
   @override
@@ -25,7 +28,7 @@ class SettingsScreen extends StatelessWidget {
         listenable: authPresenter,
         builder: (context, _) => ListView(
           children: [
-            _CloudSyncSection(authPresenter: authPresenter),
+            _CloudSyncSection(authPresenter: authPresenter, syncPresenter: syncPresenter),
             const Divider(),
           ListTile(
             leading: const Icon(Icons.science, color: AppColors.primary),
@@ -229,13 +232,14 @@ class SettingsScreen extends StatelessWidget {
 
 class _CloudSyncSection extends StatelessWidget {
   final AuthPresenter authPresenter;
+  final SyncPresenter? syncPresenter;
 
-  const _CloudSyncSection({required this.authPresenter});
+  const _CloudSyncSection({required this.authPresenter, this.syncPresenter});
 
   @override
   Widget build(BuildContext context) {
     if (authPresenter.isSignedIn) {
-      return _SignedInTile(authPresenter: authPresenter);
+      return _SignedInTile(authPresenter: authPresenter, syncPresenter: syncPresenter);
     }
     return _SignInTile(authPresenter: authPresenter);
   }
@@ -261,8 +265,9 @@ class _SignInTile extends StatelessWidget {
 
 class _SignedInTile extends StatelessWidget {
   final AuthPresenter authPresenter;
+  final SyncPresenter? syncPresenter;
 
-  const _SignedInTile({required this.authPresenter});
+  const _SignedInTile({required this.authPresenter, this.syncPresenter});
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +294,29 @@ class _SignedInTile extends StatelessWidget {
           trailing: const Icon(Icons.check_circle,
               color: AppColors.success, size: 16),
         ),
+        if (syncPresenter != null)
+          ListenableBuilder(
+            listenable: syncPresenter!,
+            builder: (context, _) => ListTile(
+              leading: syncPresenter!.isSyncing
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync, color: AppColors.primary, size: 20),
+              title: Text(
+                syncPresenter!.statusLabel,
+                style: const TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13),
+              ),
+              trailing: TextButton(
+                onPressed:
+                    syncPresenter!.isSyncing ? null : syncPresenter!.forceSync,
+                child: const Text('Sync Now'),
+              ),
+            ),
+          ),
         ListTile(
           leading: const Icon(Icons.logout, color: AppColors.danger),
           title: const Text('Sign Out',

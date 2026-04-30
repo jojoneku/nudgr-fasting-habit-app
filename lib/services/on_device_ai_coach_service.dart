@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,13 @@ class OnDeviceAiCoachService implements AiCoachService {
   bool _isDownloading = false;
   int _downloadProgress = 0;
   bool _deviceIncompatible = false;
+
+  // ── LRU caches (in-memory only, reset on app restart) ─────────────────────
+  static const _cacheSize = 50;
+  final LinkedHashMap<String, List<AiParsedFood>?> _normalizeCache =
+      LinkedHashMap();
+  final LinkedHashMap<String, List<AiItemEstimate>?> _macroForItemsCache =
+      LinkedHashMap();
 
   @override
   AiCoachTier get tier => AiCoachTier.onDevice;
@@ -111,6 +119,22 @@ class OnDeviceAiCoachService implements AiCoachService {
   @override
   void dispose() {
     _model = null;
+  }
+
+  // ── Cache helpers ─────────────────────────────────────────────────────────
+
+  V? _cacheGet<K, V>(LinkedHashMap<K, V> cache, K key) {
+    final v = cache.remove(key);
+    if (v != null) cache[key] = v;
+    return v;
+  }
+
+  void _cachePut<K, V>(LinkedHashMap<K, V> cache, K key, V value) {
+    cache.remove(key);
+    cache[key] = value;
+    while (cache.length > _cacheSize) {
+      cache.remove(cache.keys.first);
+    }
   }
 
   // ── Respond ───────────────────────────────────────────────────────────────
@@ -467,6 +491,10 @@ class OnDeviceAiCoachService implements AiCoachService {
     final model = _model;
     if (model == null || fragments.isEmpty) return null;
 
+    final cacheKey = jsonEncode(fragments);
+    final cached = _cacheGet(_normalizeCache, cacheKey);
+    if (cached != null) return cached;
+
     final chat = await model.createChat(
       temperature: 0.1,
       topK: 1,
@@ -475,7 +503,6 @@ class OnDeviceAiCoachService implements AiCoachService {
     );
 
     try {
-      // Indexed input so we can detect ordering/alignment issues in the output.
       final inputJson = jsonEncode([
         for (var i = 0; i < fragments.length; i++) {'i': i, 't': fragments[i]},
       ]);
@@ -490,7 +517,9 @@ class OnDeviceAiCoachService implements AiCoachService {
       final text =
           response is TextResponse ? response.token : response.toString();
 
-      return _parseNormalizeResponse(text, fragments.length);
+      final result = _parseNormalizeResponse(text, fragments.length);
+      if (result != null) _cachePut(_normalizeCache, cacheKey, result);
+      return result;
     } catch (e) {
       debugPrint('OnDeviceAiCoachService.normalizeFoodInput failed: $e');
       return null;
@@ -534,26 +563,119 @@ class OnDeviceAiCoachService implements AiCoachService {
     return items.cast<AiParsedFood>();
   }
 
+  // ── Estimate macros per item ──────────────────────────────────────────────
+
+  @override
+  Future<List<AiItemEstimate>?> estimateMacrosForItems(
+      List<AiParsedFood> items) async {
+    final model = _model;
+    if (model == null || items.isEmpty) return null;
+
+    final cacheKey = jsonEncode(
+        items.map((i) => {'n': i.name, 'g': i.grams}).toList());
+    final cached = _cacheGet(_macroForItemsCache, cacheKey);
+    if (cached != null) return cached;
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      final inputJson = jsonEncode([
+        for (var i = 0; i < items.length; i++)
+          {'i': i, 'n': items[i].name, 'g': items[i].grams.round()},
+      ]);
+      await chat.addQuery(
+        Message(text: '$_itemMacrosPrompt$inputJson', isUser: true),
+      );
+
+      final response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 25));
+
+      final text =
+          response is TextResponse ? response.token : response.toString();
+
+      final result = _parseItemMacrosResponse(text, items.length);
+      if (result != null) _cachePut(_macroForItemsCache, cacheKey, result);
+      return result;
+    } catch (e) {
+      debugPrint('OnDeviceAiCoachService.estimateMacrosForItems failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  List<AiItemEstimate>? _parseItemMacrosResponse(
+      String text, int expectedCount) {
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(text);
+    if (match == null) return null;
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(match.group(0)!);
+    } catch (_) {
+      return null;
+    }
+
+    final rawItems = decoded as List<dynamic>;
+    if (rawItems.length != expectedCount) return null;
+
+    final results = List<AiItemEstimate?>.filled(expectedCount, null);
+    for (final raw in rawItems) {
+      final map = raw as Map<String, dynamic>;
+      final idx = (map['i'] as num?)?.toInt();
+      if (idx == null || idx < 0 || idx >= expectedCount) return null;
+      final calories = (map['calories'] as num?)?.toInt() ?? 0;
+      if (calories <= 0) return null;
+      results[idx] = AiItemEstimate(
+        name: (map['name'] as String?) ?? '',
+        calories: calories,
+        protein: (map['protein'] as num?)?.toDouble(),
+        carbs: (map['carbs'] as num?)?.toDouble(),
+        fat: (map['fat'] as num?)?.toDouble(),
+        confidence: (map['confidence'] as num?)?.toDouble() ?? 0.7,
+      );
+    }
+
+    if (results.any((r) => r == null)) return null;
+    return results.cast<AiItemEstimate>();
+  }
+
   // ── Prompts ───────────────────────────────────────────────────────────────
+
+  // Locale hint prepended to food prompts. Biases the model toward Filipino
+  // dish recognition without changing Western food behavior.
+  static const _localeHint =
+      'Cuisine context: Filipino + Western mix. '
+      'Common Filipino dishes: adobo, sinigang, kare-kare, tocino, longganisa, pancit, tinola, bulalo.\n';
 
   static const _normalizePrompt =
       'You are a food normalizer. Given a JSON array of {"i":index,"t":"raw food text"}, '
       'output a JSON array of {"i":index,"n":"clean food name","g":gram_weight}.\n'
       'Same indices, same order. Convert any volume/unit to grams using food-specific density.\n'
       'Rules:\n'
-      '1. Strip brand names — output only the generic food name. '
-      '   e.g. "birchtree powdered milk" → "powdered whole milk", "nestle milo" → "milo chocolate drink"\n'
+      '1. Strip brand names — keep only the short generic food name (2-4 words max). '
+      '   e.g. "birchtree powdered milk" → "skim milk powder", "nestle milo" → "milo powder"\n'
       '2. Do NOT add any preparation method not stated in the input. '
       '   "potato" → "potato", NOT "potato chips" or "potato fries"\n'
       '3. Preserve explicitly stated preparation: '
       '   "fried potato" → "fried potato", "potato chips" → "potato chips"\n'
+      '4. Keep Filipino dish names as-is: "chicken adobo" → "chicken adobo"\n'
       'No explanation, no markdown.\n'
+      '$_localeHint'
       'Examples:\n'
       '[{"i":0,"t":"100gms skim milk"}] → [{"i":0,"n":"skim milk","g":100}]\n'
       '[{"i":0,"t":"3 cups cooked rice"},{"i":1,"t":"1 tbspoon olive oil"}] → '
       '[{"i":0,"n":"white rice cooked","g":555},{"i":1,"n":"olive oil","g":14}]\n'
       '[{"i":0,"t":"42g potato"}] → [{"i":0,"n":"potato","g":42}]\n'
-      '[{"i":0,"t":"birchtree powdered milk 33g"}] → [{"i":0,"n":"powdered whole milk","g":33}]\n'
+      '[{"i":0,"t":"200g chicken adobo"}] → [{"i":0,"n":"chicken adobo","g":200}]\n'
       'Input: ';
 
   static const _macroEstimatePrompt =
@@ -566,6 +688,21 @@ class OnDeviceAiCoachService implements AiCoachService {
       '"confidence":number}\n\n'
       'Meal: ';
 
+  static const _itemMacrosPrompt =
+      'You are a nutrition API. Given indexed food items with exact gram weights, '
+      'return macros computed for those exact grams.\n'
+      'Input: JSON array [{i,n,g}] — i=index, n=name, g=grams\n'
+      'Output ONLY a JSON array (no markdown, no explanation):\n'
+      '[{"i":index,"name":"name","calories":integer,'
+      '"protein":number,"carbs":number,"fat":number,"confidence":number}]\n'
+      'Same indices. calories/protein/carbs/fat are for the exact g given. '
+      'confidence is 0.0–1.0 based on how certain you are.\n'
+      'Example:\n'
+      'Input: [{"i":0,"n":"chicken breast","g":200}]\n'
+      'Output: [{"i":0,"name":"chicken breast","calories":330,"protein":62,"carbs":0,"fat":7,"confidence":0.9}]\n'
+      '$_localeHint'
+      'Input: ';
+
   static const _foodParsePrompt =
       'You are a food parser. Extract food items from the input.\n'
       'Respond with ONLY a JSON array. No explanation, no markdown.\n'
@@ -574,7 +711,7 @@ class OnDeviceAiCoachService implements AiCoachService {
       'Examples:\n'
       '  "2 cups rice" → [{"name":"rice","quantity":2,"unit":"cup","grams":null}]\n'
       '  "150g chicken breast" → [{"name":"chicken breast","quantity":150,"unit":"g","grams":150}]\n'
-      '  "2 medium eggs" → [{"name":"egg","quantity":2,"unit":"piece","grams":120}]\n'
+      '  "2 medium eggs" → [{"name":"egg","quantity":2,"unit":"piece","grams":100}]\n'
       '  "30grams of whole wheat bread" → [{"name":"whole wheat bread","quantity":30,"unit":"g","grams":30}]\n'
       'Input: ';
 

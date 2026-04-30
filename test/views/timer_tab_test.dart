@@ -38,7 +38,6 @@ void main() {
       elapsedSeconds: anyNamed('elapsedSeconds'),
       fastingGoalHours: anyNamed('fastingGoalHours'),
       history: anyNamed('history'),
-      quests: anyNamed('quests'),
       lastPenaltyCheckDate: anyNamed('lastPenaltyCheckDate'),
     )).thenAnswer((_) async {});
     when(mockStorage.saveUserStats(any)).thenAnswer((_) async {});

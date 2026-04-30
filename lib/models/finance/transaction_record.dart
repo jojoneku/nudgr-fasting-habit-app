@@ -16,8 +16,9 @@ class TransactionRecord {
   final String? transferToAccountId; // outbound leg of transfer
   final String? transferGroupId; // shared by both legs of a transfer pair
   final String? installmentId; // links to Installment
+  final DateTime updatedAt;
 
-  const TransactionRecord({
+  TransactionRecord({
     required this.id,
     required this.date,
     required this.accountId,
@@ -32,7 +33,8 @@ class TransactionRecord {
     this.transferToAccountId,
     this.transferGroupId,
     this.installmentId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory TransactionRecord.fromJson(Map<String, dynamic> json) {
     return TransactionRecord(
@@ -50,6 +52,7 @@ class TransactionRecord {
       transferToAccountId: json['transferToAccountId'] as String?,
       transferGroupId: json['transferGroupId'] as String?,
       installmentId: json['installmentId'] as String?,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -68,6 +71,7 @@ class TransactionRecord {
         'transferToAccountId': transferToAccountId,
         'transferGroupId': transferGroupId,
         'installmentId': installmentId,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   TransactionRecord copyWith({
@@ -84,6 +88,7 @@ class TransactionRecord {
     String? transferToAccountId,
     String? transferGroupId,
     String? installmentId,
+    DateTime? updatedAt,
   }) {
     return TransactionRecord(
       id: id,
@@ -100,6 +105,7 @@ class TransactionRecord {
       transferToAccountId: transferToAccountId ?? this.transferToAccountId,
       transferGroupId: transferGroupId ?? this.transferGroupId,
       installmentId: installmentId ?? this.installmentId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

@@ -319,6 +319,37 @@ class HealthService {
 
   String _dayKey(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);
 
+  /// DEBUG: Fetches today's raw step records and prints each one with timestamps.
+  /// Remove after inspection.
+  Future<void> debugDumpTodayStepRecords() async {
+    try {
+      final now = DateTime.now();
+      final midnight = DateTime(now.year, now.month, now.day);
+      final data = await Health().getHealthDataFromTypes(
+        startTime: midnight,
+        endTime: now,
+        types: [HealthDataType.STEPS],
+      );
+      debugPrint('=== DEBUG STEP RECORDS (${data.length} total) ===');
+      for (final p in data) {
+        final steps = (p.value as NumericHealthValue).numericValue.toInt();
+        final durationSec = p.dateTo.difference(p.dateFrom).inSeconds;
+        final rate = durationSec > 0
+            ? (steps / durationSec * 60).toStringAsFixed(1)
+            : 'n/a';
+        debugPrint(
+          '[${p.sourceName}] '
+          '${DateFormat('HH:mm:ss').format(p.dateFrom)} → '
+          '${DateFormat('HH:mm:ss').format(p.dateTo)} '
+          '| ${durationSec}s | steps=$steps | rate=$rate steps/min',
+        );
+      }
+      debugPrint('=== END STEP RECORDS ===');
+    } catch (e) {
+      debugPrint('HealthService: debugDumpTodayStepRecords error: $e');
+    }
+  }
+
   /// Returns distinct step data sources seen in the last 7 days.
   /// Each entry is (sourceId, sourceName).
   Future<List<({String sourceId, String sourceName})>> readStepSources() async {

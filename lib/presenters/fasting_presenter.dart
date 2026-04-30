@@ -4,6 +4,7 @@ import '../models/fasting_log.dart';
 import '../models/fasting_phase.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/local_storage_service.dart';
 import 'stats_presenter.dart';
 
 class FastingPresenter extends ChangeNotifier {
@@ -23,7 +24,7 @@ class FastingPresenter extends ChangeNotifier {
     this.statsPresenter,
     StorageService? storage,
     NotificationService? notifications,
-  })  : _storageService = storage ?? StorageService(),
+  })  : _storageService = storage ?? LocalStorageService(),
         _notificationService = notifications ?? NotificationService() {
     _init();
   }
@@ -135,7 +136,6 @@ class FastingPresenter extends ChangeNotifier {
       elapsedSeconds: elapsedSeconds,
       fastingGoalHours: fastingGoalHours,
       history: history,
-      quests: const [], // Quests are now owned by QuestPresenter
     );
   }
 

@@ -62,8 +62,9 @@ class FinancialAccount {
   final DateTime? maturityDate; // only used when category == timeDeposit
   final String?
       linkedAccountId; // custodian only: the liquid account where these funds physically live
+  final DateTime updatedAt;
 
-  const FinancialAccount({
+  FinancialAccount({
     required this.id,
     required this.name,
     required this.category,
@@ -76,7 +77,8 @@ class FinancialAccount {
     this.goalTarget,
     this.maturityDate,
     this.linkedAccountId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   bool get isSubAccount => parentAccountId != null;
   bool get isLiquid =>
@@ -112,6 +114,7 @@ class FinancialAccount {
           ? DateTime.parse(json['maturityDate'] as String)
           : null,
       linkedAccountId: json['linkedAccountId'] as String?,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -128,6 +131,7 @@ class FinancialAccount {
         'goalTarget': goalTarget,
         'maturityDate': maturityDate?.toIso8601String(),
         'linkedAccountId': linkedAccountId,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   FinancialAccount copyWith({
@@ -142,6 +146,7 @@ class FinancialAccount {
     double? goalTarget,
     DateTime? maturityDate,
     String? linkedAccountId,
+    DateTime? updatedAt,
   }) {
     return FinancialAccount(
       id: id,
@@ -156,6 +161,7 @@ class FinancialAccount {
       goalTarget: goalTarget ?? this.goalTarget,
       maturityDate: maturityDate ?? this.maturityDate,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

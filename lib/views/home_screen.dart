@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ai_coach_context.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
@@ -16,8 +17,11 @@ import '../services/auth_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
 import '../services/on_device_ai_coach_service.dart';
-import '../services/storage_service.dart';
+import '../services/local_storage_service.dart';
+import '../services/sync_service.dart';
+import '../services/sync_queue.dart';
 import '../presenters/auth_presenter.dart';
+import '../presenters/sync_presenter.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
 import 'stats_view.dart';
@@ -31,7 +35,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
-  late final StorageService _storage;
+  late final LocalStorageService _storage;
   late final StatsPresenter _statsPresenter;
   late final FastingPresenter _fastingPresenter;
   late final QuestPresenter _questPresenter;
@@ -47,13 +51,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final InstallmentPresenter _installmentPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
   late final AuthPresenter _authPresenter;
+  SyncService? _syncService;
+  SyncPresenter? _syncPresenter;
+  SyncQueue? _syncQueue;
   NutritionPresenter? _nutritionPresenter;
   int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _storage = StorageService();
+    _storage = LocalStorageService();
+    _syncQueue = SyncQueue();
     _statsPresenter = StatsPresenter(_storage);
     _fastingPresenter = FastingPresenter(
       statsPresenter: _statsPresenter,
@@ -92,15 +100,23 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       nutrition: _nutritionPresenter,
       service: _onDeviceAi,
     );
-    _authPresenter = AuthPresenter(AuthService.instance);
+    _authPresenter = AuthPresenter(
+      AuthService.instance,
+      onFirstSignIn: (userId) => _initSync(userId),
+    );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _foodDb.init(); // copy asset → documents dir if needed
       await _onDeviceAi.init(); // silently loads Qwen if already installed
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
+      await _syncQueue!.load(); // restore persisted queue before auth
       await AuthService.instance.init(); // init Supabase + restore session
       _authPresenter.init();
+      // If already signed in from cached session, init sync immediately
+      if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
+        _initSync(_authPresenter.userId!);
+      }
     });
   }
 
@@ -120,13 +136,38 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _installmentPresenter.dispose();
     _aiCoachPresenter.dispose();
     _authPresenter.dispose();
+    _syncService?.dispose();
+    _syncPresenter?.dispose();
     super.dispose();
+  }
+
+  void _initSync(String userId) {
+    if (_syncService != null) return;
+    _syncService = SyncService(
+      supabase: Supabase.instance.client,
+      storage: _storage,
+      queue: _syncQueue!,
+      userId: userId,
+    );
+    _syncPresenter = SyncPresenter(_syncService!, _authPresenter);
+    _storage.setSyncQueue(_syncQueue!);
+    _storage.onRemoteDataApplied = _reloadAll;
+    _syncService!.init();
+    _syncService!.pullAll();
+    if (mounted) setState(() {});
+  }
+
+  void _reloadAll() {
+    _fastingPresenter.loadState();
+    _questPresenter.reload();
+    _nutritionPresenter?.loadState();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _fastingPresenter.loadState();
+      _syncService?.pushPending();
     }
   }
 
@@ -151,6 +192,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         presenter: _statsPresenter,
         fastingPresenter: _fastingPresenter,
         authPresenter: _authPresenter,
+        syncPresenter: _syncPresenter,
       ),
     ];
 

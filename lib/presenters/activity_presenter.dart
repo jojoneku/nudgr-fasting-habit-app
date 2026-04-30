@@ -165,6 +165,7 @@ class ActivityPresenter extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await _healthService.debugDumpTodayStepRecords(); // TEMP: remove after inspection
       final steps = await _healthService.readTodaySteps(
           sourceId: _preferredStepsSourceId);
       final activeCalories = await _healthService.readTodayActiveCalories();

@@ -198,7 +198,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     }
 
     if (otherTotal > 0 && limit != null) {
-      const other = FinanceCategory(
+      final other = FinanceCategory(
         id: '__other__',
         name: 'Other',
         type: CategoryType.expense,

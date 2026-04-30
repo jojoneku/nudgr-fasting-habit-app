@@ -7,8 +7,6 @@ import 'ai_coach_service.dart';
 
 /// Stub implementation used before the on-device model is downloaded or
 /// when no network is available for the cloud tier.
-///
-/// Returns helpful canned messages that guide the user to download the model.
 class NullAiCoachService implements AiCoachService {
   @override
   bool get isAvailable => false;
@@ -20,9 +18,7 @@ class NullAiCoachService implements AiCoachService {
   AiCoachTier get tier => AiCoachTier.onDevice;
 
   @override
-  Future<void> downloadModel({void Function(int progress)? onProgress}) async {
-    // No-op — the real download is handled by OnDeviceAiCoachService.
-  }
+  Future<void> downloadModel({void Function(int progress)? onProgress}) async {}
 
   @override
   Stream<String> respond({
@@ -40,14 +36,17 @@ class NullAiCoachService implements AiCoachService {
   Future<AiMealEstimate?> estimateMacros(String description) async => null;
 
   @override
+  Future<List<AiItemEstimate>?> estimateMacrosForItems(
+          List<AiParsedFood> items) async =>
+      null;
+
+  @override
   Future<List<AiParsedFood>?> normalizeFoodInput(
           List<String> fragments) async =>
       null;
 
   @override
   void dispose() {}
-
-  // ── Internals ─────────────────────────────────────────────────────────────
 
   String _cannedResponse(AiCoachContext context) {
     return switch (context.entryPoint) {

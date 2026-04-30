@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../models/ai_meal_estimate.dart';
 import '../../models/food_db_entry.dart';
+import '../../models/estimation_source.dart';
 import '../../models/food_entry.dart';
 import '../../models/food_parse_result.dart';
 import '../../models/food_template.dart';
@@ -985,9 +986,9 @@ class _ParseResultCardState extends State<_ParseResultCard> {
         entries.add(FoodEntry(
           id: FoodEntry.generateId(),
           name: item.name,
-          calories: (item.grams * 2).round(), // rough ~2 kcal/g fallback
+          calories: (item.grams * 2).round(),
           grams: item.grams,
-          aiEstimated: true,
+          estimationSource: EstimationSource.keywordDensity,
           loggedAt: DateTime.now(),
         ));
       }

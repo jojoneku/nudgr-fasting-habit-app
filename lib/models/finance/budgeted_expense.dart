@@ -14,8 +14,9 @@ class BudgetedExpense {
   final String? note; // e.g. "Cash", "Maya Savings"
   final bool isPaid;
   final String? transactionId; // linked TransactionRecord
+  final DateTime updatedAt;
 
-  const BudgetedExpense({
+  BudgetedExpense({
     required this.id,
     required this.name,
     required this.budgetedType,
@@ -27,7 +28,8 @@ class BudgetedExpense {
     this.note,
     this.isPaid = false,
     this.transactionId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory BudgetedExpense.fromJson(Map<String, dynamic> json) {
     return BudgetedExpense(
@@ -42,6 +44,7 @@ class BudgetedExpense {
       note: json['note'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       transactionId: json['transactionId'] as String?,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -57,6 +60,7 @@ class BudgetedExpense {
         'note': note,
         'isPaid': isPaid,
         'transactionId': transactionId,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   BudgetedExpense copyWith({
@@ -70,6 +74,7 @@ class BudgetedExpense {
     String? note,
     bool? isPaid,
     String? transactionId,
+    DateTime? updatedAt,
   }) {
     return BudgetedExpense(
       id: id,
@@ -83,6 +88,7 @@ class BudgetedExpense {
       note: note ?? this.note,
       isPaid: isPaid ?? this.isPaid,
       transactionId: transactionId ?? this.transactionId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

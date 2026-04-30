@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/chat_message.dart';
+import '../../models/estimation_source.dart';
 import '../../models/food_template.dart';
 import '../../models/food_entry.dart';
 import '../../models/meal_slot.dart';
@@ -1113,10 +1114,6 @@ class _FoodItemDisplay extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (item.isEstimated)
-              const Text('~',
-                  style: TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
             Expanded(
               child: Text(
                 item.name,
@@ -1128,6 +1125,23 @@ class _FoodItemDisplay extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
+            if (item.needsConfirmation) ...[
+              const Tooltip(
+                message: 'Low-confidence — tap edit to verify',
+                child: _NutriBadge(label: '?', color: AppColors.danger),
+              ),
+              const SizedBox(width: 4),
+            ],
+            if (!item.estimationSource.isTrusted) ...[
+              Tooltip(
+                message: _sourceTooltip(item.estimationSource),
+                child: _NutriBadge(
+                  label: item.estimationSource.badge,
+                  color: item.estimationSource.badgeColor,
+                ),
+              ),
+              const SizedBox(width: 4),
+            ],
             if (hasGrams) ...[
               _NutriBadge(
                 label: _gramsLabel(item.grams!),
@@ -1172,6 +1186,12 @@ class _FoodItemDisplay extends StatelessWidget {
     if (g == g.roundToDouble()) return '${g.round()}g';
     return '${g.toStringAsFixed(1)}g';
   }
+
+  String _sourceTooltip(EstimationSource s) => switch (s) {
+        EstimationSource.aiPerItem => 'AI estimate',
+        EstimationSource.keywordDensity => 'Rough estimate from keyword match',
+        _ => '',
+      };
 }
 
 class _NutriBadge extends StatelessWidget {

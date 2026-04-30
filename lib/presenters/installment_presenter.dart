@@ -169,7 +169,7 @@ class InstallmentPresenter extends ChangeNotifier {
     final exists =
         _ledger.categories.any((c) => c.id == _installmentCategoryId);
     if (!exists) {
-      await _ledger.addCategory(const FinanceCategory(
+      await _ledger.addCategory(FinanceCategory(
         id: _installmentCategoryId,
         name: 'Installment',
         type: CategoryType.expense,
