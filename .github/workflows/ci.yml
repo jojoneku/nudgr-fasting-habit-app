@@ -28,7 +28,6 @@ jobs:
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
           echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> .env
-          echo "POSTGRESS_PASSWORD=${{ secrets.POSTGRESS_PASSWORD }}" >> .env
 
       - name: Analyze
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
@@ -57,7 +56,6 @@ jobs:
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
           echo "HF_TOKEN=${{ secrets.HF_TOKEN }}" >> .env
-          echo "POSTGRESS_PASSWORD=${{ secrets.POSTGRESS_PASSWORD }}" >> .env
 
       - name: Run tests
         run: flutter test test/ --coverage
