@@ -7,14 +7,16 @@ class FinanceCategory {
   final CategoryType type;
   final String icon; // MDI icon name
   final String colorHex;
+  final DateTime updatedAt;
 
-  const FinanceCategory({
+  FinanceCategory({
     required this.id,
     required this.name,
     required this.type,
     required this.icon,
     required this.colorHex,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory FinanceCategory.fromJson(Map<String, dynamic> json) {
     return FinanceCategory(
@@ -23,6 +25,8 @@ class FinanceCategory {
       type: CategoryType.values.byName(json['type'] as String),
       icon: json['icon'] as String,
       colorHex: json['colorHex'] as String,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -32,6 +36,7 @@ class FinanceCategory {
         'type': type.name,
         'icon': icon,
         'colorHex': colorHex,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   FinanceCategory copyWith({
@@ -39,6 +44,7 @@ class FinanceCategory {
     CategoryType? type,
     String? icon,
     String? colorHex,
+    DateTime? updatedAt,
   }) {
     return FinanceCategory(
       id: id,
@@ -46,6 +52,7 @@ class FinanceCategory {
       type: type ?? this.type,
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

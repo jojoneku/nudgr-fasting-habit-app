@@ -4,6 +4,7 @@ import '../models/fasting_log.dart';
 import '../models/fasting_phase.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/local_storage_service.dart';
 import 'stats_presenter.dart';
 
 class FastingPresenter extends ChangeNotifier {
@@ -23,7 +24,7 @@ class FastingPresenter extends ChangeNotifier {
     this.statsPresenter,
     StorageService? storage,
     NotificationService? notifications,
-  })  : _storageService = storage ?? StorageService(),
+  })  : _storageService = storage ?? LocalStorageService(),
         _notificationService = notifications ?? NotificationService() {
     _init();
   }
@@ -53,15 +54,25 @@ class FastingPresenter extends ChangeNotifier {
       }
     } else if (eatingStartTime != null) {
       try {
-        int eatingWindowHours =
+        final int eatingWindowHours =
             fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
         if (eatingWindowHours > 0) {
           final eatingEndTime =
               eatingStartTime!.add(Duration(hours: eatingWindowHours));
-          await _notificationService.showEatingTimerNotification(eatingEndTime);
-          await _notificationService.cancelFastingNotifications();
-          await _notificationService.scheduleEatingAlarm(
-              eatingStartTime!, fastingGoalHours);
+          if (DateTime.now().isAfter(eatingEndTime)) {
+            // Window already expired — don't re-arm a stale alarm.
+            debugPrint(
+                'FastingPresenter: Skipping eating alarm reschedule; window already expired.');
+            eatingStartTime = null;
+            await _notificationService.cancelEatingNotifications();
+            await saveState();
+          } else {
+            await _notificationService
+                .showEatingTimerNotification(eatingEndTime);
+            await _notificationService.cancelFastingNotifications();
+            await _notificationService.scheduleEatingAlarm(
+                eatingStartTime!, fastingGoalHours);
+          }
         }
       } catch (e) {
         debugPrint('Error rescheduling eating alarm: $e');
@@ -90,14 +101,26 @@ class FastingPresenter extends ChangeNotifier {
         await _notificationService.showFastingTimerNotification(endTime);
       } catch (_) {}
     } else if (eatingStartTime != null) {
-      elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
-      _startTicker();
-      try {
-        int eatingWindowHours = 24 - fastingGoalHours;
-        final eatingEndTime =
-            eatingStartTime!.add(Duration(hours: eatingWindowHours));
-        await _notificationService.showEatingTimerNotification(eatingEndTime);
-      } catch (_) {}
+      final int eatingWindowHours =
+          fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+      final eatingEndTime =
+          eatingStartTime!.add(Duration(hours: eatingWindowHours));
+
+      if (eatingWindowHours == 0 || DateTime.now().isAfter(eatingEndTime)) {
+        // Eating window has expired — clear stale state silently.
+        debugPrint(
+            'FastingPresenter: Eating window expired (ended $eatingEndTime), clearing stale state.');
+        eatingStartTime = null;
+        elapsedSeconds = 0;
+        await _notificationService.cancelEatingNotifications();
+        await saveState();
+      } else {
+        elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
+        _startTicker();
+        try {
+          await _notificationService.showEatingTimerNotification(eatingEndTime);
+        } catch (_) {}
+      }
     }
     notifyListeners();
   }
@@ -112,7 +135,6 @@ class FastingPresenter extends ChangeNotifier {
       elapsedSeconds: elapsedSeconds,
       fastingGoalHours: fastingGoalHours,
       history: history,
-      quests: const [], // Quests are now owned by QuestPresenter
     );
   }
 
@@ -127,7 +149,20 @@ class FastingPresenter extends ChangeNotifier {
     if (isFasting && startTime != null) {
       elapsedSeconds = DateTime.now().difference(startTime!).inSeconds;
     } else if (eatingStartTime != null) {
-      elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
+      final int eatingWindowHours =
+          fastingGoalHours >= 36 ? 0 : 24 - fastingGoalHours;
+      final eatingEndTime =
+          eatingStartTime!.add(Duration(hours: eatingWindowHours));
+      if (eatingWindowHours == 0 || DateTime.now().isAfter(eatingEndTime)) {
+        // Eating window just expired mid-session — clear state.
+        eatingStartTime = null;
+        elapsedSeconds = 0;
+        _ticker?.cancel();
+        _notificationService.cancelEatingNotifications();
+        saveState();
+      } else {
+        elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
+      }
     }
     notifyListeners();
   }

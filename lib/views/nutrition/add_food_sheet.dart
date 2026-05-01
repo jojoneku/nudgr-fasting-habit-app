@@ -250,7 +250,10 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       loggedAt: DateTime.now(),
     );
 
-    await widget.presenter.addFoodEntry(entry, MealSlot.snack);
-    if (mounted) Navigator.pop(context);
+    try {
+      await widget.presenter.addFoodEntry(entry, MealSlot.snack);
+    } finally {
+      if (mounted) Navigator.pop(context);
+    }
   }
 }

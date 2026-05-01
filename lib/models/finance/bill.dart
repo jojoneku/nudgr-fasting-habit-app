@@ -29,8 +29,9 @@ class Bill {
   final DateTime? paidDate;
   final double? paidAmount; // may differ from billed amount (partial pay)
   final String? transactionId; // linked TransactionRecord
+  final DateTime updatedAt;
 
-  const Bill({
+  Bill({
     required this.id,
     required this.name,
     required this.billType,
@@ -47,7 +48,8 @@ class Bill {
     this.paidDate,
     this.paidAmount,
     this.transactionId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory Bill.fromJson(Map<String, dynamic> json) {
     return Bill(
@@ -71,6 +73,8 @@ class Bill {
           : null,
       paidAmount: (json['paidAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -91,6 +95,7 @@ class Bill {
         'paidDate': paidDate?.toIso8601String(),
         'paidAmount': paidAmount,
         'transactionId': transactionId,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   Bill copyWith({
@@ -109,6 +114,7 @@ class Bill {
     DateTime? paidDate,
     double? paidAmount,
     String? transactionId,
+    DateTime? updatedAt,
   }) {
     return Bill(
       id: id,
@@ -127,6 +133,7 @@ class Bill {
       paidDate: paidDate ?? this.paidDate,
       paidAmount: paidAmount ?? this.paidAmount,
       transactionId: transactionId ?? this.transactionId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

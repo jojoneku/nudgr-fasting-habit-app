@@ -35,12 +35,8 @@ void main() {
       elapsedSeconds: anyNamed('elapsedSeconds'),
       fastingGoalHours: anyNamed('fastingGoalHours'),
       history: anyNamed('history'),
-      quests: anyNamed('quests'),
       lastPenaltyCheckDate: anyNamed('lastPenaltyCheckDate'),
     )).thenAnswer((_) async {});
-    when(mockStorage.saveUserStats(any)).thenAnswer((_) async {});
-
-    // Default notification stubs
     when(mockNotifications.init()).thenAnswer((_) async {});
     when(mockNotifications.requestPermissions()).thenAnswer((_) async => true);
     when(mockNotifications.scheduleFastingAlarm(any, any))
@@ -102,7 +98,6 @@ void main() {
         elapsedSeconds: anyNamed('elapsedSeconds'),
         fastingGoalHours: anyNamed('fastingGoalHours'),
         history: anyNamed('history'),
-        quests: anyNamed('quests'),
         lastPenaltyCheckDate: anyNamed('lastPenaltyCheckDate'),
       )).called(greaterThanOrEqualTo(1));
     });

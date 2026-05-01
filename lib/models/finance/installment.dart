@@ -13,8 +13,9 @@ class Installment {
   final String startMonth; // 'YYYY-MM' — first payment month
   final String? note;
   final bool isActive; // false = cancelled early
+  final DateTime updatedAt;
 
-  const Installment({
+  Installment({
     required this.id,
     required this.name,
     required this.accountId,
@@ -24,7 +25,8 @@ class Installment {
     required this.startMonth,
     this.note,
     this.isActive = true,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   // The 'YYYY-MM' key of the final payment month.
   String get endMonth => _offsetMonth(startMonth, totalMonths - 1);
@@ -55,6 +57,8 @@ class Installment {
       startMonth: json['startMonth'] as String,
       note: json['note'] as String?,
       isActive: json['isActive'] as bool? ?? true,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -68,6 +72,7 @@ class Installment {
         'startMonth': startMonth,
         'note': note,
         'isActive': isActive,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   Installment copyWith({
@@ -79,6 +84,7 @@ class Installment {
     String? startMonth,
     String? note,
     bool? isActive,
+    DateTime? updatedAt,
   }) {
     return Installment(
       id: id,
@@ -90,6 +96,7 @@ class Installment {
       startMonth: startMonth ?? this.startMonth,
       note: note ?? this.note,
       isActive: isActive ?? this.isActive,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

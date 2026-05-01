@@ -36,6 +36,7 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 | `/spec` | Create or update a feature spec in `docs/` |
 | `/review` | Review code against architecture and UX rules |
 | `/plan` | Generate a step-by-step implementation plan |
+| `/m3-hig` | Material 3 foundation + Apple HIG taste — theming, spacing, motion, components. Use whenever building UI |
 | `/ui-ux-pro-max` | UI/UX design intelligence — styles, colors, fonts, UX guidelines, Flutter patterns |
 | `/git-workflow` | Branching strategy, Conventional Commits, PR creation, merge, conflict resolution |
 | `/github-pr-review` | Review PRs via gh CLI — pending reviews, code suggestions, approval workflow |

@@ -3,23 +3,34 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../models/meal_slot.dart';
 import '../../models/nutrition_goals.dart';
+import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'tdee_setup_screen.dart';
 
 /// Bottom sheet: tracking mode, daily calorie goal, macro targets, TDEE wizard link, overshoot penalty.
 Future<void> showNutritionSettingsSheet(
-    BuildContext context, NutritionPresenter presenter) {
+  BuildContext context,
+  NutritionPresenter presenter, {
+  AiCoachPresenter? aiCoachPresenter,
+}) {
   return showModalBottomSheet(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _NutritionSettingsSheet(presenter: presenter),
+    builder: (_) => _NutritionSettingsSheet(
+      presenter: presenter,
+      aiCoachPresenter: aiCoachPresenter,
+    ),
   );
 }
 
 class _NutritionSettingsSheet extends StatefulWidget {
   final NutritionPresenter presenter;
-  const _NutritionSettingsSheet({required this.presenter});
+  final AiCoachPresenter? aiCoachPresenter;
+  const _NutritionSettingsSheet({
+    required this.presenter,
+    this.aiCoachPresenter,
+  });
 
   @override
   State<_NutritionSettingsSheet> createState() =>
@@ -87,10 +98,12 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final screenHeight = MediaQuery.of(context).size.height;
     final isStandard = _mode == TrackingMode.standard;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
+      constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(24),
@@ -112,16 +125,15 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
               ),
             ),
 
-            const Text('NUTRITION SETTINGS',
+            const Text('Settings',
                 style: TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 11,
-                    letterSpacing: 2.5,
-                    fontWeight: FontWeight.w700)),
+                    color: AppColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600)),
             const SizedBox(height: 24),
 
             // ── Tracking mode ─────────────────────────────────────────────
-            _label('TRACKING MODE'),
+            _label('Tracking mode'),
             const SizedBox(height: 10),
             ...TrackingMode.values.map((m) => _ModeTile(
                   mode: m,
@@ -132,7 +144,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
 
             // ── Simple: manual calorie goal ────────────────────────────────
             if (!isStandard) ...[
-              _label('DAILY CALORIE GOAL'),
+              _label('Daily calorie goal'),
               const SizedBox(height: 8),
               _numField(_calCtrl, 'kcal / day', 'e.g. 2000'),
               const SizedBox(height: 20),
@@ -142,7 +154,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
             if (isStandard) ...[
               _TdeeCard(presenter: widget.presenter),
               const SizedBox(height: 20),
-              _label('MACRO TARGETS (optional, g)'),
+              _label('Macro targets (optional, g)'),
               const SizedBox(height: 8),
               Row(children: [
                 Expanded(child: _numField(_proteinCtrl, 'Protein', 'g')),
@@ -168,7 +180,15 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
               value: _overshootPenalty,
               onChanged: (v) => setState(() => _overshootPenalty = v),
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 24),
+
+            // ── AI Coach download ──────────────────────────────────────────
+            if (widget.aiCoachPresenter != null) ...[
+              _label('AI COACH'),
+              const SizedBox(height: 10),
+              _AiCoachDownloadCard(presenter: widget.aiCoachPresenter!),
+              const SizedBox(height: 24),
+            ],
 
             SizedBox(
               width: double.infinity,
@@ -181,9 +201,8 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                       borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: _save,
-                child: const Text('SAVE',
-                    style: TextStyle(
-                        fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                child: const Text('Save',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -193,8 +212,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
   }
 
   Widget _label(String text) => Text(text,
-      style: const TextStyle(
-          color: AppColors.textSecondary, fontSize: 10, letterSpacing: 1.8));
+      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11));
 
   Widget _numField(TextEditingController ctrl, String label, String hint) {
     return TextField(
@@ -301,14 +319,12 @@ class _TdeeCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TDEE PROFILE',
-              style: TextStyle(
-                  color: AppColors.gold, fontSize: 10, letterSpacing: 2.0)),
+          const Text('TDEE profile',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
           const SizedBox(height: 8),
           if (profile == null)
             const Text('No profile set — tap below to configure',
@@ -338,8 +354,8 @@ class _TdeeCard extends StatelessWidget {
                     builder: (_) => TdeeSetupScreen(presenter: presenter)),
               ),
               child: Text(
-                profile == null ? 'SET UP TDEE' : 'EDIT TDEE PROFILE',
-                style: const TextStyle(fontSize: 12, letterSpacing: 1.4),
+                profile == null ? 'Set up TDEE' : 'Edit TDEE profile',
+                style: const TextStyle(fontSize: 12),
               ),
             ),
           ),
@@ -382,13 +398,139 @@ class _ToggleRow extends StatelessWidget {
             ],
           ),
         ),
-        Switch(
+        Switch.adaptive(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.gold,
+          activeThumbColor: AppColors.gold,
+          activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
           inactiveTrackColor: AppColors.surface,
         ),
       ],
+    );
+  }
+}
+
+// ── AI Coach download card ─────────────────────────────────────────────────────
+
+class _AiCoachDownloadCard extends StatelessWidget {
+  final AiCoachPresenter presenter;
+  const _AiCoachDownloadCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (_, __) {
+        final available = presenter.isModelAvailable;
+        final downloading = presenter.isDownloading;
+        final progress = presenter.downloadProgress ?? 0;
+
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: const Text('🧠', style: TextStyle(fontSize: 14)),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Qwen3 0.6B',
+                            style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600)),
+                        Text(
+                          available
+                              ? 'Ready — meal parsing & coaching active'
+                              : 'On-device · ~586 MB · Private',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (available)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('Ready',
+                          style: TextStyle(
+                              color: AppColors.success,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                ],
+              ),
+              if (downloading) ...[
+                const SizedBox(height: 14),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: LinearProgressIndicator(
+                    value: progress / 100.0,
+                    minHeight: 6,
+                    backgroundColor: AppColors.surface,
+                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Downloading...',
+                        style: TextStyle(
+                            color: AppColors.textSecondary, fontSize: 11)),
+                    Text('$progress%',
+                        style: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ] else if (!available) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 44,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.15),
+                      foregroundColor: AppColors.primary,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    icon: const Icon(Icons.download_outlined, size: 16),
+                    label: const Text('Download AI Coach',
+                        style: TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w500)),
+                    onPressed: presenter.downloadModel,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }

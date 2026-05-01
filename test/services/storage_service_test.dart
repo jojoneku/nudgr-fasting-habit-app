@@ -1,16 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/models/activity_log.dart';
 import 'package:intermittent_fasting/models/activity_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 
 void main() {
-  late StorageService svc;
+  late LocalStorageService svc;
 
   setUp(() {
     SharedPreferences.setMockInitialValues({});
-    svc = StorageService();
+    svc = LocalStorageService();
   });
 
   // ── Activity ────────────────────────────────────────────────────────────────

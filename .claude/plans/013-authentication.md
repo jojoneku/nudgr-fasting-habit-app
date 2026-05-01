@@ -1,6 +1,6 @@
 # Plan 013 — Authentication (Google Sign-In via Supabase)
 
-**Status:** DRAFT — Awaiting Approval
+**Status:** APPROVED — Ready to Implement
 **Author:** System Architect
 **Date:** 2026-04-02
 **Depends on:** none (Plan 014 Supabase Sync depends on this)
@@ -9,7 +9,7 @@
 
 ## Goal
 
-Add Google Sign-In via Supabase Auth so every user has a stable `userId` that scopes their cloud data. The app shows a `LoginView` on first launch and restores the session automatically on subsequent launches. Sign-out is accessible from Settings. On first sign-in, `AuthPresenter` fires a callback that a future `SyncService` (Plan 013) can hook into to pull any existing cloud data for the user.
+Add Google Sign-In via Supabase Auth so every user has a stable `userId` that scopes their cloud data. **The app is fully usable offline without an account** (soft gate). Login is prompted only when the user explicitly accesses cloud sync / backup from Settings. Session is restored automatically on subsequent launches when a prior session exists. On first sign-in, `AuthPresenter` fires a callback that a future `SyncService` (Plan 014) can hook into to pull any existing cloud data for the user.
 
 ---
 
@@ -21,8 +21,9 @@ Add Google Sign-In via Supabase Auth so every user has a stable `userId` that sc
 | `lib/services/auth_service.dart` | Create — wraps Supabase Auth + Google Sign-In |
 | `lib/presenters/auth_presenter.dart` | Create — state machine for auth flow |
 | `lib/views/auth/login_view.dart` | Create — Solo Leveling login screen |
-| `lib/views/home_screen.dart` | Modify — add auth gate (session check → LoginView or Hub) |
-| `lib/views/settings_screen.dart` | Modify — add sign-out button |
+| `lib/views/home_screen.dart` | Modify — no auth gate on launch; restore session silently in background |
+| `lib/views/settings_screen.dart` | Modify — add "Cloud Sync / Sign In" section; shows login sheet if not signed in, sign-out + sync status if signed in |
+| `lib/views/auth/login_view.dart` | Create — bottom sheet (not a full screen) for soft-gate login prompt |
 
 ---
 
@@ -80,7 +81,7 @@ class AuthPresenter extends ChangeNotifier {
 
 ## LoginView Spec
 
-**Solo Leveling aesthetic.** Dark background, centered branding, single CTA in the bottom 30%.
+**Solo Leveling aesthetic.** Shown as a **modal bottom sheet** (not a full-screen route) — triggered from Settings → Cloud Sync tile. Dark background, centered branding, single CTA in the bottom 30%.
 
 ```
 ┌─────────────────────────────────────┐
@@ -115,12 +116,14 @@ States:
 1. [ ] Add `supabase_flutter` and `google_sign_in` to `pubspec.yaml`; run `flutter pub get`
 2. [ ] Create `AuthService` — `init()`, `signInWithGoogle()`, `signOut()`, getters, stream
 3. [ ] Create `AuthPresenter` — wraps `AuthService`, exposes `isLoading`/`error`, calls `onFirstSignIn` callback on first successful sign-in
-4. [ ] Create `lib/views/auth/login_view.dart` — Solo Leveling login screen per spec above
-5. [ ] Modify `AppShell` in `lib/views/home_screen.dart` — call `authPresenter.init()` in `initState`; wrap body in `ListenableBuilder` to gate on `isSignedIn` (show `LoginView` or `HubScreen`)
-6. [ ] Modify `lib/views/settings_screen.dart` — add "Sign Out" `ListTile` in the danger/account section; calls `authPresenter.signOut()`
+4. [ ] Create `lib/views/auth/login_view.dart` — Solo Leveling login **bottom sheet** per spec above
+5. [ ] Modify `AppShell` in `lib/views/home_screen.dart` — call `authPresenter.init()` silently in `initState` to restore any cached session; **no route gate**
+6. [ ] Modify `lib/views/settings_screen.dart` — add "Cloud Sync" section; if not signed in: tile opens `LoginView` sheet; if signed in: shows Google avatar/email + "Sign Out" tile
 7. [ ] Perform platform setup (SHA-1 fingerprint, OAuth client IDs — see Risks)
-8. [ ] Smoke test: cold launch shows `LoginView` → sign in → Hub → force-kill → relaunch → Hub (session restored)
-9. [ ] Smoke test: Settings → Sign Out → `LoginView` shown
+8. [ ] Smoke test: cold launch goes straight to Hub (no login gate)
+9. [ ] Smoke test: Settings → Cloud Sync → sign in → sheet dismisses → Settings shows account row
+10. [ ] Smoke test: Settings → Sign Out → account row replaced by "Sign In" tile
+11. [ ] Smoke test: force-kill → relaunch → session restored silently, Settings shows account row
 
 ---
 
@@ -147,14 +150,15 @@ None. Authentication is infrastructure. No XP, stats, streaks, or level changes.
 
 ## Acceptance Criteria
 
-- [ ] Cold launch with no session → `LoginView` is shown
+- [ ] Cold launch with no session → **Hub shown directly**, no login required
+- [ ] Settings → "Cloud Sync" tile → tapping opens LoginView bottom sheet when not signed in
 - [ ] Tapping "Continue with Google" triggers OAuth flow and shows loading state
-- [ ] Successful sign-in navigates to `HubScreen` without rebuilding the entire widget tree unnecessarily
+- [ ] Successful sign-in dismisses the sheet; Settings shows signed-in account row
 - [ ] `AuthPresenter.userId` is non-null after sign-in
 - [ ] `onFirstSignIn` callback is invoked exactly once on first successful sign-in
-- [ ] Force-killing the app and relaunching restores the session — `HubScreen` shown directly
-- [ ] Settings screen shows a "Sign Out" option
-- [ ] Signing out clears the session and returns the user to `LoginView`
-- [ ] Network error or Google permission denial shows an error snackbar on `LoginView`
+- [ ] Force-killing the app and relaunching restores the session silently (Settings shows account row)
+- [ ] Settings screen shows a "Sign Out" option when signed in
+- [ ] Signing out clears the session and Settings reverts to "Sign In" tile
+- [ ] Network error or Google permission denial shows an error snackbar on the LoginView sheet
 - [ ] No auth logic exists in any `build()` method — all state delegated to `AuthPresenter`
 - [ ] `AuthService` and `AuthPresenter` are constructor-injected; no global locators

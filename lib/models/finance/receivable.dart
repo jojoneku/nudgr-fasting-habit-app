@@ -17,8 +17,9 @@ class Receivable {
   final DateTime? receivedDate;
   final double? receivedAmount; // may differ from expected
   final String? transactionId; // linked TransactionRecord
+  final DateTime updatedAt;
 
-  const Receivable({
+  Receivable({
     required this.id,
     required this.name,
     required this.receivableType,
@@ -33,7 +34,8 @@ class Receivable {
     this.receivedDate,
     this.receivedAmount,
     this.transactionId,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory Receivable.fromJson(Map<String, dynamic> json) {
     return Receivable(
@@ -56,6 +58,8 @@ class Receivable {
           : null,
       receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -74,6 +78,7 @@ class Receivable {
         'receivedDate': receivedDate?.toIso8601String(),
         'receivedAmount': receivedAmount,
         'transactionId': transactionId,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   Receivable copyWith({
@@ -90,6 +95,7 @@ class Receivable {
     DateTime? receivedDate,
     double? receivedAmount,
     String? transactionId,
+    DateTime? updatedAt,
   }) {
     return Receivable(
       id: id,
@@ -106,6 +112,7 @@ class Receivable {
       receivedDate: receivedDate ?? this.receivedDate,
       receivedAmount: receivedAmount ?? this.receivedAmount,
       transactionId: transactionId ?? this.transactionId,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

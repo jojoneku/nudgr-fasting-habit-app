@@ -21,11 +21,7 @@ class NutritionHistoryScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text(
-          'NUTRITION HISTORY',
-          style: TextStyle(letterSpacing: 2.5, fontSize: 13),
-        ),
-        centerTitle: true,
+        title: const Text('History'),
       ),
       body: presenter.history.isEmpty
           ? const _EmptyHistory()
@@ -59,7 +55,7 @@ class _HistoryContent extends StatelessWidget {
         const SizedBox(height: 24),
 
         // ── Streak badges ─────────────────────────────────────────────────
-        _SectionHeader('RECENT DAYS'),
+        const _SectionHeader('Recent days'),
         const SizedBox(height: 10),
 
         // ── Daily list ────────────────────────────────────────────────────
@@ -87,17 +83,15 @@ class _WeeklyChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('7-DAY OVERVIEW',
+          const Text('7-day overview',
               style: TextStyle(
-                  color: AppColors.gold,
-                  fontSize: 10,
-                  letterSpacing: 2.0,
-                  fontWeight: FontWeight.w700)),
+                  color: AppColors.textSecondary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500)),
           const SizedBox(height: 16),
           SizedBox(
             height: 120,
@@ -188,11 +182,10 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Text(
         label,
-        style: TextStyle(
-          color: AppColors.gold.withValues(alpha: 0.75),
-          fontSize: 10,
-          letterSpacing: 2.0,
-          fontWeight: FontWeight.w700,
+        style: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
         ),
       );
 }
@@ -222,7 +215,6 @@ class _HistoryRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.gold.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
