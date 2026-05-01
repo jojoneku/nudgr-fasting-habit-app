@@ -77,10 +77,12 @@ class SyncService {
 
   Future<void> pushPending() async {
     if (_isSyncing || !_isOnline || _queue.pendingCount == 0) {
-      debugPrint('SyncService: pushPending skipped — isSyncing=$_isSyncing, isOnline=$_isOnline, pending=${_queue.pendingCount}');
+      debugPrint(
+          'SyncService: pushPending skipped — isSyncing=$_isSyncing, isOnline=$_isOnline, pending=${_queue.pendingCount}');
       return;
     }
-    debugPrint('SyncService: pushPending starting — ${_queue.pendingCount} entries');
+    debugPrint(
+        'SyncService: pushPending starting — ${_queue.pendingCount} entries');
     _isSyncing = true;
     _onStateChange?.call();
     try {
@@ -92,13 +94,15 @@ class SyncService {
           await _pushEntry(entry);
           processed.add(entry);
         } catch (e) {
-          debugPrint('SyncService: push failed for ${entry.domain.name}/${entry.key}: $e');
+          debugPrint(
+              'SyncService: push failed for ${entry.domain.name}/${entry.key}: $e');
           break;
         }
       }
       _queue.removeEntries(processed);
       if (processed.isNotEmpty) _lastSyncedAt = DateTime.now();
-      debugPrint('SyncService: pushPending done — ${processed.length} pushed, ${_queue.pendingCount} remaining');
+      debugPrint(
+          'SyncService: pushPending done — ${processed.length} pushed, ${_queue.pendingCount} remaining');
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
@@ -166,15 +170,18 @@ class SyncService {
   Future<void> _pushFastingState() async {
     final state = await _storage.loadState();
     final history = state['history'] as List<FastingLog>;
-    debugPrint('SyncService: _pushFastingState — history=${history.length} entries, isFasting=${state['isFasting']}');
+    debugPrint(
+        'SyncService: _pushFastingState — history=${history.length} entries, isFasting=${state['isFasting']}');
     final data = {
       'isFasting': state['isFasting'],
       'startTime': (state['startTime'] as DateTime?)?.toIso8601String(),
-      'eatingStartTime': (state['eatingStartTime'] as DateTime?)?.toIso8601String(),
+      'eatingStartTime':
+          (state['eatingStartTime'] as DateTime?)?.toIso8601String(),
       'elapsedSeconds': state['elapsedSeconds'],
       'fastingGoalHours': state['fastingGoalHours'],
       'history': history.map((e) => e.toJson()).toList(),
-      'lastPenaltyCheckDate': (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
+      'lastPenaltyCheckDate':
+          (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
     };
     await _supabase.from('fasting_state').upsert({
       'user_id': _userId,
@@ -187,11 +194,13 @@ class SyncService {
   Future<void> _pushUserQuests() async {
     final quests = await _storage.loadQuests();
     final achievements = await _storage.loadAchievements();
-    debugPrint('SyncService: _pushUserQuests — quests=${quests.length}, achievements=${achievements.length}');
+    debugPrint(
+        'SyncService: _pushUserQuests — quests=${quests.length}, achievements=${achievements.length}');
     final data = {
       'quests': quests.map((e) => e.toJson()).toList(),
       'achievements': achievements.map((e) => e.toJson()).toList(),
-      'questPenaltyCheckDate': (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
+      'questPenaltyCheckDate':
+          (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
     };
     await _supabase.from('user_quests').upsert({
       'user_id': _userId,
@@ -202,11 +211,15 @@ class SyncService {
   }
 
   Future<void> _pushUserCollections() async {
-    debugPrint('SyncService: _pushUserCollections — pushing routines, food library, personal dict');
+    debugPrint(
+        'SyncService: _pushUserCollections — pushing routines, food library, personal dict');
     final data = {
-      'routines': (await _storage.loadRoutines()).map((e) => e.toJson()).toList(),
-      'foodLibrary': (await _storage.loadFoodLibrary()).map((e) => e.toJson()).toList(),
-      'personalDict': (await _storage.loadPersonalDict()).map((e) => e.toJson()).toList(),
+      'routines':
+          (await _storage.loadRoutines()).map((e) => e.toJson()).toList(),
+      'foodLibrary':
+          (await _storage.loadFoodLibrary()).map((e) => e.toJson()).toList(),
+      'personalDict':
+          (await _storage.loadPersonalDict()).map((e) => e.toJson()).toList(),
     };
     await _supabase.from('user_collections').upsert({
       'user_id': _userId,
@@ -234,7 +247,8 @@ class SyncService {
       log = todayLog;
     } else {
       final history = await _storage.loadActivityHistory();
-      log = history.firstWhere((l) => l.date == dateKey, orElse: () => ActivityLog.empty(dateKey));
+      log = history.firstWhere((l) => l.date == dateKey,
+          orElse: () => ActivityLog.empty(dateKey));
     }
     await _supabase.from('activity_logs').upsert({
       'user_id': _userId,
@@ -260,26 +274,54 @@ class SyncService {
     });
   }
 
-  Future<Map<String, dynamic>?> _loadFinanceRecord(String tableName, String recordId) async {
+  Future<Map<String, dynamic>?> _loadFinanceRecord(
+      String tableName, String recordId) async {
     switch (tableName) {
       case 'finance_accounts':
-        return (await _storage.loadAccounts()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadAccounts())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_transactions':
-        return (await _storage.loadTransactions()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadTransactions())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_categories':
-        return (await _storage.loadFinanceCategories()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadFinanceCategories())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_budgets':
-        return (await _storage.loadBudgets()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadBudgets())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_budgeted_expenses':
-        return (await _storage.loadBudgetedExpenses()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadBudgetedExpenses())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_bills':
-        return (await _storage.loadBills()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadBills())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_receivables':
-        return (await _storage.loadReceivables()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadReceivables())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_installments':
-        return (await _storage.loadInstallments()).where((e) => e.id == recordId).firstOrNull?.toJson();
+        return (await _storage.loadInstallments())
+            .where((e) => e.id == recordId)
+            .firstOrNull
+            ?.toJson();
       case 'finance_monthly_summaries':
-        return (await _storage.loadMonthlySummaries()).where((e) => e.month == recordId).firstOrNull?.toJson();
+        return (await _storage.loadMonthlySummaries())
+            .where((e) => e.month == recordId)
+            .firstOrNull
+            ?.toJson();
       default:
         return null;
     }
@@ -338,28 +380,43 @@ class SyncService {
       debugPrint('SyncService: userProfile — local is newer, skipping');
       return;
     }
-    debugPrint('SyncService: userProfile — applying remote data (remote=$remoteTime)');
+    debugPrint(
+        'SyncService: userProfile — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
       if (data['userStats'] != null) {
-        await _storage.saveUserStats(UserStats.fromJson(data['userStats'] as Map<String, dynamic>));
+        await _storage.saveUserStats(
+            UserStats.fromJson(data['userStats'] as Map<String, dynamic>));
       }
       if (data['nutritionGoals'] != null) {
-        await _storage.saveNutritionGoals(NutritionGoals.fromJson(data['nutritionGoals'] as Map<String, dynamic>));
+        await _storage.saveNutritionGoals(NutritionGoals.fromJson(
+            data['nutritionGoals'] as Map<String, dynamic>));
       }
       if (data['tdeeProfile'] != null) {
-        await _storage.saveTdeeProfile(TdeeProfile.fromJson(data['tdeeProfile'] as Map<String, dynamic>));
+        await _storage.saveTdeeProfile(
+            TdeeProfile.fromJson(data['tdeeProfile'] as Map<String, dynamic>));
       }
       if (data['activityGoals'] != null) {
-        await _storage.saveActivityGoals(ActivityGoals.fromJson(data['activityGoals'] as Map<String, dynamic>));
+        await _storage.saveActivityGoals(ActivityGoals.fromJson(
+            data['activityGoals'] as Map<String, dynamic>));
       }
-      if (data['nutritionStreak'] != null) await _storage.saveNutritionStreak(data['nutritionStreak'] as int);
-      if (data['nutritionGoalMetDate'] != null) await _storage.saveNutritionGoalMetDate(data['nutritionGoalMetDate'] as String);
-      if (data['logStreak'] != null) await _storage.saveLogStreak(data['logStreak'] as int);
-      if (data['logStreakDate'] != null) await _storage.saveLogStreakDate(data['logStreakDate'] as String);
-      if (data['activityStreak'] != null) await _storage.saveActivityStreak(data['activityStreak'] as int);
-      if (data['activityGoalMetDate'] != null) await _storage.saveActivityGoalMetDate(data['activityGoalMetDate'] as String);
-      if (data['preferredStepsSource'] != null) await _storage.savePreferredStepsSource(data['preferredStepsSource'] as String?);
+      if (data['nutritionStreak'] != null)
+        await _storage.saveNutritionStreak(data['nutritionStreak'] as int);
+      if (data['nutritionGoalMetDate'] != null)
+        await _storage
+            .saveNutritionGoalMetDate(data['nutritionGoalMetDate'] as String);
+      if (data['logStreak'] != null)
+        await _storage.saveLogStreak(data['logStreak'] as int);
+      if (data['logStreakDate'] != null)
+        await _storage.saveLogStreakDate(data['logStreakDate'] as String);
+      if (data['activityStreak'] != null)
+        await _storage.saveActivityStreak(data['activityStreak'] as int);
+      if (data['activityGoalMetDate'] != null)
+        await _storage
+            .saveActivityGoalMetDate(data['activityGoalMetDate'] as String);
+      if (data['preferredStepsSource'] != null)
+        await _storage
+            .savePreferredStepsSource(data['preferredStepsSource'] as String?);
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
   }
@@ -380,7 +437,8 @@ class SyncService {
       debugPrint('SyncService: fastingState — local is newer, skipping');
       return;
     }
-    debugPrint('SyncService: fastingState — applying remote data (remote=$remoteTime)');
+    debugPrint(
+        'SyncService: fastingState — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
       final history = (data['history'] as List? ?? [])
@@ -388,12 +446,18 @@ class SyncService {
           .toList();
       await _storage.saveState(
         isFasting: data['isFasting'] as bool? ?? false,
-        startTime: data['startTime'] != null ? DateTime.parse(data['startTime'] as String) : null,
-        eatingStartTime: data['eatingStartTime'] != null ? DateTime.parse(data['eatingStartTime'] as String) : null,
+        startTime: data['startTime'] != null
+            ? DateTime.parse(data['startTime'] as String)
+            : null,
+        eatingStartTime: data['eatingStartTime'] != null
+            ? DateTime.parse(data['eatingStartTime'] as String)
+            : null,
         elapsedSeconds: data['elapsedSeconds'] as int? ?? 0,
         fastingGoalHours: data['fastingGoalHours'] as int? ?? 16,
         history: history,
-        lastPenaltyCheckDate: data['lastPenaltyCheckDate'] != null ? DateTime.parse(data['lastPenaltyCheckDate'] as String) : null,
+        lastPenaltyCheckDate: data['lastPenaltyCheckDate'] != null
+            ? DateTime.parse(data['lastPenaltyCheckDate'] as String)
+            : null,
       );
     });
     _queue.setTimestamp(SyncDomain.fastingState, 'default', time: remoteTime);
@@ -415,19 +479,23 @@ class SyncService {
       debugPrint('SyncService: userQuests — local is newer, skipping');
       return;
     }
-    debugPrint('SyncService: userQuests — applying remote data (remote=$remoteTime)');
+    debugPrint(
+        'SyncService: userQuests — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
       if (data['quests'] != null) {
         await _storage.saveQuests((data['quests'] as List)
-            .map((e) => Quest.fromJson(e as Map<String, dynamic>)).toList());
+            .map((e) => Quest.fromJson(e as Map<String, dynamic>))
+            .toList());
       }
       if (data['achievements'] != null) {
         await _storage.saveAchievements((data['achievements'] as List)
-            .map((e) => QuestAchievement.fromJson(e as Map<String, dynamic>)).toList());
+            .map((e) => QuestAchievement.fromJson(e as Map<String, dynamic>))
+            .toList());
       }
       if (data['questPenaltyCheckDate'] != null) {
-        await _storage.saveQuestPenaltyCheckDate(DateTime.parse(data['questPenaltyCheckDate'] as String));
+        await _storage.saveQuestPenaltyCheckDate(
+            DateTime.parse(data['questPenaltyCheckDate'] as String));
       }
     });
     _queue.setTimestamp(SyncDomain.userQuests, 'default', time: remoteTime);
@@ -444,7 +512,8 @@ class SyncService {
       return;
     }
     final remoteTime = DateTime.parse(row['updated_at'] as String);
-    final localTime = _queue.getTimestamp(SyncDomain.userCollections, 'default');
+    final localTime =
+        _queue.getTimestamp(SyncDomain.userCollections, 'default');
     if (!remoteTime.isAfter(localTime)) {
       debugPrint('SyncService: userCollections — local is newer, skipping');
       return;
@@ -454,18 +523,22 @@ class SyncService {
     await _storage.applyRemote(() async {
       if (data['routines'] != null) {
         await _storage.saveRoutines((data['routines'] as List)
-            .map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>)).toList());
+            .map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>))
+            .toList());
       }
       if (data['foodLibrary'] != null) {
         await _storage.saveFoodLibrary((data['foodLibrary'] as List)
-            .map((e) => FoodTemplate.fromJson(e as Map<String, dynamic>)).toList());
+            .map((e) => FoodTemplate.fromJson(e as Map<String, dynamic>))
+            .toList());
       }
       if (data['personalDict'] != null) {
         await _storage.savePersonalDict((data['personalDict'] as List)
-            .map((e) => PersonalFoodEntry.fromJson(e as Map<String, dynamic>)).toList());
+            .map((e) => PersonalFoodEntry.fromJson(e as Map<String, dynamic>))
+            .toList());
       }
     });
-    _queue.setTimestamp(SyncDomain.userCollections, 'default', time: remoteTime);
+    _queue.setTimestamp(SyncDomain.userCollections, 'default',
+        time: remoteTime);
   }
 
   Future<void> _pullNutritionLogs() async {
@@ -481,10 +554,12 @@ class SyncService {
       final data = row['data'] as Map<String, dynamic>;
       await _storage.applyRemote(() async {
         if (data['log'] != null) {
-          await _storage.saveNutritionLog(DailyNutritionLog.fromJson(data['log'] as Map<String, dynamic>));
+          await _storage.saveNutritionLog(
+              DailyNutritionLog.fromJson(data['log'] as Map<String, dynamic>));
         }
         if (data['messages'] != null) {
-          await _storage.saveChatMessages(dateKey, (data['messages'] as List).cast<Map<String, dynamic>>());
+          await _storage.saveChatMessages(
+              dateKey, (data['messages'] as List).cast<Map<String, dynamic>>());
         }
       });
       _queue.setTimestamp(SyncDomain.nutritionLog, dateKey, time: remoteTime);
@@ -502,7 +577,8 @@ class SyncService {
       final localTime = _queue.getTimestamp(SyncDomain.activityLog, dateKey);
       if (!remoteTime.isAfter(localTime)) continue;
       await _storage.applyRemote(() async {
-        await _storage.saveActivityLog(ActivityLog.fromJson(row['data'] as Map<String, dynamic>));
+        await _storage.saveActivityLog(
+            ActivityLog.fromJson(row['data'] as Map<String, dynamic>));
       });
       _queue.setTimestamp(SyncDomain.activityLog, dateKey, time: remoteTime);
     }
@@ -520,33 +596,60 @@ class SyncService {
       byTable.putIfAbsent(t, () => []).add(row as Map<String, dynamic>);
     }
 
-    await _pullFinanceTable<FinancialAccount>(byTable['finance_accounts'] ?? [], 'finance_accounts',
-        loadAll: _storage.loadAccounts, fromJson: FinancialAccount.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveAccounts);
-    await _pullFinanceTable<TransactionRecord>(byTable['finance_transactions'] ?? [], 'finance_transactions',
-        loadAll: _storage.loadTransactions, fromJson: TransactionRecord.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveTransactions);
-    await _pullFinanceTable<FinanceCategory>(byTable['finance_categories'] ?? [], 'finance_categories',
-        loadAll: _storage.loadFinanceCategories, fromJson: FinanceCategory.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveFinanceCategories);
-    await _pullFinanceTable<Budget>(byTable['finance_budgets'] ?? [], 'finance_budgets',
-        loadAll: _storage.loadBudgets, fromJson: Budget.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveBudgets);
-    await _pullFinanceTable<BudgetedExpense>(byTable['finance_budgeted_expenses'] ?? [], 'finance_budgeted_expenses',
-        loadAll: _storage.loadBudgetedExpenses, fromJson: BudgetedExpense.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveBudgetedExpenses);
-    await _pullFinanceTable<Bill>(byTable['finance_bills'] ?? [], 'finance_bills',
-        loadAll: _storage.loadBills, fromJson: Bill.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveBills);
-    await _pullFinanceTable<Receivable>(byTable['finance_receivables'] ?? [], 'finance_receivables',
-        loadAll: _storage.loadReceivables, fromJson: Receivable.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveReceivables);
-    await _pullFinanceTable<Installment>(byTable['finance_installments'] ?? [], 'finance_installments',
-        loadAll: _storage.loadInstallments, fromJson: Installment.fromJson,
-        getId: (e) => e.id, saveAll: _storage.saveInstallments);
-    await _pullFinanceTable<MonthlySummary>(byTable['finance_monthly_summaries'] ?? [], 'finance_monthly_summaries',
-        loadAll: _storage.loadMonthlySummaries, fromJson: MonthlySummary.fromJson,
-        getId: (e) => e.month, saveAll: _storage.saveMonthlySummaries);
+    await _pullFinanceTable<FinancialAccount>(
+        byTable['finance_accounts'] ?? [], 'finance_accounts',
+        loadAll: _storage.loadAccounts,
+        fromJson: FinancialAccount.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveAccounts);
+    await _pullFinanceTable<TransactionRecord>(
+        byTable['finance_transactions'] ?? [], 'finance_transactions',
+        loadAll: _storage.loadTransactions,
+        fromJson: TransactionRecord.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveTransactions);
+    await _pullFinanceTable<FinanceCategory>(
+        byTable['finance_categories'] ?? [], 'finance_categories',
+        loadAll: _storage.loadFinanceCategories,
+        fromJson: FinanceCategory.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveFinanceCategories);
+    await _pullFinanceTable<Budget>(
+        byTable['finance_budgets'] ?? [], 'finance_budgets',
+        loadAll: _storage.loadBudgets,
+        fromJson: Budget.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveBudgets);
+    await _pullFinanceTable<BudgetedExpense>(
+        byTable['finance_budgeted_expenses'] ?? [], 'finance_budgeted_expenses',
+        loadAll: _storage.loadBudgetedExpenses,
+        fromJson: BudgetedExpense.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveBudgetedExpenses);
+    await _pullFinanceTable<Bill>(
+        byTable['finance_bills'] ?? [], 'finance_bills',
+        loadAll: _storage.loadBills,
+        fromJson: Bill.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveBills);
+    await _pullFinanceTable<Receivable>(
+        byTable['finance_receivables'] ?? [], 'finance_receivables',
+        loadAll: _storage.loadReceivables,
+        fromJson: Receivable.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveReceivables);
+    await _pullFinanceTable<Installment>(
+        byTable['finance_installments'] ?? [], 'finance_installments',
+        loadAll: _storage.loadInstallments,
+        fromJson: Installment.fromJson,
+        getId: (e) => e.id,
+        saveAll: _storage.saveInstallments);
+    await _pullFinanceTable<MonthlySummary>(
+        byTable['finance_monthly_summaries'] ?? [], 'finance_monthly_summaries',
+        loadAll: _storage.loadMonthlySummaries,
+        fromJson: MonthlySummary.fromJson,
+        getId: (e) => e.month,
+        saveAll: _storage.saveMonthlySummaries);
   }
 
   Future<void> _pullFinanceTable<T>(
@@ -564,10 +667,12 @@ class SyncService {
     for (final row in rows) {
       final recordId = row['record_id'] as String;
       final remoteTime = DateTime.parse(row['updated_at'] as String);
-      final localTime = _queue.getTimestamp(SyncDomain.financeRecord, '$tableName/$recordId');
+      final localTime =
+          _queue.getTimestamp(SyncDomain.financeRecord, '$tableName/$recordId');
       if (!remoteTime.isAfter(localTime)) continue;
       localMap[recordId] = fromJson(row['data'] as Map<String, dynamic>);
-      _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId', time: remoteTime);
+      _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId',
+          time: remoteTime);
       changed = true;
     }
     if (changed) {
@@ -581,7 +686,8 @@ class SyncService {
   }
 
   /// Pulls from remote only if last pull was more than [staleness] ago.
-  Future<void> pullIfStale({Duration staleness = const Duration(minutes: 5)}) async {
+  Future<void> pullIfStale(
+      {Duration staleness = const Duration(minutes: 5)}) async {
     if (_lastPulledAt != null &&
         DateTime.now().difference(_lastPulledAt!) < staleness) {
       return;
@@ -589,7 +695,8 @@ class SyncService {
     await pullAll();
   }
 
-  static String _initialPushKey(String userId) => 'sync_initial_push_done_v2_$userId';
+  static String _initialPushKey(String userId) =>
+      'sync_initial_push_done_v2_$userId';
 
   Future<bool> _isInitialPushDone() async {
     final prefs = await SharedPreferences.getInstance();

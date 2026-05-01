@@ -114,7 +114,8 @@ class FinancialAccount {
           ? DateTime.parse(json['maturityDate'] as String)
           : null,
       linkedAccountId: json['linkedAccountId'] as String?,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

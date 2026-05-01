@@ -1,6 +1,5 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intermittent_fasting/models/sync_queue_entry.dart';
@@ -74,7 +73,8 @@ void main() {
       expect(service.lastSyncedAt, isNull);
     });
 
-    test('isSyncing is false after recovering from a Supabase failure', () async {
+    test('isSyncing is false after recovering from a Supabase failure',
+        () async {
       // Add an entry so pushPending proceeds past the empty-queue guard.
       // The fake Supabase client throws UnimplementedError, which is caught
       // by the inner try/catch in pushPending — the service recovers cleanly.
@@ -96,7 +96,8 @@ void main() {
       expect(states, [true, false]);
     });
 
-    test('retains queue entries when push fails (will retry next time)', () async {
+    test('retains queue entries when push fails (will retry next time)',
+        () async {
       queue.markDirty(SyncDomain.fastingState, 'default');
 
       await service.pushPending();
@@ -178,11 +179,13 @@ void main() {
         fake.elapse(const Duration(seconds: 2)); // 2s in — not yet fired
 
         service.schedulePush(); // resets timer; should fire 3s from now
-        fake.elapse(const Duration(seconds: 2)); // 2s since reset — still not fired
+        fake.elapse(
+            const Duration(seconds: 2)); // 2s since reset — still not fired
 
         expect(fireCount, 0); // timer hasn't fired (only 2s since last call)
 
-        fake.elapse(const Duration(seconds: 2)); // now 4s since last call — fires
+        fake.elapse(
+            const Duration(seconds: 2)); // now 4s since last call — fires
         // Empty queue → pushPending exits early (no state change emitted)
         expect(service.isSyncing, false);
       });

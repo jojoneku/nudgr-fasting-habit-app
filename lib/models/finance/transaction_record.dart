@@ -52,7 +52,8 @@ class TransactionRecord {
       transferToAccountId: json['transferToAccountId'] as String?,
       transferGroupId: json['transferGroupId'] as String?,
       installmentId: json['installmentId'] as String?,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

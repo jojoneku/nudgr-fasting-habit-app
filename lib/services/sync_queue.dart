@@ -65,14 +65,15 @@ class SyncQueue {
 
   void removeEntries(List<SyncQueueEntry> processed) {
     for (final e in processed) {
-      _entries.removeWhere(
-          (q) => q.domain == e.domain && q.key == e.key && q.queuedAt == e.queuedAt);
+      _entries.removeWhere((q) =>
+          q.domain == e.domain && q.key == e.key && q.queuedAt == e.queuedAt);
     }
     _persist();
   }
 
   DateTime getTimestamp(SyncDomain domain, String key) {
-    return _timestamps['${domain.name}::$key'] ?? DateTime.fromMillisecondsSinceEpoch(0);
+    return _timestamps['${domain.name}::$key'] ??
+        DateTime.fromMillisecondsSinceEpoch(0);
   }
 
   void setTimestamp(SyncDomain domain, String key, {required DateTime time}) {
@@ -87,12 +88,14 @@ class SyncQueue {
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
-    final list = _entries.map((e) => {
-          'domain': e.domain.name,
-          'key': e.key,
-          'op': e.op.name,
-          'queuedAt': e.queuedAt.toIso8601String(),
-        }).toList();
+    final list = _entries
+        .map((e) => {
+              'domain': e.domain.name,
+              'key': e.key,
+              'op': e.op.name,
+              'queuedAt': e.queuedAt.toIso8601String(),
+            })
+        .toList();
     await prefs.setString(_keyQueue, jsonEncode(list));
   }
 

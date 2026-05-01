@@ -44,7 +44,7 @@ class _FakeAuthService extends Fake implements AuthService {
   @override
   Future<void> signInWithGoogle() async {
     signInCalled = true;
-    if (_signInError != null) throw _signInError!;
+    if (_signInError != null) throw _signInError;
     _isSignedIn = true;
     _userId = _userId ?? 'test-uid';
   }
@@ -82,7 +82,8 @@ void main() {
   // ── signInWithGoogle ───────────────────────────────────────────────────────
 
   group('signInWithGoogle', () {
-    test('fires onFirstSignIn when user was not previously signed in', () async {
+    test('fires onFirstSignIn when user was not previously signed in',
+        () async {
       String? receivedId;
       final presenter = _buildPresenter(
         auth,
@@ -131,7 +132,8 @@ void main() {
     });
 
     test('maps cancel exception to a friendly message', () async {
-      auth = _FakeAuthService(signInError: Exception('Sign-in cancelled by user.'));
+      auth = _FakeAuthService(
+          signInError: Exception('Sign-in cancelled by user.'));
       final presenter = _buildPresenter(auth);
 
       await presenter.signInWithGoogle();
@@ -149,9 +151,7 @@ void main() {
     });
 
     test('guards against concurrent calls (isLoading gate)', () async {
-      // Simulate a slow sign-in: complete manually
       final slowAuth = _FakeAuthService();
-      final completer = Completer<void>();
       var callCount = 0;
 
       final presenter = AuthPresenter(
@@ -159,16 +159,14 @@ void main() {
         onFirstSignIn: (_) => callCount++,
       );
 
-      // First call starts sign-in, second is gated out
+      // First call starts sign-in; second should be gated out by isLoading
       unawaited(presenter.signInWithGoogle());
       unawaited(presenter.signInWithGoogle()); // should be no-op
 
-      // Let the first call finish
       await Future.microtask(() {});
       slowAuth.close();
 
-      // Only one callback should have fired (or zero since slow — just
-      // verifying no crash and no double-fire)
+      // onFirstSignIn fires at most once
       expect(callCount, lessThanOrEqualTo(1));
     });
   });

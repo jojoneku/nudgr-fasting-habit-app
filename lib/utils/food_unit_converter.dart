@@ -78,7 +78,12 @@ class FoodUnitConverter {
 
   // "piece" units resolved via food-name heuristic.
   static const Set<String> _pieceUnits = {
-    'piece', 'pieces', 'pc', 'pcs', 'item', 'items',
+    'piece',
+    'pieces',
+    'pc',
+    'pcs',
+    'item',
+    'items',
   };
 
   /// All recognised unit strings — used by the parser to detect units in text.
@@ -121,9 +126,11 @@ class FoodUnitConverter {
     if (_has(n, ['cookie', 'biscuit', 'biskwit'])) return 15.0;
     if (_has(n, ['candy', 'kendi', 'gummy'])) return 10.0;
     if (_has(n, ['lollipop'])) return 12.0;
-    if (_has(n, ['tilapia', 'bangus', 'milkfish', 'dalagang bukid'])) return 150.0;
+    if (_has(n, ['tilapia', 'bangus', 'milkfish', 'dalagang bukid']))
+      return 150.0;
     if (_has(n, ['fish', 'isda'])) return 130.0;
-    if (_has(n, ['chicken leg', 'drumstick', 'chicken thigh', 'paa ng manok'])) return 120.0;
+    if (_has(n, ['chicken leg', 'drumstick', 'chicken thigh', 'paa ng manok']))
+      return 120.0;
     if (_has(n, ['chicken wing', 'pakpak'])) return 60.0;
     if (_has(n, ['chicken', 'manok'])) return 100.0;
     if (_has(n, ['hotdog', 'sausage', 'longganisa', 'chorizo'])) return 40.0;

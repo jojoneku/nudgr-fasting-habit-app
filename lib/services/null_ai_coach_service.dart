@@ -59,9 +59,8 @@ class NullAiCoachService implements AiCoachService {
         'Download the AI Coach to get RPG strategy tips and XP maximisation advice.',
       AiCoachEntryPoint.treasury =>
         'Download the AI Coach to get personalised finance analysis.',
-      AiCoachEntryPoint.general =>
-        'The AI Coach isn\'t downloaded yet. '
-            'Tap "Download AI Coach" to unlock on-device intelligence (~586 MB).',
+      AiCoachEntryPoint.general => 'The AI Coach isn\'t downloaded yet. '
+          'Tap "Download AI Coach" to unlock on-device intelligence (~586 MB).',
     };
   }
 }

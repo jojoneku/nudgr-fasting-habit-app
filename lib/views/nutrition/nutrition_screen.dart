@@ -75,8 +75,7 @@ class _NutritionBody extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) =>
-                      NutritionHistoryScreen(presenter: presenter)),
+                  builder: (_) => NutritionHistoryScreen(presenter: presenter)),
             ),
             tooltip: 'History',
           ),
@@ -86,8 +85,7 @@ class _NutritionBody extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) =>
-                      FoodLibraryScreen(presenter: presenter)),
+                  builder: (_) => FoodLibraryScreen(presenter: presenter)),
             ),
             tooltip: 'Library',
           ),
@@ -176,7 +174,7 @@ class _DayChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final label = _dayLabels[day.weekday - 1];
     final textColor = isFuture
-      ? AppColors.textSecondary.withValues(alpha: 0.3)
+        ? AppColors.textSecondary.withValues(alpha: 0.3)
         : isSelected
             ? AppColors.background
             : isToday
@@ -254,114 +252,114 @@ class _StatSection extends StatelessWidget {
       child: GestureDetector(
         onTap: () => _showNutritionDetailSheet(context, p),
         child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Row(
-          children: [
-            // ── Calories side (60%) ───────────────────────────────────────
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'CALORIES',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.6,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: [
+              // ── Calories side (60%) ───────────────────────────────────────
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'CALORIES',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.6,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  _TinyBar(
-                    progress: p.netCalorieProgress,
-                    color: barColor,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _StatCell(
-                        value: '${p.todayCalories}',
-                        label: 'Eaten',
-                        color: AppColors.textPrimary,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.remainingCalories}',
-                        label: 'Left',
-                        color: AppColors.textPrimary,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: burned > 0 ? '$burned' : '—',
-                        label: 'Burned',
-                        color: AppColors.textPrimary,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // ── Divider ───────────────────────────────────────────────────
-            Container(
-              width: 1,
-              height: 56,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: AppColors.textSecondary.withValues(alpha: 0.20),
-            ),
-            // ── Macros side (40%) ─────────────────────────────────────────
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'MACROS',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.6,
+                    const SizedBox(height: 6),
+                    _TinyBar(
+                      progress: p.netCalorieProgress,
+                      color: barColor,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _StatCell(
-                        value: '${p.todayProtein.round()}g',
-                        label: 'Protein',
-                        color: AppColors.textPrimary,
-                        barColor: AppColors.primary,
-                        progress: p.proteinProgress,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.todayCarbs.round()}g',
-                        label: 'Carbs',
-                        color: AppColors.textPrimary,
-                        barColor: AppColors.gold,
-                        progress: p.carbsProgress,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.todayFat.round()}g',
-                        label: 'Fat',
-                        color: AppColors.textPrimary,
-                        barColor: AppColors.danger,
-                        progress: p.fatProgress,
-                      ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _StatCell(
+                          value: '${p.todayCalories}',
+                          label: 'Eaten',
+                          color: AppColors.textPrimary,
+                        ),
+                        const _ColDivider(),
+                        _StatCell(
+                          value: '${p.remainingCalories}',
+                          label: 'Left',
+                          color: AppColors.textPrimary,
+                        ),
+                        const _ColDivider(),
+                        _StatCell(
+                          value: burned > 0 ? '$burned' : '—',
+                          label: 'Burned',
+                          color: AppColors.textPrimary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              // ── Divider ───────────────────────────────────────────────────
+              Container(
+                width: 1,
+                height: 56,
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                color: AppColors.textSecondary.withValues(alpha: 0.20),
+              ),
+              // ── Macros side (40%) ─────────────────────────────────────────
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'MACROS',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _StatCell(
+                          value: '${p.todayProtein.round()}g',
+                          label: 'Protein',
+                          color: AppColors.textPrimary,
+                          barColor: AppColors.primary,
+                          progress: p.proteinProgress,
+                        ),
+                        const _ColDivider(),
+                        _StatCell(
+                          value: '${p.todayCarbs.round()}g',
+                          label: 'Carbs',
+                          color: AppColors.textPrimary,
+                          barColor: AppColors.gold,
+                          progress: p.carbsProgress,
+                        ),
+                        const _ColDivider(),
+                        _StatCell(
+                          value: '${p.todayFat.round()}g',
+                          label: 'Fat',
+                          color: AppColors.textPrimary,
+                          barColor: AppColors.danger,
+                          progress: p.fatProgress,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-      ),
       ),
     );
   }
@@ -457,7 +455,6 @@ class _TinyBar extends StatelessWidget {
   }
 }
 
-
 // ─── Nutrition Detail Sheet ───────────────────────────────────────────────────
 
 class _NutritionDetailSheet extends StatelessWidget {
@@ -526,7 +523,8 @@ class _NutritionDetailSheet extends StatelessWidget {
               label: 'Protein',
               value: p.todayProtein.round(),
               goal: p.proteinGoal!,
-              remaining: (p.proteinGoal! - p.todayProtein.round()).clamp(0, p.proteinGoal!),
+              remaining: (p.proteinGoal! - p.todayProtein.round())
+                  .clamp(0, p.proteinGoal!),
               unit: 'g',
               color: AppColors.primary,
             ),
@@ -536,7 +534,8 @@ class _NutritionDetailSheet extends StatelessWidget {
               label: 'Carbs',
               value: p.todayCarbs.round(),
               goal: p.carbsGoal!,
-              remaining: (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
+              remaining:
+                  (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
               unit: 'g',
               color: AppColors.gold,
             ),
@@ -719,14 +718,14 @@ class _ChatFeedState extends State<_ChatFeed> {
     final error = widget.presenter.chatParseError;
 
     if (messages.isEmpty && !isParsing) {
-      return _EmptyChatState(
-          isToday: widget.presenter.isSelectedDateToday);
+      return _EmptyChatState(isToday: widget.presenter.isSelectedDateToday);
     }
 
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      itemCount: messages.length + (isParsing ? 1 : 0) + (error != null ? 1 : 0),
+      itemCount:
+          messages.length + (isParsing ? 1 : 0) + (error != null ? 1 : 0),
       itemBuilder: (context, index) {
         if (error != null && index == messages.length) {
           return _ErrorBubble(error: error);
@@ -760,8 +759,8 @@ class _EmptyChatState extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             isToday ? 'Log food or exercise below' : 'Nothing logged',
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 14),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 14),
           ),
         ],
       ),
@@ -818,8 +817,7 @@ class _ThinkingBubble extends StatelessWidget {
             ),
             SizedBox(width: 8),
             Text('Analyzing…',
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13)),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
           ],
         ),
       ),
@@ -840,8 +838,7 @@ class _ChatMessageCard extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: message.kind == ChatMessageKind.food
-          ? _FoodAnalysisCard(
-              message: message, presenter: presenter, key: key)
+          ? _FoodAnalysisCard(message: message, presenter: presenter, key: key)
           : message.exerciseEntry != null
               ? _ExerciseAnalysisCard(message: message, presenter: presenter)
               : const SizedBox.shrink(),
@@ -874,8 +871,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
 
   void _resetControllers() {
     _controllers = widget.message.foodItems.map((item) {
-      return TextEditingController(
-          text: item.amountText ?? item.name);
+      return TextEditingController(text: item.amountText ?? item.name);
     }).toList();
   }
 
@@ -903,7 +899,11 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     setState(() => _saving = true);
     final texts = _controllers.map((c) => c.text.trim()).toList();
     await widget.presenter.editAllChatFoodItems(widget.message.id, texts);
-    if (mounted) setState(() { _editing = false; _saving = false; });
+    if (mounted)
+      setState(() {
+        _editing = false;
+        _saving = false;
+      });
   }
 
   void _cancel() {
@@ -950,8 +950,8 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save',
-                style: TextStyle(color: AppColors.primary)),
+            child:
+                const Text('Save', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),
@@ -1069,8 +1069,8 @@ class _FoodItemRow extends StatelessWidget {
                       color: AppColors.textPrimary, fontSize: 14),
                   decoration: InputDecoration(
                     isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 8, horizontal: 10),
+                    contentPadding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                     fillColor: AppColors.background,
                     filled: true,
                     border: OutlineInputBorder(
@@ -1155,9 +1155,7 @@ class _FoodItemDisplay extends StatelessWidget {
             ),
           ],
         ),
-        if (item.protein != null ||
-            item.carbs != null ||
-            item.fat != null) ...[
+        if (item.protein != null || item.carbs != null || item.fat != null) ...[
           const SizedBox(height: 6),
           Row(
             children: [
@@ -1209,8 +1207,8 @@ class _NutriBadge extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(
-            color: color, fontSize: 11, fontWeight: FontWeight.w600),
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -1233,8 +1231,8 @@ class _MacroBadge extends StatelessWidget {
       ),
       child: Text(
         '$label ${value.round()}g',
-        style: TextStyle(
-            color: color, fontSize: 10, fontWeight: FontWeight.w500),
+        style:
+            TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w500),
       ),
     );
   }
@@ -1245,8 +1243,7 @@ class _MacroBadge extends StatelessWidget {
 class _ExerciseAnalysisCard extends StatelessWidget {
   final ChatMessage message;
   final NutritionPresenter presenter;
-  const _ExerciseAnalysisCard(
-      {required this.message, required this.presenter});
+  const _ExerciseAnalysisCard({required this.message, required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -1360,8 +1357,8 @@ class _MessageFooter extends StatelessWidget {
         children: [
           Text(
             timeStr,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 10),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 10),
           ),
           const Spacer(),
           if (editing) ...[
@@ -1498,22 +1495,19 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                 color: AppColors.textSecondary),
             onPressed: isToday ? () => _showTemplates(context) : null,
             tooltip: 'Templates',
-            constraints:
-                const BoxConstraints(minWidth: 44, minHeight: 44),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
-            icon: const Icon(Icons.edit_outlined,
-                color: AppColors.textSecondary),
+            icon:
+                const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
             onPressed:
                 isToday && !locked ? () => _showManualAdd(context) : null,
             tooltip: 'Add manually',
-            constraints:
-                const BoxConstraints(minWidth: 44, minHeight: 44),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           Expanded(
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(24),
@@ -1522,8 +1516,8 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                 controller: _ctrl,
                 focusNode: _focus,
                 enabled: isToday && !locked,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14),
+                style:
+                    const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: locked
                       ? 'Fasting — logging paused'
@@ -1534,8 +1528,7 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                       color: AppColors.textSecondary, fontSize: 13),
                   border: InputBorder.none,
                   isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(vertical: 8),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
                 ),
                 textInputAction: TextInputAction.send,
                 onSubmitted: (_) => _send(),
@@ -1550,9 +1543,8 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isToday && !locked
-                    ? AppColors.primary
-                    : AppColors.surface,
+                color:
+                    isToday && !locked ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Icon(
@@ -1611,8 +1603,7 @@ class _TemplateSheet extends StatelessWidget {
               padding: EdgeInsets.all(24),
               child: Text(
                 'No templates yet. Save a meal from the Library.',
-                style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
                 textAlign: TextAlign.center,
               ),
             ),
@@ -1622,11 +1613,9 @@ class _TemplateSheet extends StatelessWidget {
     );
   }
 
-  List<Widget> _templateList(
-      BuildContext context, List<FoodTemplate> items) {
+  List<Widget> _templateList(BuildContext context, List<FoodTemplate> items) {
     return items.map((t) {
-      final totalCal =
-          t.entries.fold<int>(0, (sum, e) => sum + e.calories);
+      final totalCal = t.entries.fold<int>(0, (sum, e) => sum + e.calories);
       return ListTile(
         dense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1634,12 +1623,10 @@ class _TemplateSheet extends StatelessWidget {
             ? const Icon(Icons.push_pin, color: AppColors.primary, size: 14)
             : null,
         title: Text(t.name,
-            style: const TextStyle(
-                color: AppColors.textPrimary, fontSize: 14)),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
         trailing: Text(
           totalCal > 0 ? '$totalCal kcal' : '',
-          style: const TextStyle(
-              color: AppColors.gold, fontSize: 12),
+          style: const TextStyle(color: AppColors.gold, fontSize: 12),
         ),
         onTap: () {
           Navigator.pop(context);

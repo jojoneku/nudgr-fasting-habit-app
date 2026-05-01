@@ -58,7 +58,7 @@ abstract class StorageService {
   static const String keyInstallments = 'finance_installments';
   static const String keyPersonalFoodDict = 'personalFoodDict';
 
-  //  User Stats 
+  //  User Stats
   Future<void> saveUserStats(UserStats stats);
   Future<UserStats> loadUserStats();
 
@@ -84,7 +84,7 @@ abstract class StorageService {
   Future<void> saveQuestPenaltyCheckDate(DateTime date);
   Future<DateTime?> loadQuestPenaltyCheckDate();
 
-  //  Nutrition 
+  //  Nutrition
   Future<void> saveNutritionLog(DailyNutritionLog log);
   Future<DailyNutritionLog> loadTodayNutritionLog();
   Future<DailyNutritionLog> loadNutritionLogForDate(String dateKey);
@@ -104,7 +104,7 @@ abstract class StorageService {
   Future<void> saveLogStreakDate(String date);
   Future<String?> loadLogStreakDate();
 
-  // ─ Activity 
+  // ─ Activity
   Future<void> saveActivityLog(ActivityLog log);
   Future<ActivityLog> loadTodayActivityLog();
   Future<List<ActivityLog>> loadActivityHistory();
@@ -144,7 +144,7 @@ abstract class StorageService {
   Future<void> saveMonthlySummaries(List<MonthlySummary> summaries);
   Future<List<MonthlySummary>> loadMonthlySummaries();
 
-  //  Personal Food Dictionary 
+  //  Personal Food Dictionary
   Future<void> savePersonalDict(List<PersonalFoodEntry> entries);
   Future<List<PersonalFoodEntry>> loadPersonalDict();
 

@@ -175,10 +175,7 @@ class FoodNlpParser {
   }
 
   static String _cleanName(String raw) {
-    return raw
-        .trim()
-        .replaceAll(RegExp(r'^(of|the|some)\s+'), '')
-        .trim();
+    return raw.trim().replaceAll(RegExp(r'^(of|the|some)\s+'), '').trim();
   }
 
   static bool _looksLikeUnit(String word) =>
@@ -186,9 +183,7 @@ class FoodNlpParser {
 
   // Pre-computed unit alternation string for regex patterns.
   static final String _unitPattern = () {
-    final units = FoodUnitConverter.knownUnits
-        .map(RegExp.escape)
-        .toList()
+    final units = FoodUnitConverter.knownUnits.map(RegExp.escape).toList()
       ..sort((a, b) => b.length.compareTo(a.length)); // longest first
     return units.join('|');
   }();

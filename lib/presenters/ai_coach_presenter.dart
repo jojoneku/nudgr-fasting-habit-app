@@ -192,9 +192,8 @@ class AiCoachPresenter extends ChangeNotifier {
     return AiCoachContext(
       entryPoint: _entryPoint,
       isFasting: _fasting.isFasting,
-      elapsedFastMinutes: _fasting.isFasting
-          ? _fasting.elapsedSeconds ~/ 60
-          : null,
+      elapsedFastMinutes:
+          _fasting.isFasting ? _fasting.elapsedSeconds ~/ 60 : null,
       fastingGoalHours: _fasting.fastingGoalHours,
       fastingStreak: stats.streak,
       playerLevel: stats.level,
@@ -208,9 +207,8 @@ class AiCoachPresenter extends ChangeNotifier {
     );
   }
 
-  List<AiChatMessage> _userVisibleMessages() => _messages
-      .where((m) => !m.isStreaming && m.text.isNotEmpty)
-      .toList();
+  List<AiChatMessage> _userVisibleMessages() =>
+      _messages.where((m) => !m.isStreaming && m.text.isNotEmpty).toList();
 
   void _updateLastMessage(String text, {required bool isStreaming}) {
     if (_messages.isEmpty) return;

@@ -512,7 +512,8 @@ class _AiCoachDownloadCard extends StatelessWidget {
                   height: 44,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                      backgroundColor:
+                          AppColors.primary.withValues(alpha: 0.15),
                       foregroundColor: AppColors.primary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(

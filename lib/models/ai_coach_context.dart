@@ -56,14 +56,14 @@ class AiCoachContext {
     if (isFasting && elapsedFastMinutes != null) {
       final h = elapsedFastMinutes! ~/ 60;
       final m = elapsedFastMinutes! % 60;
-      buf.writeln('Currently fasting: ${h}h ${m}m / ${fastingGoalHours ?? 16}h goal');
+      buf.writeln(
+          'Currently fasting: ${h}h ${m}m / ${fastingGoalHours ?? 16}h goal');
     } else {
       buf.writeln('Not currently fasting.');
     }
 
     if (todayCalories != null) {
-      buf.writeln(
-          '=== Today\'s Nutrition ===\n'
+      buf.writeln('=== Today\'s Nutrition ===\n'
           'Calories: $todayCalories / ${calorieGoal ?? '?'} kcal\n'
           'Protein: ${todayProtein?.toStringAsFixed(1) ?? '?'}g | '
           'Carbs: ${todayCarbs?.toStringAsFixed(1) ?? '?'}g | '
@@ -71,8 +71,7 @@ class AiCoachContext {
     }
 
     if (monthBudget != null && monthSpent != null) {
-      buf.writeln(
-          '=== Finance ===\n'
+      buf.writeln('=== Finance ===\n'
           'Budget: ₱${monthBudget!.toStringAsFixed(0)} | '
           'Spent: ₱${monthSpent!.toStringAsFixed(0)}');
     }

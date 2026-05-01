@@ -9,12 +9,31 @@ class FoodMatchScorer {
   // If these appear in a DB entry but NOT in the user's query, the entry is
   // penalised.
   static const _transformingWords = {
-    'chips', 'crisps', 'puffs', 'crackers', 'cracker',
-    'fried', 'battered', 'breaded', 'coated',
-    'sauce', 'gravy', 'soup', 'stew', 'casserole', 'curry',
-    'candy', 'candied', 'caramel',
-    'pie', 'cake', 'tart', 'pudding',
-    'instant', 'processed', 'imitation',
+    'chips',
+    'crisps',
+    'puffs',
+    'crackers',
+    'cracker',
+    'fried',
+    'battered',
+    'breaded',
+    'coated',
+    'sauce',
+    'gravy',
+    'soup',
+    'stew',
+    'casserole',
+    'curry',
+    'candy',
+    'candied',
+    'caramel',
+    'pie',
+    'cake',
+    'tart',
+    'pudding',
+    'instant',
+    'processed',
+    'imitation',
   };
 
   /// Pick the highest-scoring entry from [hits] for [query].
@@ -42,10 +61,8 @@ class FoodMatchScorer {
     final eName = entry.name.toLowerCase();
     if (eName == fullQuery) return 1000;
 
-    final eWords = eName
-        .split(RegExp(r'[,\s\-]+'))
-        .where((w) => w.length > 1)
-        .toList();
+    final eWords =
+        eName.split(RegExp(r'[,\s\-]+')).where((w) => w.length > 1).toList();
 
     int s = 0;
     for (final qw in qWords) {
@@ -84,16 +101,11 @@ class FoodMatchScorer {
     final q = query.toLowerCase();
     if (eName == q) return true;
 
-    final qWords = q
-        .split(RegExp(r'\s+'))
-        .where((w) => w.length > 1)
-        .toSet();
+    final qWords = q.split(RegExp(r'\s+')).where((w) => w.length > 1).toSet();
     if (qWords.isEmpty) return false;
 
-    final eWords = eName
-        .split(RegExp(r'[,\s\-()]+'))
-        .where((w) => w.length > 1)
-        .toSet();
+    final eWords =
+        eName.split(RegExp(r'[,\s\-()]+')).where((w) => w.length > 1).toSet();
 
     // Every query word must be present as a whole word.
     if (!qWords.every(eWords.contains)) return false;
@@ -120,8 +132,7 @@ class FoodMatchScorer {
 
     final nlpWords =
         nlp.split(RegExp(r'\s+')).where((w) => w.length > 2).toSet();
-    final aiWords =
-        ai.split(RegExp(r'\s+')).where((w) => w.length > 2).toSet();
+    final aiWords = ai.split(RegExp(r'\s+')).where((w) => w.length > 2).toSet();
 
     // Reject if AI added a transforming word the user didn't say.
     for (final aw in aiWords) {

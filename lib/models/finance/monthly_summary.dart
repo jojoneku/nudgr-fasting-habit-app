@@ -59,7 +59,8 @@ class MonthlySummary {
           (k, v) => MapEntry(k, (v as num).toDouble()),
         ),
       ),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

@@ -12,8 +12,8 @@ void main() {
   group('FoodMatchScorer.isLearnableMatch', () {
     test('exact name match passes', () {
       expect(
-        FoodMatchScorer.isLearnableMatch(_entry('Chicken Breast'),
-            'chicken breast'),
+        FoodMatchScorer.isLearnableMatch(
+            _entry('Chicken Breast'), 'chicken breast'),
         isTrue,
       );
     });

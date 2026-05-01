@@ -75,13 +75,10 @@ class OnDeviceAiCoachService implements AiCoachService {
       await FlutterGemma.installModel(
         modelType: ModelType.qwen,
         fileType: ModelFileType.task,
-      )
-          .fromNetwork(_modelUrl)
-          .withProgress((p) {
-            _downloadProgress = p;
-            onProgress?.call(p);
-          })
-          .install();
+      ).fromNetwork(_modelUrl).withProgress((p) {
+        _downloadProgress = p;
+        onProgress?.call(p);
+      }).install();
 
       await _loadModel();
     } finally {
@@ -107,8 +104,7 @@ class OnDeviceAiCoachService implements AiCoachService {
             msg.contains('can not find') ||
             msg.contains('litert')) {
           _deviceIncompatible = true;
-          debugPrint(
-              'OnDeviceAiCoachService: device incompatible — $cpuError');
+          debugPrint('OnDeviceAiCoachService: device incompatible — $cpuError');
         } else {
           debugPrint('OnDeviceAiCoachService: model load failed: $cpuError');
         }
@@ -168,9 +164,8 @@ class OnDeviceAiCoachService implements AiCoachService {
 
       for (final msg in messages) {
         if (msg.role == AiChatRole.user) {
-          final text = systemPrepended
-              ? msg.text
-              : '$systemContext\n\n${msg.text}';
+          final text =
+              systemPrepended ? msg.text : '$systemContext\n\n${msg.text}';
           systemPrepended = true;
           await chat.addQuery(Message(text: text, isUser: true));
         } else if (msg.text.isNotEmpty) {
@@ -190,9 +185,9 @@ class OnDeviceAiCoachService implements AiCoachService {
       bool hasContent = false;
       await for (final token in _filterThinkTokens(
         chat.generateChatResponseAsync().timeout(
-          const Duration(seconds: 90),
-          onTimeout: (sink) => sink.close(),
-        ),
+              const Duration(seconds: 90),
+              onTimeout: (sink) => sink.close(),
+            ),
       )) {
         hasContent = true;
         yield token;
@@ -254,9 +249,8 @@ class OnDeviceAiCoachService implements AiCoachService {
             const Duration(seconds: 30),
           );
 
-      final text = response is TextResponse
-          ? response.token
-          : response.toString();
+      final text =
+          response is TextResponse ? response.token : response.toString();
 
       return _parseFoodResponse(text, description);
     } catch (e) {
@@ -308,7 +302,8 @@ class OnDeviceAiCoachService implements AiCoachService {
           }
           // Yield everything before the opening tag, then enter think mode.
           if (start > 0) {
-            final before = text.substring(0, start).replaceAll(specialTokenRe, '');
+            final before =
+                text.substring(0, start).replaceAll(specialTokenRe, '');
             if (before.isNotEmpty) yield before;
           }
           inThink = true;
@@ -346,7 +341,8 @@ class OnDeviceAiCoachService implements AiCoachService {
       result.items.every((i) => !i.isEstimated);
 
   String _buildSystemTurn(AiCoachContext context) {
-    final persona = _personas[context.entryPoint] ?? _personas[AiCoachEntryPoint.general]!;
+    final persona =
+        _personas[context.entryPoint] ?? _personas[AiCoachEntryPoint.general]!;
     return '$persona\n\n${context.toPromptSummary()}\n\nRespond concisely. '
         'Do not repeat the stats back. Be direct and helpful.';
   }
@@ -394,7 +390,8 @@ class OnDeviceAiCoachService implements AiCoachService {
       if (grams != null && grams > 0) {
         resolvedGrams = grams;
       } else if (unit != null) {
-        resolvedGrams = FoodUnitConverter.convert(qty, unit, foodName: name) ?? 100.0;
+        resolvedGrams =
+            FoodUnitConverter.convert(qty, unit, foodName: name) ?? 100.0;
         estimated = !FoodUnitConverter.isExact(unit);
       } else {
         resolvedGrams = 100.0;
@@ -436,9 +433,8 @@ class OnDeviceAiCoachService implements AiCoachService {
           .generateChatResponse()
           .timeout(const Duration(seconds: 20));
 
-      final text = response is TextResponse
-          ? response.token
-          : response.toString();
+      final text =
+          response is TextResponse ? response.token : response.toString();
 
       return _parseMacroResponse(text, description);
     } catch (e) {
@@ -486,8 +482,7 @@ class OnDeviceAiCoachService implements AiCoachService {
   // ── Normalize food input ──────────────────────────────────────────────────
 
   @override
-  Future<List<AiParsedFood>?> normalizeFoodInput(
-      List<String> fragments) async {
+  Future<List<AiParsedFood>?> normalizeFoodInput(List<String> fragments) async {
     final model = _model;
     if (model == null || fragments.isEmpty) return null;
 
@@ -571,8 +566,8 @@ class OnDeviceAiCoachService implements AiCoachService {
     final model = _model;
     if (model == null || items.isEmpty) return null;
 
-    final cacheKey = jsonEncode(
-        items.map((i) => {'n': i.name, 'g': i.grams}).toList());
+    final cacheKey =
+        jsonEncode(items.map((i) => {'n': i.name, 'g': i.grams}).toList());
     final cached = _cacheGet(_macroForItemsCache, cacheKey);
     if (cached != null) return cached;
 
@@ -652,8 +647,7 @@ class OnDeviceAiCoachService implements AiCoachService {
 
   // Locale hint prepended to food prompts. Biases the model toward Filipino
   // dish recognition without changing Western food behavior.
-  static const _localeHint =
-      'Cuisine context: Filipino + Western mix. '
+  static const _localeHint = 'Cuisine context: Filipino + Western mix. '
       'Common Filipino dishes: adobo, sinigang, kare-kare, tocino, longganisa, pancit, tinola, bulalo.\n';
 
   static const _normalizePrompt =
@@ -678,8 +672,7 @@ class OnDeviceAiCoachService implements AiCoachService {
       '[{"i":0,"t":"200g chicken adobo"}] → [{"i":0,"n":"chicken adobo","g":200}]\n'
       'Input: ';
 
-  static const _macroEstimatePrompt =
-      'You are a nutrition database API. '
+  static const _macroEstimatePrompt = 'You are a nutrition database API. '
       'Given a meal description, respond with ONLY a valid JSON object — '
       'no preamble, no markdown fences, no explanation.\n'
       'Required format:\n'
@@ -718,18 +711,16 @@ class OnDeviceAiCoachService implements AiCoachService {
   static const Map<AiCoachEntryPoint, String> _personas = {
     AiCoachEntryPoint.nutrition:
         'You are a nutrition coach inside a gamified fasting app called The System. '
-        'Help the user log food accurately, hit their macro goals, and optimize their eating window.',
-    AiCoachEntryPoint.fasting:
-        'You are a fasting coach inside The System. '
+            'Help the user log food accurately, hit their macro goals, and optimize their eating window.',
+    AiCoachEntryPoint.fasting: 'You are a fasting coach inside The System. '
         'Guide the player through their fast, explain phases (ketosis, autophagy), and keep them motivated.',
     AiCoachEntryPoint.stats:
         'You are the Shadow Monarch — the RPG advisor of The System. '
-        'Analyze the player\'s XP, level, HP, and streaks. Give strategic advice to level up faster.',
-    AiCoachEntryPoint.treasury:
-        'You are a finance analyst inside The System. '
+            'Analyze the player\'s XP, level, HP, and streaks. Give strategic advice to level up faster.',
+    AiCoachEntryPoint.treasury: 'You are a finance analyst inside The System. '
         'Review the player\'s budget, spending, and savings. Give concise, actionable insights.',
     AiCoachEntryPoint.general:
         'You are The System\'s AI Coach — a health and wellness advisor with an RPG twist. '
-        'You cover fasting, nutrition, fitness, and personal finance. Be direct and motivating.',
+            'You cover fasting, nutrition, fitness, and personal finance. Be direct and motivating.',
   };
 }

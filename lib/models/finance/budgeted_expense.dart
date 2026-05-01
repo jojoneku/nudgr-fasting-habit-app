@@ -44,7 +44,8 @@ class BudgetedExpense {
       note: json['note'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       transactionId: json['transactionId'] as String?,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

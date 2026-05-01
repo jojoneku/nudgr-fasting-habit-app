@@ -165,7 +165,8 @@ class ActivityPresenter extends ChangeNotifier {
     notifyListeners();
 
     try {
-      await _healthService.debugDumpTodayStepRecords(); // TEMP: remove after inspection
+      await _healthService
+          .debugDumpTodayStepRecords(); // TEMP: remove after inspection
       final steps = await _healthService.readTodaySteps(
           sourceId: _preferredStepsSourceId);
       final activeCalories = await _healthService.readTodayActiveCalories();
@@ -173,7 +174,8 @@ class ActivityPresenter extends ChangeNotifier {
       // Prefer workout distance (GPS from Strava etc.) over DISTANCE_DELTA,
       // since device sensors don't write distance to Health Connect.
       final workoutDistance = await _healthService.readTodayWorkoutDistance();
-      final distance = workoutDistance ?? await _healthService.readTodayDistance();
+      final distance =
+          workoutDistance ?? await _healthService.readTodayDistance();
 
       _todayLog = _todayLog.copyWith(
         steps: steps,

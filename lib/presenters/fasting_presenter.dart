@@ -118,8 +118,7 @@ class FastingPresenter extends ChangeNotifier {
         elapsedSeconds = DateTime.now().difference(eatingStartTime!).inSeconds;
         _startTicker();
         try {
-          await _notificationService
-              .showEatingTimerNotification(eatingEndTime);
+          await _notificationService.showEatingTimerNotification(eatingEndTime);
         } catch (_) {}
       }
     }

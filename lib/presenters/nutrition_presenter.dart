@@ -54,17 +54,123 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Calorie density buckets (keyword fallback for unknown foods) ─────────
   static const _calorieBuckets = [
-    (kcalPerG: 7.5, keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']),
-    (kcalPerG: 5.5, keywords: ['nut', 'almond', 'peanut', 'cashew', 'pistachio', 'walnut', 'seed', 'buto']),
-    (kcalPerG: 3.5, keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']),
-    (kcalPerG: 4.5, keywords: ['cake', 'cookie', 'biscuit', 'pastry', 'donut', 'chocolate', 'candy', 'chips', 'cracker']),
-    (kcalPerG: 1.3, keywords: ['rice', 'pasta', 'noodle', 'spaghetti', 'bread', 'flour', 'oat', 'cereal', 'kanin', 'bigas']),
-    (kcalPerG: 2.0, keywords: ['beef', 'pork', 'chicken', 'turkey', 'lamb', 'meat', 'manok', 'baboy', 'baka', 'hotdog', 'sausage']),
-    (kcalPerG: 1.4, keywords: ['fish', 'salmon', 'tuna', 'tilapia', 'bangus', 'sardine', 'shrimp', 'crab', 'squid', 'seafood', 'isda', 'hipon']),
+    (
+      kcalPerG: 7.5,
+      keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']
+    ),
+    (
+      kcalPerG: 5.5,
+      keywords: [
+        'nut',
+        'almond',
+        'peanut',
+        'cashew',
+        'pistachio',
+        'walnut',
+        'seed',
+        'buto'
+      ]
+    ),
+    (
+      kcalPerG: 3.5,
+      keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']
+    ),
+    (
+      kcalPerG: 4.5,
+      keywords: [
+        'cake',
+        'cookie',
+        'biscuit',
+        'pastry',
+        'donut',
+        'chocolate',
+        'candy',
+        'chips',
+        'cracker'
+      ]
+    ),
+    (
+      kcalPerG: 1.3,
+      keywords: [
+        'rice',
+        'pasta',
+        'noodle',
+        'spaghetti',
+        'bread',
+        'flour',
+        'oat',
+        'cereal',
+        'kanin',
+        'bigas'
+      ]
+    ),
+    (
+      kcalPerG: 2.0,
+      keywords: [
+        'beef',
+        'pork',
+        'chicken',
+        'turkey',
+        'lamb',
+        'meat',
+        'manok',
+        'baboy',
+        'baka',
+        'hotdog',
+        'sausage'
+      ]
+    ),
+    (
+      kcalPerG: 1.4,
+      keywords: [
+        'fish',
+        'salmon',
+        'tuna',
+        'tilapia',
+        'bangus',
+        'sardine',
+        'shrimp',
+        'crab',
+        'squid',
+        'seafood',
+        'isda',
+        'hipon'
+      ]
+    ),
     (kcalPerG: 1.5, keywords: ['egg', 'itlog']),
     (kcalPerG: 1.5, keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas']),
-    (kcalPerG: 0.35, keywords: ['vegetable', 'salad', 'broccoli', 'spinach', 'cabbage', 'carrot', 'kangkong', 'sitaw', 'gulay', 'ampalaya', 'talong', 'okra']),
-    (kcalPerG: 0.6, keywords: ['fruit', 'apple', 'banana', 'mango', 'orange', 'grape', 'watermelon', 'saging', 'mangga', 'prutas']),
+    (
+      kcalPerG: 0.35,
+      keywords: [
+        'vegetable',
+        'salad',
+        'broccoli',
+        'spinach',
+        'cabbage',
+        'carrot',
+        'kangkong',
+        'sitaw',
+        'gulay',
+        'ampalaya',
+        'talong',
+        'okra'
+      ]
+    ),
+    (
+      kcalPerG: 0.6,
+      keywords: [
+        'fruit',
+        'apple',
+        'banana',
+        'mango',
+        'orange',
+        'grape',
+        'watermelon',
+        'saging',
+        'mangga',
+        'prutas'
+      ]
+    ),
     (kcalPerG: 0.5, keywords: ['broth', 'sabaw', 'soup']),
   ];
 
@@ -286,8 +392,7 @@ class NutritionPresenter extends ChangeNotifier {
       timestamp: DateTime.now(),
       kind: ChatMessageKind.food,
       foodItems: [
-        ChatFoodItem.fromFoodEntry(entry,
-            amountText: '${entry.calories} kcal'),
+        ChatFoodItem.fromFoodEntry(entry, amountText: '${entry.calories} kcal'),
       ],
       mealSlot: MealSlot.meal,
     );
@@ -485,7 +590,8 @@ class NutritionPresenter extends ChangeNotifier {
     try {
       final result = FoodNlpParser.parse(description);
       if (result.isEmpty) {
-        _parseError = 'Could not identify any food items. Try being more specific.';
+        _parseError =
+            'Could not identify any food items. Try being more specific.';
         return;
       }
       _lastParseResult = result;
@@ -508,7 +614,8 @@ class NutritionPresenter extends ChangeNotifier {
     if (result == null) return;
 
     for (var i = 0; i < result.items.length; i++) {
-      final entry = overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]);
+      final entry =
+          overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]);
       await addFoodEntry(entry, slot);
     }
 
@@ -585,11 +692,9 @@ class NutritionPresenter extends ChangeNotifier {
       id: FoodEntry.generateId(),
       name: parsed.name,
       calories: (dict.kcalPer100g * factor).round().clamp(1, 9999),
-      protein: dict.proteinPer100g != null
-          ? dict.proteinPer100g! * factor
-          : null,
-      carbs:
-          dict.carbsPer100g != null ? dict.carbsPer100g! * factor : null,
+      protein:
+          dict.proteinPer100g != null ? dict.proteinPer100g! * factor : null,
+      carbs: dict.carbsPer100g != null ? dict.carbsPer100g! * factor : null,
       fat: dict.fatPer100g != null ? dict.fatPer100g! * factor : null,
       grams: parsed.grams,
       estimationSource: EstimationSource.personalDict,
@@ -685,8 +790,7 @@ class NutritionPresenter extends ChangeNotifier {
     // input, AI normalize is wasted but no longer blocking.
     final aiNormalizeFuture = _ai.isAvailable
         ? _ai
-            .normalizeFoodInput(
-                nlpResult.items.map((i) => i.rawText).toList())
+            .normalizeFoodInput(nlpResult.items.map((i) => i.rawText).toList())
             .timeout(const Duration(seconds: 15))
             .catchError((Object e) {
             debugPrint('NutritionPresenter: AI normalize failed: $e');
@@ -694,8 +798,8 @@ class NutritionPresenter extends ChangeNotifier {
           })
         : Future<List<AiParsedFood>?>.value(null);
 
-    final speculativeDbFuture = Future.wait(
-        nlpResult.items.map((i) => _resolveOneDbItem(i)));
+    final speculativeDbFuture =
+        Future.wait(nlpResult.items.map((i) => _resolveOneDbItem(i)));
 
     final results = await Future.wait([aiNormalizeFuture, speculativeDbFuture]);
     final aiNormalized = results[0] as List<AiParsedFood>?;
@@ -704,24 +808,24 @@ class NutritionPresenter extends ChangeNotifier {
     // Merge AI normalize back in (preserving the same name/grams policy as
     // before): adopt AI name only if it's a reasonable normalization, and
     // adopt AI grams only when NLP couldn't determine an exact value.
-    final items = (aiNormalized != null &&
-            aiNormalized.length == nlpResult.items.length)
-        ? List.generate(nlpResult.items.length, (i) {
-            final ai = aiNormalized[i];
-            final nlp = nlpResult.items[i];
-            final keepName =
-                FoodMatchScorer.isReasonableNormalization(nlp.name, ai.name)
-                    ? ai.name
-                    : nlp.name;
-            final keepGrams = nlp.isEstimated ? ai.grams : nlp.grams;
-            return ParsedFoodItem(
-              rawText: nlp.rawText,
-              name: keepName,
-              grams: keepGrams,
-              isEstimated: nlp.isEstimated,
-            );
-          })
-        : nlpResult.items;
+    final items =
+        (aiNormalized != null && aiNormalized.length == nlpResult.items.length)
+            ? List.generate(nlpResult.items.length, (i) {
+                final ai = aiNormalized[i];
+                final nlp = nlpResult.items[i];
+                final keepName =
+                    FoodMatchScorer.isReasonableNormalization(nlp.name, ai.name)
+                        ? ai.name
+                        : nlp.name;
+                final keepGrams = nlp.isEstimated ? ai.grams : nlp.grams;
+                return ParsedFoodItem(
+                  rawText: nlp.rawText,
+                  name: keepName,
+                  grams: keepGrams,
+                  isEstimated: nlp.isEstimated,
+                );
+              })
+            : nlpResult.items;
 
     // Step 3: Personal dictionary — highest priority for user-confirmed foods.
     final entries = List<FoodEntry?>.filled(items.length, null);
@@ -763,8 +867,7 @@ class NutritionPresenter extends ChangeNotifier {
         final altName = nlpResult.items[idx].name != items[idx].name
             ? nlpResult.items[idx].name
             : null;
-        final dbEntry =
-            await _resolveOneDbItem(items[idx], altName: altName);
+        final dbEntry = await _resolveOneDbItem(items[idx], altName: altName);
         if (dbEntry != null) {
           entries[idx] = _buildEntry(items[idx], dbEntry);
           await _learnFromEntry(items[idx].name, entries[idx]!);
@@ -775,13 +878,14 @@ class NutritionPresenter extends ChangeNotifier {
 
     // Step 5: AI per-item macro estimate for still-unresolved items.
     final unresolvedIndices = [
-      for (var i = 0; i < items.length; i++) if (entries[i] == null) i,
+      for (var i = 0; i < items.length; i++)
+        if (entries[i] == null) i,
     ];
     if (unresolvedIndices.isNotEmpty && _ai.isAvailable) {
       try {
         final aiInputs = unresolvedIndices
-            .map((i) =>
-                AiParsedFood(name: items[i].name, grams: items[i].grams))
+            .map(
+                (i) => AiParsedFood(name: items[i].name, grams: items[i].grams))
             .toList();
         final aiResults = await _ai
             .estimateMacrosForItems(aiInputs)
@@ -1041,8 +1145,8 @@ class NutritionPresenter extends ChangeNotifier {
         // Same rationale as editChatFoodItem: don't learn placeholder macros.
       }
       _todayLog = _todayLog.addEntry(newEntry, msg.mealSlot);
-      updatedItems.add(
-          ChatFoodItem.fromFoodEntry(newEntry, amountText: newText));
+      updatedItems
+          .add(ChatFoodItem.fromFoodEntry(newEntry, amountText: newText));
     }
 
     await _storage.saveNutritionLog(_todayLog);
@@ -1070,8 +1174,7 @@ class NutritionPresenter extends ChangeNotifier {
     final now = DateTime.now();
     final today = _dateFmt.format(now);
     if (_todayLog.date == today) return;
-    final loggingTowardToday =
-        _todayLog.date == _dateFmt.format(_selectedDate);
+    final loggingTowardToday = _todayLog.date == _dateFmt.format(_selectedDate);
     if (!loggingTowardToday) return; // user is intentionally on a past day
     _todayLog = await _storage.loadNutritionLogForDate(today);
     _selectedDate = now;
@@ -1099,7 +1202,6 @@ class NutritionPresenter extends ChangeNotifier {
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
     notifyListeners();
   }
-
 
   // ── Internal RPG hooks ────────────────────────────────────────────────────────
 

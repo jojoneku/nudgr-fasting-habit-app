@@ -32,7 +32,8 @@ class Budget {
       allocatedAmount: (json['allocatedAmount'] as num).toDouble(),
       group: BudgetGroup.values.byName(json['group'] as String),
       budgetType: BudgetType.values.byName(json['budgetType'] as String),
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

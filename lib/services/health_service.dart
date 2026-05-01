@@ -136,7 +136,8 @@ class HealthService {
         0.0,
         (sum, p) => sum + (p.workoutSummary?.totalDistance.toDouble() ?? 0.0),
       );
-      debugPrint('HealthService: readTodayWorkoutDistance total=${total}m from ${pts.length} sessions');
+      debugPrint(
+          'HealthService: readTodayWorkoutDistance total=${total}m from ${pts.length} sessions');
       return total > 0 ? total : null;
     } catch (e) {
       debugPrint('HealthService: readTodayWorkoutDistance error: $e');

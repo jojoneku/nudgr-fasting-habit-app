@@ -292,9 +292,11 @@ class _LogMealSheetState extends State<LogMealSheet> {
             ),
             const SizedBox(height: 14),
             Text(
-              widget.presenter.isAiEstimating ? 'Estimating with AI…' : 'Analyzing…',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13),
+              widget.presenter.isAiEstimating
+                  ? 'Estimating with AI…'
+                  : 'Analyzing…',
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
             ),
           ],
         ),
@@ -731,17 +733,15 @@ class _LogMealSheetState extends State<LogMealSheet> {
         builder: (ctx) => AlertDialog(
           backgroundColor: AppColors.surface,
           title: const Text('Name this template',
-              style:
-                  TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
-            style:
-                const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Template name',
-              hintStyle: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 13),
+              hintStyle:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
               filled: true,
               fillColor: AppColors.background,
               border: OutlineInputBorder(
@@ -749,10 +749,10 @@ class _LogMealSheetState extends State<LogMealSheet> {
                   borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: const BorderSide(
-                      color: AppColors.primary, width: 1)),
-              contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 10),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
           ),
           actions: [
@@ -1062,7 +1062,8 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                           setState(() => _selected[i] = v ?? false),
                       activeColor: AppColors.primary,
                       side: BorderSide(
-                          color: AppColors.textSecondary.withValues(alpha: 0.4)),
+                          color:
+                              AppColors.textSecondary.withValues(alpha: 0.4)),
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
@@ -1112,8 +1113,8 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                   : () => widget.onConfirm(_buildEntries()),
               child: Text(
                 'Add $selectedCount item${selectedCount == 1 ? '' : 's'}  ·  $_totalCalories kcal',
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, fontSize: 13),
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
           ),

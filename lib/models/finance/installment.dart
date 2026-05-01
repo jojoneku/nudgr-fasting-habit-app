@@ -57,7 +57,8 @@ class Installment {
       startMonth: json['startMonth'] as String,
       note: json['note'] as String?,
       isActive: json['isActive'] as bool? ?? true,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

@@ -250,7 +250,9 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
               minHeight: 2,
             ),
           if (_searchResults.isNotEmpty) _buildSearchResults(),
-          if (_searchResults.isEmpty && _searchCtrl.text.isEmpty && _items.isEmpty)
+          if (_searchResults.isEmpty &&
+              _searchCtrl.text.isEmpty &&
+              _items.isEmpty)
             const Padding(
               padding: EdgeInsets.fromLTRB(20, 8, 20, 4),
               child: Text(
@@ -450,8 +452,7 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
   final _gramCtrl = TextEditingController(text: '100');
   static const _quickAmounts = [50.0, 100.0, 150.0, 200.0, 250.0];
 
-  double get _grams =>
-      double.tryParse(_gramCtrl.text.trim()) ?? 100.0;
+  double get _grams => double.tryParse(_gramCtrl.text.trim()) ?? 100.0;
 
   int get _previewCalories =>
       (widget.entry.caloriesPer100g * _grams / 100).round();
@@ -497,8 +498,8 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
           const SizedBox(height: 4),
           Text(
             widget.entry.densityLabel,
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
           ),
           const SizedBox(height: 16),
           // Quick amount chips
@@ -506,13 +507,14 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: _quickAmounts.map((g) {
-                final selected = _gramCtrl.text.trim() == g.toStringAsFixed(0) ||
-                    (_gramCtrl.text.trim() == '${g.round()}');
+                final selected =
+                    _gramCtrl.text.trim() == g.toStringAsFixed(0) ||
+                        (_gramCtrl.text.trim() == '${g.round()}');
                 return Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
-                    onTap: () => setState(
-                        () => _gramCtrl.text = g.round().toString()),
+                    onTap: () =>
+                        setState(() => _gramCtrl.text = g.round().toString()),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 8),
@@ -522,9 +524,8 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
                             : AppColors.background,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected
-                              ? AppColors.primary
-                              : Colors.transparent,
+                          color:
+                              selected ? AppColors.primary : Colors.transparent,
                           width: 1,
                         ),
                       ),
@@ -569,20 +570,19 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
                           borderRadius: BorderRadius.all(Radius.circular(12)),
                           borderSide: BorderSide.none),
                       focusedBorder: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.all(Radius.circular(12)),
-                          borderSide: BorderSide(
-                              color: AppColors.primary, width: 1)),
-                      contentPadding: EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                          borderRadius: BorderRadius.all(Radius.circular(12)),
+                          borderSide:
+                              BorderSide(color: AppColors.primary, width: 1)),
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 decoration: BoxDecoration(
                   color: AppColors.background,
                   borderRadius: BorderRadius.circular(12),
@@ -744,8 +744,8 @@ class _TemplateRow extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: const Icon(Icons.add_circle,
-                  color: AppColors.gold, size: 22),
+              icon:
+                  const Icon(Icons.add_circle, color: AppColors.gold, size: 22),
               tooltip: template.isMeal ? 'Add all items' : 'Add',
               onPressed: () => _showSlotPicker(context),
             ),
@@ -842,8 +842,8 @@ class _TemplateRow extends StatelessWidget {
               presenter.renameTemplate(template.id, ctrl.text);
               Navigator.pop(ctx);
             },
-            child: const Text('Save',
-                style: TextStyle(color: AppColors.primary)),
+            child:
+                const Text('Save', style: TextStyle(color: AppColors.primary)),
           ),
         ],
       ),

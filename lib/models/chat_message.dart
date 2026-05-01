@@ -156,8 +156,8 @@ class ChatMessage {
               .map((e) => ChatFoodItem.fromJson(e as Map<String, dynamic>))
               .toList()
           : const [],
-      mealSlot:
-          MealSlot.fromJson((json['mealSlot'] as String?) ?? MealSlot.meal.name),
+      mealSlot: MealSlot.fromJson(
+          (json['mealSlot'] as String?) ?? MealSlot.meal.name),
       exerciseEntry: json['exerciseEntry'] != null
           ? ExerciseEntry.fromJson(
               json['exerciseEntry'] as Map<String, dynamic>)

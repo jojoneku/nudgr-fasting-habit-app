@@ -25,7 +25,8 @@ class FinanceCategory {
       type: CategoryType.values.byName(json['type'] as String),
       icon: json['icon'] as String,
       colorHex: json['colorHex'] as String,
-      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 

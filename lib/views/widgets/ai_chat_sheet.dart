@@ -148,13 +148,15 @@ class _AiChatSheetState extends State<AiChatSheet> {
                       ),
                     );
                   }
-                  if (!_presenter.isModelAvailable && !_presenter.isDownloading) {
+                  if (!_presenter.isModelAvailable &&
+                      !_presenter.isDownloading) {
                     return _DownloadPrompt(presenter: _presenter);
                   }
                   if (_presenter.isDownloading) {
                     return _DownloadProgress(presenter: _presenter);
                   }
-                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+                  WidgetsBinding.instance
+                      .addPostFrameCallback((_) => _scrollToBottom());
                   return _MessageList(
                     messages: _presenter.messages,
                     scrollController: _scrollController,
@@ -175,7 +177,9 @@ class _AiChatSheetState extends State<AiChatSheet> {
                 builder: (_, __) => _InputBar(
                   controller: _controller,
                   focusNode: _focusNode,
-                  enabled: _presenter.isModelAvailable && !_presenter.isResponding && !_presenter.isInitializing,
+                  enabled: _presenter.isModelAvailable &&
+                      !_presenter.isResponding &&
+                      !_presenter.isInitializing,
                   onSend: _send,
                 ),
               ),
@@ -232,7 +236,8 @@ class _SheetHeader extends StatelessWidget {
                 onTap: presenter.isResponding ? null : presenter.toggleThinking,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: presenter.isThinkingEnabled
                         ? AppColors.primary.withValues(alpha: 0.2)
@@ -372,9 +377,7 @@ class _MessageBubble extends StatelessWidget {
               : Text(
                   message.text,
                   style: TextStyle(
-                    color: isUser
-                        ? AppColors.primary
-                        : AppColors.textPrimary,
+                    color: isUser ? AppColors.primary : AppColors.textPrimary,
                     fontSize: 14,
                     height: 1.45,
                   ),
@@ -425,7 +428,8 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 height: 6,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: opacity.clamp(0.2, 1.0)),
+                  color: AppColors.textSecondary
+                      .withValues(alpha: opacity.clamp(0.2, 1.0)),
                   shape: BoxShape.circle,
                 ),
               );
@@ -669,15 +673,13 @@ class _DownloadProgress extends StatelessWidget {
             child: isInitializing
                 ? const LinearProgressIndicator(
                     backgroundColor: Color(0xFF1C2128),
-                    valueColor:
-                        AlwaysStoppedAnimation(AppColors.primary),
+                    valueColor: AlwaysStoppedAnimation(AppColors.primary),
                     minHeight: 8,
                   )
                 : LinearProgressIndicator(
                     value: progress / 100.0,
                     backgroundColor: AppColors.surface,
-                    valueColor:
-                        const AlwaysStoppedAnimation(AppColors.primary),
+                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
                     minHeight: 8,
                   ),
           ),
@@ -686,8 +688,8 @@ class _DownloadProgress extends StatelessWidget {
             isInitializing
                 ? 'Loading model into memory — this takes a moment.'
                 : 'Keep the app open during download.',
-            style: const TextStyle(
-                color: AppColors.textSecondary, fontSize: 12),
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
