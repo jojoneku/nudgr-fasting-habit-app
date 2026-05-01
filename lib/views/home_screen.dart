@@ -153,7 +153,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _storage.setSyncQueue(_syncQueue!);
     _storage.onRemoteDataApplied = _reloadAll;
     _syncService!.init();
-    _syncService!.pullAll();
+    // Push all local data first (covers data saved before sign-in),
+    // then pull to get any data from other devices.
+    _syncService!.pushAll().then((_) => _syncService!.pullAll());
     if (mounted) setState(() {});
   }
 

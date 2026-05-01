@@ -43,12 +43,22 @@ CREATE TABLE IF NOT EXISTS activity_logs (
 -- Single table for all 9 finance collections — discriminated by `table_name`
 CREATE TABLE IF NOT EXISTS finance_records (
   user_id     UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  table_name  TEXT NOT NULL,  -- 'accounts' | 'transactions' | 'categories' | 'budgets' | 'budgeted_expenses' | 'bills' | 'receivables' | 'installments' | 'monthly_summaries'
+  table_name  TEXT NOT NULL,
   record_id   TEXT NOT NULL,
   data        JSONB NOT NULL,
   updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, table_name, record_id)
 );
+
+-- =============================================================================
+-- Grant access to authenticated users
+-- =============================================================================
+
+GRANT ALL ON public.user_profile     TO authenticated;
+GRANT ALL ON public.user_collections TO authenticated;
+GRANT ALL ON public.nutrition_logs   TO authenticated;
+GRANT ALL ON public.activity_logs    TO authenticated;
+GRANT ALL ON public.finance_records  TO authenticated;
 
 -- =============================================================================
 -- Row Level Security — each user can only access their own rows

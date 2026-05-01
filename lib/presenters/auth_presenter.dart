@@ -84,6 +84,8 @@ class AuthPresenter extends ChangeNotifier {
         msg.contains('connection')) {
       return 'Network error. Check your connection.';
     }
+    // Surface raw error in debug builds to help diagnose config issues
+    if (kDebugMode) return 'Sign-in failed: $e';
     return 'Sign-in failed. Please try again.';
   }
 }

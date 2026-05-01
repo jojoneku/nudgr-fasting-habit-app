@@ -67,7 +67,11 @@ class SyncService {
   }
 
   Future<void> pushPending() async {
-    if (_isSyncing || !_isOnline || _queue.pendingCount == 0) return;
+    if (_isSyncing || !_isOnline || _queue.pendingCount == 0) {
+      debugPrint('SyncService: pushPending skipped — isSyncing=$_isSyncing, isOnline=$_isOnline, pending=${_queue.pendingCount}');
+      return;
+    }
+    debugPrint('SyncService: pushPending starting — ${_queue.pendingCount} entries');
     _isSyncing = true;
     _onStateChange?.call();
     try {
@@ -75,6 +79,7 @@ class SyncService {
       final processed = <SyncQueueEntry>[];
       for (final entry in entries) {
         try {
+          debugPrint('SyncService: pushing ${entry.domain.name}/${entry.key}');
           await _pushEntry(entry);
           processed.add(entry);
         } catch (e) {
@@ -84,6 +89,7 @@ class SyncService {
       }
       _queue.removeEntries(processed);
       if (processed.isNotEmpty) _lastSyncedAt = DateTime.now();
+      debugPrint('SyncService: pushPending done — ${processed.length} pushed, ${_queue.pendingCount} remaining');
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
@@ -124,6 +130,7 @@ class SyncService {
   Future<void> _pushUserProfile() async {
     final state = await _storage.loadState();
     final history = state['history'] as List<FastingLog>;
+    debugPrint('SyncService: _pushUserProfile — history=${history.length} entries, isFasting=${state['isFasting']}');
     final data = {
       'fastingState': {
         'isFasting': state['isFasting'],
@@ -152,12 +159,16 @@ class SyncService {
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    debugPrint('SyncService: userProfile upserted ✓');
   }
 
   Future<void> _pushUserCollections() async {
+    final quests = await _storage.loadQuests();
+    final achievements = await _storage.loadAchievements();
+    debugPrint('SyncService: _pushUserCollections — quests=${quests.length}, achievements=${achievements.length}');
     final data = {
-      'quests': (await _storage.loadQuests()).map((e) => e.toJson()).toList(),
-      'achievements': (await _storage.loadAchievements()).map((e) => e.toJson()).toList(),
+      'quests': quests.map((e) => e.toJson()).toList(),
+      'achievements': achievements.map((e) => e.toJson()).toList(),
       'routines': (await _storage.loadRoutines()).map((e) => e.toJson()).toList(),
       'foodLibrary': (await _storage.loadFoodLibrary()).map((e) => e.toJson()).toList(),
       'personalDict': (await _storage.loadPersonalDict()).map((e) => e.toJson()).toList(),
@@ -167,6 +178,7 @@ class SyncService {
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    debugPrint('SyncService: userCollections upserted ✓');
   }
 
   Future<void> _pushNutritionLog(String dateKey) async {
@@ -241,16 +253,26 @@ class SyncService {
   // ── Pull ─────────────────────────────────────────────────────────────────────
 
   Future<void> pullAll() async {
-    if (!_isOnline) return;
+    if (!_isOnline) {
+      debugPrint('SyncService: pullAll skipped — offline');
+      return;
+    }
+    debugPrint('SyncService: pullAll starting for user $_userId');
     _isSyncing = true;
     _onStateChange?.call();
     try {
+      debugPrint('SyncService: pulling userProfile...');
       await _pullUserProfile();
+      debugPrint('SyncService: pulling userCollections...');
       await _pullUserCollections();
+      debugPrint('SyncService: pulling nutritionLogs...');
       await _pullNutritionLogs();
+      debugPrint('SyncService: pulling activityLogs...');
       await _pullActivityLogs();
+      debugPrint('SyncService: pulling financeRecords...');
       await _pullFinanceRecords();
       _lastSyncedAt = DateTime.now();
+      debugPrint('SyncService: pullAll complete ✓');
       _storage.onRemoteDataApplied?.call();
     } catch (e) {
       debugPrint('SyncService: pullAll error: $e');
@@ -266,11 +288,17 @@ class SyncService {
         .select('data, updated_at')
         .eq('user_id', _userId)
         .maybeSingle();
-    if (row == null) return;
-
+    if (row == null) {
+      debugPrint('SyncService: userProfile — no remote row found');
+      return;
+    }
     final remoteTime = DateTime.parse(row['updated_at'] as String);
     final localTime = _queue.getTimestamp(SyncDomain.userProfile, 'default');
-    if (!remoteTime.isAfter(localTime)) return;
+    if (!remoteTime.isAfter(localTime)) {
+      debugPrint('SyncService: userProfile — local is newer, skipping');
+      return;
+    }
+    debugPrint('SyncService: userProfile — applying remote data (remote=$remoteTime)');
 
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
@@ -318,11 +346,17 @@ class SyncService {
         .select('data, updated_at')
         .eq('user_id', _userId)
         .maybeSingle();
-    if (row == null) return;
-
+    if (row == null) {
+      debugPrint('SyncService: userCollections — no remote row found');
+      return;
+    }
     final remoteTime = DateTime.parse(row['updated_at'] as String);
     final localTime = _queue.getTimestamp(SyncDomain.userCollections, 'default');
-    if (!remoteTime.isAfter(localTime)) return;
+    if (!remoteTime.isAfter(localTime)) {
+      debugPrint('SyncService: userCollections — local is newer, skipping');
+      return;
+    }
+    debugPrint('SyncService: userCollections — applying remote data');
 
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
@@ -460,6 +494,31 @@ class SyncService {
   Future<void> forceSync() async {
     await pushPending();
     await pullAll();
+  }
+
+  /// Pushes ALL local data to Supabase regardless of the sync queue.
+  /// Call once on first sign-in to upload pre-existing local data.
+  Future<void> pushAll() async {
+    if (!_isOnline) {
+      debugPrint('SyncService: pushAll skipped — offline');
+      return;
+    }
+    debugPrint('SyncService: pushAll starting — uploading all local data...');
+    _isSyncing = true;
+    _onStateChange?.call();
+    try {
+      debugPrint('SyncService: pushAll — uploading userProfile...');
+      await _pushUserProfile();
+      debugPrint('SyncService: pushAll — uploading userCollections...');
+      await _pushUserCollections();
+      _lastSyncedAt = DateTime.now();
+      debugPrint('SyncService: pushAll complete ✓');
+    } catch (e) {
+      debugPrint('SyncService: pushAll error: $e');
+    } finally {
+      _isSyncing = false;
+      _onStateChange?.call();
+    }
   }
 
   void dispose() {
