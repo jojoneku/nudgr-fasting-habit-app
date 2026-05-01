@@ -115,7 +115,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _authPresenter.init();
       // If already signed in from cached session, init sync immediately
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
-        _initSync(_authPresenter.userId!);
+        await _initSync(_authPresenter.userId!);
       }
     });
   }
@@ -141,7 +141,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  void _initSync(String userId) {
+  Future<void> _initSync(String userId) async {
     if (_syncService != null) return;
     _syncService = SyncService(
       supabase: Supabase.instance.client,
@@ -152,10 +152,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _syncPresenter = SyncPresenter(_syncService!, _authPresenter);
     _storage.setSyncQueue(_syncQueue!);
     _storage.onRemoteDataApplied = _reloadAll;
-    _syncService!.init();
+    await _syncService!.init();
     // Push all local data first (covers data saved before sign-in),
     // then pull to get any data from other devices.
-    _syncService!.pushAll().then((_) => _syncService!.pullAll());
+    await _syncService!.pushAll();
+    await _syncService!.pullAll();
     if (mounted) setState(() {});
   }
 
