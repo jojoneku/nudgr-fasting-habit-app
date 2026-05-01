@@ -12,15 +12,17 @@ class Budget {
   final double allocatedAmount;
   final BudgetGroup group;
   final BudgetType budgetType;
+  final DateTime updatedAt;
 
-  const Budget({
+  Budget({
     required this.id,
     required this.categoryId,
     required this.month,
     required this.allocatedAmount,
     required this.group,
     required this.budgetType,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   factory Budget.fromJson(Map<String, dynamic> json) {
     return Budget(
@@ -30,6 +32,8 @@ class Budget {
       allocatedAmount: (json['allocatedAmount'] as num).toDouble(),
       group: BudgetGroup.values.byName(json['group'] as String),
       budgetType: BudgetType.values.byName(json['budgetType'] as String),
+      updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
     );
   }
 
@@ -40,6 +44,7 @@ class Budget {
         'allocatedAmount': allocatedAmount,
         'group': group.name,
         'budgetType': budgetType.name,
+        'updatedAt': updatedAt.toIso8601String(),
       };
 
   Budget copyWith({
@@ -48,6 +53,7 @@ class Budget {
     double? allocatedAmount,
     BudgetGroup? group,
     BudgetType? budgetType,
+    DateTime? updatedAt,
   }) {
     return Budget(
       id: id,
@@ -56,6 +62,7 @@ class Budget {
       allocatedAmount: allocatedAmount ?? this.allocatedAmount,
       group: group ?? this.group,
       budgetType: budgetType ?? this.budgetType,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../presenters/activity_presenter.dart';
+import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
@@ -26,6 +27,7 @@ class HubScreen extends StatelessWidget {
   final QuestPresenter questPresenter;
   final NutritionPresenter? nutritionPresenter;
   final ActivityPresenter? activityPresenter;
+  final AiCoachPresenter? aiCoachPresenter;
   final TreasuryDashboardPresenter? treasuryPresenter;
   final LedgerPresenter? ledgerPresenter;
   final BillsReceivablesPresenter? billsPresenter;
@@ -46,6 +48,7 @@ class HubScreen extends StatelessWidget {
     required this.questPresenter,
     this.nutritionPresenter,
     this.activityPresenter,
+    this.aiCoachPresenter,
     this.treasuryPresenter,
     this.ledgerPresenter,
     this.billsPresenter,
@@ -198,7 +201,10 @@ class HubScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => NutritionScreen(presenter: nutritionPresenter!),
+        builder: (_) => NutritionScreen(
+          presenter: nutritionPresenter!,
+          aiCoachPresenter: aiCoachPresenter,
+        ),
       ),
     );
   }

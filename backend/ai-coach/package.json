@@ -1,0 +1,10 @@
+{
+  "name": "ai-coach-lambda",
+  "version": "1.0.0",
+  "description": "AI Coach Lambda — proxies to Amazon Bedrock Claude Haiku",
+  "main": "handler.js",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.600.0"
+  }
+}

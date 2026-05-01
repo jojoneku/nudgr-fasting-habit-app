@@ -85,7 +85,7 @@ class _TimerTabState extends State<TimerTab> {
     final bool showProgressLabel = presenter.isFasting || showEatingProgress;
     final String timerDisplay = presenter.isFasting
         ? (presenter.isOvertime
-            ? '⚡ +${_formatTime(presenter.overtimeSeconds)}'
+            ? '+${_formatTime(presenter.overtimeSeconds)}'
             : _formatTime(presenter.elapsedSeconds))
         : (presenter.eatingStartTime != null
             ? (hasEatingWindow
@@ -317,7 +317,7 @@ class _TimerTabState extends State<TimerTab> {
         border: Border.all(color: phase.color.withValues(alpha: 0.3), width: 1),
       ),
       child: Text(
-        '⬡ ${phase.rpgTitle} — ${phase.label.toUpperCase()}',
+        '${phase.rpgTitle} — ${phase.label.toUpperCase()}',
         style: TextStyle(
           color: phase.color,
           fontSize: 9,

@@ -3,28 +3,12 @@ import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../models/ai_meal_estimate.dart';
 import '../../models/food_db_entry.dart';
+import '../../models/estimation_source.dart';
 import '../../models/food_entry.dart';
+import '../../models/food_parse_result.dart';
 import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const _kSlots = [
-  MealSlot.breakfast,
-  MealSlot.lunch,
-  MealSlot.dinner,
-  MealSlot.snack,
-  MealSlot.meal,
-];
-
-const _kSlotIcons = {
-  MealSlot.breakfast: Icons.wb_sunny_outlined,
-  MealSlot.lunch: Icons.light_mode_outlined,
-  MealSlot.dinner: Icons.nights_stay_outlined,
-  MealSlot.snack: Icons.cookie_outlined,
-  MealSlot.meal: Icons.restaurant_outlined,
-};
 
 // ─── Main Sheet ───────────────────────────────────────────────────────────────
 
@@ -42,14 +26,9 @@ class LogMealSheet extends StatefulWidget {
   State<LogMealSheet> createState() => _LogMealSheetState();
 }
 
-class _LogMealSheetState extends State<LogMealSheet>
-    with SingleTickerProviderStateMixin {
-  late MealSlot _slot;
-  late TabController _tabCtrl;
-
-  final _aiCtrl = TextEditingController();
-  final _searchCtrl = TextEditingController();
-  final _searchFocus = FocusNode();
+class _LogMealSheetState extends State<LogMealSheet> {
+  final _inputCtrl = TextEditingController();
+  final _inputFocus = FocusNode();
 
   List<FoodDbEntry> _searchResults = [];
   final List<_PendingEntry> _pendingEntries = [];
@@ -58,39 +37,52 @@ class _LogMealSheetState extends State<LogMealSheet>
   bool _isSearching = false;
   bool _isLogging = false;
 
+  // Incremented on every search to discard stale results from earlier queries.
+  int _searchGeneration = 0;
+
   int get _totalCalories =>
       _pendingEntries.fold(0, (s, e) => s + e.entry.calories);
 
   @override
   void initState() {
     super.initState();
-    _slot = widget.preselectedSlot ?? MealSlot.meal;
-    _tabCtrl = TabController(length: 3, vsync: this);
-    _searchCtrl.addListener(_onSearchChanged);
+    _inputCtrl.addListener(_onInputChanged);
   }
 
   @override
   void dispose() {
-    _aiCtrl.dispose();
-    _searchCtrl.dispose();
-    _searchFocus.dispose();
-    _tabCtrl.dispose();
+    _inputCtrl.dispose();
+    _inputFocus.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged() async {
-    final q = _searchCtrl.text.trim();
+  void _onInputChanged() async {
+    final q = _inputCtrl.text.trim();
     if (q.isEmpty) {
-      setState(() => _searchResults = []);
+      widget.presenter.clearParseResult();
+      setState(() {
+        _searchResults = [];
+        _isSearching = false;
+      });
       return;
     }
+
+    // Capture generation before the async gap so stale completions are ignored.
+    final generation = ++_searchGeneration;
+    widget.presenter.clearParseResult();
     setState(() => _isSearching = true);
+
     final results = await widget.presenter.foodDb.search(q);
-    if (mounted) {
+
+    if (mounted && _searchGeneration == generation) {
       setState(() {
         _searchResults = results;
         _isSearching = false;
       });
+      // Auto-analyze when DB has no matches.
+      if (results.isEmpty) {
+        widget.presenter.parseMeal(q);
+      }
     }
   }
 
@@ -106,6 +98,13 @@ class _LogMealSheetState extends State<LogMealSheet>
 
   @override
   Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: widget.presenter,
+      builder: (_, __) => _buildSheet(context),
+    );
+  }
+
+  Widget _buildSheet(BuildContext context) {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
 
@@ -119,71 +118,32 @@ class _LogMealSheetState extends State<LogMealSheet>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag handle
+          _buildHandle(),
+          _buildHeader(),
           const SizedBox(height: 10),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.textSecondary.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(2),
+          _buildInputField(),
+          if (_isSearching)
+            const LinearProgressIndicator(
+              color: AppColors.accent,
+              backgroundColor: Colors.transparent,
+              minHeight: 2,
             ),
-          ),
-          const SizedBox(height: 14),
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _buildHeader(),
-          ),
-          const SizedBox(height: 14),
-          // Slot chips
-          _buildSlotSelector(),
-          const SizedBox(height: 14),
-          // Tab bar
-          _buildTabBar(),
-          // Tab content — flexible so it doesn't overflow
           Flexible(
             child: Padding(
               padding: EdgeInsets.only(bottom: bottom),
-              child: TabBarView(
-                controller: _tabCtrl,
-                children: [
-                  _AiTab(
-                    presenter: widget.presenter,
-                    controller: _aiCtrl,
-                    slot: _slot,
-                    onConfirm: (entries) {
-                      for (final e in entries) {
-                        _addEntry(e.toFoodEntry());
-                      }
-                    },
-                  ),
-                  _SearchTab(
-                    controller: _searchCtrl,
-                    focusNode: _searchFocus,
-                    results: _searchResults,
-                    isSearching: _isSearching,
-                    onAdd: (entry) {
-                      _addEntry(entry);
-                      _searchCtrl.clear();
-                      setState(() => _searchResults = []);
-                    },
-                    onManual: _showManualEntry,
-                  ),
-                  _QuickTab(
-                    presenter: widget.presenter,
-                    slot: _slot,
-                    onAdd: _addEntry,
-                  ),
-                ],
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 180),
+                child: KeyedSubtree(
+                  key: ValueKey(_contentPhase),
+                  child: _buildContent(),
+                ),
               ),
             ),
           ),
-          // Cart
+          _buildAiState(),
           if (_pendingEntries.isNotEmpty) _buildCart(),
-          // Actions
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
             child: _buildActions(),
           ),
         ],
@@ -191,229 +151,510 @@ class _LogMealSheetState extends State<LogMealSheet>
     );
   }
 
-  Widget _buildHeader() {
-    return Row(
+  Widget _buildHandle() {
+    return Column(
       children: [
-        const Icon(Icons.restaurant_menu, color: AppColors.gold, size: 16),
-        const SizedBox(width: 8),
-        const Text(
-          'LOG MEAL',
-          style: TextStyle(
-              color: AppColors.gold,
-              fontSize: 13,
-              letterSpacing: 2.0,
-              fontWeight: FontWeight.w700),
-        ),
-        const Spacer(),
-        GestureDetector(
-          onTap: () => Navigator.pop(context),
-          child: Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(Icons.close,
-                color: AppColors.textSecondary, size: 16),
+        const SizedBox(height: 10),
+        Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+            color: AppColors.textSecondary.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(2),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSlotSelector() {
-    return SizedBox(
-      height: 36,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _kSlots.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (_, i) {
-          final slot = _kSlots[i];
-          final selected = slot == _slot;
-          return GestureDetector(
-            onTap: () {
-              HapticFeedback.selectionClick();
-              setState(() => _slot = slot);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: selected
-                    ? AppColors.gold.withValues(alpha: 0.15)
-                    : AppColors.background,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: selected
-                      ? AppColors.gold
-                      : AppColors.textSecondary.withValues(alpha: 0.2),
-                  width: selected ? 1.2 : 0.8,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    _kSlotIcons[slot] ?? Icons.restaurant_outlined,
-                    size: 12,
-                    color: selected ? AppColors.gold : AppColors.textSecondary,
-                  ),
-                  const SizedBox(width: 5),
-                  Text(
-                    slot.label,
-                    style: TextStyle(
-                      color:
-                          selected ? AppColors.gold : AppColors.textSecondary,
-                      fontSize: 12,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+      child: Row(
+        children: [
+          const Text(
+            'Add Food',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
             ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      height: 40,
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: TabBar(
-        controller: _tabCtrl,
-        onTap: (i) {
-          if (i == 1) {
-            // Auto-focus search when switching to search tab
-            Future.delayed(const Duration(milliseconds: 150),
-                () => _searchFocus.requestFocus());
-          }
-        },
-        indicator: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.12),
-              blurRadius: 6,
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              icon: const Icon(Icons.close,
+                  color: AppColors.textSecondary, size: 20),
+              onPressed: () => Navigator.pop(context),
             ),
-          ],
-        ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelColor: AppColors.accent,
-        unselectedLabelColor: AppColors.textSecondary,
-        labelStyle: const TextStyle(
-            fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 0.8),
-        unselectedLabelStyle:
-            const TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
-        tabs: const [
-          Tab(text: '✦ AI'),
-          Tab(text: '⌕ SEARCH'),
-          Tab(text: '⚡ QUICK'),
+          ),
         ],
       ),
     );
   }
 
+  Widget _buildInputField() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: TextField(
+        controller: _inputCtrl,
+        focusNode: _inputFocus,
+        autofocus: true,
+        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        decoration: InputDecoration(
+          hintText: 'Search or describe a meal...',
+          hintStyle: TextStyle(
+            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            fontSize: 13,
+          ),
+          prefixIcon: const Icon(Icons.search,
+              color: AppColors.textSecondary, size: 18),
+          suffixIcon: _inputCtrl.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppColors.textSecondary, size: 16),
+                  onPressed: () {
+                    _inputCtrl.clear();
+                    setState(() => _searchResults = []);
+                    widget.presenter.clearEstimate();
+                  },
+                )
+              : null,
+          filled: true,
+          fillColor: AppColors.background,
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide.none),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(14),
+              borderSide: const BorderSide(color: AppColors.accent, width: 1)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        ),
+      ),
+    );
+  }
+
+  String get _contentPhase {
+    final hasInput = _inputCtrl.text.trim().isNotEmpty;
+    if (!hasInput) return 'quick';
+    if (_searchResults.isNotEmpty) return 'results';
+    if (_isSearching) return 'searching';
+    final p = widget.presenter;
+    if (p.isParsing || p.isAiEstimating) return 'analyzing';
+    return 'no-results';
+  }
+
+  Widget _buildContent() {
+    final hasInput = _inputCtrl.text.trim().isNotEmpty;
+
+    if (!hasInput) return _buildQuickSection();
+
+    if (_searchResults.isNotEmpty) {
+      return ListView.builder(
+        padding: const EdgeInsets.only(top: 6, bottom: 12),
+        itemCount: _searchResults.length,
+        itemBuilder: (_, i) => _SearchResultRow(
+          entry: _searchResults[i],
+          onAdd: (entry) {
+            _addEntry(entry);
+            _inputCtrl.clear();
+            setState(() => _searchResults = []);
+          },
+        ),
+      );
+    }
+
+    if (_isSearching) return const SizedBox.shrink();
+
+    final p = widget.presenter;
+    if (p.isParsing || p.isAiEstimating) return _buildAnalyzingPlaceholder();
+
+    return _buildNoResults();
+  }
+
+  Widget _buildAnalyzingPlaceholder() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              widget.presenter.isAiEstimating
+                  ? 'Estimating with AI…'
+                  : 'Analyzing…',
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickSection() {
+    final recents = widget.presenter.recentFoods;
+    final templates = widget.presenter.savedTemplates;
+
+    if (recents.isEmpty && templates.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.search,
+                  color: AppColors.textSecondary.withValues(alpha: 0.25),
+                  size: 32),
+              const SizedBox(height: 8),
+              const Text(
+                'Search the food database or describe your meal',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (recents.isNotEmpty) ...[
+            _sectionLabel('Recently logged'),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: recents.map((t) {
+                final cal = t.totalCalories;
+                return GestureDetector(
+                  onTap: () {
+                    for (final e in t.entries) {
+                      _addEntry(FoodEntry(
+                        id: FoodEntry.generateId(),
+                        name: e.name,
+                        calories: e.calories,
+                        protein: e.protein,
+                        carbs: e.carbs,
+                        fat: e.fat,
+                        grams: e.grams,
+                        loggedAt: DateTime.now(),
+                      ));
+                    }
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(t.name,
+                            style: const TextStyle(
+                                color: AppColors.textPrimary, fontSize: 12)),
+                        const SizedBox(width: 6),
+                        Text('$cal',
+                            style: const TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 18),
+          ],
+          if (templates.isNotEmpty) ...[
+            _sectionLabel('Saved templates'),
+            const SizedBox(height: 8),
+            ...templates.map((t) => _TemplateCard(
+                  template: t,
+                  onAdd: () {
+                    for (final e in t.entries) {
+                      _addEntry(FoodEntry(
+                        id: FoodEntry.generateId(),
+                        name: e.name,
+                        calories: e.calories,
+                        protein: e.protein,
+                        carbs: e.carbs,
+                        fat: e.fat,
+                        grams: e.grams,
+                        loggedAt: DateTime.now(),
+                      ));
+                    }
+                  },
+                )),
+            const SizedBox(height: 8),
+          ],
+          GestureDetector(
+            onTap: _showManualEntry,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.edit_outlined,
+                    color: AppColors.textSecondary.withValues(alpha: 0.5),
+                    size: 14),
+                const SizedBox(width: 6),
+                Text(
+                  'Add manually',
+                  style: TextStyle(
+                      color: AppColors.textSecondary.withValues(alpha: 0.5),
+                      fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoResults() {
+    final aiAvailable = widget.presenter.isAiAvailable;
+    final hasParseError = widget.presenter.parseError != null;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          const SizedBox(height: 12),
+          Icon(Icons.search_off,
+              color: AppColors.textSecondary.withValues(alpha: 0.25), size: 32),
+          const SizedBox(height: 8),
+          Text(
+            hasParseError
+                ? 'No matches found for "${_inputCtrl.text.trim()}"'
+                : 'No results for "${_inputCtrl.text.trim()}"',
+            style:
+                const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            textAlign: TextAlign.center,
+          ),
+          if (hasParseError) ...[
+            const SizedBox(height: 4),
+            const Text(
+              'Try AI estimation or enter nutrients manually.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          const SizedBox(height: 20),
+          if (aiAvailable) ...[
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accent.withValues(alpha: 0.12),
+                  foregroundColor: AppColors.accent,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: widget.presenter.isAiEstimating
+                    ? null
+                    : () =>
+                        widget.presenter.estimateMeal(_inputCtrl.text.trim()),
+                icon: const Icon(Icons.auto_awesome, size: 15),
+                label: const Text('Estimate with AI',
+                    style: TextStyle(fontSize: 13)),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ] else ...[
+            _AiUnavailableBanner(presenter: widget.presenter),
+            const SizedBox(height: 8),
+          ],
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.textSecondary,
+                side: BorderSide(
+                    color: AppColors.textSecondary.withValues(alpha: 0.2)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _showManualEntry,
+              icon: const Icon(Icons.edit_outlined, size: 16),
+              label: const Text('Add manually'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiState() {
+    final parseError = widget.presenter.parseError;
+    if (parseError != null) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.danger, size: 15),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(parseError,
+                  style:
+                      const TextStyle(color: AppColors.danger, fontSize: 12)),
+            ),
+            GestureDetector(
+              onTap: widget.presenter.clearParseResult,
+              child: const Icon(Icons.close,
+                  color: AppColors.textSecondary, size: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final parseResult = widget.presenter.lastParseResult;
+    if (parseResult != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: _ParseResultCard(
+          result: parseResult,
+          dbMatches: widget.presenter.parsedDbMatches,
+          onConfirm: (entries) {
+            for (final e in entries) {
+              _addEntry(e);
+            }
+            widget.presenter.clearParseResult();
+            _inputCtrl.clear();
+            setState(() => _searchResults = []);
+          },
+          onDismiss: widget.presenter.clearParseResult,
+        ),
+      );
+    }
+
+    final error = widget.presenter.aiEstimateError;
+    if (error != null) {
+      return Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.danger.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded,
+                color: AppColors.danger, size: 15),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(error,
+                  style:
+                      const TextStyle(color: AppColors.danger, fontSize: 12)),
+            ),
+            GestureDetector(
+              onTap: widget.presenter.clearEstimate,
+              child: const Icon(Icons.close,
+                  color: AppColors.textSecondary, size: 16),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final estimate = widget.presenter.lastEstimate;
+    if (estimate != null) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        child: _AiResultCard(
+          estimate: estimate,
+          onConfirm: (items) {
+            for (final item in items) {
+              _addEntry(item.toFoodEntry());
+            }
+            widget.presenter.clearEstimate();
+            _inputCtrl.clear();
+          },
+          onDismiss: widget.presenter.clearEstimate,
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   Widget _buildCart() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-            color: AppColors.gold.withValues(alpha: 0.2), width: 0.8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          ..._pendingEntries.map((p) => _CartRow(
+                pending: p,
+                onRemove: () => _removeEntry(p),
+              )),
+          const Divider(height: 16, color: Color(0x12FFFFFF)),
           Row(
             children: [
-              const Icon(Icons.local_fire_department,
-                  color: AppColors.gold, size: 14),
-              const SizedBox(width: 6),
               Text(
-                '$_totalCalories kcal  ·  ${_pendingEntries.length} item${_pendingEntries.length == 1 ? '' : 's'}',
+                '$_totalCalories kcal',
                 style: const TextStyle(
                     color: AppColors.gold,
-                    fontSize: 12,
+                    fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
               const Spacer(),
-              if (_pendingEntries.isNotEmpty)
-                GestureDetector(
-                  onTap: () => setState(() => _pendingEntries.clear()),
-                  child: const Text('Clear all',
-                      style: TextStyle(color: AppColors.danger, fontSize: 11)),
+              GestureDetector(
+                onTap: () => setState(() => _pendingEntries.clear()),
+                child: Text(
+                  'Clear all',
+                  style: TextStyle(
+                      color: AppColors.danger.withValues(alpha: 0.7),
+                      fontSize: 12),
                 ),
+              ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            runSpacing: 6,
-            children: _pendingEntries.map((p) {
-              return GestureDetector(
-                onTap: () => _removeEntry(p),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: AppColors.textSecondary.withValues(alpha: 0.15)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(
-                        child: Text(
-                          p.entry.name,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 11),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 1,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${p.entry.calories}',
-                        style: const TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w600),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.close,
-                          color: AppColors.textSecondary, size: 10),
-                    ],
-                  ),
-                ),
-              );
-            }).toList(),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
-              Checkbox(
+              Switch.adaptive(
                 value: _saveAsTemplate,
-                onChanged: (v) => setState(() => _saveAsTemplate = v ?? false),
-                activeColor: AppColors.gold,
+                onChanged: (v) => setState(() => _saveAsTemplate = v),
+                activeThumbColor: AppColors.gold,
+                activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
               ),
+              const SizedBox(width: 8),
               const Text('Save as template',
                   style:
                       TextStyle(color: AppColors.textSecondary, fontSize: 12)),
@@ -429,67 +670,51 @@ class _LogMealSheetState extends State<LogMealSheet>
     return Row(
       children: [
         SizedBox(
-          width: 80,
+          width: 72,
           height: 52,
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
               foregroundColor: AppColors.textSecondary,
               side: BorderSide(
-                  color: AppColors.textSecondary.withValues(alpha: 0.3),
+                  color: AppColors.textSecondary.withValues(alpha: 0.2),
                   width: 0.5),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
             onPressed: () => Navigator.pop(context),
-            child: const Text('✕', style: TextStyle(fontSize: 16)),
+            child: const Icon(Icons.close, size: 18),
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: SizedBox(
             height: 52,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: hasItems
-                    ? [
-                        BoxShadow(
-                          color: AppColors.gold.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 3),
-                        ),
-                      ]
-                    : [],
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: hasItems ? AppColors.gold : AppColors.surface,
+                foregroundColor:
+                    hasItems ? AppColors.background : AppColors.textSecondary,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor:
-                      hasItems ? AppColors.gold : AppColors.surface,
-                  foregroundColor:
-                      hasItems ? AppColors.background : AppColors.textSecondary,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
-                ),
-                onPressed: !hasItems || _isLogging ? null : _logMeal,
-                child: _isLogging
-                    ? const SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.background))
-                    : Text(
-                        hasItems
-                            ? 'LOG  ·  $_totalCalories kcal'
-                            : 'ADD ITEMS TO LOG',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.6,
-                          fontSize: hasItems ? 13 : 11,
-                        ),
+              onPressed: !hasItems || _isLogging ? null : _promptAndLog,
+              child: _isLogging
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: AppColors.background))
+                  : Text(
+                      hasItems
+                          ? 'Log  ·  $_totalCalories kcal'
+                          : 'Add items to log',
+                      style: TextStyle(
+                        fontWeight:
+                            hasItems ? FontWeight.w600 : FontWeight.normal,
+                        fontSize: 14,
                       ),
-              ),
+                    ),
             ),
           ),
         ),
@@ -497,23 +722,87 @@ class _LogMealSheetState extends State<LogMealSheet>
     );
   }
 
-  Future<void> _logMeal() async {
+  Future<void> _promptAndLog() async {
+    if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
+      final defaultName = _pendingEntries.length == 1
+          ? _pendingEntries.first.entry.name
+          : '${DateTime.now().day}/${DateTime.now().month} meal';
+      final ctrl = TextEditingController(text: defaultName);
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppColors.surface,
+          title: const Text('Name this template',
+              style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Template name',
+              hintStyle:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide:
+                      const BorderSide(color: AppColors.primary, width: 1)),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel',
+                  style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Save',
+                  style: TextStyle(color: AppColors.primary)),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) return;
+      await _logMeal(templateName: ctrl.text.trim());
+    } else {
+      await _logMeal();
+    }
+  }
+
+  Future<void> _logMeal({String? templateName}) async {
     setState(() => _isLogging = true);
     HapticFeedback.mediumImpact();
-    for (final p in _pendingEntries) {
-      await widget.presenter.addFoodEntry(p.entry, _slot);
+    try {
+      for (final p in _pendingEntries) {
+        await widget.presenter.addFoodEntry(p.entry, MealSlot.meal);
+      }
+      if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
+        final name = (templateName != null && templateName.isNotEmpty)
+            ? templateName
+            : (_pendingEntries.length == 1
+                ? _pendingEntries.first.entry.name
+                : '${DateTime.now().day}/${DateTime.now().month} meal');
+        final template = FoodTemplate(
+          id: FoodEntry.generateId(),
+          name: name,
+          isMeal: _pendingEntries.length > 1,
+          defaultSlot: MealSlot.meal,
+          entries: _pendingEntries.map((p) => p.entry).toList(),
+        );
+        await widget.presenter.saveFoodTemplate(template);
+      }
+    } finally {
+      // Always dismiss — if the sheet stays open with _isLogging=true the
+      // transparent modal barrier blocks the entire screen behind it.
+      if (mounted) Navigator.pop(context);
     }
-    if (_saveAsTemplate && _pendingEntries.isNotEmpty) {
-      final template = FoodTemplate(
-        id: FoodEntry.generateId(),
-        name: '${_slot.label} ${DateTime.now().day}/${DateTime.now().month}',
-        isMeal: _pendingEntries.length > 1,
-        defaultSlot: _slot,
-        entries: _pendingEntries.map((p) => p.entry).toList(),
-      );
-      await widget.presenter.saveFoodTemplate(template);
-    }
-    if (mounted) Navigator.pop(context);
   }
 
   void _showManualEntry() {
@@ -521,471 +810,7 @@ class _LogMealSheetState extends State<LogMealSheet>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => _ManualEntrySheet(
-        onAdd: (entry) => _addEntry(entry),
-      ),
-    );
-  }
-}
-
-// ─── AI Tab ───────────────────────────────────────────────────────────────────
-
-class _AiTab extends StatelessWidget {
-  final NutritionPresenter presenter;
-  final TextEditingController controller;
-  final MealSlot slot;
-  final void Function(List<AiItemEstimate>) onConfirm;
-
-  const _AiTab({
-    required this.presenter,
-    required this.controller,
-    required this.slot,
-    required this.onConfirm,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (_, __) {
-        final available = presenter.isAiAvailable;
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          child: available
-              ? _buildActiveState()
-              : _AiUnavailableBanner(presenter: presenter),
-        );
-      },
-    );
-  }
-
-  Widget _buildActiveState() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Describe field
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
-          ),
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(children: [
-                Icon(Icons.auto_awesome, color: AppColors.accent, size: 13),
-                SizedBox(width: 6),
-                Text('Describe your meal',
-                    style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.8)),
-              ]),
-              const SizedBox(height: 8),
-              TextField(
-                controller: controller,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14, height: 1.4),
-                maxLines: 3,
-                minLines: 2,
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _runEstimate(),
-                decoration: InputDecoration(
-                  hintText:
-                      'e.g. 2 cups of rice, grilled chicken breast 200g, mixed salad with olive oil dressing',
-                  hintStyle: TextStyle(
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
-                      fontSize: 13,
-                      height: 1.4),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                width: double.infinity,
-                height: 42,
-                child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent.withValues(alpha: 0.15),
-                    foregroundColor: AppColors.accent,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: presenter.isAiEstimating ? null : _runEstimate,
-                  icon: const Icon(Icons.bolt, size: 15),
-                  label: const Text('ANALYSE MEAL',
-                      style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 1.0,
-                          fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Status / result
-        _buildStatus(),
-      ],
-    );
-  }
-
-  Widget _buildStatus() {
-    if (presenter.isAiEstimating) {
-      return Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.accent.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.accent.withValues(alpha: 0.15)),
-        ),
-        child: const Row(
-          children: [
-            SizedBox(
-                width: 14,
-                height: 14,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.accent)),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'System analysing meal composition...',
-                style: TextStyle(color: AppColors.accent, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final error = presenter.aiEstimateError;
-    if (error != null) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.danger.withValues(alpha: 0.2)),
-        ),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: AppColors.danger, size: 15),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(error,
-                  style:
-                      const TextStyle(color: AppColors.danger, fontSize: 12)),
-            ),
-            GestureDetector(
-              onTap: presenter.clearEstimate,
-              child: const Icon(Icons.close,
-                  color: AppColors.textSecondary, size: 16),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final estimate = presenter.lastEstimate;
-    if (estimate != null) {
-      return _AiResultCard(
-        estimate: estimate,
-        onConfirm: (items) {
-          onConfirm(items);
-          presenter.clearEstimate();
-        },
-        onDismiss: presenter.clearEstimate,
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Row(
-        children: [
-          Icon(Icons.tips_and_updates_outlined,
-              color: AppColors.textSecondary, size: 14),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Be specific — include portion sizes for better accuracy.',
-              style: TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12, height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _runEstimate() {
-    final desc = controller.text.trim();
-    if (desc.isEmpty) return;
-    presenter.estimateMeal(desc);
-  }
-}
-
-// ─── Search Tab ───────────────────────────────────────────────────────────────
-
-class _SearchTab extends StatelessWidget {
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final List<FoodDbEntry> results;
-  final bool isSearching;
-  final void Function(FoodEntry) onAdd;
-  final VoidCallback onManual;
-
-  const _SearchTab({
-    required this.controller,
-    required this.focusNode,
-    required this.results,
-    required this.isSearching,
-    required this.onAdd,
-    required this.onManual,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-          child: _buildSearchField(),
-        ),
-        if (isSearching)
-          const LinearProgressIndicator(
-              color: AppColors.accent,
-              backgroundColor: Colors.transparent,
-              minHeight: 2),
-        Expanded(
-          child: results.isEmpty
-              ? _buildEmpty()
-              : ListView.builder(
-                  padding: const EdgeInsets.only(top: 6, bottom: 12),
-                  itemCount: results.length,
-                  itemBuilder: (_, i) => _SearchResultRow(
-                    entry: results[i],
-                    onAdd: onAdd,
-                  ),
-                ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
-          child: GestureDetector(
-            onTap: onManual,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: AppColors.textSecondary.withValues(alpha: 0.15)),
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.edit_outlined,
-                      color: AppColors.textSecondary, size: 14),
-                  SizedBox(width: 6),
-                  Text('Enter manually',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSearchField() {
-    return TextField(
-      controller: controller,
-      focusNode: focusNode,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-      decoration: InputDecoration(
-        hintText: 'Search food database...',
-        hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.5),
-            fontSize: 13),
-        prefixIcon:
-            const Icon(Icons.search, color: AppColors.textSecondary, size: 18),
-        suffixIcon: controller.text.isNotEmpty
-            ? GestureDetector(
-                onTap: controller.clear,
-                child: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 16),
-              )
-            : null,
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1)),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildEmpty() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.search,
-              color: AppColors.textSecondary.withValues(alpha: 0.3), size: 36),
-          const SizedBox(height: 8),
-          Text(
-            controller.text.isEmpty
-                ? 'Type to search 1000+ foods'
-                : 'No results for "${controller.text}"',
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 13),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Quick Tab ────────────────────────────────────────────────────────────────
-
-class _QuickTab extends StatelessWidget {
-  final NutritionPresenter presenter;
-  final MealSlot slot;
-  final void Function(FoodEntry) onAdd;
-
-  const _QuickTab({
-    required this.presenter,
-    required this.slot,
-    required this.onAdd,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (_, __) {
-        final recents = presenter.recentFoods;
-        final templates = presenter.savedTemplates;
-
-        if (recents.isEmpty && templates.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.bolt_outlined,
-                    color: AppColors.textSecondary.withValues(alpha: 0.3),
-                    size: 36),
-                const SizedBox(height: 8),
-                const Text('Log meals to build quick-access history',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13)),
-              ],
-            ),
-          );
-        }
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (recents.isNotEmpty) ...[
-                _sectionLabel('RECENTLY LOGGED'),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: recents.map((t) {
-                    final cal = t.totalCalories;
-                    return GestureDetector(
-                      onTap: () {
-                        for (final e in t.entries) {
-                          onAdd(FoodEntry(
-                            id: FoodEntry.generateId(),
-                            name: e.name,
-                            calories: e.calories,
-                            protein: e.protein,
-                            carbs: e.carbs,
-                            fat: e.fat,
-                            grams: e.grams,
-                            loggedAt: DateTime.now(),
-                          ));
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: AppColors.background,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: AppColors.textSecondary
-                                  .withValues(alpha: 0.15)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(t.name,
-                                style: const TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 12)),
-                            const SizedBox(width: 6),
-                            Text('$cal',
-                                style: const TextStyle(
-                                    color: AppColors.gold,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600)),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 18),
-              ],
-              if (templates.isNotEmpty) ...[
-                _sectionLabel('SAVED TEMPLATES'),
-                const SizedBox(height: 8),
-                ...templates.map((t) => _TemplateCard(
-                      template: t,
-                      onAdd: () {
-                        for (final e in t.entries) {
-                          onAdd(FoodEntry(
-                            id: FoodEntry.generateId(),
-                            name: e.name,
-                            calories: e.calories,
-                            protein: e.protein,
-                            carbs: e.carbs,
-                            fat: e.fat,
-                            grams: e.grams,
-                            loggedAt: DateTime.now(),
-                          ));
-                        }
-                      },
-                    )),
-              ],
-            ],
-          ),
-        );
-      },
+      builder: (_) => _ManualEntrySheet(onAdd: _addEntry),
     );
   }
 
@@ -993,10 +818,51 @@ class _QuickTab extends StatelessWidget {
         label,
         style: const TextStyle(
             color: AppColors.textSecondary,
-            fontSize: 10,
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w600),
+            fontSize: 11,
+            fontWeight: FontWeight.w500),
       );
+}
+
+// ─── Cart Row ─────────────────────────────────────────────────────────────────
+
+class _CartRow extends StatelessWidget {
+  final _PendingEntry pending;
+  final VoidCallback onRemove;
+  const _CartRow({required this.pending, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              pending.entry.name,
+              style:
+                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Text(
+            '${pending.entry.calories} kcal',
+            style: const TextStyle(
+                color: AppColors.gold,
+                fontSize: 12,
+                fontWeight: FontWeight.w500),
+          ),
+          const SizedBox(width: 4),
+          IconButton(
+            icon: const Icon(Icons.close,
+                color: AppColors.textSecondary, size: 14),
+            onPressed: onRemove,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Template Card ────────────────────────────────────────────────────────────
@@ -1017,8 +883,6 @@ class _TemplateCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(14),
-        border:
-            Border.all(color: AppColors.textSecondary.withValues(alpha: 0.12)),
       ),
       child: Material(
         color: Colors.transparent,
@@ -1033,12 +897,14 @@ class _TemplateCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.1),
+                    color: AppColors.surface,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
-                    isMeal ? Icons.restaurant : Icons.set_meal_outlined,
-                    color: AppColors.gold,
+                    isMeal
+                        ? Icons.restaurant_outlined
+                        : Icons.set_meal_outlined,
+                    color: AppColors.textSecondary,
                     size: 18,
                   ),
                 ),
@@ -1063,24 +929,196 @@ class _TemplateCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.gold.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Text('+ ADD',
-                      style: TextStyle(
-                          color: AppColors.gold,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5)),
+                const Text(
+                  '+ Add',
+                  style: TextStyle(
+                      color: AppColors.gold,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ─── Parse Result Card ────────────────────────────────────────────────────────
+
+class _ParseResultCard extends StatefulWidget {
+  final FoodParseResult result;
+  final List<FoodDbEntry?> dbMatches;
+  final void Function(List<FoodEntry>) onConfirm;
+  final VoidCallback onDismiss;
+
+  const _ParseResultCard({
+    required this.result,
+    required this.dbMatches,
+    required this.onConfirm,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_ParseResultCard> createState() => _ParseResultCardState();
+}
+
+class _ParseResultCardState extends State<_ParseResultCard> {
+  late List<bool> _selected;
+
+  @override
+  void initState() {
+    super.initState();
+    _selected = List.filled(widget.result.items.length, true);
+  }
+
+  List<FoodEntry> _buildEntries() {
+    final entries = <FoodEntry>[];
+    for (int i = 0; i < widget.result.items.length; i++) {
+      if (!_selected[i]) continue;
+      final item = widget.result.items[i];
+      final db = i < widget.dbMatches.length ? widget.dbMatches[i] : null;
+      if (db != null) {
+        entries.add(db.toFoodEntry(item.grams));
+      } else {
+        // No DB match — create a rough entry from grams alone
+        entries.add(FoodEntry(
+          id: FoodEntry.generateId(),
+          name: item.name,
+          calories: (item.grams * 2).round(),
+          grams: item.grams,
+          estimationSource: EstimationSource.keywordDensity,
+          loggedAt: DateTime.now(),
+        ));
+      }
+    }
+    return entries;
+  }
+
+  int get _totalCalories => _buildEntries().fold(0, (s, e) => s + e.calories);
+
+  @override
+  Widget build(BuildContext context) {
+    final selectedCount = _selected.where((v) => v).length;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.primary.withValues(alpha: 0.2),
+          width: 0.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.manage_search_outlined,
+                  color: AppColors.primary, size: 14),
+              const SizedBox(width: 6),
+              Text(
+                widget.result.usedModel
+                    ? 'AI parsed ${widget.result.items.length} items'
+                    : '${widget.result.items.length} items matched',
+                style: const TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: const Icon(Icons.close,
+                    color: AppColors.textSecondary, size: 16),
+                onPressed: widget.onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...widget.result.items.asMap().entries.map((entry) {
+            final i = entry.key;
+            final item = entry.value;
+            final db = i < widget.dbMatches.length ? widget.dbMatches[i] : null;
+            final cal = db != null
+                ? (db.caloriesPer100g * item.grams / 100).round()
+                : (item.grams * 2).round();
+            final hasDb = db != null;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Checkbox(
+                      value: _selected[i],
+                      onChanged: (v) =>
+                          setState(() => _selected[i] = v ?? false),
+                      activeColor: AppColors.primary,
+                      side: BorderSide(
+                          color:
+                              AppColors.textSecondary.withValues(alpha: 0.4)),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          db?.name ?? item.name,
+                          style: const TextStyle(
+                              color: AppColors.textPrimary, fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${item.grams.round()}g${item.isEstimated ? ' ~est' : ''}',
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    '${hasDb ? '' : '~'}$cal kcal',
+                    style: TextStyle(
+                        color: hasDb ? AppColors.gold : AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
+              ),
+            );
+          }),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            height: 42,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: selectedCount == 0
+                  ? null
+                  : () => widget.onConfirm(_buildEntries()),
+              child: Text(
+                'Add $selectedCount item${selectedCount == 1 ? '' : 's'}  ·  $_totalCalories kcal',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1101,11 +1139,10 @@ class _AiUnavailableBanner extends StatelessWidget {
         final progress = presenter.aiDownloadProgress;
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: AppColors.background,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.accent.withValues(alpha: 0.2)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1187,11 +1224,9 @@ class _AiUnavailableBanner extends StatelessWidget {
                           borderRadius: BorderRadius.circular(10)),
                     ),
                     icon: const Icon(Icons.download_outlined, size: 16),
-                    label: const Text('DOWNLOAD AI MODEL',
+                    label: const Text('Download AI model',
                         style: TextStyle(
-                            fontSize: 12,
-                            letterSpacing: 1.0,
-                            fontWeight: FontWeight.w600)),
+                            fontSize: 13, fontWeight: FontWeight.w500)),
                     onPressed: () => presenter.downloadAiModel(),
                   ),
                 ),
@@ -1237,12 +1272,10 @@ class _AiResultCardState extends State<_AiResultCard> {
       decoration: BoxDecoration(
         color: AppColors.accent.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.accent.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             children: [
               const Icon(Icons.auto_awesome, color: AppColors.accent, size: 14),
@@ -1251,19 +1284,20 @@ class _AiResultCardState extends State<_AiResultCard> {
                 '~$total kcal estimated',
                 style: const TextStyle(
                     color: AppColors.accent,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w600,
                     fontSize: 13),
               ),
               const Spacer(),
-              GestureDetector(
-                onTap: widget.onDismiss,
-                child: const Icon(Icons.close,
+              IconButton(
+                icon: const Icon(Icons.close,
                     color: AppColors.textSecondary, size: 16),
+                onPressed: widget.onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          // Item rows
           ..._items.asMap().entries.map((entry) {
             final i = entry.key;
             final item = entry.value;
@@ -1276,7 +1310,6 @@ class _AiResultCardState extends State<_AiResultCard> {
                         style: const TextStyle(
                             color: AppColors.textPrimary, fontSize: 12)),
                   ),
-                  // Macro badges
                   if (item.protein != null)
                     _macroBadge('P', item.protein!.round(), AppColors.success),
                   if (item.carbs != null)
@@ -1290,10 +1323,13 @@ class _AiResultCardState extends State<_AiResultCard> {
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => setState(() => _items.removeAt(i)),
-                    child: const Icon(Icons.remove_circle_outline,
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle_outline,
                         color: AppColors.danger, size: 14),
+                    onPressed: () => setState(() => _items.removeAt(i)),
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 44, minHeight: 44),
                   ),
                 ],
               ),
@@ -1312,11 +1348,9 @@ class _AiResultCardState extends State<_AiResultCard> {
               ),
               onPressed: _items.isEmpty ? null : () => widget.onConfirm(_items),
               child: Text(
-                'ADD TO MEAL  ·  $total kcal',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.6,
-                    fontSize: 12),
+                'Add to meal  ·  $total kcal',
+                style:
+                    const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
               ),
             ),
           ),
@@ -1400,7 +1434,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                               fontWeight: FontWeight.w600)),
                       if (protein != null) ...[
                         const SizedBox(width: 8),
-                        Text('P: ${protein.round()}g',
+                        Text('P ${protein.round()}g',
                             style: const TextStyle(
                                 color: AppColors.success, fontSize: 11)),
                       ],
@@ -1425,9 +1459,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
             ],
           ),
           const SizedBox(height: 6),
-          // Serving size chips
           SizedBox(
-            height: 26,
+            height: 44,
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
@@ -1443,7 +1476,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     child: Container(
                       margin: const EdgeInsets.only(right: 6),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 10, vertical: 11),
                       decoration: BoxDecoration(
                         color: selected
                             ? AppColors.gold.withValues(alpha: 0.15)
@@ -1468,7 +1501,6 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     ),
                   );
                 }),
-                // Custom grams input
                 SizedBox(
                   width: 64,
                   child: TextField(
@@ -1556,28 +1588,25 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text('CUSTOM FOOD',
-                style: TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 11,
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w700)),
+            const Text(
+              'Custom food',
+              style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
+            ),
             const Spacer(),
-            GestureDetector(
-              onTap: () => Navigator.pop(context),
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 14),
+            SizedBox(
+              width: 44,
+              height: 44,
+              child: IconButton(
+                icon: const Icon(Icons.close,
+                    color: AppColors.textSecondary, size: 18),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
           ]),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           TextField(
               controller: _nameCtrl,
               autofocus: true,
@@ -1645,9 +1674,8 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
                     borderRadius: BorderRadius.circular(14)),
               ),
               onPressed: _add,
-              child: const Text('ADD TO MEAL',
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, letterSpacing: 0.8)),
+              child: const Text('Add',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
             ),
           ),
         ],

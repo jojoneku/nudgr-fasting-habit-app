@@ -1,3 +1,4 @@
+import 'estimation_source.dart';
 import 'food_entry.dart';
 
 class FoodDbEntry {
@@ -39,7 +40,7 @@ class FoodDbEntry {
       carbs: carbsPer100g != null ? carbsPer100g! * factor : null,
       fat: fatPer100g != null ? fatPer100g! * factor : null,
       grams: grams,
-      aiEstimated: false,
+      estimationSource: EstimationSource.db,
       loggedAt: DateTime.now(),
     );
   }

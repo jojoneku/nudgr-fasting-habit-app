@@ -69,11 +69,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: Text(
-          'TDEE SETUP — STEP ${_step + 1}/3',
-          style: const TextStyle(letterSpacing: 2.0, fontSize: 13),
-        ),
-        centerTitle: true,
+        title: Text('TDEE Setup · Step ${_step + 1} of 3'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -82,7 +78,15 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
           children: [
             _StepIndicator(current: _step),
             const SizedBox(height: 32),
-            Expanded(child: _buildStep()),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: KeyedSubtree(
+                  key: ValueKey(_step),
+                  child: _buildStep(),
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             _buildNavButtons(),
           ],
@@ -108,12 +112,11 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('BODY STATS',
+        const Text('Body stats',
             style: TextStyle(
-                color: AppColors.gold,
+                color: AppColors.textSecondary,
                 fontSize: 11,
-                letterSpacing: 2.0,
-                fontWeight: FontWeight.w600)),
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 20),
         Row(children: [
           Expanded(
@@ -125,11 +128,8 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
           Expanded(child: _field(_ageCtrl, 'Age', 'yrs', TextInputType.number)),
         ]),
         const SizedBox(height: 20),
-        const Text('SEX',
-            style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
-                letterSpacing: 1.5)),
+        const Text('Sex',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
         const SizedBox(height: 10),
         Row(children: [
           _SexButton(
@@ -152,12 +152,11 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('ACTIVITY LEVEL',
+        const Text('Activity level',
             style: TextStyle(
-                color: AppColors.gold,
+                color: AppColors.textSecondary,
                 fontSize: 11,
-                letterSpacing: 2.0,
-                fontWeight: FontWeight.w600)),
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 20),
         ...ActivityLevel.values.map((level) => _RadioTile(
               label: level.label,
@@ -175,12 +174,11 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('GOAL',
+        const Text('Goal',
             style: TextStyle(
-                color: AppColors.gold,
+                color: AppColors.textSecondary,
                 fontSize: 11,
-                letterSpacing: 2.0,
-                fontWeight: FontWeight.w600)),
+                fontWeight: FontWeight.w500)),
         const SizedBox(height: 20),
         _RadioTile(
             label: 'Cut — Lose weight',
@@ -207,16 +205,13 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.gold.withValues(alpha: 0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('YOUR TARGET',
+                const Text('Your target',
                     style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 10,
-                        letterSpacing: 2.0)),
+                        color: AppColors.textSecondary, fontSize: 11)),
                 const SizedBox(height: 8),
                 Text('${profile.targetCalories} kcal / day',
                     style: const TextStyle(
@@ -228,11 +223,9 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                     style: const TextStyle(
                         color: AppColors.textSecondary, fontSize: 11)),
                 const SizedBox(height: 16),
-                const Text('SUGGESTED MACROS',
+                const Text('Suggested macros',
                     style: TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 10,
-                        letterSpacing: 2.0)),
+                        color: AppColors.textSecondary, fontSize: 11)),
                 const SizedBox(height: 8),
                 Row(children: [
                   _MacroChip(
@@ -272,7 +265,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                       borderRadius: BorderRadius.circular(12)),
                 ),
                 onPressed: () => setState(() => _step--),
-                child: const Text('BACK'),
+                child: const Text('Back'),
               ),
             ),
           ),
@@ -290,9 +283,8 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
               ),
               onPressed: isLast ? _confirm : _next,
               child: Text(
-                isLast ? 'CONFIRM' : 'NEXT',
-                style: const TextStyle(
-                    fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                isLast ? 'Confirm' : 'Next',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),
@@ -374,7 +366,8 @@ class _StepIndicator extends StatelessWidget {
       children: List.generate(3, (i) {
         final active = i <= current;
         return Expanded(
-          child: Container(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
             margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
             height: 3,
             decoration: BoxDecoration(
@@ -444,7 +437,6 @@ class _MacroChip extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.gold.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [
