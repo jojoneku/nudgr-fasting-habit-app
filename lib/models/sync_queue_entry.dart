@@ -3,6 +3,8 @@ enum SyncOp { upsert, delete }
 enum SyncDomain {
   userProfile,
   userCollections,
+  fastingState,
+  userQuests,
   nutritionLog,
   activityLog,
   financeRecord,

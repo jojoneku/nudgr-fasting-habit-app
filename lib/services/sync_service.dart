@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/activity_goals.dart';
@@ -36,9 +37,11 @@ class SyncService {
 
   bool _isSyncing = false;
   DateTime? _lastSyncedAt;
+  DateTime? _lastPulledAt;
   bool _isOnline = true;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   VoidCallback? _onStateChange;
+  Timer? _debounceTimer;
 
   SyncService({
     required SupabaseClient supabase,
@@ -55,6 +58,12 @@ class SyncService {
   int get pendingCount => _queue.pendingCount;
 
   void setOnStateChange(VoidCallback cb) => _onStateChange = cb;
+
+  /// Schedules a push after a 3-second debounce so rapid saves batch together.
+  void schedulePush() {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(seconds: 3), pushPending);
+  }
 
   Future<void> init() async {
     final results = await Connectivity().checkConnectivity();
@@ -106,6 +115,10 @@ class SyncService {
         await _pushUserProfile();
       case SyncDomain.userCollections:
         await _pushUserCollections();
+      case SyncDomain.fastingState:
+        await _pushFastingState();
+      case SyncDomain.userQuests:
+        await _pushUserQuests();
       case SyncDomain.nutritionLog:
         await _pushNutritionLog(entry.key);
       case SyncDomain.activityLog:
@@ -128,19 +141,8 @@ class SyncService {
   }
 
   Future<void> _pushUserProfile() async {
-    final state = await _storage.loadState();
-    final history = state['history'] as List<FastingLog>;
-    debugPrint('SyncService: _pushUserProfile — history=${history.length} entries, isFasting=${state['isFasting']}');
+    debugPrint('SyncService: _pushUserProfile — pushing profile data');
     final data = {
-      'fastingState': {
-        'isFasting': state['isFasting'],
-        'startTime': (state['startTime'] as DateTime?)?.toIso8601String(),
-        'eatingStartTime': (state['eatingStartTime'] as DateTime?)?.toIso8601String(),
-        'elapsedSeconds': state['elapsedSeconds'],
-        'fastingGoalHours': state['fastingGoalHours'],
-        'history': history.map((e) => e.toJson()).toList(),
-        'lastPenaltyCheckDate': (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
-      },
       'userStats': (await _storage.loadUserStats()).toJson(),
       'nutritionGoals': (await _storage.loadNutritionGoals()).toJson(),
       'tdeeProfile': (await _storage.loadTdeeProfile())?.toJson(),
@@ -151,7 +153,6 @@ class SyncService {
       'logStreakDate': await _storage.loadLogStreakDate(),
       'activityStreak': await _storage.loadActivityStreak(),
       'activityGoalMetDate': await _storage.loadActivityGoalMetDate(),
-      'questPenaltyCheckDate': (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
       'preferredStepsSource': await _storage.loadPreferredStepsSource(),
     };
     await _supabase.from('user_profile').upsert({
@@ -162,13 +163,47 @@ class SyncService {
     debugPrint('SyncService: userProfile upserted ✓');
   }
 
-  Future<void> _pushUserCollections() async {
+  Future<void> _pushFastingState() async {
+    final state = await _storage.loadState();
+    final history = state['history'] as List<FastingLog>;
+    debugPrint('SyncService: _pushFastingState — history=${history.length} entries, isFasting=${state['isFasting']}');
+    final data = {
+      'isFasting': state['isFasting'],
+      'startTime': (state['startTime'] as DateTime?)?.toIso8601String(),
+      'eatingStartTime': (state['eatingStartTime'] as DateTime?)?.toIso8601String(),
+      'elapsedSeconds': state['elapsedSeconds'],
+      'fastingGoalHours': state['fastingGoalHours'],
+      'history': history.map((e) => e.toJson()).toList(),
+      'lastPenaltyCheckDate': (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
+    };
+    await _supabase.from('fasting_state').upsert({
+      'user_id': _userId,
+      'data': data,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    debugPrint('SyncService: fastingState upserted ✓');
+  }
+
+  Future<void> _pushUserQuests() async {
     final quests = await _storage.loadQuests();
     final achievements = await _storage.loadAchievements();
-    debugPrint('SyncService: _pushUserCollections — quests=${quests.length}, achievements=${achievements.length}');
+    debugPrint('SyncService: _pushUserQuests — quests=${quests.length}, achievements=${achievements.length}');
     final data = {
       'quests': quests.map((e) => e.toJson()).toList(),
       'achievements': achievements.map((e) => e.toJson()).toList(),
+      'questPenaltyCheckDate': (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
+    };
+    await _supabase.from('user_quests').upsert({
+      'user_id': _userId,
+      'data': data,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    debugPrint('SyncService: userQuests upserted ✓');
+  }
+
+  Future<void> _pushUserCollections() async {
+    debugPrint('SyncService: _pushUserCollections — pushing routines, food library, personal dict');
+    final data = {
       'routines': (await _storage.loadRoutines()).map((e) => e.toJson()).toList(),
       'foodLibrary': (await _storage.loadFoodLibrary()).map((e) => e.toJson()).toList(),
       'personalDict': (await _storage.loadPersonalDict()).map((e) => e.toJson()).toList(),
@@ -263,6 +298,10 @@ class SyncService {
     try {
       debugPrint('SyncService: pulling userProfile...');
       await _pullUserProfile();
+      debugPrint('SyncService: pulling fastingState...');
+      await _pullFastingState();
+      debugPrint('SyncService: pulling userQuests...');
+      await _pullUserQuests();
       debugPrint('SyncService: pulling userCollections...');
       await _pullUserCollections();
       debugPrint('SyncService: pulling nutritionLogs...');
@@ -272,6 +311,7 @@ class SyncService {
       debugPrint('SyncService: pulling financeRecords...');
       await _pullFinanceRecords();
       _lastSyncedAt = DateTime.now();
+      _lastPulledAt = _lastSyncedAt;
       debugPrint('SyncService: pullAll complete ✓');
       _storage.onRemoteDataApplied?.call();
     } catch (e) {
@@ -299,7 +339,6 @@ class SyncService {
       return;
     }
     debugPrint('SyncService: userProfile — applying remote data (remote=$remoteTime)');
-
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
       if (data['userStats'] != null) {
@@ -321,23 +360,77 @@ class SyncService {
       if (data['activityStreak'] != null) await _storage.saveActivityStreak(data['activityStreak'] as int);
       if (data['activityGoalMetDate'] != null) await _storage.saveActivityGoalMetDate(data['activityGoalMetDate'] as String);
       if (data['preferredStepsSource'] != null) await _storage.savePreferredStepsSource(data['preferredStepsSource'] as String?);
-      final fs = data['fastingState'] as Map<String, dynamic>?;
-      if (fs != null) {
-        final history = (fs['history'] as List? ?? [])
-            .map((e) => FastingLog.fromJson(e as Map<String, dynamic>))
-            .toList();
-        await _storage.saveState(
-          isFasting: fs['isFasting'] as bool? ?? false,
-          startTime: fs['startTime'] != null ? DateTime.parse(fs['startTime'] as String) : null,
-          eatingStartTime: fs['eatingStartTime'] != null ? DateTime.parse(fs['eatingStartTime'] as String) : null,
-          elapsedSeconds: fs['elapsedSeconds'] as int? ?? 0,
-          fastingGoalHours: fs['fastingGoalHours'] as int? ?? 16,
-          history: history,
-          lastPenaltyCheckDate: fs['lastPenaltyCheckDate'] != null ? DateTime.parse(fs['lastPenaltyCheckDate'] as String) : null,
-        );
-      }
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
+  }
+
+  Future<void> _pullFastingState() async {
+    final row = await _supabase
+        .from('fasting_state')
+        .select('data, updated_at')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    if (row == null) {
+      debugPrint('SyncService: fastingState — no remote row found');
+      return;
+    }
+    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final localTime = _queue.getTimestamp(SyncDomain.fastingState, 'default');
+    if (!remoteTime.isAfter(localTime)) {
+      debugPrint('SyncService: fastingState — local is newer, skipping');
+      return;
+    }
+    debugPrint('SyncService: fastingState — applying remote data (remote=$remoteTime)');
+    final data = row['data'] as Map<String, dynamic>;
+    await _storage.applyRemote(() async {
+      final history = (data['history'] as List? ?? [])
+          .map((e) => FastingLog.fromJson(e as Map<String, dynamic>))
+          .toList();
+      await _storage.saveState(
+        isFasting: data['isFasting'] as bool? ?? false,
+        startTime: data['startTime'] != null ? DateTime.parse(data['startTime'] as String) : null,
+        eatingStartTime: data['eatingStartTime'] != null ? DateTime.parse(data['eatingStartTime'] as String) : null,
+        elapsedSeconds: data['elapsedSeconds'] as int? ?? 0,
+        fastingGoalHours: data['fastingGoalHours'] as int? ?? 16,
+        history: history,
+        lastPenaltyCheckDate: data['lastPenaltyCheckDate'] != null ? DateTime.parse(data['lastPenaltyCheckDate'] as String) : null,
+      );
+    });
+    _queue.setTimestamp(SyncDomain.fastingState, 'default', time: remoteTime);
+  }
+
+  Future<void> _pullUserQuests() async {
+    final row = await _supabase
+        .from('user_quests')
+        .select('data, updated_at')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    if (row == null) {
+      debugPrint('SyncService: userQuests — no remote row found');
+      return;
+    }
+    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final localTime = _queue.getTimestamp(SyncDomain.userQuests, 'default');
+    if (!remoteTime.isAfter(localTime)) {
+      debugPrint('SyncService: userQuests — local is newer, skipping');
+      return;
+    }
+    debugPrint('SyncService: userQuests — applying remote data (remote=$remoteTime)');
+    final data = row['data'] as Map<String, dynamic>;
+    await _storage.applyRemote(() async {
+      if (data['quests'] != null) {
+        await _storage.saveQuests((data['quests'] as List)
+            .map((e) => Quest.fromJson(e as Map<String, dynamic>)).toList());
+      }
+      if (data['achievements'] != null) {
+        await _storage.saveAchievements((data['achievements'] as List)
+            .map((e) => QuestAchievement.fromJson(e as Map<String, dynamic>)).toList());
+      }
+      if (data['questPenaltyCheckDate'] != null) {
+        await _storage.saveQuestPenaltyCheckDate(DateTime.parse(data['questPenaltyCheckDate'] as String));
+      }
+    });
+    _queue.setTimestamp(SyncDomain.userQuests, 'default', time: remoteTime);
   }
 
   Future<void> _pullUserCollections() async {
@@ -357,17 +450,8 @@ class SyncService {
       return;
     }
     debugPrint('SyncService: userCollections — applying remote data');
-
     final data = row['data'] as Map<String, dynamic>;
     await _storage.applyRemote(() async {
-      if (data['quests'] != null) {
-        await _storage.saveQuests((data['quests'] as List)
-            .map((e) => Quest.fromJson(e as Map<String, dynamic>)).toList());
-      }
-      if (data['achievements'] != null) {
-        await _storage.saveAchievements((data['achievements'] as List)
-            .map((e) => QuestAchievement.fromJson(e as Map<String, dynamic>)).toList());
-      }
       if (data['routines'] != null) {
         await _storage.saveRoutines((data['routines'] as List)
             .map((e) => HabitRoutine.fromJson(e as Map<String, dynamic>)).toList());
@@ -496,11 +580,36 @@ class SyncService {
     await pullAll();
   }
 
+  /// Pulls from remote only if last pull was more than [staleness] ago.
+  Future<void> pullIfStale({Duration staleness = const Duration(minutes: 5)}) async {
+    if (_lastPulledAt != null &&
+        DateTime.now().difference(_lastPulledAt!) < staleness) {
+      return;
+    }
+    await pullAll();
+  }
+
+  static String _initialPushKey(String userId) => 'sync_initial_push_done_v2_$userId';
+
+  Future<bool> _isInitialPushDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_initialPushKey(_userId)) ?? false;
+  }
+
+  Future<void> _markInitialPushDone() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_initialPushKey(_userId), true);
+  }
+
   /// Pushes ALL local data to Supabase regardless of the sync queue.
-  /// Call once on first sign-in to upload pre-existing local data.
+  /// Runs only once per user per device (guarded by a SharedPreferences flag).
   Future<void> pushAll() async {
     if (!_isOnline) {
       debugPrint('SyncService: pushAll skipped — offline');
+      return;
+    }
+    if (await _isInitialPushDone()) {
+      debugPrint('SyncService: pushAll skipped — already done for this user');
       return;
     }
     debugPrint('SyncService: pushAll starting — uploading all local data...');
@@ -509,8 +618,13 @@ class SyncService {
     try {
       debugPrint('SyncService: pushAll — uploading userProfile...');
       await _pushUserProfile();
+      debugPrint('SyncService: pushAll — uploading fastingState...');
+      await _pushFastingState();
+      debugPrint('SyncService: pushAll — uploading userQuests...');
+      await _pushUserQuests();
       debugPrint('SyncService: pushAll — uploading userCollections...');
       await _pushUserCollections();
+      await _markInitialPushDone();
       _lastSyncedAt = DateTime.now();
       debugPrint('SyncService: pushAll complete ✓');
     } catch (e) {
@@ -522,6 +636,7 @@ class SyncService {
   }
 
   void dispose() {
+    _debounceTimer?.cancel();
     _connectivitySub?.cancel();
   }
 }

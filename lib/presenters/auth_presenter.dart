@@ -12,11 +12,14 @@ class AuthPresenter extends ChangeNotifier {
   /// successful sign-in so SyncService can pull the user's cloud data.
   final void Function(String userId)? onFirstSignIn;
 
+  /// Fired when the user signs out so SyncService can be torn down.
+  final VoidCallback? onSignOut;
+
   StreamSubscription<AuthState>? _authSub;
   bool _isLoading = false;
   String? _error;
 
-  AuthPresenter(this._auth, {this.onFirstSignIn});
+  AuthPresenter(this._auth, {this.onFirstSignIn, this.onSignOut});
 
   // ── Public state ─────────────────────────────────────────────────────────
 
@@ -60,6 +63,7 @@ class AuthPresenter extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
+    onSignOut?.call();
     // authStateChanges stream triggers notifyListeners via _authSub
   }
 

@@ -103,6 +103,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _authPresenter = AuthPresenter(
       AuthService.instance,
       onFirstSignIn: (userId) => _initSync(userId),
+      onSignOut: _tearDownSync,
     );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
@@ -152,11 +153,23 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _syncPresenter = SyncPresenter(_syncService!, _authPresenter);
     _storage.setSyncQueue(_syncQueue!);
     _storage.onRemoteDataApplied = _reloadAll;
+    _storage.onDirty = _syncService!.schedulePush;
     await _syncService!.init();
-    // Push all local data first (covers data saved before sign-in),
-    // then pull to get any data from other devices.
+    // Flush any queued offline changes first, then do the initial push of
+    // pre-existing local data (runs once per user per device), then pull.
+    await _syncService!.pushPending();
     await _syncService!.pushAll();
     await _syncService!.pullAll();
+    if (mounted) setState(() {});
+  }
+
+  void _tearDownSync() {
+    _storage.onDirty = null;
+    _storage.onRemoteDataApplied = null;
+    _syncService?.dispose();
+    _syncPresenter?.dispose();
+    _syncService = null;
+    _syncPresenter = null;
     if (mounted) setState(() {});
   }
 
@@ -171,6 +184,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _fastingPresenter.loadState();
       _syncService?.pushPending();
+      _syncService?.pullIfStale();
     }
   }
 

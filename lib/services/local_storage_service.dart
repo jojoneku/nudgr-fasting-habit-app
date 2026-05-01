@@ -38,6 +38,9 @@ class LocalStorageService extends StorageService {
   /// Fired by SyncService after pullAll() — lets home_screen reload presenters.
   VoidCallback? onRemoteDataApplied;
 
+  /// Fired whenever local data is marked dirty — used by SyncService to auto-push.
+  VoidCallback? onDirty;
+
   /// Runs [block] while suppressing dirty-marking to avoid re-queuing remote data.
   Future<void> applyRemote(Future<void> Function() block) async {
     _applyingRemote = true;
@@ -50,7 +53,10 @@ class LocalStorageService extends StorageService {
 
   void _markDirty(SyncDomain domain, String key,
       {SyncOp op = SyncOp.upsert}) {
-    if (!_applyingRemote) _syncQueue?.markDirty(domain, key, op: op);
+    if (!_applyingRemote) {
+      _syncQueue?.markDirty(domain, key, op: op);
+      onDirty?.call();
+    }
   }
 
   // ── User Stats ───────────────────────────────────────────────────────────────
@@ -108,7 +114,7 @@ class LocalStorageService extends StorageService {
     await prefs.setInt(StorageService.keyFastingGoalHours, fastingGoalHours);
     await prefs.setString(StorageService.keyHistory, jsonEncode(history.map((e) => e.toJson()).toList()));
     debugPrint('LocalStorageService: State saved. isFasting=$isFasting');
-    _markDirty(SyncDomain.userProfile, 'default');
+    _markDirty(SyncDomain.fastingState, 'default');
   }
 
   @override
@@ -151,7 +157,7 @@ class LocalStorageService extends StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(StorageService.keyQuests, jsonEncode(quests.map((e) => e.toJson()).toList()));
     debugPrint('LocalStorageService: Quests saved (${quests.length} items)');
-    _markDirty(SyncDomain.userCollections, 'default');
+    _markDirty(SyncDomain.userQuests, 'default');
   }
 
   @override
@@ -196,7 +202,7 @@ class LocalStorageService extends StorageService {
   Future<void> saveAchievements(List<QuestAchievement> achievements) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(StorageService.keyQuestAchievements, jsonEncode(achievements.map((a) => a.toJson()).toList()));
-    _markDirty(SyncDomain.userCollections, 'default');
+    _markDirty(SyncDomain.userQuests, 'default');
   }
 
   @override
@@ -218,7 +224,7 @@ class LocalStorageService extends StorageService {
   Future<void> saveQuestPenaltyCheckDate(DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(StorageService.keyQuestPenaltyCheckDate, date.toIso8601String());
-    _markDirty(SyncDomain.userProfile, 'default');
+    _markDirty(SyncDomain.userQuests, 'default');
   }
 
   @override
