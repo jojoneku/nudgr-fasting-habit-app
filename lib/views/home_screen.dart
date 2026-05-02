@@ -22,8 +22,10 @@ import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/sync_presenter.dart';
+import '../presenters/hub_presenter.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
+import 'settings_screen.dart';
 import 'stats_view.dart';
 import 'widgets/ai_chat_sheet.dart';
 
@@ -51,6 +53,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final InstallmentPresenter _installmentPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
   late final AuthPresenter _authPresenter;
+  late HubPresenter _hubPresenter;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   SyncQueue? _syncQueue;
@@ -105,6 +108,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       onFirstSignIn: (userId) => _initSync(userId),
       onSignOut: _tearDownSync,
     );
+    _hubPresenter = HubPresenter(
+      fasting: _fastingPresenter,
+      quests: _questPresenter,
+      treasury: _treasuryPresenter,
+    );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -137,6 +145,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _installmentPresenter.dispose();
     _aiCoachPresenter.dispose();
     _authPresenter.dispose();
+    _hubPresenter.dispose();
     _syncService?.dispose();
     _syncPresenter?.dispose();
     super.dispose();
@@ -192,6 +201,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final screens = [
       HubScreen(
+        hubPresenter: _hubPresenter,
         fastingPresenter: _fastingPresenter,
         statsPresenter: _statsPresenter,
         questPresenter: _questPresenter,
@@ -204,9 +214,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         budgetPresenter: _budgetPresenter,
         historyPresenter: _historyPresenter,
         installmentPresenter: _installmentPresenter,
+        authPresenter: _authPresenter,
+        syncPresenter: _syncPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,
+        fastingPresenter: _fastingPresenter,
+        authPresenter: _authPresenter,
+        syncPresenter: _syncPresenter,
+      ),
+      SettingsScreen(
         fastingPresenter: _fastingPresenter,
         authPresenter: _authPresenter,
         syncPresenter: _syncPresenter,
@@ -216,26 +233,33 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: screens[_selectedIndex],
-      floatingActionButton: _AiCoachFab(
-        presenter: _aiCoachPresenter,
-        entryPoint: _selectedIndex == 1
-            ? AiCoachEntryPoint.stats
-            : AiCoachEntryPoint.general,
-      ),
+      floatingActionButton: _selectedIndex < 2
+          ? _AiCoachFab(
+              presenter: _aiCoachPresenter,
+              entryPoint: _selectedIndex == 1
+                  ? AiCoachEntryPoint.stats
+                  : AiCoachEntryPoint.general,
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (i) => setState(() => _selectedIndex = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.grid_view_outlined),
-            selectedIcon: Icon(Icons.grid_view),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home),
             label: 'Hub',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
             selectedIcon: Icon(Icons.person),
-            label: 'Character',
+            label: 'Stats',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.settings_outlined),
+            selectedIcon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
       ),

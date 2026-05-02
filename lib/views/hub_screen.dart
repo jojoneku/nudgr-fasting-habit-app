@@ -1,48 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:intl/intl.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
+import '../presenters/auth_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/hub_presenter.dart';
+import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/quest_presenter.dart';
 import '../presenters/stats_presenter.dart';
+import '../presenters/sync_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
-import '../presenters/installment_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
-import '../app_colors.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
-import 'widgets/module_card.dart';
-import 'tabs/timer_tab.dart';
-import 'quests/quests_tab.dart';
+import 'nutrition/log_meal_sheet.dart';
 import 'nutrition/nutrition_screen.dart';
+import 'quests/quests_tab.dart';
+import 'stats_view.dart';
+import 'tabs/timer_tab.dart';
+import 'treasury/ledger/add_transaction_sheet.dart';
 import 'treasury/treasury_module_view.dart';
+import 'widgets/hub/activity_hub_card.dart';
+import 'widgets/hub/fasting_hub_card.dart';
+import 'widgets/hub/nutrition_hub_card.dart';
+import 'widgets/hub/quests_hub_card.dart';
+import 'widgets/hub/stats_hub_card.dart';
+import 'widgets/hub/treasury_hub_card.dart';
+import 'widgets/system/overlays/app_toast.dart';
+import 'widgets/system/foundation/app_page_scaffold.dart';
+import '../utils/app_spacing.dart';
 
 class HubScreen extends StatelessWidget {
-  final FastingPresenter fastingPresenter;
-  final StatsPresenter statsPresenter;
-  final QuestPresenter questPresenter;
-  final NutritionPresenter? nutritionPresenter;
-  final ActivityPresenter? activityPresenter;
-  final AiCoachPresenter? aiCoachPresenter;
-  final TreasuryDashboardPresenter? treasuryPresenter;
-  final LedgerPresenter? ledgerPresenter;
-  final BillsReceivablesPresenter? billsPresenter;
-  final BudgetPresenter? budgetPresenter;
-  final TreasuryHistoryPresenter? historyPresenter;
-  final InstallmentPresenter? installmentPresenter;
-
-  /// Extra subtitle overrides: moduleId → subtitle string getter.
-  final Map<String, String Function()> moduleSubtitleGetters;
-
-  /// Optional onTap overrides per module.
-  final Map<String, VoidCallback> moduleOnTapOverrides;
-
   const HubScreen({
     super.key,
+    required this.hubPresenter,
     required this.fastingPresenter,
     required this.statsPresenter,
     required this.questPresenter,
@@ -55,51 +50,64 @@ class HubScreen extends StatelessWidget {
     this.budgetPresenter,
     this.historyPresenter,
     this.installmentPresenter,
-    this.moduleSubtitleGetters = const {},
-    this.moduleOnTapOverrides = const {},
+    this.authPresenter,
+    this.syncPresenter,
   });
+
+  final HubPresenter hubPresenter;
+  final FastingPresenter fastingPresenter;
+  final StatsPresenter statsPresenter;
+  final QuestPresenter questPresenter;
+  final NutritionPresenter? nutritionPresenter;
+  final ActivityPresenter? activityPresenter;
+  final AiCoachPresenter? aiCoachPresenter;
+  final TreasuryDashboardPresenter? treasuryPresenter;
+  final LedgerPresenter? ledgerPresenter;
+  final BillsReceivablesPresenter? billsPresenter;
+  final BudgetPresenter? budgetPresenter;
+  final TreasuryHistoryPresenter? historyPresenter;
+  final InstallmentPresenter? installmentPresenter;
+  final AuthPresenter? authPresenter;
+  final SyncPresenter? syncPresenter;
+
+  String _todayLabel() {
+    return DateFormat('EEEE, MMMM d').format(DateTime.now());
+  }
+
+  Future<void> _refresh() async {
+    await Future.wait([
+      fastingPresenter.loadState(),
+      questPresenter.reload(),
+      if (activityPresenter != null) activityPresenter!.loadState(),
+      if (nutritionPresenter != null) nutritionPresenter!.loadState(),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: Listenable.merge([
-        fastingPresenter,
-        statsPresenter,
-        questPresenter,
-        if (nutritionPresenter != null) nutritionPresenter!,
-        if (activityPresenter != null) activityPresenter!,
-        if (treasuryPresenter != null) treasuryPresenter!,
-      ]),
-      builder: (context, _) => _buildGrid(context),
-    );
-  }
-
-  Widget _buildGrid(BuildContext context) {
-    final modules = _buildModuleDefinitions(context);
-
-    return CustomScrollView(
+    return AppPageScaffold.large(
+      title: 'Today',
+      subtitle: _todayLabel(),
+      onRefresh: _refresh,
       slivers: [
-        const SliverAppBar(
-          title: Text(
-            'SYSTEM INTERFACE',
-            style: TextStyle(letterSpacing: 3.0, fontSize: 14),
-          ),
-          centerTitle: true,
-          pinned: false,
-          floating: true,
-        ),
         SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          sliver: SliverGrid(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => modules[index],
-              childCount: modules.length,
-            ),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.95,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.md,
+            AppSpacing.xl,
+          ),
+          sliver: ListenableBuilder(
+            listenable: hubPresenter,
+            builder: (ctx, _) => SliverList(
+              delegate: SliverChildListDelegate(
+                hubPresenter.cardOrder
+                    .map((type) => Padding(
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                          child: _buildCard(type, ctx),
+                        ))
+                    .toList(),
+              ),
             ),
           ),
         ),
@@ -107,90 +115,54 @@ class HubScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildModuleDefinitions(BuildContext context) {
-    final fastingSubtitle = moduleSubtitleGetters['fasting']?.call() ??
-        (fastingPresenter.isFasting ? 'Fasting now' : 'Not fasting');
-
-    final questsSubtitle =
-        moduleSubtitleGetters['quests']?.call() ?? _questsSummary();
-
-    return [
-      ModuleCard(
-        title: 'Fasting',
-        rpgName: 'DISCIPLINE PROTOCOL',
-        icon: Icons.timer,
-        accentColor: AppColors.primary,
-        subtitle: fastingSubtitle,
-        onTap: moduleOnTapOverrides['fasting'] ?? () => _pushTimerTab(context),
-      ),
-      ModuleCard(
-        title: 'Quests',
-        rpgName: 'QUEST BOARD',
-        icon: MdiIcons.swordCross,
-        accentColor: AppColors.secondary,
-        subtitle: questsSubtitle,
-        onTap: moduleOnTapOverrides['quests'] ?? () => _pushQuestsTab(context),
-      ),
-      ModuleCard(
-        title: 'Calories',
-        rpgName: 'ALCHEMY LAB',
-        icon: MdiIcons.flask,
-        accentColor: AppColors.gold,
-        isLocked: nutritionPresenter == null,
-        subtitle: nutritionPresenter != null
-            ? moduleSubtitleGetters['calories']?.call() ??
-                nutritionPresenter!.hubSubtitle
-            : null,
-        onTap: moduleOnTapOverrides['calories'] ??
-            (nutritionPresenter != null
-                ? () => _pushNutritionScreen(context)
-                : null),
-      ),
-      ModuleCard(
-        title: 'Activity',
-        rpgName: 'TRAINING GROUNDS',
-        icon: MdiIcons.run,
-        accentColor: AppColors.success,
-        isLocked: activityPresenter == null,
-        subtitle: activityPresenter != null
-            ? moduleSubtitleGetters['activity']?.call() ??
-                activityPresenter!.hubSubtitle
-            : null,
-        onTap: moduleOnTapOverrides['activity'] ??
-            (activityPresenter != null
-                ? () => _pushActivityScreen(context)
-                : null),
-      ),
-      ModuleCard(
-        title: 'Finance',
-        rpgName: 'TREASURY',
-        icon: MdiIcons.bank,
-        accentColor: Colors.amber,
-        isLocked: treasuryPresenter == null,
-        subtitle: treasuryPresenter != null ? 'Track finances' : null,
-        onTap: moduleOnTapOverrides['treasury'] ??
-            (treasuryPresenter != null
-                ? () => _pushTreasuryScreen(context)
-                : null),
-      ),
-    ];
+  Widget _buildCard(HubCardType type, BuildContext context) {
+    return switch (type) {
+      HubCardType.fasting => FastingHubCard(
+          fasting: fastingPresenter,
+          onNavigate: () => _pushTimerTab(context),
+          onStartFast: fastingPresenter.startFast,
+          onEndFast: () => _endFast(context),
+        ),
+      HubCardType.nutrition => nutritionPresenter != null
+          ? NutritionHubCard(
+              nutrition: nutritionPresenter!,
+              onNavigate: () => _pushNutritionScreen(context),
+              onLogMeal: () => _showLogMealSheet(context),
+            )
+          : const SizedBox.shrink(),
+      HubCardType.quests => QuestsHubCard(
+          quests: questPresenter,
+          onNavigate: () => _pushQuestsTab(context),
+          onMarkComplete: () => _markNextQuestDone(context),
+        ),
+      HubCardType.activity => activityPresenter != null
+          ? ActivityHubCard(
+              activity: activityPresenter!,
+              onNavigate: () => _pushActivityScreen(context),
+            )
+          : const SizedBox.shrink(),
+      HubCardType.treasury => treasuryPresenter != null
+          ? TreasuryHubCard(
+              treasury: treasuryPresenter!,
+              onNavigate: () => _pushTreasuryScreen(context),
+              onLogExpense: () => _showAddTransactionSheet(context),
+            )
+          : const SizedBox.shrink(),
+      HubCardType.stats => StatsHubCard(
+          stats: statsPresenter,
+          onNavigate: () => _pushStatsView(context),
+        ),
+    };
   }
 
-  String _questsSummary() {
-    final active = questPresenter.todayActiveQuests.length;
-    final overdue = questPresenter.todayOverdueQuests.length;
-    final completed = questPresenter.todayCompletedQuests.length;
-    final total = active + overdue + completed;
-    if (total == 0) return 'No missions today';
-    return '$completed/$total done today';
-  }
+  // ── Navigation ──────────────────────────────────────────────────────────────
 
   void _pushTimerTab(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
-          appBar: AppBar(title: const Text('Discipline Protocol')),
+          appBar: AppBar(title: const Text('Fasting')),
           body: TimerTab(presenter: fastingPresenter),
         ),
       ),
@@ -198,19 +170,26 @@ class HubScreen extends StatelessWidget {
   }
 
   void _pushNutritionScreen(BuildContext context) {
+    final n = nutritionPresenter;
+    if (n == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => NutritionScreen(
-          presenter: nutritionPresenter!,
-          aiCoachPresenter: aiCoachPresenter,
-        ),
+        builder: (_) => NutritionScreen(presenter: n, aiCoachPresenter: aiCoachPresenter),
       ),
     );
   }
 
+  void _pushQuestsTab(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => QuestsTab(presenter: questPresenter)),
+    );
+  }
+
   void _pushActivityScreen(BuildContext context) {
-    final ap = activityPresenter!;
+    final ap = activityPresenter;
+    if (ap == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -228,12 +207,7 @@ class HubScreen extends StatelessWidget {
     final budget = budgetPresenter;
     final history = historyPresenter;
     final installments = installmentPresenter;
-    if (dash == null ||
-        ledger == null ||
-        bills == null ||
-        budget == null ||
-        history == null ||
-        installments == null) return;
+    if (dash == null || ledger == null || bills == null || budget == null || history == null || installments == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -249,12 +223,60 @@ class HubScreen extends StatelessWidget {
     );
   }
 
-  void _pushQuestsTab(BuildContext context) {
+  void _pushStatsView(BuildContext context) {
+    final auth = authPresenter;
+    if (auth == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => QuestsTab(presenter: questPresenter),
+        builder: (_) => Scaffold(
+          body: StatsView(
+            presenter: statsPresenter,
+            fastingPresenter: fastingPresenter,
+            authPresenter: auth,
+            syncPresenter: syncPresenter,
+          ),
+        ),
       ),
+    );
+  }
+
+  // ── Quick actions ────────────────────────────────────────────────────────────
+
+  Future<void> _endFast(BuildContext context) async {
+    final (xp, _) = await fastingPresenter.stopFast();
+    if (context.mounted) {
+      AppToast.success(context, xp > 0 ? 'Fast complete! +$xp XP' : 'Fast ended');
+    }
+  }
+
+  void _showLogMealSheet(BuildContext context) {
+    final n = nutritionPresenter;
+    if (n == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => LogMealSheet(presenter: n),
+    );
+  }
+
+  Future<void> _markNextQuestDone(BuildContext context) async {
+    final quest = questPresenter.nextUrgentQuest;
+    if (quest == null) return;
+    final (xp, isCrit) = await questPresenter.completeQuest(quest.id);
+    if (context.mounted) {
+      final label = isCrit ? 'Critical! +$xp XP' : '+$xp XP';
+      AppToast.success(context, '${quest.title} done · $label');
+    }
+  }
+
+  void _showAddTransactionSheet(BuildContext context) {
+    final ledger = ledgerPresenter;
+    if (ledger == null) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddTransactionSheet(presenter: ledger),
     );
   }
 }
