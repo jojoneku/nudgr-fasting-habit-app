@@ -143,6 +143,7 @@ class HubScreen extends StatelessWidget {
             SliverAppBar.large(
               pinned: true,
               toolbarHeight: 36,
+              expandedHeight: 88,
               surfaceTintColor: Colors.transparent,
               backgroundColor: stickyBg,
               title: nameTitle,

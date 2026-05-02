@@ -35,37 +35,38 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(),
+          _buildHeader(cs),
           const SizedBox(height: 20),
-          _buildNameField(),
+          _buildNameField(cs),
           const SizedBox(height: 12),
-          _buildCaloriesField(),
+          _buildCaloriesField(cs),
           const SizedBox(height: 12),
-          _buildMacrosToggle(),
+          _buildMacrosToggle(cs),
           if (_showMacros) ...[
             const SizedBox(height: 12),
-            _buildMacrosRow(),
+            _buildMacrosRow(cs),
           ],
           const SizedBox(height: 20),
-          _buildActions(),
+          _buildActions(cs),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ColorScheme cs) {
     return Row(
       children: [
         const Text(
@@ -83,8 +84,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           height: 44,
           child: IconButton(
             tooltip: 'Close',
-            icon: const Icon(Icons.close,
-                color: AppColors.textSecondary, size: 20),
+            icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 20),
             onPressed: () => Navigator.pop(context),
           ),
         ),
@@ -92,40 +92,40 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     );
   }
 
-  Widget _buildNameField() {
+  Widget _buildNameField(ColorScheme cs) {
     return TextField(
       controller: _nameCtrl,
       autofocus: true,
       textCapitalization: TextCapitalization.sentences,
-      style: const TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Food name', 'e.g. Chicken breast 150g'),
+      style: TextStyle(color: cs.onSurface),
+      decoration: _inputDecoration('Food name', 'e.g. Chicken breast 150g', cs),
     );
   }
 
-  Widget _buildCaloriesField() {
+  Widget _buildCaloriesField(ColorScheme cs) {
     return TextField(
       controller: _calCtrl,
       keyboardType: TextInputType.number,
-      style: const TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Calories', 'kcal'),
+      style: TextStyle(color: cs.onSurface),
+      decoration: _inputDecoration('Calories', 'kcal', cs),
     );
   }
 
-  Widget _buildMacrosToggle() {
+  Widget _buildMacrosToggle(ColorScheme cs) {
     return GestureDetector(
       onTap: () => setState(() => _showMacros = !_showMacros),
       child: Row(
         children: [
           Icon(
             _showMacros ? Icons.expand_less : Icons.expand_more,
-            color: AppColors.textSecondary,
+            color: cs.onSurfaceVariant,
             size: 18,
           ),
           const SizedBox(width: 6),
           Text(
             _showMacros ? 'Hide macros' : 'Add macros (optional)',
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
               fontSize: 13,
             ),
           ),
@@ -134,15 +134,15 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     );
   }
 
-  Widget _buildMacrosRow() {
+  Widget _buildMacrosRow(ColorScheme cs) {
     return Row(
       children: [
         Expanded(
           child: TextField(
             controller: _proteinCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            decoration: _inputDecoration('Protein', 'g'),
+            style: TextStyle(color: cs.onSurface, fontSize: 13),
+            decoration: _inputDecoration('Protein', 'g', cs),
           ),
         ),
         const SizedBox(width: 8),
@@ -150,8 +150,8 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           child: TextField(
             controller: _carbsCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            decoration: _inputDecoration('Carbs', 'g'),
+            style: TextStyle(color: cs.onSurface, fontSize: 13),
+            decoration: _inputDecoration('Carbs', 'g', cs),
           ),
         ),
         const SizedBox(width: 8),
@@ -159,15 +159,15 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           child: TextField(
             controller: _fatCtrl,
             keyboardType: TextInputType.number,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            decoration: _inputDecoration('Fat', 'g'),
+            style: TextStyle(color: cs.onSurface, fontSize: 13),
+            decoration: _inputDecoration('Fat', 'g', cs),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildActions() {
+  Widget _buildActions(ColorScheme cs) {
     return Row(
       children: [
         Expanded(
@@ -175,9 +175,9 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
             height: 48,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-                side: const BorderSide(
-                    color: AppColors.textSecondary, width: 0.5),
+                foregroundColor: cs.onSurfaceVariant,
+                side: BorderSide(
+                    color: cs.outlineVariant, width: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -195,7 +195,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.background,
+                foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -213,15 +213,14 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     );
   }
 
-  InputDecoration _inputDecoration(String label, String hint) {
+  InputDecoration _inputDecoration(String label, String hint, ColorScheme cs) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
-      labelStyle: const TextStyle(color: AppColors.textSecondary),
-      hintStyle:
-          TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.5)),
+      labelStyle: TextStyle(color: cs.onSurfaceVariant),
+      hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
       filled: true,
-      fillColor: AppColors.background,
+      fillColor: cs.surfaceContainerHighest,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,

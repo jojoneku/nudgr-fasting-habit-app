@@ -47,32 +47,31 @@ class _NutritionBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canPop = Navigator.canPop(context);
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
         elevation: 0,
         automaticallyImplyLeading: false,
         titleSpacing: canPop ? 0 : 20,
         leading: canPop
             ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new,
-                    color: AppColors.textSecondary, size: 18),
+                icon: Icon(Icons.arrow_back_ios_new,
+                    color: cs.onSurfaceVariant, size: 18),
                 onPressed: () => Navigator.pop(context),
               )
             : null,
-        title: const Text(
+        title: Text(
           'Nutrition',
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: cs.onSurface,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.history_outlined,
-                color: AppColors.textSecondary, size: 22),
+            icon: Icon(Icons.history_outlined,
+                color: cs.onSurfaceVariant, size: 22),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -81,8 +80,8 @@ class _NutritionBody extends StatelessWidget {
             tooltip: 'History',
           ),
           IconButton(
-            icon: const Icon(Icons.menu_book_outlined,
-                color: AppColors.textSecondary, size: 22),
+            icon: Icon(Icons.menu_book_outlined,
+                color: cs.onSurfaceVariant, size: 22),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -91,8 +90,8 @@ class _NutritionBody extends StatelessWidget {
             tooltip: 'Library',
           ),
           IconButton(
-            icon: const Icon(Icons.tune_outlined,
-                color: AppColors.textSecondary, size: 22),
+            icon: Icon(Icons.tune_outlined,
+                color: cs.onSurfaceVariant, size: 22),
             onPressed: () => showNutritionSettingsSheet(
               context,
               presenter,
@@ -159,6 +158,7 @@ class _StatSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = presenter;
+    final cs = Theme.of(context).colorScheme;
     final burned = p.selectedDateCaloriesBurned;
     final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
     return Padding(
@@ -174,10 +174,10 @@ class _StatSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'CALORIES',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: cs.onSurfaceVariant,
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.6,
@@ -195,19 +195,19 @@ class _StatSection extends StatelessWidget {
                       _StatCell(
                         value: '${p.todayCalories}',
                         label: 'Eaten',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: '${p.remainingCalories}',
                         label: 'Left',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                       ),
                       const _ColDivider(),
                       _StatCell(
                         value: burned > 0 ? '$burned' : '—',
                         label: 'Burned',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                       ),
                     ],
                   ),
@@ -219,7 +219,7 @@ class _StatSection extends StatelessWidget {
               width: 1,
               height: 56,
               margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: AppColors.textSecondary.withValues(alpha: 0.20),
+              color: cs.outlineVariant,
             ),
             // ── Macros side (40%) ──────────────────────────────────────────
             Expanded(
@@ -227,10 +227,10 @@ class _StatSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'MACROS',
                     style: TextStyle(
-                      color: AppColors.textSecondary,
+                      color: cs.onSurfaceVariant,
                       fontSize: 10,
                       fontWeight: FontWeight.w500,
                       letterSpacing: 0.6,
@@ -242,7 +242,7 @@ class _StatSection extends StatelessWidget {
                       _StatCell(
                         value: '${p.todayProtein.round()}g',
                         label: 'Protein',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                         barColor: AppColors.primary,
                         progress: p.proteinProgress,
                       ),
@@ -250,7 +250,7 @@ class _StatSection extends StatelessWidget {
                       _StatCell(
                         value: '${p.todayCarbs.round()}g',
                         label: 'Carbs',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                         barColor: AppColors.gold,
                         progress: p.carbsProgress,
                       ),
@@ -258,7 +258,7 @@ class _StatSection extends StatelessWidget {
                       _StatCell(
                         value: '${p.todayFat.round()}g',
                         label: 'Fat',
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                         barColor: AppColors.danger,
                         progress: p.fatProgress,
                       ),
@@ -281,7 +281,7 @@ class _ColDivider extends StatelessWidget {
         width: 1,
         height: 36,
         margin: const EdgeInsets.symmetric(horizontal: 6),
-        color: AppColors.textSecondary.withValues(alpha: 0.20),
+        color: Theme.of(context).colorScheme.outlineVariant,
       );
 }
 
@@ -325,8 +325,8 @@ class _StatCell extends StatelessWidget {
           const SizedBox(height: 3),
           Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
               fontSize: 10,
             ),
           ),
@@ -364,7 +364,7 @@ class _NutritionDetailBody extends StatelessWidget {
           extra: burned > 0 ? '🔥 $burned kcal burned' : null,
         ),
         const SizedBox(height: 14),
-        const Divider(color: Color(0x18FFFFFF), height: 1),
+        Divider(color: Theme.of(context).colorScheme.outlineVariant, height: 1),
         const SizedBox(height: 14),
         if (p.proteinGoal != null)
           _DetailRow(
@@ -398,9 +398,9 @@ class _NutritionDetailBody extends StatelessWidget {
             color: AppColors.danger,
           ),
         if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
-          const Text(
+          Text(
             'No macro targets set — configure them in Settings.',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
           ),
         const SizedBox(height: 8),
       ],
@@ -430,6 +430,7 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final progress = goal > 0 ? (value / goal).clamp(0.0, 1.0) : 0.0;
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -437,8 +438,8 @@ class _DetailRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: cs.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
               ),
@@ -455,8 +456,8 @@ class _DetailRow extends StatelessWidget {
             ),
             Text(
               ' / $goal $unit',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
                 fontSize: 12,
                 height: 1,
               ),
@@ -470,8 +471,8 @@ class _DetailRow extends StatelessWidget {
           children: [
             Text(
               '$remaining $unit remaining',
-              style: const TextStyle(
-                color: AppColors.textSecondary,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
                 fontSize: 11,
               ),
             ),
@@ -479,8 +480,8 @@ class _DetailRow extends StatelessWidget {
               const Spacer(),
               Text(
                 extra!,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                style: TextStyle(
+                  color: cs.onSurfaceVariant,
                   fontSize: 11,
                 ),
               ),
@@ -601,16 +602,17 @@ class _ThinkingBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             SizedBox(
@@ -618,12 +620,12 @@ class _ThinkingBubble extends StatelessWidget {
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: AppColors.textSecondary,
+                color: cs.onSurfaceVariant,
               ),
             ),
-            SizedBox(width: 8),
+            const SizedBox(width: 8),
             Text('Analyzing…',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
           ],
         ),
       ),
@@ -729,21 +731,21 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     final nameCtrl = TextEditingController(text: suggested);
     final messenger = ScaffoldMessenger.of(context);
 
+    final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text('Save as template',
-            style: TextStyle(color: AppColors.textPrimary, fontSize: 15)),
+        title: Text('Save as template',
+            style: TextStyle(color: cs.onSurface, fontSize: 15)),
         content: TextField(
           controller: nameCtrl,
           autofocus: true,
-          style: const TextStyle(color: AppColors.textPrimary),
+          style: TextStyle(color: cs.onSurface),
           decoration: InputDecoration(
             hintText: 'Template name',
-            hintStyle: const TextStyle(color: AppColors.textSecondary),
+            hintStyle: TextStyle(color: cs.onSurfaceVariant),
             filled: true,
-            fillColor: AppColors.background,
+            fillColor: cs.surfaceContainerHighest,
             border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
                 borderSide: BorderSide.none),
@@ -752,8 +754,8 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: Text('Cancel',
+                style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -790,7 +792,6 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
       messenger2.showSnackBar(
         SnackBar(
           content: Text('Saved "${template.name}" to library'),
-          backgroundColor: AppColors.surface,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -800,9 +801,10 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
   @override
   Widget build(BuildContext context) {
     final message = widget.message;
+    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -813,15 +815,13 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
             child: Text(
               message.rawText,
               style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
               ),
             ),
           ),
-          Divider(
-              height: 1,
-              color: AppColors.textSecondary.withValues(alpha: 0.08)),
+          Divider(height: 1, color: cs.outlineVariant),
           ...message.foodItems.asMap().entries.map((e) => _FoodItemRow(
                 item: e.value,
                 index: e.key,
@@ -861,6 +861,7 @@ class _FoodItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
         Padding(
@@ -869,26 +870,25 @@ class _FoodItemRow extends StatelessWidget {
               ? TextField(
                   controller: controller,
                   autofocus: index == 0,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: cs.onSurface, fontSize: 14),
                   decoration: InputDecoration(
                     isDense: true,
                     contentPadding:
                         const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                    fillColor: AppColors.background,
+                    fillColor: cs.surfaceContainerHighest,
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(
-                          color: AppColors.primary.withValues(alpha: 0.4)),
+                          color: cs.primary.withValues(alpha: 0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: const BorderSide(color: AppColors.primary),
+                      borderSide: BorderSide(color: cs.primary),
                     ),
                     hintText: 'e.g. 100g rice',
-                    hintStyle: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 13),
+                    hintStyle: TextStyle(
+                        color: cs.onSurfaceVariant, fontSize: 13),
                   ),
                 )
               : _FoodItemDisplay(item: item),
@@ -898,7 +898,7 @@ class _FoodItemRow extends StatelessWidget {
             height: 1,
             indent: 14,
             endIndent: 14,
-            color: AppColors.textSecondary.withValues(alpha: 0.08),
+            color: cs.outlineVariant,
           ),
       ],
     );
@@ -921,8 +921,8 @@ class _FoodItemDisplay extends StatelessWidget {
             Expanded(
               child: Text(
                 item.name,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -949,7 +949,7 @@ class _FoodItemDisplay extends StatelessWidget {
             if (hasGrams) ...[
               _NutriBadge(
                 label: _gramsLabel(item.grams!),
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(width: 4),
             ],
@@ -1052,9 +1052,10 @@ class _ExerciseAnalysisCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final e = message.exerciseEntry!;
+    final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1065,15 +1066,13 @@ class _ExerciseAnalysisCard extends StatelessWidget {
             child: Text(
               message.rawText,
               style: TextStyle(
-                color: AppColors.textSecondary.withValues(alpha: 0.7),
+                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
                 fontSize: 11,
                 fontStyle: FontStyle.italic,
               ),
             ),
           ),
-          Divider(
-              height: 1,
-              color: AppColors.textSecondary.withValues(alpha: 0.08)),
+          Divider(height: 1, color: cs.outlineVariant),
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Row(
@@ -1087,8 +1086,8 @@ class _ExerciseAnalysisCard extends StatelessWidget {
                     children: [
                       Text(
                         e.name,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
+                        style: TextStyle(
+                          color: cs.onSurface,
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
                         ),
@@ -1097,8 +1096,8 @@ class _ExerciseAnalysisCard extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           e.statsLabel,
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11),
+                          style: TextStyle(
+                              color: cs.onSurfaceVariant, fontSize: 11),
                         ),
                       ],
                     ],
@@ -1153,14 +1152,14 @@ class _MessageFooter extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeStr = DateFormat('h:mm a').format(timestamp);
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 0, 8, 8),
       child: Row(
         children: [
           Text(
             timeStr,
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 10),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10),
           ),
           const Spacer(),
           if (editing) ...[
@@ -1179,25 +1178,25 @@ class _MessageFooter extends StatelessWidget {
             const SizedBox(width: 2),
             _FooterBtn(
                 icon: Icons.close,
-                color: AppColors.textSecondary,
+                color: cs.onSurfaceVariant,
                 onTap: onCancel),
           ] else ...[
             if (onEdit != null)
               _FooterBtn(
                   icon: Icons.edit_outlined,
-                  color: AppColors.textSecondary,
+                  color: cs.onSurfaceVariant,
                   onTap: onEdit!),
             if (onSaveTemplate != null) ...[
               const SizedBox(width: 2),
               _FooterBtn(
                   icon: Icons.bookmark_border,
-                  color: AppColors.textSecondary,
+                  color: cs.onSurfaceVariant,
                   onTap: onSaveTemplate!),
             ],
             const SizedBox(width: 2),
             _FooterBtn(
                 icon: Icons.delete_outline,
-                color: AppColors.textSecondary,
+                color: cs.onSurfaceVariant,
                 onTap: onDelete),
           ],
         ],
@@ -1283,22 +1282,21 @@ class _ChatInputBarState extends State<_ChatInputBar> {
         !widget.presenter.isEatingWindowOpen;
     final isToday = widget.presenter.isSelectedDateToday;
 
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: AppColors.background,
+      color: cs.surface,
       padding: EdgeInsets.fromLTRB(
           12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
       child: Row(
         children: [
           IconButton(
-            icon: const Icon(Icons.grid_view_outlined,
-                color: AppColors.textSecondary),
+            icon: Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
             onPressed: isToday ? () => _showTemplates(context) : null,
             tooltip: 'Templates',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
-            icon:
-                const Icon(Icons.edit_outlined, color: AppColors.textSecondary),
+            icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
             onPressed:
                 isToday && !locked ? () => _showManualAdd(context) : null,
             tooltip: 'Add manually',
@@ -1308,23 +1306,22 @@ class _ChatInputBarState extends State<_ChatInputBar> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.surface,
+                color: cs.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(24),
               ),
               child: TextField(
                 controller: _ctrl,
                 focusNode: _focus,
                 enabled: isToday && !locked,
-                style:
-                    const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: TextStyle(color: cs.onSurface, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: locked
                       ? 'Fasting — logging paused'
                       : !isToday
                           ? 'View only — select today to log'
                           : 'Log food or exercise…',
-                  hintStyle: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 13),
+                  hintStyle: TextStyle(
+                      color: cs.onSurfaceVariant, fontSize: 13),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -1342,15 +1339,14 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color:
-                    isToday && !locked ? AppColors.primary : AppColors.surface,
+                color: isToday && !locked ? cs.primary : cs.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Icon(
                 Icons.arrow_upward,
                 color: isToday && !locked
-                    ? AppColors.background
-                    : AppColors.textSecondary,
+                    ? cs.onPrimary
+                    : cs.onSurfaceVariant,
                 size: 20,
               ),
             ),
@@ -1385,11 +1381,11 @@ class _TemplateBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (recents.isNotEmpty) ...[
-          _sectionLabel('Recent'),
+          _sectionLabel('Recent', context),
           ..._templateList(context, recents),
         ],
         if (templates.isNotEmpty) ...[
-          _sectionLabel('Saved Meals'),
+          _sectionLabel('Saved Meals', context),
           ..._templateList(context, templates),
         ],
         SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
@@ -1417,13 +1413,13 @@ class _TemplateBody extends StatelessWidget {
     }).toList();
   }
 
-  Widget _sectionLabel(String label) {
+  Widget _sectionLabel(String label, BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 4),
       child: Text(
         label,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 11,
           fontWeight: FontWeight.w500,
           letterSpacing: 0.5,
@@ -1499,19 +1495,23 @@ class _ManualFoodBodyState extends State<_ManualFoodBody> {
         const SizedBox(height: 10),
         GestureDetector(
           onTap: () => setState(() => _showMacros = !_showMacros),
-          child: Row(children: [
-            Icon(
-              _showMacros ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-              color: AppColors.textSecondary,
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              _showMacros ? 'Hide macros' : 'Add macros (optional)',
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-          ]),
+          child: Builder(builder: (context) {
+            final color = Theme.of(context).colorScheme.onSurfaceVariant;
+            return Row(children: [
+              Icon(
+                _showMacros
+                    ? Icons.keyboard_arrow_up
+                    : Icons.keyboard_arrow_down,
+                color: color,
+                size: 16,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                _showMacros ? 'Hide macros' : 'Add macros (optional)',
+                style: TextStyle(color: color, fontSize: 12),
+              ),
+            ]);
+          }),
         ),
         if (_showMacros) ...[
           const SizedBox(height: 10),

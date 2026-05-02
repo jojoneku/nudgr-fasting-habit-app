@@ -14,6 +14,8 @@ class SyncPresenter extends ChangeNotifier {
   bool get isSyncing => _sync.isSyncing;
   DateTime? get lastSyncedAt => _sync.lastSyncedAt;
   int get pendingCount => _sync.pendingCount;
+  String? _syncError;
+  String? get syncError => _syncError;
 
   String get statusLabel {
     if (!_auth.isSignedIn) return 'Sign in to sync';
@@ -25,7 +27,16 @@ class SyncPresenter extends ChangeNotifier {
     return 'Synced ${_timeAgo(last)}';
   }
 
-  Future<void> forceSync() => _sync.forceSync();
+  Future<void> forceSync() async {
+    _syncError = null;
+    try {
+      await _sync.forceSync();
+    } catch (e) {
+      _syncError = e.toString();
+      notifyListeners();
+      rethrow;
+    }
+  }
 
   void _onSyncStateChanged() => notifyListeners();
   void _onAuthChanged() => notifyListeners();
