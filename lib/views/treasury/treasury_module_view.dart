@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -40,33 +39,40 @@ class TreasuryModuleView extends StatefulWidget {
 class _TreasuryModuleViewState extends State<TreasuryModuleView> {
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return DefaultTabController(
       length: TreasuryModuleView.tabCount,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: colorScheme.surface,
         appBar: AppBar(
-          backgroundColor: AppColors.surface,
-          title: const Text(
+          backgroundColor: colorScheme.surfaceContainer,
+          title: Text(
             'TREASURY',
-            style: TextStyle(letterSpacing: 2.0, fontSize: 14),
+            style: theme.textTheme.titleSmall?.copyWith(
+              letterSpacing: 2.0,
+            ),
           ),
           centerTitle: true,
         ),
         bottomNavigationBar: Container(
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: colorScheme.surfaceContainer,
             border: Border(
               top: BorderSide(
-                  color: AppColors.accent.withOpacity(0.18), width: 1),
+                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+                width: 1,
+              ),
             ),
           ),
-          child: const TabBar(
-            indicatorColor: AppColors.accent,
+          child: TabBar(
+            indicatorColor: colorScheme.primary,
             indicatorWeight: 3,
             indicatorSize: TabBarIndicatorSize.label,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.textSecondary,
-            tabs: [
+            labelColor: colorScheme.primary,
+            unselectedLabelColor: colorScheme.onSurfaceVariant,
+            tabs: const [
               Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
               Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
               Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),

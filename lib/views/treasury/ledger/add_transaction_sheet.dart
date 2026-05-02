@@ -3,12 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -95,8 +95,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedAccountId == null) return;
-    if (_type == TransactionType.transfer && _transferToAccountId == null)
+    if (_type == TransactionType.transfer && _transferToAccountId == null) {
       return;
+    }
 
     setState(() => _isSubmitting = true);
 
@@ -150,12 +151,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       initialDate: _date,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.accent),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _date = picked);
   }
@@ -168,15 +163,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       children: [
         Flexible(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+            padding: const EdgeInsets.only(bottom: 16),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _SheetTitle(isEdit: isEdit),
-                  const SizedBox(height: 16),
                   _TypeToggle(
                       selected: _type,
                       onChanged: (t) => setState(() {
@@ -235,10 +228,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                   const SizedBox(height: 12),
                   _NoteField(controller: _noteController),
                   const SizedBox(height: 20),
-                  _SubmitButton(
-                      isEdit: isEdit,
-                      isSubmitting: _isSubmitting,
-                      onPressed: _submit),
+                  AppPrimaryButton(
+                    label: isEdit ? 'Save' : 'Log Transaction',
+                    isLoading: _isSubmitting,
+                    onPressed: _isSubmitting ? null : _submit,
+                  ),
                   const SizedBox(height: 8),
                 ],
               ),
@@ -251,22 +245,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 }
 
-class _SheetTitle extends StatelessWidget {
-  final bool isEdit;
-
-  const _SheetTitle({required this.isEdit});
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      isEdit ? 'Edit Transaction' : 'Log Transaction',
-      style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.bold),
-    );
-  }
-}
+// ── Type Toggle ───────────────────────────────────────────────────────────────
 
 class _TypeToggle extends StatelessWidget {
   final TransactionType selected;
@@ -276,13 +255,14 @@ class _TypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         _TypeButton(
           label: 'Inflow',
           type: TransactionType.inflow,
           selected: selected,
-          color: AppColors.success,
+          color: cs.tertiary,
           onTap: () => onChanged(TransactionType.inflow),
         ),
         const SizedBox(width: 8),
@@ -290,7 +270,7 @@ class _TypeToggle extends StatelessWidget {
           label: 'Outflow',
           type: TransactionType.outflow,
           selected: selected,
-          color: AppColors.danger,
+          color: cs.error,
           onTap: () => onChanged(TransactionType.outflow),
         ),
         const SizedBox(width: 8),
@@ -298,7 +278,7 @@ class _TypeToggle extends StatelessWidget {
           label: 'Transfer',
           type: TransactionType.transfer,
           selected: selected,
-          color: Colors.amber,
+          color: cs.primary,
           onTap: () => onChanged(TransactionType.transfer),
         ),
       ],
@@ -331,12 +311,15 @@ class _TypeButton extends StatelessWidget {
           onPressed: onTap,
           style: OutlinedButton.styleFrom(
             backgroundColor:
-                isSelected ? color.withOpacity(0.15) : Colors.transparent,
+                isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
             side: BorderSide(
                 color: isSelected
                     ? color
-                    : AppColors.textSecondary.withOpacity(0.4)),
-            foregroundColor: isSelected ? color : AppColors.textSecondary,
+                    : Theme.of(context)
+                        .colorScheme
+                        .outlineVariant),
+            foregroundColor:
+                isSelected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
             padding: EdgeInsets.zero,
           ),
           child: Text(label,
@@ -347,6 +330,8 @@ class _TypeButton extends StatelessWidget {
     );
   }
 }
+
+// ── Amount Field ──────────────────────────────────────────────────────────────
 
 class _AmountField extends StatelessWidget {
   final TextEditingController controller;
@@ -359,24 +344,9 @@ class _AmountField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 16),
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Amount',
-        labelStyle: TextStyle(color: AppColors.textSecondary),
         prefixText: '₱ ',
-        prefixStyle: TextStyle(color: AppColors.accent),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
       ),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Enter an amount';
@@ -387,6 +357,8 @@ class _AmountField extends StatelessWidget {
     );
   }
 }
+
+// ── Account Dropdown ──────────────────────────────────────────────────────────
 
 class _AccountDropdown extends StatelessWidget {
   final List<FinancialAccount> accounts;
@@ -404,27 +376,9 @@ class _AccountDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: value,
-      hint: Text(label,
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14)),
-      dropdownColor: AppColors.surface,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
-      ),
+      initialValue: value,
+      hint: Text(label),
+      decoration: InputDecoration(labelText: label),
       items: accounts
           .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
           .toList(),
@@ -433,6 +387,8 @@ class _AccountDropdown extends StatelessWidget {
     );
   }
 }
+
+// ── Category Chips ────────────────────────────────────────────────────────────
 
 class _CategoryChips extends StatelessWidget {
   final List<FinanceCategory> categories;
@@ -447,11 +403,13 @@ class _CategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Category',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            style: TextStyle(
+                color: cs.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -461,16 +419,6 @@ class _CategoryChips extends StatelessWidget {
             return ChoiceChip(
               label: Text(cat.name),
               selected: isSelected,
-              selectedColor: AppColors.accent.withOpacity(0.2),
-              labelStyle: TextStyle(
-                color: isSelected ? AppColors.accent : AppColors.textSecondary,
-                fontSize: 12,
-              ),
-              backgroundColor: AppColors.surface,
-              side: BorderSide(
-                  color: isSelected
-                      ? AppColors.accent
-                      : AppColors.textSecondary.withOpacity(0.3)),
               onSelected: (_) => onSelected(cat.id),
             );
           }).toList(),
@@ -479,6 +427,8 @@ class _CategoryChips extends StatelessWidget {
     );
   }
 }
+
+// ── Description Field ─────────────────────────────────────────────────────────
 
 class _DescriptionField extends StatelessWidget {
   final TextEditingController controller;
@@ -490,29 +440,16 @@ class _DescriptionField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLength: 60,
-      style: TextStyle(color: AppColors.textPrimary),
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Description',
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        filled: true,
-        fillColor: AppColors.background,
-        counterStyle: TextStyle(color: AppColors.textSecondary),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
       ),
       validator: (v) =>
           (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
     );
   }
 }
+
+// ── Date Picker Row ───────────────────────────────────────────────────────────
 
 class _DatePickerRow extends StatelessWidget {
   final DateTime date;
@@ -524,6 +461,7 @@ class _DatePickerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
@@ -531,14 +469,14 @@ class _DatePickerRow extends StatelessWidget {
         height: 56,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
-          color: AppColors.background,
+          color: cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
+          border: Border.all(color: cs.outline.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
             Icon(Icons.calendar_today_outlined,
-                color: AppColors.textSecondary, size: 18),
+                color: cs.onSurfaceVariant, size: 18),
             const SizedBox(width: 8),
             Expanded(
               child: Text(
@@ -546,7 +484,7 @@ class _DatePickerRow extends StatelessWidget {
                     ? DateFormat('MMM d, yyyy').format(date)
                     : DateFormat('MMMM d, yyyy').format(date),
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                style: TextStyle(color: cs.onSurface, fontSize: 14),
               ),
             ),
           ],
@@ -555,6 +493,8 @@ class _DatePickerRow extends StatelessWidget {
     );
   }
 }
+
+// ── Note Field ────────────────────────────────────────────────────────────────
 
 class _NoteField extends StatelessWidget {
   final TextEditingController controller;
@@ -566,26 +506,14 @@ class _NoteField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: 2,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Note (optional)',
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
       ),
     );
   }
 }
+
+// ── No Categories Hint ────────────────────────────────────────────────────────
 
 class _NoCategoriesHint extends StatelessWidget {
   final TransactionType type;
@@ -594,65 +522,22 @@ class _NoCategoriesHint extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final label = type == TransactionType.inflow ? 'income' : 'expense';
-    return Container(
+    return AppCard(
+      variant: AppCardVariant.outlined,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
-      ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, color: AppColors.textSecondary, size: 16),
+          Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               'No $label categories yet — add some in the Ledger first.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SubmitButton extends StatelessWidget {
-  final bool isEdit;
-  final bool isSubmitting;
-  final VoidCallback onPressed;
-
-  const _SubmitButton(
-      {required this.isEdit,
-      required this.isSubmitting,
-      required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: isSubmitting ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.background,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: isSubmitting
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.background),
-              )
-            : Text(
-                isEdit ? 'Save' : 'Log Transaction',
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
       ),
     );
   }

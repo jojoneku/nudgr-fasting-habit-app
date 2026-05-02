@@ -1,10 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
 class FullSpendingHistorySheet extends StatefulWidget {
@@ -13,15 +12,12 @@ class FullSpendingHistorySheet extends StatefulWidget {
   const FullSpendingHistorySheet({super.key, required this.presenter});
 
   static void show(BuildContext context, TreasuryDashboardPresenter presenter) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => FullSpendingHistorySheet(presenter: presenter),
+      title: 'Daily Spending',
+      useDraggableScrollableSheet: true,
+      initialChildSize: 0.82,
+      body: _SpendingHistoryBody(presenter: presenter),
     );
   }
 
@@ -31,10 +27,28 @@ class FullSpendingHistorySheet extends StatefulWidget {
 }
 
 class _FullSpendingHistorySheetState extends State<FullSpendingHistorySheet> {
+  @override
+  Widget build(BuildContext context) {
+    return _SpendingHistoryBody(presenter: widget.presenter);
+  }
+}
+
+class _SpendingHistoryBody extends StatefulWidget {
+  final TreasuryDashboardPresenter presenter;
+
+  const _SpendingHistoryBody({required this.presenter});
+
+  @override
+  State<_SpendingHistoryBody> createState() => _SpendingHistoryBodyState();
+}
+
+class _SpendingHistoryBodyState extends State<_SpendingHistoryBody> {
   int _days = 30;
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final data = widget.presenter.lastNDaysSpending(_days);
     final peak = data.fold(0.0, (m, d) => d.amount > m ? d.amount : m);
     final total = data.fold(0.0, (s, d) => s + d.amount);
@@ -43,53 +57,35 @@ class _FullSpendingHistorySheetState extends State<FullSpendingHistorySheet> {
         ? 0.0
         : nonZero.fold(0.0, (s, d) => s + d.amount) / nonZero.length;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.82,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (context, scrollController) => Column(
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _Handle(),
-          _Header(total: total, avg: avg, peak: peak),
-          _RangeSelector(
-              selected: _days, onChanged: (v) => setState(() => _days = v)),
-          Expanded(
-            child: SingleChildScrollView(
-              controller: scrollController,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 160,
-                    child: _FullBarChart(days: data, peak: peak),
-                  ),
-                  const SizedBox(height: 16),
-                  ...data.reversed
-                      .where((d) => d.amount > 0)
-                      .map((d) => _DayRow(day: d, peak: peak)),
-                ],
-              ),
-            ),
+          _Header(
+            total: total,
+            avg: avg,
+            peak: peak,
+            colorScheme: colorScheme,
+            theme: theme,
           ),
+          const SizedBox(height: 8),
+          _RangeSelector(
+            selected: _days,
+            onChanged: (v) => setState(() => _days = v),
+            colorScheme: colorScheme,
+            theme: theme,
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 160,
+            child: _FullBarChart(days: data, peak: peak),
+          ),
+          const SizedBox(height: 16),
+          ...data.reversed
+              .where((d) => d.amount > 0)
+              .map((d) => _DayRow(day: d, peak: peak)),
+          const SizedBox(height: 8),
         ],
-      ),
-    );
-  }
-}
-
-class _Handle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 4),
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: AppColors.textSecondary.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(2),
-        ),
       ),
     );
   }
@@ -99,74 +95,57 @@ class _Header extends StatelessWidget {
   final double total;
   final double avg;
   final double peak;
+  final ColorScheme colorScheme;
+  final ThemeData theme;
 
-  const _Header({required this.total, required this.avg, required this.peak});
+  const _Header({
+    required this.total,
+    required this.avg,
+    required this.peak,
+    required this.colorScheme,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'DAILY SPENDING',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  formatPeso(total),
-                  style: AppTextStyles.mono(
-                    textStyle: TextStyle(
-                      color: AppColors.danger,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Avg ${formatPesoCompact(avg)}/day',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'PEAK',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
-                  letterSpacing: 0.8,
-                ),
+              AppNumberDisplay(
+                value: formatPeso(total),
+                size: AppNumberSize.title,
+                color: colorScheme.error,
               ),
               Text(
-                formatPesoCompact(peak),
-                style: AppTextStyles.mono(
-                  textStyle: const TextStyle(
-                    color: Color(0xFFEF9A9A),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                'Avg ${formatPesoCompact(avg)}/day',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
           ),
-        ],
-      ),
+        ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              'PEAK',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                letterSpacing: 0.8,
+              ),
+            ),
+            AppNumberDisplay(
+              value: formatPesoCompact(peak),
+              size: AppNumberSize.body,
+              color: const Color(0xFFEF9A9A),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -174,52 +153,54 @@ class _Header extends StatelessWidget {
 class _RangeSelector extends StatelessWidget {
   final int selected;
   final ValueChanged<int> onChanged;
+  final ColorScheme colorScheme;
+  final ThemeData theme;
 
-  const _RangeSelector({required this.selected, required this.onChanged});
+  const _RangeSelector({
+    required this.selected,
+    required this.onChanged,
+    required this.colorScheme,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
     const options = [7, 14, 30, 90];
     const labels = ['7D', '2W', '30D', '90D'];
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Row(
-        children: [
-          for (int i = 0; i < options.length; i++) ...[
-            GestureDetector(
-              onTap: () => onChanged(options[i]),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                decoration: BoxDecoration(
+    return Row(
+      children: [
+        for (int i = 0; i < options.length; i++) ...[
+          GestureDetector(
+            onTap: () => onChanged(options[i]),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+              decoration: BoxDecoration(
+                color: selected == options[i]
+                    ? colorScheme.primary.withValues(alpha: 0.15)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
                   color: selected == options[i]
-                      ? AppColors.accent.withOpacity(0.15)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: selected == options[i]
-                        ? AppColors.accent
-                        : AppColors.textSecondary.withOpacity(0.2),
-                  ),
+                      ? colorScheme.primary
+                      : colorScheme.outlineVariant,
                 ),
-                child: Text(
-                  labels[i],
-                  style: TextStyle(
-                    color: selected == options[i]
-                        ? AppColors.accent
-                        : AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
+              ),
+              child: Text(
+                labels[i],
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: selected == options[i]
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
             ),
-            if (i < options.length - 1) const SizedBox(width: 8),
-          ],
+          ),
+          if (i < options.length - 1) const SizedBox(width: 8),
         ],
-      ),
+      ],
     );
   }
 }
@@ -264,11 +245,17 @@ class _FullBarChartState extends State<_FullBarChart>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _anim,
       builder: (context, _) => CustomPaint(
         painter: _FullBarPainter(
-            days: widget.days, peak: widget.peak, progress: _anim.value),
+          days: widget.days,
+          peak: widget.peak,
+          progress: _anim.value,
+          primaryColor: colorScheme.primary,
+          onSurfaceVariantColor: colorScheme.onSurfaceVariant,
+        ),
         child: const SizedBox.expand(),
       ),
     );
@@ -279,12 +266,19 @@ class _FullBarPainter extends CustomPainter {
   final List<DailySpend> days;
   final double peak;
   final double progress;
+  final Color primaryColor;
+  final Color onSurfaceVariantColor;
 
   static const double _labelH = 16.0;
   static const double _topPad = 10.0;
 
-  _FullBarPainter(
-      {required this.days, required this.peak, required this.progress});
+  _FullBarPainter({
+    required this.days,
+    required this.peak,
+    required this.progress,
+    required this.primaryColor,
+    required this.onSurfaceVariantColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -313,7 +307,7 @@ class _FullBarPainter extends CustomPainter {
           const Radius.circular(3),
         ),
         Paint()
-          ..color = AppColors.textSecondary.withOpacity(0.07)
+          ..color = onSurfaceVariantColor.withValues(alpha: 0.07)
           ..style = PaintingStyle.fill,
       );
 
@@ -328,10 +322,13 @@ class _FullBarPainter extends CustomPainter {
           paint.shader = LinearGradient(
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
-            colors: [AppColors.accent.withOpacity(0.6), AppColors.accent],
+            colors: [
+              primaryColor.withValues(alpha: 0.6),
+              primaryColor,
+            ],
           ).createShader(Rect.fromLTWH(x, barTop, barW, barH));
         } else {
-          paint.color = AppColors.accent.withOpacity(0.38);
+          paint.color = primaryColor.withValues(alpha: 0.38);
         }
         canvas.drawRRect(barRect, paint);
       }
@@ -351,8 +348,8 @@ class _FullBarPainter extends CustomPainter {
             text: label,
             style: TextStyle(
               color: isToday
-                  ? AppColors.accent
-                  : AppColors.textSecondary.withOpacity(0.5),
+                  ? primaryColor
+                  : onSurfaceVariantColor.withValues(alpha: 0.5),
               fontSize: totalBars <= 14 ? 9.0 : 8.0,
               fontWeight: isToday ? FontWeight.w800 : FontWeight.normal,
             ),
@@ -385,9 +382,11 @@ class _DayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final isPeak = peak > 0 && day.amount == peak;
     final ratio = peak > 0 ? day.amount / peak : 0.0;
-    final barColor = isPeak ? const Color(0xFFEF9A9A) : AppColors.accent;
+    final barColor = isPeak ? const Color(0xFFEF9A9A) : colorScheme.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -397,39 +396,29 @@ class _DayRow extends StatelessWidget {
             width: 44,
             child: Text(
               DateFormat('MMM d').format(day.date),
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 11,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: ratio,
-                backgroundColor: AppColors.textSecondary.withOpacity(0.08),
-                valueColor: AlwaysStoppedAnimation(barColor),
-                minHeight: 6,
-              ),
+            child: AppLinearProgress(
+              value: ratio,
+              color: barColor,
+              backgroundColor: colorScheme.surfaceContainerHighest,
+              height: 6,
             ),
           ),
           const SizedBox(width: 10),
           SizedBox(
             width: 64,
-            child: Text(
-              formatPesoCompact(day.amount),
+            child: AppNumberDisplay(
+              value: formatPesoCompact(day.amount),
+              size: AppNumberSize.body,
+              color: isPeak ? const Color(0xFFEF9A9A) : colorScheme.onSurface,
               textAlign: TextAlign.right,
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color:
-                      isPeak ? const Color(0xFFEF9A9A) : AppColors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
             ),
           ),
         ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class MonthlySummaryCard extends StatelessWidget {
   final MonthlySummary summary;
@@ -17,160 +17,151 @@ class MonthlySummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final netPositive = summary.netSavings >= 0;
-    final netColor = netPositive ? AppColors.success : AppColors.danger;
+    final netColor = netPositive ? cs.tertiary : cs.error;
+    final allBillsPaid = summary.billsPaidCount == summary.billCount &&
+        summary.billCount > 0;
 
-    return InkWell(
+    return AppCard(
+      variant: AppCardVariant.elevated,
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isLive
-                ? AppColors.accent.withOpacity(0.4)
-                : AppColors.textSecondary.withOpacity(0.15),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  monthLabel(summary.month),
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (isLive) ...[
+                AppBadge(
+                  text: 'LIVE',
+                  variant: AppBadgeVariant.tonal,
+                  color: cs.primary,
+                ),
+                const SizedBox(width: 8),
+              ],
+              Icon(Icons.chevron_right,
+                  color: cs.onSurfaceVariant, size: 20),
+            ],
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    monthLabel(summary.month),
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-                if (isLive)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: AppColors.accent.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(8),
-                      border:
-                          Border.all(color: AppColors.accent.withOpacity(0.4)),
-                    ),
-                    child: Text(
-                      'LIVE',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                Icon(Icons.chevron_right,
-                    color: AppColors.textSecondary, size: 20),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                _SummaryMetric(
+          const SizedBox(height: 12),
+
+          // Top row: Net Savings + Ending Cash
+          Row(
+            children: [
+              Expanded(
+                child: AppNumberDisplay(
+                  value: formatPesoCompact(summary.netSavings.abs()),
+                  prefix: netPositive ? '+' : '−',
                   label: 'Net Savings',
-                  value: formatPeso(summary.netSavings),
+                  size: AppNumberSize.body,
                   color: netColor,
-                  prefix: netPositive ? '+' : '',
+                  textAlign: TextAlign.start,
                 ),
-                const SizedBox(width: 8),
-                _SummaryMetric(
-                  label: 'Ending Cash',
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppNumberDisplay(
                   value: formatPesoCompact(summary.endingCash),
-                  color: AppColors.textPrimary,
+                  label: 'Ending Cash',
+                  size: AppNumberSize.body,
+                  color: cs.onSurface,
+                  textAlign: TextAlign.start,
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _SummaryMetric(
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Bottom row: Bills + Inflow + Outflow
+          Row(
+            children: [
+              Expanded(
+                child: _MetricCell(
+                  icon: allBillsPaid
+                      ? Icons.check_circle_outline
+                      : Icons.pending_outlined,
                   label: 'Bills',
-                  value: '${summary.billsPaidCount}/${summary.billCount} paid',
-                  color: summary.billsPaidCount == summary.billCount
-                      ? AppColors.success
-                      : AppColors.gold,
-                  icon: Icons.receipt_long_outlined,
+                  value:
+                      '${summary.billsPaidCount}/${summary.billCount} paid',
+                  color: allBillsPaid ? cs.tertiary : cs.secondary,
                 ),
-                const SizedBox(width: 8),
-                _SummaryMetric(
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetricCell(
+                  icon: Icons.arrow_downward,
                   label: 'Inflow',
                   value: formatPesoCompact(summary.totalInflow),
-                  color: AppColors.success,
-                  icon: Icons.arrow_downward,
+                  color: cs.tertiary,
                 ),
-                const SizedBox(width: 8),
-                _SummaryMetric(
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _MetricCell(
+                  icon: Icons.arrow_upward,
                   label: 'Outflow',
                   value: formatPesoCompact(summary.totalOutflow),
-                  color: AppColors.danger,
-                  icon: Icons.arrow_upward,
+                  color: cs.error,
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 }
 
-class _SummaryMetric extends StatelessWidget {
+class _MetricCell extends StatelessWidget {
+  final IconData icon;
   final String label;
   final String value;
   final Color color;
-  final String prefix;
-  final IconData? icon;
 
-  const _SummaryMetric({
+  const _MetricCell({
+    required this.icon,
     required this.label,
     required this.value,
     required this.color,
-    this.prefix = '',
-    this.icon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              if (icon != null) ...[
-                Icon(icon, color: color, size: 12),
-                const SizedBox(width: 3),
-              ],
-              Text(
-                label,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 10),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            '$prefix$value',
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: color, size: 12),
+            const SizedBox(width: 3),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
             ),
-            overflow: TextOverflow.ellipsis,
+          ],
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.textTheme.labelMedium?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
           ),
-        ],
-      ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 }

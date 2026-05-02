@@ -1,12 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
@@ -31,8 +29,6 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   String _startMonth = toMonthKey(DateTime.now());
   bool _monthlyManuallyEdited = false;
   bool _saving = false;
-
-  static const _presetMonths = [3, 6, 12, 24];
 
   @override
   void initState() {
@@ -114,202 +110,147 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     setState(() => _startMonth = toMonthKey(next));
   }
 
+  Widget _buildForm(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Name
+          _FieldLabel('Name'),
+          TextFormField(
+            controller: _nameCtrl,
+            decoration:
+                const InputDecoration(hintText: 'e.g. MacBook Pro, Braces'),
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Required' : null,
+          ),
+          const SizedBox(height: 16),
+
+          // Account
+          _FieldLabel('Account (Credit / BNPL)'),
+          DropdownButtonFormField<String>(
+            value: _accountId,
+            decoration: const InputDecoration(hintText: 'Select account'),
+            items: widget.presenter.accounts.map((a) {
+              return DropdownMenuItem(value: a.id, child: Text(a.name));
+            }).toList(),
+            onChanged: (v) => setState(() => _accountId = v),
+            validator: (v) => v == null ? 'Required' : null,
+          ),
+          const SizedBox(height: 16),
+
+          // Total Amount
+          _FieldLabel('Total Amount'),
+          TextFormField(
+            controller: _totalCtrl,
+            decoration: const InputDecoration(hintText: '0.00'),
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            validator: (v) {
+              if (v == null || double.tryParse(v) == null) {
+                return 'Enter a valid amount';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Number of months
+          _FieldLabel('Number of Months'),
+          _MonthsSelector(
+            selected: _totalMonths,
+            onChanged: _onMonthsChanged,
+          ),
+          const SizedBox(height: 16),
+
+          // Monthly Amount
+          _FieldLabel('Monthly Payment (auto-computed, editable)'),
+          TextFormField(
+            controller: _monthlyCtrl,
+            decoration: const InputDecoration(hintText: '0.00'),
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
+            validator: (v) {
+              if (v == null || double.tryParse(v) == null) {
+                return 'Enter a valid amount';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Start Month
+          _FieldLabel('Start Month'),
+          _StartMonthSelector(
+            selectedMonth: _startMonth,
+            onAdjust: _adjustStartMonth,
+          ),
+          const SizedBox(height: 16),
+
+          // Note
+          _FieldLabel('Note (optional)'),
+          AppTextField(
+            controller: _noteCtrl,
+            hint: 'e.g. 0% interest, 12 months',
+            maxLines: 2,
+            textInputAction: TextInputAction.done,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isEdit = widget.existing != null;
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle
-                Center(
-                  child: Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.textSecondary.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                Text(
-                  isEdit ? 'Edit Installment' : 'New Installment',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+              ),
+              Text(
+                isEdit ? 'Edit Installment' : 'New Installment',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 20),
-
-                // ── Name ──────────────────────────────────────────────────────
-                _FieldLabel('Name'),
-                TextFormField(
-                  controller: _nameCtrl,
-                  style: TextStyle(color: AppColors.textPrimary),
-                  decoration: _inputDecor('e.g. MacBook Pro, Braces'),
-                  textCapitalization: TextCapitalization.words,
-                  validator: (v) =>
-                      (v == null || v.trim().isEmpty) ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // ── Account ───────────────────────────────────────────────────
-                _FieldLabel('Account (Credit / BNPL)'),
-                DropdownButtonFormField<String>(
-                  value: _accountId,
-                  dropdownColor: AppColors.surface,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: _inputDecor('Select account'),
-                  items: widget.presenter.accounts.map((a) {
-                    return DropdownMenuItem(value: a.id, child: Text(a.name));
-                  }).toList(),
-                  onChanged: (v) => setState(() => _accountId = v),
-                  validator: (v) => v == null ? 'Required' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // ── Total Amount ──────────────────────────────────────────────
-                _FieldLabel('Total Amount'),
-                TextFormField(
-                  controller: _totalCtrl,
-                  style: AppTextStyles.mono(
-                    textStyle: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  decoration: _inputDecor('0.00'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                  ],
-                  validator: (v) {
-                    if (v == null || double.tryParse(v) == null) {
-                      return 'Enter a valid amount';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // ── Number of months ──────────────────────────────────────────
-                _FieldLabel('Number of Months'),
-                _MonthsSelector(
-                  selected: _totalMonths,
-                  onChanged: _onMonthsChanged,
-                ),
-                const SizedBox(height: 16),
-
-                // ── Monthly Amount ────────────────────────────────────────────
-                _FieldLabel('Monthly Payment (auto-computed, editable)'),
-                TextFormField(
-                  controller: _monthlyCtrl,
-                  style: AppTextStyles.mono(
-                    textStyle: TextStyle(color: AppColors.textPrimary),
-                  ),
-                  decoration: _inputDecor('0.00'),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                  ],
-                  onChanged: (_) =>
-                      setState(() => _monthlyManuallyEdited = true),
-                  validator: (v) {
-                    if (v == null || double.tryParse(v) == null) {
-                      return 'Enter a valid amount';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // ── Start Month ───────────────────────────────────────────────
-                _FieldLabel('Start Month'),
-                _StartMonthSelector(
-                  selectedMonth: _startMonth,
-                  onAdjust: _adjustStartMonth,
-                ),
-                const SizedBox(height: 16),
-
-                // ── Note ─────────────────────────────────────────────────────
-                _FieldLabel('Note (optional)'),
-                TextFormField(
-                  controller: _noteCtrl,
-                  style: TextStyle(color: AppColors.textPrimary),
-                  decoration: _inputDecor('e.g. 0% interest, 12 months'),
-                  maxLines: 2,
-                ),
-                const SizedBox(height: 28),
-
-                // ── Save button ───────────────────────────────────────────────
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: _saving ? null : _save,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.background,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: _saving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppColors.background,
-                            ),
-                          )
-                        : Text(
-                            isEdit ? 'Save Changes' : 'Add Installment',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                            ),
-                          ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+              const SizedBox(height: 20),
+              _buildForm(context),
+              const SizedBox(height: 28),
+              AppPrimaryButton(
+                label: isEdit ? 'Save Changes' : 'Add Installment',
+                onPressed: _saving ? null : _save,
+                isLoading: _saving,
+              ),
+            ],
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecor(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.5)),
-      filled: true,
-      fillColor: AppColors.background,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.2)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.2)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.accent),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: const BorderSide(color: AppColors.danger),
       ),
     );
   }
@@ -326,7 +267,7 @@ class _FieldLabel extends StatelessWidget {
       child: Text(
         text,
         style: TextStyle(
-          color: AppColors.textSecondary,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
           fontSize: 12,
           fontWeight: FontWeight.w500,
         ),
@@ -372,25 +313,28 @@ class _MonthChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.accent.withOpacity(0.15)
-              : AppColors.background,
+              ? colorScheme.primary.withValues(alpha: 0.15)
+              : colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: selected
-                ? AppColors.accent
-                : AppColors.textSecondary.withOpacity(0.2),
+                ? colorScheme.primary
+                : colorScheme.outlineVariant,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? AppColors.accent : AppColors.textSecondary,
+            color: selected
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
             fontSize: 13,
           ),
@@ -429,34 +373,10 @@ class _CustomMonthsFieldState extends State<_CustomMonthsField> {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 72,
-      child: TextFormField(
+      child: AppTextField(
         controller: _ctrl,
-        style: TextStyle(color: AppColors.textPrimary, fontSize: 13),
-        decoration: InputDecoration(
-          hintText: 'Custom',
-          hintStyle: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
-          filled: true,
-          fillColor: AppColors.background,
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                BorderSide(color: AppColors.textSecondary.withOpacity(0.2)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide:
-                BorderSide(color: AppColors.textSecondary.withOpacity(0.2)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: AppColors.accent),
-          ),
-        ),
+        hint: 'Custom',
         keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         onChanged: (v) {
           final parsed = int.tryParse(v);
           if (parsed != null && parsed > 0) widget.onChanged(parsed);
@@ -475,11 +395,12 @@ class _StartMonthSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.textSecondary.withOpacity(0.2)),
+        border: Border.all(color: colorScheme.outlineVariant),
       ),
       child: Row(
         children: [
@@ -487,7 +408,8 @@ class _StartMonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_left,
+                  color: colorScheme.onSurfaceVariant),
               onPressed: () => onAdjust(-1),
             ),
           ),
@@ -496,7 +418,7 @@ class _StartMonthSelector extends StatelessWidget {
               child: Text(
                 monthLabel(selectedMonth),
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: colorScheme.onSurface,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -507,7 +429,8 @@ class _StartMonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right,
+                  color: colorScheme.onSurfaceVariant),
               onPressed: () => onAdjust(1),
             ),
           ),

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -12,6 +11,7 @@ import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/spending_calendar.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/transaction_list_tile.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
@@ -29,38 +29,36 @@ class _LedgerViewState extends State<LedgerView> {
   LedgerPresenter get presenter => widget.presenter;
 
   void _showAddTransactionSheet() {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => AddTransactionSheet(presenter: presenter),
+      title: 'Log Transaction',
+      body: AddTransactionSheet(presenter: presenter),
+    );
+  }
+
+  void _showEditTransactionSheet(TransactionRecord txn) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Edit Transaction',
+      body: AddTransactionSheet(presenter: presenter, existing: txn),
     );
   }
 
   void _showManageCategoriesSheet() {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => ManageCategoriesSheet(presenter: presenter),
+      title: 'Manage Categories',
+      body: ManageCategoriesSheet(presenter: presenter),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: presenter,
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: AppColors.background,
           body: Column(
             children: [
               _MonthSelectorRow(presenter: presenter),
@@ -71,7 +69,12 @@ class _LedgerViewState extends State<LedgerView> {
                 ),
               _SummaryCard(presenter: presenter),
               _AccountFilterRow(presenter: presenter),
-              Expanded(child: _TransactionList(presenter: presenter)),
+              Expanded(
+                child: _TransactionList(
+                  presenter: presenter,
+                  onEditTransaction: _showEditTransactionSheet,
+                ),
+              ),
             ],
           ),
           floatingActionButton: Column(
@@ -80,8 +83,8 @@ class _LedgerViewState extends State<LedgerView> {
               FloatingActionButton.small(
                 heroTag: 'categories',
                 onPressed: _showManageCategoriesSheet,
-                backgroundColor: AppColors.surface,
-                foregroundColor: AppColors.textSecondary,
+                backgroundColor: cs.surfaceContainerHigh,
+                foregroundColor: cs.onSurfaceVariant,
                 elevation: 2,
                 child: const Icon(Icons.label_outline),
               ),
@@ -89,8 +92,6 @@ class _LedgerViewState extends State<LedgerView> {
               FloatingActionButton(
                 heroTag: 'add_txn',
                 onPressed: _showAddTransactionSheet,
-                backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.background,
                 elevation: 4,
                 child: const Icon(Icons.add),
               ),
@@ -149,6 +150,7 @@ class _AccountPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: GestureDetector(
@@ -161,13 +163,13 @@ class _AccountPill extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
           decoration: BoxDecoration(
             color: selected
-                ? AppColors.accent.withOpacity(0.15)
-                : AppColors.surface,
+                ? cs.primary.withValues(alpha: 0.15)
+                : cs.surfaceContainerLow,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
               color: selected
-                  ? AppColors.accent
-                  : AppColors.textSecondary.withOpacity(0.25),
+                  ? cs.primary
+                  : cs.outlineVariant,
             ),
           ),
           child: Row(
@@ -176,8 +178,7 @@ class _AccountPill extends StatelessWidget {
               if (icon != null) ...[
                 Icon(icon,
                     size: 13,
-                    color:
-                        selected ? AppColors.accent : AppColors.textSecondary),
+                    color: selected ? cs.primary : cs.onSurfaceVariant),
                 const SizedBox(width: 5),
               ],
               Text(
@@ -185,7 +186,7 @@ class _AccountPill extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? AppColors.accent : AppColors.textSecondary,
+                  color: selected ? cs.primary : cs.onSurfaceVariant,
                 ),
               ),
             ],
@@ -231,8 +232,9 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
-      color: AppColors.surface,
+      color: cs.surface,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
@@ -240,7 +242,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
               onPressed: () => widget.presenter
                   .setMonth(previousMonth(widget.presenter.selectedMonth)),
             ),
@@ -256,7 +258,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
                     Text(
                       monthLabel(widget.presenter.selectedMonth),
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color: cs.onSurface,
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
                       ),
@@ -264,7 +266,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
                     const SizedBox(width: 2),
                     Icon(
                       Icons.arrow_drop_down_rounded,
-                      color: AppColors.textSecondary,
+                      color: cs.onSurfaceVariant,
                       size: 20,
                     ),
                   ],
@@ -276,7 +278,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
               onPressed: () => widget.presenter
                   .setMonth(nextMonth(widget.presenter.selectedMonth)),
             ),
@@ -316,7 +318,7 @@ class _CalendarPopover extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.35),
+                  color: Colors.black.withValues(alpha: 0.35),
                   blurRadius: 20,
                   offset: const Offset(0, 6),
                 ),
@@ -355,6 +357,7 @@ class _DateFilterChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
       child: Row(
@@ -362,20 +365,21 @@ class _DateFilterChip extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
             decoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.12),
+              color: cs.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.accent.withOpacity(0.4)),
+              border:
+                  Border.all(color: cs.primary.withValues(alpha: 0.4)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.calendar_today_outlined,
-                    size: 12, color: AppColors.accent),
+                    size: 12, color: cs.primary),
                 const SizedBox(width: 6),
                 Text(
                   'Filtered: ${_filterChipFmt.format(date)}',
                   style: TextStyle(
-                    color: AppColors.accent,
+                    color: cs.primary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -384,7 +388,7 @@ class _DateFilterChip extends StatelessWidget {
                 GestureDetector(
                   onTap: onClear,
                   child: Icon(Icons.close_rounded,
-                      size: 14, color: AppColors.accent),
+                      size: 14, color: cs.primary),
                 ),
               ],
             ),
@@ -404,35 +408,39 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final inflow = presenter.filteredMonthInflow;
     final outflow = presenter.filteredMonthOutflow;
     final net = presenter.filteredMonthNet;
-    final netColor = net >= 0 ? AppColors.success : AppColors.danger;
+    final netColor = net >= 0 ? cs.tertiary : cs.error;
     final netPrefix = net >= 0 ? '+' : '';
 
-    return Container(
-      color: AppColors.surface,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
-          _SummaryChip(
-            label: 'Income',
-            value: formatPeso(inflow),
-            color: AppColors.success,
-          ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Expenses',
-            value: formatPeso(outflow),
-            color: AppColors.danger,
-          ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Net',
-            value: '$netPrefix${formatPeso(net.abs())}',
-            color: netColor,
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+      child: AppCard(
+        variant: AppCardVariant.filled,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: Row(
+          children: [
+            _SummaryChip(
+              label: 'Income',
+              value: formatPeso(inflow),
+              color: cs.tertiary,
+            ),
+            const SizedBox(width: 8),
+            _SummaryChip(
+              label: 'Expenses',
+              value: formatPeso(outflow),
+              color: cs.error,
+            ),
+            const SizedBox(width: 8),
+            _SummaryChip(
+              label: 'Net',
+              value: '$netPrefix${formatPeso(net.abs())}',
+              color: netColor,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -455,9 +463,9 @@ class _SummaryChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,7 +485,7 @@ class _SummaryChip extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 10,
               ),
             ),
@@ -492,49 +500,22 @@ class _SummaryChip extends StatelessWidget {
 
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
+  final void Function(TransactionRecord txn) onEditTransaction;
 
-  const _TransactionList({required this.presenter});
+  const _TransactionList({
+    required this.presenter,
+    required this.onEditTransaction,
+  });
 
   @override
   Widget build(BuildContext context) {
     final grouped = presenter.groupedTransactions;
 
     if (grouped.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                shape: BoxShape.circle,
-                border: Border.all(
-                    color: AppColors.textSecondary.withOpacity(0.15)),
-              ),
-              child: Icon(
-                Icons.receipt_long_outlined,
-                color: AppColors.textSecondary.withOpacity(0.4),
-                size: 32,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No transactions this month',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Tap + to log your first one',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-            ),
-          ],
-        ),
+      return const AppEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No transactions this month',
+        body: 'Tap + to log your first one',
       );
     }
 
@@ -546,7 +527,12 @@ class _TransactionList extends StatelessWidget {
       itemBuilder: (context, index) {
         final date = sortedDates[index];
         final txns = grouped[date]!;
-        return _DateGroup(date: date, transactions: txns, presenter: presenter);
+        return _DateGroup(
+          date: date,
+          transactions: txns,
+          presenter: presenter,
+          onEditTransaction: onEditTransaction,
+        );
       },
     );
   }
@@ -558,11 +544,13 @@ class _DateGroup extends StatelessWidget {
   final DateTime date;
   final List<TransactionRecord> transactions;
   final LedgerPresenter presenter;
+  final void Function(TransactionRecord txn) onEditTransaction;
 
   const _DateGroup({
     required this.date,
     required this.transactions,
     required this.presenter,
+    required this.onEditTransaction,
   });
 
   double get _dailyNet => transactions.fold(
@@ -589,58 +577,54 @@ class _DateGroup extends StatelessWidget {
     }
   }
 
-  void _showEditSheet(BuildContext context, TransactionRecord txn) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => AddTransactionSheet(presenter: presenter, existing: txn),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _DateHeader(date: date, dailyNet: _dailyNet),
-        ...transactions.map(
-          (txn) => Dismissible(
-            key: ValueKey(txn.id),
-            direction: DismissDirection.endToStart,
-            background: _SwipeDeleteBackground(),
-            onDismissed: (_) {
-              HapticFeedback.mediumImpact();
-              final deleted = txn;
-              presenter.deleteTransaction(deleted.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Deleted "${deleted.description}"'),
-                  duration: const Duration(seconds: 4),
-                  backgroundColor: AppColors.surface,
-                  behavior: SnackBarBehavior.floating,
-                  action: SnackBarAction(
-                    label: 'Undo',
-                    textColor: AppColors.accent,
-                    onPressed: () => presenter.addTransaction(deleted),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: AppSection(
+        title: _DateHeader.labelFor(date),
+        trailing: _dailyNet != 0
+            ? _DailyNetBadge(dailyNet: _dailyNet)
+            : null,
+        padding: const EdgeInsets.only(top: 14, bottom: 4),
+        child: Column(
+          children: [
+            ...transactions.map(
+              (txn) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: AppCard(
+                  variant: AppCardVariant.filled,
+                  padding: EdgeInsets.zero,
+                  child: TransactionListTile(
+                    key: ValueKey(txn.id),
+                    txn: txn,
+                    account: _findAccount(txn.accountId),
+                    category: _findCategory(txn.categoryId),
+                    onTap: () => onEditTransaction(txn),
+                    onDelete: () {
+                      HapticFeedback.mediumImpact();
+                      final deleted = txn;
+                      presenter.deleteTransaction(deleted.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Deleted "${deleted.description}"'),
+                          duration: const Duration(seconds: 4),
+                          behavior: SnackBarBehavior.floating,
+                          action: SnackBarAction(
+                            label: 'Undo',
+                            onPressed: () => presenter.addTransaction(deleted),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 ),
-              );
-            },
-            child: TransactionListTile(
-              txn: txn,
-              account: _findAccount(txn.accountId),
-              category: _findCategory(txn.categoryId),
-              onTap: () => _showEditSheet(context, txn),
+              ),
             ),
-          ),
+            const SizedBox(height: 4),
+          ],
         ),
-        const SizedBox(height: 4),
-      ],
+      ),
     );
   }
 }
@@ -653,7 +637,7 @@ class _DateHeader extends StatelessWidget {
 
   const _DateHeader({required this.date, required this.dailyNet});
 
-  String get _label {
+  static String labelFor(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
@@ -665,72 +649,32 @@ class _DateHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final netColor = dailyNet > 0
-        ? AppColors.success
-        : dailyNet < 0
-            ? AppColors.danger
-            : AppColors.textSecondary;
-    final prefix = dailyNet > 0 ? '+' : '';
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            _label.toUpperCase(),
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11,
-              letterSpacing: 1.0,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          if (dailyNet != 0)
-            Text(
-              '$prefix${formatPeso(dailyNet.abs())}',
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: netColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
+    return Text(labelFor(date).toUpperCase());
   }
 }
 
-// ── Swipe Delete Background ──────────────────────────────────────────────────
+// ── Daily Net Badge ───────────────────────────────────────────────────────────
 
-class _SwipeDeleteBackground extends StatelessWidget {
+class _DailyNetBadge extends StatelessWidget {
+  final double dailyNet;
+
+  const _DailyNetBadge({required this.dailyNet});
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      decoration: BoxDecoration(
-        color: AppColors.danger.withOpacity(0.85),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      alignment: Alignment.centerRight,
-      padding: const EdgeInsets.only(right: 20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.delete_outline, color: Colors.white, size: 22),
-          const SizedBox(height: 2),
-          Text(
-            'DELETE',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.85),
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ],
+    final cs = Theme.of(context).colorScheme;
+    final netColor =
+        dailyNet > 0 ? cs.tertiary : dailyNet < 0 ? cs.error : cs.onSurfaceVariant;
+    final prefix = dailyNet > 0 ? '+' : '';
+
+    return Text(
+      '$prefix${formatPeso(dailyNet.abs())}',
+      style: AppTextStyles.mono(
+        textStyle: TextStyle(
+          color: netColor,
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class MetricCardsGrid extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
@@ -10,9 +10,11 @@ class MetricCardsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     final forecastColor = presenter.forecastedNetBalance >= 0
-        ? AppColors.accent
-        : AppColors.danger;
+        ? colorScheme.primary
+        : colorScheme.error;
 
     final fourthLabel = presenter.hasBudget ? 'Forecast' : 'Liabilities';
     final fourthValue = presenter.hasBudget
@@ -21,8 +23,8 @@ class MetricCardsGrid extends StatelessWidget {
     final fourthColor = presenter.hasBudget
         ? forecastColor
         : (presenter.totalLiabilities > 0
-            ? AppColors.danger
-            : AppColors.textSecondary);
+            ? colorScheme.error
+            : colorScheme.onSurfaceVariant);
 
     return Row(
       children: [
@@ -32,14 +34,14 @@ class MetricCardsGrid extends StatelessWidget {
               _MetricCard(
                 label: 'ENDING CASH',
                 value: formatPeso(presenter.endingCash),
-                color: AppColors.accent,
+                color: colorScheme.primary,
                 icon: Icons.account_balance_wallet_outlined,
               ),
               const SizedBox(height: 8),
               _MetricCard(
                 label: 'MONTH OUT',
                 value: formatPeso(presenter.monthTotalOutflow),
-                color: AppColors.danger,
+                color: colorScheme.error,
                 icon: Icons.arrow_upward_rounded,
               ),
             ],
@@ -52,7 +54,7 @@ class MetricCardsGrid extends StatelessWidget {
               _MetricCard(
                 label: 'MONTH IN',
                 value: formatPeso(presenter.monthTotalInflow),
-                color: AppColors.success,
+                color: colorScheme.tertiary,
                 icon: Icons.arrow_downward_rounded,
               ),
               const SizedBox(height: 8),
@@ -87,45 +89,35 @@ class _MetricCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.accent.withOpacity(0.08), width: 1),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, size: 13, color: color),
-                const SizedBox(width: 5),
-                Text(
-                  label,
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 10,
-                    letterSpacing: 0.8,
-                    fontWeight: FontWeight.w600,
-                  ),
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: color,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          AppNumberDisplay(
+            value: value,
+            size: AppNumberSize.body,
+            color: color,
+          ),
+        ],
       ),
     );
   }

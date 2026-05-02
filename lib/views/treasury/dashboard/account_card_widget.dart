@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AccountCardWidget extends StatelessWidget {
   final FinancialAccount account;
@@ -68,54 +68,52 @@ class AccountCardWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final accentColor = _parseColor();
 
     return Semantics(
       label:
           "${account.name}, ${account.isLiability ? 'Owed' : 'Balance'}: ${formatPesoCompact(account.balance)}",
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: onTap,
-          child: Container(
-            width: 140,
-            height: 90,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: AppColors.accent.withOpacity(0.10), width: 1),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(11),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Container(
-                    width: 3,
-                    color: accentColor,
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _CardHeader(
-                              account: account,
-                              accentColor: accentColor,
-                              categoryLabel: _categoryLabel(),
-                              categoryIcon: _categoryIcon()),
-                          _CardBalance(
-                              account: account, heldAmount: heldAmount),
-                        ],
-                      ),
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        padding: EdgeInsets.zero,
+        onTap: onTap,
+        child: SizedBox(
+          width: 140,
+          height: 90,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  width: 3,
+                  color: accentColor,
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _CardHeader(
+                          account: account,
+                          accentColor: accentColor,
+                          categoryLabel: _categoryLabel(),
+                          categoryIcon: _categoryIcon(),
+                        ),
+                        _CardBalance(
+                          account: account,
+                          heldAmount: heldAmount,
+                          colorScheme: colorScheme,
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
@@ -143,17 +141,11 @@ class _CardHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Icon(categoryIcon, color: accentColor, size: 18),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-          decoration: BoxDecoration(
-            color: accentColor.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            categoryLabel,
-            style: TextStyle(
-                color: accentColor, fontSize: 10, fontWeight: FontWeight.w600),
-          ),
+        AppBadge(
+          text: categoryLabel,
+          color: accentColor,
+          variant: AppBadgeVariant.tonal,
+          size: AppBadgeSize.small,
         ),
       ],
     );
@@ -163,11 +155,18 @@ class _CardHeader extends StatelessWidget {
 class _CardBalance extends StatelessWidget {
   final FinancialAccount account;
   final double heldAmount;
+  final ColorScheme colorScheme;
 
-  const _CardBalance({required this.account, this.heldAmount = 0.0});
+  const _CardBalance({
+    required this.account,
+    this.heldAmount = 0.0,
+    required this.colorScheme,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -175,35 +174,28 @@ class _CardBalance extends StatelessWidget {
           account.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 12,
+          style: theme.textTheme.labelMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 2),
-        Text(
-          account.isLiability
+        AppNumberDisplay(
+          value: account.isLiability
               ? 'Owed: ${formatPesoCompact(account.balance)}'
               : formatPesoCompact(account.balance),
-          style: AppTextStyles.mono(
-            textStyle: TextStyle(
-              color: account.isLiability
-                  ? AppColors.danger
-                  : AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+          size: AppNumberSize.body,
+          color: account.isLiability
+              ? colorScheme.error
+              : colorScheme.onSurfaceVariant,
         ),
         if (heldAmount > 0) ...[
           const SizedBox(height: 2),
           Text(
             '${formatPesoCompact(heldAmount)} held',
-            style: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.55),
-              fontSize: 9,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
               fontStyle: FontStyle.italic,
+              fontSize: 9,
             ),
           ),
         ],

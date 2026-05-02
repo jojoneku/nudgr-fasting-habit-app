@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBudgetSheet extends StatefulWidget {
   final BudgetPresenter presenter;
@@ -51,7 +51,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Select a category'),
-          backgroundColor: AppColors.danger,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -71,159 +71,145 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     }
   }
 
+  bool get _isEdit =>
+      _selectedCategoryId != null &&
+      widget.presenter.budgetFor(_selectedCategoryId!) != null;
+
   @override
   Widget build(BuildContext context) {
     final allCategories = widget.presenter.allCategories;
-    final isEdit = _selectedCategoryId != null &&
-        widget.presenter.budgetFor(_selectedCategoryId!) != null;
 
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+    return Form(
+      key: _formKey,
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                isEdit ? 'Edit Budget' : 'Set Budget',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Category selector or display
+            if (widget.preselectedCategoryId == null) ...[
+              DropdownButtonFormField<String>(
+                initialValue: _selectedCategoryId,
+                hint: Text(
+                  'Select Category',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: allCategories
+                    .map((c) =>
+                        DropdownMenuItem(value: c.id, child: Text(c.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategoryId = v),
+                validator: (v) => v == null ? 'Select a category' : null,
               ),
-              const SizedBox(height: 16),
-              if (widget.preselectedCategoryId == null) ...[
-                DropdownButtonFormField<String>(
-                  value: _selectedCategoryId,
-                  hint: Text('Select Category',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14)),
-                  dropdownColor: AppColors.surface,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: _inputDec('Category'),
-                  items: allCategories
-                      .map((c) =>
-                          DropdownMenuItem(value: c.id, child: Text(c.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedCategoryId = v),
-                  validator: (v) => v == null ? 'Select a category' : null,
-                ),
-                const SizedBox(height: 12),
-              ] else ...[
-                _CategoryDisplay(
-                  category: allCategories.cast<FinanceCategory?>().firstWhere(
-                        (c) => c?.id == _selectedCategoryId,
-                        orElse: () => null,
-                      ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              TextFormField(
-                controller: _amountController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                ],
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: _inputDec('Budget Amount', prefix: '₱ '),
-                validator: (v) {
-                  final p = double.tryParse(v ?? '');
-                  if (p == null || p <= 0) return 'Must be > 0';
-                  return null;
-                },
+              const SizedBox(height: 12),
+            ] else ...[
+              _CategoryDisplay(
+                category: allCategories.cast<FinanceCategory?>().firstWhere(
+                      (c) => c?.id == _selectedCategoryId,
+                      orElse: () => null,
+                    ),
               ),
-              const SizedBox(height: 16),
-              Text('Budget Group',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-              const SizedBox(height: 8),
-              _GroupSelector(
-                value: _group,
-                onChanged: (g) => setState(() => _group = g),
-              ),
-              const SizedBox(height: 16),
-              Text('Budget Type',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-              const SizedBox(height: 8),
-              _TypeSelector(
-                value: _budgetType,
-                onChanged: (t) => setState(() => _budgetType = t),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(
-                          isEdit ? 'Save Budget' : 'Set Budget',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                ),
-              ),
-              if (isEdit) ...[
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  height: 44,
-                  child: TextButton(
-                    onPressed: () async {
-                      await widget.presenter.removeBudget(_selectedCategoryId!);
-                      if (context.mounted) Navigator.pop(context);
-                    },
-                    style:
-                        TextButton.styleFrom(foregroundColor: AppColors.danger),
-                    child: const Text('Remove Budget'),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
             ],
-          ),
+
+            // Amount field
+            TextFormField(
+              controller: _amountController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Budget Amount',
+                prefixText: '₱ ',
+              ),
+              validator: (v) {
+                final p = double.tryParse(v ?? '');
+                if (p == null || p <= 0) return 'Must be > 0';
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // Budget Group
+            Text(
+              'Budget Group',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            AppSegmentedControl<BudgetGroup>(
+              segments: const [
+                (
+                  value: BudgetGroup.nonNegotiables,
+                  label: 'Non-Neg.',
+                  icon: null
+                ),
+                (
+                  value: BudgetGroup.livingExpense,
+                  label: 'Living',
+                  icon: null
+                ),
+                (
+                  value: BudgetGroup.variableOptional,
+                  label: 'Variable',
+                  icon: null
+                ),
+              ],
+              selected: _group,
+              onChanged: (g) => setState(() => _group = g),
+            ),
+            const SizedBox(height: 16),
+
+            // Budget Type
+            Text(
+              'Budget Type',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+            const SizedBox(height: 8),
+            AppSegmentedControl<BudgetType>(
+              segments: const [
+                (value: BudgetType.monthly, label: 'Monthly', icon: null),
+                (value: BudgetType.fixed, label: 'Fixed', icon: null),
+                (value: BudgetType.goal, label: 'Goal', icon: null),
+                (value: BudgetType.variable, label: 'Variable', icon: null),
+              ],
+              selected: _budgetType,
+              onChanged: (t) => setState(() => _budgetType = t),
+            ),
+            const SizedBox(height: 20),
+
+            // Save button
+            AppPrimaryButton(
+              label: _isEdit ? 'Save Budget' : 'Set Budget',
+              onPressed: _isSubmitting ? null : _submit,
+              isLoading: _isSubmitting,
+            ),
+
+            // Remove budget button (edit only)
+            if (_isEdit) ...[
+              const SizedBox(height: 8),
+              AppDestructiveButton(
+                label: 'Remove Budget',
+                onPressed: _isSubmitting
+                    ? null
+                    : () async {
+                        await widget.presenter
+                            .removeBudget(_selectedCategoryId!);
+                        if (context.mounted) Navigator.pop(context);
+                      },
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
   }
-
-  InputDecoration _inputDec(String label, {String? prefix}) => InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        prefixText: prefix,
-        prefixStyle: TextStyle(color: AppColors.accent),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
-      );
 }
 
 class _CategoryDisplay extends StatelessWidget {
@@ -233,107 +219,25 @@ class _CategoryDisplay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 52,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
-      ),
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
       child: Row(
         children: [
-          Text('Category',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+          Text(
+            'Category',
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
           const SizedBox(width: 12),
           Text(
             category?.name ?? '—',
-            style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 14),
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
-    );
-  }
-}
-
-class _GroupSelector extends StatelessWidget {
-  final BudgetGroup value;
-  final ValueChanged<BudgetGroup> onChanged;
-
-  const _GroupSelector({required this.value, required this.onChanged});
-
-  static const _labels = {
-    BudgetGroup.nonNegotiables: 'Non-Negotiables',
-    BudgetGroup.livingExpense: 'Living Expense',
-    BudgetGroup.variableOptional: 'Variable / Optional',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: BudgetGroup.values.map((g) {
-        final isSelected = value == g;
-        return ChoiceChip(
-          label: Text(_labels[g]!),
-          selected: isSelected,
-          selectedColor: AppColors.accent.withOpacity(0.15),
-          labelStyle: TextStyle(
-            color: isSelected ? AppColors.accent : AppColors.textSecondary,
-            fontSize: 12,
-          ),
-          backgroundColor: AppColors.surface,
-          side: BorderSide(
-              color: isSelected
-                  ? AppColors.accent
-                  : AppColors.textSecondary.withOpacity(0.3)),
-          onSelected: (_) => onChanged(g),
-        );
-      }).toList(),
-    );
-  }
-}
-
-class _TypeSelector extends StatelessWidget {
-  final BudgetType value;
-  final ValueChanged<BudgetType> onChanged;
-
-  const _TypeSelector({required this.value, required this.onChanged});
-
-  static const _labels = {
-    BudgetType.monthly: 'Monthly',
-    BudgetType.fixed: 'Fixed',
-    BudgetType.goal: 'Goal',
-    BudgetType.variable: 'Variable',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: BudgetType.values.map((t) {
-        final isSelected = value == t;
-        return ChoiceChip(
-          label: Text(_labels[t]!),
-          selected: isSelected,
-          selectedColor: AppColors.accent.withOpacity(0.15),
-          labelStyle: TextStyle(
-            color: isSelected ? AppColors.accent : AppColors.textSecondary,
-            fontSize: 12,
-          ),
-          backgroundColor: AppColors.surface,
-          side: BorderSide(
-              color: isSelected
-                  ? AppColors.accent
-                  : AppColors.textSecondary.withOpacity(0.3)),
-          onSelected: (_) => onChanged(t),
-        );
-      }).toList(),
     );
   }
 }
