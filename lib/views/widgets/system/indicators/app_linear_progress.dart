@@ -51,8 +51,7 @@ class AppLinearProgress extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (label != null)
-                Text(label!, style: AppTextStyles.labelMedium),
+              if (label != null) Text(label!, style: AppTextStyles.labelMedium),
               if (valueText != null)
                 Text(
                   valueText!,

@@ -38,8 +38,8 @@ class AuthService {
   String? get currentUserAvatarUrl =>
       _client.auth.currentUser?.userMetadata?['avatar_url'] as String?;
   String? get currentUserDisplayName =>
-      _client.auth.currentUser?.userMetadata?['full_name'] as String?
-      ?? _client.auth.currentUser?.userMetadata?['name'] as String?;
+      _client.auth.currentUser?.userMetadata?['full_name'] as String? ??
+      _client.auth.currentUser?.userMetadata?['name'] as String?;
 
   /// Emits on every auth state change (sign-in, sign-out, token refresh).
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;

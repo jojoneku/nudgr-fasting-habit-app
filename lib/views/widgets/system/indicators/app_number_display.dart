@@ -3,6 +3,7 @@ import '../../../../utils/app_spacing.dart';
 import '../../../../utils/app_text_styles.dart';
 
 enum AppNumberSize { display, headline, title, body }
+
 enum AppNumberLabelPosition { above, below }
 
 /// Large numeric value with DM Mono + tabular figures. Prevents digit jitter.
@@ -69,8 +70,7 @@ class AppNumberDisplay extends StatelessWidget {
 
     if (label == null) return numberRow;
 
-    final labelWidget =
-        Text(label!, style: labelStyle, textAlign: textAlign);
+    final labelWidget = Text(label!, style: labelStyle, textAlign: textAlign);
 
     return Column(
       mainAxisSize: MainAxisSize.min,

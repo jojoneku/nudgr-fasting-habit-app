@@ -275,7 +275,8 @@ class HubScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => NutritionScreen(presenter: n, aiCoachPresenter: aiCoachPresenter),
+        builder: (_) =>
+            NutritionScreen(presenter: n, aiCoachPresenter: aiCoachPresenter),
       ),
     );
   }
@@ -307,7 +308,12 @@ class HubScreen extends StatelessWidget {
     final budget = budgetPresenter;
     final history = historyPresenter;
     final installments = installmentPresenter;
-    if (dash == null || ledger == null || bills == null || budget == null || history == null || installments == null) return;
+    if (dash == null ||
+        ledger == null ||
+        bills == null ||
+        budget == null ||
+        history == null ||
+        installments == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -347,7 +353,8 @@ class HubScreen extends StatelessWidget {
   Future<void> _endFast(BuildContext context) async {
     final (xp, _) = await fastingPresenter.stopFast();
     if (context.mounted) {
-      AppToast.success(context, xp > 0 ? 'Fast complete! +$xp XP' : 'Fast ended');
+      AppToast.success(
+          context, xp > 0 ? 'Fast complete! +$xp XP' : 'Fast ended');
     }
   }
 
@@ -442,11 +449,27 @@ class _ExpandableFabState extends State<_ExpandableFab>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final items = [
-      (label: 'Nutrition', icon: Icons.restaurant_outlined, cb: widget.onNutrition),
-      (label: 'Activity', icon: Icons.directions_run_rounded, cb: widget.onActivity),
-      (label: 'Finance', icon: Icons.account_balance_wallet_outlined, cb: widget.onFinance),
+      (
+        label: 'Nutrition',
+        icon: Icons.restaurant_outlined,
+        cb: widget.onNutrition
+      ),
+      (
+        label: 'Activity',
+        icon: Icons.directions_run_rounded,
+        cb: widget.onActivity
+      ),
+      (
+        label: 'Finance',
+        icon: Icons.account_balance_wallet_outlined,
+        cb: widget.onFinance
+      ),
       (label: 'Quests', icon: Icons.flag_outlined, cb: widget.onQuests),
-      (label: 'Fasting', icon: Icons.hourglass_empty_rounded, cb: widget.onFasting),
+      (
+        label: 'Fasting',
+        icon: Icons.hourglass_empty_rounded,
+        cb: widget.onFasting
+      ),
     ];
 
     return Column(

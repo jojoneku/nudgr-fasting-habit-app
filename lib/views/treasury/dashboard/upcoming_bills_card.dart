@@ -87,7 +87,8 @@ class _BillRow extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final nameColor = isOverdue ? colorScheme.error : colorScheme.onSurface;
     final dueLabel = isOverdue ? 'Overdue' : 'Due ${bill.dueDay}';
-    final dueLabelColor = isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant;
+    final dueLabelColor =
+        isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant;
 
     return AppListTile(
       leading: Icon(
@@ -164,7 +165,8 @@ class _CollapseRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         child: Row(
           children: [
-            Icon(Icons.expand_less, size: 16, color: colorScheme.onSurfaceVariant),
+            Icon(Icons.expand_less,
+                size: 16, color: colorScheme.onSurfaceVariant),
             const SizedBox(width: 6),
             Text(
               'Show less',

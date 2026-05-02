@@ -159,8 +159,7 @@ class _CategoryRow extends StatelessWidget {
                   child: AppLinearProgress(
                     value: percent,
                     color: color,
-                    backgroundColor:
-                        colorScheme.surfaceContainerHighest,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
                     height: 5,
                   ),
                 ),

@@ -26,7 +26,9 @@ class TreasuryHubCard extends StatelessWidget {
         return AppCard(
           onTap: onNavigate,
           header: HubCardHeader(
-            icon: isActive ? Icons.account_balance : Icons.account_balance_outlined,
+            icon: isActive
+                ? Icons.account_balance
+                : Icons.account_balance_outlined,
             title: 'Finance',
             accentColor: AppColors.gold,
             isActive: isActive,
@@ -101,12 +103,14 @@ class _BillWarning extends StatelessWidget {
 
     return Row(
       children: [
-        Icon(Icons.warning_amber_rounded, size: 14, color: theme.colorScheme.error),
+        Icon(Icons.warning_amber_rounded,
+            size: 14, color: theme.colorScheme.error),
         const SizedBox(width: 4),
         Expanded(
           child: Text(
             '$label · ${bill.name}',
-            style: AppTextStyles.bodySmall.copyWith(color: theme.colorScheme.error),
+            style: AppTextStyles.bodySmall
+                .copyWith(color: theme.colorScheme.error),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

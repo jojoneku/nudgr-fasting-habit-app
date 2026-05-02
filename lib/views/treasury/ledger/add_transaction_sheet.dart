@@ -315,11 +315,10 @@ class _TypeButton extends StatelessWidget {
             side: BorderSide(
                 color: isSelected
                     ? color
-                    : Theme.of(context)
-                        .colorScheme
-                        .outlineVariant),
-            foregroundColor:
-                isSelected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+                    : Theme.of(context).colorScheme.outlineVariant),
+            foregroundColor: isSelected
+                ? color
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             padding: EdgeInsets.zero,
           ),
           child: Text(label,
@@ -408,8 +407,7 @@ class _CategoryChips extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Category',
-            style: TextStyle(
-                color: cs.onSurfaceVariant, fontSize: 12)),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,

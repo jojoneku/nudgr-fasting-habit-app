@@ -41,8 +41,8 @@ class AppGroupedList extends StatelessWidget {
             children: [
               if (section.title != null)
                 Padding(
-                  padding: margin.add(
-                      const EdgeInsets.only(bottom: AppSpacing.xs)),
+                  padding:
+                      margin.add(const EdgeInsets.only(bottom: AppSpacing.xs)),
                   child: Text(
                     section.title!,
                     style: AppTextStyles.labelMedium.copyWith(
@@ -65,8 +65,8 @@ class AppGroupedList extends StatelessWidget {
               ),
               if (section.footer != null)
                 Padding(
-                  padding: margin.add(
-                      const EdgeInsets.only(top: AppSpacing.xs)),
+                  padding:
+                      margin.add(const EdgeInsets.only(top: AppSpacing.xs)),
                   child: Text(
                     section.footer!,
                     style: AppTextStyles.bodySmall.copyWith(

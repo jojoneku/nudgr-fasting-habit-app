@@ -11,8 +11,7 @@ import '../widgets/system/system.dart';
 import 'widgets/quest_mission_tile.dart' show linkedStatColor, linkedStatIcon;
 
 class RoutineEditorView extends StatefulWidget {
-  const RoutineEditorView(
-      {super.key, required this.presenter, this.routine});
+  const RoutineEditorView({super.key, required this.presenter, this.routine});
 
   final QuestPresenter presenter;
   final HabitRoutine? routine;
@@ -69,7 +68,8 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
       actions: [
         TextButton(
           onPressed: _isLoading ? null : _save,
-          child: const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
+          child:
+              const Text('Save', style: TextStyle(fontWeight: FontWeight.w600)),
         ),
       ],
       padding: EdgeInsets.zero,
@@ -134,8 +134,8 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
                     children: allQuests
                         .map((q) => _QuestPickerTile(
                               quest: q,
-                              isSelected: _selectedQuestIds
-                                  .contains(q.id.toString()),
+                              isSelected:
+                                  _selectedQuestIds.contains(q.id.toString()),
                               onToggle: (selected) => setState(() {
                                 final id = q.id.toString();
                                 if (selected) {
@@ -204,8 +204,8 @@ class _RoutineEditorViewState extends State<RoutineEditorView> {
     }
 
     if (!mounted) return;
-    AppToast.success(
-        context, existing != null ? 'Group updated.' : 'Group "$name" created!');
+    AppToast.success(context,
+        existing != null ? 'Group updated.' : 'Group "$name" created!');
     Navigator.of(context).pop();
   }
 }
@@ -225,8 +225,8 @@ class _TimeTile extends StatelessWidget {
       onTap: () => _pick(context),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(
-            vertical: 12, horizontal: AppSpacing.md),
+        padding:
+            const EdgeInsets.symmetric(vertical: 12, horizontal: AppSpacing.md),
         decoration: BoxDecoration(
           border: Border.all(
               color: theme.colorScheme.outline.withValues(alpha: 0.5)),
@@ -270,8 +270,7 @@ class _TimeTile extends StatelessWidget {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
               onPressed: () {
                 onChanged(temp);
@@ -301,7 +300,8 @@ class _ColorPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: colors.map((hex) {
-        final color = Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+        final color =
+            Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
         final isSelected = hex == selected;
         return GestureDetector(
           onTap: () => onChanged(hex),
@@ -318,7 +318,10 @@ class _ColorPicker extends StatelessWidget {
                 width: 2.5,
               ),
               boxShadow: isSelected
-                  ? [BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 8)]
+                  ? [
+                      BoxShadow(
+                          color: color.withValues(alpha: 0.5), blurRadius: 8)
+                    ]
                   : null,
             ),
           ),

@@ -62,7 +62,8 @@ class InstallmentListTile extends StatelessWidget {
             children: [
               // ── Header ──────────────────────────────────────────────────────
               AppListTile(
-                leading: AppIconBadge(icon: Icons.credit_score_outlined, color: color),
+                leading: AppIconBadge(
+                    icon: Icons.credit_score_outlined, color: color),
                 title: Text(
                   installment.name,
                   maxLines: 1,
@@ -97,7 +98,8 @@ class InstallmentListTile extends StatelessWidget {
               AppLinearProgress(
                 value: progress,
                 label: '$count/${installment.totalMonths} paid',
-                valueText: remaining > 0 ? '${formatPeso(remainingAmt)} left' : null,
+                valueText:
+                    remaining > 0 ? '${formatPeso(remainingAmt)} left' : null,
                 color: color,
                 height: 6,
               ),

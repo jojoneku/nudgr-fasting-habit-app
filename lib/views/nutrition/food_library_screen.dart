@@ -124,8 +124,8 @@ class _CreateTemplateFab extends StatelessWidget {
           builder: (_) => _CreateTemplateSheet(presenter: presenter),
         ),
         icon: const Icon(Icons.add, size: 20),
-        label:
-            const Text('New Template', style: TextStyle(fontWeight: FontWeight.w700)),
+        label: const Text('New Template',
+            style: TextStyle(fontWeight: FontWeight.w700)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       );
 }
@@ -607,7 +607,8 @@ class _ItemChip extends StatelessWidget {
                   Text(
                     '${entry.grams!.round()}g${macros.isNotEmpty ? ' · $macros' : ''}',
                     style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 11),
                   ),
               ],
             ),
@@ -615,7 +616,9 @@ class _ItemChip extends StatelessWidget {
           Text(
             '${entry.calories} kcal',
             style: const TextStyle(
-                color: AppColors.gold, fontSize: 12, fontWeight: FontWeight.w600),
+                color: AppColors.gold,
+                fontSize: 12,
+                fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: 4),
           GestureDetector(
@@ -655,8 +658,7 @@ class _TemplateRow extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: template.isPinned
             ? Border.all(
-                color:
-                    theme.colorScheme.primary.withValues(alpha: 0.25),
+                color: theme.colorScheme.primary.withValues(alpha: 0.25),
                 width: 0.5)
             : null,
       ),
@@ -696,8 +698,8 @@ class _TemplateRow extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: const Icon(Icons.add_circle,
-                  color: AppColors.gold, size: 22),
+              icon:
+                  const Icon(Icons.add_circle, color: AppColors.gold, size: 22),
               tooltip: template.isMeal ? 'Add all items' : 'Add',
               onPressed: () => _showSlotPicker(context),
             ),

@@ -147,8 +147,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           TextFormField(
             controller: _totalCtrl,
             decoration: const InputDecoration(hintText: '0.00'),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textInputAction: TextInputAction.next,
             validator: (v) {
               if (v == null || double.tryParse(v) == null) {
@@ -172,8 +171,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           TextFormField(
             controller: _monthlyCtrl,
             decoration: const InputDecoration(hintText: '0.00'),
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             textInputAction: TextInputAction.next,
             onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
             validator: (v) {
@@ -324,17 +322,14 @@ class _MonthChip extends StatelessWidget {
               : colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected
-                ? colorScheme.primary
-                : colorScheme.outlineVariant,
+            color: selected ? colorScheme.primary : colorScheme.outlineVariant,
           ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: selected
-                ? colorScheme.primary
-                : colorScheme.onSurfaceVariant,
+            color:
+                selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
             fontWeight: selected ? FontWeight.w700 : FontWeight.w400,
             fontSize: 13,
           ),
@@ -408,8 +403,8 @@ class _StartMonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left,
-                  color: colorScheme.onSurfaceVariant),
+              icon:
+                  Icon(Icons.chevron_left, color: colorScheme.onSurfaceVariant),
               onPressed: () => onAdjust(-1),
             ),
           ),

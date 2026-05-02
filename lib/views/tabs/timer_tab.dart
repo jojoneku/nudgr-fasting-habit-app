@@ -41,11 +41,13 @@ class _TimerTabState extends State<TimerTab> {
 
   double get _ringProgress {
     if (presenter.isFasting) {
-      return (presenter.elapsedSeconds / presenter.targetSeconds).clamp(0.0, 1.0);
+      return (presenter.elapsedSeconds / presenter.targetSeconds)
+          .clamp(0.0, 1.0);
     }
     if (_isEatingWindow && _hasEatingWindow) {
       final eatingTarget = _eatingWindowHours * 3600;
-      final remaining = (eatingTarget - presenter.elapsedSeconds).clamp(0, eatingTarget);
+      final remaining =
+          (eatingTarget - presenter.elapsedSeconds).clamp(0, eatingTarget);
       return eatingTarget > 0 ? remaining / eatingTarget : 0.0;
     }
     return 0.0;
@@ -70,7 +72,8 @@ class _TimerTabState extends State<TimerTab> {
           : _formatHMS(presenter.elapsedSeconds);
     }
     if (_isEatingWindow && _hasEatingWindow) {
-      final rem = (_eatingWindowHours * 3600 - presenter.elapsedSeconds).clamp(0, _eatingWindowHours * 3600);
+      final rem = (_eatingWindowHours * 3600 - presenter.elapsedSeconds)
+          .clamp(0, _eatingWindowHours * 3600);
       return _formatHMS(rem);
     }
     return '${presenter.fastingGoalHours.toString().padLeft(2, '0')}:00:00';
@@ -91,7 +94,9 @@ class _TimerTabState extends State<TimerTab> {
       return '${(_ringProgress * 100).toInt()}% of ${presenter.fastingGoalHours}h goal';
     }
     if (_isEatingWindow && _hasEatingWindow) {
-      final elapsed = (presenter.elapsedSeconds / (_eatingWindowHours * 3600) * 100).clamp(0.0, 100.0);
+      final elapsed =
+          (presenter.elapsedSeconds / (_eatingWindowHours * 3600) * 100)
+              .clamp(0.0, 100.0);
       return '${elapsed.toInt()}% elapsed';
     }
     return null;
@@ -154,8 +159,7 @@ class _TimerTabState extends State<TimerTab> {
                 child: const Text('Keep fasting')),
             TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style:
-                    TextButton.styleFrom(foregroundColor: AppColors.danger),
+                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
                 child: const Text('Discard')),
           ],
         ),
@@ -166,7 +170,8 @@ class _TimerTabState extends State<TimerTab> {
 
     if (needsRefeeding) {
       if (!mounted) return;
-      final shouldEnd = await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
+      final shouldEnd =
+          await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
       if (shouldEnd && mounted) await _doEndFast();
       return;
     }
@@ -201,7 +206,8 @@ class _TimerTabState extends State<TimerTab> {
         hpChange: hpChange,
         durationHours: durationHours,
         wasSuccess: durationHours >= presenter.fastingGoalHours,
-        currentStreak: streak + (durationHours >= presenter.fastingGoalHours ? 1 : 0),
+        currentStreak:
+            streak + (durationHours >= presenter.fastingGoalHours ? 1 : 0),
       ),
       onDismiss: (note) async {
         if (note != null && presenter.history.isNotEmpty) {
@@ -489,9 +495,7 @@ class _TimerTabState extends State<TimerTab> {
           ),
         ),
         Container(
-            width: 1,
-            height: 40,
-            color: theme.colorScheme.outlineVariant),
+            width: 1, height: 40, color: theme.colorScheme.outlineVariant),
         Expanded(
           child: _TimeInfoTile(
             title: rightTitle,
@@ -513,29 +517,29 @@ class _TimerTabState extends State<TimerTab> {
           Expanded(
             child: _StatsCell(
               value: '${presenter.currentStreak}',
-              unit: presenter.currentStreak == 0 ? '' : (presenter.currentStreak == 1 ? 'day' : 'days'),
+              unit: presenter.currentStreak == 0
+                  ? ''
+                  : (presenter.currentStreak == 1 ? 'day' : 'days'),
               label: 'Streak',
               icon: Icons.local_fire_department_rounded,
               iconColor: AppColors.gold,
             ),
           ),
           Container(
-              width: 1,
-              height: 36,
-              color: theme.colorScheme.outlineVariant),
+              width: 1, height: 36, color: theme.colorScheme.outlineVariant),
           Expanded(
             child: _StatsCell(
               value: '${presenter.longestStreak}',
-              unit: presenter.longestStreak == 0 ? '' : (presenter.longestStreak == 1 ? 'day' : 'days'),
+              unit: presenter.longestStreak == 0
+                  ? ''
+                  : (presenter.longestStreak == 1 ? 'day' : 'days'),
               label: 'Best',
               icon: Icons.emoji_events_outlined,
               iconColor: AppColors.success,
             ),
           ),
           Container(
-              width: 1,
-              height: 36,
-              color: theme.colorScheme.outlineVariant),
+              width: 1, height: 36, color: theme.colorScheme.outlineVariant),
           Expanded(
             child: _StatsCell(
               value: '${presenter.history.length}',
@@ -578,9 +582,7 @@ class _TimerTabState extends State<TimerTab> {
           children: [
             AppIconBadge(
               icon: isSuccess ? Icons.check_rounded : Icons.close_rounded,
-              color: isSuccess
-                  ? AppColors.success
-                  : theme.colorScheme.error,
+              color: isSuccess ? AppColors.success : theme.colorScheme.error,
               size: 36,
               iconSize: 18,
             ),
@@ -692,8 +694,8 @@ class _TimeInfoTile extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(title,
-            style: AppTextStyles.labelSmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant)),
+            style: AppTextStyles.labelSmall
+                .copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -701,8 +703,8 @@ class _TimeInfoTile extends StatelessWidget {
           children: [
             Text(
               value,
-              style: AppTextStyles.labelLarge.copyWith(
-                  color: color, fontWeight: FontWeight.w600),
+              style: AppTextStyles.labelLarge
+                  .copyWith(color: color, fontWeight: FontWeight.w600),
             ),
             if (onEdit != null) ...[
               const SizedBox(width: 4),

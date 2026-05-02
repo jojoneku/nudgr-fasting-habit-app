@@ -162,8 +162,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: Icon(Icons.receipt_long_outlined,
-                  color: colorScheme.primary),
+              leading:
+                  Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
               title: const Text('Add Bill'),
               onTap: () {
                 Navigator.pop(context);
@@ -171,8 +171,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.attach_money,
-                  color: const Color(0xFF4CAF50)),
+              leading: Icon(Icons.attach_money, color: const Color(0xFF4CAF50)),
               title: const Text('Add Receivable'),
               onTap: () {
                 Navigator.pop(context);
@@ -180,8 +179,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.savings_outlined,
-                  color: const Color(0xFFFFB300)),
+              leading:
+                  Icon(Icons.savings_outlined, color: const Color(0xFFFFB300)),
               title: const Text('Add Budgeted Expense'),
               onTap: () {
                 Navigator.pop(context);
@@ -189,10 +188,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.credit_score_outlined,
-                  color: colorScheme.primary),
+              leading:
+                  Icon(Icons.credit_score_outlined, color: colorScheme.primary),
               title: const Text('Add Installment'),
-              subtitle: const Text('Track a purchase split into monthly payments'),
+              subtitle:
+                  const Text('Track a purchase split into monthly payments'),
               onTap: () {
                 Navigator.pop(context);
                 _showAddInstallmentSheet();
@@ -286,8 +286,8 @@ class _MonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left,
-                  color: colorScheme.onSurfaceVariant),
+              icon:
+                  Icon(Icons.chevron_left, color: colorScheme.onSurfaceVariant),
               onPressed: () => onChanged(previousMonth(selectedMonth)),
             ),
           ),
@@ -345,8 +345,7 @@ class _StatsBar extends StatelessWidget {
           const SizedBox(width: 8),
           _StatChip(
             label: 'Installments',
-            value:
-                formatPesoCompact(installmentPresenter.totalDueThisMonth),
+            value: formatPesoCompact(installmentPresenter.totalDueThisMonth),
             color: colorScheme.primary,
           ),
         ],
@@ -605,8 +604,7 @@ class _SectionCard extends StatelessWidget {
         data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
-          tilePadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
           childrenPadding: EdgeInsets.zero,
           title: Row(
             children: [
@@ -1234,8 +1232,7 @@ class _MarkInstallmentPaidSheet extends StatefulWidget {
       _MarkInstallmentPaidSheetState();
 }
 
-class _MarkInstallmentPaidSheetState
-    extends State<_MarkInstallmentPaidSheet> {
+class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
   late final TextEditingController _amountCtrl;
   DateTime _date = DateTime.now();
   bool _saving = false;

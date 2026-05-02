@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../utils/app_text_styles.dart';
 
 enum AppBadgeVariant { tonal, filled, outlined }
+
 enum AppBadgeSize { small, medium }
 
 /// Tiny pill badge — text or count.
@@ -31,7 +32,8 @@ class AppBadge extends StatelessWidget {
     final theme = Theme.of(context);
     final c = color ?? theme.colorScheme.primary;
     final isSmall = size == AppBadgeSize.small;
-    final style = (isSmall ? AppTextStyles.labelSmall : AppTextStyles.labelMedium);
+    final style =
+        (isSmall ? AppTextStyles.labelSmall : AppTextStyles.labelMedium);
 
     Color bg;
     Color fg;

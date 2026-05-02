@@ -42,9 +42,19 @@ class FastingHubCard extends StatelessWidget {
             isActive: isActive,
           ),
           footer: isActive
-              ? AppPrimaryButton(label: 'End fast', height: 44, onPressed: onEndFast, variant: AppButtonVariant.tonal)
-              : AppPrimaryButton(label: 'Start fast', height: 44, onPressed: onStartFast, variant: AppButtonVariant.tonal),
-          child: isActive ? _ActiveSnapshot(fasting: fasting, formatHM: _formatHM) : _IdleSnapshot(fasting: fasting),
+              ? AppPrimaryButton(
+                  label: 'End fast',
+                  height: 44,
+                  onPressed: onEndFast,
+                  variant: AppButtonVariant.tonal)
+              : AppPrimaryButton(
+                  label: 'Start fast',
+                  height: 44,
+                  onPressed: onStartFast,
+                  variant: AppButtonVariant.tonal),
+          child: isActive
+              ? _ActiveSnapshot(fasting: fasting, formatHM: _formatHM)
+              : _IdleSnapshot(fasting: fasting),
         );
       },
     );
@@ -86,8 +96,8 @@ class _ActiveSnapshot extends StatelessWidget {
     final progress = fasting.targetSeconds > 0
         ? (fasting.elapsedSeconds / fasting.targetSeconds).clamp(0.0, 1.0)
         : 0.0;
-    final remaining =
-        (fasting.targetSeconds - fasting.elapsedSeconds).clamp(0, fasting.targetSeconds);
+    final remaining = (fasting.targetSeconds - fasting.elapsedSeconds)
+        .clamp(0, fasting.targetSeconds);
     final phase = fasting.currentPhase;
 
     return Row(
@@ -110,7 +120,8 @@ class _ActiveSnapshot extends StatelessWidget {
             children: [
               Text(
                 formatHM(fasting.elapsedSeconds),
-                style: AppTextStyles.numeric(fontSize: 22, weight: FontWeight.w600),
+                style: AppTextStyles.numeric(
+                    fontSize: 22, weight: FontWeight.w600),
               ),
               const SizedBox(height: 2),
               Text(

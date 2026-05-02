@@ -54,8 +54,7 @@ class _HistoryContent extends StatelessWidget {
           title: 'Recent days',
           child: Column(
             children: history
-                .map((log) =>
-                    _HistoryRow(log: log, goalCalories: goalCalories))
+                .map((log) => _HistoryRow(log: log, goalCalories: goalCalories))
                 .toList(),
           ),
         ),
@@ -89,8 +88,7 @@ class _WeeklyChart extends StatelessWidget {
             height: 120,
             child: CustomPaint(
               size: const Size(double.infinity, 120),
-              painter:
-                  _BarChartPainter(days: days, goalCalories: goalCalories),
+              painter: _BarChartPainter(days: days, goalCalories: goalCalories),
             ),
           ),
           const SizedBox(height: 8),
@@ -181,8 +179,7 @@ class _HistoryRow extends StatelessWidget {
     final cal = log.totalCalories;
     final goalMet = goalCalories > 0 && cal >= goalCalories;
     final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
-    final ratio =
-        goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
+    final ratio = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),

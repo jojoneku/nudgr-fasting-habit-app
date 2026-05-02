@@ -251,8 +251,8 @@ class _LiabilitiesCard extends StatelessWidget {
       variant: AppCardVariant.elevated,
       padding: EdgeInsets.zero,
       child: ExpansionTile(
-        leading:
-            AppIconBadge(icon: Icons.credit_card_outlined, color: colorScheme.error),
+        leading: AppIconBadge(
+            icon: Icons.credit_card_outlined, color: colorScheme.error),
         title: Text(
           'LIABILITIES',
           style: theme.textTheme.labelMedium?.copyWith(
@@ -308,7 +308,8 @@ class _LiabilityListTile extends StatelessWidget {
             color: colorScheme.error,
           ),
           const SizedBox(width: 4),
-          Icon(Icons.chevron_right, color: colorScheme.onSurfaceVariant, size: 16),
+          Icon(Icons.chevron_right,
+              color: colorScheme.onSurfaceVariant, size: 16),
         ],
       ),
     );

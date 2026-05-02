@@ -168,8 +168,7 @@ class _QuestTileState extends State<_QuestTile>
       value: progress,
       size: 44,
       color: isCompleted ? null : _statColor,
-      backgroundColor:
-          isCompleted ? null : _statColor.withValues(alpha: 0.12),
+      backgroundColor: isCompleted ? null : _statColor.withValues(alpha: 0.12),
       centerChild: Icon(
         q.linkedStat != null
             ? linkedStatIcon(q.linkedStat!)
@@ -181,8 +180,7 @@ class _QuestTileState extends State<_QuestTile>
   }
 
   Widget _buildSubtitle(BuildContext context, bool isCompleted) {
-    final timeStr =
-        TimeOfDay(hour: q.hour, minute: q.minute).format(context);
+    final timeStr = TimeOfDay(hour: q.hour, minute: q.minute).format(context);
     final theme = Theme.of(context);
     return Wrap(
       spacing: 8,
@@ -228,9 +226,7 @@ class _QuestTileState extends State<_QuestTile>
           const SizedBox(width: 4),
         ],
         GestureDetector(
-          onLongPress: q.minimumVersion != null
-              ? _showMinVersionSheet
-              : null,
+          onLongPress: q.minimumVersion != null ? _showMinVersionSheet : null,
           child: IconButton(
             iconSize: 28,
             icon: Icon(
@@ -307,8 +303,8 @@ class _QuestTileState extends State<_QuestTile>
         mainAxisSize: MainAxisSize.min,
         children: [
           AppListTile(
-            leading:
-                const Icon(Icons.check_circle_outline, color: AppColors.success),
+            leading: const Icon(Icons.check_circle_outline,
+                color: AppColors.success),
             title: const Text('Full completion'),
             subtitle: Text('+${q.xpReward} XP'),
             onTap: () {

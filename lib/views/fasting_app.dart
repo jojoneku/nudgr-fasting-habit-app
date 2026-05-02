@@ -151,8 +151,7 @@ class _FastingAppState extends State<FastingApp> {
         indicatorColor: AppColorsLight.primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.all(
           const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppColorsLight.textSecondary),
+              fontWeight: FontWeight.w600, color: AppColorsLight.textSecondary),
         ),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {

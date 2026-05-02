@@ -64,9 +64,8 @@ class _LoginViewState extends State<LoginView> {
   bool _validate() {
     final email = _emailController.text.trim();
     final pass = _passwordController.text;
-    final eErr = (email.isEmpty || !email.contains('@'))
-        ? 'Enter a valid email'
-        : null;
+    final eErr =
+        (email.isEmpty || !email.contains('@')) ? 'Enter a valid email' : null;
     final pErr = pass.length < 6 ? 'At least 6 characters' : null;
     setState(() {
       _emailError = eErr;

@@ -61,27 +61,21 @@ class SpendingCalendar extends StatelessWidget {
           ),
           calendarStyle: CalendarStyle(
             outsideDaysVisible: false,
-            defaultTextStyle:
-                TextStyle(color: cs.onSurface, fontSize: 13),
-            weekendTextStyle:
-                TextStyle(color: cs.onSurface, fontSize: 13),
+            defaultTextStyle: TextStyle(color: cs.onSurface, fontSize: 13),
+            weekendTextStyle: TextStyle(color: cs.onSurface, fontSize: 13),
             todayDecoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: cs.primary, width: 1.5),
             ),
             todayTextStyle: TextStyle(
-                color: cs.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700),
+                color: cs.primary, fontSize: 13, fontWeight: FontWeight.w700),
             selectedDecoration: BoxDecoration(
               color: cs.primary.withValues(alpha: 0.25),
               shape: BoxShape.circle,
               border: Border.all(color: cs.primary),
             ),
             selectedTextStyle: TextStyle(
-                color: cs.primary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700),
+                color: cs.primary, fontSize: 13, fontWeight: FontWeight.w700),
           ),
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, day, focusedDay) => _HeatmapCell(
@@ -161,8 +155,7 @@ class _HeatmapCell extends StatelessWidget {
         alpha: bgColor != null ? 0.6 : 0.2,
       );
     } else if (isToday) {
-      border =
-          Border.all(color: cs.primary.withValues(alpha: 0.7), width: 1.5);
+      border = Border.all(color: cs.primary.withValues(alpha: 0.7), width: 1.5);
     }
 
     return Tooltip(

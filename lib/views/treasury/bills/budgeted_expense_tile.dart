@@ -89,15 +89,14 @@ class BudgetedExpenseTile extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               expense.note!,
-              style: TextStyle(
-                  color: colorScheme.onSurfaceVariant, fontSize: 11),
+              style:
+                  TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
             ),
           ],
         ],
       ),
       trailing: expense.isPaid
-          ? Icon(Icons.check_circle,
-              color: const Color(0xFF4CAF50), size: 24)
+          ? Icon(Icons.check_circle, color: const Color(0xFF4CAF50), size: 24)
           : SizedBox(
               height: 44,
               child: TextButton(

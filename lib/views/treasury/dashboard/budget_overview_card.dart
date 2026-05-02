@@ -43,7 +43,10 @@ class BudgetOverviewCard extends StatelessWidget {
             const SizedBox(height: 12),
             Divider(
               height: 1,
-              color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+              color: Theme.of(context)
+                  .colorScheme
+                  .outlineVariant
+                  .withValues(alpha: 0.4),
             ),
             const SizedBox(height: 12),
             for (final group in _groups) ...[
@@ -103,8 +106,7 @@ class _BudgetProgressRow extends StatelessWidget {
                         ? theme.textTheme.bodyMedium
                         : theme.textTheme.bodySmall)
                     ?.copyWith(
-                  fontWeight:
-                      isTotal ? FontWeight.w600 : FontWeight.w400,
+                  fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
@@ -117,7 +119,8 @@ class _BudgetProgressRow extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             AppNumberDisplay(
-              value: '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
+              value:
+                  '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
               size: AppNumberSize.body,
               color: colorScheme.onSurfaceVariant,
             ),

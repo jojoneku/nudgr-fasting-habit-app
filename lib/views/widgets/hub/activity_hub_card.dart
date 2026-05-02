@@ -53,7 +53,8 @@ class _Snapshot extends StatelessWidget {
           children: [
             Text(
               fmt.format(steps),
-              style: AppTextStyles.numeric(fontSize: 22, weight: FontWeight.w600),
+              style:
+                  AppTextStyles.numeric(fontSize: 22, weight: FontWeight.w600),
             ),
             const SizedBox(width: 4),
             Text(
@@ -68,7 +69,9 @@ class _Snapshot extends StatelessWidget {
         AppLinearProgress(
           value: progress,
           height: 4,
-          color: activity.isGoalMet ? AppColors.success : theme.colorScheme.primary,
+          color: activity.isGoalMet
+              ? AppColors.success
+              : theme.colorScheme.primary,
         ),
         if (activity.todayLog.activeCalories != null) ...[
           const SizedBox(height: AppSpacing.xs),

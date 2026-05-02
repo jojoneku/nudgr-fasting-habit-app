@@ -40,8 +40,7 @@ class _CategoryBudgetTileState extends State<CategoryBudgetTile> {
 
     final allocated = widget.budget?.allocatedAmount ?? 0.0;
     final actual = widget.isIncome ? widget.received : widget.spent;
-    final progress =
-        allocated > 0 ? (actual / allocated).clamp(0.0, 2.0) : 0.0;
+    final progress = allocated > 0 ? (actual / allocated).clamp(0.0, 2.0) : 0.0;
     final isOver = actual > allocated && allocated > 0;
 
     Color progressColor;
@@ -57,8 +56,7 @@ class _CategoryBudgetTileState extends State<CategoryBudgetTile> {
       }
     }
 
-    final pct =
-        allocated > 0 ? '${(actual / allocated * 100).round()}%' : '—';
+    final pct = allocated > 0 ? '${(actual / allocated * 100).round()}%' : '—';
 
     return InkWell(
       onTap: widget.onTap,
@@ -67,8 +65,7 @@ class _CategoryBudgetTileState extends State<CategoryBudgetTile> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -105,8 +102,8 @@ class _CategoryBudgetTileState extends State<CategoryBudgetTile> {
                         ),
                         Text(
                           ' / ${formatPesoCompact(allocated)}',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                              color: cs.onSurfaceVariant),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
                         ),
                       ],
                     ),

@@ -148,11 +148,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   label: 'Non-Neg.',
                   icon: null
                 ),
-                (
-                  value: BudgetGroup.livingExpense,
-                  label: 'Living',
-                  icon: null
-                ),
+                (value: BudgetGroup.livingExpense, label: 'Living', icon: null),
                 (
                   value: BudgetGroup.variableOptional,
                   label: 'Variable',

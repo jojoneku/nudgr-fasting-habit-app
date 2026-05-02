@@ -27,7 +27,11 @@ class NutritionHubCard extends StatelessWidget {
           icon: Icons.restaurant_outlined,
           title: 'Nutrition',
         ),
-        footer: AppPrimaryButton(label: 'Log meal', height: 44, onPressed: onLogMeal, variant: AppButtonVariant.tonal),
+        footer: AppPrimaryButton(
+            label: 'Log meal',
+            height: 44,
+            onPressed: onLogMeal,
+            variant: AppButtonVariant.tonal),
         child: _Snapshot(nutrition: nutrition),
       ),
     );
@@ -54,13 +58,17 @@ class _Snapshot extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        AppLinearProgress(value: p.netCalorieProgress, color: barColor, height: 3),
+        AppLinearProgress(
+            value: p.netCalorieProgress, color: barColor, height: 3),
         const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             _Cell(value: '${p.todayCalories}', label: 'Eaten'),
-            _Cell(value: '${p.remainingCalories}', label: 'Remaining', alignRight: true),
+            _Cell(
+                value: '${p.remainingCalories}',
+                label: 'Remaining',
+                alignRight: true),
           ],
         ),
       ],
@@ -69,7 +77,8 @@ class _Snapshot extends StatelessWidget {
 }
 
 class _Cell extends StatelessWidget {
-  const _Cell({required this.value, required this.label, this.alignRight = false});
+  const _Cell(
+      {required this.value, required this.label, this.alignRight = false});
 
   final String value;
   final String label;
@@ -77,25 +86,26 @@ class _Cell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final align = alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final align =
+        alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     return Column(
       crossAxisAlignment: align,
-        children: [
-          Text(
-            value,
-            style: AppTextStyles.labelMedium.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+      children: [
+        Text(
+          value,
+          style: AppTextStyles.labelMedium.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
           ),
-          const SizedBox(height: 2),
-          Text(
-            label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
           ),
-        ],
+        ),
+      ],
     );
   }
 }

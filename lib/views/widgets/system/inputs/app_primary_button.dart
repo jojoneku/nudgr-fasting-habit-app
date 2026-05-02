@@ -26,7 +26,8 @@ class AppPrimaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final style = ButtonStyle(
-      minimumSize: WidgetStatePropertyAll(Size(fullWidth ? double.infinity : 0, height)),
+      minimumSize:
+          WidgetStatePropertyAll(Size(fullWidth ? double.infinity : 0, height)),
       fixedSize: WidgetStatePropertyAll(Size.fromHeight(height)),
     );
 

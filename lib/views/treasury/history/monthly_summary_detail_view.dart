@@ -31,8 +31,7 @@ class MonthlySummaryDetailView extends StatelessWidget {
               const SizedBox(height: 16),
               _BillsReceivablesSection(summary: summary),
               const SizedBox(height: 16),
-              _CategorySpendSection(
-                  summary: summary, categories: categories),
+              _CategorySpendSection(summary: summary, categories: categories),
               const SizedBox(height: 16),
               _AccountSnapshotsSection(summary: summary),
             ]),
@@ -133,8 +132,8 @@ class _BillsReceivablesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final allBillsPaid = summary.billsPaidCount == summary.billCount &&
-        summary.billCount > 0;
+    final allBillsPaid =
+        summary.billsPaidCount == summary.billCount && summary.billCount > 0;
     final allReceived = summary.receivableCount > 0
         ? summary.totalReceived >= summary.totalReceivables
         : false;

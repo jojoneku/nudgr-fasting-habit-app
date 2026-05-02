@@ -29,7 +29,8 @@ class HubCardHeader extends StatelessWidget {
         AppIconBadge(icon: icon, color: color, size: 36, iconSize: 18),
         const SizedBox(width: AppSpacing.sm),
         Expanded(child: Text(title, style: AppTextStyles.titleSmall)),
-        Icon(Icons.chevron_right, size: 16, color: theme.colorScheme.onSurfaceVariant),
+        Icon(Icons.chevron_right,
+            size: 16, color: theme.colorScheme.onSurfaceVariant),
       ],
     );
   }

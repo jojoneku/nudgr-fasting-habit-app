@@ -218,8 +218,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                   Text(
                     'Your target',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -234,16 +233,14 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                   Text(
                     'BMR ${profile.bmr} · TDEE ${profile.tdee}',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Suggested macros',
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                   const SizedBox(height: 8),
@@ -253,8 +250,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                         value: '${profile.suggestedProteinG}g'),
                     const SizedBox(width: 8),
                     _MacroChip(
-                        label: 'Carbs',
-                        value: '${profile.suggestedCarbsG}g'),
+                        label: 'Carbs', value: '${profile.suggestedCarbsG}g'),
                     const SizedBox(width: 8),
                     _MacroChip(
                         label: 'Fat', value: '${profile.suggestedFatG}g'),
@@ -263,8 +259,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                   Text(
                     'These will be applied to your macro targets.',
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
                 ],

@@ -6,12 +6,13 @@ class AppColorsLight {
   static const Color surfaceVariant = Color(0xFFEFF3F8);
   // WCAG AA: all three values darkened to achieve ≥ 4.5:1 on background,
   // surface, and surfaceVariant simultaneously.
-  static const Color primary = Color(0xFF0174B2);   // was 0288D1 — 3.7:1 → 4.9:1
-  static const Color secondary = Color(0xFF007A85); // was 00838F — 4.3:1 → 4.9:1
+  static const Color primary = Color(0xFF0174B2); // was 0288D1 — 3.7:1 → 4.9:1
+  static const Color secondary =
+      Color(0xFF007A85); // was 00838F — 4.3:1 → 4.9:1
   static const Color textPrimary = Color(0xFF0F1923);
   static const Color textSecondary = Color(0xFF4A5568);
   static const Color error = Color(0xFFD32F2F);
-  static const Color success = Color(0xFF2E7D32);   // was 388E3C — 3.9:1 → 4.9:1
+  static const Color success = Color(0xFF2E7D32); // was 388E3C — 3.9:1 → 4.9:1
   // gold (#F9A825) is inherently low-contrast on white (1.9:1). Use ONLY as
   // a fill/tint with dark text on top — never as text-on-white in light mode.
   static const Color gold = Color(0xFFF9A825);

@@ -103,8 +103,7 @@ class ReceivableListTile extends StatelessWidget {
       ),
       subtitle: subtitleWidget,
       trailing: receivable.isReceived
-          ? Icon(Icons.check_circle,
-              color: const Color(0xFF4CAF50), size: 24)
+          ? Icon(Icons.check_circle, color: const Color(0xFF4CAF50), size: 24)
           : SizedBox(
               height: 44,
               child: TextButton(

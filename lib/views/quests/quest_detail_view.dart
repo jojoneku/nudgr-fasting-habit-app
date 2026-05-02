@@ -190,8 +190,7 @@ class _StatsRow extends StatelessWidget {
             color: Theme.of(context).colorScheme.outlineVariant,
           ),
           _StatCell(
-            value:
-                '${quest.completedDates.length + quest.partialDates.length}',
+            value: '${quest.completedDates.length + quest.partialDates.length}',
             label: 'Total',
           ),
         ],

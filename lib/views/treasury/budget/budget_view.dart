@@ -25,10 +25,10 @@ class _BudgetViewState extends State<BudgetView> {
   void _showAddBudgetSheet([String? categoryId]) {
     AppBottomSheet.show(
       context: context,
-      title: categoryId != null &&
-              widget.presenter.budgetFor(categoryId) != null
-          ? 'Edit Budget'
-          : 'Set Budget',
+      title:
+          categoryId != null && widget.presenter.budgetFor(categoryId) != null
+              ? 'Edit Budget'
+              : 'Set Budget',
       body: AddBudgetSheet(
         presenter: widget.presenter,
         preselectedCategoryId: categoryId,
@@ -220,7 +220,8 @@ class _GroupSection extends StatelessWidget {
 
     return AppSection(
       title: _groupLabels[group]!,
-      hint: '${formatPesoCompact(sectionSpent)} / ${formatPesoCompact(sectionAllocated)}',
+      hint:
+          '${formatPesoCompact(sectionSpent)} / ${formatPesoCompact(sectionAllocated)}',
       child: AppCard(
         variant: AppCardVariant.outlined,
         padding: EdgeInsets.zero,

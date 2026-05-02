@@ -189,8 +189,7 @@ class BillListTile extends StatelessWidget {
           children: [
             if (onEdit != null)
               ListTile(
-                leading:
-                    Icon(Icons.edit_outlined, color: colorScheme.primary),
+                leading: Icon(Icons.edit_outlined, color: colorScheme.primary),
                 title: const Text('Edit'),
                 onTap: () {
                   Navigator.pop(context);
@@ -199,10 +198,9 @@ class BillListTile extends StatelessWidget {
               ),
             if (onDelete != null)
               ListTile(
-                leading:
-                    Icon(Icons.delete_outline, color: colorScheme.error),
-                title: Text('Delete',
-                    style: TextStyle(color: colorScheme.error)),
+                leading: Icon(Icons.delete_outline, color: colorScheme.error),
+                title:
+                    Text('Delete', style: TextStyle(color: colorScheme.error)),
                 onTap: () {
                   Navigator.pop(context);
                   onDelete?.call();

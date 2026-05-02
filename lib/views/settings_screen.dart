@@ -129,11 +129,9 @@ class SettingsScreen extends StatelessWidget {
           leading: CircleAvatar(
             radius: 18,
             backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.15),
-            backgroundImage:
-                avatarUrl != null ? NetworkImage(avatarUrl) : null,
+            backgroundImage: avatarUrl != null ? NetworkImage(avatarUrl) : null,
             child: avatarUrl == null
-                ? Icon(Icons.person,
-                    color: theme.colorScheme.primary, size: 18)
+                ? Icon(Icons.person, color: theme.colorScheme.primary, size: 18)
                 : null,
           ),
           title: Text(email),
@@ -167,9 +165,8 @@ class SettingsScreen extends StatelessWidget {
                     ),
               title: Text(syncPresenter!.statusLabel),
               trailing: TextButton(
-                onPressed: syncPresenter!.isSyncing
-                    ? null
-                    : syncPresenter!.forceSync,
+                onPressed:
+                    syncPresenter!.isSyncing ? null : syncPresenter!.forceSync,
                 child: const Text('Sync Now'),
               ),
             ),
@@ -342,7 +339,8 @@ class SettingsScreen extends StatelessWidget {
             final confirm = await AppConfirmDialog.confirm(
               context: context,
               title: 'Clear All Data',
-              body: 'This will delete ALL your data including fasting history and quests. This cannot be undone.',
+              body:
+                  'This will delete ALL your data including fasting history and quests. This cannot be undone.',
               confirmLabel: 'Delete All',
               isDestructive: true,
             );

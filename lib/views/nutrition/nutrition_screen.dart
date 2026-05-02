@@ -76,8 +76,7 @@ class _NutritionBody extends StatelessWidget {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) =>
-                      NutritionHistoryScreen(presenter: presenter)),
+                  builder: (_) => NutritionHistoryScreen(presenter: presenter)),
             ),
             tooltip: 'History',
           ),
@@ -394,8 +393,7 @@ class _NutritionDetailBody extends StatelessWidget {
             label: 'Fat',
             value: p.todayFat.round(),
             goal: p.fatGoal!,
-            remaining:
-                (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
+            remaining: (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
             unit: 'g',
             color: AppColors.danger,
           ),
@@ -1317,8 +1315,8 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                 controller: _ctrl,
                 focusNode: _focus,
                 enabled: isToday && !locked,
-                style: const TextStyle(
-                    color: AppColors.textPrimary, fontSize: 14),
+                style:
+                    const TextStyle(color: AppColors.textPrimary, fontSize: 14),
                 decoration: InputDecoration(
                   hintText: locked
                       ? 'Fasting — logging paused'
@@ -1503,17 +1501,15 @@ class _ManualFoodBodyState extends State<_ManualFoodBody> {
           onTap: () => setState(() => _showMacros = !_showMacros),
           child: Row(children: [
             Icon(
-              _showMacros
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
+              _showMacros ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               color: AppColors.textSecondary,
               size: 16,
             ),
             const SizedBox(width: 4),
             Text(
               _showMacros ? 'Hide macros' : 'Add macros (optional)',
-              style: const TextStyle(
-                  color: AppColors.textSecondary, fontSize: 12),
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
             ),
           ]),
         ),

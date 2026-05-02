@@ -31,8 +31,7 @@ class AppDayChipRow extends StatelessWidget {
         final day = weekStart.add(Duration(days: i));
         final isSelected =
             DateUtils.dateOnly(day) == DateUtils.dateOnly(selectedDate);
-        final isToday =
-            highlightToday && DateUtils.dateOnly(day) == today;
+        final isToday = highlightToday && DateUtils.dateOnly(day) == today;
 
         Color bg = Colors.transparent;
         Color fg = theme.colorScheme.onSurfaceVariant;
@@ -65,8 +64,7 @@ class AppDayChipRow extends StatelessWidget {
                   '${day.day}',
                   style: AppTextStyles.labelMedium.copyWith(
                     color: fg,
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                   ),
                 ),
               ],

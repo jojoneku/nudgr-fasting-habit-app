@@ -238,8 +238,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(title,
-                      style: theme.textTheme.titleLarge),
+                  child: Text(title, style: theme.textTheme.titleLarge),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -262,8 +261,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
                 category: _category,
                 onCategoryChanged: (c) => setState(() => _category = c!),
                 selectedColor: _selectedColor,
-                onColorSelected: (hex) =>
-                    setState(() => _selectedColor = hex),
+                onColorSelected: (hex) => setState(() => _selectedColor = hex),
                 maturityDate: _maturityDate,
                 onPickMaturityDate: _pickMaturityDate,
                 linkedAccountId: _linkedAccountId,
@@ -376,8 +374,7 @@ class _AccountSetupForm extends StatelessWidget {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                                RegExp(r'[\d.]'))
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
                           ],
                           decoration: const InputDecoration(
                             labelText: 'Opening Balance',
@@ -398,8 +395,7 @@ class _AccountSetupForm extends StatelessWidget {
               header: Text(
                 'Color',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color:
-                        Theme.of(context).colorScheme.onSurfaceVariant),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
               child: _ColorPicker(
                 options: _colorOptions,
@@ -426,8 +422,7 @@ class _AccountSetupForm extends StatelessWidget {
               const SizedBox(height: 12),
             ],
             if (isTimeDeposit) ...[
-              _MaturityDateRow(
-                  date: maturityDate, onTap: onPickMaturityDate),
+              _MaturityDateRow(date: maturityDate, onTap: onPickMaturityDate),
               const SizedBox(height: 12),
             ],
             if (isCustodian) ...[
@@ -536,8 +531,8 @@ class _ColorPicker extends StatelessWidget {
         .toUpperCase();
   }
 
-  bool _isPreset(String hex) => options
-      .any((o) => o.toLowerCase() == hex.toLowerCase());
+  bool _isPreset(String hex) =>
+      options.any((o) => o.toLowerCase() == hex.toLowerCase());
 
   void _openCustomPicker(BuildContext context) {
     Color pickerColor = _parse(selected);
@@ -623,13 +618,10 @@ class _ColorPicker extends StatelessWidget {
                 border: Border.all(
                   color: isCustom
                       ? Colors.white
-                      : Theme.of(context)
-                          .colorScheme
-                          .outlineVariant,
+                      : Theme.of(context).colorScheme.outlineVariant,
                   width: isCustom ? 2.5 : 1.5,
                 ),
-                color:
-                    isCustom ? _parse(selected) : Colors.transparent,
+                color: isCustom ? _parse(selected) : Colors.transparent,
                 boxShadow: isCustom
                     ? [
                         BoxShadow(
@@ -720,8 +712,7 @@ class _StoredInDropdown extends StatelessWidget {
           child: Text(
             '— Not linked —',
             style: TextStyle(
-                color:
-                    Theme.of(context).colorScheme.onSurfaceVariant),
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ),
         ...accounts.map(

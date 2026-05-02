@@ -167,9 +167,7 @@ class _AccountPill extends StatelessWidget {
                 : cs.surfaceContainerLow,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: selected
-                  ? cs.primary
-                  : cs.outlineVariant,
+              color: selected ? cs.primary : cs.outlineVariant,
             ),
           ),
           child: Row(
@@ -367,8 +365,7 @@ class _DateFilterChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: cs.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
-              border:
-                  Border.all(color: cs.primary.withValues(alpha: 0.4)),
+              border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -387,8 +384,7 @@ class _DateFilterChip extends StatelessWidget {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: onClear,
-                  child: Icon(Icons.close_rounded,
-                      size: 14, color: cs.primary),
+                  child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
                 ),
               ],
             ),
@@ -583,9 +579,7 @@ class _DateGroup extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: AppSection(
         title: _DateHeader.labelFor(date),
-        trailing: _dailyNet != 0
-            ? _DailyNetBadge(dailyNet: _dailyNet)
-            : null,
+        trailing: _dailyNet != 0 ? _DailyNetBadge(dailyNet: _dailyNet) : null,
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
           children: [
@@ -663,8 +657,11 @@ class _DailyNetBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final netColor =
-        dailyNet > 0 ? cs.tertiary : dailyNet < 0 ? cs.error : cs.onSurfaceVariant;
+    final netColor = dailyNet > 0
+        ? cs.tertiary
+        : dailyNet < 0
+            ? cs.error
+            : cs.onSurfaceVariant;
     final prefix = dailyNet > 0 ? '+' : '';
 
     return Text(

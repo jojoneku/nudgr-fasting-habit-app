@@ -267,9 +267,8 @@ class _MetricPillsRow extends StatelessWidget {
           icon: Icons.directions_walk,
           label: 'Goal',
           value: '${(progress * 100).round()}%',
-          color: presenter.isGoalMet
-              ? AppStatColor.success
-              : AppStatColor.neutral,
+          color:
+              presenter.isGoalMet ? AppStatColor.success : AppStatColor.neutral,
         ),
         if (cals != null)
           AppStatPill(
@@ -369,8 +368,7 @@ class _WeeklyChart extends StatelessWidget {
                             ),
                             if (log.steps > 0)
                               Positioned(
-                                bottom:
-                                    math.max(4, ratio * barAreaHeight) + 3,
+                                bottom: math.max(4, ratio * barAreaHeight) + 3,
                                 child: Text(
                                   _compactNum(log.steps),
                                   style: TextStyle(
@@ -676,8 +674,7 @@ class _CalendarSectionState extends State<_CalendarSection> {
 
               return GestureDetector(
                 onTap: hasData
-                    ? () =>
-                        setState(() => _selected = isSelected ? null : log)
+                    ? () => setState(() => _selected = isSelected ? null : log)
                     : null,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -851,8 +848,7 @@ class _GoalSheetState extends State<_GoalSheet> {
           children: [
             Center(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(vertical: AppSpacing.md),
+                padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
                 child: Container(
                   width: 36,
                   height: 4,
@@ -1116,8 +1112,8 @@ class _FullHistorySheet extends StatelessWidget {
             Expanded(
               child: ListView.builder(
                 controller: controller,
-                padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xxl),
+                padding: const EdgeInsets.fromLTRB(AppSpacing.md, AppSpacing.sm,
+                    AppSpacing.md, AppSpacing.xxl),
                 itemCount: months.length,
                 itemBuilder: (context, i) => Padding(
                   padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -1231,12 +1227,11 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
                   : log.goalMet
                       ? AppColors.success
                       : AppColors.gold;
-              final distProgress =
-                  hasDist && widget.goalDistanceMeters > 0
-                      ? (log.distanceMeters! / widget.goalDistanceMeters)
-                          .clamp(0.0, 1.0)
-                          .toDouble()
-                      : 0.0;
+              final distProgress = hasDist && widget.goalDistanceMeters > 0
+                  ? (log.distanceMeters! / widget.goalDistanceMeters)
+                      .clamp(0.0, 1.0)
+                      .toDouble()
+                  : 0.0;
               final distColor = hasDist && widget.goalDistanceMeters > 0
                   ? AppColors.accent
                   : Colors.transparent;
@@ -1248,8 +1243,7 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
 
               return GestureDetector(
                 onTap: hasData
-                    ? () =>
-                        setState(() => _selected = isSelected ? null : log)
+                    ? () => setState(() => _selected = isSelected ? null : log)
                     : null,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1362,8 +1356,8 @@ class _DayDetail extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
-              _chip(Icons.directions_walk,
-                  '${_numFmt.format(log.steps)} steps', accentColor),
+              _chip(Icons.directions_walk, '${_numFmt.format(log.steps)} steps',
+                  accentColor),
               if (calories != null) ...[
                 const SizedBox(width: 8),
                 _chip(MdiIcons.fire, '${calories!.round()} kcal',

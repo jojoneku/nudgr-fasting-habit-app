@@ -58,7 +58,10 @@ class StatsView extends StatelessWidget {
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xl,
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.xl,
                   ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
@@ -163,8 +166,8 @@ class _HeaderCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.edit_outlined, size: 14,
-                          color: theme.colorScheme.onSurfaceVariant),
+                      Icon(Icons.edit_outlined,
+                          size: 14, color: theme.colorScheme.onSurfaceVariant),
                     ],
                   ),
                 ),
@@ -269,7 +272,8 @@ class _AttributesSection extends StatelessWidget {
                       icon: _attrDefs[i].$2,
                       value: _value(_attrDefs[i].$1),
                       canSpend: canSpend,
-                      onAllocate: () => presenter.allocatePoint(_attrDefs[i].$1),
+                      onAllocate: () =>
+                          presenter.allocatePoint(_attrDefs[i].$1),
                     ),
                   ),
                   const SizedBox(width: AppSpacing.sm),

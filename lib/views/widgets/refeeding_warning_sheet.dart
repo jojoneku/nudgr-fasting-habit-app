@@ -95,7 +95,8 @@ class RefeedingWarningSheet extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AppSpacing.sm + 4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+                  color:
+                      theme.colorScheme.errorContainer.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -122,7 +123,8 @@ class RefeedingWarningSheet extends StatelessWidget {
             _buildStep(
               context,
               timeframe: 'First 1–2 hours',
-              instruction: 'Bone broth, vegetable broth, or electrolytes. Small sips only.',
+              instruction:
+                  'Bone broth, vegetable broth, or electrolytes. Small sips only.',
               icon: Icons.water_drop_outlined,
               color: theme.colorScheme.primary,
             ),
@@ -130,7 +132,8 @@ class RefeedingWarningSheet extends StatelessWidget {
             _buildStep(
               context,
               timeframe: '2–6 hours after',
-              instruction: 'Soft foods: banana, yogurt, soup, or plain rice. Small portions.',
+              instruction:
+                  'Soft foods: banana, yogurt, soup, or plain rice. Small portions.',
               icon: Icons.restaurant_outlined,
               color: AppColors.gold,
             ),
@@ -138,7 +141,8 @@ class RefeedingWarningSheet extends StatelessWidget {
             _buildStep(
               context,
               timeframe: '6+ hours after',
-              instruction: 'Gradually return to normal meals. Avoid heavy fats immediately.',
+              instruction:
+                  'Gradually return to normal meals. Avoid heavy fats immediately.',
               icon: Icons.check_circle_outline,
               color: AppColors.success,
             ),

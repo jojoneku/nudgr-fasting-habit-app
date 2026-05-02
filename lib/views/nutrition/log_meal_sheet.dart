@@ -1516,8 +1516,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
               return GestureDetector(
                 onTap: () => _selectGrams(g),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.gold.withValues(alpha: 0.15)
@@ -1536,9 +1536,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                               ? AppColors.gold
                               : AppColors.textSecondary,
                           fontSize: 11,
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.normal)),
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.normal)),
                 ),
               );
             }).toList(),

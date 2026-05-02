@@ -30,7 +30,8 @@ class AppToast {
     required String actionLabel,
     required VoidCallback onAction,
   }) {
-    _show(context, message: message, actionLabel: actionLabel, onAction: onAction);
+    _show(context,
+        message: message, actionLabel: actionLabel, onAction: onAction);
   }
 
   static void _show(
@@ -44,9 +45,7 @@ class AppToast {
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: color != null
-            ? color.withValues(alpha: 0.12)
-            : null,
+        backgroundColor: color != null ? color.withValues(alpha: 0.12) : null,
         content: Row(
           children: [
             if (icon != null) ...[

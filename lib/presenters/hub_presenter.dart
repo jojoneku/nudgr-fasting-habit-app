@@ -60,13 +60,14 @@ class HubPresenter extends ChangeNotifier {
       active.add(HubCardType.treasury);
     }
 
-    final base = _manualOrder ?? const [
-      HubCardType.nutrition,
-      HubCardType.activity,
-      HubCardType.treasury,
-      HubCardType.quests,
-      HubCardType.fasting,
-    ];
+    final base = _manualOrder ??
+        const [
+          HubCardType.nutrition,
+          HubCardType.activity,
+          HubCardType.treasury,
+          HubCardType.quests,
+          HubCardType.fasting,
+        ];
 
     final newOrder = [
       ...active,

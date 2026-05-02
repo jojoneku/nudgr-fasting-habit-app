@@ -233,7 +233,8 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final title = widget.existing != null ? 'Edit Receivable' : 'Add Receivable';
+    final title =
+        widget.existing != null ? 'Edit Receivable' : 'Add Receivable';
 
     return Padding(
       padding:
@@ -269,8 +270,7 @@ class _ReceivableTypeSelector extends StatelessWidget {
   final ReceivableType value;
   final ValueChanged<ReceivableType> onChanged;
 
-  const _ReceivableTypeSelector(
-      {required this.value, required this.onChanged});
+  const _ReceivableTypeSelector({required this.value, required this.onChanged});
 
   static const _labels = {
     ReceivableType.salary: 'Salary',
@@ -286,8 +286,8 @@ class _ReceivableTypeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Type',
-            style: TextStyle(
-                color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            style:
+                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,

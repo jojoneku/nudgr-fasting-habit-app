@@ -3,6 +3,7 @@ import '../../../../app_colors.dart';
 import '../../../../utils/app_text_styles.dart';
 
 enum AppStatColor { neutral, primary, success, warning, error }
+
 enum AppStatSize { small, medium }
 
 /// Compact label+value chip for HP, XP, kcal, step counts etc.
@@ -39,7 +40,8 @@ class AppStatPill extends StatelessWidget {
     final isSmall = size == AppStatSize.small;
     final hPad = isSmall ? 6.0 : 10.0;
     final vPad = isSmall ? 2.0 : 4.0;
-    final textStyle = isSmall ? AppTextStyles.labelSmall : AppTextStyles.labelMedium;
+    final textStyle =
+        isSmall ? AppTextStyles.labelSmall : AppTextStyles.labelMedium;
 
     final content = Row(
       mainAxisSize: MainAxisSize.min,
@@ -50,8 +52,7 @@ class AppStatPill extends StatelessWidget {
         ],
         if (label != null) ...[
           Text(label!,
-              style: textStyle.copyWith(
-                  color: c, fontWeight: FontWeight.w600)),
+              style: textStyle.copyWith(color: c, fontWeight: FontWeight.w600)),
           const SizedBox(width: 4),
         ],
         Text(value, style: textStyle.copyWith(color: c)),
@@ -59,8 +60,7 @@ class AppStatPill extends StatelessWidget {
     );
 
     return Container(
-      padding:
-          EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
+      padding: EdgeInsets.symmetric(horizontal: hPad, vertical: vPad),
       decoration: BoxDecoration(
         color: c.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(999),

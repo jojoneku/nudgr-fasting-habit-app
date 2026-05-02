@@ -173,8 +173,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
                       color: colorScheme.onSurfaceVariant, fontSize: 14)),
               decoration: const InputDecoration(labelText: 'Payment Account'),
               items: widget.presenter.accounts
-                  .map((a) =>
-                      DropdownMenuItem(value: a.id, child: Text(a.name)))
+                  .map(
+                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedAccountId = v),
             ),
@@ -297,8 +297,8 @@ class _BillTypeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Bill Type',
-            style: TextStyle(
-                color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            style:
+                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,

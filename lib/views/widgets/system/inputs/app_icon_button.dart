@@ -33,8 +33,8 @@ class AppIconButton extends StatelessWidget {
         button = IconButton.outlined(
             onPressed: onPressed, icon: Icon(icon), tooltip: tooltip);
       case AppIconButtonVariant.standard:
-        button =
-            IconButton(onPressed: onPressed, icon: Icon(icon), tooltip: tooltip);
+        button = IconButton(
+            onPressed: onPressed, icon: Icon(icon), tooltip: tooltip);
     }
 
     if (badge != null) {

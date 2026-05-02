@@ -277,9 +277,7 @@ class _BarChartPainter extends CustomPainter {
         text: isToday ? '•' : dayLabel,
         style: isToday
             ? TextStyle(
-                color: primaryColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w800)
+                color: primaryColor, fontSize: 11, fontWeight: FontWeight.w800)
             : labelStyle,
       );
       final tp = TextPainter(
@@ -288,8 +286,7 @@ class _BarChartPainter extends CustomPainter {
       )..layout();
       tp.paint(
         canvas,
-        Offset(
-            x + barWidth / 2 - tp.width / 2, size.height - _labelHeight + 4),
+        Offset(x + barWidth / 2 - tp.width / 2, size.height - _labelHeight + 4),
       );
     }
   }
@@ -337,9 +334,8 @@ class _StatsRow extends StatelessWidget {
           label: 'PEAK DAY',
           value: peakLabel,
           subValue: formatPesoCompact(peak),
-          color: peak > 0
-              ? const Color(0xFFEF9A9A)
-              : colorScheme.onSurfaceVariant,
+          color:
+              peak > 0 ? const Color(0xFFEF9A9A) : colorScheme.onSurfaceVariant,
         ),
       ],
     );
@@ -400,7 +396,8 @@ class _StatDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 32,
-      color: Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
+      color:
+          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
     );
   }
 }

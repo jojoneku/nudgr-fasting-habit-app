@@ -32,8 +32,8 @@ class AppCircularProgress extends StatelessWidget {
         value: isIndeterminate ? null : value.clamp(0.0, 1.0),
         strokeWidth: strokeWidth,
         color: color ?? theme.colorScheme.primary,
-        backgroundColor: backgroundColor ??
-            theme.colorScheme.surfaceContainerHighest,
+        backgroundColor:
+            backgroundColor ?? theme.colorScheme.surfaceContainerHighest,
       ),
     );
 

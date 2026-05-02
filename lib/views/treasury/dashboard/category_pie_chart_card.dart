@@ -20,15 +20,13 @@ class CategoryPieChartCard extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final slices = presenter.categorySpendThisMonth;
     final total = slices.fold(0.0, (s, e) => s + e.$2);
-    final hasMore =
-        presenter.allCategorySpendThisMonth.length > slices.length;
+    final hasMore = presenter.allCategorySpendThisMonth.length > slices.length;
 
     return AppSection(
       title: 'Expense Breakdown',
       trailing: hasMore
           ? GestureDetector(
-              onTap: () =>
-                  FullCategoryBreakdownSheet.show(context, presenter),
+              onTap: () => FullCategoryBreakdownSheet.show(context, presenter),
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 child: Row(

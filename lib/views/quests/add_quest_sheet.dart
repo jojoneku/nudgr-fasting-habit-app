@@ -74,8 +74,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -92,8 +91,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
           const SizedBox(height: AppSpacing.md),
           // Header
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
                 Expanded(
@@ -225,8 +223,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                         const SizedBox(height: AppSpacing.sm),
                         AppTextField(
                           controller: _minVersionCtrl,
-                          hint:
-                              'Minimum version — e.g., at least 5 push-ups',
+                          hint: 'Minimum version — e.g., at least 5 push-ups',
                         ),
                       ],
                     ),
@@ -283,8 +280,8 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
             SwitchListTile(
               dense: true,
               contentPadding: EdgeInsets.zero,
-              title: const Text('One-time quest',
-                  style: TextStyle(fontSize: 13)),
+              title:
+                  const Text('One-time quest', style: TextStyle(fontSize: 13)),
               subtitle: const Text('Deleted after completion',
                   style: TextStyle(fontSize: 11)),
               value: _isOneTime,
@@ -395,8 +392,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
         monthlyDays: _monthlyDays,
         recurrenceAnchorDate: anchorDate,
       ));
-      await widget.presenter
-          .assignQuestToGroup(existing.id, _selectedGroupId);
+      await widget.presenter.assignQuestToGroup(existing.id, _selectedGroupId);
     } else {
       final id = DateTime.now().millisecondsSinceEpoch ~/ 1000;
       await widget.presenter.addQuest(Quest(
@@ -443,17 +439,18 @@ class _TimePicker extends StatelessWidget {
       onTap: () => _pick(context),
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: AppSpacing.md),
+        padding:
+            const EdgeInsets.symmetric(vertical: 12, horizontal: AppSpacing.md),
         decoration: BoxDecoration(
-          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+          border: Border.all(
+              color: theme.colorScheme.outline.withValues(alpha: 0.5)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           children: [
             Icon(Icons.access_time, size: 15, color: theme.colorScheme.primary),
             const SizedBox(width: AppSpacing.sm),
-            Text(time.format(context),
-                style: AppTextStyles.bodyMedium),
+            Text(time.format(context), style: AppTextStyles.bodyMedium),
           ],
         ),
       ),
@@ -514,7 +511,8 @@ class _ReminderDropdown extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
+        border:
+            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
         borderRadius: BorderRadius.circular(8),
       ),
       child: DropdownButtonHideUnderline(
@@ -563,7 +561,8 @@ class _WeekdayPicker extends StatelessWidget {
             height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+              color:
+                  isSelected ? theme.colorScheme.primary : Colors.transparent,
               border: Border.all(
                 color: isSelected
                     ? theme.colorScheme.primary
@@ -687,7 +686,8 @@ class _DayPicker extends StatelessWidget {
             height: 36,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+              color:
+                  isSelected ? theme.colorScheme.primary : Colors.transparent,
               border: Border.all(
                 color: isSelected
                     ? theme.colorScheme.primary
@@ -735,8 +735,7 @@ class _StatPicker extends StatelessWidget {
 
   Widget _chip(BuildContext context, LinkedStat? stat) {
     final isSelected = selected == stat;
-    final color =
-        stat != null ? linkedStatColor(stat) : AppColors.neutral;
+    final color = stat != null ? linkedStatColor(stat) : AppColors.neutral;
     final label = stat != null ? linkedStatLabel(stat) : 'None';
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -745,13 +744,15 @@ class _StatPicker extends StatelessWidget {
         selectedColor: color.withValues(alpha: 0.2),
         checkmarkColor: color,
         side: BorderSide(
-            color: isSelected ? color : AppColors.neutral.withValues(alpha: 0.4)),
+            color:
+                isSelected ? color : AppColors.neutral.withValues(alpha: 0.4)),
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (stat != null) ...[
               Icon(linkedStatIcon(stat),
-                  size: 13, color: isSelected ? color : AppColors.textSecondary),
+                  size: 13,
+                  color: isSelected ? color : AppColors.textSecondary),
               const SizedBox(width: 4),
             ],
             Text(label,
@@ -867,8 +868,9 @@ class _GroupOption extends StatelessWidget {
               isSelected ? color.withValues(alpha: 0.12) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color:
-                isSelected ? color : Theme.of(context).colorScheme.outlineVariant,
+            color: isSelected
+                ? color
+                : Theme.of(context).colorScheme.outlineVariant,
             width: isSelected ? 1.5 : 1,
           ),
         ),

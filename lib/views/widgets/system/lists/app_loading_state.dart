@@ -28,8 +28,7 @@ class AppLoadingState extends StatelessWidget {
             if (message != null) ...[
               const SizedBox(height: AppSpacing.md),
               Text(message!,
-                  style: AppTextStyles.bodyMedium,
-                  textAlign: TextAlign.center),
+                  style: AppTextStyles.bodyMedium, textAlign: TextAlign.center),
             ],
           ],
         ),

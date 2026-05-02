@@ -261,7 +261,8 @@ class _TypeOption extends StatelessWidget {
             curve: Curves.easeOut,
             height: double.infinity,
             decoration: BoxDecoration(
-              color: selected ? color.withValues(alpha: 0.15) : Colors.transparent,
+              color:
+                  selected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.horizontal(
                 left: isLeft ? const Radius.circular(12) : Radius.zero,
                 right: !isLeft ? const Radius.circular(12) : Radius.zero,
@@ -274,16 +275,14 @@ class _TypeOption extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon,
-                    size: 14,
-                    color: selected ? color : cs.onSurfaceVariant),
+                    size: 14, color: selected ? color : cs.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
                     color: selected ? color : cs.onSurfaceVariant,
                     fontSize: 13,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.normal,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                   ),
                 ),
               ],
@@ -405,7 +404,10 @@ class _CategoryTile extends StatelessWidget {
               borderRadius: BorderRadius.circular(22),
               child: Icon(
                 Icons.delete_outline_rounded,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.5),
                 size: 18,
               ),
             ),

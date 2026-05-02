@@ -28,10 +28,11 @@ class StatRadarChart extends StatelessWidget {
       child: CustomPaint(
         painter: _RadarChartPainter(
           stats,
-          fillColor: fillColor ?? theme.colorScheme.primary.withValues(alpha: 0.3),
+          fillColor:
+              fillColor ?? theme.colorScheme.primary.withValues(alpha: 0.3),
           borderColor: borderColor ?? theme.colorScheme.primary,
-          gridColor: gridColor ??
-              theme.colorScheme.onSurface.withValues(alpha: 0.2),
+          gridColor:
+              gridColor ?? theme.colorScheme.onSurface.withValues(alpha: 0.2),
           labelColor: labelColor ?? theme.colorScheme.onSurfaceVariant,
         ),
       ),
@@ -118,8 +119,8 @@ class _RadarChartPainter extends CustomPainter {
             color: labelColor, fontSize: 10, fontWeight: FontWeight.bold),
       );
       textPainter.layout();
-      textPainter.paint(
-          canvas, Offset(x - textPainter.width / 2, y - textPainter.height / 2));
+      textPainter.paint(canvas,
+          Offset(x - textPainter.width / 2, y - textPainter.height / 2));
     }
   }
 

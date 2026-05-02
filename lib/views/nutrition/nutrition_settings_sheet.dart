@@ -230,8 +230,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                         style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 10),
-                    _AiCoachDownloadCard(
-                        presenter: widget.aiCoachPresenter!),
+                    _AiCoachDownloadCard(presenter: widget.aiCoachPresenter!),
                     const SizedBox(height: 24),
                   ],
 
@@ -293,7 +292,8 @@ class _ModeTile extends StatelessWidget {
                 Text(
                   mode.label,
                   style: TextStyle(
-                    color: selected ? AppColors.gold : theme.colorScheme.onSurface,
+                    color:
+                        selected ? AppColors.gold : theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -379,8 +379,7 @@ class _TdeeCard extends StatelessWidget {
               onPressed: () => Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (_) =>
-                        TdeeSetupScreen(presenter: presenter)),
+                    builder: (_) => TdeeSetupScreen(presenter: presenter)),
               ),
               child: Text(
                 profile == null ? 'Set up TDEE' : 'Edit TDEE profile',
@@ -466,8 +465,7 @@ class _AiCoachDownloadCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.primary.withValues(alpha: 0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Text('🧠', style: TextStyle(fontSize: 14)),

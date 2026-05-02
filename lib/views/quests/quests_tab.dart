@@ -28,7 +28,8 @@ class _QuestsTabState extends State<QuestsTab> {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: presenter,
-      builder: (context, _) => _isManaging ? _buildManageView() : _buildDailyView(),
+      builder: (context, _) =>
+          _isManaging ? _buildManageView() : _buildDailyView(),
     );
   }
 
@@ -222,9 +223,7 @@ class _QuestsTabState extends State<QuestsTab> {
             sliver: SliverToBoxAdapter(
               child: AppSection(
                 title: 'All Quests',
-                hint: groups.isNotEmpty
-                    ? 'Grouped quests appear above'
-                    : null,
+                hint: groups.isNotEmpty ? 'Grouped quests appear above' : null,
                 child: allQuests.isEmpty
                     ? Padding(
                         padding:

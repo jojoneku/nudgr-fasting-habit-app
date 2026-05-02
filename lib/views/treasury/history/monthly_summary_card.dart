@@ -21,8 +21,8 @@ class MonthlySummaryCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final netPositive = summary.netSavings >= 0;
     final netColor = netPositive ? cs.tertiary : cs.error;
-    final allBillsPaid = summary.billsPaidCount == summary.billCount &&
-        summary.billCount > 0;
+    final allBillsPaid =
+        summary.billsPaidCount == summary.billCount && summary.billCount > 0;
 
     return AppCard(
       variant: AppCardVariant.elevated,
@@ -48,8 +48,7 @@ class MonthlySummaryCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
               ],
-              Icon(Icons.chevron_right,
-                  color: cs.onSurfaceVariant, size: 20),
+              Icon(Icons.chevron_right, color: cs.onSurfaceVariant, size: 20),
             ],
           ),
           const SizedBox(height: 12),
@@ -90,8 +89,7 @@ class MonthlySummaryCard extends StatelessWidget {
                       ? Icons.check_circle_outline
                       : Icons.pending_outlined,
                   label: 'Bills',
-                  value:
-                      '${summary.billsPaidCount}/${summary.billCount} paid',
+                  value: '${summary.billsPaidCount}/${summary.billCount} paid',
                   color: allBillsPaid ? cs.tertiary : cs.secondary,
                 ),
               ),

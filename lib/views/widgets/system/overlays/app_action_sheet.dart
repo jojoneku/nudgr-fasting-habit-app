@@ -93,8 +93,8 @@ class _AppActionSheetContent<T> extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     message!,
-                    style: AppTextStyles.bodySmall.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant),
+                    style: AppTextStyles.bodySmall
+                        .copyWith(color: theme.colorScheme.onSurfaceVariant),
                     textAlign: TextAlign.center,
                   ),
                 ],
@@ -144,13 +144,10 @@ class _ActionTile<T> extends StatelessWidget {
         item.label,
         style: AppTextStyles.bodyLarge.copyWith(
           color: color,
-          fontWeight:
-              item.isPrimary ? FontWeight.w600 : FontWeight.w400,
+          fontWeight: item.isPrimary ? FontWeight.w600 : FontWeight.w400,
         ),
       ),
-      onTap: item.enabled
-          ? () => Navigator.of(context).pop(item.value)
-          : null,
+      onTap: item.enabled ? () => Navigator.of(context).pop(item.value) : null,
     );
   }
 }

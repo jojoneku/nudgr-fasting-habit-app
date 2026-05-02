@@ -65,9 +65,8 @@ class _FastCompletionModalState extends State<FastCompletionModal> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final accentColor = data.wasSuccess
-        ? theme.colorScheme.primary
-        : theme.colorScheme.error;
+    final accentColor =
+        data.wasSuccess ? theme.colorScheme.primary : theme.colorScheme.error;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -97,9 +96,8 @@ class _FastCompletionModalState extends State<FastCompletionModal> {
                     ? Icons.verified_rounded
                     : Icons.cancel_rounded,
                 value: data.wasSuccess ? 'Fast complete' : 'Fast ended early',
-                color: data.wasSuccess
-                    ? AppStatColor.success
-                    : AppStatColor.error,
+                color:
+                    data.wasSuccess ? AppStatColor.success : AppStatColor.error,
               ),
               const SizedBox(height: AppSpacing.mdGenerous),
               // Duration
