@@ -12,6 +12,7 @@ class AppEmptyState extends StatelessWidget {
     this.actionLabel,
     this.onAction,
     this.iconSize = 64,
+    this.padding = const EdgeInsets.all(AppSpacing.xxl),
   });
 
   final IconData icon;
@@ -20,13 +21,14 @@ class AppEmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
   final double iconSize;
+  final EdgeInsetsGeometry padding;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xxl),
+        padding: padding,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

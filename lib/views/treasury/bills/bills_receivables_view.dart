@@ -410,7 +410,7 @@ class _BillsSection extends StatelessWidget {
     final paidCount = bills.where((b) => b.isPaid).length;
 
     return _SectionCard(
-      title: 'BILLS',
+      title: 'Bills',
       count: bills.length,
       subtitle: '$paidCount/${bills.length} paid',
       accentColor: colorScheme.error,
@@ -449,7 +449,7 @@ class _ReceivablesSection extends StatelessWidget {
     final receivedCount = receivables.where((r) => r.isReceived).length;
 
     return _SectionCard(
-      title: 'RECEIVABLES',
+      title: 'Receivables',
       count: receivables.length,
       subtitle: '$receivedCount/${receivables.length} received',
       accentColor: const Color(0xFF4CAF50),
@@ -529,7 +529,7 @@ class _InstallmentsSection extends StatelessWidget {
         : '$paidCount/${installments.length} paid · ${formatPeso(presenter.totalDueThisMonth)} due';
 
     return _SectionCard(
-      title: 'INSTALLMENTS',
+      title: 'Installments',
       count: installments.length,
       subtitle: subtitle,
       accentColor: const Color(0xFF9C27B0),

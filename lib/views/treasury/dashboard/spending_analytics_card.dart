@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_spending_history_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -50,10 +51,11 @@ class SpendingAnalyticsCard extends StatelessWidget {
               height: 120,
               child: hasData
                   ? _BarChart(days: days, peak: peak)
-                  : AppEmptyState(
+                  : const AppEmptyState(
                       icon: Icons.bar_chart_rounded,
                       title: 'No spending recorded yet',
                       iconSize: 36,
+                      padding: EdgeInsets.all(AppSpacing.md),
                     ),
             ),
             const SizedBox(height: 12),
@@ -166,7 +168,7 @@ class _BarChartPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     if (days.isEmpty) return;
 
-    final barAreaTop = _topPad;
+    const barAreaTop = _topPad;
     final barAreaBottom = size.height - _labelHeight - 4;
     final barAreaH = barAreaBottom - barAreaTop;
 

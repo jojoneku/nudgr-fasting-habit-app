@@ -75,7 +75,7 @@ class AppCard extends StatelessWidget {
     Widget card = Material(
       color: resolvedColor,
       elevation: elevation,
-      borderRadius: radius,
+      borderRadius: border != null ? null : radius,
       shape: border != null
           ? RoundedRectangleBorder(borderRadius: radius, side: border)
           : null,

@@ -162,6 +162,7 @@ class _QuestsTabState extends State<QuestsTab> {
     return AppPageScaffold.large(
       title: 'Manage',
       leading: IconButton(
+        tooltip: 'Done',
         icon: const Icon(Icons.close),
         onPressed: () => setState(() => _isManaging = false),
       ),

@@ -185,6 +185,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
             width: 44,
             height: 44,
             child: IconButton(
+              tooltip: 'Close',
               icon: const Icon(Icons.close,
                   color: AppColors.textSecondary, size: 20),
               onPressed: () => Navigator.pop(context),
@@ -853,6 +854,7 @@ class _CartRow extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           IconButton(
+            tooltip: 'Remove',
             icon: const Icon(Icons.close,
                 color: AppColors.textSecondary, size: 14),
             onPressed: onRemove,
@@ -1031,6 +1033,7 @@ class _ParseResultCardState extends State<_ParseResultCard> {
               ),
               const Spacer(),
               IconButton(
+                tooltip: 'Dismiss',
                 icon: const Icon(Icons.close,
                     color: AppColors.textSecondary, size: 16),
                 onPressed: widget.onDismiss,
@@ -1289,6 +1292,7 @@ class _AiResultCardState extends State<_AiResultCard> {
               ),
               const Spacer(),
               IconButton(
+                tooltip: 'Dismiss',
                 icon: const Icon(Icons.close,
                     color: AppColors.textSecondary, size: 16),
                 onPressed: widget.onDismiss,
