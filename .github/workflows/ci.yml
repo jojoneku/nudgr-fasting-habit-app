@@ -218,7 +218,7 @@ jobs:
 
       - name: Set up keystore
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/nudgr-release.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 --decode > android/app/nudgr-release.jks
           cat > android/key.properties <<EOF
           storePassword=${{ secrets.KEY_STORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
