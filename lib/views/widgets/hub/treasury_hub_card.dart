@@ -12,12 +12,10 @@ class TreasuryHubCard extends StatelessWidget {
     super.key,
     required this.treasury,
     required this.onNavigate,
-    required this.onLogExpense,
   });
 
   final TreasuryDashboardPresenter treasury;
   final VoidCallback onNavigate;
-  final VoidCallback onLogExpense;
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +31,6 @@ class TreasuryHubCard extends StatelessWidget {
             accentColor: AppColors.gold,
             isActive: isActive,
           ),
-          footer: AppPrimaryButton(label: 'Log expense', height: 44, onPressed: onLogExpense),
           child: _Snapshot(treasury: treasury, isActive: isActive),
         );
       },
@@ -61,7 +58,7 @@ class _Snapshot extends StatelessWidget {
           children: [
             Text(
               formatPesoCompact(todaySpend),
-              style: AppTextStyles.numeric(fontSize: 22, weight: FontWeight.w600),
+              style: AppTextStyles.titleLarge,
             ),
             const SizedBox(width: 6),
             Text(

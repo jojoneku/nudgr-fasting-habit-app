@@ -37,6 +37,7 @@ class QuestsHubCard extends StatelessWidget {
                   label: 'Mark done',
                   height: 44,
                   onPressed: onMarkComplete,
+                  variant: AppButtonVariant.tonal,
                 )
               : null,
           child: isActive

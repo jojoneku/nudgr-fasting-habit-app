@@ -9,7 +9,6 @@ import '../models/user_stats.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
 import 'widgets/level_up_overlay.dart';
-import 'widgets/stat_radar_chart.dart';
 import 'settings_screen.dart';
 import 'widgets/system/system.dart';
 
@@ -65,9 +64,9 @@ class StatsView extends StatelessWidget {
                     delegate: SliverChildListDelegate([
                       _HeaderCard(presenter: presenter, stats: stats),
                       const SizedBox(height: AppSpacing.md),
-                      _AttributesSection(presenter: presenter, stats: stats),
-                      const SizedBox(height: AppSpacing.md),
                       _StreaksSection(stats: stats, presenter: presenter),
+                      const SizedBox(height: AppSpacing.md),
+                      _AttributesSection(presenter: presenter, stats: stats),
                     ]),
                   ),
                 ),
@@ -250,7 +249,6 @@ class _AttributesSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final canSpend = stats.statPoints > 0;
     final rowCount = (_attrDefs.length + 1) ~/ 2;
 
@@ -258,26 +256,6 @@ class _AttributesSection extends StatelessWidget {
       title: 'Attributes',
       child: Column(
         children: [
-          AppCard(
-            variant: AppCardVariant.elevated,
-            child: Center(
-              child: StatRadarChart(
-                stats: {
-                  'STR': stats.attributes.str,
-                  'VIT': stats.attributes.vit,
-                  'AGI': stats.attributes.agi,
-                  'INT': stats.attributes.intl,
-                  'SEN': stats.attributes.sen,
-                },
-                size: 180,
-                fillColor: theme.colorScheme.primary.withValues(alpha: 0.18),
-                borderColor: theme.colorScheme.primary,
-                gridColor: theme.colorScheme.outlineVariant,
-                labelColor: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
           ...List.generate(rowCount, (rowIdx) {
             final i = rowIdx * 2;
             return Padding(

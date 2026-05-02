@@ -39,7 +39,7 @@ class TreasuryDashboardView extends StatelessWidget {
           );
         }
         return Scaffold(
-          backgroundColor: colorScheme.surface,
+          backgroundColor: colorScheme.surfaceContainerLowest,
           body: _DashboardScrollBody(
             presenter: presenter,
             onAddAccount: () => _showAccountSheet(context),

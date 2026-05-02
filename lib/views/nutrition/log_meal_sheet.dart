@@ -1401,6 +1401,13 @@ class _SearchResultRowState extends State<_SearchResultRow> {
     super.dispose();
   }
 
+  void _selectGrams(double g) {
+    setState(() {
+      _grams = g;
+      _ctrl.text = g.round().toString();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final cal = (widget.entry.caloriesPer100g * _grams / 100).round();
@@ -1410,7 +1417,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      padding: const EdgeInsets.fromLTRB(12, 10, 8, 10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: BorderRadius.circular(12),
@@ -1442,99 +1449,99 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                             style: const TextStyle(
                                 color: AppColors.success, fontSize: 11)),
                       ],
-                      const SizedBox(width: 8),
-                      Text('${_grams.round()}g',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11)),
                     ]),
                   ],
                 ),
               ),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  icon: const Icon(Icons.add_circle,
-                      color: AppColors.gold, size: 26),
-                  onPressed: () =>
-                      widget.onAdd(widget.entry.toFoodEntry(_grams)),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Grams input — standalone pill
+                  Container(
+                    width: 58,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: TextField(
+                      controller: _ctrl,
+                      keyboardType: TextInputType.number,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          color: AppColors.textPrimary, fontSize: 13),
+                      decoration: const InputDecoration(
+                        isDense: true,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        border: InputBorder.none,
+                        suffix: Text('g',
+                            style: TextStyle(
+                                color: AppColors.textSecondary, fontSize: 10)),
+                      ),
+                      onChanged: (v) {
+                        final g = double.tryParse(v);
+                        if (g != null && g > 0) setState(() => _grams = g);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  // Add button — separate
+                  SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: Material(
+                      color: AppColors.gold.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(8),
+                        onTap: () =>
+                            widget.onAdd(widget.entry.toFoodEntry(_grams)),
+                        child: const Icon(Icons.add,
+                            color: AppColors.gold, size: 18),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: [
-                ..._servingSizes.map((g) {
-                  final selected = _grams == g;
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _grams = g;
-                        _ctrl.text = g.round().toString();
-                      });
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 11),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? AppColors.gold.withValues(alpha: 0.15)
-                            : AppColors.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
+          const SizedBox(height: 8),
+          // Compact pill presets
+          Wrap(
+            spacing: 6,
+            children: _servingSizes.map((g) {
+              final selected = _grams == g;
+              return GestureDetector(
+                onTap: () => _selectGrams(g),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.gold.withValues(alpha: 0.15)
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: selected
+                          ? AppColors.gold
+                          : AppColors.textSecondary.withValues(alpha: 0.2),
+                      width: selected ? 1 : 0.5,
+                    ),
+                  ),
+                  child: Text('${g.round()}g',
+                      style: TextStyle(
                           color: selected
                               ? AppColors.gold
-                              : AppColors.textSecondary.withValues(alpha: 0.2),
-                          width: selected ? 1 : 0.5,
-                        ),
-                      ),
-                      child: Text('${g.round()}g',
-                          style: TextStyle(
-                              color: selected
-                                  ? AppColors.gold
-                                  : AppColors.textSecondary,
-                              fontSize: 11,
-                              fontWeight: selected
-                                  ? FontWeight.w600
-                                  : FontWeight.normal)),
-                    ),
-                  );
-                }),
-                SizedBox(
-                  width: 64,
-                  child: TextField(
-                    controller: _ctrl,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        color: AppColors.textPrimary, fontSize: 11),
-                    decoration: InputDecoration(
-                      hintText: 'custom',
-                      hintStyle: TextStyle(
-                          color: AppColors.textSecondary.withValues(alpha: 0.5),
-                          fontSize: 10),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 4),
-                      filled: true,
-                      fillColor: AppColors.surface,
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide.none),
-                    ),
-                    onChanged: (v) {
-                      final g = double.tryParse(v);
-                      if (g != null && g > 0) setState(() => _grams = g);
-                    },
-                  ),
+                              : AppColors.textSecondary,
+                          fontSize: 11,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.normal)),
                 ),
-              ],
-            ),
+              );
+            }).toList(),
           ),
         ],
       ),

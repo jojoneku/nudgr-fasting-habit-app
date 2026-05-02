@@ -321,43 +321,48 @@ class _TimerTabState extends State<TimerTab> {
   }
 
   Widget _buildProtocolSection(BuildContext context) {
-    final proto = _currentProtocol;
-    return AppSection(
-      title: 'Protocol',
-      trailing: TextButton.icon(
-        icon: const Icon(Icons.tune_rounded, size: 16),
-        label: const Text('More'),
-        onPressed: () => _showFullProtocolSheet(context),
-        style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppSegmentedControl<int>(
-            selected: _quickSelected,
-            segments: const [
-              (value: 16, label: '16:8', icon: null),
-              (value: 18, label: '18:6', icon: null),
-              (value: 20, label: '20:4', icon: null),
-              (value: 24, label: 'OMAD', icon: null),
-            ],
-            onChanged: (h) => presenter.updateFastingGoal(h),
+    final theme = Theme.of(context);
+    final mainProtocols =
+        FastingProtocol.all.where((p) => !p.isExtended).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 116,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.zero,
+            itemCount: mainProtocols.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, i) {
+              final p = mainProtocols[i];
+              return SizedBox(
+                width: 156,
+                child: ProtocolCard(
+                  protocol: p,
+                  isSelected: presenter.fastingGoalHours == p.hours,
+                  onTap: () => presenter.updateFastingGoal(p.hours),
+                ),
+              );
+            },
           ),
-          if (proto != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              '${proto.rpgName} · ${proto.benefit}',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        GestureDetector(
+          onTap: () => _showFullProtocolSheet(context),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Text(
+              'Extended protocols',
+              style: AppTextStyles.labelSmall.copyWith(
+                color: theme.colorScheme.primary,
+                decoration: TextDecoration.underline,
+                decorationColor: theme.colorScheme.primary,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-          ],
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -496,28 +501,49 @@ class _TimerTabState extends State<TimerTab> {
   }
 
   Widget _buildStatsStrip(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        AppStatPill(
-          icon: Icons.local_fire_department_rounded,
-          label: 'Streak',
-          value: '${presenter.currentStreak}d',
-          color: AppStatColor.warning,
-        ),
-        AppStatPill(
-          icon: Icons.emoji_events_outlined,
-          label: 'Best',
-          value: '${presenter.longestStreak}d',
-          color: AppStatColor.success,
-        ),
-        AppStatPill(
-          icon: Icons.history_rounded,
-          label: 'Fasts',
-          value: '${presenter.history.length}',
-          color: AppStatColor.neutral,
-        ),
-      ],
+    final theme = Theme.of(context);
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md, horizontal: AppSpacing.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatsCell(
+              value: '${presenter.currentStreak}',
+              unit: presenter.currentStreak == 0 ? '' : (presenter.currentStreak == 1 ? 'day' : 'days'),
+              label: 'Streak',
+              icon: Icons.local_fire_department_rounded,
+              iconColor: AppColors.gold,
+            ),
+          ),
+          Container(
+              width: 1,
+              height: 36,
+              color: theme.colorScheme.outlineVariant),
+          Expanded(
+            child: _StatsCell(
+              value: '${presenter.longestStreak}',
+              unit: presenter.longestStreak == 0 ? '' : (presenter.longestStreak == 1 ? 'day' : 'days'),
+              label: 'Best',
+              icon: Icons.emoji_events_outlined,
+              iconColor: AppColors.success,
+            ),
+          ),
+          Container(
+              width: 1,
+              height: 36,
+              color: theme.colorScheme.outlineVariant),
+          Expanded(
+            child: _StatsCell(
+              value: '${presenter.history.length}',
+              unit: '',
+              label: 'Fasts',
+              icon: Icons.history_rounded,
+              iconColor: theme.colorScheme.primary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -579,6 +605,64 @@ class _TimerTabState extends State<TimerTab> {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── _StatsCell ────────────────────────────────────────────────────────────────
+
+class _StatsCell extends StatelessWidget {
+  const _StatsCell({
+    required this.value,
+    required this.unit,
+    required this.label,
+    required this.icon,
+    required this.iconColor,
+  });
+
+  final String value;
+  final String unit;
+  final String label;
+  final IconData icon;
+  final Color iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: iconColor),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              value,
+              style: AppTextStyles.titleMedium.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+            if (unit.isNotEmpty) ...[
+              const SizedBox(width: 3),
+              Text(
+                unit,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ],
+          ],
+        ),
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 }

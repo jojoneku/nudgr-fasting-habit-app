@@ -97,11 +97,12 @@ class ProtocolCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = protocol.tierColor;
 
     return AppCard(
       variant: isSelected ? AppCardVariant.outlined : AppCardVariant.filled,
-      color: isSelected ? color.withValues(alpha: 0.08) : null,
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
+          : null,
       onTap: onTap,
       padding: const EdgeInsets.all(AppSpacing.sm + 4),
       child: Column(
@@ -125,7 +126,9 @@ class ProtocolCard extends StatelessWidget {
           Text(
             protocol.rpgName,
             style: AppTextStyles.labelLarge.copyWith(
-              color: isSelected ? color : theme.colorScheme.onSurface,
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,

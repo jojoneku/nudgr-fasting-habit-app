@@ -24,10 +24,24 @@ class HubPresenter extends ChangeNotifier {
   final QuestPresenter _quests;
   final TreasuryDashboardPresenter? _treasury;
 
-  List<HubCardType> _cardOrder = HubCardType.values.toList();
+  List<HubCardType> _cardOrder =
+      HubCardType.values.where((t) => t != HubCardType.stats).toList();
+  List<HubCardType>? _manualOrder;
   bool _pendingRecompute = false;
 
   List<HubCardType> get cardOrder => _cardOrder;
+
+  /// Called by the drag-to-reorder list. Persists the user's preferred order
+  /// and uses it as the base for future auto-recomputes.
+  void reorderCards(int oldIndex, int newIndex) {
+    if (newIndex > oldIndex) newIndex -= 1;
+    final list = List<HubCardType>.from(_cardOrder);
+    final item = list.removeAt(oldIndex);
+    list.insert(newIndex, item);
+    _cardOrder = list;
+    _manualOrder = list;
+    notifyListeners();
+  }
 
   void _onSourceChanged() {
     if (_pendingRecompute) return;
@@ -46,18 +60,17 @@ class HubPresenter extends ChangeNotifier {
       active.add(HubCardType.treasury);
     }
 
-    const defaultOrder = [
+    final base = _manualOrder ?? const [
       HubCardType.nutrition,
       HubCardType.activity,
       HubCardType.treasury,
       HubCardType.quests,
       HubCardType.fasting,
-      HubCardType.stats,
     ];
 
     final newOrder = [
       ...active,
-      ...defaultOrder.where((t) => !active.contains(t)),
+      ...base.where((t) => !active.contains(t)),
     ];
 
     if (!_listEquals(newOrder, _cardOrder)) {

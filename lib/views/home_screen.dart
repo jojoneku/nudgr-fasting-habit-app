@@ -239,12 +239,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: screens[_selectedIndex],
-      floatingActionButton: _selectedIndex < 2
+      floatingActionButton: _selectedIndex == 1
           ? _AiCoachFab(
               presenter: _aiCoachPresenter,
-              entryPoint: _selectedIndex == 1
-                  ? AiCoachEntryPoint.stats
-                  : AiCoachEntryPoint.general,
+              entryPoint: AiCoachEntryPoint.stats,
             )
           : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,

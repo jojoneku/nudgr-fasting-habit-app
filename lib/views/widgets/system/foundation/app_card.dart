@@ -41,7 +41,7 @@ class AppCard extends StatelessWidget {
 
     switch (variant) {
       case AppCardVariant.elevated:
-        resolvedColor = color ?? theme.colorScheme.surface;
+        resolvedColor = color ?? theme.colorScheme.surfaceContainerHigh;
         elevation = 1;
       case AppCardVariant.filled:
         resolvedColor = color ?? theme.colorScheme.surfaceContainerLow;

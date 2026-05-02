@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../presenters/nutrition_presenter.dart';
 import '../system/system.dart';
 import '../../../app_colors.dart';
-import '../../../utils/app_spacing.dart';
 import '../../../utils/app_text_styles.dart';
 import 'hub_card_header.dart';
 
@@ -26,10 +24,10 @@ class NutritionHubCard extends StatelessWidget {
       builder: (context, _) => AppCard(
         onTap: onNavigate,
         header: const HubCardHeader(
-          icon: Icons.science_outlined,
+          icon: Icons.restaurant_outlined,
           title: 'Nutrition',
         ),
-        footer: AppPrimaryButton(label: 'Log meal', height: 44, onPressed: onLogMeal),
+        footer: AppPrimaryButton(label: 'Log meal', height: 44, onPressed: onLogMeal, variant: AppButtonVariant.tonal),
         child: _Snapshot(nutrition: nutrition),
       ),
     );
@@ -42,79 +40,62 @@ class _Snapshot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final fmt = NumberFormat('#,###');
-    final kcal = nutrition.todayCalories;
-    final goal = nutrition.effectiveGoal;
+    final p = nutrition;
+    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        Text(
+          'CALORIES',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: AppColors.textSecondary,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        AppLinearProgress(value: p.netCalorieProgress, color: barColor, height: 3),
+        const SizedBox(height: 8),
         Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              fmt.format(kcal),
-              style: AppTextStyles.numeric(fontSize: 22, weight: FontWeight.w600),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              '/ ${fmt.format(goal)} kcal',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
+            _Cell(value: '${p.todayCalories}', label: 'Eaten'),
+            _Cell(value: '${p.remainingCalories}', label: 'Remaining', alignRight: true),
           ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _MacroBar(
-          label: 'P',
-          value: nutrition.proteinProgress,
-          color: theme.colorScheme.primary,
-        ),
-        const SizedBox(height: 4),
-        _MacroBar(
-          label: 'C',
-          value: nutrition.carbsProgress,
-          color: AppColors.gold,
-        ),
-        const SizedBox(height: 4),
-        _MacroBar(
-          label: 'F',
-          value: nutrition.fatProgress,
-          color: AppColors.secondary,
         ),
       ],
     );
   }
 }
 
-class _MacroBar extends StatelessWidget {
-  const _MacroBar({required this.label, required this.value, required this.color});
+class _Cell extends StatelessWidget {
+  const _Cell({required this.value, required this.label, this.alignRight = false});
+
+  final String value;
   final String label;
-  final double value;
-  final Color color;
+  final bool alignRight;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        SizedBox(
-          width: 14,
-          child: Text(
-            label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+    final align = alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    return Column(
+      crossAxisAlignment: align,
+        children: [
+          Text(
+            value,
+            style: AppTextStyles.labelMedium.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
             ),
           ),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: AppLinearProgress(value: value, height: 4, color: color),
-        ),
-      ],
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
     );
   }
 }

@@ -97,11 +97,11 @@ abstract final class AppTextStyles {
         letterSpacing: 0.5,
       );
 
-  // ── Numeric / Monospace (DM Mono with tabular figures) ───────────────────
+  // ── Numeric (Plus Jakarta Sans with tabular figures — no digit jitter) ──────
   static TextStyle numeric({double? fontSize, FontWeight? weight}) =>
-      GoogleFonts.dmMono(
+      GoogleFonts.plusJakartaSans(
         fontSize: fontSize,
-        fontWeight: weight ?? FontWeight.w400,
+        fontWeight: weight ?? FontWeight.w600,
         fontFeatures: const [FontFeature.tabularFigures()],
       );
 
