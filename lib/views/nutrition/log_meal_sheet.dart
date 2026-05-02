@@ -108,11 +108,12 @@ class _LogMealSheetState extends State<LogMealSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     final maxHeight = MediaQuery.sizeOf(context).height * 0.88;
 
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -152,6 +153,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildHandle() {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
         const SizedBox(height: 10),
@@ -159,7 +161,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.textSecondary.withValues(alpha: 0.3),
+            color: cs.outlineVariant,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -168,14 +170,15 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildHeader() {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
       child: Row(
         children: [
-          const Text(
+          Text(
             'Add Food',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: cs.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -186,8 +189,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
             height: 44,
             child: IconButton(
               tooltip: 'Close',
-              icon: const Icon(Icons.close,
-                  color: AppColors.textSecondary, size: 20),
+              icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 20),
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -197,25 +199,24 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildInputField() {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: TextField(
         controller: _inputCtrl,
         focusNode: _inputFocus,
         autofocus: true,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+        style: TextStyle(color: cs.onSurface, fontSize: 14),
         decoration: InputDecoration(
           hintText: 'Search or describe a meal...',
           hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.5),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.6),
             fontSize: 13,
           ),
-          prefixIcon: const Icon(Icons.search,
-              color: AppColors.textSecondary, size: 18),
+          prefixIcon: Icon(Icons.search, color: cs.onSurfaceVariant, size: 18),
           suffixIcon: _inputCtrl.text.isNotEmpty
               ? IconButton(
-                  icon: const Icon(Icons.close,
-                      color: AppColors.textSecondary, size: 16),
+                  icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 16),
                   onPressed: () {
                     _inputCtrl.clear();
                     setState(() => _searchResults = []);
@@ -224,7 +225,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 )
               : null,
           filled: true,
-          fillColor: AppColors.background,
+          fillColor: cs.surfaceContainerHighest,
           border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide.none),
@@ -296,8 +297,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
               widget.presenter.isAiEstimating
                   ? 'Estimating with AI…'
                   : 'Analyzing…',
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 13),
             ),
           ],
         ),
@@ -310,6 +312,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
     final templates = widget.presenter.savedTemplates;
 
     if (recents.isEmpty && templates.isEmpty) {
+      final cs0 = Theme.of(context).colorScheme;
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(32),
@@ -317,14 +320,13 @@ class _LogMealSheetState extends State<LogMealSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.search,
-                  color: AppColors.textSecondary.withValues(alpha: 0.25),
-                  size: 32),
+                  color: cs0.onSurfaceVariant.withValues(alpha: 0.3), size: 32),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Search the food database or describe your meal',
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    color: AppColors.textSecondary, fontSize: 13, height: 1.5),
+                    color: cs0.onSurfaceVariant, fontSize: 13, height: 1.5),
               ),
             ],
           ),
@@ -360,28 +362,31 @@ class _LogMealSheetState extends State<LogMealSheet> {
                       ));
                     }
                   },
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.background,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(t.name,
-                            style: const TextStyle(
-                                color: AppColors.textPrimary, fontSize: 12)),
-                        const SizedBox(width: 6),
-                        Text('$cal',
-                            style: const TextStyle(
-                                color: AppColors.gold,
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
+                  child: Builder(builder: (ctx) {
+                    final cs = Theme.of(ctx).colorScheme;
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(t.name,
+                              style:
+                                  TextStyle(color: cs.onSurface, fontSize: 12)),
+                          const SizedBox(width: 6),
+                          Text('$cal',
+                              style: const TextStyle(
+                                  color: AppColors.gold,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    );
+                  }),
                 );
               }).toList(),
             ),
@@ -411,21 +416,21 @@ class _LogMealSheetState extends State<LogMealSheet> {
           ],
           GestureDetector(
             onTap: _showManualEntry,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.edit_outlined,
-                    color: AppColors.textSecondary.withValues(alpha: 0.5),
-                    size: 14),
-                const SizedBox(width: 6),
-                Text(
-                  'Add manually',
-                  style: TextStyle(
-                      color: AppColors.textSecondary.withValues(alpha: 0.5),
-                      fontSize: 12),
-                ),
-              ],
-            ),
+            child: Builder(builder: (ctx) {
+              final color = Theme.of(ctx)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.5);
+              return Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit_outlined, color: color, size: 14),
+                  const SizedBox(width: 6),
+                  Text('Add manually',
+                      style: TextStyle(color: color, fontSize: 12)),
+                ],
+              );
+            }),
           ),
         ],
       ),
@@ -435,6 +440,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
   Widget _buildNoResults() {
     final aiAvailable = widget.presenter.isAiAvailable;
     final hasParseError = widget.presenter.parseError != null;
+    final cs = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -442,21 +448,20 @@ class _LogMealSheetState extends State<LogMealSheet> {
         children: [
           const SizedBox(height: 12),
           Icon(Icons.search_off,
-              color: AppColors.textSecondary.withValues(alpha: 0.25), size: 32),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.3), size: 32),
           const SizedBox(height: 8),
           Text(
             hasParseError
                 ? 'No matches found for "${_inputCtrl.text.trim()}"'
                 : 'No results for "${_inputCtrl.text.trim()}"',
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
             textAlign: TextAlign.center,
           ),
           if (hasParseError) ...[
             const SizedBox(height: 4),
-            const Text(
+            Text(
               'Try AI estimation or enter nutrients manually.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
               textAlign: TextAlign.center,
             ),
           ],
@@ -492,9 +497,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
             height: 44,
             child: OutlinedButton.icon(
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-                side: BorderSide(
-                    color: AppColors.textSecondary.withValues(alpha: 0.2)),
+                foregroundColor: cs.onSurfaceVariant,
+                side: BorderSide(color: cs.outlineVariant),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -530,8 +534,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
             ),
             GestureDetector(
               onTap: widget.presenter.clearParseResult,
-              child: const Icon(Icons.close,
-                  color: AppColors.textSecondary, size: 16),
+              child: Icon(Icons.close,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 16),
             ),
           ],
         ),
@@ -579,8 +584,9 @@ class _LogMealSheetState extends State<LogMealSheet> {
             ),
             GestureDetector(
               onTap: widget.presenter.clearEstimate,
-              child: const Icon(Icons.close,
-                  color: AppColors.textSecondary, size: 16),
+              child: Icon(Icons.close,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 16),
             ),
           ],
         ),
@@ -609,11 +615,12 @@ class _LogMealSheetState extends State<LogMealSheet> {
   }
 
   Widget _buildCart() {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -623,7 +630,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 pending: p,
                 onRemove: () => _removeEntry(p),
               )),
-          const Divider(height: 16, color: Color(0x12FFFFFF)),
+          Divider(height: 16, color: cs.outlineVariant),
           Row(
             children: [
               Text(
@@ -656,9 +663,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               const SizedBox(width: 8),
-              const Text('Save as template',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+              Text('Save as template',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
             ],
           ),
         ],
@@ -668,6 +674,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
 
   Widget _buildActions() {
     final hasItems = _pendingEntries.isNotEmpty;
+    final cs = Theme.of(context).colorScheme;
     return Row(
       children: [
         SizedBox(
@@ -675,10 +682,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
           height: 52,
           child: OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.textSecondary,
-              side: BorderSide(
-                  color: AppColors.textSecondary.withValues(alpha: 0.2),
-                  width: 0.5),
+              foregroundColor: cs.onSurfaceVariant,
+              side: BorderSide(color: cs.outlineVariant, width: 0.5),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
             ),
@@ -692,9 +697,10 @@ class _LogMealSheetState extends State<LogMealSheet> {
             height: 52,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: hasItems ? AppColors.gold : AppColors.surface,
+                backgroundColor:
+                    hasItems ? AppColors.gold : cs.surfaceContainerHigh,
                 foregroundColor:
-                    hasItems ? AppColors.background : AppColors.textSecondary,
+                    hasItems ? Colors.black87 : cs.onSurfaceVariant,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -705,7 +711,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
                       width: 18,
                       height: 18,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: AppColors.background))
+                          strokeWidth: 2, color: Colors.black87))
                   : Text(
                       hasItems
                           ? 'Log  ·  $_totalCalories kcal'
@@ -729,22 +735,21 @@ class _LogMealSheetState extends State<LogMealSheet> {
           ? _pendingEntries.first.entry.name
           : '${DateTime.now().day}/${DateTime.now().month} meal';
       final ctrl = TextEditingController(text: defaultName);
+      final cs = Theme.of(context).colorScheme;
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: AppColors.surface,
-          title: const Text('Name this template',
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 16)),
+          title: Text('Name this template',
+              style: TextStyle(color: cs.onSurface, fontSize: 16)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+            style: TextStyle(color: cs.onSurface, fontSize: 14),
             decoration: InputDecoration(
               hintText: 'Template name',
-              hintStyle:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
               filled: true,
-              fillColor: AppColors.background,
+              fillColor: cs.surfaceContainerHighest,
               border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: BorderSide.none),
@@ -759,8 +764,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel',
-                  style: TextStyle(color: AppColors.textSecondary)),
+              child:
+                  Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -817,8 +822,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
 
   Widget _sectionLabel(String label) => Text(
         label,
-        style: const TextStyle(
-            color: AppColors.textSecondary,
+        style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
             fontSize: 11,
             fontWeight: FontWeight.w500),
       );
@@ -833,6 +838,7 @@ class _CartRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -840,8 +846,7 @@ class _CartRow extends StatelessWidget {
           Expanded(
             child: Text(
               pending.entry.name,
-              style:
-                  const TextStyle(color: AppColors.textPrimary, fontSize: 13),
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -855,8 +860,7 @@ class _CartRow extends StatelessWidget {
           const SizedBox(width: 4),
           IconButton(
             tooltip: 'Remove',
-            icon: const Icon(Icons.close,
-                color: AppColors.textSecondary, size: 14),
+            icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 14),
             onPressed: onRemove,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -880,10 +884,11 @@ class _TemplateCard extends StatelessWidget {
     final isMeal = template.isMeal;
     final cal = template.totalCalories;
 
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Material(
@@ -899,14 +904,14 @@ class _TemplateCard extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Icon(
                     isMeal
                         ? Icons.restaurant_outlined
                         : Icons.set_meal_outlined,
-                    color: AppColors.textSecondary,
+                    color: cs.onSurfaceVariant,
                     size: 18,
                   ),
                 ),
@@ -916,8 +921,8 @@ class _TemplateCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(template.name,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
+                          style: TextStyle(
+                              color: cs.onSurface,
                               fontSize: 13,
                               fontWeight: FontWeight.w500)),
                       const SizedBox(height: 2),
@@ -925,8 +930,8 @@ class _TemplateCard extends StatelessWidget {
                         isMeal
                             ? '${template.entries.length} items · $cal kcal'
                             : '$cal kcal',
-                        style: const TextStyle(
-                            color: AppColors.textSecondary, fontSize: 11),
+                        style:
+                            TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1034,8 +1039,9 @@ class _ParseResultCardState extends State<_ParseResultCard> {
               const Spacer(),
               IconButton(
                 tooltip: 'Dismiss',
-                icon: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 16),
+                icon: Icon(Icons.close,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 16),
                 onPressed: widget.onDismiss,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -1065,8 +1071,10 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                           setState(() => _selected[i] = v ?? false),
                       activeColor: AppColors.primary,
                       side: BorderSide(
-                          color:
-                              AppColors.textSecondary.withValues(alpha: 0.4)),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant
+                              .withValues(alpha: 0.4)),
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
@@ -1077,14 +1085,18 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                       children: [
                         Text(
                           db?.name ?? item.name,
-                          style: const TextStyle(
-                              color: AppColors.textPrimary, fontSize: 12),
+                          style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 12),
                           overflow: TextOverflow.ellipsis,
                         ),
                         Text(
                           '${item.grams.round()}g${item.isEstimated ? ' ~est' : ''}',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 10),
+                          style: TextStyle(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                              fontSize: 10),
                         ),
                       ],
                     ),
@@ -1092,7 +1104,9 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                   Text(
                     '${hasDb ? '' : '~'}$cal kcal',
                     style: TextStyle(
-                        color: hasDb ? AppColors.gold : AppColors.textSecondary,
+                        color: hasDb
+                            ? AppColors.gold
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                         fontWeight: FontWeight.w600),
                   ),
@@ -1140,11 +1154,12 @@ class _AiUnavailableBanner extends StatelessWidget {
       builder: (_, __) {
         final downloading = presenter.isAiDownloading;
         final progress = presenter.aiDownloadProgress;
+        final cs = Theme.of(context).colorScheme;
 
         return Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.background,
+            color: cs.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(14),
           ),
           child: Column(
@@ -1161,18 +1176,18 @@ class _AiUnavailableBanner extends StatelessWidget {
                       color: AppColors.accent, size: 14),
                 ),
                 const SizedBox(width: 10),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('On-Device AI',
+                      const Text('On-Device AI',
                           style: TextStyle(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       Text('Fully private — no internet needed',
                           style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11)),
+                              color: cs.onSurfaceVariant, fontSize: 11)),
                     ],
                   ),
                 ),
@@ -1180,12 +1195,12 @@ class _AiUnavailableBanner extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(presenter.aiSizeLabel,
-                      style: const TextStyle(
-                          color: AppColors.textSecondary, fontSize: 10)),
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 10)),
                 ),
               ]),
               const SizedBox(height: 14),
@@ -1195,7 +1210,8 @@ class _AiUnavailableBanner extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress / 100.0,
                     minHeight: 6,
-                    backgroundColor: AppColors.surface,
+                    backgroundColor:
+                        Theme.of(context).colorScheme.surfaceContainerHigh,
                     valueColor:
                         const AlwaysStoppedAnimation<Color>(AppColors.accent),
                   ),
@@ -1204,9 +1220,9 @@ class _AiUnavailableBanner extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Downloading model...',
+                    Text('Downloading model...',
                         style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 11)),
+                            color: cs.onSurfaceVariant, fontSize: 11)),
                     Text('$progress%',
                         style: const TextStyle(
                             color: AppColors.accent,
@@ -1293,8 +1309,9 @@ class _AiResultCardState extends State<_AiResultCard> {
               const Spacer(),
               IconButton(
                 tooltip: 'Dismiss',
-                icon: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 16),
+                icon: Icon(Icons.close,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    size: 16),
                 onPressed: widget.onDismiss,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -1311,8 +1328,9 @@ class _AiResultCardState extends State<_AiResultCard> {
                 children: [
                   Expanded(
                     child: Text(item.name,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary, fontSize: 12)),
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 12)),
                   ),
                   if (item.protein != null)
                     _macroBadge('P', item.protein!.round(), AppColors.success),
@@ -1346,7 +1364,7 @@ class _AiResultCardState extends State<_AiResultCard> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.accent,
-                foregroundColor: AppColors.background,
+                foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
               ),
@@ -1415,11 +1433,12 @@ class _SearchResultRowState extends State<_SearchResultRow> {
         ? (widget.entry.proteinPer100g! * _grams / 100)
         : null;
 
+    final cs = Theme.of(context).colorScheme;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
       padding: const EdgeInsets.fromLTRB(12, 10, 10, 10),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1432,8 +1451,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(widget.entry.name,
-                        style: const TextStyle(
-                            color: AppColors.textPrimary,
+                        style: TextStyle(
+                            color: cs.onSurface,
                             fontSize: 13,
                             fontWeight: FontWeight.w500)),
                     const SizedBox(height: 2),
@@ -1461,7 +1480,7 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     width: 58,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: cs.surfaceContainerHigh,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     alignment: Alignment.center,
@@ -1469,16 +1488,15 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                       controller: _ctrl,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 13),
-                      decoration: const InputDecoration(
+                      style: TextStyle(color: cs.onSurface, fontSize: 13),
+                      decoration: InputDecoration(
                         isDense: true,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 8),
                         border: InputBorder.none,
                         suffix: Text('g',
                             style: TextStyle(
-                                color: AppColors.textSecondary, fontSize: 10)),
+                                color: cs.onSurfaceVariant, fontSize: 10)),
                       ),
                       onChanged: (v) {
                         final g = double.tryParse(v);
@@ -1521,20 +1539,17 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.gold.withValues(alpha: 0.15)
-                        : AppColors.surface,
+                        : cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: selected
-                          ? AppColors.gold
-                          : AppColors.textSecondary.withValues(alpha: 0.2),
+                      color: selected ? AppColors.gold : cs.outlineVariant,
                       width: selected ? 1 : 0.5,
                     ),
                   ),
                   child: Text('${g.round()}g',
                       style: TextStyle(
-                          color: selected
-                              ? AppColors.gold
-                              : AppColors.textSecondary,
+                          color:
+                              selected ? AppColors.gold : cs.onSurfaceVariant,
                           fontSize: 11,
                           fontWeight:
                               selected ? FontWeight.w600 : FontWeight.normal)),
@@ -1585,12 +1600,13 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Container(
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surfaceContainerHigh,
         borderRadius: BorderRadius.circular(24),
       ),
       child: Column(
@@ -1598,10 +1614,10 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: [
-            const Text(
+            Text(
               'Custom food',
               style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: cs.onSurface,
                   fontSize: 15,
                   fontWeight: FontWeight.w600),
             ),
@@ -1610,8 +1626,7 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
               width: 44,
               height: 44,
               child: IconButton(
-                icon: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 18),
+                icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 18),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -1620,14 +1635,14 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
           TextField(
               controller: _nameCtrl,
               autofocus: true,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: _dec('Food name', 'e.g. Chicken breast 150g')),
+              style: TextStyle(color: cs.onSurface),
+              decoration: _dec('Food name', 'e.g. Chicken breast 150g', cs)),
           const SizedBox(height: 10),
           TextField(
               controller: _calCtrl,
               keyboardType: TextInputType.number,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: _dec('Calories (kcal)', 'e.g. 320')),
+              style: TextStyle(color: cs.onSurface),
+              decoration: _dec('Calories (kcal)', 'e.g. 320', cs)),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => setState(() => _showMacros = !_showMacros),
@@ -1636,12 +1651,11 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
                   _showMacros
                       ? Icons.keyboard_arrow_up
                       : Icons.keyboard_arrow_down,
-                  color: AppColors.textSecondary,
+                  color: cs.onSurfaceVariant,
                   size: 16),
               const SizedBox(width: 4),
               Text(_showMacros ? 'Hide macros' : 'Add macros (optional)',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
             ]),
           ),
           if (_showMacros) ...[
@@ -1651,25 +1665,22 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
                   child: TextField(
                       controller: _pCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Protein', 'g'))),
+                      style: TextStyle(color: cs.onSurface, fontSize: 12),
+                      decoration: _dec('Protein', 'g', cs))),
               const SizedBox(width: 8),
               Expanded(
                   child: TextField(
                       controller: _cCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Carbs', 'g'))),
+                      style: TextStyle(color: cs.onSurface, fontSize: 12),
+                      decoration: _dec('Carbs', 'g', cs))),
               const SizedBox(width: 8),
               Expanded(
                   child: TextField(
                       controller: _fCtrl,
                       keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Fat', 'g'))),
+                      style: TextStyle(color: cs.onSurface, fontSize: 12),
+                      decoration: _dec('Fat', 'g', cs))),
             ]),
           ],
           const SizedBox(height: 16),
@@ -1679,7 +1690,7 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.gold,
-                foregroundColor: AppColors.background,
+                foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
@@ -1693,15 +1704,15 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
     );
   }
 
-  InputDecoration _dec(String label, String hint) => InputDecoration(
+  InputDecoration _dec(String label, String hint, ColorScheme cs) =>
+      InputDecoration(
         labelText: label,
         hintText: hint,
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        labelStyle: TextStyle(color: cs.onSurfaceVariant),
         hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.5),
-            fontSize: 11),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.5), fontSize: 11),
         filled: true,
-        fillColor: AppColors.background,
+        fillColor: cs.surfaceContainerHighest,
         border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide.none),

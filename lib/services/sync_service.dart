@@ -76,9 +76,9 @@ class SyncService {
   }
 
   Future<void> pushPending() async {
-    if (_isSyncing || !_isOnline || _queue.pendingCount == 0) {
+    if (_isSyncing || _queue.pendingCount == 0) {
       debugPrint(
-          'SyncService: pushPending skipped — isSyncing=$_isSyncing, isOnline=$_isOnline, pending=${_queue.pendingCount}');
+          'SyncService: pushPending skipped — isSyncing=$_isSyncing, pending=${_queue.pendingCount}');
       return;
     }
     debugPrint(
@@ -330,10 +330,6 @@ class SyncService {
   // ── Pull ─────────────────────────────────────────────────────────────────────
 
   Future<void> pullAll() async {
-    if (!_isOnline) {
-      debugPrint('SyncService: pullAll skipped — offline');
-      return;
-    }
     debugPrint('SyncService: pullAll starting for user $_userId');
     _isSyncing = true;
     _onStateChange?.call();
@@ -358,6 +354,7 @@ class SyncService {
       _storage.onRemoteDataApplied?.call();
     } catch (e) {
       debugPrint('SyncService: pullAll error: $e');
+      rethrow;
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
@@ -711,10 +708,6 @@ class SyncService {
   /// Pushes ALL local data to Supabase regardless of the sync queue.
   /// Runs only once per user per device (guarded by a SharedPreferences flag).
   Future<void> pushAll() async {
-    if (!_isOnline) {
-      debugPrint('SyncService: pushAll skipped — offline');
-      return;
-    }
     if (await _isInitialPushDone()) {
       debugPrint('SyncService: pushAll skipped — already done for this user');
       return;
@@ -736,6 +729,7 @@ class SyncService {
       debugPrint('SyncService: pushAll complete ✓');
     } catch (e) {
       debugPrint('SyncService: pushAll error: $e');
+      rethrow;
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
