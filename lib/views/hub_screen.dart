@@ -85,6 +85,24 @@ class HubScreen extends StatelessWidget {
     return 'Champion';
   }
 
+  String _getGreeting() {
+    final greetings = [
+      'Hi',
+      'Hello',
+      'Hey',
+      'Good day',
+      'Welcome',
+      'Greetings'
+    ];
+    final dayOfYear =
+        DateTime.now().difference(DateTime(DateTime.now().year)).inDays;
+    return greetings[dayOfYear % greetings.length];
+  }
+
+  String _getTitleText() {
+    return '${_getGreeting()}, ${_firstName()}';
+  }
+
   String _todayLabel() {
     return DateFormat('EEEE, MMMM d').format(DateTime.now());
   }
@@ -107,7 +125,7 @@ class HubScreen extends StatelessWidget {
     Widget nameTitle = FittedBox(
       fit: BoxFit.scaleDown,
       alignment: Alignment.centerLeft,
-      child: Text(_firstName(), style: AppTextStyles.headlineMedium),
+      child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
     );
     // Re-render whenever auth resolves so "Champion" updates to the real name.
     if (authPresenter != null) {
@@ -116,7 +134,7 @@ class HubScreen extends StatelessWidget {
         builder: (_, __) => FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(_firstName(), style: AppTextStyles.headlineMedium),
+          child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
         ),
       );
     }
@@ -140,10 +158,11 @@ class HubScreen extends StatelessWidget {
         onRefresh: _refresh,
         child: CustomScrollView(
           slivers: [
-            SliverAppBar.large(
+            SliverAppBar(
               pinned: true,
-              toolbarHeight: 36,
-              expandedHeight: 88,
+              toolbarHeight: 64,
+              collapsedHeight: 64,
+              titleSpacing: 0,
               surfaceTintColor: Colors.transparent,
               backgroundColor: stickyBg,
               title: nameTitle,

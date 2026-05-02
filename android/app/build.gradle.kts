@@ -44,20 +44,22 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-        ndk {
-            abiFilters += listOf("arm64-v8a")
-        }
     }
 
     packaging {
         jniLibs {
-            // Strip non-arm64 native libs from plugin AARs (e.g. flutter_gemma
-            // ships pre-built x86_64 libs that add ~53 MB to the APK).
-            excludes += setOf("lib/x86_64/**", "lib/x86/**", "lib/armeabi-v7a/**")
+            // Strip non-arm64 native libs from plugin AARs for release only
+            // (e.g. flutter_gemma ships pre-built x86_64 libs that add ~53 MB).
+            // Debug builds keep x86_64 for emulator support.
         }
     }
 
     buildTypes {
+        debug {
+            ndk {
+                abiFilters += listOf("arm64-v8a", "x86_64")
+            }
+        }
         release {
             signingConfig = if (keyPropertiesFile.exists())
                 signingConfigs.getByName("release")
@@ -66,6 +68,14 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             isMinifyEnabled = true
             isShrinkResources = true
+            ndk {
+                abiFilters += listOf("arm64-v8a")
+            }
+            packaging {
+                jniLibs {
+                    excludes += setOf("lib/x86_64/**", "lib/x86/**", "lib/armeabi-v7a/**")
+                }
+            }
         }
     }
 }

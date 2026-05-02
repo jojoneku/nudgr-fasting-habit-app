@@ -322,16 +322,23 @@ class _AiCoachFabState extends State<_AiCoachFab>
             width: 56,
             height: 56,
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: AppColors.primary,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.25),
+                color: AppColors.primary.withValues(alpha: 0.45),
                 width: 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.25),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: const Center(
               child: Icon(Icons.psychology_outlined,
-                  color: AppColors.primary, size: 24),
+                  color: AppColors.background, size: 24),
             ),
           ),
         ),

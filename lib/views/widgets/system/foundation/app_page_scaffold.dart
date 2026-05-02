@@ -95,8 +95,14 @@ class _AppPageScaffoldLarge extends AppPageScaffold {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final pageBackground = backgroundColor ?? theme.scaffoldBackgroundColor;
 
-    final titleSliver = SliverAppBar.large(
+    final toolbarHeight = subtitle == null ? 56.0 : 64.0;
+
+    final titleSliver = SliverAppBar(
+      toolbarHeight: toolbarHeight,
+      collapsedHeight: toolbarHeight,
+      titleSpacing: 0,
       title: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -113,7 +119,7 @@ class _AppPageScaffoldLarge extends AppPageScaffold {
       ),
       actions: actions,
       leading: leading,
-      backgroundColor: backgroundColor,
+      backgroundColor: pageBackground,
       surfaceTintColor: Colors.transparent,
       pinned: true,
     );
@@ -130,7 +136,7 @@ class _AppPageScaffoldLarge extends AppPageScaffold {
     }
 
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: pageBackground,
       body: scrollView,
       floatingActionButton: floatingActionButton,
       bottomNavigationBar: bottomNavigationBar,
