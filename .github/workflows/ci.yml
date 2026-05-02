@@ -200,8 +200,8 @@ jobs:
 
           NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
           BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 2100))
-          APK_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/app-release.apk"
-          MANIFEST_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/manifest.json"
+          APK_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/v${NEW_VERSION}/app-release.apk"
+          MANIFEST_URL="https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/manifest.json"
           RELEASED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
@@ -252,23 +252,15 @@ jobs:
             "${{ steps.meta.outputs.released_at }}" > manifest.json
           cat manifest.json
 
-      - name: Upload manifest to Supabase
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          curl -sf -X POST \
-            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/manifest.json" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Content-Type: application/json" \
-            -H "x-upsert: true" \
-            --data-binary @manifest.json
-
-      - name: Upload APK to Supabase
-        run: |
-          curl -sf -X POST \
-            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/app-release.apk" \
-            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
-            -H "Content-Type: application/vnd.android.package-archive" \
-            -H "x-upsert: true" \
-            --data-binary @build/app/outputs/flutter-apk/app-release.apk
+          gh release create "v${{ steps.meta.outputs.new_version }}" \
+            --title "v${{ steps.meta.outputs.new_version }}" \
+            --notes "${{ steps.meta.outputs.release_notes }}" \
+            build/app/outputs/flutter-apk/app-release.apk \
+            manifest.json
 
       - name: Commit version bump
         run: |
