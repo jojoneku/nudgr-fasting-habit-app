@@ -1,260 +1,197 @@
-# Plan 017 — UI Design System Overhaul: Modern M3 + HIG Taste
+# Plan 017 — Design Tokens + ThemeData (Foundation)
+
+> Blocks **017W** (widget library), which blocks **017a–017h** (page plans).
 
 ## Goal
 
-Pivot the app's visual identity from Solo Leveling cyberpunk gaming aesthetic to a **modern, premium lifestyle app** — while keeping all gamification mechanics intact. Lock in Material 3 as the structural foundation, with Apple HIG–inspired spacing, motion restraint, and visual hierarchy. Support both **dark (default)** and **light modes**. Keep the existing color palette, adapting for both modes.
+Lock in the **token layer** and **dual-mode `ThemeData`** for the visual overhaul. No widgets, no page changes — purely the foundation that 017W (widget library) and the page plans will consume.
+
+When 017 is merged, the app continues to render identically. The change is internal: token files exist, both `ThemeData` factories are wired, theme persistence works.
+
+---
+
+## Why a Tokens-Only Plan
+
+Splitting tokens from the widget library and from page work yields:
+
+- **Smaller, reviewable PRs** — token changes are easy to verify; widgets and pages each get their own focus.
+- **Light mode for free downstream** — once tokens + ThemeData are right, every primitive built in 017W reads from them.
+- **Cheaper iteration** — adjusting a radius / spacing / motion duration means editing one file, not chasing usages.
 
 ---
 
 ## Design Philosophy
 
-### What Changes
+M3 is the **structural foundation** (ColorScheme, ThemeData, motion tokens, component contracts). HIG is the **taste layer** that shapes how those pieces feel — surface contrast over elevation for grouping, generous breathing room, spring-based motion, weight-driven typographic hierarchy.
+
 | Before | After |
 |---|---|
 | Glow-heavy shadows, neon ring effects | Subtle elevation + M3 surface tint |
-| All-caps RPG labels ("SYSTEM INTERFACE", "INITIATE FAST") | Sentence case with accent typography |
-| Border-glow cards | Clean M3 elevated cards with surface tint |
-| Solo Leveling language in navigation/headers | Neutral, lifestyle-app language |
+| All-caps RPG labels | Sentence case with accent typography |
+| Border-glow cards | Filled cards with surface contrast (HIG grouping) — elevation reserved for true lift |
+| Solo Leveling language in chrome | Neutral, lifestyle-app language (in page plans) |
 | Dark-only forced | Dark default + light mode switchable |
+| Cubic-only motion | Spring curves on appearances; cubics still used for layout transitions |
+| Color/size for hierarchy | Type **weight** (semibold) for hierarchy where possible |
 
-### What Stays
-- Color palette (cyan, teal, amber, red, green) — refined for both modes, not replaced
-- Custom ring painter + radar chart — kept, just cleaned up (less glow)
-- RPG mechanics (XP, levels, ranks, HP, streaks) — fully unchanged
-- Overall structure (hub grid, stats view, feature screens)
-- MVP architecture, ListenableBuilder pattern
+**What stays:** color palette (refined), custom painters (parameterized in 017W), RPG mechanics, MVP architecture.
 
----
+### HIG influence (concrete)
 
-## Typography Direction
-
-Replace current type stack with:
-- **`Plus Jakarta Sans`** — headings, body, labels (clean, modern, premium)
-- **`DM Mono`** — numbers, timers, financial displays (replaces Roboto Mono, drop-in compatible)
-
-Both are available on Google Fonts, already installed as a dependency.
-
----
-
-## Color Token Strategy
-
-### Dark Mode (keep existing palette, refine)
-- Reduce glow alpha: 30% → 10–15% on all `MaskFilter.blur` effects
-- Background: `#0A0E14`, Surface: `#1C2128` — no change
-- Accent colors: no change (desaturated cyan/teal already right)
-
-### Light Mode (new)
-| Token | Value | Notes |
-|---|---|---|
-| Background | `#F8FAFC` | Warm slate white |
-| Surface | `#FFFFFF` | Clean white |
-| Surface Variant | `#EFF3F8` | Subtle section backgrounds |
-| Primary | `#0288D1` | Darker cyan for legibility on white |
-| Secondary | `#00838F` | Darker teal |
-| Text Primary | `#0F1923` | Near-black (not pure black) |
-| Text Secondary | `#4A5568` | Accessible grey |
-| Error | `#D32F2F` | Darker red for light backgrounds |
-| Success | `#388E3C` | Darker green |
-| Gold | `#F9A825` | Darker amber |
-
-Finance category palettes are data-viz colors — keep as-is (sufficient contrast with borders).
+| HIG signature | Where it lands |
+|---|---|
+| Filled cards as default; elevated for true lift | `flex_color_scheme` overridden — `cardElevation: 0`, surface contrast does the grouping |
+| Generous section rhythm (~20pt) | `AppSpacing.mdGenerous = 20` token added; sections use it |
+| Spring motion on appearances | `AppMotion.spring` curve preset added |
+| Semibold for hierarchy | `AppTextStyles.titleMedium`+ pinned at `w600`, body stays `w400` |
+| Inset grouped lists | Provided by `AppListTile.insetGrouped` in 017W |
+| Action sheets for choices | Provided by `AppActionSheet` in 017W |
+| Large titles that collapse | Provided by `AppPageScaffold.large()` in 017W |
 
 ---
 
-## Spacing System (HIG-taste)
+## Package Additions
 
-```
-xs:  4px   — icon padding, tight spacing
-sm:  8px   — chip gap, between-row spacing
-md:  16px  — card padding, horizontal page margin
-lg:  24px  — section top margin
-xl:  32px  — major vertical rhythm
-xxl: 48px  — hero/display spacing
-```
+| Package | Why |
+|---|---|
+| `flex_color_scheme` | Generates M3 light + dark `ThemeData` with all component sub-themes pre-configured. Cuts ~70% of hand-rolled `*Theme` config. Any specific override stays explicit. |
 
-New file: `lib/utils/app_spacing.dart`
+Add to `pubspec.yaml` in Phase 2.
 
 ---
 
-## Motion Tokens (HIG-restrained)
+## Phase 1 — Token Layer
 
-```
-micro:   150ms  ease-out           — button/chip presses
-appear:  200ms  ease-out           — card/chip enter (scale 0.97→1.0, opacity 0→1)
-modal:   300ms  cubic(0.2,0,0,1)  — bottom sheet / dialog entrance (M3 standard)
-page:    250ms  ease-in-out        — route transitions
-```
-
-**Remove:** pulsing glow animations, any animation > 400ms.
-
-New file: `lib/utils/app_motion.dart`
-
----
-
-## Phases
-
-### Phase 1 — Design System Foundation (Token Layer)
-> No screen changes. Lock in the token system.
+> Pure constants. No widgets, no theming yet.
 
 | File | Action |
 |---|---|
-| `lib/utils/app_colors.dart` | Add `AppColorsLight` static class with light mode counterparts |
-| `lib/utils/app_text_styles.dart` | Full rewrite: Plus Jakarta Sans + DM Mono, full M3 TypeScale mapping |
-| `lib/utils/app_spacing.dart` | **Create** — spacing constants |
-| `lib/utils/app_motion.dart` | **Create** — duration + curve constants |
+| `lib/utils/app_colors.dart` | Add `AppColorsLight` static class mirroring the existing dark palette |
+| `lib/utils/app_text_styles.dart` | Full rewrite — Plus Jakarta Sans (text) + DM Mono (numerics with `tabularFigures` enabled), full M3 type scale. **Weight discipline:** `display*` w700, `headline*` w700, `title*` w600 (HIG hierarchy via weight), `body*` w400, `label*` w500 |
+| `lib/utils/app_spacing.dart` | **Create** — `xs 4 / sm 8 / md 16 / mdGenerous 20 / lg 24 / xl 32 / xxl 48`. `mdGenerous` is the HIG-rhythm token used between sections and around hero blocks |
+| `lib/utils/app_motion.dart` | **Create** — durations: `micro 150ms / appear 200ms / modal 300ms / page 250ms`. Curves: `easeOut`, `easeInOut`, `decelerate`, **`spring`** (custom `Cubic(0.32, 0.72, 0, 1)` — settled HIG-feel; use on entrances) |
+| `lib/utils/app_radii.dart` | **Create** — `sm 8 / md 12 / lg 16 / xl 20 / xxl 28 / pill StadiumBorder` |
+| `lib/utils/app_elevation.dart` | **Create** — `level0..level3` (0/1/3/6) for M3 elevation steps |
+
+### Light mode palette (new in `AppColorsLight`)
+
+| Token | Value |
+|---|---|
+| Background | `#F8FAFC` |
+| Surface | `#FFFFFF` |
+| Surface Variant | `#EFF3F8` |
+| Primary | `#0288D1` |
+| Secondary | `#00838F` |
+| Text Primary | `#0F1923` |
+| Text Secondary | `#4A5568` |
+| Error | `#D32F2F` |
+| Success | `#388E3C` |
+| Gold | `#F9A825` |
+
+Finance category colors stay as-is (used as fills with borders).
 
 ---
 
-### Phase 2 — Theme Wiring (ThemeData Layer)
-> Wire both ThemeData objects and persistence.
+## Phase 2 — ThemeData Wiring
+
+> Both modes wired and switchable. Persistence added. Driven by `flex_color_scheme`.
 
 | File | Action |
 |---|---|
-| `lib/views/fasting_app.dart` | Create `_darkTheme()` + `_lightTheme()` factories; wire themeMode from presenter |
-| `lib/services/storage_service.dart` | Add `theme_mode` key + `getThemeMode` / `saveThemeMode` methods |
-| `lib/presenters/settings_presenter.dart` | Add `themeMode` getter/setter |
+| `pubspec.yaml` | Add `flex_color_scheme: ^7.x` (latest stable) |
+| `lib/views/fasting_app.dart` | Replace any inline `ThemeData()` with `_darkTheme()` / `_lightTheme()` factories built via `FlexThemeData.dark()` / `.light()`; wire `themeMode` from `SettingsPresenter` |
+| `lib/services/storage_service.dart` | Add `kThemeMode` key + `getThemeMode()` / `saveThemeMode(ThemeMode)` |
+| `lib/presenters/settings_presenter.dart` | Add `themeMode` getter + `setThemeMode(ThemeMode)` |
 
-**ThemeData components to customize in both modes:**
-- `AppBarTheme` — no elevation, correct foreground
-- `NavigationBarTheme` — active indicator, icon/label colors
-- `CardTheme` — elevation 1, rounded 16px (not 32px), subtle shadow
-- `FilledButton` / `OutlinedButton` / `TextButton`
-- `ChipTheme` — compact, readable
-- `InputDecorationTheme` — filled style, rounded
-- `BottomSheetTheme` — drag handle, top radius 20px
-- `DialogTheme` — rounded 24px
+### `flex_color_scheme` configuration (key settings)
+
+- `colors:` derived from `AppColors` / `AppColorsLight` (we feed our palette in, not a generated seed)
+- `useMaterial3: true`
+- `subThemesData: FlexSubThemesData(`
+  - `defaultRadius: AppRadii.lg` (16)
+  - `inputDecoratorRadius: AppRadii.md` (12)
+  - `cardRadius: AppRadii.lg` (16)
+  - **`cardElevation: 0`** — HIG default; cards group via surface contrast, not shadow. Pages can opt-in to elevation per-card via `AppCard(variant: elevated)`
+  - `bottomSheetRadius: 20`
+  - `dialogRadius: AppRadii.xxl` (28)
+  - `appBarBackgroundSchemeColor: SchemeColor.surface`
+  - `bottomNavigationBarMutedUnselectedIcon: true`
+  - `chipRadius: AppRadii.sm`
+  - `snackBarRadius: AppRadii.md`
+  - `snackBarBehavior: SnackBarBehavior.floating`
+  - `)`
+- `appBarStyle: FlexAppBarStyle.surface, appBarElevation: 0`
+- `tabBarStyle: FlexTabBarStyle.flutterDefault`
+
+### Page transitions (HIG-flavored)
+
+- `pageTransitionsTheme:` use `ZoomPageTransitionsBuilder` (Android) — settled, HIG-adjacent. Avoid the default sliding `OpenUpwardsPageTransitionsBuilder`.
+- Bottom sheet entrance / dialog entrance use `AppMotion.spring` curve (300ms / 200ms respectively).
+
+### Manual overrides on top of `flex_color_scheme`
+
+After the base ThemeData is generated, override:
+- `textTheme:` injected from `AppTextStyles` (Plus Jakarta Sans + DM Mono via `google_fonts`)
+- `extensions:` add `ThemeExtension` for any tokens flex doesn't carry (custom motion durations, glow opacity)
 
 ---
 
-### Phase 3 — Hub Screen + Navigation
-> First thing users see. High impact.
+## Phase 3 — Theme Persistence
 
-| File | Action |
+| Concern | Implementation |
 |---|---|
-| `lib/views/tabs/hub_screen.dart` | Remove "SYSTEM INTERFACE" header; redesign module cards: clean M3 elevated cards (icon + label + badge). Keep 2-col grid. |
-| `lib/views/fasting_app.dart` | NavigationBar: clean labels, refined active indicator |
-
-**Hub card redesign direction:** Replace border-glow cards with M3 `Card` (elevation 1) + `surfaceTint`. Icon in a filled container. Module name in `titleMedium`. Locked state: reduced opacity + lock icon overlay.
-
----
-
-### Phase 4 — Fasting Timer Screen
-> Core loop. Most-used screen.
-
-| File | Action |
-|---|---|
-| `lib/views/fasting/fasting_tab.dart` (+ related) | Modernize layout; reduce ring glow to subtle shadow; rename "INITIATE FAST" → "Start Fast"; clean button hierarchy; polish protocol card |
-| `lib/views/fasting/painters/partial_ring_painter.dart` | Reduce `MaskFilter.blur` opacity; accept color params (no hardcoded AppColors) |
-
----
-
-### Phase 5 — Stats / Character View
-> Keep RPG mechanics, modernize the surface.
-
-| File | Action |
-|---|---|
-| `lib/views/character/stats_view.dart` | Modernize rank display: hexagon badge → clean pill chip; clean HP/XP bars; radar chart stays but wrapped in M3 surface card; attribute grid gets cleaner label/value layout |
-| Radar chart painter | Accept color params for theme-awareness |
-
----
-
-### Phase 6 — Supporting Screens
-> Bring Nutrition, Quests, Activity, Treasury into the system.
-
-| Files | Action |
-|---|---|
-| `lib/views/nutrition/*` | Apply spacing tokens, new card style, typography |
-| `lib/views/quests/*` | Clean list/card layouts, remove RPG-heavy header labels |
-| `lib/views/activity/*` | Apply spacing + card system |
-| `lib/views/treasury/*` | Apply card + typography system (financial displays → DM Mono confirmed) |
-
----
-
-### Phase 7 — Polish + QA
-- Add HIG-taste page transitions (subtle fade-through or shared-axis, not default Android slide)
-- Light mode QA pass: verify every screen
-- Accessibility check: WCAG AA contrast on all text pairs
-- Touch target audit: all interactive elements ≥ 44×44px
-- Animation timing audit: no animation > 400ms
-
----
-
-## Interface Definitions
-
-### StorageService (new additions)
-```dart
-static const String kThemeMode = 'theme_mode'; // 'dark' | 'light' | 'system'
-
-Future<ThemeMode> getThemeMode();
-Future<void> saveThemeMode(ThemeMode mode);
-```
-
-### SettingsPresenter (new additions)
-```dart
-ThemeMode get themeMode;
-
-Future<void> setThemeMode(ThemeMode mode);
-```
-
-> **Decided:** Theme toggle lives in the Settings screen. No hub-level access.
-
-### Custom Painters (new interface)
-```dart
-// Pass colors as constructor params so Views inject theme-aware values
-// instead of reading AppColors directly inside the painter
-PartialRingPainter({
-  required Color primaryColor,
-  required Color trackColor,
-  double glowOpacity = 0.12, // reduced from current ~0.30
-  ...
-})
-
-StatRadarChart({
-  required Color fillColor,
-  required Color borderColor,
-  required Color gridColor,
-  required Color labelColor,
-  ...
-})
-```
-
----
-
-## Risks & Edge Cases
-
-| Risk | Mitigation |
-|---|---|
-| Custom painters use hardcoded `AppColors.*` | Pass colors as constructor params (Phase 4 + 5) |
-| Finance category colors too light for light mode text | Used as fill colors with border — acceptable; revisit in Phase 7 QA |
-| Adding Plus Jakarta Sans increases first load | Use `GoogleFonts.plusJakartaSansTextTheme()` batch approach, not per-widget |
-| RPG labels deeply embedded ("Days Since Awakening", rank names) | This plan covers **visual** modernization only — content language is a separate product decision, defer to user |
-| `useMaterial3: true` already set | Good — no flag change needed, just fix ThemeData values |
+| Persistence | `StorageService.saveThemeMode(ThemeMode)` stores `'system' | 'light' | 'dark'` strings |
+| Default | `ThemeMode.system` on first launch (M3 best practice — respects OS) |
+| Hot-swap | `SettingsPresenter` is a `ChangeNotifier`; `fasting_app.dart` rebuilds on `themeMode` change — no app restart |
+| **No UI in 017** | The Settings UI for the toggle is built in **017h**. For dev / testing of light mode in the meantime, expose a temporary debug menu or test from device theme settings |
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] Both dark and light `ThemeData` defined and switchable at runtime
-- [ ] Theme preference persisted across app restarts
-- [ ] No hardcoded colors in View files — all via `Theme.of(context)` or AppColors tokens
-- [ ] Plus Jakarta Sans + DM Mono applied across all screens
-- [ ] Hub module cards: no glow borders, M3 card style
-- [ ] Fasting ring: glow ≤ 15% opacity, layout clean
-- [ ] All touch targets ≥ 44×44px
-- [ ] All animations within 150–300ms (hard cap 400ms)
-- [ ] Light mode: WCAG AA contrast on all text/background pairs
-- [ ] Navigation bar: no RPG-styled labels
-- [ ] Custom painters accept color params (no internal AppColors references)
+- [ ] Token files (colors / type / spacing / motion / radii / elevation) created
+- [ ] `flex_color_scheme` added to `pubspec.yaml`
+- [ ] Both dark and light `ThemeData` defined via `FlexThemeData.*` + manual overrides
+- [ ] App switches mode at runtime via `SettingsPresenter.setThemeMode`
+- [ ] Theme preference persisted via `StorageService` and restored on cold start
+- [ ] `useMaterial3: true` (verified)
+- [ ] No visual regressions on any existing screen — app looks unchanged
+- [ ] No hardcoded colors / radii / spacings / durations introduced in this plan's changes
+- [ ] `AppTextStyles` registered as `ThemeData.textTheme` and applied app-wide
 
 ---
 
-## Non-Goals for This Plan
-- Changing RPG mechanics (XP math, leveling, streaks — untouched)
-- New features or screens
-- Backend/data layer changes (except themeMode persistence)
-- Icon set redesign
-- Full RPG language rebrand (product decision, separate conversation)
+## Out of Scope (covered by other plans)
+
+- Reusable widget library — **017W**
+- Migration of existing widgets in `lib/views/widgets/` — **017W Phase 6**
+- Page redesigns — **017a–017h**
+- Page transitions / motion audit / accessibility QA — **017i**
+- Settings UI for theme toggle — **017h**
+- Custom painter parameterization — **017W Phase 6**
+- RPG content language changes — handled in each page plan
 
 ---
 
-*Plan 017 — ready for approval. Phase 1 can start immediately after alignment.*
+## Risks
+
+| Risk | Mitigation |
+|---|---|
+| `flex_color_scheme` opinions don't fit our palette | Feed exact `AppColors` values; manually override any sub-theme it gets wrong |
+| Plus Jakarta Sans bloats first frame | Use `GoogleFonts.plusJakartaSansTextTheme()` once at theme level; verify with airplane-mode test that fonts are bundled, not fetched |
+| Light mode contrast on finance category colors | Used as fills with borders — acceptable; revisit in 017i QA |
+| ThemeMode hot-swap rebuilds entire tree | Acceptable; `MaterialApp` rebuild is cheap relative to gain |
+
+---
+
+## Plans That Build On 017
+
+| Plan | Depends On |
+|---|---|
+| 017W | 017 |
+| 017a–017h | 017 + 017W |
+| 017i | 017a–017h |
+
+---
+
+*Plan 017 — tokens + theme only. Phase 1 can start immediately after alignment.*
