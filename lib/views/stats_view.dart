@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
 import '../presenters/auth_presenter.dart';
+import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/sync_presenter.dart';
@@ -18,12 +19,14 @@ class StatsView extends StatelessWidget {
     required this.presenter,
     required this.fastingPresenter,
     required this.authPresenter,
+    required this.settingsPresenter,
     this.syncPresenter,
   });
 
   final StatsPresenter presenter;
   final FastingPresenter fastingPresenter;
   final AuthPresenter authPresenter;
+  final SettingsPresenter settingsPresenter;
   final SyncPresenter? syncPresenter;
 
   @override
@@ -45,6 +48,7 @@ class StatsView extends StatelessWidget {
                       builder: (_) => SettingsScreen(
                         fastingPresenter: fastingPresenter,
                         authPresenter: authPresenter,
+                        settingsPresenter: settingsPresenter,
                         syncPresenter: syncPresenter,
                       ),
                     ),

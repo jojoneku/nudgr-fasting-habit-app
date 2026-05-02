@@ -185,7 +185,7 @@ class _FastingAppState extends State<FastingApp> {
         theme: _lightTheme(),
         darkTheme: _darkTheme(),
         themeMode: _settingsPresenter.themeMode,
-        home: const HomeScreen(),
+        home: HomeScreen(settingsPresenter: _settingsPresenter),
       ),
     );
   }

@@ -11,6 +11,7 @@ import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/quest_presenter.dart';
+import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
@@ -52,6 +53,7 @@ class HubScreen extends StatelessWidget {
     this.installmentPresenter,
     this.authPresenter,
     this.syncPresenter,
+    required this.settingsPresenter,
   });
 
   final HubPresenter hubPresenter;
@@ -69,6 +71,7 @@ class HubScreen extends StatelessWidget {
   final InstallmentPresenter? installmentPresenter;
   final AuthPresenter? authPresenter;
   final SyncPresenter? syncPresenter;
+  final SettingsPresenter settingsPresenter;
 
   String _todayLabel() {
     return DateFormat('EEEE, MMMM d').format(DateTime.now());
@@ -235,6 +238,7 @@ class HubScreen extends StatelessWidget {
             fastingPresenter: fastingPresenter,
             authPresenter: auth,
             syncPresenter: syncPresenter,
+            settingsPresenter: settingsPresenter,
           ),
         ),
       ),

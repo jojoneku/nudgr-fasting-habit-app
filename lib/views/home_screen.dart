@@ -21,6 +21,7 @@ import '../services/local_storage_service.dart';
 import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
 import '../presenters/auth_presenter.dart';
+import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../app_colors.dart';
@@ -30,7 +31,9 @@ import 'stats_view.dart';
 import 'widgets/ai_chat_sheet.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, required this.settingsPresenter});
+
+  final SettingsPresenter settingsPresenter;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -216,16 +219,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         installmentPresenter: _installmentPresenter,
         authPresenter: _authPresenter,
         syncPresenter: _syncPresenter,
+        settingsPresenter: widget.settingsPresenter,
       ),
       StatsView(
         presenter: _statsPresenter,
         fastingPresenter: _fastingPresenter,
         authPresenter: _authPresenter,
         syncPresenter: _syncPresenter,
+        settingsPresenter: widget.settingsPresenter,
       ),
       SettingsScreen(
         fastingPresenter: _fastingPresenter,
         authPresenter: _authPresenter,
+        settingsPresenter: widget.settingsPresenter,
         syncPresenter: _syncPresenter,
       ),
     ];
