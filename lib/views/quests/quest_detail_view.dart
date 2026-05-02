@@ -1,30 +1,40 @@
 import 'package:flutter/material.dart';
-import '../../app_colors.dart';
 import '../../models/quest.dart';
 import '../../models/quest_achievement.dart';
 import '../../presenters/quest_presenter.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_text_styles.dart';
+import '../widgets/system/system.dart';
+import 'add_quest_sheet.dart';
 import 'widgets/habit_heatmap.dart';
 import 'widgets/streak_badge.dart';
 import 'widgets/quest_mission_tile.dart' show linkedStatColor, linkedStatLabel;
 
 class QuestDetailView extends StatelessWidget {
-  final Quest quest;
-  final QuestPresenter presenter;
-
   const QuestDetailView({
     super.key,
     required this.quest,
     required this.presenter,
   });
 
+  final Quest quest;
+  final QuestPresenter presenter;
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(quest.title)),
+    return AppPageScaffold(
+      title: quest.title,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          onPressed: () => _showEdit(context),
+          tooltip: 'Edit',
+        ),
+      ],
+      padding: EdgeInsets.zero,
       body: ListenableBuilder(
         listenable: presenter,
         builder: (context, _) {
-          // Re-fetch from presenter to get latest data
           final latest =
               presenter.quests.where((q) => q.id == quest.id).firstOrNull ??
                   quest;
@@ -36,55 +46,73 @@ class QuestDetailView extends StatelessWidget {
 
   Widget _buildBody(BuildContext context, Quest q) {
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xxl),
       children: [
-        _StatsRow(quest: q),
-        const SizedBox(height: 24),
-        _Section(
-          title: 'Habit History',
+        // Stats card
+        AppCard(
+          child: _StatsRow(quest: q),
+        ),
+        const SizedBox(height: AppSpacing.mdGenerous),
+
+        // Habit history
+        AppSection(
+          title: 'Habit history',
           child: HabitHeatmap(
             dateStates: _buildDateStates(q),
             scheduledDays: q.days,
           ),
         ),
-        const SizedBox(height: 24),
-        _Section(
-          title: 'Streak Milestones',
+        const SizedBox(height: AppSpacing.mdGenerous),
+
+        // Streak milestones
+        AppSection(
+          title: 'Streak milestones',
           child: StreakBadgeRow(
             currentStreak: q.streakCount,
             unlockedMilestones: _unlockedMilestones(q.id),
           ),
         ),
+
+        // Stat contribution
         if (q.linkedStat != null) ...[
-          const SizedBox(height: 24),
-          _Section(
-            title: 'Stat Contribution',
-            child: _StatContributionBar(quest: q, presenter: presenter),
+          const SizedBox(height: AppSpacing.mdGenerous),
+          AppSection(
+            title: 'Stat contribution',
+            child: AppCard(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: _StatContributionBar(quest: q, presenter: presenter),
+            ),
           ),
         ],
-        if (q.anchorNote != null && q.anchorNote!.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          _Section(
-            title: '⚓ Anchor',
+
+        // Anchor note
+        if (q.anchorNote?.isNotEmpty == true) ...[
+          const SizedBox(height: AppSpacing.mdGenerous),
+          AppSection(
+            title: 'Anchor',
             child: Text(
               q.anchorNote!,
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
-        if (q.minimumVersion != null && q.minimumVersion!.isNotEmpty) ...[
-          const SizedBox(height: 24),
-          _Section(
-            title: '🔩 Minimum Version',
+
+        // Minimum version
+        if (q.minimumVersion?.isNotEmpty == true) ...[
+          const SizedBox(height: AppSpacing.mdGenerous),
+          AppSection(
+            title: 'Minimum version',
             child: Text(
               q.minimumVersion!,
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 14),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ],
-        const SizedBox(height: 40),
       ],
     );
   }
@@ -97,7 +125,6 @@ class QuestDetailView extends StatelessWidget {
     for (final d in q.partialDates) {
       states[d] = 'partial';
     }
-    // Mark scheduled days in last 12 weeks that aren't completed as missed
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final start = today.subtract(const Duration(days: 84));
@@ -118,29 +145,57 @@ class QuestDetailView extends StatelessWidget {
         .map((a) => a.streakMilestone)
         .toSet();
   }
+
+  Future<void> _showEdit(BuildContext context) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => AddQuestSheet(presenter: presenter, quest: quest),
+    );
+  }
 }
 
-// ─── Sub-widgets ──────────────────────────────────────────────────────────────
+// ─── Stats row ────────────────────────────────────────────────────────────────
 
 class _StatsRow extends StatelessWidget {
-  final Quest quest;
-
   const _StatsRow({required this.quest});
+
+  final Quest quest;
 
   @override
   Widget build(BuildContext context) {
-    final completionRate = _completionRate();
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        _Stat(label: 'Current Streak', value: '${quest.streakCount} 🔥'),
-        _Stat(
-            label: '30-Day Rate', value: '${(completionRate * 100).round()}%'),
-        _Stat(
-            label: 'Total',
+    final rate = _completionRate();
+    return IntrinsicHeight(
+      child: Row(
+        children: [
+          _StatCell(
+            value: '${quest.streakCount}',
+            suffix: '🔥',
+            label: 'Streak',
+          ),
+          VerticalDivider(
+            width: AppSpacing.mdGenerous,
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+          _StatCell(
+            value: '${(rate * 100).round()}%',
+            label: '30-day rate',
+          ),
+          VerticalDivider(
+            width: AppSpacing.mdGenerous,
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
+          _StatCell(
             value:
-                '${quest.completedDates.length + quest.partialDates.length}'),
-      ],
+                '${quest.completedDates.length + quest.partialDates.length}',
+            label: 'Total',
+          ),
+        ],
+      ),
     );
   }
 
@@ -163,35 +218,47 @@ class _StatsRow extends StatelessWidget {
   }
 }
 
-class _Stat extends StatelessWidget {
-  final String label;
-  final String value;
+class _StatCell extends StatelessWidget {
+  const _StatCell({required this.value, required this.label, this.suffix});
 
-  const _Stat({required this.label, required this.value});
+  final String value;
+  final String label;
+  final String? suffix;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value,
-            style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppColors.primary)),
-        const SizedBox(height: 4),
-        Text(label,
-            style:
-                const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
-      ],
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            suffix != null ? '$value $suffix' : value,
+            style: AppTextStyles.headlineSmall.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 }
 
+// ─── Stat contribution bar ────────────────────────────────────────────────────
+
 class _StatContributionBar extends StatelessWidget {
+  const _StatContributionBar({required this.quest, required this.presenter});
+
   final Quest quest;
   final QuestPresenter presenter;
-
-  const _StatContributionBar({required this.quest, required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -199,63 +266,14 @@ class _StatContributionBar extends StatelessWidget {
     final stat = quest.linkedStat!;
     final color = linkedStatColor(stat);
     final label = linkedStatLabel(stat);
-    final completions = (quest.streakCount % 21);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              '$completions / 21 completions toward +1 $label',
-              style:
-                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            Text(
-              '${(progress * 100).round()}%',
-              style: TextStyle(
-                  color: color, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            minHeight: 8,
-            backgroundColor: color.withValues(alpha: 0.15),
-            valueColor: AlwaysStoppedAnimation(color),
-          ),
-        ),
-      ],
-    );
-  }
-}
+    final completions = quest.streakCount % 21;
 
-class _Section extends StatelessWidget {
-  final String title;
-  final Widget child;
-
-  const _Section({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title.toUpperCase(),
-          style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.2,
-          ),
-        ),
-        const SizedBox(height: 12),
-        child,
-      ],
+    return AppLinearProgress(
+      value: progress,
+      color: color,
+      label: '$completions / 21 completions toward +1 $label',
+      valueText: '${(progress * 100).round()}%',
+      height: 8,
     );
   }
 }
