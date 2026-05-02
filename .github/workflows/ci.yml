@@ -148,3 +148,122 @@ jobs:
           # Enable auto-merge (merges once all required checks on the PR pass)
           gh pr merge "$existing" --auto --merge \
             --repo "$GITHUB_REPOSITORY"
+
+  release:
+    name: Release — Build & Deploy APK
+    runs-on: ubuntu-latest
+    needs: [analyze_format, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create .env file
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Compute release metadata
+        id: meta
+        run: |
+          CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
+          MAJOR=$(echo $CURRENT | cut -d. -f1)
+          MINOR=$(echo $CURRENT | cut -d. -f2)
+          PATCH=$(echo $CURRENT | cut -d. -f3)
+
+          COMMIT_MSG=$(git log -1 --pretty=%B)
+          if echo "$COMMIT_MSG" | grep -qE '(BREAKING CHANGE|!:)'; then
+            MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0
+          elif echo "$COMMIT_MSG" | grep -qP '^feat(\(.+\))?:'; then
+            MINOR=$((MINOR + 1)); PATCH=0
+          else
+            PATCH=$((PATCH + 1))
+          fi
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          BUILD_NUMBER=$((GITHUB_RUN_NUMBER + 2100))
+          APK_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/app-release.apk"
+          MANIFEST_URL="${{ secrets.SUPABASE_URL }}/storage/v1/object/public/releases/manifest.json"
+          RELEASED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
+          echo "manifest_url=$MANIFEST_URL" >> $GITHUB_OUTPUT
+          echo "released_at=$RELEASED_AT" >> $GITHUB_OUTPUT
+          printf 'release_notes<<EOF\n%s\nEOF\n' \
+            "$(git log -1 --pretty=%B | head -c 300)" >> $GITHUB_OUTPUT
+
+      - name: Bump pubspec version
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }}/" pubspec.yaml
+
+      - name: Build APK
+        run: |
+          flutter build apk --release \
+            --build-number=${{ steps.meta.outputs.build_number }} \
+            --build-name=${{ steps.meta.outputs.new_version }} \
+            --dart-define=UPDATE_MANIFEST_URL=${{ steps.meta.outputs.manifest_url }}
+
+      - name: Generate manifest.json
+        run: |
+          python3 -c "
+          import json, sys
+          print(json.dumps({
+            'version': sys.argv[1],
+            'build_number': int(sys.argv[2]),
+            'apk_url': sys.argv[3],
+            'release_notes': sys.argv[4],
+            'released_at': sys.argv[5]
+          }, indent=2))
+          " \
+            "${{ steps.meta.outputs.new_version }}" \
+            "${{ steps.meta.outputs.build_number }}" \
+            "${{ steps.meta.outputs.apk_url }}" \
+            "${{ steps.meta.outputs.release_notes }}" \
+            "${{ steps.meta.outputs.released_at }}" > manifest.json
+          cat manifest.json
+
+      - name: Upload manifest to Supabase
+        run: |
+          curl -sf -X POST \
+            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/manifest.json" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/json" \
+            -H "x-upsert: true" \
+            --data-binary @manifest.json
+
+      - name: Upload APK to Supabase
+        run: |
+          curl -sf -X POST \
+            "${{ secrets.SUPABASE_URL }}/storage/v1/object/releases/app-release.apk" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}" \
+            -H "Content-Type: application/vnd.android.package-archive" \
+            -H "x-upsert: true" \
+            --data-binary @build/app/outputs/flutter-apk/app-release.apk
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml
+          git commit -m "chore(release): bump version to ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }} [skip ci]"
+          git push
