@@ -58,7 +58,6 @@ class _FastingAppState extends State<FastingApp> {
         dialogRadius: AppRadii.xxl,
         chipRadius: AppRadii.sm,
         snackBarRadius: AppRadii.md,
-        appBarBackgroundSchemeColor: SchemeColor.surface,
         bottomNavigationBarMutedUnselectedIcon: true,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -69,6 +68,27 @@ class _FastingAppState extends State<FastingApp> {
       ),
     ).copyWith(
       scaffoldBackgroundColor: AppColors.background,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.primary,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: AppColors.primary.withValues(alpha: 0.15),
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(
+              fontWeight: FontWeight.w600, color: AppColors.textSecondary),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColors.primary);
+          }
+          return const IconThemeData(color: AppColors.textSecondary);
+        }),
+      ),
       snackBarTheme:
           const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       textTheme: AppTextStyles.textTheme.apply(
@@ -109,7 +129,6 @@ class _FastingAppState extends State<FastingApp> {
         dialogRadius: AppRadii.xxl,
         chipRadius: AppRadii.sm,
         snackBarRadius: AppRadii.md,
-        appBarBackgroundSchemeColor: SchemeColor.surface,
         bottomNavigationBarMutedUnselectedIcon: true,
       ),
       pageTransitionsTheme: const PageTransitionsTheme(
@@ -120,6 +139,28 @@ class _FastingAppState extends State<FastingApp> {
       ),
     ).copyWith(
       scaffoldBackgroundColor: AppColorsLight.background,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: AppColorsLight.surface,
+        foregroundColor: AppColorsLight.primary,
+        elevation: 0,
+        surfaceTintColor: Colors.transparent,
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: AppColorsLight.surface,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: AppColorsLight.primary.withValues(alpha: 0.12),
+        labelTextStyle: WidgetStateProperty.all(
+          const TextStyle(
+              fontWeight: FontWeight.w600,
+              color: AppColorsLight.textSecondary),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return const IconThemeData(color: AppColorsLight.primary);
+          }
+          return const IconThemeData(color: AppColorsLight.textSecondary);
+        }),
+      ),
       snackBarTheme:
           const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       textTheme: AppTextStyles.textTheme.apply(
