@@ -80,7 +80,7 @@ class SettingsScreen extends StatelessWidget {
                 onChanged: (mode) {
                   settingsPresenter.setThemeMode(mode);
                 },
-                segments: [
+                segments: const [
                   (value: ThemeMode.system, label: 'Auto', icon: null),
                   (value: ThemeMode.light, label: 'Light', icon: null),
                   (value: ThemeMode.dark, label: 'Dark', icon: null),
