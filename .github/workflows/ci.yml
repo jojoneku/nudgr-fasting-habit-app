@@ -216,6 +216,16 @@ jobs:
         run: |
           sed -i "s/^version: .*/version: ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }}/" pubspec.yaml
 
+      - name: Set up keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/nudgr-release.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=../app/nudgr-release.jks
+          EOF
+
       - name: Build APK
         run: |
           flutter build apk --release \

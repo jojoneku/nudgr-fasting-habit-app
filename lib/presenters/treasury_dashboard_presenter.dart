@@ -117,6 +117,28 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   bool get hasBills => upcomingBills.isNotEmpty;
 
+  bool get hasBillImminent {
+    final today = DateTime.now().day;
+    return upcomingBills.any((b) => b.dueDay == today || b.dueDay == today + 1);
+  }
+
+  Bill? get imminentBill {
+    final today = DateTime.now().day;
+    return upcomingBills
+        .where((b) => b.dueDay == today || b.dueDay == today + 1)
+        .firstOrNull;
+  }
+
+  double get todayOutflow {
+    final now = DateTime.now();
+    return _transactions.where((t) {
+      return t.type == TransactionType.outflow &&
+          t.date.year == now.year &&
+          t.date.month == now.month &&
+          t.date.day == now.day;
+    }).fold(0.0, (sum, t) => sum + t.amount);
+  }
+
   bool isBillOverdue(Bill bill) => bill.dueDay < DateTime.now().day;
 
   // --- Budget ---

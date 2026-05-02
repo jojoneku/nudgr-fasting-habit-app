@@ -1,9 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
@@ -19,6 +17,7 @@ import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/installment_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/receivable_list_tile.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class BillsReceivablesView extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
@@ -51,9 +50,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) =>
           AddBillSheet(presenter: widget.presenter, existing: existing),
@@ -64,9 +63,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) =>
           AddReceivableSheet(presenter: widget.presenter, existing: existing),
@@ -77,9 +76,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _AddBudgetedExpenseSheet(
           presenter: widget.presenter, existing: existing),
@@ -90,9 +89,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) =>
           _MarkBillPaidSheet(bill: bill, presenter: widget.presenter),
@@ -103,9 +102,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _MarkReceivedSheet(
           receivable: receivable, presenter: widget.presenter),
@@ -116,9 +115,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) =>
           _MarkExpensePaidSheet(expense: expense, presenter: widget.presenter),
@@ -129,9 +128,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => AddInstallmentSheet(
           presenter: widget.installmentPresenter, existing: existing),
@@ -142,9 +141,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => _MarkInstallmentPaidSheet(
           installment: installment, presenter: widget.installmentPresenter),
@@ -152,11 +151,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   }
 
   void _showFabMenu() {
+    final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
         child: Column(
@@ -164,27 +163,25 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           children: [
             ListTile(
               leading:
-                  Icon(Icons.receipt_long_outlined, color: AppColors.accent),
-              title: Text('Add Bill',
-                  style: TextStyle(color: AppColors.textPrimary)),
+                  Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
+              title: const Text('Add Bill'),
               onTap: () {
                 Navigator.pop(context);
                 _showAddBillSheet();
               },
             ),
             ListTile(
-              leading: Icon(Icons.attach_money, color: AppColors.success),
-              title: Text('Add Receivable',
-                  style: TextStyle(color: AppColors.textPrimary)),
+              leading: Icon(Icons.attach_money, color: const Color(0xFF4CAF50)),
+              title: const Text('Add Receivable'),
               onTap: () {
                 Navigator.pop(context);
                 _showAddReceivableSheet();
               },
             ),
             ListTile(
-              leading: Icon(Icons.savings_outlined, color: AppColors.gold),
-              title: Text('Add Budgeted Expense',
-                  style: TextStyle(color: AppColors.textPrimary)),
+              leading:
+                  Icon(Icons.savings_outlined, color: const Color(0xFFFFB300)),
+              title: const Text('Add Budgeted Expense'),
               onTap: () {
                 Navigator.pop(context);
                 _showAddBudgetedExpenseSheet();
@@ -192,12 +189,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
             ),
             ListTile(
               leading:
-                  Icon(Icons.credit_score_outlined, color: AppColors.accent),
-              title: Text('Add Installment',
-                  style: TextStyle(color: AppColors.textPrimary)),
-              subtitle: Text('Track a purchase split into monthly payments',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  Icon(Icons.credit_score_outlined, color: colorScheme.primary),
+              title: const Text('Add Installment'),
+              subtitle:
+                  const Text('Track a purchase split into monthly payments'),
               onTap: () {
                 Navigator.pop(context);
                 _showAddInstallmentSheet();
@@ -216,7 +211,6 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           Listenable.merge([widget.presenter, widget.installmentPresenter]),
       builder: (context, _) {
         return Scaffold(
-          backgroundColor: AppColors.background,
           body: Column(
             children: [
               _MonthSelector(
@@ -229,22 +223,27 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               ),
               Expanded(
                 child: ListView(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
+                    const SizedBox(height: 12),
                     _BillsSection(
                       presenter: widget.presenter,
                       onMarkPaid: _showMarkBillPaidSheet,
                       onEdit: _showAddBillSheet,
                     ),
+                    const SizedBox(height: 12),
                     _ReceivablesSection(
                       presenter: widget.presenter,
                       onMarkReceived: _showMarkReceivedSheet,
                       onEdit: _showAddReceivableSheet,
                     ),
+                    const SizedBox(height: 12),
                     _BudgetedExpensesSection(
                       presenter: widget.presenter,
                       onMarkPaid: _showMarkExpensePaidSheet,
                       onEdit: _showAddBudgetedExpenseSheet,
                     ),
+                    const SizedBox(height: 12),
                     _InstallmentsSection(
                       presenter: widget.installmentPresenter,
                       onMarkPaid: _showMarkInstallmentPaidSheet,
@@ -258,8 +257,6 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: _showFabMenu,
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.background,
             child: const Icon(Icons.add),
           ),
         );
@@ -278,8 +275,9 @@ class _MonthSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: AppColors.surface,
+      color: colorScheme.surface,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -288,14 +286,15 @@ class _MonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_left, color: AppColors.textSecondary),
+              icon:
+                  Icon(Icons.chevron_left, color: colorScheme.onSurfaceVariant),
               onPressed: () => onChanged(previousMonth(selectedMonth)),
             ),
           ),
           Text(
             monthLabel(selectedMonth),
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: colorScheme.onSurface,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -304,7 +303,8 @@ class _MonthSelector extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon: Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              icon: Icon(Icons.chevron_right,
+                  color: colorScheme.onSurfaceVariant),
               onPressed: () => onChanged(nextMonth(selectedMonth)),
             ),
           ),
@@ -325,27 +325,28 @@ class _StatsBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
-      color: AppColors.surface,
+      color: colorScheme.surface,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
       child: Row(
         children: [
           _StatChip(
             label: 'Pending',
             value: formatPesoCompact(presenter.totalBillsPending),
-            color: AppColors.danger,
+            color: colorScheme.error,
           ),
           const SizedBox(width: 8),
           _StatChip(
             label: 'Paid',
             value: formatPesoCompact(presenter.totalBillsPaid),
-            color: AppColors.success,
+            color: const Color(0xFF4CAF50),
           ),
           const SizedBox(width: 8),
           _StatChip(
             label: 'Installments',
             value: formatPesoCompact(installmentPresenter.totalDueThisMonth),
-            color: AppColors.accent,
+            color: colorScheme.primary,
           ),
         ],
       ),
@@ -367,9 +368,9 @@ class _StatChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +379,9 @@ class _StatChip extends StatelessWidget {
                 style: TextStyle(
                     color: color, fontWeight: FontWeight.w700, fontSize: 13)),
             Text(label,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 10)),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 10)),
           ],
         ),
       ),
@@ -401,14 +404,17 @@ class _BillsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final bills = presenter.bills;
     final paidCount = bills.where((b) => b.isPaid).length;
+
     return _SectionCard(
-      title: 'BILLS',
+      title: 'Bills',
       count: bills.length,
       subtitle: '$paidCount/${bills.length} paid',
-      accentColor: AppColors.danger,
+      accentColor: colorScheme.error,
       initiallyExpanded: true,
+      emptyIcon: Icons.receipt_outlined,
       emptyMessage: 'No bills for this month',
       children: bills
           .map((bill) => BillListTile(
@@ -440,12 +446,14 @@ class _ReceivablesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final receivables = presenter.receivables;
     final receivedCount = receivables.where((r) => r.isReceived).length;
+
     return _SectionCard(
-      title: 'RECEIVABLES',
+      title: 'Receivables',
       count: receivables.length,
       subtitle: '$receivedCount/${receivables.length} received',
-      accentColor: AppColors.success,
+      accentColor: const Color(0xFF4CAF50),
       initiallyExpanded: true,
+      emptyIcon: Icons.account_balance_wallet_outlined,
       emptyMessage: 'No receivables for this month',
       children: receivables
           .map((r) => ReceivableListTile(
@@ -476,12 +484,14 @@ class _BudgetedExpensesSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final expenses = presenter.budgetedExpenses;
     final paidCount = expenses.where((e) => e.isPaid).length;
+
     return _SectionCard(
       title: 'BUDGETED EXPENSES',
       count: expenses.length,
       subtitle: '$paidCount/${expenses.length} paid',
-      accentColor: AppColors.gold,
+      accentColor: const Color(0xFFFFB300),
       initiallyExpanded: false,
+      emptyIcon: Icons.savings_outlined,
       emptyMessage: 'No budgeted expenses for this month',
       children: expenses
           .map((e) => BudgetedExpenseTile(
@@ -495,6 +505,71 @@ class _BudgetedExpensesSection extends StatelessWidget {
   }
 }
 
+// ─── Installments Section ─────────────────────────────────────────────────────
+
+class _InstallmentsSection extends StatelessWidget {
+  final InstallmentPresenter presenter;
+  final ValueChanged<Installment> onMarkPaid;
+  final ValueChanged<Installment> onEdit;
+
+  const _InstallmentsSection({
+    required this.presenter,
+    required this.onMarkPaid,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final installments = presenter.dueThisMonth;
+    final paidCount =
+        installments.where((i) => presenter.isPaidForMonth(i.id)).length;
+    final subtitle = installments.isEmpty
+        ? 'None due this month'
+        : '$paidCount/${installments.length} paid · ${formatPeso(presenter.totalDueThisMonth)} due';
+
+    return _SectionCard(
+      title: 'Installments',
+      count: installments.length,
+      subtitle: subtitle,
+      accentColor: const Color(0xFF9C27B0),
+      initiallyExpanded: installments.isNotEmpty,
+      emptyIcon: Icons.credit_score_outlined,
+      emptyMessage: 'No installments due this month',
+      children: installments.map((i) {
+        final account =
+            presenter.accounts.where((a) => a.id == i.accountId).firstOrNull;
+        return InstallmentListTile(
+          key: ValueKey(i.id),
+          installment: i,
+          presenter: presenter,
+          account: account,
+          onMarkPaid: () => onMarkPaid(i),
+          onEdit: () => onEdit(i),
+          onDelete: () => _confirmDelete(context, presenter, i),
+        );
+      }).toList(),
+    );
+  }
+
+  void _confirmDelete(
+    BuildContext context,
+    InstallmentPresenter presenter,
+    Installment installment,
+  ) {
+    AppConfirmDialog.confirm(
+      context: context,
+      title: 'Delete Installment',
+      body:
+          'Delete "${installment.name}"? All linked payment transactions will also be removed.',
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+    ).then((confirmed) {
+      if (confirmed) presenter.deleteInstallment(installment.id);
+    });
+  }
+}
+
 // ─── Section Card (expandable) ────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
@@ -503,6 +578,7 @@ class _SectionCard extends StatelessWidget {
   final String subtitle;
   final Color accentColor;
   final bool initiallyExpanded;
+  final IconData emptyIcon;
   final String emptyMessage;
   final List<Widget> children;
 
@@ -512,21 +588,20 @@ class _SectionCard extends StatelessWidget {
     required this.subtitle,
     required this.accentColor,
     required this.initiallyExpanded,
+    required this.emptyIcon,
     required this.emptyMessage,
     required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: accentColor.withOpacity(0.2)),
-      ),
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: EdgeInsets.zero,
       child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        data: theme.copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -545,26 +620,16 @@ class _SectionCard extends StatelessWidget {
               Text(
                 title,
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: theme.colorScheme.onSurface,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.0,
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$count',
-                  style: TextStyle(
-                      color: accentColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                ),
+              AppBadge(
+                text: '$count',
+                color: accentColor,
               ),
             ],
           ),
@@ -572,22 +637,19 @@ class _SectionCard extends StatelessWidget {
             padding: const EdgeInsets.only(left: 14),
             child: Text(
               subtitle,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+              style: TextStyle(
+                  color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
             ),
           ),
-          iconColor: AppColors.textSecondary,
-          collapsedIconColor: AppColors.textSecondary,
+          iconColor: theme.colorScheme.onSurfaceVariant,
+          collapsedIconColor: theme.colorScheme.onSurfaceVariant,
           children: children.isEmpty
               ? [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 20),
-                    child: Text(
-                      emptyMessage,
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 13),
-                    ),
-                  )
+                  AppEmptyState(
+                    icon: emptyIcon,
+                    title: emptyMessage,
+                    iconSize: 40,
+                  ),
                 ]
               : children,
         ),
@@ -636,12 +698,6 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
       initialDate: _paidDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.accent),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _paidDate = picked);
   }
@@ -666,6 +722,8 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -677,27 +735,22 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
           children: [
             Text('Mark Paid — ${widget.bill.name}',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            TextField(
+            AppTextField(
               controller: _amountController,
+              label: 'Amount Paid',
+              prefix: const Text('₱ '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-              ],
-              style: TextStyle(color: AppColors.textPrimary),
-              decoration: _inputDec('Amount Paid', prefix: '₱ '),
             ),
             if (widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,
-                dropdownColor: AppColors.surface,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: _inputDec('Account'),
+                decoration: const InputDecoration(labelText: 'Account'),
                 items: widget.presenter.accounts
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -713,46 +766,27 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: AppColors.textSecondary.withOpacity(0.3)),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.calendar_today_outlined,
-                        color: AppColors.textSecondary, size: 18),
+                        color: colorScheme.onSurfaceVariant, size: 18),
                     const SizedBox(width: 12),
                     Text(DateFormat('MMMM d, yyyy').format(_paidDate),
                         style: TextStyle(
-                            color: AppColors.textPrimary, fontSize: 14)),
+                            color: colorScheme.onSurface, fontSize: 14)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _confirm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Confirm Payment',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
+            AppPrimaryButton(
+              label: 'Confirm Payment',
+              onPressed: _isSubmitting ? null : _confirm,
+              isLoading: _isSubmitting,
             ),
             const SizedBox(height: 8),
           ],
@@ -760,25 +794,6 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
       ),
     );
   }
-
-  InputDecoration _inputDec(String label, {String? prefix}) => InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        prefixText: prefix,
-        prefixStyle: TextStyle(color: AppColors.accent),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.accent),
-        ),
-      );
 }
 
 // ─── Mark Received Sheet ──────────────────────────────────────────────────────
@@ -816,12 +831,6 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
       initialDate: _receivedDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.success),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _receivedDate = picked);
   }
@@ -844,6 +853,8 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -855,37 +866,16 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
           children: [
             Text('Mark Received — ${widget.receivable.name}',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            TextField(
+            AppTextField(
               controller: _amountController,
+              label: 'Amount Received',
+              prefix: const Text('₱ '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-              ],
-              style: TextStyle(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Amount Received',
-                labelStyle: TextStyle(color: AppColors.textSecondary),
-                prefixText: '₱ ',
-                prefixStyle: TextStyle(color: AppColors.success),
-                filled: true,
-                fillColor: AppColors.background,
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color: AppColors.textSecondary.withOpacity(0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppColors.success),
-                ),
-              ),
             ),
             const SizedBox(height: 12),
             InkWell(
@@ -895,46 +885,27 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: AppColors.textSecondary.withOpacity(0.3)),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.calendar_today_outlined,
-                        color: AppColors.textSecondary, size: 18),
+                        color: colorScheme.onSurfaceVariant, size: 18),
                     const SizedBox(width: 12),
                     Text(DateFormat('MMMM d, yyyy').format(_receivedDate),
                         style: TextStyle(
-                            color: AppColors.textPrimary, fontSize: 14)),
+                            color: colorScheme.onSurface, fontSize: 14)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _confirm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Confirm Receipt',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
+            AppPrimaryButton(
+              label: 'Confirm Receipt',
+              onPressed: _isSubmitting ? null : _confirm,
+              isLoading: _isSubmitting,
             ),
             const SizedBox(height: 8),
           ],
@@ -983,12 +954,6 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
       initialDate: _paidDate,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.accent),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _paidDate = picked);
   }
@@ -1013,6 +978,8 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -1024,61 +991,22 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
           children: [
             Text('Mark Paid — ${widget.expense.name}',
                 style: TextStyle(
-                    color: AppColors.textPrimary,
+                    color: colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
             const SizedBox(height: 16),
-            TextField(
+            AppTextField(
               controller: _amountController,
+              label: 'Amount Paid',
+              prefix: const Text('₱ '),
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-              ],
-              style: TextStyle(color: AppColors.textPrimary),
-              decoration: InputDecoration(
-                labelText: 'Amount Paid',
-                labelStyle: TextStyle(color: AppColors.textSecondary),
-                prefixText: '₱ ',
-                prefixStyle: TextStyle(color: AppColors.accent),
-                filled: true,
-                fillColor: AppColors.background,
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                      color: AppColors.textSecondary.withOpacity(0.3)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: AppColors.accent),
-                ),
-              ),
             ),
             if (widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,
-                dropdownColor: AppColors.surface,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: InputDecoration(
-                  labelText: 'Account',
-                  labelStyle: TextStyle(color: AppColors.textSecondary),
-                  filled: true,
-                  fillColor: AppColors.background,
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                        color: AppColors.textSecondary.withOpacity(0.3)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: AppColors.accent),
-                  ),
-                ),
+                decoration: const InputDecoration(labelText: 'Account'),
                 items: widget.presenter.accounts
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -1094,46 +1022,27 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
+                  color: colorScheme.surfaceContainerLow,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: AppColors.textSecondary.withOpacity(0.3)),
+                  border: Border.all(color: colorScheme.outlineVariant),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.calendar_today_outlined,
-                        color: AppColors.textSecondary, size: 18),
+                        color: colorScheme.onSurfaceVariant, size: 18),
                     const SizedBox(width: 12),
                     Text(DateFormat('MMMM d, yyyy').format(_paidDate),
                         style: TextStyle(
-                            color: AppColors.textPrimary, fontSize: 14)),
+                            color: colorScheme.onSurface, fontSize: 14)),
                   ],
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _confirm,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)),
-                ),
-                child: _isSubmitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Confirm Payment',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 15)),
-              ),
+            AppPrimaryButton(
+              label: 'Confirm Payment',
+              onPressed: _isSubmitting ? null : _confirm,
+              isLoading: _isSubmitting,
             ),
             const SizedBox(height: 8),
           ],
@@ -1216,30 +1125,13 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
     }
   }
 
-  InputDecoration _inputDec(String label, {String? prefix}) => InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary),
-        prefixText: prefix,
-        prefixStyle: TextStyle(color: AppColors.gold),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide:
-              BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: BorderSide(color: AppColors.gold),
-        ),
-      );
-
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final expenseCategories = widget.presenter.categories
         .where((c) => c.type == CategoryType.expense)
         .toList();
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -1256,7 +1148,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                     ? 'Edit Budgeted Expense'
                     : 'Add Budgeted Expense',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: colorScheme.onSurface,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1264,21 +1156,19 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: _inputDec('Name'),
+                decoration: const InputDecoration(labelText: 'Name'),
+                textInputAction: TextInputAction.next,
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
               ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _amountController,
+                decoration: const InputDecoration(
+                    labelText: 'Allocated Amount', prefixText: '₱ '),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                ],
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: _inputDec('Allocated Amount', prefix: '₱ '),
+                textInputAction: TextInputAction.next,
                 validator: (v) {
                   final p = double.tryParse(v ?? '');
                   if (p == null || p <= 0) return 'Must be > 0';
@@ -1286,16 +1176,16 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                 },
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AppTextField(
                 controller: _noteController,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: _inputDec('Note (optional)'),
+                label: 'Note (optional)',
+                textInputAction: TextInputAction.done,
               ),
               if (expenseCategories.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text('Category',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
+                        color: colorScheme.onSurfaceVariant, fontSize: 12)),
                 const SizedBox(height: 8),
                 Wrap(
                   spacing: 8,
@@ -1305,18 +1195,6 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                     return ChoiceChip(
                       label: Text(cat.name),
                       selected: isSelected,
-                      selectedColor: AppColors.gold.withOpacity(0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected
-                            ? AppColors.gold
-                            : AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                      backgroundColor: AppColors.surface,
-                      side: BorderSide(
-                          color: isSelected
-                              ? AppColors.gold
-                              : AppColors.textSecondary.withOpacity(0.3)),
                       onSelected: (_) =>
                           setState(() => _selectedCategoryId = cat.id),
                     );
@@ -1324,114 +1202,15 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                 ),
               ],
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.gold,
-                    foregroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : Text(
-                          widget.existing != null ? 'Save' : 'Add Expense',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                ),
+              AppPrimaryButton(
+                label: widget.existing != null ? 'Save' : 'Add Expense',
+                onPressed: _isSubmitting ? null : _submit,
+                isLoading: _isSubmitting,
               ),
               const SizedBox(height: 8),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Installments Section ─────────────────────────────────────────────────────
-
-class _InstallmentsSection extends StatelessWidget {
-  final InstallmentPresenter presenter;
-  final ValueChanged<Installment> onMarkPaid;
-  final ValueChanged<Installment> onEdit;
-
-  const _InstallmentsSection({
-    required this.presenter,
-    required this.onMarkPaid,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final installments = presenter.dueThisMonth;
-    final paidCount =
-        installments.where((i) => presenter.isPaidForMonth(i.id)).length;
-    final subtitle = installments.isEmpty
-        ? 'None due this month'
-        : '$paidCount/${installments.length} paid · ${formatPeso(presenter.totalDueThisMonth)} due';
-
-    return _SectionCard(
-      title: 'INSTALLMENTS',
-      count: installments.length,
-      subtitle: subtitle,
-      accentColor: const Color(0xFF9C27B0),
-      initiallyExpanded: installments.isNotEmpty,
-      emptyMessage: 'No installments due this month',
-      children: installments.map((i) {
-        final account =
-            presenter.accounts.where((a) => a.id == i.accountId).firstOrNull;
-        return InstallmentListTile(
-          key: ValueKey(i.id),
-          installment: i,
-          presenter: presenter,
-          account: account,
-          onMarkPaid: () => onMarkPaid(i),
-          onEdit: () => onEdit(i),
-          onDelete: () => _confirmDelete(context, presenter, i),
-        );
-      }).toList(),
-    );
-  }
-
-  void _confirmDelete(
-    BuildContext context,
-    InstallmentPresenter presenter,
-    Installment installment,
-  ) {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text('Delete Installment',
-            style: TextStyle(color: AppColors.textPrimary)),
-        content: Text(
-          'Delete "${installment.name}"? All linked payment transactions will also be removed.',
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              presenter.deleteInstallment(installment.id);
-            },
-            child: Text('Delete', style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
       ),
     );
   }
@@ -1485,7 +1264,9 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final count = widget.presenter.paidCount(widget.installment.id) + 1;
+
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -1502,7 +1283,7 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.textSecondary.withOpacity(0.3),
+                    color: colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -1510,107 +1291,56 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
               Text(
                 'Mark Payment $count/${widget.installment.totalMonths}',
                 style: TextStyle(
-                  color: AppColors.textPrimary,
+                  color: colorScheme.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               Text(
                 widget.installment.name,
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, fontSize: 13),
               ),
               const SizedBox(height: 20),
               Text('Amount',
-                  style:
-                      TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                  style: TextStyle(
+                      color: colorScheme.onSurfaceVariant, fontSize: 12)),
               const SizedBox(height: 6),
-              TextFormField(
+              AppTextField(
                 controller: _amountCtrl,
-                style: TextStyle(color: AppColors.textPrimary),
+                prefix: const Text('₱ '),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                ],
-                decoration: InputDecoration(
-                  prefixText: '₱ ',
-                  prefixStyle: TextStyle(color: AppColors.textSecondary),
-                  filled: true,
-                  fillColor: AppColors.background,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                        color: AppColors.textSecondary.withOpacity(0.2)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(
-                        color: AppColors.textSecondary.withOpacity(0.2)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.accent),
-                  ),
-                ),
               ),
               const SizedBox(height: 16),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text('Date',
                     style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
+                        color: colorScheme.onSurfaceVariant, fontSize: 12)),
                 subtitle: Text(
                   '${_date.day}/${_date.month}/${_date.year}',
                   style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                       fontWeight: FontWeight.w500),
                 ),
                 trailing: Icon(Icons.calendar_today_outlined,
-                    color: AppColors.accent, size: 18),
+                    color: colorScheme.primary, size: 18),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
                     initialDate: _date,
                     firstDate: DateTime(2020),
                     lastDate: DateTime.now(),
-                    builder: (context, child) => Theme(
-                      data: ThemeData.dark().copyWith(
-                        colorScheme: const ColorScheme.dark(
-                          primary: AppColors.accent,
-                          surface: AppColors.surface,
-                        ),
-                      ),
-                      child: child!,
-                    ),
                   );
                   if (picked != null) setState(() => _date = picked);
                 },
               ),
               const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _saving ? null : _confirm,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: _saving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.background),
-                        )
-                      : const Text('Confirm Payment',
-                          style: TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15)),
-                ),
+              AppPrimaryButton(
+                label: 'Confirm Payment',
+                onPressed: _saving ? null : _confirm,
+                isLoading: _saving,
               ),
             ],
           ),

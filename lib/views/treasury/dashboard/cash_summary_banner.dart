@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class CashSummaryBanner extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
@@ -11,13 +10,9 @@ class CashSummaryBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: AppColors.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-        child: _TotalLiquidRow(presenter: presenter),
-      ),
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      child: _TotalLiquidRow(presenter: presenter),
     );
   }
 }
@@ -29,51 +24,41 @@ class _TotalLiquidRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'TOTAL LIQUID CASH',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
             letterSpacing: 1.2,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          formatPeso(presenter.totalLiquidCash),
-          style: AppTextStyles.mono(
-            textStyle: const TextStyle(
-              color: AppColors.accent,
-              fontSize: 30,
-              fontWeight: FontWeight.w800,
-              shadows: [
-                Shadow(color: AppColors.accentGlow, blurRadius: 16),
-                Shadow(color: AppColors.accentGlow, blurRadius: 32),
-              ],
-            ),
-          ),
+        AppNumberDisplay(
+          value: formatPeso(presenter.totalLiquidCash),
+          size: AppNumberSize.headline,
+          color: colorScheme.primary,
         ),
         const SizedBox(height: 6),
         Row(
           children: [
             Text(
               'Net Worth  ',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            Text(
-              formatPeso(presenter.netWorth),
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: presenter.netWorth >= 0
-                      ? AppColors.success
-                      : AppColors.danger,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
+            ),
+            AppNumberDisplay(
+              value: formatPeso(presenter.netWorth),
+              size: AppNumberSize.body,
+              color: presenter.netWorth >= 0
+                  ? colorScheme.tertiary
+                  : colorScheme.error,
             ),
           ],
         ),

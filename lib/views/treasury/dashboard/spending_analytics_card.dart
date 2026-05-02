@@ -1,11 +1,11 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_spending_history_sheet.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
 class SpendingAnalyticsCard extends StatelessWidget {
@@ -15,102 +15,64 @@ class SpendingAnalyticsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final days = presenter.last7DaysSpending;
     final peak = presenter.peakDaySpend7;
     final avg = presenter.avgDailySpend7;
     final hasData = days.any((d) => d.amount > 0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: _SectionHeader(label: 'SPENDING — LAST 7 DAYS')),
-            GestureDetector(
-              onTap: () => FullSpendingHistorySheet.show(context, presenter),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                child: Row(
-                  children: [
-                    Text(
-                      'View Full',
-                      style: TextStyle(
-                        color: AppColors.accent,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(Icons.chevron_right,
-                        color: AppColors.accent, size: 16),
-                  ],
+    return AppSection(
+      title: 'Spending — Last 7 Days',
+      trailing: GestureDetector(
+        onTap: () => FullSpendingHistorySheet.show(context, presenter),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+          child: Row(
+            children: [
+              Text(
+                'View Full',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(width: 2),
+              Icon(Icons.chevron_right, color: colorScheme.primary, size: 16),
+            ],
+          ),
+        ),
+      ),
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        child: Column(
+          children: [
+            SizedBox(
+              height: 120,
+              child: hasData
+                  ? _BarChart(days: days, peak: peak)
+                  : const AppEmptyState(
+                      icon: Icons.bar_chart_rounded,
+                      title: 'No spending recorded yet',
+                      iconSize: 36,
+                      padding: EdgeInsets.all(AppSpacing.md),
+                    ),
+            ),
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 12),
+            _StatsRow(
+              avgDaily: avg,
+              peak: peak,
+              peakDay: presenter.peakSpendDay,
+              todaySpend: days.isNotEmpty ? days.last.amount : 0.0,
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        Card(
-          color: AppColors.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(
-              children: [
-                SizedBox(
-                  height: 120,
-                  child: hasData
-                      ? _BarChart(days: days, peak: peak)
-                      : _EmptyChartState(),
-                ),
-                const SizedBox(height: 12),
-                Divider(
-                    height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
-                const SizedBox(height: 12),
-                _StatsRow(
-                  avgDaily: avg,
-                  peak: peak,
-                  peakDay: presenter.peakSpendDay,
-                  todaySpend: days.isNotEmpty ? days.last.amount : 0.0,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-
-  const _SectionHeader({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 14,
-          decoration: BoxDecoration(
-            color: AppColors.accent,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            letterSpacing: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -135,13 +97,24 @@ class _BarChartState extends State<_BarChart>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 350),
     );
     _animation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutCubic,
     );
-    _controller.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.value == 0 && !_controller.isAnimating) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _controller.value = 1.0;
+      } else {
+        _controller.forward();
+      }
+    }
   }
 
   @override
@@ -152,6 +125,7 @@ class _BarChartState extends State<_BarChart>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) => CustomPaint(
@@ -159,6 +133,8 @@ class _BarChartState extends State<_BarChart>
           days: widget.days,
           peak: widget.peak,
           progress: _animation.value,
+          primaryColor: colorScheme.primary,
+          onSurfaceVariantColor: colorScheme.onSurfaceVariant,
         ),
         child: const SizedBox.expand(),
       ),
@@ -170,9 +146,11 @@ class _BarChartPainter extends CustomPainter {
   final List<DailySpend> days;
   final double peak;
   final double progress;
+  final Color primaryColor;
+  final Color onSurfaceVariantColor;
 
   static const double _labelHeight = 20.0;
-  static const double _topPad = 16.0; // space for value labels above bars
+  static const double _topPad = 16.0;
   static const double _barRadius = 4.0;
   static const double _barSpacing = 6.0;
   // Softer red — avoids the hallation/vibration of pure #FF1744 on dark bg
@@ -182,13 +160,15 @@ class _BarChartPainter extends CustomPainter {
     required this.days,
     required this.peak,
     required this.progress,
+    required this.primaryColor,
+    required this.onSurfaceVariantColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (days.isEmpty) return;
 
-    final barAreaTop = _topPad;
+    const barAreaTop = _topPad;
     final barAreaBottom = size.height - _labelHeight - 4;
     final barAreaH = barAreaBottom - barAreaTop;
 
@@ -197,7 +177,7 @@ class _BarChartPainter extends CustomPainter {
     final today = DateTime.now();
 
     final labelStyle = TextStyle(
-      color: AppColors.textSecondary.withOpacity(0.7),
+      color: onSurfaceVariantColor.withValues(alpha: 0.7),
       fontSize: 10,
       fontWeight: FontWeight.w500,
     );
@@ -216,13 +196,13 @@ class _BarChartPainter extends CustomPainter {
       // Colors
       final Color barColor;
       if (isToday) {
-        barColor = AppColors.accent;
+        barColor = primaryColor;
       } else if (isPeak) {
         barColor = _peakColor;
       } else if (day.amount > 0) {
-        barColor = AppColors.accent.withOpacity(0.4);
+        barColor = primaryColor.withValues(alpha: 0.4);
       } else {
-        barColor = AppColors.textSecondary.withOpacity(0.1);
+        barColor = onSurfaceVariantColor.withValues(alpha: 0.1);
       }
 
       // Background track
@@ -232,7 +212,7 @@ class _BarChartPainter extends CustomPainter {
           const Radius.circular(_barRadius),
         ),
         Paint()
-          ..color = AppColors.textSecondary.withOpacity(0.08)
+          ..color = onSurfaceVariantColor.withValues(alpha: 0.08)
           ..style = PaintingStyle.fill,
       );
 
@@ -250,8 +230,8 @@ class _BarChartPainter extends CustomPainter {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: [
-              AppColors.accent.withOpacity(0.6),
-              AppColors.accent,
+              primaryColor.withValues(alpha: 0.6),
+              primaryColor,
             ],
           ).createShader(Rect.fromLTWH(x, barTop, barWidth, barH));
         } else {
@@ -265,7 +245,7 @@ class _BarChartPainter extends CustomPainter {
           canvas.drawRRect(
             barRect,
             Paint()
-              ..color = AppColors.accent.withOpacity(0.18)
+              ..color = primaryColor.withValues(alpha: 0.18)
               ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6),
           );
         }
@@ -274,7 +254,7 @@ class _BarChartPainter extends CustomPainter {
         if (isPeak && progress > 0.9) {
           final amountSpan = TextSpan(
             text: formatPesoCompact(day.amount),
-            style: TextStyle(
+            style: const TextStyle(
               color: _peakColor,
               fontSize: 9,
               fontWeight: FontWeight.w700,
@@ -286,7 +266,6 @@ class _BarChartPainter extends CustomPainter {
           )..layout();
           final labelX = (x + barWidth / 2 - tp.width / 2)
               .clamp(0.0, size.width - tp.width);
-          // Draw above bar, but never above the top padding area
           final labelY = (barTop - tp.height - 2).clamp(0.0, barTop);
           tp.paint(canvas, Offset(labelX, labelY));
         }
@@ -298,9 +277,7 @@ class _BarChartPainter extends CustomPainter {
         text: isToday ? '•' : dayLabel,
         style: isToday
             ? TextStyle(
-                color: AppColors.accent,
-                fontSize: 11,
-                fontWeight: FontWeight.w800)
+                color: primaryColor, fontSize: 11, fontWeight: FontWeight.w800)
             : labelStyle,
       );
       final tp = TextPainter(
@@ -319,27 +296,6 @@ class _BarChartPainter extends CustomPainter {
       old.progress != progress || old.peak != peak;
 }
 
-class _EmptyChartState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.bar_chart_rounded,
-              color: AppColors.textSecondary.withOpacity(0.3), size: 36),
-          const SizedBox(height: 6),
-          Text(
-            'No spending recorded yet',
-            style: TextStyle(
-                color: AppColors.textSecondary.withOpacity(0.5), fontSize: 12),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _StatsRow extends StatelessWidget {
   final double avgDaily;
   final double peak;
@@ -355,6 +311,7 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final peakLabel =
         peakDay != null ? DateFormat('EEE, MMM d').format(peakDay!) : '—';
 
@@ -364,20 +321,21 @@ class _StatsRow extends StatelessWidget {
         _StatChip(
           label: 'TODAY',
           value: formatPesoCompact(todaySpend),
-          color: AppColors.accent,
+          color: colorScheme.primary,
         ),
         _StatDivider(),
         _StatChip(
           label: 'AVG / DAY',
           value: formatPesoCompact(avgDaily),
-          color: AppColors.textSecondary,
+          color: colorScheme.onSurfaceVariant,
         ),
         _StatDivider(),
         _StatChip(
           label: 'PEAK DAY',
           value: peakLabel,
           subValue: formatPesoCompact(peak),
-          color: peak > 0 ? const Color(0xFFEF9A9A) : AppColors.textSecondary,
+          color:
+              peak > 0 ? const Color(0xFFEF9A9A) : colorScheme.onSurfaceVariant,
         ),
       ],
     );
@@ -399,39 +357,32 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Column(
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 9,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: colorScheme.onSurfaceVariant,
             letterSpacing: 0.8,
             fontWeight: FontWeight.w600,
+            fontSize: 9,
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          value,
-          style: AppTextStyles.mono(
-            textStyle: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        AppNumberDisplay(
+          value: value,
+          size: AppNumberSize.body,
+          color: color,
         ),
         if (subValue != null) ...[
           const SizedBox(height: 1),
-          Text(
-            subValue!,
-            style: AppTextStyles.mono(
-              textStyle: TextStyle(
-                color: color.withOpacity(0.75),
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+          AppNumberDisplay(
+            value: subValue!,
+            size: AppNumberSize.body,
+            color: color.withValues(alpha: 0.75),
           ),
         ],
       ],
@@ -445,7 +396,8 @@ class _StatDivider extends StatelessWidget {
     return Container(
       width: 1,
       height: 32,
-      color: AppColors.textSecondary.withOpacity(0.15),
+      color:
+          Theme.of(context).colorScheme.outlineVariant.withValues(alpha: 0.4),
     );
   }
 }

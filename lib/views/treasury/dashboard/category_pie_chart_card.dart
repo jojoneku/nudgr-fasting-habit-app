@@ -2,13 +2,12 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
-import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_category_breakdown_sheet.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class CategoryPieChartCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
@@ -17,93 +16,53 @@ class CategoryPieChartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final slices = presenter.categorySpendThisMonth;
     final total = slices.fold(0.0, (s, e) => s + e.$2);
     final hasMore = presenter.allCategorySpendThisMonth.length > slices.length;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(child: _SectionHeader(label: 'EXPENSE BREAKDOWN')),
-            if (hasMore)
-              GestureDetector(
-                onTap: () =>
-                    FullCategoryBreakdownSheet.show(context, presenter),
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  child: Row(
-                    children: [
-                      Text(
-                        'View All',
-                        style: TextStyle(
-                          color: AppColors.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+    return AppSection(
+      title: 'Expense Breakdown',
+      trailing: hasMore
+          ? GestureDetector(
+              onTap: () => FullCategoryBreakdownSheet.show(context, presenter),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                child: Row(
+                  children: [
+                    Text(
+                      'View All',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
                       ),
-                      const SizedBox(width: 2),
-                      Icon(Icons.chevron_right,
-                          color: AppColors.accent, size: 16),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.chevron_right,
+                        color: colorScheme.primary, size: 16),
+                  ],
                 ),
               ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Card(
-          color: AppColors.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: slices.isEmpty
-                ? _EmptyState()
-                : Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      _PieChart(slices: slices, total: total),
-                      const SizedBox(width: 20),
-                      Expanded(child: _Legend(slices: slices, total: total)),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-  const _SectionHeader({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 14,
-          decoration: BoxDecoration(
-            color: AppColors.accent,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            letterSpacing: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+            )
+          : null,
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        child: slices.isEmpty
+            ? AppEmptyState(
+                icon: Icons.pie_chart_outline_rounded,
+                title: 'No expenses this month',
+                iconSize: 32,
+              )
+            : Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _PieChart(slices: slices, total: total),
+                  const SizedBox(width: 20),
+                  Expanded(child: _Legend(slices: slices, total: total)),
+                ],
+              ),
+      ),
     );
   }
 }
@@ -128,13 +87,24 @@ class _PieChartState extends State<_PieChart>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 700),
+      duration: const Duration(milliseconds: 350),
     );
     _animation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutCubic,
     );
-    _controller.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_controller.value == 0 && !_controller.isAnimating) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _controller.value = 1.0;
+      } else {
+        _controller.forward();
+      }
+    }
   }
 
   @override
@@ -145,6 +115,7 @@ class _PieChartState extends State<_PieChart>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) => SizedBox(
@@ -155,6 +126,8 @@ class _PieChartState extends State<_PieChart>
             slices: widget.slices,
             total: widget.total,
             progress: _animation.value,
+            textPrimaryColor: colorScheme.onSurface,
+            textSecondaryColor: colorScheme.onSurfaceVariant,
           ),
         ),
       ),
@@ -166,6 +139,8 @@ class _PieChartPainter extends CustomPainter {
   final List<(FinanceCategory, double)> slices;
   final double total;
   final double progress;
+  final Color textPrimaryColor;
+  final Color textSecondaryColor;
 
   static const double _gapAngle = 0.04;
   static const double _strokeWidth = 22.0;
@@ -174,6 +149,8 @@ class _PieChartPainter extends CustomPainter {
     required this.slices,
     required this.total,
     required this.progress,
+    required this.textPrimaryColor,
+    required this.textSecondaryColor,
   });
 
   @override
@@ -212,7 +189,7 @@ class _PieChartPainter extends CustomPainter {
         sweepAngle,
         false,
         Paint()
-          ..color = color.withOpacity(0.18)
+          ..color = color.withValues(alpha: 0.18)
           ..style = PaintingStyle.stroke
           ..strokeWidth = _strokeWidth + 6
           ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
@@ -228,12 +205,11 @@ class _PieChartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: AppTextStyles.mono(
-            textStyle: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+          style: TextStyle(
+            color: textPrimaryColor,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            fontFamily: 'DM Mono',
           ),
         ),
         textDirection: ui.TextDirection.ltr,
@@ -245,7 +221,10 @@ class _PieChartPainter extends CustomPainter {
         text: TextSpan(
           text: 'spent',
           style: TextStyle(
-              color: AppColors.textSecondary, fontSize: 9, letterSpacing: 0.5),
+            color: textSecondaryColor,
+            fontSize: 9,
+            letterSpacing: 0.5,
+          ),
         ),
         textDirection: ui.TextDirection.ltr,
         textAlign: TextAlign.center,
@@ -300,6 +279,9 @@ class _LegendRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Row(
       children: [
         Container(
@@ -309,7 +291,7 @@ class _LegendRow extends StatelessWidget {
             color: color,
             shape: BoxShape.circle,
             boxShadow: [
-              BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)
+              BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4)
             ],
           ),
         ),
@@ -319,9 +301,8 @@ class _LegendRow extends StatelessWidget {
             name,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 11,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -329,49 +310,18 @@ class _LegendRow extends StatelessWidget {
         const SizedBox(width: 4),
         Text(
           '${(percent * 100).round()}%',
-          style: TextStyle(
+          style: theme.textTheme.labelSmall?.copyWith(
             color: color,
-            fontSize: 10,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(width: 6),
-        Text(
-          formatPesoCompact(amount),
-          style: AppTextStyles.mono(
-            textStyle: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+        AppNumberDisplay(
+          value: formatPesoCompact(amount),
+          size: AppNumberSize.body,
+          color: colorScheme.onSurfaceVariant,
         ),
       ],
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 80,
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.pie_chart_outline_rounded,
-                color: AppColors.textSecondary.withOpacity(0.3), size: 32),
-            const SizedBox(height: 6),
-            Text(
-              'No expenses this month',
-              style: TextStyle(
-                  color: AppColors.textSecondary.withOpacity(0.5),
-                  fontSize: 12),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

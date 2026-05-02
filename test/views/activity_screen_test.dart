@@ -95,7 +95,7 @@ void main() {
       await tester.tap(find.text('Enter manually'));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text("Today's Steps"), findsOneWidget);
+      expect(find.text("Today's steps"), findsOneWidget);
     });
 
     testWidgets('goal sheet opens on tune icon tap', (tester) async {
@@ -105,7 +105,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.tune_outlined));
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Daily Goals'), findsOneWidget);
+      expect(find.text('Daily goals'), findsOneWidget);
     });
 
     testWidgets('shows trophy icon when goal is met', (tester) async {

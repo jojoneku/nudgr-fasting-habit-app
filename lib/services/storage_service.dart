@@ -57,6 +57,7 @@ abstract class StorageService {
   static const String keyMonthlySummaries = 'finance_monthly_summaries';
   static const String keyInstallments = 'finance_installments';
   static const String keyPersonalFoodDict = 'personalFoodDict';
+  static const String kThemeMode = 'themeMode';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -147,6 +148,10 @@ abstract class StorageService {
   //  Personal Food Dictionary
   Future<void> savePersonalDict(List<PersonalFoodEntry> entries);
   Future<List<PersonalFoodEntry>> loadPersonalDict();
+
+  //  Theme
+  Future<void> saveThemeMode(String mode);
+  Future<String?> loadThemeMode();
 
   //  Export / Import ─
   Future<String> exportAllData();

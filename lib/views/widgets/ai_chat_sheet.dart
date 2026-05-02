@@ -4,6 +4,7 @@ import '../../app_colors.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
+import 'system/system.dart';
 
 /// Entry point labels and icons per context.
 const _entryMeta = {
@@ -404,8 +405,20 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 900),
-    )..repeat();
+      duration: const Duration(milliseconds: 600),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.of(context).disableAnimations) {
+      _ctrl
+        ..stop()
+        ..value = 0.5;
+    } else if (!_ctrl.isAnimating) {
+      _ctrl.repeat();
+    }
   }
 
   @override
@@ -617,23 +630,10 @@ class _DownloadPrompt extends StatelessWidget {
               style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
             ),
             const SizedBox(height: 28),
-            SizedBox(
-              width: double.infinity,
+            AppPrimaryButton(
+              label: 'Download AI Coach',
+              onPressed: presenter.downloadModel,
               height: 48,
-              child: ElevatedButton(
-                onPressed: presenter.downloadModel,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.black,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                ),
-                child: const Text(
-                  'Download AI Coach',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ),
             ),
           ],
         ),

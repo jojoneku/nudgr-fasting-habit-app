@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class GoalProgressCard extends StatelessWidget {
   final FinancialAccount account;
@@ -34,6 +34,8 @@ class GoalProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final color = _parseColor();
 
     return InkWell(
@@ -56,58 +58,40 @@ class GoalProgressCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     account.name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Text(
-                  account.goalTarget != null
+                AppNumberDisplay(
+                  value: account.goalTarget != null
                       ? '${((_progress) * 100).round()}%'
                       : formatPeso(account.balance),
-                  style: AppTextStyles.mono(
-                    textStyle: TextStyle(
-                      color: color,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  size: AppNumberSize.body,
+                  color: color,
                 ),
               ],
             ),
             if (account.goalTarget != null) ...[
               const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _progress,
-                  backgroundColor: color.withOpacity(0.15),
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                  minHeight: 6,
-                ),
+              AppLinearProgress(
+                value: _progress,
+                color: color,
+                backgroundColor: color.withValues(alpha: 0.15),
+                height: 6,
               ),
               const SizedBox(height: 4),
-              Text(
-                _subtitleText,
-                style: AppTextStyles.mono(
-                  textStyle: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 11,
-                  ),
-                ),
+              AppNumberDisplay(
+                value: _subtitleText,
+                size: AppNumberSize.body,
+                color: colorScheme.onSurfaceVariant,
               ),
             ] else ...[
               const SizedBox(height: 2),
-              Text(
-                formatPeso(account.balance),
-                style: AppTextStyles.mono(
-                  textStyle: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
+              AppNumberDisplay(
+                value: formatPeso(account.balance),
+                size: AppNumberSize.body,
+                color: colorScheme.onSurfaceVariant,
               ),
             ],
           ],

@@ -6,6 +6,7 @@
 import 'dart:async' as _i9;
 import 'dart:ui' as _i38;
 
+import 'package:flutter/material.dart' as _i45;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     as _i7;
 import 'package:intermittent_fasting/models/activity_goals.dart' as _i6;
@@ -44,7 +45,10 @@ import 'package:intermittent_fasting/models/user_stats.dart' as _i2;
 import 'package:intermittent_fasting/presenters/activity_presenter.dart'
     as _i41;
 import 'package:intermittent_fasting/presenters/fasting_presenter.dart' as _i39;
+import 'package:intermittent_fasting/presenters/hub_presenter.dart' as _i43;
 import 'package:intermittent_fasting/presenters/quest_presenter.dart' as _i42;
+import 'package:intermittent_fasting/presenters/settings_presenter.dart'
+    as _i44;
 import 'package:intermittent_fasting/presenters/stats_presenter.dart' as _i37;
 import 'package:intermittent_fasting/services/ai_coach_service.dart' as _i29;
 import 'package:intermittent_fasting/services/food_db_service.dart' as _i35;
@@ -880,6 +884,25 @@ class MockStorageService extends _i1.Mock implements _i8.StorageService {
       ) as _i9.Future<List<_i25.PersonalFoodEntry>>);
 
   @override
+  _i9.Future<void> saveThemeMode(String? mode) => (super.noSuchMethod(
+        Invocation.method(
+          #saveThemeMode,
+          [mode],
+        ),
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
+
+  @override
+  _i9.Future<String?> loadThemeMode() => (super.noSuchMethod(
+        Invocation.method(
+          #loadThemeMode,
+          [],
+        ),
+        returnValue: _i9.Future<String?>.value(),
+      ) as _i9.Future<String?>);
+
+  @override
   _i9.Future<String> exportAllData() => (super.noSuchMethod(
         Invocation.method(
           #exportAllData,
@@ -1507,14 +1530,11 @@ class MockFoodDbService extends _i1.Mock implements _i35.FoodDbService {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockStatsPresenter extends _i1.Mock implements _i37.StatsPresenter {
-  MockStatsPresenter() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   bool get showLevelUpDialog => (super.noSuchMethod(
         Invocation.getter(#showLevelUpDialog),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -1524,18 +1544,24 @@ class MockStatsPresenter extends _i1.Mock implements _i37.StatsPresenter {
           this,
           Invocation.getter(#stats),
         ),
+        returnValueForMissingStub: _FakeUserStats_0(
+          this,
+          Invocation.getter(#stats),
+        ),
       ) as _i2.UserStats);
 
   @override
   int get maxHp => (super.noSuchMethod(
         Invocation.getter(#maxHp),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   int get nextLevelXp => (super.noSuchMethod(
         Invocation.getter(#nextLevelXp),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
@@ -1545,12 +1571,20 @@ class MockStatsPresenter extends _i1.Mock implements _i37.StatsPresenter {
           this,
           Invocation.getter(#rank),
         ),
+        returnValueForMissingStub: _i26.dummyValue<String>(
+          this,
+          Invocation.getter(#rank),
+        ),
       ) as String);
 
   @override
   String get jobTitle => (super.noSuchMethod(
         Invocation.getter(#jobTitle),
         returnValue: _i26.dummyValue<String>(
+          this,
+          Invocation.getter(#jobTitle),
+        ),
+        returnValueForMissingStub: _i26.dummyValue<String>(
           this,
           Invocation.getter(#jobTitle),
         ),
@@ -1569,6 +1603,7 @@ class MockStatsPresenter extends _i1.Mock implements _i37.StatsPresenter {
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -1701,86 +1736,95 @@ class MockStatsPresenter extends _i1.Mock implements _i37.StatsPresenter {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
-  MockFastingPresenter() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   bool get isFasting => (super.noSuchMethod(
         Invocation.getter(#isFasting),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   int get elapsedSeconds => (super.noSuchMethod(
         Invocation.getter(#elapsedSeconds),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   int get fastingGoalHours => (super.noSuchMethod(
         Invocation.getter(#fastingGoalHours),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   List<_i10.FastingLog> get history => (super.noSuchMethod(
         Invocation.getter(#history),
         returnValue: <_i10.FastingLog>[],
+        returnValueForMissingStub: <_i10.FastingLog>[],
       ) as List<_i10.FastingLog>);
 
   @override
   int get targetSeconds => (super.noSuchMethod(
         Invocation.getter(#targetSeconds),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   bool get isOvertime => (super.noSuchMethod(
         Invocation.getter(#isOvertime),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   int get overtimeSeconds => (super.noSuchMethod(
         Invocation.getter(#overtimeSeconds),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   _i40.FastingPhase get currentPhase => (super.noSuchMethod(
         Invocation.getter(#currentPhase),
         returnValue: _i40.FastingPhase.sugarBurn,
+        returnValueForMissingStub: _i40.FastingPhase.sugarBurn,
       ) as _i40.FastingPhase);
 
   @override
   bool get requiresRefeedingProtocol => (super.noSuchMethod(
         Invocation.getter(#requiresRefeedingProtocol),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   int get currentStreak => (super.noSuchMethod(
         Invocation.getter(#currentStreak),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   int get longestStreak => (super.noSuchMethod(
         Invocation.getter(#longestStreak),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   double get totalHoursFasted => (super.noSuchMethod(
         Invocation.getter(#totalHoursFasted),
         returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
       ) as double);
 
   @override
   double get successRate => (super.noSuchMethod(
         Invocation.getter(#successRate),
         returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
       ) as double);
 
   @override
@@ -1841,6 +1885,7 @@ class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -1870,6 +1915,7 @@ class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
           [day],
         ),
         returnValue: <_i10.FastingLog>[],
+        returnValueForMissingStub: <_i10.FastingLog>[],
       ) as List<_i10.FastingLog>);
 
   @override
@@ -1889,6 +1935,7 @@ class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
           [],
         ),
         returnValue: _i9.Future<(int, int)>.value((0, 0)),
+        returnValueForMissingStub: _i9.Future<(int, int)>.value((0, 0)),
       ) as _i9.Future<(int, int)>);
 
   @override
@@ -2013,6 +2060,14 @@ class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
             [],
           ),
         )),
+        returnValueForMissingStub:
+            _i9.Future<String>.value(_i26.dummyValue<String>(
+          this,
+          Invocation.method(
+            #exportData,
+            [],
+          ),
+        )),
       ) as _i9.Future<String>);
 
   @override
@@ -2066,14 +2121,14 @@ class MockFastingPresenter extends _i1.Mock implements _i39.FastingPresenter {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
-  MockActivityPresenter() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   _i5.ActivityLog get todayLog => (super.noSuchMethod(
         Invocation.getter(#todayLog),
         returnValue: _FakeActivityLog_3(
+          this,
+          Invocation.getter(#todayLog),
+        ),
+        returnValueForMissingStub: _FakeActivityLog_3(
           this,
           Invocation.getter(#todayLog),
         ),
@@ -2086,48 +2141,59 @@ class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
           this,
           Invocation.getter(#goals),
         ),
+        returnValueForMissingStub: _FakeActivityGoals_4(
+          this,
+          Invocation.getter(#goals),
+        ),
       ) as _i6.ActivityGoals);
 
   @override
   List<_i5.ActivityLog> get history => (super.noSuchMethod(
         Invocation.getter(#history),
         returnValue: <_i5.ActivityLog>[],
+        returnValueForMissingStub: <_i5.ActivityLog>[],
       ) as List<_i5.ActivityLog>);
 
   @override
   bool get isHealthConnectAvailable => (super.noSuchMethod(
         Invocation.getter(#isHealthConnectAvailable),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   bool get hasHealthPermission => (super.noSuchMethod(
         Invocation.getter(#hasHealthPermission),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   bool get isLoading => (super.noSuchMethod(
         Invocation.getter(#isLoading),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   bool get isBackfilling => (super.noSuchMethod(
         Invocation.getter(#isBackfilling),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   bool get isConnecting => (super.noSuchMethod(
         Invocation.getter(#isConnecting),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   bool get healthPermissionDenied => (super.noSuchMethod(
         Invocation.getter(#healthPermissionDenied),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -2135,36 +2201,42 @@ class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
       (super.noSuchMethod(
         Invocation.getter(#stepSources),
         returnValue: <({String sourceId, String sourceName})>[],
+        returnValueForMissingStub: <({String sourceId, String sourceName})>[],
       ) as List<({String sourceId, String sourceName})>);
 
   @override
   int get todaySteps => (super.noSuchMethod(
         Invocation.getter(#todaySteps),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   double get stepProgress => (super.noSuchMethod(
         Invocation.getter(#stepProgress),
         returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
       ) as double);
 
   @override
   bool get isGoalMet => (super.noSuchMethod(
         Invocation.getter(#isGoalMet),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   double get distanceProgress => (super.noSuchMethod(
         Invocation.getter(#distanceProgress),
         returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
       ) as double);
 
   @override
   bool get isDistanceGoalMet => (super.noSuchMethod(
         Invocation.getter(#isDistanceGoalMet),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -2174,30 +2246,41 @@ class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
           this,
           Invocation.getter(#summaryLabel),
         ),
+        returnValueForMissingStub: _i26.dummyValue<String>(
+          this,
+          Invocation.getter(#summaryLabel),
+        ),
       ) as String);
 
   @override
   List<_i5.ActivityLog> get weeklyLogs => (super.noSuchMethod(
         Invocation.getter(#weeklyLogs),
         returnValue: <_i5.ActivityLog>[],
+        returnValueForMissingStub: <_i5.ActivityLog>[],
       ) as List<_i5.ActivityLog>);
 
   @override
   int get weeklyMaxSteps => (super.noSuchMethod(
         Invocation.getter(#weeklyMaxSteps),
         returnValue: 0,
+        returnValueForMissingStub: 0,
       ) as int);
 
   @override
   Map<String, _i5.ActivityLog> get historyByDate => (super.noSuchMethod(
         Invocation.getter(#historyByDate),
         returnValue: <String, _i5.ActivityLog>{},
+        returnValueForMissingStub: <String, _i5.ActivityLog>{},
       ) as Map<String, _i5.ActivityLog>);
 
   @override
   String get todayCaloriesLabel => (super.noSuchMethod(
         Invocation.getter(#todayCaloriesLabel),
         returnValue: _i26.dummyValue<String>(
+          this,
+          Invocation.getter(#todayCaloriesLabel),
+        ),
+        returnValueForMissingStub: _i26.dummyValue<String>(
           this,
           Invocation.getter(#todayCaloriesLabel),
         ),
@@ -2210,20 +2293,27 @@ class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
           this,
           Invocation.getter(#hubSubtitle),
         ),
+        returnValueForMissingStub: _i26.dummyValue<String>(
+          this,
+          Invocation.getter(#hubSubtitle),
+        ),
       ) as String);
 
   @override
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
-  double? caloriesBurned(_i5.ActivityLog? log) =>
-      (super.noSuchMethod(Invocation.method(
-        #caloriesBurned,
-        [log],
-      )) as double?);
+  double? caloriesBurned(_i5.ActivityLog? log) => (super.noSuchMethod(
+        Invocation.method(
+          #caloriesBurned,
+          [log],
+        ),
+        returnValueForMissingStub: null,
+      ) as double?);
 
   @override
   _i9.Future<void> loadState() => (super.noSuchMethod(
@@ -2378,56 +2468,67 @@ class MockActivityPresenter extends _i1.Mock implements _i41.ActivityPresenter {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
-  MockQuestPresenter() {
-    _i1.throwOnMissingStub(this);
-  }
-
   @override
   List<_i11.Quest> get quests => (super.noSuchMethod(
         Invocation.getter(#quests),
         returnValue: <_i11.Quest>[],
+        returnValueForMissingStub: <_i11.Quest>[],
       ) as List<_i11.Quest>);
 
   @override
   List<_i12.HabitRoutine> get routines => (super.noSuchMethod(
         Invocation.getter(#routines),
         returnValue: <_i12.HabitRoutine>[],
+        returnValueForMissingStub: <_i12.HabitRoutine>[],
       ) as List<_i12.HabitRoutine>);
 
   @override
   List<_i13.QuestAchievement> get unseenAchievements => (super.noSuchMethod(
         Invocation.getter(#unseenAchievements),
         returnValue: <_i13.QuestAchievement>[],
+        returnValueForMissingStub: <_i13.QuestAchievement>[],
       ) as List<_i13.QuestAchievement>);
 
   @override
   bool get hasUnseenAchievements => (super.noSuchMethod(
         Invocation.getter(#hasUnseenAchievements),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
   List<_i11.Quest> get todayActiveQuests => (super.noSuchMethod(
         Invocation.getter(#todayActiveQuests),
         returnValue: <_i11.Quest>[],
+        returnValueForMissingStub: <_i11.Quest>[],
       ) as List<_i11.Quest>);
 
   @override
   List<_i11.Quest> get todayOverdueQuests => (super.noSuchMethod(
         Invocation.getter(#todayOverdueQuests),
         returnValue: <_i11.Quest>[],
+        returnValueForMissingStub: <_i11.Quest>[],
       ) as List<_i11.Quest>);
 
   @override
   List<_i11.Quest> get todayCompletedQuests => (super.noSuchMethod(
         Invocation.getter(#todayCompletedQuests),
         returnValue: <_i11.Quest>[],
+        returnValueForMissingStub: <_i11.Quest>[],
       ) as List<_i11.Quest>);
+
+  @override
+  bool get hasUrgentQuest => (super.noSuchMethod(
+        Invocation.getter(#hasUrgentQuest),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
 
   @override
   bool get hasListeners => (super.noSuchMethod(
         Invocation.getter(#hasListeners),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -2438,6 +2539,7 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           [routine],
         ),
         returnValue: <_i11.Quest>[],
+        returnValueForMissingStub: <_i11.Quest>[],
       ) as List<_i11.Quest>);
 
   @override
@@ -2447,6 +2549,7 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           [questId],
         ),
         returnValue: false,
+        returnValueForMissingStub: false,
       ) as bool);
 
   @override
@@ -2456,6 +2559,7 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           [questId],
         ),
         returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
       ) as double);
 
   @override
@@ -2484,6 +2588,7 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           },
         ),
         returnValue: _i9.Future<(int, bool)>.value((0, false)),
+        returnValueForMissingStub: _i9.Future<(int, bool)>.value((0, false)),
       ) as _i9.Future<(int, bool)>);
 
   @override
@@ -2494,6 +2599,7 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           [questId],
         ),
         returnValue: _i9.Future<(int, bool)>.value((0, false)),
+        returnValueForMissingStub: _i9.Future<(int, bool)>.value((0, false)),
       ) as _i9.Future<(int, bool)>);
 
   @override
@@ -2620,7 +2726,154 @@ class MockQuestPresenter extends _i1.Mock implements _i42.QuestPresenter {
           [],
         ),
         returnValue: _i9.Future<int>.value(0),
+        returnValueForMissingStub: _i9.Future<int>.value(0),
       ) as _i9.Future<int>);
+
+  @override
+  void addListener(_i38.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #addListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void removeListener(_i38.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #removeListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+        Invocation.method(
+          #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [HubPresenter].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockHubPresenter extends _i1.Mock implements _i43.HubPresenter {
+  @override
+  List<_i43.HubCardType> get cardOrder => (super.noSuchMethod(
+        Invocation.getter(#cardOrder),
+        returnValue: <_i43.HubCardType>[],
+        returnValueForMissingStub: <_i43.HubCardType>[],
+      ) as List<_i43.HubCardType>);
+
+  @override
+  bool get hasListeners => (super.noSuchMethod(
+        Invocation.getter(#hasListeners),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  void reorderCards(
+    int? oldIndex,
+    int? newIndex,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #reorderCards,
+          [
+            oldIndex,
+            newIndex,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void addListener(_i38.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #addListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void removeListener(_i38.VoidCallback? listener) => super.noSuchMethod(
+        Invocation.method(
+          #removeListener,
+          [listener],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void notifyListeners() => super.noSuchMethod(
+        Invocation.method(
+          #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [SettingsPresenter].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockSettingsPresenter extends _i1.Mock implements _i44.SettingsPresenter {
+  @override
+  _i45.ThemeMode get themeMode => (super.noSuchMethod(
+        Invocation.getter(#themeMode),
+        returnValue: _i45.ThemeMode.system,
+        returnValueForMissingStub: _i45.ThemeMode.system,
+      ) as _i45.ThemeMode);
+
+  @override
+  bool get hasListeners => (super.noSuchMethod(
+        Invocation.getter(#hasListeners),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  _i9.Future<void> init() => (super.noSuchMethod(
+        Invocation.method(
+          #init,
+          [],
+        ),
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
+
+  @override
+  _i9.Future<void> setThemeMode(_i45.ThemeMode? mode) => (super.noSuchMethod(
+        Invocation.method(
+          #setThemeMode,
+          [mode],
+        ),
+        returnValue: _i9.Future<void>.value(),
+        returnValueForMissingStub: _i9.Future<void>.value(),
+      ) as _i9.Future<void>);
 
   @override
   void addListener(_i38.VoidCallback? listener) => super.noSuchMethod(

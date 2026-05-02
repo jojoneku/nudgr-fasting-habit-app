@@ -1,4 +1,4 @@
-package com.example.intermittent_fasting_2
+package com.nudgr.app
 
 import android.content.Intent
 import io.flutter.embedding.android.FlutterFragmentActivity

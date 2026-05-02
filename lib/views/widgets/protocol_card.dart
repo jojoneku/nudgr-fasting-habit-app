@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../app_colors.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_text_styles.dart';
+import 'system/system.dart';
 
 class FastingProtocol {
   final int hours;
@@ -68,13 +71,18 @@ class FastingProtocol {
       isExtended: true,
     ),
   ];
+
+  Color get tierColor {
+    if (isExtended) {
+      return hours >= 48 ? AppColors.danger : const Color(0xFFFF7043);
+    }
+    if (hours >= 20) return const Color(0xFFAB47BC);
+    if (hours >= 16) return AppColors.secondary;
+    return AppColors.neutral;
+  }
 }
 
 class ProtocolCard extends StatelessWidget {
-  final FastingProtocol protocol;
-  final bool isSelected;
-  final VoidCallback onTap;
-
   const ProtocolCard({
     super.key,
     required this.protocol,
@@ -82,118 +90,59 @@ class ProtocolCard extends StatelessWidget {
     required this.onTap,
   });
 
-  Color get _tierColor {
-    if (protocol.isExtended) {
-      return protocol.hours >= 48 ? AppColors.danger : const Color(0xFFFF7043);
-    }
-    if (protocol.hours >= 20) return const Color(0xFFAB47BC);
-    if (protocol.hours >= 16) return AppColors.secondary;
-    return AppColors.neutral;
-  }
+  final FastingProtocol protocol;
+  final bool isSelected;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    final theme = Theme.of(context);
+
+    return AppCard(
+      variant: isSelected ? AppCardVariant.outlined : AppCardVariant.filled,
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.4)
+          : null,
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        curve: Curves.easeOut,
-        width: 160,
-        clipBehavior: Clip.hardEdge,
-        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-        transform: isSelected
-            ? Matrix4.diagonal3Values(1.02, 1.02, 1.0)
-            : Matrix4.identity(),
-        transformAlignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? _tierColor.withValues(alpha: 0.12)
-              : AppColors.background.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? _tierColor
-                : AppColors.neutral.withValues(alpha: 0.2),
-            width: isSelected ? 1.5 : 1,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: _tierColor.withValues(alpha: 0.25),
-                    blurRadius: 12,
-                    spreadRadius: 1,
-                  )
-                ]
-              : null,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+      padding: const EdgeInsets.all(AppSpacing.sm + 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _tierColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      protocol.ratio,
-                      style: TextStyle(
-                        color: _tierColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                  if (protocol.isExtended)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '⚠',
-                        style: TextStyle(fontSize: 11),
-                      ),
-                    ),
-                ],
+              AppStatPill(
+                value: protocol.ratio,
+                color: isSelected ? AppStatColor.primary : AppStatColor.neutral,
+                size: AppStatSize.small,
               ),
-              const SizedBox(height: 10),
-              Text(
-                protocol.rpgName,
-                style: TextStyle(
-                  color: isSelected ? _tierColor : AppColors.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  height: 1.2,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                protocol.benefit,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                  height: 1.3,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
+              if (protocol.isExtended)
+                Icon(Icons.warning_amber_rounded,
+                    size: 14, color: theme.colorScheme.error),
             ],
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            protocol.rpgName,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: isSelected
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            protocol.benefit,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

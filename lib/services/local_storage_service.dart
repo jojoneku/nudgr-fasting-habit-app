@@ -1023,6 +1023,18 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<void> saveThemeMode(String mode) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.kThemeMode, mode);
+  }
+
+  @override
+  Future<String?> loadThemeMode() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(StorageService.kThemeMode);
+  }
+
+  @override
   Future<void> importAllData(String jsonString) async {
     final prefs = await SharedPreferences.getInstance();
     try {

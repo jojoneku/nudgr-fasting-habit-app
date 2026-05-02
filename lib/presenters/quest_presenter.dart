@@ -84,6 +84,11 @@ class QuestPresenter extends ChangeNotifier {
       ..sort(_byTime);
   }
 
+  bool get hasUrgentQuest => todayOverdueQuests.isNotEmpty;
+
+  Quest? get nextUrgentQuest =>
+      todayOverdueQuests.isNotEmpty ? todayOverdueQuests.first : null;
+
   /// Quests that belong to a routine scheduled for today.
   List<Quest> questsForRoutine(HabitRoutine routine) {
     return routine.questIds
