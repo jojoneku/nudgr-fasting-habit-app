@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/daily_nutrition_log.dart';
 import '../../presenters/nutrition_presenter.dart';
+import '../widgets/system/system.dart';
 
 class NutritionHistoryScreen extends StatelessWidget {
   final NutritionPresenter presenter;
@@ -13,27 +14,25 @@ class NutritionHistoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: presenter,
-      builder: (context, _) => _buildScaffold(context),
-    );
-  }
-
-  Widget _buildScaffold(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('History'),
+      builder: (context, _) => AppPageScaffold(
+        title: 'History',
+        padding: EdgeInsets.zero,
+        body: presenter.history.isEmpty
+            ? const AppEmptyState(
+                icon: Icons.bar_chart_outlined,
+                title: 'No history yet',
+                body: 'Log meals for 2+ days to see your chart',
+              )
+            : _HistoryContent(
+                history: presenter.history,
+                goalCalories: presenter.effectiveGoal,
+              ),
       ),
-      body: presenter.history.isEmpty
-          ? const _EmptyHistory()
-          : _HistoryContent(
-              history: presenter.history,
-              goalCalories: presenter.effectiveGoal,
-            ),
     );
   }
 }
 
-// ── Main content: chart + list ─────────────────────────────────────────────────
+// ─── History Content ──────────────────────────────────────────────────────────
 
 class _HistoryContent extends StatelessWidget {
   final List<DailyNutritionLog> history;
@@ -41,7 +40,6 @@ class _HistoryContent extends StatelessWidget {
 
   const _HistoryContent({required this.history, required this.goalCalories});
 
-  /// Last 7 days from history (most-recent first → reverse for chart left→right).
   List<DailyNutritionLog> get _last7 =>
       history.take(7).toList().reversed.toList();
 
@@ -50,25 +48,23 @@ class _HistoryContent extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
       children: [
-        // ── Weekly bar chart ──────────────────────────────────────────────
         _WeeklyChart(days: _last7, goalCalories: goalCalories),
         const SizedBox(height: 24),
-
-        // ── Streak badges ─────────────────────────────────────────────────
-        const _SectionHeader('Recent days'),
-        const SizedBox(height: 10),
-
-        // ── Daily list ────────────────────────────────────────────────────
-        ...history.map((log) => _HistoryRow(
-              log: log,
-              goalCalories: goalCalories,
-            )),
+        AppSection(
+          title: 'Recent days',
+          child: Column(
+            children: history
+                .map((log) =>
+                    _HistoryRow(log: log, goalCalories: goalCalories))
+                .toList(),
+          ),
+        ),
       ],
     );
   }
 }
 
-// ── Weekly bar chart ──────────────────────────────────────────────────────────
+// ─── Weekly Bar Chart ─────────────────────────────────────────────────────────
 
 class _WeeklyChart extends StatelessWidget {
   final List<DailyNutritionLog> days;
@@ -78,30 +74,26 @@ class _WeeklyChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-      ),
+    final theme = Theme.of(context);
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('7-day overview',
-              style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500)),
+          Text(
+            '7-day overview',
+            style: theme.textTheme.labelMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
           const SizedBox(height: 16),
           SizedBox(
             height: 120,
             child: CustomPaint(
               size: const Size(double.infinity, 120),
-              painter: _BarChartPainter(days: days, goalCalories: goalCalories),
+              painter:
+                  _BarChartPainter(days: days, goalCalories: goalCalories),
             ),
           ),
           const SizedBox(height: 8),
-          // Day labels
           Row(
             children: days.map((log) {
               final dt = DateTime.tryParse(log.date) ?? DateTime.now();
@@ -109,10 +101,8 @@ class _WeeklyChart extends StatelessWidget {
                 child: Text(
                   DateFormat('E').format(dt).substring(0, 1),
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 10,
-                      letterSpacing: 0.5),
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               );
             }).toList(),
@@ -142,29 +132,30 @@ class _BarChartPainter extends CustomPainter {
     final barWidth = size.width / (days.length * 2 - 1);
     final goalY = size.height * (1 - goalCalories / maxCal);
 
-    // Goal line
-    final goalPaint = Paint()
-      ..color = AppColors.gold.withValues(alpha: 0.4)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    canvas.drawLine(Offset(0, goalY), Offset(size.width, goalY), goalPaint);
+    canvas.drawLine(
+      Offset(0, goalY),
+      Offset(size.width, goalY),
+      Paint()
+        ..color = AppColors.gold.withValues(alpha: 0.4)
+        ..strokeWidth = 1
+        ..style = PaintingStyle.stroke,
+    );
 
-    // Bars
     for (int i = 0; i < days.length; i++) {
       final cal = days[i].totalCalories;
-      final ratio = (cal / maxCal).clamp(0.0, 1.0);
-      final barH = size.height * ratio;
+      final barH = size.height * (cal / maxCal).clamp(0.0, 1.0);
       final left = i * barWidth * 2;
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTWH(left, size.height - barH, barWidth, barH),
-        const Radius.circular(4),
-      );
-
       final isGoalMet = goalCalories > 0 && cal >= goalCalories;
-      final barColor =
-          isGoalMet ? AppColors.gold : AppColors.gold.withValues(alpha: 0.3);
-
-      canvas.drawRRect(rect, Paint()..color = barColor);
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(left, size.height - barH, barWidth, barH),
+          const Radius.circular(4),
+        ),
+        Paint()
+          ..color = isGoalMet
+              ? AppColors.gold
+              : AppColors.gold.withValues(alpha: 0.3),
+      );
     }
   }
 
@@ -173,24 +164,7 @@ class _BarChartPainter extends CustomPainter {
       old.days != days || old.goalCalories != goalCalories;
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-  const _SectionHeader(this.label);
-
-  @override
-  Widget build(BuildContext context) => Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.textSecondary,
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-      );
-}
-
-// ── History row ───────────────────────────────────────────────────────────────
+// ─── History Row ──────────────────────────────────────────────────────────────
 
 class _HistoryRow extends StatelessWidget {
   final DailyNutritionLog log;
@@ -203,84 +177,61 @@ class _HistoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final cal = log.totalCalories;
     final goalMet = goalCalories > 0 && cal >= goalCalories;
-    final ratio = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
-    final barColor =
-        goalMet ? AppColors.gold : AppColors.gold.withValues(alpha: 0.4);
+    final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
+    final ratio =
+        goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            Expanded(
-              child: Text(
-                _dateFmt.format(DateTime.parse(log.date)),
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: AppCard(
+        padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _dateFmt.format(DateTime.parse(log.date)),
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  '${_calFmt.format(cal)} kcal',
+                  style: TextStyle(
+                    color: goalMet
+                        ? AppColors.gold
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.bold,
                     fontSize: 13,
-                    fontWeight: FontWeight.w600),
-              ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (isOver)
+                  AppBadge(text: 'Over', color: theme.colorScheme.error)
+                else if (goalMet)
+                  const AppBadge(text: 'Hit target', color: AppColors.gold)
+                else
+                  AppBadge(
+                    text: 'Under',
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+              ],
             ),
-            Text(
-              '${_calFmt.format(cal)} kcal',
-              style: TextStyle(
-                  color: goalMet ? AppColors.gold : AppColors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold),
-            ),
-            if (goalMet) ...[
-              const SizedBox(width: 6),
-              const Icon(Icons.check_circle, color: AppColors.gold, size: 14),
-            ],
-          ]),
-          const SizedBox(height: 8),
-          // Mini progress bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(2),
-            child: LinearProgressIndicator(
+            const SizedBox(height: 8),
+            AppLinearProgress(
               value: ratio.clamp(0.0, 1.0),
-              minHeight: 3,
-              backgroundColor: AppColors.background,
-              valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              height: 3,
+              color: goalMet
+                  ? AppColors.gold
+                  : AppColors.gold.withValues(alpha: 0.4),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Empty state ───────────────────────────────────────────────────────────────
-
-class _EmptyHistory extends StatelessWidget {
-  const _EmptyHistory();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.bar_chart, color: AppColors.textSecondary, size: 48),
-          SizedBox(height: 16),
-          Text(
-            'No history yet',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
-          SizedBox(height: 4),
-          Text(
-            'Log meals for 2+ days to see your chart',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
