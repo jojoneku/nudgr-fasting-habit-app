@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../app_colors.dart';
 import '../../presenters/activity_presenter.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_text_styles.dart';
+import '../widgets/system/system.dart';
 import 'activity_screen.dart';
 
 class ActivityPermissionScreen extends StatelessWidget {
@@ -11,11 +14,12 @@ class ActivityPermissionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('TRAINING GROUNDS')),
+    return AppPageScaffold(
+      title: 'Training Grounds',
+      padding: EdgeInsets.zero,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -27,27 +31,25 @@ class ActivityPermissionScreen extends StatelessWidget {
                   color: AppColors.success,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.lg),
               Text(
                 'Connect Health Connect',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
-                    ),
+                style: AppTextStyles.headlineSmall.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.md),
               Text(
                 'Training Grounds reads your daily steps from Health Connect to track your physical discipline and award AGI points.',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
-                      height: 1.5,
-                    ),
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.5,
+                ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 32),
-              _BenefitRow(
+              const SizedBox(height: AppSpacing.lg),
+              const _BenefitRow(
                 icon: Icons.emoji_events_outlined,
                 label: '+25 XP when you hit your daily step goal',
               ),
@@ -57,7 +59,7 @@ class ActivityPermissionScreen extends StatelessWidget {
                 label: '+1 AGI every 5 consecutive days goal met',
               ),
               const SizedBox(height: 12),
-              _BenefitRow(
+              const _BenefitRow(
                 icon: Icons.lock_outline,
                 label: 'Read-only — we never write to Health Connect',
               ),
@@ -67,32 +69,18 @@ class ActivityPermissionScreen extends StatelessWidget {
                 builder: (context, _) => Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    FilledButton.icon(
+                    AppPrimaryButton(
+                      leading: Icons.health_and_safety_outlined,
+                      label: 'Connect Health Connect',
+                      isLoading: presenter.isLoading,
                       onPressed: presenter.isLoading
                           ? null
                           : () => _grantPermission(context),
-                      icon: presenter.isLoading
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            )
-                          : const Icon(Icons.health_and_safety_outlined),
-                      label: const Text('Connect Health Connect'),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(52),
-                      ),
                     ),
-                    const SizedBox(height: 12),
-                    TextButton(
+                    const SizedBox(height: AppSpacing.sm),
+                    AppSecondaryButton(
+                      label: 'Use manual entry instead',
                       onPressed: () => _skipToManual(context),
-                      child: Text(
-                        'Use manual entry instead',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
                     ),
                   ],
                 ),
@@ -142,9 +130,7 @@ class _BenefitRow extends StatelessWidget {
         Expanded(
           child: Text(
             label,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textPrimary,
-                ),
+            style: AppTextStyles.bodyMedium,
           ),
         ),
       ],
