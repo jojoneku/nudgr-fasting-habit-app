@@ -5,16 +5,14 @@ import '../presenters/stats_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../models/user_stats.dart';
+import '../utils/app_spacing.dart';
+import '../utils/app_text_styles.dart';
 import 'widgets/level_up_overlay.dart';
 import 'widgets/stat_radar_chart.dart';
 import 'settings_screen.dart';
+import 'widgets/system/system.dart';
 
 class StatsView extends StatelessWidget {
-  final StatsPresenter presenter;
-  final FastingPresenter fastingPresenter;
-  final AuthPresenter authPresenter;
-  final SyncPresenter? syncPresenter;
-
   const StatsView({
     super.key,
     required this.presenter,
@@ -22,6 +20,11 @@ class StatsView extends StatelessWidget {
     required this.authPresenter,
     this.syncPresenter,
   });
+
+  final StatsPresenter presenter;
+  final FastingPresenter fastingPresenter;
+  final AuthPresenter authPresenter;
+  final SyncPresenter? syncPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -31,80 +34,39 @@ class StatsView extends StatelessWidget {
         final stats = presenter.stats;
         return Stack(
           children: [
-            Scaffold(
-              backgroundColor: AppColors.background,
-              body: SafeArea(
-                child: Center(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Card(
-                      elevation: 8,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(32)),
-                      clipBehavior: Clip.antiAlias,
-                      child: Container(
-                        color: AppColors.surface,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 24, vertical: 32),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Header
-                            Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                const Text(
-                                  "STATUS",
-                                  style: TextStyle(
-                                    color: AppColors.textPrimary,
-                                    fontSize: 18,
-                                    letterSpacing: 4.0,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                          color: AppColors.primary,
-                                          blurRadius: 8),
-                                    ],
-                                  ),
-                                ),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: IconButton(
-                                    icon: const Icon(Icons.settings_outlined,
-                                        color: AppColors.textSecondary,
-                                        size: 20),
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => SettingsScreen(
-                                            fastingPresenter: fastingPresenter,
-                                            authPresenter: authPresenter,
-                                            syncPresenter: syncPresenter),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 20),
-
-                            // Profile Section
-                            _buildProfileSection(context, stats),
-                            _buildDivider(),
-
-                            // Vitals Section
-                            _buildVitalitySection(context, stats),
-                            _buildDivider(),
-
-                            // Stats Section
-                            _buildStatsGrid(context, stats),
-                          ],
-                        ),
+            AppPageScaffold.large(
+              title: 'Character',
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SettingsScreen(
+                        fastingPresenter: fastingPresenter,
+                        authPresenter: authPresenter,
+                        syncPresenter: syncPresenter,
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.xl,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _HeaderCard(presenter: presenter, stats: stats),
+                      const SizedBox(height: AppSpacing.md),
+                      _AttributesSection(presenter: presenter, stats: stats),
+                      const SizedBox(height: AppSpacing.md),
+                      _StreaksSection(stats: stats, presenter: presenter),
+                    ]),
+                  ),
+                ),
+              ],
             ),
             if (presenter.showLevelUpDialog)
               LevelUpOverlay(
@@ -116,374 +78,339 @@ class StatsView extends StatelessWidget {
       },
     );
   }
+}
 
-  Widget _buildDivider() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16.0),
-      child: Container(
-        height: 1,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              AppColors.primary.withValues(alpha: 0.0),
-              AppColors.primary.withValues(alpha: 0.5),
-              AppColors.primary.withValues(alpha: 0.0),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard({required this.presenter, required this.stats});
+  final StatsPresenter presenter;
+  final UserStats stats;
 
-  Widget _buildProfileSection(BuildContext context, UserStats stats) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildInfoRow("NAME", stats.name,
-                  isEditable: true, context: context),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  const SizedBox(
-                    width: 60,
-                    child: Text(
-                      "RANK",
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.15),
-                      border: Border.all(color: AppColors.gold),
-                      borderRadius: BorderRadius.circular(4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.gold.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          spreadRadius: 1,
-                        ),
-                      ],
-                    ),
-                    child: Text(
-                      "${presenter.rank}-Rank",
-                      style: const TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        Column(
-          children: [
-            const Text(
-              "LEVEL",
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-            Text(
-              "${stats.level}",
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value,
-      {bool isEditable = false, BuildContext? context}) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 60,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-        if (isEditable && context != null)
-          InkWell(
-            onTap: () => _editName(context, value),
-            child: Row(
-              children: [
-                Text(
-                  value.toUpperCase(),
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Icon(Icons.edit,
-                    size: 12, color: AppColors.textSecondary),
-              ],
-            ),
-          )
-        else
-          Text(
-            value.toUpperCase(),
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-      ],
-    );
-  }
-
-  Future<void> _editName(BuildContext context, String currentName) async {
-    final controller = TextEditingController(text: currentName);
+  Future<void> _editName(BuildContext context) async {
+    final controller = TextEditingController(text: stats.name);
     final newName = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: const Text("Update Name",
-            style: TextStyle(color: AppColors.textPrimary)),
+      builder: (ctx) => AlertDialog(
+        title: const Text('Edit name'),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: AppColors.textPrimary),
-          cursorColor: AppColors.primary,
-          decoration: const InputDecoration(
-            hintText: "Enter Name",
-            hintStyle: TextStyle(color: AppColors.textSecondary),
-            enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: AppColors.textSecondary),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: AppColors.primary),
-            ),
-          ),
           autofocus: true,
+          decoration: const InputDecoration(hintText: 'Enter name'),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancel",
-                style: TextStyle(color: AppColors.textSecondary)),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child:
-                const Text("Save", style: TextStyle(color: AppColors.primary)),
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
           ),
         ],
       ),
     );
-
+    controller.dispose();
     if (newName != null && newName.trim().isNotEmpty) {
       presenter.updateName(newName.trim());
     }
   }
 
-  Widget _buildVitalitySection(BuildContext context, UserStats stats) {
-    final maxHp = presenter.maxHp;
-    final hpPercent = (stats.currentHp / maxHp).clamp(0.0, 1.0);
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final hpPercent = (stats.currentHp / presenter.maxHp).clamp(0.0, 1.0);
+    final xpPercent = (stats.currentXp / presenter.nextLevelXp).clamp(0.0, 1.0);
 
-    final nextLevelXp = presenter.nextLevelXp;
-    final xpPercent = (stats.currentXp / nextLevelXp).clamp(0.0, 1.0);
-
-    return Column(
-      children: [
-        _buildBar("HP", stats.currentHp, maxHp, hpPercent, AppColors.danger),
-        const SizedBox(height: 12),
-        _buildBar("XP", stats.currentXp, nextLevelXp, xpPercent,
-            AppColors.accent), // XP is Blue/Cyan like MP usually
-      ],
-    );
-  }
-
-  Widget _buildBar(
-      String label, int current, int max, double percent, Color color) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 30,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+    return AppCard(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer,
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(
+                presenter.rank,
+                style: AppTextStyles.titleLarge.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              Container(
-                height: 14,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black,
-                  border: Border.all(
-                      color: AppColors.textSecondary.withValues(alpha: 0.3)),
-                ),
-                child: Stack(
-                  children: [
-                    FractionallySizedBox(
-                      widthFactor: percent,
-                      child: Container(
-                        color: color.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        "$current / $max",
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          shadows: [Shadow(color: Colors.black, blurRadius: 2)],
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GestureDetector(
+                  onTap: () => _editName(context),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          stats.name,
+                          style: AppTextStyles.titleLarge,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.edit_outlined, size: 14,
+                          color: theme.colorScheme.onSurfaceVariant),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        presenter.jobTitle,
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    AppStatPill(
+                      label: 'Lv.',
+                      value: '${stats.level}',
+                      color: AppStatColor.primary,
+                      size: AppStatSize.small,
                     ),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsGrid(BuildContext context, UserStats stats) {
-    final attrs = stats.attributes;
-    final canSpend = stats.statPoints > 0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "STATISTICS",
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (canSpend)
-              Text(
-                "(AVAILABLE POINTS: ${stats.statPoints})",
-                style: const TextStyle(
-                  color: AppColors.gold,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  shadows: [Shadow(color: AppColors.gold, blurRadius: 4)],
+                const SizedBox(height: AppSpacing.sm),
+                AppLinearProgress(
+                  value: hpPercent,
+                  label: 'HP',
+                  valueText: '${stats.currentHp} / ${presenter.maxHp}',
+                  color: theme.colorScheme.error,
+                  height: 6,
                 ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // New Layout: Radar Chart + List
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Left: Stats List
-            Expanded(
-              flex: 4,
-              child: Column(
-                children: [
-                  _buildStatRow("STRENGTH", attrs.str, "STR", canSpend),
-                  _buildStatRow("VITALITY", attrs.vit, "VIT", canSpend),
-                  _buildStatRow("AGILITY", attrs.agi, "AGI", canSpend),
-                  _buildStatRow("INTELLIGENCE", attrs.intl, "INT", canSpend),
-                  _buildStatRow("SENSE", attrs.sen, "SEN", canSpend),
-                ],
-              ),
-            ),
-
-            const SizedBox(width: 24), // Added spacing
-
-            // Right: Radar Chart
-            Expanded(
-              flex: 5,
-              child: Center(
-                child: StatRadarChart(
-                  stats: {
-                    'STR': attrs.str,
-                    'VIT': attrs.vit,
-                    'AGI': attrs.agi,
-                    'INT': attrs.intl,
-                    'SEN': attrs.sen,
-                  },
-                  size: 140,
+                const SizedBox(height: AppSpacing.xs),
+                AppLinearProgress(
+                  value: xpPercent,
+                  label: 'XP',
+                  valueText: '${stats.currentXp} / ${presenter.nextLevelXp}',
+                  height: 6,
                 ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatRow(String label, int value, String key, bool canSpend) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 13),
-          ),
-          Row(
-            children: [
-              Text(
-                "$value",
-                style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold),
-              ),
-              if (canSpend) ...[
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => presenter.allocatePoint(key),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppColors.gold),
-                      shape: BoxShape.circle,
-                    ),
-                    child:
-                        const Icon(Icons.add, size: 12, color: AppColors.gold),
+                if (stats.statPoints > 0) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  AppStatPill(
+                    icon: Icons.add_circle_outline,
+                    value: '${stats.statPoints} pts available',
+                    color: AppStatColor.warning,
+                    size: AppStatSize.small,
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AttributesSection extends StatelessWidget {
+  const _AttributesSection({required this.presenter, required this.stats});
+  final StatsPresenter presenter;
+  final UserStats stats;
+
+  static const _attrDefs = [
+    ('STR', Icons.fitness_center_rounded),
+    ('VIT', Icons.favorite_rounded),
+    ('AGI', Icons.directions_run_rounded),
+    ('INT', Icons.psychology_rounded),
+    ('SEN', Icons.sensors_rounded),
+  ];
+
+  int _value(String key) {
+    final a = stats.attributes;
+    return switch (key) {
+      'STR' => a.str,
+      'VIT' => a.vit,
+      'AGI' => a.agi,
+      'INT' => a.intl,
+      'SEN' => a.sen,
+      _ => 0,
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final canSpend = stats.statPoints > 0;
+    final rowCount = (_attrDefs.length + 1) ~/ 2;
+
+    return AppSection(
+      title: 'Attributes',
+      child: Column(
+        children: [
+          AppCard(
+            variant: AppCardVariant.elevated,
+            child: Center(
+              child: StatRadarChart(
+                stats: {
+                  'STR': stats.attributes.str,
+                  'VIT': stats.attributes.vit,
+                  'AGI': stats.attributes.agi,
+                  'INT': stats.attributes.intl,
+                  'SEN': stats.attributes.sen,
+                },
+                size: 180,
+                fillColor: theme.colorScheme.primary.withValues(alpha: 0.18),
+                borderColor: theme.colorScheme.primary,
+                gridColor: theme.colorScheme.outlineVariant,
+                labelColor: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          ...List.generate(rowCount, (rowIdx) {
+            final i = rowIdx * 2;
+            return Padding(
+              padding: EdgeInsets.only(top: rowIdx > 0 ? AppSpacing.sm : 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _AttrCell(
+                      label: _attrDefs[i].$1,
+                      icon: _attrDefs[i].$2,
+                      value: _value(_attrDefs[i].$1),
+                      canSpend: canSpend,
+                      onAllocate: () => presenter.allocatePoint(_attrDefs[i].$1),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: i + 1 < _attrDefs.length
+                        ? _AttrCell(
+                            label: _attrDefs[i + 1].$1,
+                            icon: _attrDefs[i + 1].$2,
+                            value: _value(_attrDefs[i + 1].$1),
+                            canSpend: canSpend,
+                            onAllocate: () =>
+                                presenter.allocatePoint(_attrDefs[i + 1].$1),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _AttrCell extends StatelessWidget {
+  const _AttrCell({
+    required this.label,
+    required this.icon,
+    required this.value,
+    required this.canSpend,
+    required this.onAllocate,
+  });
+
+  final String label;
+  final IconData icon;
+  final int value;
+  final bool canSpend;
+  final VoidCallback onAllocate;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AppCard(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm + 4,
+        vertical: AppSpacing.sm + 2,
+      ),
+      child: Row(
+        children: [
+          AppIconBadge(
+            icon: icon,
+            color: theme.colorScheme.primary,
+            size: 32,
+            iconSize: 16,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(label, style: AppTextStyles.labelMedium),
+                AppNumberDisplay(
+                  value: '$value',
+                  size: AppNumberSize.body,
+                  color: theme.colorScheme.onSurface,
+                  textAlign: TextAlign.start,
+                ),
+              ],
+            ),
+          ),
+          if (canSpend)
+            GestureDetector(
+              onTap: onAllocate,
+              child: const AppIconBadge(
+                icon: Icons.add,
+                color: AppColors.gold,
+                size: 28,
+                iconSize: 14,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StreaksSection extends StatelessWidget {
+  const _StreaksSection({required this.stats, required this.presenter});
+  final UserStats stats;
+  final StatsPresenter presenter;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSection(
+      title: 'Streaks',
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            AppStatPill(
+              icon: Icons.local_fire_department_rounded,
+              label: 'Streak',
+              value: '${stats.streak}d',
+              color: AppStatColor.warning,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            AppStatPill(
+              icon: Icons.workspace_premium_rounded,
+              label: 'Rank',
+              value: '${presenter.rank}-Rank',
+              color: AppStatColor.primary,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            AppStatPill(
+              icon: Icons.bolt,
+              label: 'Level',
+              value: '${stats.level}',
+              color: AppStatColor.success,
+            ),
+          ],
+        ),
       ),
     );
   }

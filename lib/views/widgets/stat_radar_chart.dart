@@ -1,6 +1,5 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import '../../app_colors.dart';
 
 class StatRadarChart extends StatelessWidget {
   const StatRadarChart({
@@ -33,7 +32,7 @@ class StatRadarChart extends StatelessWidget {
           borderColor: borderColor ?? theme.colorScheme.primary,
           gridColor: gridColor ??
               theme.colorScheme.onSurface.withValues(alpha: 0.2),
-          labelColor: labelColor ?? AppColors.textSecondary,
+          labelColor: labelColor ?? theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );
