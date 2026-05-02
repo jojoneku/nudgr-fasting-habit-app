@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app_colors.dart';
+import 'system/system.dart';
 
 class RefeedingWarningSheet extends StatelessWidget {
   final int elapsedSeconds;
@@ -240,34 +241,16 @@ class RefeedingWarningSheet extends StatelessWidget {
 
   Widget _buildActions(BuildContext context) => Column(
         children: [
-          SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: FilledButton(
-              onPressed: onConfirmEnd,
-              style: FilledButton.styleFrom(
-                backgroundColor: AppColors.danger,
-                foregroundColor: AppColors.textPrimary,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(26)),
-              ),
-              child: const Text(
-                'I UNDERSTAND — END FAST',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ),
+          AppDestructiveButton(
+            label: 'I UNDERSTAND — END FAST',
+            onPressed: onConfirmEnd,
           ),
           const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
+          AppSecondaryButton(
+            label: 'Continue Fasting',
+            onPressed: () => Navigator.pop(context, false),
+            fullWidth: true,
             height: 48,
-            child: TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.textSecondary,
-              ),
-              child: const Text('Continue Fasting'),
-            ),
           ),
         ],
       );

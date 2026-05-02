@@ -57,6 +57,7 @@ dependencies:
   flutter_dotenv: ^5.2.1
   connectivity_plus: ^6.0.0
   flex_color_scheme: ^8.0.0
+  skeletonizer: ^2.0.0
 
 
 dev_dependencies:

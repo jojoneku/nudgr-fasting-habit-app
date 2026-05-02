@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import '../../app_colors.dart';
+import 'system/system.dart';
 
 class LevelUpOverlay extends StatelessWidget {
-  final int newLevel;
-  final VoidCallback onClose;
-
   const LevelUpOverlay({
     super.key,
     required this.newLevel,
     required this.onClose,
   });
+
+  final int newLevel;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -20,34 +21,31 @@ class LevelUpOverlay extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            "LEVEL UP!",
+            'LEVEL UP!',
             style: TextStyle(
               color: AppColors.gold,
               fontSize: 48,
               fontWeight: FontWeight.bold,
               letterSpacing: 4.0,
-              shadows: [
-                Shadow(color: AppColors.gold, blurRadius: 20),
-              ],
+              shadows: [Shadow(color: AppColors.gold, blurRadius: 20)],
             ),
           ),
           const SizedBox(height: 20),
-          Text(
-            "You have reached Level $newLevel",
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 24,
-            ),
+          AppNumberDisplay(
+            value: '$newLevel',
+            label: 'You have reached',
+            labelPosition: AppNumberLabelPosition.above,
+            size: AppNumberSize.headline,
+            color: AppColors.textPrimary,
           ),
           const SizedBox(height: 40),
-          ElevatedButton(
-            onPressed: onClose,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.gold,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 48),
+            child: AppPrimaryButton(
+              label: 'ACCEPT',
+              onPressed: onClose,
+              height: 52,
             ),
-            child: const Text("ACCEPT"),
           ),
         ],
       ),

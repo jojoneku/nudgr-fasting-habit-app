@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app_colors.dart';
+import 'system/system.dart';
 
 class FastingProtocol {
   final int hours;
@@ -136,35 +137,16 @@ class ProtocolCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: _tierColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      protocol.ratio,
-                      style: TextStyle(
-                        color: _tierColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
+                  AppStatPill(
+                    value: protocol.ratio,
+                    color: AppStatColor.neutral,
+                    size: AppStatSize.small,
                   ),
                   if (protocol.isExtended)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text(
-                        '⚠',
-                        style: TextStyle(fontSize: 11),
-                      ),
+                    AppStatPill(
+                      value: '⚠',
+                      color: AppStatColor.error,
+                      size: AppStatSize.small,
                     ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../app_colors.dart';
+import 'system/system.dart';
 
 class FastCompletionData {
   final int xpEarned;
@@ -255,34 +256,9 @@ class _FastCompletionModalState extends State<FastCompletionModal>
         color: AppColors.neutral.withValues(alpha: 0.2),
       );
 
-  Widget _buildNoteField() => TextField(
+  Widget _buildNoteField() => AppTextField(
         controller: _noteController,
-        style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
-        decoration: InputDecoration(
-          hintText: 'Add a note to this fast… (optional)',
-          hintStyle: TextStyle(
-              color: AppColors.textSecondary.withValues(alpha: 0.6),
-              fontSize: 14),
-          filled: true,
-          fillColor: AppColors.background.withValues(alpha: 0.6),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: AppColors.neutral.withValues(alpha: 0.2), width: 1),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: AppColors.neutral.withValues(alpha: 0.2), width: 1),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-                color: _accentColor.withValues(alpha: 0.6), width: 1),
-          ),
-        ),
+        hint: 'Add a note to this fast… (optional)',
         maxLines: 2,
       );
 
