@@ -76,24 +76,44 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 
 | Type | Semver | When |
 |------|--------|------|
-| `feat` | MINOR | New feature |
+| `feat!` / `BREAKING CHANGE` | **MAJOR** | Incompatible API or data change |
+| `feat` | MINOR | New user-facing feature |
 | `fix` | PATCH | Bug fix |
+| `perf` | PATCH | Performance improvement |
 | `refactor` | — | Code restructure, no behavior change |
 | `test` | — | Adding/fixing tests |
-| `chore` | — | Deps, tooling, CI |
+| `chore` | — | Deps, tooling, config |
+| `ci` | — | CI/CD pipeline changes |
 | `docs` | — | Documentation only |
-| `perf` | PATCH | Performance improvement |
 
-**Breaking change:** Add `!` after type: `feat!: redesign storage API`
+**Breaking change — two equivalent forms:**
+
+```
+# Form 1: ! suffix (preferred, visible in subject)
+feat!(storage): replace SharedPreferences with Isar
+
+# Form 2: footer token (use when body context helps)
+feat(storage): replace SharedPreferences with Isar
+
+BREAKING CHANGE: all stored data is migrated on first launch;
+rollback to previous version will lose local data.
+```
+
+**CI auto-bump rule (release job reads these):**
+- Subject contains `!` or body has `BREAKING CHANGE` → **major** bump
+- Type is `feat` (no `!`) → **minor** bump
+- Anything else (`fix`, `perf`, `chore`, `ci`, `refactor`, `test`, `docs`) → **patch** bump
 
 ### Examples for This App
 
 ```
 feat(presenter): add XP calculation on fast completion
 fix(notifications): reschedule alarm after app restart
+feat!(models): migrate FastingLog to new schema — breaks stored JSON
 refactor(storage): extract StorageService abstract interface
 test(presenter): add streak reset unit tests
 chore(deps): upgrade flutter_local_notifications to 18.0
+ci(release): add APK auto-deploy to Supabase
 ```
 
 ---
