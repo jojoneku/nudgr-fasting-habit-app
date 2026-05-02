@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class FullCategoryBreakdownSheet extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
@@ -12,130 +11,86 @@ class FullCategoryBreakdownSheet extends StatelessWidget {
   const FullCategoryBreakdownSheet({super.key, required this.presenter});
 
   static void show(BuildContext context, TreasuryDashboardPresenter presenter) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => FullCategoryBreakdownSheet(presenter: presenter),
+      title: 'Expense Breakdown',
+      useDraggableScrollableSheet: true,
+      initialChildSize: 0.65,
+      body: _BreakdownBody(presenter: presenter),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    return _BreakdownBody(presenter: presenter);
+  }
+}
+
+class _BreakdownBody extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+
+  const _BreakdownBody({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final slices = presenter.allCategorySpendThisMonth;
     final total = slices.fold(0.0, (s, e) => s + e.$2);
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.65,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      expand: false,
-      builder: (context, scrollController) => Column(
-        children: [
-          _SheetHandle(),
-          _SheetHeader(total: total),
-          Expanded(
-            child: slices.isEmpty
-                ? _EmptyState()
-                : ListView.builder(
-                    controller: scrollController,
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: slices.length,
-                    itemBuilder: (context, i) => _CategoryRow(
-                      category: slices[i].$1,
-                      amount: slices[i].$2,
-                      total: total,
-                      index: i,
-                    ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'All Categories This Month',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  'TOTAL',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
                   ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SheetHandle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 10, bottom: 4),
-      child: Container(
-        width: 40,
-        height: 4,
-        decoration: BoxDecoration(
-          color: AppColors.textSecondary.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(2),
+                ),
+                AppNumberDisplay(
+                  value: formatPeso(total),
+                  size: AppNumberSize.body,
+                  color: colorScheme.error,
+                ),
+              ],
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _SheetHeader extends StatelessWidget {
-  final double total;
-
-  const _SheetHeader({required this.total});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'EXPENSE BREAKDOWN',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'All Categories This Month',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+        const SizedBox(height: 16),
+        if (slices.isEmpty)
+          AppEmptyState(
+            icon: Icons.pie_chart_outline_rounded,
+            title: 'No expenses this month',
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
+            itemCount: slices.length,
+            itemBuilder: (context, i) => _CategoryRow(
+              category: slices[i].$1,
+              amount: slices[i].$2,
+              total: total,
+              index: i,
+            ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                'TOTAL',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 10,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              Text(
-                formatPeso(total),
-                style: AppTextStyles.mono(
-                  textStyle: TextStyle(
-                    color: AppColors.danger,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -155,18 +110,15 @@ class _CategoryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final color = resolveSliceColor(category.colorHex, index);
     final percent = total > 0 ? amount / total : 0.0;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
+      child: AppCard(
+        variant: AppCardVariant.outlined,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -179,7 +131,8 @@ class _CategoryRow extends StatelessWidget {
                     color: color,
                     shape: BoxShape.circle,
                     boxShadow: [
-                      BoxShadow(color: color.withOpacity(0.5), blurRadius: 4)
+                      BoxShadow(
+                          color: color.withValues(alpha: 0.5), blurRadius: 4)
                     ],
                   ),
                 ),
@@ -187,22 +140,15 @@ class _CategoryRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     category.name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
+                    style: theme.textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Text(
-                  formatPeso(amount),
-                  style: AppTextStyles.mono(
-                    textStyle: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                AppNumberDisplay(
+                  value: formatPeso(amount),
+                  size: AppNumberSize.body,
+                  color: colorScheme.onSurface,
                 ),
               ],
             ),
@@ -210,22 +156,18 @@ class _CategoryRow extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
-                    child: LinearProgressIndicator(
-                      value: percent,
-                      backgroundColor: AppColors.textSecondary.withOpacity(0.1),
-                      valueColor: AlwaysStoppedAnimation(color),
-                      minHeight: 5,
-                    ),
+                  child: AppLinearProgress(
+                    value: percent,
+                    color: color,
+                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    height: 5,
                   ),
                 ),
                 const SizedBox(width: 10),
                 Text(
                   '${(percent * 100).round()}%',
-                  style: TextStyle(
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: color,
-                    fontSize: 11,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -233,18 +175,6 @@ class _CategoryRow extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Text(
-        'No expenses this month',
-        style: TextStyle(color: AppColors.textSecondary),
       ),
     );
   }

@@ -1,10 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class ManageCategoriesSheet extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -52,199 +52,133 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: ListenableBuilder(
-        listenable: widget.presenter,
-        builder: (context, _) {
-          final expense = widget.presenter.categories
-              .where((c) => c.type == CategoryType.expense)
-              .toList();
-          final income = widget.presenter.categories
-              .where((c) => c.type == CategoryType.income)
-              .toList();
-
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _DragHandle(),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _SheetHeader(onClose: () => Navigator.pop(context)),
-                      const SizedBox(height: 20),
-                      _TypeToggle(
-                        value: _type,
-                        onChanged: (t) => setState(() => _type = t),
-                      ),
-                      const SizedBox(height: 12),
-                      _AddCategoryForm(
-                        formKey: _formKey,
-                        controller: _nameController,
-                        isSubmitting: _isSubmitting,
-                        onSubmit: _addCategory,
-                        type: _type,
-                      ),
-                      const SizedBox(height: 28),
-                      if (expense.isEmpty && income.isEmpty)
-                        _EmptyState()
-                      else ...[
-                        if (expense.isNotEmpty) ...[
-                          _SectionHeader(
-                            label: 'EXPENSE',
-                            count: expense.length,
-                            color: AppColors.danger,
-                            icon: Icons.arrow_upward_rounded,
-                          ),
-                          const SizedBox(height: 8),
-                          ...expense.map((c) => _CategoryTile(
-                                key: ValueKey(c.id),
-                                category: c,
-                                accentColor: AppColors.danger,
-                                onDelete: () => _confirmDelete(context, c),
-                              )),
-                        ],
-                        if (expense.isNotEmpty && income.isNotEmpty)
-                          const SizedBox(height: 20),
-                        if (income.isNotEmpty) ...[
-                          _SectionHeader(
-                            label: 'INCOME',
-                            count: income.length,
-                            color: AppColors.success,
-                            icon: Icons.arrow_downward_rounded,
-                          ),
-                          const SizedBox(height: 8),
-                          ...income.map((c) => _CategoryTile(
-                                key: ValueKey(c.id),
-                                category: c,
-                                accentColor: AppColors.success,
-                                onDelete: () => _confirmDelete(context, c),
-                              )),
-                        ],
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, FinanceCategory category) {
-    showDialog(
+  Future<void> _confirmDelete(
+      BuildContext context, FinanceCategory category) async {
+    final confirmed = await AppConfirmDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete category?',
-          style: TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-        ),
-        content: Text(
+      title: 'Delete category?',
+      body:
           '"${category.name}" will be removed. Existing transactions will keep the ID but won\'t display a label.',
-          style: TextStyle(
-              color: AppColors.textSecondary, fontSize: 13, height: 1.5),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              widget.presenter.deleteCategory(category.id);
-            },
-            child: Text('Delete', style: TextStyle(color: AppColors.danger)),
-          ),
-        ],
-      ),
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
     );
+    if (confirmed) {
+      widget.presenter.deleteCategory(category.id);
+    }
   }
-}
-
-// ─── Drag Handle ─────────────────────────────────────────────────────────────
-
-class _DragHandle extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 4),
-      child: Center(
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppColors.textSecondary.withOpacity(0.3),
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Sheet Header ─────────────────────────────────────────────────────────────
-
-class _SheetHeader extends StatelessWidget {
-  final VoidCallback onClose;
-
-  const _SheetHeader({required this.onClose});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
+    return ListenableBuilder(
+      listenable: widget.presenter,
+      builder: (context, _) {
+        final expense = widget.presenter.categories
+            .where((c) => c.type == CategoryType.expense)
+            .toList();
+        final income = widget.presenter.categories
+            .where((c) => c.type == CategoryType.income)
+            .toList();
+
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'CATEGORIES',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.0,
-                ),
+              _TypeToggle(
+                value: _type,
+                onChanged: (t) => setState(() => _type = t),
               ),
-              const SizedBox(height: 2),
-              Text(
-                'Manage Labels',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+              const SizedBox(height: 12),
+              _AddCategoryForm(
+                formKey: _formKey,
+                controller: _nameController,
+                isSubmitting: _isSubmitting,
+                onSubmit: _addCategory,
+                type: _type,
               ),
+              const SizedBox(height: 28),
+              if (expense.isEmpty && income.isEmpty)
+                const AppEmptyState(
+                  icon: Icons.label_off_outlined,
+                  title: 'No categories yet',
+                  body:
+                      'Add expense and income labels above\nto start tagging transactions.',
+                )
+              else ...[
+                if (expense.isNotEmpty)
+                  AppSection(
+                    title: 'Expense',
+                    trailing: _CountBadge(
+                        count: expense.length,
+                        color: Theme.of(context).colorScheme.error),
+                    child: Column(
+                      children: expense
+                          .map((c) => _CategoryTile(
+                                key: ValueKey(c.id),
+                                category: c,
+                                accentColor:
+                                    Theme.of(context).colorScheme.error,
+                                onDelete: () => _confirmDelete(context, c),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                if (expense.isNotEmpty && income.isNotEmpty)
+                  const SizedBox(height: 20),
+                if (income.isNotEmpty)
+                  AppSection(
+                    title: 'Income',
+                    trailing: _CountBadge(
+                        count: income.length,
+                        color: Theme.of(context).colorScheme.tertiary),
+                    child: Column(
+                      children: income
+                          .map((c) => _CategoryTile(
+                                key: ValueKey(c.id),
+                                category: c,
+                                accentColor:
+                                    Theme.of(context).colorScheme.tertiary,
+                                onDelete: () => _confirmDelete(context, c),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+              ],
             ],
           ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Count Badge ──────────────────────────────────────────────────────────────
+
+class _CountBadge extends StatelessWidget {
+  final int count;
+  final Color color;
+
+  const _CountBadge({required this.count, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
         ),
-        Semantics(
-          label: 'Close',
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: InkWell(
-              onTap: onClose,
-              borderRadius: BorderRadius.circular(22),
-              child: Icon(Icons.close_rounded,
-                  color: AppColors.textSecondary, size: 20),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -259,12 +193,13 @@ class _TypeToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.textSecondary.withOpacity(0.15)),
+        border: Border.all(color: cs.outlineVariant),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -273,7 +208,7 @@ class _TypeToggle extends StatelessWidget {
             label: 'Expense',
             icon: Icons.arrow_upward_rounded,
             selected: value == CategoryType.expense,
-            color: AppColors.danger,
+            color: cs.error,
             onTap: () => onChanged(CategoryType.expense),
             isLeft: true,
           ),
@@ -281,7 +216,7 @@ class _TypeToggle extends StatelessWidget {
             label: 'Income',
             icon: Icons.arrow_downward_rounded,
             selected: value == CategoryType.income,
-            color: AppColors.success,
+            color: cs.tertiary,
             onTap: () => onChanged(CategoryType.income),
             isLeft: false,
           ),
@@ -310,6 +245,7 @@ class _TypeOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Semantics(
         label: label,
@@ -325,26 +261,26 @@ class _TypeOption extends StatelessWidget {
             curve: Curves.easeOut,
             height: double.infinity,
             decoration: BoxDecoration(
-              color: selected ? color.withOpacity(0.15) : Colors.transparent,
+              color:
+                  selected ? color.withValues(alpha: 0.15) : Colors.transparent,
               borderRadius: BorderRadius.horizontal(
                 left: isLeft ? const Radius.circular(12) : Radius.zero,
                 right: !isLeft ? const Radius.circular(12) : Radius.zero,
               ),
               border: selected
-                  ? Border.all(color: color.withOpacity(0.4))
+                  ? Border.all(color: color.withValues(alpha: 0.4))
                   : Border.all(color: Colors.transparent),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(icon,
-                    size: 14,
-                    color: selected ? color : AppColors.textSecondary),
+                    size: 14, color: selected ? color : cs.onSurfaceVariant),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: selected ? color : AppColors.textSecondary,
+                    color: selected ? color : cs.onSurfaceVariant,
                     fontSize: 13,
                     fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
                   ),
@@ -377,8 +313,8 @@ class _AddCategoryForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        type == CategoryType.expense ? AppColors.danger : AppColors.success;
+    final cs = Theme.of(context).colorScheme;
+    final color = type == CategoryType.expense ? cs.error : cs.tertiary;
 
     return Form(
       key: formKey,
@@ -388,35 +324,11 @@ class _AddCategoryForm extends StatelessWidget {
           Expanded(
             child: TextFormField(
               controller: controller,
-              style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
               textCapitalization: TextCapitalization.words,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Category name',
-                labelStyle:
-                    TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                filled: true,
-                fillColor: AppColors.background,
                 contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                      color: AppColors.textSecondary.withOpacity(0.2)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: color),
-                ),
-                errorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.danger),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.danger),
-                ),
+                    EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               ),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
@@ -429,12 +341,11 @@ class _AddCategoryForm extends StatelessWidget {
             height: 52,
             child: Semantics(
               label: 'Add category',
-              child: ElevatedButton(
+              child: FilledButton(
                 onPressed: isSubmitting ? null : onSubmit,
-                style: ElevatedButton.styleFrom(
+                style: FilledButton.styleFrom(
                   backgroundColor: color,
-                  foregroundColor: AppColors.background,
-                  disabledBackgroundColor: color.withOpacity(0.3),
+                  foregroundColor: cs.onSurface,
                   padding: EdgeInsets.zero,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10)),
@@ -445,7 +356,7 @@ class _AddCategoryForm extends StatelessWidget {
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: AppColors.background),
+                            strokeWidth: 2, color: cs.onPrimary),
                       )
                     : const Icon(Icons.add_rounded, size: 22),
               ),
@@ -453,64 +364,6 @@ class _AddCategoryForm extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── Section Header ───────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-  final int count;
-  final Color color;
-  final IconData icon;
-
-  const _SectionHeader({
-    required this.label,
-    required this.count,
-    required this.color,
-    required this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 14,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: color,
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.5,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            '$count',
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }
@@ -533,103 +386,34 @@ class _CategoryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
-      child: Material(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(10),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () {},
-          child: Container(
-            height: 52,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              border:
-                  Border.all(color: AppColors.textSecondary.withOpacity(0.1)),
-            ),
-            child: Row(
-              children: [
-                // Left accent bar
-                Container(
-                  width: 3,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: accentColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(10),
-                      bottomLeft: Radius.circular(10),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                Icon(Icons.label_outline_rounded,
-                    color: accentColor.withOpacity(0.7), size: 16),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    category.name,
-                    style: TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-                Semantics(
-                  label: 'Delete ${category.name}',
-                  child: SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: InkWell(
-                      onTap: onDelete,
-                      borderRadius: BorderRadius.circular(22),
-                      child: Icon(Icons.delete_outline_rounded,
-                          color: AppColors.textSecondary.withOpacity(0.5),
-                          size: 18),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 4),
-              ],
+      child: AppListTile(
+        leading: AppIconBadge(
+          icon: Icons.label_outline_rounded,
+          color: accentColor,
+          size: 40,
+          iconSize: 18,
+        ),
+        title: Text(category.name),
+        trailing: Semantics(
+          label: 'Delete ${category.name}',
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: InkWell(
+              onTap: onDelete,
+              borderRadius: BorderRadius.circular(22),
+              child: Icon(
+                Icons.delete_outline_rounded,
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant
+                    .withValues(alpha: 0.5),
+                size: 18,
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ─── Empty State ──────────────────────────────────────────────────────────────
-
-class _EmptyState extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      child: Column(
-        children: [
-          Icon(Icons.label_off_outlined,
-              color: AppColors.textSecondary.withOpacity(0.3), size: 40),
-          const SizedBox(height: 12),
-          Text(
-            'No categories yet',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Add expense and income labels above\nto start tagging transactions.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.6),
-              fontSize: 12,
-              height: 1.5,
-            ),
-          ),
-        ],
+        onTap: () {},
       ),
     );
   }

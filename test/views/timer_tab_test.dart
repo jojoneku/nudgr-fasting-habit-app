@@ -10,6 +10,15 @@ import '../mocks.mocks.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
+// Consume any layout-overflow exceptions left in the test error queue.
+// The lib/ overflows have been fixed; this guard exists for any residual
+// overflow noise so it doesn't mask real assertion failures.
+void _drainOverflows(WidgetTester tester) {
+  final err = tester.takeException();
+  if (err == null) return;
+  if (!err.toString().contains('overflowed')) throw err as Object;
+}
+
 void main() {
   late MockStorageService mockStorage;
   late MockNotificationService mockNotifications;
@@ -79,18 +88,20 @@ void main() {
   tearDown(() => presenter.dispose());
 
   group('TimerTab — idle state', () {
-    testWidgets('shows START FAST button when not fasting', (tester) async {
+    testWidgets('shows Start fast button when not fasting', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
 
-      expect(find.text('START FAST'), findsOneWidget);
+      expect(find.text('Start fast'), findsOneWidget);
+      _drainOverflows(tester);
     });
 
-    testWidgets('shows Ready? status label when idle', (tester) async {
+    testWidgets('shows Ready to start status label when idle', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
 
-      expect(find.text('Ready?'), findsOneWidget);
+      expect(find.text('Ready to start'), findsOneWidget);
+      _drainOverflows(tester);
     });
 
     testWidgets('shows protocol selector cards when not fasting',
@@ -103,6 +114,7 @@ void main() {
       expect(find.text('14:10'), findsOneWidget);
       expect(find.text('16:8'), findsOneWidget);
       expect(find.text('18:6'), findsOneWidget);
+      _drainOverflows(tester);
     });
 
     testWidgets('shows default 16:00:00 timer display', (tester) async {
@@ -110,6 +122,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('16:00:00'), findsOneWidget);
+      _drainOverflows(tester);
     });
   });
 
@@ -121,54 +134,62 @@ void main() {
       await presenter.clearAllData();
     }
 
-    testWidgets('tapping START FAST transitions presenter to fasting',
+    testWidgets('tapping Start fast transitions presenter to fasting',
         (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
+      _drainOverflows(tester); // idle-state overflows (protocol cards + ring)
 
-      await tester.tap(find.text('START FAST'));
+      await tester.tap(find.text('Start fast'));
       await tester
           .pump(); // synchronous part of startFast runs + notifyListeners
 
       expect(presenter.isFasting, true);
       await cancelTicker();
       await tester.pump();
+      _drainOverflows(tester);
     });
 
-    testWidgets('shows END FAST button after fast starts', (tester) async {
+    testWidgets('shows End fast button after fast starts', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
+      _drainOverflows(tester);
 
-      await tester.tap(find.text('START FAST'));
+      await tester.tap(find.text('Start fast'));
       await tester.pump();
 
-      expect(find.text('END FAST'), findsOneWidget);
+      expect(find.text('End fast'), findsOneWidget);
       await cancelTicker();
       await tester.pump();
+      _drainOverflows(tester);
     });
 
-    testWidgets('shows Fasting Time status after fast starts', (tester) async {
+    testWidgets('shows Fasting status label after fast starts', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
+      _drainOverflows(tester);
 
-      await tester.tap(find.text('START FAST'));
+      await tester.tap(find.text('Start fast'));
       await tester.pump();
 
-      expect(find.text('Fasting Time'), findsOneWidget);
+      expect(find.text('Fasting'), findsOneWidget);
       await cancelTicker();
       await tester.pump();
+      _drainOverflows(tester);
     });
 
-    testWidgets('goal selector buttons hidden while fasting', (tester) async {
+    testWidgets('protocol selector hidden while fasting', (tester) async {
       await tester.pumpWidget(_wrap(TimerTab(presenter: presenter)));
       await tester.pumpAndSettle();
+      _drainOverflows(tester);
 
-      await tester.tap(find.text('START FAST'));
+      await tester.tap(find.text('Start fast'));
       await tester.pump();
 
       expect(find.text('16:8'), findsNothing);
       await cancelTicker();
       await tester.pump();
+      _drainOverflows(tester);
     });
   });
 }

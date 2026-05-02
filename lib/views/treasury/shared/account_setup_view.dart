@@ -3,9 +3,9 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 const _colorOptions = [
   '#7C3AED',
@@ -108,12 +108,6 @@ class _AccountSetupViewState extends State<AccountSetupView> {
           _maturityDate ?? DateTime.now().add(const Duration(days: 180)),
       firstDate: DateTime.now(),
       lastDate: DateTime(2035),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.dark(primary: AppColors.accent),
-        ),
-        child: child!,
-      ),
     );
     if (picked != null) setState(() => _maturityDate = picked);
   }
@@ -162,28 +156,21 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          'Delete Account?',
-          style: TextStyle(
-              color: AppColors.textPrimary, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Delete Account?'),
         content: Text(
           'This will permanently remove "${widget.existing!.name}". This cannot be undone.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete',
-                style: TextStyle(
-                    color: AppColors.danger, fontWeight: FontWeight.w700)),
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
@@ -198,15 +185,10 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     } on StateError catch (e) {
       if (e.message == 'has_sub_accounts' && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text(
-              'Remove all sub-accounts first before deleting this account.',
-              style: TextStyle(color: AppColors.textPrimary),
-            ),
-            backgroundColor: AppColors.surface,
+                'Remove all sub-accounts first before deleting this account.'),
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
         );
       }
@@ -217,90 +199,11 @@ class _AccountSetupViewState extends State<AccountSetupView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isEdit = widget.existing != null;
     final isSubAccount = widget.parentAccountId != null;
 
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _SheetTitle(isEdit: isEdit, isSubAccount: isSubAccount),
-              const SizedBox(height: 16),
-              _NameField(controller: _nameController),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _CategoryDropdown(
-                      categories: _availableCategories,
-                      value: _category,
-                      onChanged: (c) => setState(() => _category = c!),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _BalanceField(controller: _balanceController),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _ColorPicker(
-                options: _colorOptions,
-                selected: _selectedColor,
-                onSelected: (hex) => setState(() => _selectedColor = hex),
-              ),
-              if (_isGoal) ...[
-                const SizedBox(height: 12),
-                _GoalTargetField(controller: _goalTargetController),
-              ],
-              if (_isTimeDeposit) ...[
-                const SizedBox(height: 12),
-                _MaturityDateRow(date: _maturityDate, onTap: _pickMaturityDate),
-              ],
-              if (_isCustodian) ...[
-                const SizedBox(height: 12),
-                _StoredInDropdown(
-                  accounts: widget.presenter.liquidAccounts,
-                  selectedId: _linkedAccountId,
-                  onChanged: (id) => setState(() => _linkedAccountId = id),
-                ),
-              ],
-              const SizedBox(height: 20),
-              _SubmitButton(
-                  isEdit: isEdit,
-                  isSubmitting: _isSubmitting,
-                  onPressed: _submit),
-              if (isEdit) ...[
-                const SizedBox(height: 8),
-                _DeleteButton(
-                    isSubmitting: _isSubmitting, onPressed: _confirmDelete),
-              ],
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SheetTitle extends StatelessWidget {
-  final bool isEdit;
-  final bool isSubAccount;
-
-  const _SheetTitle({required this.isEdit, required this.isSubAccount});
-
-  @override
-  Widget build(BuildContext context) {
-    String title;
+    final String title;
     if (isEdit) {
       title = 'Edit Account';
     } else if (isSubAccount) {
@@ -308,32 +211,257 @@ class _SheetTitle extends StatelessWidget {
     } else {
       title = 'Add Account';
     }
-    return Text(
-      title,
-      style: TextStyle(
-          color: AppColors.textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.bold),
+
+    // AccountSetupView is used as the builder body of showModalBottomSheet.
+    // We render the sheet chrome here (handle + title + form).
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 8),
+          // Drag handle
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(title, style: theme.textTheme.titleLarge),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Form body
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _AccountSetupForm(
+                formKey: _formKey,
+                nameController: _nameController,
+                balanceController: _balanceController,
+                goalTargetController: _goalTargetController,
+                availableCategories: _availableCategories,
+                category: _category,
+                onCategoryChanged: (c) => setState(() => _category = c!),
+                selectedColor: _selectedColor,
+                onColorSelected: (hex) => setState(() => _selectedColor = hex),
+                maturityDate: _maturityDate,
+                onPickMaturityDate: _pickMaturityDate,
+                linkedAccountId: _linkedAccountId,
+                onLinkedAccountChanged: (id) =>
+                    setState(() => _linkedAccountId = id),
+                liquidAccounts: widget.presenter.liquidAccounts,
+                isGoal: _isGoal,
+                isTimeDeposit: _isTimeDeposit,
+                isCustodian: _isCustodian,
+                isEdit: isEdit,
+                isSubmitting: _isSubmitting,
+                onSubmit: _submit,
+                onDelete: isEdit ? _confirmDelete : null,
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }
 
-class _NameField extends StatelessWidget {
-  final TextEditingController controller;
+// ─── Form widget (separated so it can live inside AppBottomSheet.show body) ───
 
-  const _NameField({required this.controller});
+class _AccountSetupForm extends StatelessWidget {
+  final GlobalKey<FormState> formKey;
+  final TextEditingController nameController;
+  final TextEditingController balanceController;
+  final TextEditingController goalTargetController;
+  final List<AccountCategory> availableCategories;
+  final AccountCategory category;
+  final ValueChanged<AccountCategory?> onCategoryChanged;
+  final String selectedColor;
+  final ValueChanged<String> onColorSelected;
+  final DateTime? maturityDate;
+  final VoidCallback onPickMaturityDate;
+  final String? linkedAccountId;
+  final ValueChanged<String?> onLinkedAccountChanged;
+  final List<FinancialAccount> liquidAccounts;
+  final bool isGoal;
+  final bool isTimeDeposit;
+  final bool isCustodian;
+  final bool isEdit;
+  final bool isSubmitting;
+  final VoidCallback onSubmit;
+  final VoidCallback? onDelete;
+
+  const _AccountSetupForm({
+    required this.formKey,
+    required this.nameController,
+    required this.balanceController,
+    required this.goalTargetController,
+    required this.availableCategories,
+    required this.category,
+    required this.onCategoryChanged,
+    required this.selectedColor,
+    required this.onColorSelected,
+    required this.maturityDate,
+    required this.onPickMaturityDate,
+    required this.linkedAccountId,
+    required this.onLinkedAccountChanged,
+    required this.liquidAccounts,
+    required this.isGoal,
+    required this.isTimeDeposit,
+    required this.isCustodian,
+    required this.isEdit,
+    required this.isSubmitting,
+    required this.onSubmit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Account Name'),
-      validator: (v) =>
-          (v == null || v.trim().isEmpty) ? 'Enter account name' : null,
+    return Form(
+      key: formKey,
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Account details card
+            AppCard(
+              variant: AppCardVariant.outlined,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration:
+                        const InputDecoration(labelText: 'Account Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter account name'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _CategoryDropdown(
+                          categories: availableCategories,
+                          value: category,
+                          onChanged: onCategoryChanged,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: balanceController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+                          ],
+                          decoration: const InputDecoration(
+                            labelText: 'Opening Balance',
+                            prefixText: '₱ ',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Color picker card
+            AppCard(
+              variant: AppCardVariant.outlined,
+              header: Text(
+                'Color',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
+              child: _ColorPicker(
+                options: _colorOptions,
+                selected: selectedColor,
+                onSelected: onColorSelected,
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // Conditional fields
+            if (isGoal) ...[
+              TextFormField(
+                controller: goalTargetController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+                ],
+                decoration: const InputDecoration(
+                  labelText: 'Goal Target',
+                  prefixText: '₱ ',
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (isTimeDeposit) ...[
+              _MaturityDateRow(date: maturityDate, onTap: onPickMaturityDate),
+              const SizedBox(height: 12),
+            ],
+            if (isCustodian) ...[
+              _StoredInDropdown(
+                accounts: liquidAccounts,
+                selectedId: linkedAccountId,
+                onChanged: onLinkedAccountChanged,
+              ),
+              const SizedBox(height: 12),
+            ],
+
+            const SizedBox(height: 8),
+
+            // Save button
+            AppPrimaryButton(
+              label: isEdit ? 'Save' : 'Add Account',
+              onPressed: isSubmitting ? null : onSubmit,
+              isLoading: isSubmitting,
+            ),
+
+            // Delete button (edit only)
+            if (onDelete != null) ...[
+              const SizedBox(height: 8),
+              AppDestructiveButton(
+                label: 'Delete Account',
+                leading: Icons.delete_outline_rounded,
+                onPressed: isSubmitting ? null : onDelete,
+                isLoading: isSubmitting,
+              ),
+            ],
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
     );
   }
 }
+
+// ─── Sub-widgets ──────────────────────────────────────────────────────────────
 
 class _CategoryDropdown extends StatelessWidget {
   final List<AccountCategory> categories;
@@ -346,80 +474,29 @@ class _CategoryDropdown extends StatelessWidget {
     required this.onChanged,
   });
 
-  String _label(AccountCategory cat) {
-    switch (cat) {
-      case AccountCategory.bank:
-        return 'Bank';
-      case AccountCategory.ewallet:
-        return 'eWallet';
-      case AccountCategory.cash:
-        return 'Cash';
-      case AccountCategory.savings:
-        return 'Savings';
-      case AccountCategory.goal:
-        return 'Goal';
-      case AccountCategory.timeDeposit:
-        return 'Time Deposit';
-      case AccountCategory.creditCard:
-        return 'Credit Card';
-      case AccountCategory.creditLine:
-        return 'Credit Line';
-      case AccountCategory.bnpl:
-        return 'BNPL';
-      case AccountCategory.investment:
-        return 'Investment';
-      case AccountCategory.custodian:
-        return 'External';
-    }
-  }
+  String _label(AccountCategory cat) => switch (cat) {
+        AccountCategory.bank => 'Bank',
+        AccountCategory.ewallet => 'eWallet',
+        AccountCategory.cash => 'Cash',
+        AccountCategory.savings => 'Savings',
+        AccountCategory.goal => 'Goal',
+        AccountCategory.timeDeposit => 'Time Deposit',
+        AccountCategory.creditCard => 'Credit Card',
+        AccountCategory.creditLine => 'Credit Line',
+        AccountCategory.bnpl => 'BNPL',
+        AccountCategory.investment => 'Investment',
+        AccountCategory.custodian => 'External',
+      };
 
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<AccountCategory>(
       initialValue: value,
-      dropdownColor: AppColors.surface,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-      decoration: _inputDecoration('Category'),
+      decoration: const InputDecoration(labelText: 'Category'),
       items: categories
           .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
           .toList(),
       onChanged: onChanged,
-    );
-  }
-}
-
-class _BalanceField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _BalanceField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-      style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Opening Balance').copyWith(
-          prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
-    );
-  }
-}
-
-class _GoalTargetField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _GoalTargetField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
-      style: TextStyle(color: AppColors.textPrimary),
-      decoration: _inputDecoration('Goal Target').copyWith(
-          prefixText: '₱ ', prefixStyle: TextStyle(color: AppColors.accent)),
     );
   }
 }
@@ -440,19 +517,21 @@ class _ColorPicker extends StatelessWidget {
       final clean = hex.replaceFirst('#', '');
       return Color(int.parse('FF$clean', radix: 16));
     } catch (_) {
-      return AppColors.accent;
+      return Colors.blue;
     }
   }
 
-  String _toHex(Color color) =>
-      '#${color.red.toRadixString(16).padLeft(2, '0')}'
-              '${color.green.toRadixString(16).padLeft(2, '0')}'
-              '${color.blue.toRadixString(16).padLeft(2, '0')}'
-          .toUpperCase();
+  String _toHex(Color color) {
+    final r = (color.r * 255).round().clamp(0, 255);
+    final g = (color.g * 255).round().clamp(0, 255);
+    final b = (color.b * 255).round().clamp(0, 255);
+    return '#${r.toRadixString(16).padLeft(2, '0')}'
+            '${g.toRadixString(16).padLeft(2, '0')}'
+            '${b.toRadixString(16).padLeft(2, '0')}'
+        .toUpperCase();
+  }
 
   bool _isPreset(String hex) =>
-      options.contains(hex.toUpperCase()) ||
-      options.contains(hex.toLowerCase()) ||
       options.any((o) => o.toLowerCase() == hex.toLowerCase());
 
   void _openCustomPicker(BuildContext context) {
@@ -460,11 +539,7 @@ class _ColorPicker extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Custom Color',
-            style: TextStyle(
-                color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        title: const Text('Custom Color'),
         content: SingleChildScrollView(
           child: HueRingPicker(
             pickerColor: pickerColor,
@@ -476,15 +551,14 @@ class _ColorPicker extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
-                style: TextStyle(color: AppColors.textSecondary)),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
               onSelected(_toHex(pickerColor));
             },
-            child: Text('Apply', style: TextStyle(color: AppColors.accent)),
+            child: const Text('Apply'),
           ),
         ],
       ),
@@ -495,81 +569,79 @@ class _ColorPicker extends StatelessWidget {
   Widget build(BuildContext context) {
     final isCustom = !_isPreset(selected);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
       children: [
-        Text('Color',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            ...options.map((hex) {
-              final color = _parse(hex);
-              final isSelected = hex.toLowerCase() == selected.toLowerCase();
-              return Semantics(
-                label: 'Color $hex',
-                selected: isSelected,
-                child: GestureDetector(
-                  onTap: () => onSelected(hex),
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      border: isSelected
-                          ? Border.all(color: Colors.white, width: 2.5)
-                          : null,
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                  color: color.withOpacity(0.5), blurRadius: 6)
-                            ]
-                          : null,
-                    ),
-                    child: isSelected
-                        ? const Icon(Icons.check, color: Colors.white, size: 18)
-                        : null,
-                  ),
+        ...options.map((hex) {
+          final color = _parse(hex);
+          final isSelected = hex.toLowerCase() == selected.toLowerCase();
+          return Semantics(
+            label: 'Color $hex',
+            selected: isSelected,
+            child: GestureDetector(
+              onTap: () => onSelected(hex),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: isSelected
+                      ? Border.all(color: Colors.white, width: 2.5)
+                      : null,
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                              color: color.withValues(alpha: 0.5),
+                              blurRadius: 6)
+                        ]
+                      : null,
                 ),
-              );
-            }),
-            // Custom color swatch
-            Semantics(
-              label: 'Pick custom color',
-              child: GestureDetector(
-                onTap: () => _openCustomPicker(context),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: isCustom
-                          ? Colors.white
-                          : AppColors.textSecondary.withOpacity(0.4),
-                      width: isCustom ? 2.5 : 1.5,
-                    ),
-                    color: isCustom ? _parse(selected) : Colors.transparent,
-                    boxShadow: isCustom
-                        ? [
-                            BoxShadow(
-                                color: _parse(selected).withOpacity(0.5),
-                                blurRadius: 6)
-                          ]
-                        : null,
-                  ),
-                  child: isCustom
-                      ? const Icon(Icons.check, color: Colors.white, size: 18)
-                      : Icon(Icons.colorize_rounded,
-                          color: AppColors.textSecondary.withOpacity(0.6),
-                          size: 18),
-                ),
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                    : null,
               ),
             ),
-          ],
+          );
+        }),
+        // Custom color swatch
+        Semantics(
+          label: 'Pick custom color',
+          child: GestureDetector(
+            onTap: () => _openCustomPicker(context),
+            child: Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isCustom
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.outlineVariant,
+                  width: isCustom ? 2.5 : 1.5,
+                ),
+                color: isCustom ? _parse(selected) : Colors.transparent,
+                boxShadow: isCustom
+                    ? [
+                        BoxShadow(
+                            color: _parse(selected).withValues(alpha: 0.5),
+                            blurRadius: 6)
+                      ]
+                    : null,
+              ),
+              child: isCustom
+                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  : Icon(
+                      Icons.colorize_rounded,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.6),
+                      size: 18,
+                    ),
+            ),
+          ),
         ),
       ],
     );
@@ -584,75 +656,27 @@ class _MaturityDateRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0A0E14),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: AppColors.textSecondary.withOpacity(0.3)),
-        ),
+      child: AppCard(
+        variant: AppCardVariant.outlined,
         child: Row(
           children: [
-            Icon(Icons.event_outlined,
-                color: AppColors.textSecondary, size: 18),
+            Icon(Icons.event_outlined, color: cs.onSurfaceVariant, size: 18),
             const SizedBox(width: 12),
             Text(
               date != null
                   ? 'Matures: ${date!.year}-${date!.month.toString().padLeft(2, '0')}-${date!.day.toString().padLeft(2, '0')}'
                   : 'Maturity Date',
-              style: TextStyle(
-                color: date != null
-                    ? AppColors.textPrimary
-                    : AppColors.textSecondary,
-                fontSize: 14,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: date != null ? cs.onSurface : cs.onSurfaceVariant,
               ),
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _SubmitButton extends StatelessWidget {
-  final bool isEdit;
-  final bool isSubmitting;
-  final VoidCallback onPressed;
-
-  const _SubmitButton(
-      {required this.isEdit,
-      required this.isSubmitting,
-      required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 52,
-      child: ElevatedButton(
-        onPressed: isSubmitting ? null : onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.accent,
-          foregroundColor: AppColors.background,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-        child: isSubmitting
-            ? SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.background),
-              )
-            : Text(
-                isEdit ? 'Save' : 'Add Account',
-                style:
-                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-              ),
       ),
     );
   }
@@ -672,71 +696,29 @@ class _StoredInDropdown extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<String>(
-      value: selectedId,
-      dropdownColor: AppColors.surface,
-      style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-      decoration: _inputDecoration('Stored in account (optional)').copyWith(
+      initialValue: selectedId,
+      decoration: InputDecoration(
+        labelText: 'Stored in account (optional)',
         helperText: 'These funds physically live in this account',
-        helperStyle: TextStyle(
-            color: AppColors.textSecondary.withOpacity(0.6), fontSize: 11),
+        helperStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withValues(alpha: 0.6)),
       ),
       items: [
         DropdownMenuItem<String>(
-            value: null,
-            child: Text('— Not linked —',
-                style: TextStyle(color: AppColors.textSecondary))),
+          value: null,
+          child: Text(
+            '— Not linked —',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ),
         ...accounts.map(
             (a) => DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
       ],
       onChanged: onChanged,
     );
   }
-}
-
-class _DeleteButton extends StatelessWidget {
-  final bool isSubmitting;
-  final VoidCallback onPressed;
-
-  const _DeleteButton({required this.isSubmitting, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: OutlinedButton.icon(
-        onPressed: isSubmitting ? null : onPressed,
-        icon: Icon(Icons.delete_outline_rounded,
-            size: 18, color: AppColors.danger),
-        label: Text(
-          'Delete Account',
-          style:
-              TextStyle(color: AppColors.danger, fontWeight: FontWeight.w600),
-        ),
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: AppColors.danger.withOpacity(0.5)),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
-    );
-  }
-}
-
-InputDecoration _inputDecoration(String label) {
-  return InputDecoration(
-    labelText: label,
-    labelStyle: TextStyle(color: AppColors.textSecondary),
-    filled: true,
-    fillColor: const Color(0xFF0A0E14),
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide(color: AppColors.accent),
-    ),
-  );
 }

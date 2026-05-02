@@ -1,11 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBillSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
@@ -95,220 +94,184 @@ class _AddBillSheetState extends State<AddBillSheet> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.existing != null ? 'Edit Bill' : 'Add Bill',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameController,
-                style: TextStyle(color: AppColors.textPrimary),
-                decoration: _inputDecoration('Name'),
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-              ),
-              const SizedBox(height: 12),
-              _BillTypeSelector(
-                value: _billType,
-                onChanged: (v) => setState(() => _billType = v),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _amountController,
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp(r'[\d.]')),
-                      ],
-                      style: TextStyle(color: AppColors.textPrimary),
-                      decoration: _inputDecoration('Amount', prefix: '₱ '),
-                      validator: (v) {
-                        final p = double.tryParse(v ?? '');
-                        if (p == null || p <= 0) return 'Must be > 0';
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _dueDayController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      style: TextStyle(color: AppColors.textPrimary),
-                      decoration: _inputDecoration('Due Day (1–31)'),
-                      validator: (v) {
-                        final d = int.tryParse(v ?? '');
-                        if (d == null || d < 1 || d > 31) return '1–31';
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              if (widget.presenter.accounts.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  value: _selectedAccountId,
-                  hint: Text('Account (optional)',
-                      style: TextStyle(
-                          color: AppColors.textSecondary, fontSize: 14)),
-                  dropdownColor: AppColors.surface,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: _inputDecoration('Payment Account'),
-                  items: widget.presenter.accounts
-                      .map((a) =>
-                          DropdownMenuItem(value: a.id, child: Text(a.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedAccountId = v),
-                ),
-              ],
-              if (_expenseCategories.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('Category',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _expenseCategories.map((cat) {
-                    final isSelected = _selectedCategoryId == cat.id;
-                    return ChoiceChip(
-                      label: Text(cat.name),
-                      selected: isSelected,
-                      selectedColor: AppColors.accent.withOpacity(0.2),
-                      labelStyle: TextStyle(
-                        color: isSelected
-                            ? AppColors.accent
-                            : AppColors.textSecondary,
-                        fontSize: 12,
-                      ),
-                      backgroundColor: AppColors.surface,
-                      side: BorderSide(
-                          color: isSelected
-                              ? AppColors.accent
-                              : AppColors.textSecondary.withOpacity(0.3)),
-                      onSelected: (_) =>
-                          setState(() => _selectedCategoryId = cat.id),
-                    );
-                  }).toList(),
-                ),
-              ],
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _paymentNoteController,
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                decoration: _inputDecoration('Payment Note (optional)'),
-              ),
-              const SizedBox(height: 16),
-              SwitchListTile(
-                value: _isRecurring,
-                onChanged: (v) => setState(() => _isRecurring = v),
-                title: Text('Recurring',
-                    style:
-                        TextStyle(color: AppColors.textPrimary, fontSize: 14)),
-                subtitle: Text('Auto-generate next month',
-                    style: TextStyle(
-                        color: AppColors.textSecondary, fontSize: 12)),
-                activeColor: AppColors.accent,
-                contentPadding: EdgeInsets.zero,
-              ),
-              if (_isRecurring) ...[
-                const SizedBox(height: 8),
-                DropdownButtonFormField<RecurrenceType>(
-                  value: _recurrenceType,
-                  dropdownColor: AppColors.surface,
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
-                  decoration: _inputDecoration('Recurrence'),
-                  items: RecurrenceType.values
-                      .map((r) => DropdownMenuItem(
-                          value: r, child: Text(_recurrenceLabel(r))))
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _recurrenceType = v ?? _recurrenceType),
-                ),
-              ],
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accent,
-                    foregroundColor: AppColors.background,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: _isSubmitting
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: AppColors.background),
-                        )
-                      : Text(
-                          widget.existing != null ? 'Save' : 'Add Bill',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 15),
-                        ),
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration(String label, {String? prefix}) {
-    return InputDecoration(
-      labelText: label,
-      labelStyle: TextStyle(color: AppColors.textSecondary),
-      prefixText: prefix,
-      prefixStyle: TextStyle(color: AppColors.accent),
-      filled: true,
-      fillColor: AppColors.background,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.textSecondary.withOpacity(0.3)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: AppColors.accent),
-      ),
-    );
-  }
-
   String _recurrenceLabel(RecurrenceType r) => switch (r) {
         RecurrenceType.monthly => 'Monthly',
         RecurrenceType.weekly => 'Weekly',
         RecurrenceType.yearly => 'Yearly',
         RecurrenceType.custom => 'Custom',
       };
+
+  Widget _buildForm(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Name
+          TextFormField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: 'Name'),
+            textInputAction: TextInputAction.next,
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+          ),
+          const SizedBox(height: 12),
+
+          // Bill type selector
+          _BillTypeSelector(
+            value: _billType,
+            onChanged: (v) => setState(() => _billType = v),
+          ),
+          const SizedBox(height: 12),
+
+          // Amount + Due Day
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: _amountController,
+                  decoration: const InputDecoration(
+                      labelText: 'Amount', prefixText: '₱ '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final p = double.tryParse(v ?? '');
+                    if (p == null || p <= 0) return 'Must be > 0';
+                    return null;
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _dueDayController,
+                  decoration:
+                      const InputDecoration(labelText: 'Due Day (1–31)'),
+                  keyboardType: TextInputType.number,
+                  textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final d = int.tryParse(v ?? '');
+                    if (d == null || d < 1 || d > 31) return '1–31';
+                    return null;
+                  },
+                ),
+              ),
+            ],
+          ),
+
+          // Account dropdown
+          if (widget.presenter.accounts.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: _selectedAccountId,
+              hint: Text('Account (optional)',
+                  style: TextStyle(
+                      color: colorScheme.onSurfaceVariant, fontSize: 14)),
+              decoration: const InputDecoration(labelText: 'Payment Account'),
+              items: widget.presenter.accounts
+                  .map(
+                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedAccountId = v),
+            ),
+          ],
+
+          // Category chips
+          if (_expenseCategories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text('Category',
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _expenseCategories.map((cat) {
+                final isSelected = _selectedCategoryId == cat.id;
+                return ChoiceChip(
+                  label: Text(cat.name),
+                  selected: isSelected,
+                  onSelected: (_) =>
+                      setState(() => _selectedCategoryId = cat.id),
+                );
+              }).toList(),
+            ),
+          ],
+
+          // Payment note
+          const SizedBox(height: 12),
+          AppTextField(
+            controller: _paymentNoteController,
+            label: 'Payment Note (optional)',
+            textInputAction: TextInputAction.done,
+          ),
+
+          // Recurring toggle
+          const SizedBox(height: 16),
+          SwitchListTile(
+            value: _isRecurring,
+            onChanged: (v) => setState(() => _isRecurring = v),
+            title: const Text('Recurring', style: TextStyle(fontSize: 14)),
+            subtitle: Text('Auto-generate next month',
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (_isRecurring) ...[
+            const SizedBox(height: 8),
+            DropdownButtonFormField<RecurrenceType>(
+              value: _recurrenceType,
+              decoration: const InputDecoration(labelText: 'Recurrence'),
+              items: RecurrenceType.values
+                  .map((r) => DropdownMenuItem(
+                      value: r, child: Text(_recurrenceLabel(r))))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _recurrenceType = v ?? _recurrenceType),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final title = widget.existing != null ? 'Edit Bill' : 'Add Bill';
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(title,
+                style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+            _buildForm(context),
+            const SizedBox(height: 20),
+            AppPrimaryButton(
+              label: widget.existing != null ? 'Save' : 'Add Bill',
+              onPressed: _isSubmitting ? null : _submit,
+              isLoading: _isSubmitting,
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _BillTypeSelector extends StatelessWidget {
@@ -329,11 +292,13 @@ class _BillTypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Bill Type',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+            style:
+                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -343,16 +308,6 @@ class _BillTypeSelector extends StatelessWidget {
             return ChoiceChip(
               label: Text(_labels[t]!),
               selected: isSelected,
-              selectedColor: AppColors.accent.withOpacity(0.15),
-              labelStyle: TextStyle(
-                color: isSelected ? AppColors.accent : AppColors.textSecondary,
-                fontSize: 12,
-              ),
-              backgroundColor: AppColors.surface,
-              side: BorderSide(
-                  color: isSelected
-                      ? AppColors.accent
-                      : AppColors.textSecondary.withOpacity(0.3)),
               onSelected: (_) => onChanged(t),
             );
           }).toList(),

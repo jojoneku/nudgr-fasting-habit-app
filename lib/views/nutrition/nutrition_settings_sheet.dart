@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../../app_colors.dart';
 import '../../models/meal_slot.dart';
 import '../../models/nutrition_goals.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'tdee_setup_screen.dart';
+import '../widgets/system/system.dart';
 
 /// Bottom sheet: tracking mode, daily calorie goal, macro targets, TDEE wizard link, overshoot penalty.
 Future<void> showNutritionSettingsSheet(
@@ -97,142 +97,152 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final bottomPad = MediaQuery.of(context).viewInsets.bottom;
     final screenHeight = MediaQuery.of(context).size.height;
     final isStandard = _mode == TrackingMode.standard;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
       constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(24),
       ),
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: AppColors.textSecondary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 10),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Settings',
+                    style: theme.textTheme.titleLarge,
+                  ),
                 ),
-              ),
-            ),
-
-            const Text('Settings',
-                style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600)),
-            const SizedBox(height: 24),
-
-            // ── Tracking mode ─────────────────────────────────────────────
-            _label('Tracking mode'),
-            const SizedBox(height: 10),
-            ...TrackingMode.values.map((m) => _ModeTile(
-                  mode: m,
-                  selected: _mode == m,
-                  onTap: () => setState(() => _mode = m),
-                )),
-            const SizedBox(height: 20),
-
-            // ── Simple: manual calorie goal ────────────────────────────────
-            if (!isStandard) ...[
-              _label('Daily calorie goal'),
-              const SizedBox(height: 8),
-              _numField(_calCtrl, 'kcal / day', 'e.g. 2000'),
-              const SizedBox(height: 20),
-            ],
-
-            // ── Standard: TDEE + macros + toggles ─────────────────────────
-            if (isStandard) ...[
-              _TdeeCard(presenter: widget.presenter),
-              const SizedBox(height: 20),
-              _label('Macro targets (optional, g)'),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: _numField(_proteinCtrl, 'Protein', 'g')),
-                const SizedBox(width: 10),
-                Expanded(child: _numField(_carbsCtrl, 'Carbs', 'g')),
-                const SizedBox(width: 10),
-                Expanded(child: _numField(_fatCtrl, 'Fat', 'g')),
-              ]),
-              const SizedBox(height: 20),
-              _ToggleRow(
-                label: 'Lock logging during fast',
-                subtitle: 'Pause food logging while fasting window is active',
-                value: _ifSync,
-                onChanged: (v) => setState(() => _ifSync = v),
-              ),
-              const SizedBox(height: 12),
-            ],
-
-            // ── Overshoot penalty (both modes) ─────────────────────────────
-            _ToggleRow(
-              label: 'Overshoot penalty',
-              subtitle: '−5 HP when you exceed 120% of goal',
-              value: _overshootPenalty,
-              onChanged: (v) => setState(() => _overshootPenalty = v),
-            ),
-            const SizedBox(height: 24),
-
-            // ── AI Coach download ──────────────────────────────────────────
-            if (widget.aiCoachPresenter != null) ...[
-              _label('AI COACH'),
-              const SizedBox(height: 10),
-              _AiCoachDownloadCard(presenter: widget.aiCoachPresenter!),
-              const SizedBox(height: 24),
-            ],
-
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.gold,
-                  foregroundColor: AppColors.background,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
-                onPressed: _save,
-                child: const Text('Save',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomPad),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Tracking mode ───────────────────────────────────────
+                  Text('Tracking mode',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 10),
+                  ...TrackingMode.values.map((m) => _ModeTile(
+                        mode: m,
+                        selected: _mode == m,
+                        onTap: () => setState(() => _mode = m),
+                      )),
+                  const SizedBox(height: 20),
+
+                  // ── Simple: manual calorie goal ──────────────────────────
+                  if (!isStandard) ...[
+                    Text('Daily calorie goal',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    AppTextField(
+                      controller: _calCtrl,
+                      label: 'kcal / day',
+                      hint: 'e.g. 2000',
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // ── Standard: TDEE + macros + toggles ───────────────────
+                  if (isStandard) ...[
+                    _TdeeCard(presenter: widget.presenter),
+                    const SizedBox(height: 20),
+                    Text('Macro targets (optional, g)',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      Expanded(
+                          child: AppTextField(
+                              controller: _proteinCtrl,
+                              label: 'Protein',
+                              hint: 'g',
+                              keyboardType: TextInputType.number)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: AppTextField(
+                              controller: _carbsCtrl,
+                              label: 'Carbs',
+                              hint: 'g',
+                              keyboardType: TextInputType.number)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                          child: AppTextField(
+                              controller: _fatCtrl,
+                              label: 'Fat',
+                              hint: 'g',
+                              keyboardType: TextInputType.number)),
+                    ]),
+                    const SizedBox(height: 20),
+                    _ToggleRow(
+                      label: 'Lock logging during fast',
+                      subtitle:
+                          'Pause food logging while fasting window is active',
+                      value: _ifSync,
+                      onChanged: (v) => setState(() => _ifSync = v),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // ── Overshoot penalty (both modes) ──────────────────────
+                  _ToggleRow(
+                    label: 'Overshoot penalty',
+                    subtitle: '−5 HP when you exceed 120% of goal',
+                    value: _overshootPenalty,
+                    onChanged: (v) => setState(() => _overshootPenalty = v),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // ── AI Coach download ────────────────────────────────────
+                  if (widget.aiCoachPresenter != null) ...[
+                    Text('AI Coach',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant)),
+                    const SizedBox(height: 10),
+                    _AiCoachDownloadCard(presenter: widget.aiCoachPresenter!),
+                    const SizedBox(height: 24),
+                  ],
+
+                  AppPrimaryButton(
+                    label: 'Save',
+                    onPressed: _save,
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _label(String text) => Text(text,
-      style: const TextStyle(color: AppColors.textSecondary, fontSize: 11));
-
-  Widget _numField(TextEditingController ctrl, String label, String hint) {
-    return TextField(
-      controller: ctrl,
-      keyboardType: TextInputType.number,
-      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-      style: const TextStyle(color: AppColors.textPrimary),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        hintStyle: const TextStyle(color: AppColors.textSecondary),
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.gold, width: 1)),
+          ),
+        ],
       ),
     );
   }
@@ -249,6 +259,7 @@ class _ModeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -257,12 +268,12 @@ class _ModeTile extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected
               ? AppColors.gold.withValues(alpha: 0.1)
-              : AppColors.background,
+              : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
                 ? AppColors.gold.withValues(alpha: 0.5)
-                : AppColors.textSecondary.withValues(alpha: 0.2),
+                : theme.colorScheme.outlineVariant,
           ),
         ),
         child: Row(children: [
@@ -278,15 +289,20 @@ class _ModeTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(mode.label,
-                    style: TextStyle(
-                        color:
-                            selected ? AppColors.gold : AppColors.textPrimary,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14)),
-                Text(_modeDescription(mode),
-                    style: const TextStyle(
-                        color: AppColors.textSecondary, fontSize: 11)),
+                Text(
+                  mode.label,
+                  style: TextStyle(
+                    color:
+                        selected ? AppColors.gold : theme.colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+                Text(
+                  _modeDescription(mode),
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+                ),
               ],
             ),
           ),
@@ -314,29 +330,41 @@ class _TdeeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final profile = presenter.tdeeProfile;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.circular(14),
-      ),
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('TDEE profile',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11)),
+          Text(
+            'TDEE profile',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
           const SizedBox(height: 8),
           if (profile == null)
-            const Text('No profile set — tap below to configure',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12))
-          else
             Text(
-              '${profile.targetCalories} kcal/day  ·  ${profile.goal.toUpperCase()}',
-              style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold),
+              'No profile set — tap below to configure',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 12),
+            )
+          else
+            AppNumberDisplay(
+              value: '${profile.targetCalories}',
+              suffix: 'kcal/day',
+              size: AppNumberSize.title,
+              color: AppColors.gold,
+              textAlign: TextAlign.start,
             ),
+          if (profile != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              profile.goal.toUpperCase(),
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontSize: 11),
+            ),
+          ],
           const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
@@ -381,20 +409,23 @@ class _ToggleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500)),
-              Text(subtitle,
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 11)),
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(fontWeight: FontWeight.w500),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+              ),
             ],
           ),
         ),
@@ -403,7 +434,6 @@ class _ToggleRow extends StatelessWidget {
           onChanged: onChanged,
           activeThumbColor: AppColors.gold,
           activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
-          inactiveTrackColor: AppColors.surface,
         ),
       ],
     );
@@ -418,6 +448,7 @@ class _AiCoachDownloadCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListenableBuilder(
       listenable: presenter,
       builder: (_, __) {
@@ -425,12 +456,7 @@ class _AiCoachDownloadCard extends StatelessWidget {
         final downloading = presenter.isDownloading;
         final progress = presenter.downloadProgress ?? 0;
 
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(14),
-          ),
+        return AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -439,7 +465,7 @@ class _AiCoachDownloadCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: const Text('🧠', style: TextStyle(fontSize: 14)),
@@ -449,82 +475,63 @@ class _AiCoachDownloadCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Qwen3 0.6B',
-                            style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600)),
+                        Text(
+                          'Qwen3 0.6B',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
                         Text(
                           available
                               ? 'Ready — meal parsing & coaching active'
                               : 'On-device · ~586 MB · Private',
-                          style: const TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11),
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontSize: 11),
                         ),
                       ],
                     ),
                   ),
                   if (available)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: const Text('Ready',
-                          style: TextStyle(
-                              color: AppColors.success,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700)),
+                    const AppBadge(
+                      text: 'Ready',
+                      color: AppColors.success,
+                      variant: AppBadgeVariant.tonal,
                     ),
                 ],
               ),
               if (downloading) ...[
                 const SizedBox(height: 14),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress / 100.0,
-                    minHeight: 6,
-                    backgroundColor: AppColors.surface,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
-                  ),
+                AppLinearProgress(
+                  value: progress / 100.0,
+                  height: 6,
+                  color: theme.colorScheme.primary,
                 ),
                 const SizedBox(height: 6),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Downloading...',
-                        style: TextStyle(
-                            color: AppColors.textSecondary, fontSize: 11)),
-                    Text('$progress%',
-                        style: const TextStyle(
-                            color: AppColors.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
+                    Text(
+                      'Downloading...',
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontSize: 11),
+                    ),
+                    Text(
+                      '$progress%',
+                      style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600),
+                    ),
                   ],
                 ),
               ] else if (!available) ...[
                 const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
+                AppPrimaryButton(
+                  label: 'Download AI Coach',
+                  leading: Icons.download_outlined,
+                  onPressed: presenter.downloadModel,
                   height: 44,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          AppColors.primary.withValues(alpha: 0.15),
-                      foregroundColor: AppColors.primary,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                    ),
-                    icon: const Icon(Icons.download_outlined, size: 16),
-                    label: const Text('Download AI Coach',
-                        style: TextStyle(
-                            fontSize: 13, fontWeight: FontWeight.w500)),
-                    onPressed: presenter.downloadModel,
-                  ),
                 ),
               ],
             ],

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dayKeyFmt = DateFormat('yyyy-MM-dd');
 
@@ -19,6 +19,8 @@ class SpendingCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     final parts = presenter.selectedMonth.split('-');
     final year = int.parse(parts[0]);
     final month = int.parse(parts[1]);
@@ -31,13 +33,9 @@ class SpendingCalendar extends StatelessWidget {
     final avg = presenter.averageDailyOutflow;
 
     return RepaintBoundary(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withOpacity(0.07)),
-        ),
+      child: AppCard(
+        variant: AppCardVariant.outlined,
+        padding: EdgeInsets.zero,
         child: TableCalendar(
           firstDay: firstDay,
           lastDay: lastDay,
@@ -51,39 +49,33 @@ class SpendingCalendar extends StatelessWidget {
           daysOfWeekHeight: 28,
           daysOfWeekStyle: DaysOfWeekStyle(
             weekdayStyle: TextStyle(
-              color: AppColors.textSecondary,
+              color: cs.onSurfaceVariant,
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
             weekendStyle: TextStyle(
-              color: AppColors.textSecondary.withOpacity(0.6),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
               fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
           ),
           calendarStyle: CalendarStyle(
             outsideDaysVisible: false,
-            defaultTextStyle:
-                TextStyle(color: AppColors.textPrimary, fontSize: 13),
-            weekendTextStyle:
-                TextStyle(color: AppColors.textPrimary, fontSize: 13),
+            defaultTextStyle: TextStyle(color: cs.onSurface, fontSize: 13),
+            weekendTextStyle: TextStyle(color: cs.onSurface, fontSize: 13),
             todayDecoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accent, width: 1.5),
+              border: Border.all(color: cs.primary, width: 1.5),
             ),
             todayTextStyle: TextStyle(
-                color: AppColors.accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700),
+                color: cs.primary, fontSize: 13, fontWeight: FontWeight.w700),
             selectedDecoration: BoxDecoration(
-              color: AppColors.accent.withOpacity(0.25),
+              color: cs.primary.withValues(alpha: 0.25),
               shape: BoxShape.circle,
-              border: Border.all(color: AppColors.accent),
+              border: Border.all(color: cs.primary),
             ),
             selectedTextStyle: TextStyle(
-                color: AppColors.accent,
-                fontSize: 13,
-                fontWeight: FontWeight.w700),
+                color: cs.primary, fontSize: 13, fontWeight: FontWeight.w700),
           ),
           calendarBuilders: CalendarBuilders(
             defaultBuilder: (context, day, focusedDay) => _HeatmapCell(
@@ -135,6 +127,7 @@ class _HeatmapCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final key = _dayKeyFmt.format(day);
     final outflow = outflowMap[key] ?? 0;
     final inflow = inflowMap[key] ?? 0;
@@ -143,26 +136,26 @@ class _HeatmapCell extends StatelessWidget {
     final hasBoth = hasOutflow && hasInflow;
 
     Color? bgColor;
-    Color textColor = AppColors.textPrimary;
+    Color textColor = cs.onSurface;
 
     if (hasOutflow && outflow >= inflow) {
       final opacity = (outflow / avg).clamp(0.15, 0.90);
-      bgColor = AppColors.danger.withOpacity(opacity);
-      if (opacity > 0.5) textColor = Colors.white;
+      bgColor = cs.error.withValues(alpha: opacity);
+      if (opacity > 0.5) textColor = cs.onError;
     } else if (hasInflow) {
       final opacity = (inflow / avg).clamp(0.15, 0.70);
-      bgColor = AppColors.success.withOpacity(opacity);
-      if (opacity > 0.5) textColor = Colors.white;
+      bgColor = cs.tertiary.withValues(alpha: opacity);
+      if (opacity > 0.5) textColor = cs.onTertiary;
     }
 
     Border? border;
     if (isSelected) {
-      border = Border.all(color: AppColors.accent, width: 1.5);
-      bgColor = (bgColor ?? Colors.transparent).withOpacity(
-        bgColor != null ? 0.6 : 0.2,
+      border = Border.all(color: cs.primary, width: 1.5);
+      bgColor = (bgColor ?? Colors.transparent).withValues(
+        alpha: bgColor != null ? 0.6 : 0.2,
       );
     } else if (isToday) {
-      border = Border.all(color: AppColors.accent.withOpacity(0.7), width: 1.5);
+      border = Border.all(color: cs.primary.withValues(alpha: 0.7), width: 1.5);
     }
 
     return Tooltip(
@@ -182,7 +175,7 @@ class _HeatmapCell extends StatelessWidget {
               Text(
                 '${day.day}',
                 style: TextStyle(
-                  color: isSelected ? AppColors.accent : textColor,
+                  color: isSelected ? cs.primary : textColor,
                   fontSize: 12,
                   fontWeight:
                       isSelected || isToday ? FontWeight.w700 : FontWeight.w500,
@@ -196,8 +189,8 @@ class _HeatmapCell extends StatelessWidget {
                     height: 4,
                     decoration: BoxDecoration(
                       color: outflow >= inflow
-                          ? AppColors.success.withOpacity(0.8)
-                          : AppColors.danger.withOpacity(0.8),
+                          ? cs.tertiary.withValues(alpha: 0.8)
+                          : cs.error.withValues(alpha: 0.8),
                       shape: BoxShape.circle,
                     ),
                   ),

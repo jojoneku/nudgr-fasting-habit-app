@@ -29,6 +29,7 @@ class AuthPresenter extends ChangeNotifier {
   String? get userId => _auth.currentUserId;
   String? get userEmail => _auth.currentUserEmail;
   String? get userAvatarUrl => _auth.currentUserAvatarUrl;
+  String? get userDisplayName => _auth.currentUserDisplayName;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 

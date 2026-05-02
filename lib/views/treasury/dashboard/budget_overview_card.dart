@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/app_text_styles.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class BudgetOverviewCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
@@ -29,75 +28,39 @@ class BudgetOverviewCard extends StatelessWidget {
     final totalAllocated = presenter.totalBudgetAllocated;
     final totalSpent = presenter.totalBudgetSpent;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionHeader(label: 'BUDGET THIS MONTH'),
-        const SizedBox(height: 8),
-        Card(
-          color: AppColors.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-            child: Column(
-              children: [
-                _BudgetProgressRow(
-                  label: 'Total',
-                  allocated: totalAllocated,
-                  spent: totalSpent,
-                  isTotal: true,
-                ),
-                const SizedBox(height: 12),
-                Divider(
-                    height: 1, color: AppColors.textSecondary.withOpacity(0.1)),
-                const SizedBox(height: 12),
-                for (final group in _groups) ...[
-                  _BudgetProgressRow(
-                    label: _groupLabels[group]!,
-                    allocated: allocated[group] ?? 0.0,
-                    spent: spent[group] ?? 0.0,
-                    isTotal: false,
-                  ),
-                  if (group != _groups.last) const SizedBox(height: 10),
-                ],
-              ],
+    return AppSection(
+      title: 'Budget This Month',
+      child: AppCard(
+        variant: AppCardVariant.elevated,
+        child: Column(
+          children: [
+            _BudgetProgressRow(
+              label: 'Total',
+              allocated: totalAllocated,
+              spent: totalSpent,
+              isTotal: true,
             ),
-          ),
+            const SizedBox(height: 12),
+            Divider(
+              height: 1,
+              color: Theme.of(context)
+                  .colorScheme
+                  .outlineVariant
+                  .withValues(alpha: 0.4),
+            ),
+            const SizedBox(height: 12),
+            for (final group in _groups) ...[
+              _BudgetProgressRow(
+                label: _groupLabels[group]!,
+                allocated: allocated[group] ?? 0.0,
+                spent: spent[group] ?? 0.0,
+                isTotal: false,
+              ),
+              if (group != _groups.last) const SizedBox(height: 10),
+            ],
+          ],
         ),
-      ],
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String label;
-
-  const _SectionHeader({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          width: 3,
-          height: 14,
-          decoration: BoxDecoration(
-            color: AppColors.accent,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          label,
-          style: TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            letterSpacing: 1.4,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -115,16 +78,19 @@ class _BudgetProgressRow extends StatelessWidget {
     required this.isTotal,
   });
 
-  Color _progressColor(double ratio) {
-    if (ratio >= 1.0) return AppColors.danger;
+  Color _progressColor(double ratio, ColorScheme colorScheme) {
+    if (ratio >= 1.0) return colorScheme.error;
     if (ratio >= 0.75) return const Color(0xFFFFB300);
-    return AppColors.success;
+    return colorScheme.tertiary;
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final ratio = allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0;
-    final barColor = _progressColor(allocated > 0 ? spent / allocated : 0.0);
+    final barColor =
+        _progressColor(allocated > 0 ? spent / allocated : 0.0, colorScheme);
     final percentText =
         allocated > 0 ? '${(spent / allocated * 100).round()}%' : '—';
 
@@ -136,32 +102,27 @@ class _BudgetProgressRow extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(
-                  color:
-                      isTotal ? AppColors.textPrimary : AppColors.textSecondary,
-                  fontSize: isTotal ? 13 : 12,
+                style: (isTotal
+                        ? theme.textTheme.bodyMedium
+                        : theme.textTheme.bodySmall)
+                    ?.copyWith(
                   fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),
             ),
             Text(
               percentText,
-              style: TextStyle(
+              style: theme.textTheme.labelSmall?.copyWith(
                 color: barColor,
-                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),
             const SizedBox(width: 8),
-            Text(
-              '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: isTotal ? 12 : 11,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+            AppNumberDisplay(
+              value:
+                  '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
+              size: AppNumberSize.body,
+              color: colorScheme.onSurfaceVariant,
             ),
           ],
         ),
@@ -231,16 +192,14 @@ class _AnimatedProgressBarState extends State<_AnimatedProgressBar>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, _) => ClipRRect(
-        borderRadius: BorderRadius.circular(widget.height / 2),
-        child: LinearProgressIndicator(
-          value: _animation.value,
-          minHeight: widget.height,
-          backgroundColor: AppColors.textSecondary.withOpacity(0.12),
-          valueColor: AlwaysStoppedAnimation<Color>(widget.color),
-        ),
+      builder: (context, _) => AppLinearProgress(
+        value: _animation.value,
+        color: widget.color,
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        height: widget.height,
       ),
     );
   }

@@ -3,14 +3,15 @@ import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/chat_message.dart';
 import '../../models/estimation_source.dart';
-import '../../models/food_template.dart';
 import '../../models/food_entry.dart';
+import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'food_library_screen.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
+import '../widgets/system/system.dart';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ class _NutritionBody extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _WeekStrip(presenter: presenter),
+            _WeekStripRow(presenter: presenter),
             _StatSection(presenter: presenter),
             Expanded(child: _ChatFeed(presenter: presenter)),
             _ChatInputBar(presenter: presenter),
@@ -119,109 +120,22 @@ class _NutritionBody extends StatelessWidget {
 
 // ─── Week Strip ───────────────────────────────────────────────────────────────
 
-class _WeekStrip extends StatelessWidget {
+class _WeekStripRow extends StatelessWidget {
   final NutritionPresenter presenter;
-  const _WeekStrip({required this.presenter});
+  const _WeekStripRow({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateUtils.dateOnly(now);
-    final selected = DateUtils.dateOnly(presenter.selectedDate);
-    // Monday of this week
+    final today = DateUtils.dateOnly(DateTime.now());
     final monday = today.subtract(Duration(days: today.weekday - 1));
-    final days = List.generate(7, (i) => monday.add(Duration(days: i)));
-
-    return Container(
-      height: 72,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: days.map((day) {
-          final isToday = day == today;
-          final isSelected = day == selected;
-          final isFuture = day.isAfter(today);
-          return _DayChip(
-            day: day,
-            isToday: isToday,
-            isSelected: isSelected,
-            isFuture: isFuture,
-            onTap: isFuture ? null : () => presenter.setSelectedDate(day),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _DayChip extends StatelessWidget {
-  final DateTime day;
-  final bool isToday;
-  final bool isSelected;
-  final bool isFuture;
-  final VoidCallback? onTap;
-  const _DayChip({
-    required this.day,
-    required this.isToday,
-    required this.isSelected,
-    required this.isFuture,
-    required this.onTap,
-  });
-
-  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-
-  @override
-  Widget build(BuildContext context) {
-    final label = _dayLabels[day.weekday - 1];
-    final textColor = isFuture
-        ? AppColors.textSecondary.withValues(alpha: 0.3)
-        : isSelected
-            ? AppColors.background
-            : isToday
-                ? AppColors.primary
-                : AppColors.textSecondary;
-    final bgColor = isSelected ? AppColors.primary : Colors.transparent;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 40,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: isFuture
-                    ? AppColors.textSecondary.withValues(alpha: 0.3)
-                    : AppColors.textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 4),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              alignment: Alignment.center,
-              child: Text(
-                '${day.day}',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 15,
-                  fontWeight:
-                      isSelected || isToday ? FontWeight.w700 : FontWeight.w400,
-                ),
-              ),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: AppDayChipRow(
+        selectedDate: presenter.selectedDate,
+        weekStart: monday,
+        onSelected: (day) {
+          if (!day.isAfter(today)) presenter.setSelectedDate(day);
+        },
       ),
     );
   }
@@ -231,10 +145,10 @@ class _DayChip extends StatelessWidget {
 
 void _showNutritionDetailSheet(
     BuildContext context, NutritionPresenter presenter) {
-  showModalBottomSheet(
+  AppBottomSheet.show(
     context: context,
-    backgroundColor: Colors.transparent,
-    builder: (_) => _NutritionDetailSheet(presenter: presenter),
+    title: 'Breakdown',
+    body: _NutritionDetailBody(presenter: presenter),
   );
 }
 
@@ -248,117 +162,112 @@ class _StatSection extends StatelessWidget {
     final burned = p.selectedDateCaloriesBurned;
     final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-      child: GestureDetector(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      child: AppCard(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         onTap: () => _showNutritionDetailSheet(context, p),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Row(
-            children: [
-              // ── Calories side (60%) ───────────────────────────────────────
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'CALORIES',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.6,
+        child: Row(
+          children: [
+            // ── Calories side (60%) ─────────────────────────────────────────
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'CALORIES',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  AppLinearProgress(
+                    value: p.netCalorieProgress,
+                    color: barColor,
+                    height: 3,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _StatCell(
+                        value: '${p.todayCalories}',
+                        label: 'Eaten',
+                        color: AppColors.textPrimary,
                       ),
-                    ),
-                    const SizedBox(height: 6),
-                    _TinyBar(
-                      progress: p.netCalorieProgress,
-                      color: barColor,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _StatCell(
-                          value: '${p.todayCalories}',
-                          label: 'Eaten',
-                          color: AppColors.textPrimary,
-                        ),
-                        const _ColDivider(),
-                        _StatCell(
-                          value: '${p.remainingCalories}',
-                          label: 'Left',
-                          color: AppColors.textPrimary,
-                        ),
-                        const _ColDivider(),
-                        _StatCell(
-                          value: burned > 0 ? '$burned' : '—',
-                          label: 'Burned',
-                          color: AppColors.textPrimary,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // ── Divider ───────────────────────────────────────────────────
-              Container(
-                width: 1,
-                height: 56,
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                color: AppColors.textSecondary.withValues(alpha: 0.20),
-              ),
-              // ── Macros side (40%) ─────────────────────────────────────────
-              Expanded(
-                flex: 2,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'MACROS',
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.6,
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.remainingCalories}',
+                        label: 'Left',
+                        color: AppColors.textPrimary,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _StatCell(
-                          value: '${p.todayProtein.round()}g',
-                          label: 'Protein',
-                          color: AppColors.textPrimary,
-                          barColor: AppColors.primary,
-                          progress: p.proteinProgress,
-                        ),
-                        const _ColDivider(),
-                        _StatCell(
-                          value: '${p.todayCarbs.round()}g',
-                          label: 'Carbs',
-                          color: AppColors.textPrimary,
-                          barColor: AppColors.gold,
-                          progress: p.carbsProgress,
-                        ),
-                        const _ColDivider(),
-                        _StatCell(
-                          value: '${p.todayFat.round()}g',
-                          label: 'Fat',
-                          color: AppColors.textPrimary,
-                          barColor: AppColors.danger,
-                          progress: p.fatProgress,
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: burned > 0 ? '$burned' : '—',
+                        label: 'Burned',
+                        color: AppColors.textPrimary,
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // ── Divider ────────────────────────────────────────────────────
+            Container(
+              width: 1,
+              height: 56,
+              margin: const EdgeInsets.symmetric(horizontal: 12),
+              color: AppColors.textSecondary.withValues(alpha: 0.20),
+            ),
+            // ── Macros side (40%) ──────────────────────────────────────────
+            Expanded(
+              flex: 2,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'MACROS',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      _StatCell(
+                        value: '${p.todayProtein.round()}g',
+                        label: 'Protein',
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.primary,
+                        progress: p.proteinProgress,
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.todayCarbs.round()}g',
+                        label: 'Carbs',
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.gold,
+                        progress: p.carbsProgress,
+                      ),
+                      const _ColDivider(),
+                      _StatCell(
+                        value: '${p.todayFat.round()}g',
+                        label: 'Fat',
+                        color: AppColors.textPrimary,
+                        barColor: AppColors.danger,
+                        progress: p.fatProgress,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -397,7 +306,11 @@ class _StatCell extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (progress != null) ...[
-            _TinyBar(progress: progress!, color: barColor ?? color),
+            AppLinearProgress(
+              value: progress!,
+              color: barColor ?? color,
+              height: 3,
+            ),
             const SizedBox(height: 5),
           ],
           Text(
@@ -423,43 +336,11 @@ class _StatCell extends StatelessWidget {
   }
 }
 
-class _TinyBar extends StatelessWidget {
-  final double progress;
-  final Color color;
-  const _TinyBar({required this.progress, required this.color});
+// ─── Nutrition Detail Body ────────────────────────────────────────────────────
 
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (ctx, box) {
-      return Container(
-        height: 3,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(2),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-            height: 3,
-            width: box.maxWidth * progress.clamp(0.0, 1.0),
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-      );
-    });
-  }
-}
-
-// ─── Nutrition Detail Sheet ───────────────────────────────────────────────────
-
-class _NutritionDetailSheet extends StatelessWidget {
+class _NutritionDetailBody extends StatelessWidget {
   final NutritionPresenter presenter;
-  const _NutritionDetailSheet({required this.presenter});
+  const _NutritionDetailBody({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -469,93 +350,60 @@ class _NutritionDetailSheet extends StatelessWidget {
     final remaining = p.remainingCalories;
     final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 24),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.55,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(bottom: 18),
-              decoration: BoxDecoration(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const Text(
-            'BREAKDOWN',
-            style: TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.0,
-            ),
-          ),
-          const SizedBox(height: 16),
-          // ── Calories row ────────────────────────────────────────────────
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _DetailRow(
+          label: 'Calories',
+          value: p.todayCalories,
+          goal: calGoal,
+          remaining: remaining.clamp(0, calGoal),
+          unit: 'kcal',
+          color: barColor,
+          extra: burned > 0 ? '🔥 $burned kcal burned' : null,
+        ),
+        const SizedBox(height: 14),
+        const Divider(color: Color(0x18FFFFFF), height: 1),
+        const SizedBox(height: 14),
+        if (p.proteinGoal != null)
           _DetailRow(
-            label: 'Calories',
-            value: p.todayCalories,
-            goal: calGoal,
-            remaining: remaining.clamp(0, calGoal),
-            unit: 'kcal',
-            color: barColor,
-            extra: burned > 0 ? '🔥 $burned kcal burned' : null,
+            label: 'Protein',
+            value: p.todayProtein.round(),
+            goal: p.proteinGoal!,
+            remaining: (p.proteinGoal! - p.todayProtein.round())
+                .clamp(0, p.proteinGoal!),
+            unit: 'g',
+            color: AppColors.primary,
           ),
-          const SizedBox(height: 14),
-          const Divider(color: Color(0x18FFFFFF), height: 1),
-          const SizedBox(height: 14),
-          // ── Macros ──────────────────────────────────────────────────────
-          if (p.proteinGoal != null)
-            _DetailRow(
-              label: 'Protein',
-              value: p.todayProtein.round(),
-              goal: p.proteinGoal!,
-              remaining: (p.proteinGoal! - p.todayProtein.round())
-                  .clamp(0, p.proteinGoal!),
-              unit: 'g',
-              color: AppColors.primary,
-            ),
-          if (p.proteinGoal != null) const SizedBox(height: 10),
-          if (p.carbsGoal != null)
-            _DetailRow(
-              label: 'Carbs',
-              value: p.todayCarbs.round(),
-              goal: p.carbsGoal!,
-              remaining:
-                  (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
-              unit: 'g',
-              color: AppColors.gold,
-            ),
-          if (p.carbsGoal != null) const SizedBox(height: 10),
-          if (p.fatGoal != null)
-            _DetailRow(
-              label: 'Fat',
-              value: p.todayFat.round(),
-              goal: p.fatGoal!,
-              remaining: (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
-              unit: 'g',
-              color: AppColors.danger,
-            ),
-          if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
-            const Text(
-              'No macro targets set — configure them in Settings.',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
-            ),
-        ],
-      ),
+        if (p.proteinGoal != null) const SizedBox(height: 10),
+        if (p.carbsGoal != null)
+          _DetailRow(
+            label: 'Carbs',
+            value: p.todayCarbs.round(),
+            goal: p.carbsGoal!,
+            remaining:
+                (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
+            unit: 'g',
+            color: AppColors.gold,
+          ),
+        if (p.carbsGoal != null) const SizedBox(height: 10),
+        if (p.fatGoal != null)
+          _DetailRow(
+            label: 'Fat',
+            value: p.todayFat.round(),
+            goal: p.fatGoal!,
+            remaining: (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
+            unit: 'g',
+            color: AppColors.danger,
+          ),
+        if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
+          const Text(
+            'No macro targets set — configure them in Settings.',
+            style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+          ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
@@ -616,7 +464,7 @@ class _DetailRow extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 8),
-        _FullBar(progress: progress, color: color),
+        AppLinearProgress(value: progress, color: color, height: 8),
         const SizedBox(height: 6),
         Row(
           children: [
@@ -641,38 +489,6 @@ class _DetailRow extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-class _FullBar extends StatelessWidget {
-  final double progress;
-  final Color color;
-  const _FullBar({required this.progress, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (_, box) {
-      return Container(
-        height: 8,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            height: 8,
-            width: box.maxWidth * progress,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        ),
-      );
-    });
   }
 }
 
@@ -750,20 +566,10 @@ class _EmptyChatState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.chat_bubble_outline,
-              color: AppColors.textSecondary.withValues(alpha: 0.3), size: 40),
-          const SizedBox(height: 12),
-          Text(
-            isToday ? 'Log food or exercise below' : 'Nothing logged',
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 14),
-          ),
-        ],
-      ),
+    return AppEmptyState(
+      icon: Icons.chat_bubble_outline,
+      title: isToday ? 'Log food or exercise below' : 'Nothing logged',
+      iconSize: 40,
     );
   }
 }
@@ -899,11 +705,12 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     setState(() => _saving = true);
     final texts = _controllers.map((c) => c.text.trim()).toList();
     await widget.presenter.editAllChatFoodItems(widget.message.id, texts);
-    if (mounted)
+    if (mounted) {
       setState(() {
         _editing = false;
         _saving = false;
       });
+    }
   }
 
   void _cancel() {
@@ -977,7 +784,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
               ))
           .toList(),
     );
-    final messenger2 = messenger; // already captured above
+    final messenger2 = messenger;
     await widget.presenter.saveFoodTemplate(template);
     if (mounted) {
       messenger2.showSnackBar(
@@ -1001,7 +808,6 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Original input header ──────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Text(
@@ -1016,7 +822,6 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
           Divider(
               height: 1,
               color: AppColors.textSecondary.withValues(alpha: 0.08)),
-          // ── Food item rows ─────────────────────────────────────────────────
           ...message.foodItems.asMap().entries.map((e) => _FoodItemRow(
                 item: e.value,
                 index: e.key,
@@ -1024,7 +829,6 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
                 editing: _editing,
                 controller: _controllers[e.key],
               )),
-          // ── Footer ─────────────────────────────────────────────────────────
           _MessageFooter(
             timestamp: message.timestamp,
             editing: _editing,
@@ -1256,7 +1060,6 @@ class _ExerciseAnalysisCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Original input header ─────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
             child: Text(
@@ -1271,7 +1074,6 @@ class _ExerciseAnalysisCard extends StatelessWidget {
           Divider(
               height: 1,
               color: AppColors.textSecondary.withValues(alpha: 0.08)),
-          // ── Exercise row ──────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Row(
@@ -1448,8 +1250,6 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     final text = _ctrl.text.trim();
     if (text.isEmpty || widget.presenter.isChatParsing) return;
     _ctrl.clear();
-    // Dismiss keyboard first, then defer parseChat to the next frame so the
-    // keyboard dismiss animation starts before triggering a rebuild.
     FocusScope.of(context).unfocus();
     Future.delayed(Duration.zero, () {
       if (mounted) widget.presenter.parseChat(text);
@@ -1457,24 +1257,23 @@ class _ChatInputBarState extends State<_ChatInputBar> {
   }
 
   void _showTemplates(BuildContext context) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _TemplateSheet(presenter: widget.presenter),
+      title: 'Templates',
+      body: _TemplateBody(presenter: widget.presenter),
+      useDraggableScrollableSheet: true,
+      initialChildSize: 0.5,
     );
   }
 
   void _showManualAdd(BuildContext context) {
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _ManualFoodSheet(
+      title: 'Custom food',
+      body: _ManualFoodBody(
         onAdd: (entry) => widget.presenter.addManualFoodEntry(entry),
       ),
+      isScrollControlled: true,
     );
   }
 
@@ -1562,68 +1361,50 @@ class _ChatInputBarState extends State<_ChatInputBar> {
   }
 }
 
-// ─── Template Sheet ───────────────────────────────────────────────────────────
+// ─── Template Body ────────────────────────────────────────────────────────────
 
-class _TemplateSheet extends StatelessWidget {
+class _TemplateBody extends StatelessWidget {
   final NutritionPresenter presenter;
-  const _TemplateSheet({required this.presenter});
+  const _TemplateBody({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
     final templates = presenter.savedTemplates;
     final recents = presenter.recentFoods.take(5).toList();
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.textSecondary.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          if (recents.isNotEmpty) ...[
-            _sheetSectionLabel('Recent'),
-            ..._templateList(context, recents),
-          ],
-          if (templates.isNotEmpty) ...[
-            _sheetSectionLabel('Saved Meals'),
-            ..._templateList(context, templates),
-          ],
-          if (templates.isEmpty && recents.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(24),
-              child: Text(
-                'No templates yet. Save a meal from the Library.',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+    if (templates.isEmpty && recents.isEmpty) {
+      return const AppEmptyState(
+        icon: Icons.bookmark_border,
+        title: 'No templates yet',
+        body: 'Save a meal from the Library.',
+      );
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (recents.isNotEmpty) ...[
+          _sectionLabel('Recent'),
+          ..._templateList(context, recents),
         ],
-      ),
+        if (templates.isNotEmpty) ...[
+          _sectionLabel('Saved Meals'),
+          ..._templateList(context, templates),
+        ],
+        SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
+      ],
     );
   }
 
   List<Widget> _templateList(BuildContext context, List<FoodTemplate> items) {
     return items.map((t) {
       final totalCal = t.entries.fold<int>(0, (sum, e) => sum + e.calories);
-      return ListTile(
-        dense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+      return AppListTile(
         leading: t.isPinned
             ? const Icon(Icons.push_pin, color: AppColors.primary, size: 14)
             : null,
-        title: Text(t.name,
-            style: const TextStyle(color: AppColors.textPrimary, fontSize: 14)),
+        title: Text(t.name),
         trailing: Text(
           totalCal > 0 ? '$totalCal kcal' : '',
           style: const TextStyle(color: AppColors.gold, fontSize: 12),
@@ -1636,32 +1417,33 @@ class _TemplateSheet extends StatelessWidget {
     }).toList();
   }
 
-  Widget _sheetSectionLabel(String label) {
+  Widget _sectionLabel(String label) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 4),
+      padding: const EdgeInsets.fromLTRB(0, 4, 0, 4),
       child: Text(
         label,
         style: const TextStyle(
-            color: AppColors.textSecondary,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.5),
+          color: AppColors.textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 }
 
-// ─── Manual Food Sheet ────────────────────────────────────────────────────────
+// ─── Manual Food Body ─────────────────────────────────────────────────────────
 
-class _ManualFoodSheet extends StatefulWidget {
+class _ManualFoodBody extends StatefulWidget {
   final void Function(FoodEntry) onAdd;
-  const _ManualFoodSheet({required this.onAdd});
+  const _ManualFoodBody({required this.onAdd});
 
   @override
-  State<_ManualFoodSheet> createState() => _ManualFoodSheetState();
+  State<_ManualFoodBody> createState() => _ManualFoodBodyState();
 }
 
-class _ManualFoodSheetState extends State<_ManualFoodSheet> {
+class _ManualFoodBodyState extends State<_ManualFoodBody> {
   final _nameCtrl = TextEditingController();
   final _calCtrl = TextEditingController();
   final _pCtrl = TextEditingController();
@@ -1679,136 +1461,6 @@ class _ManualFoodSheetState extends State<_ManualFoodSheet> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottom),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(children: [
-            const Text(
-              'Custom food',
-              style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                icon: const Icon(Icons.close,
-                    color: AppColors.textSecondary, size: 18),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ]),
-          const SizedBox(height: 14),
-          TextField(
-              controller: _nameCtrl,
-              autofocus: true,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: _dec('Food name', 'e.g. Chicken breast 150g')),
-          const SizedBox(height: 10),
-          TextField(
-              controller: _calCtrl,
-              keyboardType: TextInputType.number,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: _dec('Calories (kcal)', 'e.g. 320')),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: () => setState(() => _showMacros = !_showMacros),
-            child: Row(children: [
-              Icon(
-                  _showMacros
-                      ? Icons.keyboard_arrow_up
-                      : Icons.keyboard_arrow_down,
-                  color: AppColors.textSecondary,
-                  size: 16),
-              const SizedBox(width: 4),
-              Text(_showMacros ? 'Hide macros' : 'Add macros (optional)',
-                  style: const TextStyle(
-                      color: AppColors.textSecondary, fontSize: 12)),
-            ]),
-          ),
-          if (_showMacros) ...[
-            const SizedBox(height: 10),
-            Row(children: [
-              Expanded(
-                  child: TextField(
-                      controller: _pCtrl,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Protein', 'g'))),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: TextField(
-                      controller: _cCtrl,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Carbs', 'g'))),
-              const SizedBox(width: 8),
-              Expanded(
-                  child: TextField(
-                      controller: _fCtrl,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: AppColors.textPrimary, fontSize: 12),
-                      decoration: _dec('Fat', 'g'))),
-            ]),
-          ],
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: AppColors.background,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
-              ),
-              onPressed: _add,
-              child: const Text('Add',
-                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  InputDecoration _dec(String label, String hint) => InputDecoration(
-        labelText: label,
-        hintText: hint,
-        labelStyle: const TextStyle(color: AppColors.textSecondary),
-        hintStyle: TextStyle(
-            color: AppColors.textSecondary.withValues(alpha: 0.5),
-            fontSize: 11),
-        filled: true,
-        fillColor: AppColors.background,
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.primary, width: 1)),
-        isDense: true,
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      );
-
   void _add() {
     final name = _nameCtrl.text.trim();
     final cal = int.tryParse(_calCtrl.text.trim());
@@ -1823,5 +1475,73 @@ class _ManualFoodSheetState extends State<_ManualFoodSheet> {
       loggedAt: DateTime.now(),
     ));
     Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppTextField(
+          controller: _nameCtrl,
+          autofocus: true,
+          label: 'Food name',
+          hint: 'e.g. Chicken breast 150g',
+        ),
+        const SizedBox(height: 10),
+        AppTextField(
+          controller: _calCtrl,
+          keyboardType: TextInputType.number,
+          label: 'Calories (kcal)',
+          hint: 'e.g. 320',
+        ),
+        const SizedBox(height: 10),
+        GestureDetector(
+          onTap: () => setState(() => _showMacros = !_showMacros),
+          child: Row(children: [
+            Icon(
+              _showMacros ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+              color: AppColors.textSecondary,
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              _showMacros ? 'Hide macros' : 'Add macros (optional)',
+              style:
+                  const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            ),
+          ]),
+        ),
+        if (_showMacros) ...[
+          const SizedBox(height: 10),
+          Row(children: [
+            Expanded(
+                child: AppTextField(
+                    controller: _pCtrl,
+                    keyboardType: TextInputType.number,
+                    label: 'Protein',
+                    hint: 'g')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: AppTextField(
+                    controller: _cCtrl,
+                    keyboardType: TextInputType.number,
+                    label: 'Carbs',
+                    hint: 'g')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: AppTextField(
+                    controller: _fCtrl,
+                    keyboardType: TextInputType.number,
+                    label: 'Fat',
+                    hint: 'g')),
+          ]),
+        ],
+        const SizedBox(height: 16),
+        AppPrimaryButton(label: 'Add', onPressed: _add),
+        const SizedBox(height: 8),
+      ],
+    );
   }
 }
