@@ -80,7 +80,7 @@ jobs:
 
       - name: Open hotfix→main PR and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           existing=$(gh pr list --base main --head hotfix \
             --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
@@ -98,7 +98,7 @@ jobs:
 
       - name: Open hotfix→dev PR and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           existing=$(gh pr list --base dev --head hotfix \
             --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
@@ -129,7 +129,7 @@ jobs:
 
       - name: Open dev→main PR and enable auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           # Create the PR if it doesn't already exist
           existing=$(gh pr list --base main --head dev \
