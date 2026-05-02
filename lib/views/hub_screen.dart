@@ -158,9 +158,11 @@ class HubScreen extends StatelessWidget {
         onRefresh: _refresh,
         child: CustomScrollView(
           slivers: [
-            SliverAppBar.large(
+            SliverAppBar(
               pinned: true,
-              toolbarHeight: 36,
+              toolbarHeight: 64,
+              collapsedHeight: 64,
+              titleSpacing: 0,
               surfaceTintColor: Colors.transparent,
               backgroundColor: stickyBg,
               title: nameTitle,
