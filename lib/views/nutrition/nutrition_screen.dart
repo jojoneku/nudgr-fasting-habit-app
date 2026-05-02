@@ -164,7 +164,7 @@ class _StatSection extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         onTap: () => _showNutritionDetailSheet(context, p),
         child: Row(
           children: [
@@ -280,7 +280,7 @@ class _ColDivider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 1,
         height: 36,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 10),
         color: Theme.of(context).colorScheme.outlineVariant,
       );
 }
@@ -311,7 +311,7 @@ class _StatCell extends StatelessWidget {
               color: barColor ?? color,
               height: 3,
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
           ],
           Text(
             value,
@@ -322,7 +322,7 @@ class _StatCell extends StatelessWidget {
               height: 1,
             ),
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 6),
           Text(
             label,
             style: TextStyle(

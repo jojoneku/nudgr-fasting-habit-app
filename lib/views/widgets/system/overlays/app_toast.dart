@@ -43,19 +43,34 @@ class AppToast {
     VoidCallback? onAction,
   }) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final base = cs.surfaceContainerHigh;
+    final bg = color != null
+        ? Color.alphaBlend(color.withValues(alpha: 0.15), base)
+        : base;
+    final fg = color ?? cs.onSurface;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        backgroundColor: color != null ? color.withValues(alpha: 0.12) : null,
+        backgroundColor: bg,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: (color ?? cs.outline).withValues(alpha: 0.25),
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
         content: Row(
           children: [
             if (icon != null) ...[
-              Icon(icon, color: color ?? theme.colorScheme.onSurface, size: 20),
+              Icon(icon, color: fg, size: 20),
               const SizedBox(width: 8),
             ],
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(color: color ?? theme.colorScheme.onSurface),
+                style: TextStyle(color: fg),
               ),
             ),
           ],
