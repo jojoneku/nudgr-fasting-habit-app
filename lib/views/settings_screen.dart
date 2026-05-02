@@ -39,11 +39,10 @@ class SettingsScreen extends StatelessWidget {
               listenable: Listenable.merge([authPresenter, settingsPresenter]),
               builder: (context, _) => AppGroupedList(
                 sections: [
-                  _appearanceSection(context),
                   _accountSection(context),
+                  _appearanceSection(context),
                   _dataSection(context),
                   if (kDebugMode) _developerSection(context),
-                  _aboutSection(context),
                 ],
               ),
             ),
@@ -165,8 +164,17 @@ class SettingsScreen extends StatelessWidget {
                     ),
               title: Text(syncPresenter!.statusLabel),
               trailing: TextButton(
-                onPressed:
-                    syncPresenter!.isSyncing ? null : syncPresenter!.forceSync,
+                onPressed: syncPresenter!.isSyncing
+                    ? null
+                    : () async {
+                        try {
+                          await syncPresenter!.forceSync();
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppToast.error(context, 'Sync failed: $e');
+                          }
+                        }
+                      },
                 child: const Text('Sync Now'),
               ),
             ),
@@ -381,21 +389,6 @@ class SettingsScreen extends StatelessWidget {
               AppToast.show(context, 'Notification sent! Check status bar.');
             }
           },
-        ),
-      ],
-    );
-  }
-
-  AppGroupedListSection _aboutSection(BuildContext context) {
-    return AppGroupedListSection(
-      title: 'About',
-      children: [
-        AppListTile(
-          insetGrouped: true,
-          leading: const AppIconBadge(icon: Icons.description),
-          title: const Text('Licenses'),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: () => showLicensePage(context: context),
         ),
       ],
     );
