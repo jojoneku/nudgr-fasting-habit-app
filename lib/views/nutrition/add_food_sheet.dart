@@ -176,8 +176,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
                 foregroundColor: cs.onSurfaceVariant,
-                side: BorderSide(
-                    color: cs.outlineVariant, width: 0.5),
+                side: BorderSide(color: cs.outlineVariant, width: 0.5),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -90,8 +90,8 @@ class _NutritionBody extends StatelessWidget {
             tooltip: 'Library',
           ),
           IconButton(
-            icon: Icon(Icons.tune_outlined,
-                color: cs.onSurfaceVariant, size: 22),
+            icon:
+                Icon(Icons.tune_outlined, color: cs.onSurfaceVariant, size: 22),
             onPressed: () => showNutritionSettingsSheet(
               context,
               presenter,
@@ -400,7 +400,9 @@ class _NutritionDetailBody extends StatelessWidget {
         if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
           Text(
             'No macro targets set — configure them in Settings.',
-            style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 12),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12),
           ),
         const SizedBox(height: 8),
       ],
@@ -754,8 +756,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel',
-                style: TextStyle(color: cs.onSurfaceVariant)),
+            child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
@@ -879,16 +880,16 @@ class _FoodItemRow extends StatelessWidget {
                     filled: true,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(
-                          color: cs.primary.withValues(alpha: 0.4)),
+                      borderSide:
+                          BorderSide(color: cs.primary.withValues(alpha: 0.4)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
                       borderSide: BorderSide(color: cs.primary),
                     ),
                     hintText: 'e.g. 100g rice',
-                    hintStyle: TextStyle(
-                        color: cs.onSurfaceVariant, fontSize: 13),
+                    hintStyle:
+                        TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                   ),
                 )
               : _FoodItemDisplay(item: item),
@@ -1177,9 +1178,7 @@ class _MessageFooter extends StatelessWidget {
                   onTap: onConfirm),
             const SizedBox(width: 2),
             _FooterBtn(
-                icon: Icons.close,
-                color: cs.onSurfaceVariant,
-                onTap: onCancel),
+                icon: Icons.close, color: cs.onSurfaceVariant, onTap: onCancel),
           ] else ...[
             if (onEdit != null)
               _FooterBtn(
@@ -1320,8 +1319,8 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                       : !isToday
                           ? 'View only — select today to log'
                           : 'Log food or exercise…',
-                  hintStyle: TextStyle(
-                      color: cs.onSurfaceVariant, fontSize: 13),
+                  hintStyle:
+                      TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(vertical: 8),
@@ -1339,14 +1338,13 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: isToday && !locked ? cs.primary : cs.surfaceContainerHigh,
+                color:
+                    isToday && !locked ? cs.primary : cs.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(22),
               ),
               child: Icon(
                 Icons.arrow_upward,
-                color: isToday && !locked
-                    ? cs.onPrimary
-                    : cs.onSurfaceVariant,
+                color: isToday && !locked ? cs.onPrimary : cs.onSurfaceVariant,
                 size: 20,
               ),
             ),

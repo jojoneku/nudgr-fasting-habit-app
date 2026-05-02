@@ -320,8 +320,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.search,
-                  color: cs0.onSurfaceVariant.withValues(alpha: 0.3),
-                  size: 32),
+                  color: cs0.onSurfaceVariant.withValues(alpha: 0.3), size: 32),
               const SizedBox(height: 8),
               Text(
                 'Search the food database or describe your meal',
@@ -376,8 +375,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(t.name,
-                              style: TextStyle(
-                                  color: cs.onSurface, fontSize: 12)),
+                              style:
+                                  TextStyle(color: cs.onSurface, fontSize: 12)),
                           const SizedBox(width: 6),
                           Text('$cal',
                               style: const TextStyle(
@@ -765,8 +764,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('Cancel',
-                  style: TextStyle(color: cs.onSurfaceVariant)),
+              child:
+                  Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -931,8 +930,8 @@ class _TemplateCard extends StatelessWidget {
                         isMeal
                             ? '${template.entries.length} items · $cal kcal'
                             : '$cal kcal',
-                        style: TextStyle(
-                            color: cs.onSurfaceVariant, fontSize: 11),
+                        style:
+                            TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                       ),
                     ],
                   ),
@@ -1200,8 +1199,8 @@ class _AiUnavailableBanner extends StatelessWidget {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(presenter.aiSizeLabel,
-                      style: TextStyle(
-                          color: cs.onSurfaceVariant, fontSize: 10)),
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 10)),
                 ),
               ]),
               const SizedBox(height: 14),
@@ -1492,8 +1491,8 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                       style: TextStyle(color: cs.onSurface, fontSize: 13),
                       decoration: InputDecoration(
                         isDense: true,
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 4, vertical: 8),
                         border: InputBorder.none,
                         suffix: Text('g',
                             style: TextStyle(
@@ -1543,17 +1542,14 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                         : cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: selected
-                          ? AppColors.gold
-                          : cs.outlineVariant,
+                      color: selected ? AppColors.gold : cs.outlineVariant,
                       width: selected ? 1 : 0.5,
                     ),
                   ),
                   child: Text('${g.round()}g',
                       style: TextStyle(
-                          color: selected
-                              ? AppColors.gold
-                              : cs.onSurfaceVariant,
+                          color:
+                              selected ? AppColors.gold : cs.onSurfaceVariant,
                           fontSize: 11,
                           fontWeight:
                               selected ? FontWeight.w600 : FontWeight.normal)),
