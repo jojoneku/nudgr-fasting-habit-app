@@ -1,20 +1,23 @@
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../app_colors.dart';
 import '../../models/fasting_phase.dart';
 import '../../presenters/fasting_presenter.dart';
-import '../../app_colors.dart';
+import '../../utils/app_spacing.dart';
+import '../../utils/app_text_styles.dart';
 import '../../utils/date_utils.dart' as date_utils;
-import '../widgets/partial_ring_painter.dart';
+import '../widgets/fast_completion_modal.dart';
 import '../widgets/protocol_card.dart';
 import '../widgets/refeeding_warning_sheet.dart';
-import '../widgets/fast_completion_modal.dart';
+import '../widgets/system/system.dart';
 import 'history_tab.dart';
+
+// Quick-pick protocol hours shown in AppSegmentedControl.
+const _kQuickHours = [16, 18, 20, 24];
 
 class TimerTab extends StatefulWidget {
   final FastingPresenter presenter;
-
   const TimerTab({super.key, required this.presenter});
 
   @override
@@ -24,350 +27,109 @@ class TimerTab extends StatefulWidget {
 class _TimerTabState extends State<TimerTab> {
   FastingPresenter get presenter => widget.presenter;
 
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (context, child) {
-        return _buildTimerView();
-      },
-    );
-  }
+  // ── Derived helpers (pure derivations, no state) ────────────────────────────
 
-  Widget _buildTimerView() {
-    double progress = 0.0;
-    int targetSeconds = 1;
-    String statusLabel = "Ready?";
-    final bool isExtendedFast = presenter.fastingGoalHours >= 36;
-    int eatingHours = isExtendedFast ? 0 : (24 - presenter.fastingGoalHours);
-    if (eatingHours < 0) eatingHours = 0;
-    final bool hasEatingWindow = eatingHours > 0;
-    int eatingRemainingSeconds = 0;
-    double eatingElapsedPercent = 0;
+  bool get _isEatingWindow =>
+      !presenter.isFasting && presenter.eatingStartTime != null;
 
+  bool get _isExtendedFast => presenter.fastingGoalHours >= 36;
+
+  int get _eatingWindowHours =>
+      _isExtendedFast ? 0 : (24 - presenter.fastingGoalHours).clamp(0, 24);
+
+  bool get _hasEatingWindow => _eatingWindowHours > 0;
+
+  double get _ringProgress {
     if (presenter.isFasting) {
-      targetSeconds = presenter.fastingGoalHours * 3600;
-      progress = (presenter.elapsedSeconds / targetSeconds).clamp(0.0, 1.0);
-      statusLabel = presenter.isOvertime ? "OVERDRIVE" : "Fasting Time";
-    } else if (presenter.eatingStartTime != null) {
-      final int eatingTargetSeconds = hasEatingWindow ? eatingHours * 3600 : 1;
-      targetSeconds = eatingTargetSeconds;
-      if (hasEatingWindow) {
-        eatingRemainingSeconds = eatingTargetSeconds - presenter.elapsedSeconds;
-        if (eatingRemainingSeconds < 0) eatingRemainingSeconds = 0;
-        progress = eatingTargetSeconds > 0
-            ? (eatingRemainingSeconds / eatingTargetSeconds)
-            : 0;
-        eatingElapsedPercent = eatingTargetSeconds > 0
-            ? (presenter.elapsedSeconds / eatingTargetSeconds)
-            : 0;
-        if (eatingElapsedPercent < 0) eatingElapsedPercent = 0;
-        if (eatingElapsedPercent > 1) eatingElapsedPercent = 1;
-      } else {
-        eatingRemainingSeconds = 0;
-        progress = 0;
-        eatingElapsedPercent = 0;
-      }
-      statusLabel =
-          hasEatingWindow ? "Eating Window Left" : "Eating Window Disabled";
+      return (presenter.elapsedSeconds / presenter.targetSeconds).clamp(0.0, 1.0);
     }
-    if (progress > 1.0) progress = 1.0;
-
-    final theme = Theme.of(context);
-    final Color fastingAccent = presenter.isFasting
-        ? (presenter.isOvertime
-            ? AppColors.danger
-            : presenter.currentPhase.color)
-        : AppColors.secondary;
-    const Color eatingAccent = AppColors.primary;
-    final bool showEatingProgress =
-        presenter.eatingStartTime != null && hasEatingWindow;
-    final bool showProgressLabel = presenter.isFasting || showEatingProgress;
-    final String timerDisplay = presenter.isFasting
-        ? (presenter.isOvertime
-            ? '+${_formatTime(presenter.overtimeSeconds)}'
-            : _formatTime(presenter.elapsedSeconds))
-        : (presenter.eatingStartTime != null
-            ? (hasEatingWindow
-                ? _formatTime(eatingRemainingSeconds)
-                : '00:00:00')
-            : "${presenter.fastingGoalHours}:00:00");
-    double displayProgress =
-        (presenter.isFasting || presenter.eatingStartTime != null)
-            ? progress
-            : 0.0;
-    displayProgress = math.max(0.0, math.min(1.0, displayProgress));
-
-    final bool reverseProgress =
-        !presenter.isFasting && presenter.eatingStartTime != null;
-
-    final timerCore = Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          width: 280,
-          height: 280,
-          child: CustomPaint(
-            painter: PartialRingPainter(
-              progress: displayProgress,
-              trackColor: AppColors.neutral.withValues(alpha: 0.2),
-              progressColor: presenter.isFasting
-                  ? fastingAccent
-                  : (presenter.eatingStartTime != null
-                      ? eatingAccent
-                      : AppColors.neutral),
-              strokeWidth: 20,
-              reverse: reverseProgress,
-            ),
-          ),
-        ),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(statusLabel, style: theme.textTheme.labelLarge),
-            const SizedBox(height: 8),
-            Text(
-              timerDisplay,
-              style: theme.textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontFeatures: [const FontFeature.tabularFigures()],
-              ),
-            ),
-            if (showProgressLabel)
-              Text(
-                presenter.isFasting
-                    ? "${(progress * 100).toInt()}%"
-                    : "${(eatingElapsedPercent * 100).toInt()}% elapsed",
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: presenter.isFasting ? fastingAccent : eatingAccent,
-                ),
-              ),
-            if (presenter.isFasting) ...[
-              const SizedBox(height: 6),
-              _buildPhaseLabel(presenter.currentPhase),
-            ],
-          ],
-        )
-      ],
-    );
-
-    Widget? leftPanel;
-    Widget? rightPanel;
-
-    if (presenter.isFasting && presenter.startTime != null) {
-      final start = presenter.startTime!;
-      leftPanel = _buildTimerInfoPanel(
-        title: 'Started',
-        value: _format12Hour(start),
-        accentColor: fastingAccent,
-        onEdit: _editCurrentFastingTime,
-      );
-      rightPanel = _buildTimerInfoPanel(
-        title: 'Goal End',
-        value: date_utils.formatTimeWithDay(
-            start.add(Duration(hours: presenter.fastingGoalHours)), start),
-        accentColor: fastingAccent,
-      );
-    } else if (presenter.eatingStartTime != null) {
-      final eatingStart = presenter.eatingStartTime!;
-      leftPanel = _buildTimerInfoPanel(
-        title: 'Window Start',
-        value: _format12Hour(eatingStart),
-        accentColor: eatingAccent,
-        onEdit: _editCurrentEatingTime,
-      );
-      rightPanel = _buildTimerInfoPanel(
-        title: 'Window End',
-        value: date_utils.formatTimeWithDay(
-            eatingStart.add(Duration(hours: 24 - presenter.fastingGoalHours)),
-            eatingStart),
-        accentColor: eatingAccent,
-      );
+    if (_isEatingWindow && _hasEatingWindow) {
+      final eatingTarget = _eatingWindowHours * 3600;
+      final remaining = (eatingTarget - presenter.elapsedSeconds).clamp(0, eatingTarget);
+      return eatingTarget > 0 ? remaining / eatingTarget : 0.0;
     }
-
-    return Center(
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!presenter.isFasting)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: _buildProtocolSelector(),
-              ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Card(
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(32)),
-                clipBehavior: Clip.antiAlias,
-                child: Container(
-                  color: theme.colorScheme.surface,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: double.infinity,
-                        child: timerCore,
-                      ),
-                      if (leftPanel != null || rightPanel != null) ...[
-                        const SizedBox(height: 16),
-                        IntrinsicHeight(
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              if (leftPanel != null) Expanded(child: leftPanel),
-                              if (rightPanel != null)
-                                Expanded(child: rightPanel),
-                            ],
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      Container(
-                        width: double.infinity,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(28),
-                          boxShadow: [
-                            BoxShadow(
-                              color: (presenter.isFasting
-                                      ? fastingAccent
-                                      : (presenter.eatingStartTime != null
-                                          ? eatingAccent
-                                          : theme.colorScheme.primary))
-                                  .withValues(alpha: 0.5),
-                              blurRadius: 20,
-                              spreadRadius: 1,
-                            ),
-                          ],
-                        ),
-                        child: FilledButton(
-                          onPressed: _toggleFast,
-                          style: FilledButton.styleFrom(
-                            backgroundColor: presenter.isFasting
-                                ? fastingAccent
-                                : (presenter.eatingStartTime != null
-                                    ? eatingAccent
-                                    : theme.colorScheme.primary),
-                          ),
-                          child: Text(
-                            presenter.isFasting ? "END FAST" : "START FAST",
-                            style: const TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      ),
-                      if (presenter.eatingStartTime != null &&
-                          !presenter.isFasting &&
-                          hasEatingWindow) ...[
-                        const SizedBox(height: 12),
-                        Align(
-                          alignment: Alignment.center,
-                          child: TextButton(
-                            onPressed: _skipEatingWindow,
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.textSecondary,
-                            ),
-                            child: const Text("Skip / Pause Today"),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            _buildHistorySummary(theme),
-          ],
-        ),
-      ),
-    );
+    return 0.0;
   }
 
-  Widget _buildProtocolSelector() {
-    return SizedBox(
-      height: 150,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        itemCount: FastingProtocol.all.length,
-        itemBuilder: (context, index) {
-          final protocol = FastingProtocol.all[index];
-          return ProtocolCard(
-            protocol: protocol,
-            isSelected: presenter.fastingGoalHours == protocol.hours,
-            onTap: () => presenter.updateFastingGoal(protocol.hours),
-          );
-        },
-      ),
-    );
+  bool get _ringReversed => _isEatingWindow;
+
+  Color _ringColor(BuildContext context) {
+    if (presenter.isFasting) {
+      return presenter.isOvertime
+          ? Theme.of(context).colorScheme.error
+          : presenter.currentPhase.color;
+    }
+    if (_isEatingWindow) return Theme.of(context).colorScheme.primary;
+    return Theme.of(context).colorScheme.outlineVariant;
   }
 
-  Widget _buildPhaseLabel(FastingPhase phase) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: phase.color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: phase.color.withValues(alpha: 0.3), width: 1),
-      ),
-      child: Text(
-        '${phase.rpgTitle} — ${phase.label.toUpperCase()}',
-        style: TextStyle(
-          color: phase.color,
-          fontSize: 9,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
-        ),
-      ),
-    );
+  String get _timerString {
+    if (presenter.isFasting) {
+      return presenter.isOvertime
+          ? '+${_formatHMS(presenter.overtimeSeconds)}'
+          : _formatHMS(presenter.elapsedSeconds);
+    }
+    if (_isEatingWindow && _hasEatingWindow) {
+      final rem = (_eatingWindowHours * 3600 - presenter.elapsedSeconds).clamp(0, _eatingWindowHours * 3600);
+      return _formatHMS(rem);
+    }
+    return '${presenter.fastingGoalHours.toString().padLeft(2, '0')}:00:00';
   }
 
-  Widget _buildTimerInfoPanel({
-    required String title,
-    required String value,
-    Color? accentColor,
-    VoidCallback? onEdit,
-  }) {
-    final color = accentColor ?? AppColors.primary;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(title,
-            style:
-                const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            if (onEdit != null) ...[
-              const SizedBox(width: 4),
-              InkWell(
-                onTap: onEdit,
-                child: Icon(Icons.edit, size: 16, color: color),
-              ),
-            ],
-          ],
-        ),
-      ],
-    );
+  String get _statusLabel {
+    if (presenter.isFasting) {
+      return presenter.isOvertime ? 'Overdrive' : 'Fasting';
+    }
+    if (_isEatingWindow) {
+      return _hasEatingWindow ? 'Window remaining' : 'Eating window disabled';
+    }
+    return 'Ready to start';
   }
 
-  void _toggleFast() {
+  String? get _progressLabel {
+    if (presenter.isFasting) {
+      return '${(_ringProgress * 100).toInt()}% of ${presenter.fastingGoalHours}h goal';
+    }
+    if (_isEatingWindow && _hasEatingWindow) {
+      final elapsed = (presenter.elapsedSeconds / (_eatingWindowHours * 3600) * 100).clamp(0.0, 100.0);
+      return '${elapsed.toInt()}% elapsed';
+    }
+    return null;
+  }
+
+  String get _primaryActionLabel {
+    if (presenter.isFasting) return 'End fast';
+    return 'Start fast';
+  }
+
+  bool get _showSkipButton =>
+      _isEatingWindow && _hasEatingWindow && !presenter.isFasting;
+
+  int get _quickSelected => _kQuickHours.contains(presenter.fastingGoalHours)
+      ? presenter.fastingGoalHours
+      : _kQuickHours.first;
+
+  FastingProtocol? get _currentProtocol => FastingProtocol.all
+      .where((p) => p.hours == presenter.fastingGoalHours)
+      .firstOrNull;
+
+  String _formatHMS(int totalSeconds) {
+    final abs = totalSeconds.abs();
+    final h = abs ~/ 3600;
+    final m = (abs % 3600) ~/ 60;
+    final s = abs % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  }
+
+  String _format12Hour(DateTime dt) {
+    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
+    final period = dt.hour >= 12 ? 'PM' : 'AM';
+    return '$h:${dt.minute.toString().padLeft(2, '0')} $period';
+  }
+
+  // ── Actions ─────────────────────────────────────────────────────────────────
+
+  void _onPrimaryAction() {
     if (presenter.isFasting) {
       _showStopFastDialog();
     } else {
@@ -376,69 +138,60 @@ class _TimerTabState extends State<TimerTab> {
   }
 
   Future<void> _showStopFastDialog() async {
-    final isShortFast = presenter.elapsedSeconds < 600;
-    final needsRefeedingProtocol = presenter.requiresRefeedingProtocol;
+    final isShort = presenter.elapsedSeconds < 600;
+    final needsRefeeding = presenter.requiresRefeedingProtocol;
 
-    if (isShortFast) {
-      // Short fast — offer discard (no penalty)
+    if (isShort) {
       final shouldDiscard = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Discard Session?"),
+        builder: (_) => AlertDialog(
+          title: const Text('Discard session?'),
           content: const Text(
-              "You've fasted less than 10 minutes. Discard with no penalty, or continue?"),
+              "You've fasted less than 10 minutes. Discard with no penalty?"),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text("Keep Fasting")),
+                child: const Text('Keep fasting')),
             TextButton(
                 onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
-                child: const Text("Discard")),
+                style:
+                    TextButton.styleFrom(foregroundColor: AppColors.danger),
+                child: const Text('Discard')),
           ],
         ),
       );
-      if (shouldDiscard == true && mounted) {
-        await presenter.discardFast();
-      }
+      if (shouldDiscard == true && mounted) await presenter.discardFast();
       return;
     }
 
-    if (needsRefeedingProtocol) {
-      // Extended fast — show refeeding protocol warning
+    if (needsRefeeding) {
       if (!mounted) return;
-      final shouldEnd =
-          await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
-      if (shouldEnd && mounted) {
-        await _doEndFast();
-      }
+      final shouldEnd = await RefeedingWarningSheet.show(context, presenter.elapsedSeconds);
+      if (shouldEnd && mounted) await _doEndFast();
       return;
     }
 
-    // Standard confirmation
     final shouldStop = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("End Fast?"),
-        content: const Text("Are you sure you want to end your fast now?"),
+      builder: (_) => AlertDialog(
+        title: const Text('End fast?'),
+        content: const Text('Are you sure you want to end your fast now?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text("Cancel")),
+              child: const Text('Cancel')),
           TextButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text("End Fast")),
+              child: const Text('End fast')),
         ],
       ),
     );
-    if (shouldStop == true && mounted) {
-      await _doEndFast();
-    }
+    if (shouldStop == true && mounted) await _doEndFast();
   }
 
   Future<void> _doEndFast() async {
     final durationHours = presenter.elapsedSeconds / 3600.0;
-    final currentStreak = presenter.currentStreak;
+    final streak = presenter.currentStreak;
     final (xp, hpChange) = await presenter.stopFast();
     if (!mounted) return;
     await FastCompletionModal.show(
@@ -448,282 +201,501 @@ class _TimerTabState extends State<TimerTab> {
         hpChange: hpChange,
         durationHours: durationHours,
         wasSuccess: durationHours >= presenter.fastingGoalHours,
-        currentStreak: currentStreak +
-            (durationHours >= presenter.fastingGoalHours ? 1 : 0),
+        currentStreak: streak + (durationHours >= presenter.fastingGoalHours ? 1 : 0),
       ),
       onDismiss: (note) async {
         if (note != null && presenter.history.isNotEmpty) {
-          final updatedLog = presenter.history.first;
-          updatedLog.note = note;
-          await presenter.updateLog(0, updatedLog);
+          final log = presenter.history.first;
+          log.note = note;
+          await presenter.updateLog(0, log);
         }
       },
     );
   }
 
-  Future<void> _skipEatingWindow() async {
-    await presenter.skipEatingWindow();
+  void _showFullProtocolSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _FullProtocolSheet(presenter: presenter),
+    );
   }
 
-  Future<void> _editCurrentFastingTime() async {
+  Future<void> _editStartTime() async {
     if (presenter.startTime == null) return;
-    DateTime tempStartTime = presenter.startTime!;
-    final theme = Theme.of(context);
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Edit Start Time'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 200,
-                    width: double.maxFinite,
-                    child: CupertinoTheme(
-                      data: const CupertinoThemeData(
-                        brightness: Brightness.dark,
-                        textTheme: CupertinoTextThemeData(
-                          dateTimePickerTextStyle: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ),
-                      child: CupertinoDatePicker(
-                        mode: CupertinoDatePickerMode.dateAndTime,
-                        initialDateTime: tempStartTime,
-                        maximumDate: DateTime.now(),
-                        onDateTimeChanged: (DateTime value) {
-                          setState(() {
-                            tempStartTime = value;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.onSurfaceVariant,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            presenter.updateStartTime(tempStartTime);
-                            Navigator.pop(context);
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Save'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+    DateTime temp = presenter.startTime!;
+    final saved = await _showDateTimePicker(
+      context,
+      title: 'Edit start time',
+      initial: temp,
     );
+    if (saved != null && mounted) presenter.updateStartTime(saved);
   }
 
-  Future<void> _editCurrentEatingTime() async {
+  Future<void> _editEatingTime() async {
     if (presenter.eatingStartTime == null) return;
-    DateTime tempStartTime = presenter.eatingStartTime!;
-    final theme = Theme.of(context);
+    final saved = await _showDateTimePicker(
+      context,
+      title: 'Edit window start',
+      initial: presenter.eatingStartTime!,
+    );
+    if (saved != null && mounted) presenter.updateEatingStartTime(saved);
+  }
 
-    await showDialog(
+  Future<DateTime?> _showDateTimePicker(
+    BuildContext context, {
+    required String title,
+    required DateTime initial,
+  }) async {
+    DateTime temp = initial;
+    return showDialog<DateTime>(
       context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: const Text('Edit Window Start'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 200,
-                    width: double.maxFinite,
-                    child: CupertinoTheme(
-                      data: const CupertinoThemeData(
-                        brightness: Brightness.dark,
-                        textTheme: CupertinoTextThemeData(
-                          dateTimePickerTextStyle: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 20,
-                          ),
-                        ),
-                      ),
-                      child: CupertinoDatePicker(
-                        mode: CupertinoDatePickerMode.dateAndTime,
-                        initialDateTime: tempStartTime,
-                        maximumDate: DateTime.now(),
-                        onDateTimeChanged: (DateTime value) {
-                          setState(() {
-                            tempStartTime = value;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            foregroundColor: theme.colorScheme.onSurfaceVariant,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Cancel'),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () {
-                            presenter.updateEatingStartTime(tempStartTime);
-                            Navigator.pop(context);
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: theme.colorScheme.primary,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                          ),
-                          child: const Text('Save'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, setLocal) => AlertDialog(
+          title: Text(title),
+          content: SizedBox(
+            height: 200,
+            width: double.maxFinite,
+            child: CupertinoTheme(
+              data: CupertinoThemeData(
+                brightness: Theme.of(context).brightness,
               ),
-            );
-          },
-        );
-      },
+              child: CupertinoDatePicker(
+                mode: CupertinoDatePickerMode.dateAndTime,
+                initialDateTime: initial,
+                maximumDate: DateTime.now(),
+                onDateTimeChanged: (v) => setLocal(() => temp = v),
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(context, temp),
+                child: const Text('Save')),
+          ],
+        ),
+      ),
     );
   }
 
-  String _formatTime(int totalSeconds) {
-    int h = totalSeconds ~/ 3600;
-    int m = (totalSeconds % 3600) ~/ 60;
-    int s = totalSeconds % 60;
-    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
+  // ── Build ────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) => _buildContent(context),
+    );
   }
 
-  String _format12Hour(DateTime dateTime) {
-    int hour = dateTime.hour;
-    String period = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12;
-    if (hour == 0) hour = 12;
-    return '$hour:${dateTime.minute.toString().padLeft(2, '0')} $period';
+  Widget _buildContent(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.xxl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Protocol picker — only when idle
+          if (!presenter.isFasting && !_isEatingWindow) ...[
+            _buildProtocolSection(context),
+            const SizedBox(height: AppSpacing.md),
+          ],
+          // Hero ring card
+          _buildRingCard(context),
+          const SizedBox(height: AppSpacing.md),
+          // Stats strip
+          _buildStatsStrip(context),
+          // History
+          if (presenter.history.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildHistorySection(context),
+          ],
+        ],
+      ),
+    );
   }
 
-  Widget _buildHistorySummary(ThemeData theme) {
-    if (presenter.history.isEmpty) return const SizedBox.shrink();
-
-    final lastLog = presenter.history.first;
-    final duration = lastLog.fastDuration;
-    final isSuccess = lastLog.success;
-
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
+  Widget _buildProtocolSection(BuildContext context) {
+    final proto = _currentProtocol;
+    return AppSection(
+      title: 'Protocol',
+      trailing: TextButton.icon(
+        icon: const Icon(Icons.tune_rounded, size: 16),
+        label: const Text('More'),
+        onPressed: () => _showFullProtocolSheet(context),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "LAST FAST",
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: AppColors.textSecondary,
-                  letterSpacing: 1.2,
-                  fontWeight: FontWeight.bold,
-                ),
+          AppSegmentedControl<int>(
+            selected: _quickSelected,
+            segments: const [
+              (value: 16, label: '16:8', icon: null),
+              (value: 18, label: '18:6', icon: null),
+              (value: 20, label: '20:4', icon: null),
+              (value: 24, label: 'OMAD', icon: null),
+            ],
+            onChanged: (h) => presenter.updateFastingGoal(h),
+          ),
+          if (proto != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              '${proto.rpgName} · ${proto.benefit}',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              TextButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Scaffold(
-                        appBar: AppBar(title: const Text("History")),
-                        body: HistoryList(presenter: presenter),
-                      ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRingCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final ringColor = _ringColor(context);
+
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.mdGenerous),
+      child: Column(
+        children: [
+          // Ring
+          AppRingProgress(
+            value: _ringProgress,
+            size: 220,
+            strokeWidth: 16,
+            glowOpacity: 0.10,
+            primaryColor: ringColor,
+            reversed: _ringReversed,
+            center: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _statusLabel,
+                  style: AppTextStyles.labelLarge.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AppNumberDisplay(
+                  value: _timerString,
+                  size: AppNumberSize.headline,
+                  color: theme.colorScheme.onSurface,
+                ),
+                if (presenter.isFasting) ...[
+                  const SizedBox(height: 4),
+                  _buildPhaseLabel(context, presenter.currentPhase),
+                ],
+                if (_progressLabel != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _progressLabel!,
+                    style: AppTextStyles.labelSmall.copyWith(
+                      color: ringColor,
                     ),
-                  );
-                },
-                child: const Text("Show All"),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Time info row
+          if (presenter.isFasting && presenter.startTime != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildTimeInfoRow(
+              leftTitle: 'Started',
+              leftValue: _format12Hour(presenter.startTime!),
+              leftOnEdit: _editStartTime,
+              rightTitle: 'Goal end',
+              rightValue: date_utils.formatTimeWithDay(
+                  presenter.startTime!
+                      .add(Duration(hours: presenter.fastingGoalHours)),
+                  presenter.startTime!),
+            ),
+          ] else if (_isEatingWindow && presenter.eatingStartTime != null) ...[
+            const SizedBox(height: AppSpacing.md),
+            _buildTimeInfoRow(
+              leftTitle: 'Window start',
+              leftValue: _format12Hour(presenter.eatingStartTime!),
+              leftOnEdit: _editEatingTime,
+              rightTitle: 'Window end',
+              rightValue: date_utils.formatTimeWithDay(
+                  presenter.eatingStartTime!
+                      .add(Duration(hours: _eatingWindowHours)),
+                  presenter.eatingStartTime!),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.mdGenerous),
+          // Primary action
+          AppPrimaryButton(
+            label: _primaryActionLabel,
+            onPressed: _onPrimaryAction,
+          ),
+          if (_showSkipButton) ...[
+            const SizedBox(height: AppSpacing.sm),
+            AppSecondaryButton(
+              label: 'Skip eating window',
+              onPressed: presenter.skipEatingWindow,
+              fullWidth: true,
+              height: 44,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPhaseLabel(BuildContext context, FastingPhase phase) {
+    return AppStatPill(
+      value: phase.label,
+      color: AppStatColor.neutral,
+      size: AppStatSize.small,
+    );
+  }
+
+  Widget _buildTimeInfoRow({
+    required String leftTitle,
+    required String leftValue,
+    VoidCallback? leftOnEdit,
+    required String rightTitle,
+    required String rightValue,
+  }) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: _TimeInfoTile(
+            title: leftTitle,
+            value: leftValue,
+            onEdit: leftOnEdit,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        Container(
+            width: 1,
+            height: 40,
+            color: theme.colorScheme.outlineVariant),
+        Expanded(
+          child: _TimeInfoTile(
+            title: rightTitle,
+            value: rightValue,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsStrip(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        AppStatPill(
+          icon: Icons.local_fire_department_rounded,
+          label: 'Streak',
+          value: '${presenter.currentStreak}d',
+          color: AppStatColor.warning,
+        ),
+        AppStatPill(
+          icon: Icons.emoji_events_outlined,
+          label: 'Best',
+          value: '${presenter.longestStreak}d',
+          color: AppStatColor.success,
+        ),
+        AppStatPill(
+          icon: Icons.history_rounded,
+          label: 'Fasts',
+          value: '${presenter.history.length}',
+          color: AppStatColor.neutral,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHistorySection(BuildContext context) {
+    final theme = Theme.of(context);
+    final lastLog = presenter.history.first;
+    final isSuccess = lastLog.success;
+    final h = lastLog.fastDuration.floor();
+    final m = ((lastLog.fastDuration - h) * 60).round();
+    final durationLabel = m > 0 ? '${h}h ${m}m' : '${h}h';
+
+    return AppSection(
+      title: 'Last fast',
+      trailing: TextButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              appBar: AppBar(title: const Text('History')),
+              body: HistoryList(presenter: presenter),
+            ),
+          ),
+        ),
+        child: const Text('Show all'),
+      ),
+      child: AppCard(
+        variant: AppCardVariant.tonal,
+        child: Row(
+          children: [
+            AppIconBadge(
+              icon: isSuccess ? Icons.check_rounded : Icons.close_rounded,
+              color: isSuccess
+                  ? AppColors.success
+                  : theme.colorScheme.error,
+              size: 36,
+              iconSize: 18,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppNumberDisplay(
+                    value: durationLabel,
+                    size: AppNumberSize.title,
+                    color: isSuccess
+                        ? AppColors.success
+                        : theme.colorScheme.onSurface,
+                  ),
+                  Text(
+                    DateFormat('MMM d, h:mm a').format(lastLog.fastStart),
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── _TimeInfoTile ────────────────────────────────────────────────────────────
+
+class _TimeInfoTile extends StatelessWidget {
+  const _TimeInfoTile({
+    required this.title,
+    required this.value,
+    required this.color,
+    this.onEdit,
+  });
+
+  final String title;
+  final String value;
+  final Color color;
+  final VoidCallback? onEdit;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(title,
+            style: AppTextStyles.labelSmall.copyWith(
+                color: theme.colorScheme.onSurfaceVariant)),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              value,
+              style: AppTextStyles.labelLarge.copyWith(
+                  color: color, fontWeight: FontWeight.w600),
+            ),
+            if (onEdit != null) ...[
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: onEdit,
+                child: Icon(Icons.edit_outlined, size: 14, color: color),
               ),
             ],
-          ),
-          const SizedBox(height: 8),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── _FullProtocolSheet ───────────────────────────────────────────────────────
+
+class _FullProtocolSheet extends StatelessWidget {
+  const _FullProtocolSheet({required this.presenter});
+  final FastingPresenter presenter;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: AppSpacing.sm),
           Container(
-            padding: const EdgeInsets.all(16),
+            width: 40,
+            height: 4,
             decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border:
-                  Border.all(color: AppColors.neutral.withValues(alpha: 0.1)),
+              color: Theme.of(context).colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(2),
             ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: (isSuccess ? AppColors.primary : AppColors.error)
-                        .withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isSuccess ? Icons.check : Icons.close,
-                    color: isSuccess ? AppColors.primary : AppColors.error,
-                  ),
-                ),
-                const SizedBox(width: 16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "${duration.toStringAsFixed(1)} Hours",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        DateFormat('MMM d, h:mm a').format(lastLog.fastStart),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
+                    child: Text('Choose protocol',
+                        style: AppTextStyles.titleLarge)),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
                 ),
               ],
             ),
           ),
+          const SizedBox(height: AppSpacing.sm),
+          SizedBox(
+            height: 220,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm, vertical: AppSpacing.xs),
+              itemCount: FastingProtocol.all.length,
+              itemBuilder: (context, i) {
+                final p = FastingProtocol.all[i];
+                return SizedBox(
+                  width: 160,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ProtocolCard(
+                      protocol: p,
+                      isSelected: presenter.fastingGoalHours == p.hours,
+                      onTap: () {
+                        presenter.updateFastingGoal(p.hours);
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
         ],
       ),
     );
