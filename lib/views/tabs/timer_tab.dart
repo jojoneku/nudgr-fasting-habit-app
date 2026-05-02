@@ -328,7 +328,7 @@ class _TimerTabState extends State<TimerTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          height: 116,
+          height: 136,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: EdgeInsets.zero,
@@ -392,10 +392,13 @@ class _TimerTabState extends State<TimerTab> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                AppNumberDisplay(
-                  value: _timerString,
-                  size: AppNumberSize.headline,
-                  color: theme.colorScheme.onSurface,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: AppNumberDisplay(
+                    value: _timerString,
+                    size: AppNumberSize.headline,
+                    color: theme.colorScheme.onSurface,
+                  ),
                 ),
                 if (presenter.isFasting) ...[
                   const SizedBox(height: 4),
