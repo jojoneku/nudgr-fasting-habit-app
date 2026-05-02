@@ -41,6 +41,7 @@ class StatsView extends StatelessWidget {
               title: 'Character',
               actions: [
                 IconButton(
+                  tooltip: 'Settings',
                   icon: const Icon(Icons.settings_outlined),
                   onPressed: () => Navigator.push(
                     context,

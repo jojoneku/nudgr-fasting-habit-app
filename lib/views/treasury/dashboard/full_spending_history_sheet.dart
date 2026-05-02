@@ -224,16 +224,31 @@ class _FullBarChartState extends State<_FullBarChart>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+        vsync: this, duration: const Duration(milliseconds: 350));
     _anim = CurvedAnimation(parent: _ctrl, curve: Curves.easeOutCubic);
-    _ctrl.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_ctrl.value == 0 && !_ctrl.isAnimating) {
+      if (MediaQuery.of(context).disableAnimations) {
+        _ctrl.value = 1.0;
+      } else {
+        _ctrl.forward();
+      }
+    }
   }
 
   @override
   void didUpdateWidget(_FullBarChart old) {
     super.didUpdateWidget(old);
     if (old.days.length != widget.days.length) {
-      _ctrl.forward(from: 0);
+      if (MediaQuery.of(context).disableAnimations) {
+        _ctrl.value = 1.0;
+      } else {
+        _ctrl.forward(from: 0);
+      }
     }
   }
 

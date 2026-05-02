@@ -82,6 +82,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
           width: 44,
           height: 44,
           child: IconButton(
+            tooltip: 'Close',
             icon: const Icon(Icons.close,
                 color: AppColors.textSecondary, size: 20),
             onPressed: () => Navigator.pop(context),
@@ -182,7 +183,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
                 ),
               ),
               onPressed: () => Navigator.pop(context),
-              child: const Text('CANCEL'),
+              child: const Text('Cancel'),
             ),
           ),
         ),

@@ -31,7 +31,12 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
     return AppSection(
       title: 'Upcoming Bills',
       trailing: hasOverdue
-          ? _OverduePulse(colorScheme: colorScheme)
+          ? AppBadge(
+              text: 'Overdue',
+              color: colorScheme.error,
+              variant: AppBadgeVariant.tonal,
+              size: AppBadgeSize.small,
+            )
           : null,
       child: AppCard(
         variant: AppCardVariant.elevated,
@@ -65,50 +70,6 @@ class _UpcomingBillsCardState extends State<UpcomingBillsCard> {
             _TotalFooter(total: total, hasOverdue: hasOverdue),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _OverduePulse extends StatefulWidget {
-  final ColorScheme colorScheme;
-
-  const _OverduePulse({required this.colorScheme});
-
-  @override
-  State<_OverduePulse> createState() => _OverduePulseState();
-}
-
-class _OverduePulseState extends State<_OverduePulse>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.4, end: 1.0).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: AppBadge(
-        text: 'OVERDUE',
-        color: widget.colorScheme.error,
-        variant: AppBadgeVariant.tonal,
-        size: AppBadgeSize.small,
       ),
     );
   }

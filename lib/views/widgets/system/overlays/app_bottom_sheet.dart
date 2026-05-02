@@ -112,6 +112,7 @@ class _AppBottomSheetContent extends StatelessWidget {
                 if (trailing != null) trailing!,
                 if (isDismissible)
                   IconButton(
+                    tooltip: 'Close',
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.of(context).pop(),
                   ),

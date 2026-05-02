@@ -226,7 +226,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
 
                   // ── AI Coach download ────────────────────────────────────
                   if (widget.aiCoachPresenter != null) ...[
-                    Text('AI COACH',
+                    Text('AI Coach',
                         style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 10),
