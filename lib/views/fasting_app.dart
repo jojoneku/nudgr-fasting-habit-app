@@ -2,7 +2,9 @@ import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
 import '../presenters/settings_presenter.dart';
+import '../presenters/update_presenter.dart';
 import '../services/local_storage_service.dart';
+import '../services/update_service.dart';
 import '../utils/app_radii.dart';
 import '../utils/app_text_styles.dart';
 import 'home_screen.dart';
@@ -17,6 +19,9 @@ class FastingApp extends StatefulWidget {
 class _FastingAppState extends State<FastingApp> {
   late final LocalStorageService _storage;
   late final SettingsPresenter _settingsPresenter;
+  late final UpdatePresenter _updatePresenter;
+
+  static const String _currentVersion = '1.0.1';
 
   @override
   void initState() {
@@ -24,11 +29,29 @@ class _FastingAppState extends State<FastingApp> {
     _storage = LocalStorageService();
     _settingsPresenter = SettingsPresenter(_storage);
     _settingsPresenter.init();
+
+    // Initialize update checker with manifest URL from dart-define
+    const manifestUrl = String.fromEnvironment(
+      'UPDATE_MANIFEST_URL',
+      defaultValue: 'https://github.com/jojoneku/nudgr-fasting-habit-app/releases/latest/download/manifest.json',
+    );
+    final updateService = UpdateService(manifestUrl: manifestUrl);
+    _updatePresenter = UpdatePresenter(
+      updateService: updateService,
+      storage: _storage,
+      currentVersion: _currentVersion,
+    );
+
+    // Check for updates after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _updatePresenter.checkForUpdates();
+    });
   }
 
   @override
   void dispose() {
     _settingsPresenter.dispose();
+    _updatePresenter.dispose();
     super.dispose();
   }
 
@@ -184,7 +207,10 @@ class _FastingAppState extends State<FastingApp> {
         theme: _lightTheme(),
         darkTheme: _darkTheme(),
         themeMode: _settingsPresenter.themeMode,
-        home: HomeScreen(settingsPresenter: _settingsPresenter),
+        home: HomeScreen(
+          settingsPresenter: _settingsPresenter,
+          updatePresenter: _updatePresenter,
+        ),
       ),
     );
   }

@@ -24,16 +24,23 @@ import '../presenters/auth_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/hub_presenter.dart';
+import '../presenters/update_presenter.dart';
 import '../app_colors.dart';
 import 'hub_screen.dart';
 import 'settings_screen.dart';
 import 'stats_view.dart';
 import 'widgets/ai_chat_sheet.dart';
+import 'widgets/update_prompt.dart';
 
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.settingsPresenter});
+  const AppShell({
+    super.key,
+    required this.settingsPresenter,
+    this.updatePresenter,
+  });
 
   final SettingsPresenter settingsPresenter;
+  final UpdatePresenter? updatePresenter;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -236,37 +243,48 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       ),
     ];
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: screens[_selectedIndex],
-      floatingActionButton: _selectedIndex == 1
-          ? _AiCoachFab(
-              presenter: _aiCoachPresenter,
-              entryPoint: AiCoachEntryPoint.stats,
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Hub',
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: AppColors.background,
+          body: screens[_selectedIndex],
+          floatingActionButton: _selectedIndex == 1
+              ? _AiCoachFab(
+                  presenter: _aiCoachPresenter,
+                  entryPoint: AiCoachEntryPoint.stats,
+                )
+              : null,
+          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+          bottomNavigationBar: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Hub',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Stats',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.settings_outlined),
+                selectedIcon: Icon(Icons.settings),
+                label: 'Settings',
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Stats',
+        ),
+        if (widget.updatePresenter != null)
+          Positioned(
+            bottom: 70,
+            left: 0,
+            right: 0,
+            child: UpdatePrompt(presenter: widget.updatePresenter!),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
