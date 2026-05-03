@@ -36,9 +36,9 @@ class UpdateService {
   Future<UpdateManifest?> fetchLatestManifest() async {
     try {
       final response = await http.get(Uri.parse(manifestUrl)).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () => throw Exception('Timeout fetching manifest'),
-      );
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception('Timeout fetching manifest'),
+          );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;

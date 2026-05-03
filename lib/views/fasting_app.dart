@@ -33,7 +33,8 @@ class _FastingAppState extends State<FastingApp> {
     // Initialize update checker with manifest URL from dart-define
     const manifestUrl = String.fromEnvironment(
       'UPDATE_MANIFEST_URL',
-      defaultValue: 'https://github.com/jojoneku/nudgr-fasting-habit-app/releases/latest/download/manifest.json',
+      defaultValue:
+          'https://github.com/jojoneku/nudgr-fasting-habit-app/releases/latest/download/manifest.json',
     );
     final updateService = UpdateService(manifestUrl: manifestUrl);
     _updatePresenter = UpdatePresenter(

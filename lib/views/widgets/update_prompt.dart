@@ -73,7 +73,8 @@ class UpdatePrompt extends StatelessWidget {
                           }
                         }
                       },
-                      child: const Text('Update', style: TextStyle(fontSize: 12)),
+                      child:
+                          const Text('Update', style: TextStyle(fontSize: 12)),
                     ),
                     const SizedBox(width: 8),
                     IconButton(
