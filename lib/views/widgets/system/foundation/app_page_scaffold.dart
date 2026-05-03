@@ -103,19 +103,22 @@ class _AppPageScaffoldLarge extends AppPageScaffold {
       toolbarHeight: toolbarHeight,
       collapsedHeight: toolbarHeight,
       titleSpacing: 0,
-      title: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(title!, style: AppTextStyles.headlineMedium),
-          if (subtitle != null)
-            Text(
-              subtitle!,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      title: Padding(
+        padding: const EdgeInsets.only(left: AppSpacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(title!, style: AppTextStyles.headlineMedium),
+            if (subtitle != null)
+              Text(
+                subtitle!,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
       actions: actions,
       leading: leading,
