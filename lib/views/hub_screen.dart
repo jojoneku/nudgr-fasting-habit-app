@@ -35,6 +35,7 @@ import 'widgets/system/overlays/app_bottom_sheet.dart';
 import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
+import '../app_colors.dart';
 
 class HubScreen extends StatelessWidget {
   const HubScreen({
@@ -120,27 +121,33 @@ class HubScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     // 88% opacity so content is faintly visible through the pinned header.
-    final stickyBg = theme.colorScheme.surface.withValues(alpha: 0.88);
+    final stickyBg = AppColors.surface.withValues(alpha: 0.88);
 
-    Widget nameTitle = FittedBox(
-      fit: BoxFit.scaleDown,
-      alignment: Alignment.centerLeft,
-      child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
+    Widget nameTitle = Padding(
+      padding: const EdgeInsets.only(left: 16),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.centerLeft,
+        child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
+      ),
     );
     // Re-render whenever auth resolves so "Champion" updates to the real name.
     if (authPresenter != null) {
       nameTitle = ListenableBuilder(
         listenable: authPresenter!,
-        builder: (_, __) => FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
+        builder: (_, __) => Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
+          ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: AppColors.background,
       floatingActionButton: _ExpandableFab(
         onNutrition: nutritionPresenter != null
             ? () => _pushNutritionScreen(context)
