@@ -92,9 +92,17 @@ jobs:
               --repo "$GITHUB_REPOSITORY"
             existing=$(gh pr list --base main --head hotfix \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+
+            # Wait for checks to complete before enabling auto-merge
+            for i in {1..60}; do
+              status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
+              if [ "$status" -eq 0 ]; then
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                break
+              fi
+              sleep 2
+            done
           fi
-          gh pr merge "$existing" --auto --merge \
-            --repo "$GITHUB_REPOSITORY"
 
       - name: Open hotfix→dev PR and enable auto-merge
         env:
@@ -110,9 +118,17 @@ jobs:
               --repo "$GITHUB_REPOSITORY"
             existing=$(gh pr list --base dev --head hotfix \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+
+            # Wait for checks to complete before enabling auto-merge
+            for i in {1..60}; do
+              status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
+              if [ "$status" -eq 0 ]; then
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                break
+              fi
+              sleep 2
+            done
           fi
-          gh pr merge "$existing" --auto --merge \
-            --repo "$GITHUB_REPOSITORY"
 
   promote_to_main:
     name: Promote dev → main
@@ -143,11 +159,17 @@ jobs:
               --repo "$GITHUB_REPOSITORY"
             existing=$(gh pr list --base main --head dev \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          fi
 
-          # Enable auto-merge (merges once all required checks on the PR pass)
-          gh pr merge "$existing" --auto --merge \
-            --repo "$GITHUB_REPOSITORY"
+            # Wait for checks to complete before enabling auto-merge
+            for i in {1..60}; do
+              status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
+              if [ "$status" -eq 0 ]; then
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                break
+              fi
+              sleep 2
+            done
+          fi
 
   release:
     name: Release — Build & Deploy APK
