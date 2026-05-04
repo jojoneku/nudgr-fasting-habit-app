@@ -167,22 +167,22 @@ class HubScreen extends StatelessWidget {
           slivers: [
             SliverAppBar(
               pinned: true,
-              toolbarHeight: 64,
-              collapsedHeight: 64,
+              toolbarHeight: 56,
+              collapsedHeight: 56,
               titleSpacing: 0,
               surfaceTintColor: Colors.transparent,
-              backgroundColor: stickyBg,
+              backgroundColor: AppColors.surface,
               title: nameTitle,
               bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(20),
+                preferredSize: const Size.fromHeight(24),
                 child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
                       _todayLabel(),
                       style: AppTextStyles.bodySmall.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
