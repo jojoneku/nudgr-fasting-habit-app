@@ -89,15 +89,17 @@ jobs:
               --base main --head hotfix \
               --title "hotfix: promote hotfix → main" \
               --body "Automated hotfix promotion — CI passed on \`hotfix\`." \
-              --repo "$GITHUB_REPOSITORY"
+              --repo "$GITHUB_REPOSITORY" || true
             existing=$(gh pr list --base main --head hotfix \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          fi
 
-            # Wait for checks to complete before enabling auto-merge
+          # Wait for checks to complete before enabling auto-merge (if PR exists)
+          if [ -n "$existing" ]; then
             for i in {1..60}; do
               status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
               if [ "$status" -eq 0 ]; then
-                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY" || true
                 break
               fi
               sleep 2
@@ -115,15 +117,17 @@ jobs:
               --base dev --head hotfix \
               --title "hotfix: back-merge hotfix → dev" \
               --body "Keeping dev in sync with the hotfix." \
-              --repo "$GITHUB_REPOSITORY"
+              --repo "$GITHUB_REPOSITORY" || true
             existing=$(gh pr list --base dev --head hotfix \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          fi
 
-            # Wait for checks to complete before enabling auto-merge
+          # Wait for checks to complete before enabling auto-merge (if PR exists)
+          if [ -n "$existing" ]; then
             for i in {1..60}; do
               status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
               if [ "$status" -eq 0 ]; then
-                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY" || true
                 break
               fi
               sleep 2
@@ -156,15 +160,17 @@ jobs:
               --base main --head dev \
               --title "chore: promote dev → main" \
               --body "Automated promotion — CI passed on \`dev\`." \
-              --repo "$GITHUB_REPOSITORY"
+              --repo "$GITHUB_REPOSITORY" || true
             existing=$(gh pr list --base main --head dev \
               --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
+          fi
 
-            # Wait for checks to complete before enabling auto-merge
+          # Wait for checks to complete before enabling auto-merge (if PR exists)
+          if [ -n "$existing" ]; then
             for i in {1..60}; do
               status=$(gh pr view "$existing" --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion == null) | .name' 2>/dev/null | wc -l)
               if [ "$status" -eq 0 ]; then
-                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY"
+                gh pr merge "$existing" --auto --merge --repo "$GITHUB_REPOSITORY" || true
                 break
               fi
               sleep 2
