@@ -285,6 +285,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Skip if release already exists
+          if gh release view "v${{ steps.meta.outputs.new_version }}" &>/dev/null; then
+            echo "Release v${{ steps.meta.outputs.new_version }} already exists, skipping."
+            exit 0
+          fi
+
           gh release create "v${{ steps.meta.outputs.new_version }}" \
             --title "v${{ steps.meta.outputs.new_version }}" \
             --notes "${{ steps.meta.outputs.release_notes }}" \
@@ -304,13 +310,22 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          gh pr create -B main -H release-version-bump-${{ steps.meta.outputs.new_version }} \
-            --title "chore(release): bump version to ${{ steps.meta.outputs.new_version }}" \
-            --body "Automated version bump from release v${{ steps.meta.outputs.new_version }} — CI will ensure required status checks pass before merge." \
-            --repo "$GITHUB_REPOSITORY"
-
+          # Check if PR already exists
           pr_number=$(gh pr list -B main -H release-version-bump-${{ steps.meta.outputs.new_version }} \
-            --json number --jq '.[0].number' --repo "$GITHUB_REPOSITORY")
+            --json number --jq '.[0].number' --repo "$GITHUB_REPOSITORY" 2>/dev/null || echo "")
 
-          gh pr merge "$pr_number" --auto --merge \
-            --repo "$GITHUB_REPOSITORY"
+          if [ -z "$pr_number" ]; then
+            gh pr create -B main -H release-version-bump-${{ steps.meta.outputs.new_version }} \
+              --title "chore(release): bump version to ${{ steps.meta.outputs.new_version }}" \
+              --body "Automated version bump from release v${{ steps.meta.outputs.new_version }} — CI will ensure required status checks pass before merge." \
+              --repo "$GITHUB_REPOSITORY"
+
+            pr_number=$(gh pr list -B main -H release-version-bump-${{ steps.meta.outputs.new_version }} \
+              --json number --jq '.[0].number' --repo "$GITHUB_REPOSITORY")
+          fi
+
+          # Only attempt auto-merge if PR exists and checks have passed
+          if [ -n "$pr_number" ]; then
+            gh pr merge "$pr_number" --auto --merge \
+              --repo "$GITHUB_REPOSITORY" || true
+          fi
