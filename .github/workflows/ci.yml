@@ -303,7 +303,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b release-version-bump-${{ steps.meta.outputs.new_version }}
           git add pubspec.yaml
-          git commit -m "chore(release): bump version to ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }} [skip ci]"
+          git commit -m "chore(release): bump version to ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }}"
           git push -u origin release-version-bump-${{ steps.meta.outputs.new_version }}
 
       - name: Open PR for version bump

@@ -7,6 +7,7 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 - **Stack:** Flutter (Dart 3+), MVP architecture, `ChangeNotifier` state
 - **Persistence:** `StorageService` abstract interface (SharedPreferences impl)
 - **Notifications:** `flutter_local_notifications` with alarm clock mode
+- **Theming:** **Dual-mode** — dark (default, Solo Leveling RPG) and light. Mode follows `SettingsPresenter.themeMode`; theme is built in `lib/views/fasting_app.dart`. Tokens live in `lib/app_colors.dart`: `AppColors` (dark) and `AppColorsLight` (light).
 
 ## Architecture at a Glance
 | Layer | Path | Responsibility |
@@ -28,6 +29,7 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 4. Touch targets ≥ 44×44px; primary actions in bottom 30% of screen
 5. Animations: 150–300ms micro-interactions, ≤ 400ms max
 6. Constructor injection only — no `GetIt` or global locators
+7. **Theme-aware colors only.** In widgets, read from `Theme.of(context)` — `colorScheme.*`, `scaffoldBackgroundColor`, `textTheme.*`. Do **not** hardcode `AppColors.X` (dark-only) or `AppColorsLight.X` (light-only) inside widgets — that breaks the other mode. Direct token use is allowed only inside `fasting_app.dart` (theme construction) and inside semantically dark-only or light-only assets.
 
 ## Skills
 | Skill | Description |
