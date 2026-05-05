@@ -74,6 +74,7 @@ class _WeeklyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gold = context.appColors.gold;
     return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +89,8 @@ class _WeeklyChart extends StatelessWidget {
             height: 120,
             child: CustomPaint(
               size: const Size(double.infinity, 120),
-              painter: _BarChartPainter(days: days, goalCalories: goalCalories),
+              painter: _BarChartPainter(
+                  days: days, goalCalories: goalCalories, barColor: gold),
             ),
           ),
           const SizedBox(height: 8),
@@ -114,8 +116,10 @@ class _WeeklyChart extends StatelessWidget {
 class _BarChartPainter extends CustomPainter {
   final List<DailyNutritionLog> days;
   final int goalCalories;
+  final Color barColor;
 
-  _BarChartPainter({required this.days, required this.goalCalories});
+  _BarChartPainter(
+      {required this.days, required this.goalCalories, required this.barColor});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -134,7 +138,7 @@ class _BarChartPainter extends CustomPainter {
       Offset(0, goalY),
       Offset(size.width, goalY),
       Paint()
-        ..color = AppColors.gold.withValues(alpha: 0.4)
+        ..color = barColor.withValues(alpha: 0.4)
         ..strokeWidth = 1
         ..style = PaintingStyle.stroke,
     );
@@ -149,10 +153,7 @@ class _BarChartPainter extends CustomPainter {
           Rect.fromLTWH(left, size.height - barH, barWidth, barH),
           const Radius.circular(4),
         ),
-        Paint()
-          ..color = isGoalMet
-              ? AppColors.gold
-              : AppColors.gold.withValues(alpha: 0.3),
+        Paint()..color = isGoalMet ? barColor : barColor.withValues(alpha: 0.3),
       );
     }
   }
@@ -176,6 +177,7 @@ class _HistoryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gold = context.appColors.gold;
     final cal = log.totalCalories;
     final goalMet = goalCalories > 0 && cal >= goalCalories;
     final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
@@ -200,9 +202,7 @@ class _HistoryRow extends StatelessWidget {
                 Text(
                   '${_calFmt.format(cal)} kcal',
                   style: TextStyle(
-                    color: goalMet
-                        ? AppColors.gold
-                        : theme.colorScheme.onSurfaceVariant,
+                    color: goalMet ? gold : theme.colorScheme.onSurfaceVariant,
                     fontWeight: FontWeight.bold,
                     fontSize: 13,
                   ),
@@ -211,7 +211,7 @@ class _HistoryRow extends StatelessWidget {
                 if (isOver)
                   AppBadge(text: 'Over', color: theme.colorScheme.error)
                 else if (goalMet)
-                  const AppBadge(text: 'Hit target', color: AppColors.gold)
+                  AppBadge(text: 'Hit target', color: gold)
                 else
                   AppBadge(
                     text: 'Under',
@@ -223,9 +223,7 @@ class _HistoryRow extends StatelessWidget {
             AppLinearProgress(
               value: ratio.clamp(0.0, 1.0),
               height: 3,
-              color: goalMet
-                  ? AppColors.gold
-                  : AppColors.gold.withValues(alpha: 0.4),
+              color: goalMet ? gold : gold.withValues(alpha: 0.4),
             ),
           ],
         ),

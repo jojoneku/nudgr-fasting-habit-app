@@ -25,10 +25,11 @@ class AppStatPill extends StatelessWidget {
 
   Color _resolveColor(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     return switch (color) {
       AppStatColor.primary => theme.colorScheme.primary,
-      AppStatColor.success => AppColors.success,
-      AppStatColor.warning => AppColors.gold,
+      AppStatColor.success => appColors.success,
+      AppStatColor.warning => appColors.gold,
       AppStatColor.error => theme.colorScheme.error,
       AppStatColor.neutral => theme.colorScheme.onSurfaceVariant,
     };

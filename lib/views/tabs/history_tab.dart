@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
+import '../../app_colors.dart'; // context.appColors
 import '../../models/fasting_phase.dart';
 import '../../presenters/fasting_presenter.dart';
 import '../../models/fasting_log.dart';
-import '../../app_colors.dart';
 
 class HistoryList extends StatefulWidget {
   final FastingPresenter presenter;
@@ -24,12 +24,12 @@ class _HistoryListState extends State<HistoryList> {
     return ListenableBuilder(
       listenable: presenter,
       builder: (context, child) {
-        return _buildHistoryView();
+        return _buildHistoryView(context);
       },
     );
   }
 
-  Widget _buildHistoryView() {
+  Widget _buildHistoryView(BuildContext context) {
     if (presenter.history.isEmpty) {
       return const Center(
           child: Padding(
@@ -44,9 +44,9 @@ class _HistoryListState extends State<HistoryList> {
           child: Column(
             children: [
               const SizedBox(height: 16),
-              _buildStatsBanner(),
+              _buildStatsBanner(context),
               const SizedBox(height: 16),
-              _buildWeekHeatmap(),
+              _buildWeekHeatmap(context),
               const SizedBox(height: 8),
             ],
           ),
@@ -59,7 +59,7 @@ class _HistoryListState extends State<HistoryList> {
                 final log = presenter.history[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildHistoryCard(log, index),
+                  child: _buildHistoryCard(context, log, index),
                 );
               },
               childCount: presenter.history.length,
@@ -70,35 +70,41 @@ class _HistoryListState extends State<HistoryList> {
     );
   }
 
-  Widget _buildStatsBanner() {
+  Widget _buildStatsBanner(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final appColors = context.appColors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
           _buildStatTile(
+            context: context,
             icon: Icons.local_fire_department_rounded,
-            iconColor: AppColors.danger,
+            iconColor: cs.error,
             label: 'STREAK',
             value: '${presenter.currentStreak}d',
           ),
           _buildStatDivider(),
           _buildStatTile(
+            context: context,
             icon: Icons.bolt,
-            iconColor: AppColors.gold,
+            iconColor: appColors.gold,
             label: 'BEST',
             value: '${presenter.longestStreak}d',
           ),
           _buildStatDivider(),
           _buildStatTile(
+            context: context,
             icon: Icons.timer_outlined,
-            iconColor: AppColors.secondary,
+            iconColor: cs.secondary,
             label: 'TOTAL',
             value: '${presenter.totalHoursFasted.toStringAsFixed(0)}h',
           ),
           _buildStatDivider(),
           _buildStatTile(
+            context: context,
             icon: Icons.verified_rounded,
-            iconColor: AppColors.success,
+            iconColor: appColors.success,
             label: 'SUCCESS',
             value: '${presenter.successRate.toStringAsFixed(0)}%',
           ),
@@ -108,49 +114,54 @@ class _HistoryListState extends State<HistoryList> {
   }
 
   Widget _buildStatTile({
+    required BuildContext context,
     required IconData icon,
     required Color iconColor,
     required String label,
     required String value,
-  }) =>
-      Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: iconColor, size: 20),
-              const SizedBox(height: 6),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  height: 1.0,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 9,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(14),
         ),
-      );
+        child: Column(
+          children: [
+            Icon(icon, color: iconColor, size: 20),
+            const SizedBox(height: 6),
+            Text(
+              value,
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                height: 1.0,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 9,
+                letterSpacing: 0.8,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildStatDivider() => const SizedBox(width: 8);
 
-  Widget _buildWeekHeatmap() {
+  Widget _buildWeekHeatmap(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final appColors = context.appColors;
     final now = DateTime.now();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -166,11 +177,11 @@ class _HistoryListState extends State<HistoryList> {
 
           Color circleColor;
           if (hasSuccess) {
-            circleColor = AppColors.secondary;
+            circleColor = cs.secondary;
           } else if (hasAny) {
-            circleColor = AppColors.gold;
+            circleColor = appColors.gold;
           } else {
-            circleColor = AppColors.surface;
+            circleColor = cs.surfaceContainerHigh;
           }
 
           return Expanded(
@@ -183,7 +194,7 @@ class _HistoryListState extends State<HistoryList> {
                     color: circleColor,
                     shape: BoxShape.circle,
                     border: isToday
-                        ? Border.all(color: AppColors.textSecondary, width: 1.5)
+                        ? Border.all(color: cs.onSurfaceVariant, width: 1.5)
                         : null,
                   ),
                   child: hasAny
@@ -192,7 +203,7 @@ class _HistoryListState extends State<HistoryList> {
                             hasSuccess
                                 ? Icons.check_rounded
                                 : Icons.remove_rounded,
-                            color: AppColors.background,
+                            color: cs.surface,
                             size: 16,
                           ),
                         )
@@ -202,9 +213,7 @@ class _HistoryListState extends State<HistoryList> {
                 Text(
                   label,
                   style: TextStyle(
-                    color: isToday
-                        ? AppColors.textPrimary
-                        : AppColors.textSecondary,
+                    color: isToday ? cs.onSurface : cs.onSurfaceVariant,
                     fontSize: 10,
                     fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                   ),
@@ -217,7 +226,9 @@ class _HistoryListState extends State<HistoryList> {
     );
   }
 
-  Widget _buildHistoryCard(FastingLog log, int index) {
+  Widget _buildHistoryCard(BuildContext context, FastingLog log, int index) {
+    final cs = Theme.of(context).colorScheme;
+    final appColors = context.appColors;
     final fastDuration = log.fastDuration;
     final eatingDuration = log.eatingDuration;
     double eatingDurVal = eatingDuration ?? (24.0 - fastDuration);
@@ -234,12 +245,12 @@ class _HistoryListState extends State<HistoryList> {
 
     return Card(
       elevation: 0,
-      color: AppColors.surface,
+      color: cs.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-            color: (log.success ? AppColors.secondary : AppColors.danger)
-                .withValues(alpha: 0.15),
+            color:
+                (log.success ? cs.secondary : cs.error).withValues(alpha: 0.15),
             width: 1),
       ),
       margin: EdgeInsets.zero,
@@ -256,16 +267,14 @@ class _HistoryListState extends State<HistoryList> {
                 children: [
                   Icon(
                     log.success ? Icons.bolt : Icons.bolt_outlined,
-                    color: log.success
-                        ? AppColors.secondary
-                        : AppColors.textSecondary,
+                    color: log.success ? cs.secondary : cs.onSurfaceVariant,
                     size: 18,
                   ),
                   const SizedBox(width: 6),
                   Text(
                     '${log.goalDuration}:${log.goalDuration >= 36 ? 0 : 24 - log.goalDuration}',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -276,13 +285,14 @@ class _HistoryListState extends State<HistoryList> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: highestPhase.color.withValues(alpha: 0.12),
+                      color:
+                          highestPhase.color(context).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       highestPhase.label.toUpperCase(),
                       style: TextStyle(
-                        color: highestPhase.color,
+                        color: highestPhase.color(context),
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
@@ -295,13 +305,13 @@ class _HistoryListState extends State<HistoryList> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: AppColors.gold.withValues(alpha: 0.1),
+                      color: appColors.gold.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       '+$xpEarned XP',
-                      style: const TextStyle(
-                        color: AppColors.gold,
+                      style: TextStyle(
+                        color: appColors.gold,
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                       ),
@@ -309,8 +319,8 @@ class _HistoryListState extends State<HistoryList> {
                   ),
                   if (note != null && note.isNotEmpty) ...[
                     const SizedBox(width: 6),
-                    const Icon(Icons.note_rounded,
-                        size: 14, color: AppColors.textSecondary),
+                    Icon(Icons.note_rounded,
+                        size: 14, color: cs.onSurfaceVariant),
                   ],
                 ],
               ),
@@ -323,8 +333,8 @@ class _HistoryListState extends State<HistoryList> {
                 children: [
                   Text(
                     '${fastDuration.toStringAsFixed(1)}h',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: cs.onSurface,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       height: 1.0,
@@ -333,8 +343,8 @@ class _HistoryListState extends State<HistoryList> {
                   const SizedBox(width: 8),
                   Text(
                     'of ${goalHours.toStringAsFixed(0)}h goal',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
@@ -344,13 +354,13 @@ class _HistoryListState extends State<HistoryList> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.danger.withValues(alpha: 0.12),
+                        color: cs.error.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: const Text(
+                      child: Text(
                         '⚡ OVERTIME',
                         style: TextStyle(
-                          color: AppColors.danger,
+                          color: cs.error,
                           fontSize: 9,
                           fontWeight: FontWeight.bold,
                         ),
@@ -367,8 +377,8 @@ class _HistoryListState extends State<HistoryList> {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 5,
-                  backgroundColor: AppColors.neutral.withValues(alpha: 0.15),
-                  color: log.success ? AppColors.secondary : AppColors.danger,
+                  backgroundColor: cs.outline.withValues(alpha: 0.15),
+                  color: log.success ? cs.secondary : cs.error,
                 ),
               ),
               const SizedBox(height: 12),
@@ -380,16 +390,16 @@ class _HistoryListState extends State<HistoryList> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Start',
                           style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11),
+                              color: cs.onSurfaceVariant, fontSize: 11),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           DateFormat('MMM d, h:mm a').format(log.fastStart),
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
+                          style: TextStyle(
+                              color: cs.onSurface,
                               fontSize: 13,
                               fontWeight: FontWeight.w600),
                         ),
@@ -399,23 +409,23 @@ class _HistoryListState extends State<HistoryList> {
                   Container(
                     width: 1,
                     height: 28,
-                    color: AppColors.textSecondary.withValues(alpha: 0.2),
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.2),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'End',
                           style: TextStyle(
-                              color: AppColors.textSecondary, fontSize: 11),
+                              color: cs.onSurfaceVariant, fontSize: 11),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           DateFormat('MMM d, h:mm a').format(log.fastEnd),
-                          style: const TextStyle(
-                              color: AppColors.textPrimary,
+                          style: TextStyle(
+                              color: cs.onSurface,
                               fontSize: 13,
                               fontWeight: FontWeight.w600),
                         ),
@@ -432,20 +442,20 @@ class _HistoryListState extends State<HistoryList> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.background.withValues(alpha: 0.5),
+                    color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.format_quote_rounded,
-                          color: AppColors.textSecondary, size: 14),
+                      Icon(Icons.format_quote_rounded,
+                          color: cs.onSurfaceVariant, size: 14),
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
                           note,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
                             fontSize: 12,
                             fontStyle: FontStyle.italic,
                             height: 1.4,
@@ -548,11 +558,11 @@ class _HistoryListState extends State<HistoryList> {
                       SizedBox(
                         height: 200,
                         child: CupertinoTheme(
-                          data: const CupertinoThemeData(
-                            brightness: Brightness.dark,
+                          data: CupertinoThemeData(
+                            brightness: Theme.of(context).brightness,
                             textTheme: CupertinoTextThemeData(
                               dateTimePickerTextStyle: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 20,
                               ),
                             ),
@@ -576,11 +586,11 @@ class _HistoryListState extends State<HistoryList> {
                       SizedBox(
                         height: 200,
                         child: CupertinoTheme(
-                          data: const CupertinoThemeData(
-                            brightness: Brightness.dark,
+                          data: CupertinoThemeData(
+                            brightness: Theme.of(context).brightness,
                             textTheme: CupertinoTextThemeData(
                               dateTimePickerTextStyle: TextStyle(
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 20,
                               ),
                             ),
@@ -605,11 +615,12 @@ class _HistoryListState extends State<HistoryList> {
                         SizedBox(
                           height: 200,
                           child: CupertinoTheme(
-                            data: const CupertinoThemeData(
-                              brightness: Brightness.dark,
+                            data: CupertinoThemeData(
+                              brightness: Theme.of(context).brightness,
                               textTheme: CupertinoTextThemeData(
                                 dateTimePickerTextStyle: TextStyle(
-                                  color: AppColors.textPrimary,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface,
                                   fontSize: 20,
                                 ),
                               ),

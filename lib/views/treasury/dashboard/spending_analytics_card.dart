@@ -135,6 +135,7 @@ class _BarChartState extends State<_BarChart>
           progress: _animation.value,
           primaryColor: colorScheme.primary,
           onSurfaceVariantColor: colorScheme.onSurfaceVariant,
+          peakColor: colorScheme.errorContainer,
         ),
         child: const SizedBox.expand(),
       ),
@@ -148,13 +149,12 @@ class _BarChartPainter extends CustomPainter {
   final double progress;
   final Color primaryColor;
   final Color onSurfaceVariantColor;
+  final Color peakColor;
 
   static const double _labelHeight = 20.0;
   static const double _topPad = 16.0;
   static const double _barRadius = 4.0;
   static const double _barSpacing = 6.0;
-  // Softer red — avoids the hallation/vibration of pure #FF1744 on dark bg
-  static const Color _peakColor = Color(0xFFEF9A9A);
 
   _BarChartPainter({
     required this.days,
@@ -162,6 +162,7 @@ class _BarChartPainter extends CustomPainter {
     required this.progress,
     required this.primaryColor,
     required this.onSurfaceVariantColor,
+    required this.peakColor,
   });
 
   @override
@@ -198,7 +199,7 @@ class _BarChartPainter extends CustomPainter {
       if (isToday) {
         barColor = primaryColor;
       } else if (isPeak) {
-        barColor = _peakColor;
+        barColor = peakColor;
       } else if (day.amount > 0) {
         barColor = primaryColor.withValues(alpha: 0.4);
       } else {
@@ -254,8 +255,8 @@ class _BarChartPainter extends CustomPainter {
         if (isPeak && progress > 0.9) {
           final amountSpan = TextSpan(
             text: formatPesoCompact(day.amount),
-            style: const TextStyle(
-              color: _peakColor,
+            style: TextStyle(
+              color: peakColor,
               fontSize: 9,
               fontWeight: FontWeight.w700,
             ),
@@ -293,7 +294,9 @@ class _BarChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BarChartPainter old) =>
-      old.progress != progress || old.peak != peak;
+      old.progress != progress ||
+      old.peak != peak ||
+      old.peakColor != peakColor;
 }
 
 class _StatsRow extends StatelessWidget {
@@ -334,8 +337,9 @@ class _StatsRow extends StatelessWidget {
           label: 'PEAK DAY',
           value: peakLabel,
           subValue: formatPesoCompact(peak),
-          color:
-              peak > 0 ? const Color(0xFFEF9A9A) : colorScheme.onSurfaceVariant,
+          color: peak > 0
+              ? colorScheme.errorContainer
+              : colorScheme.onSurfaceVariant,
         ),
       ],
     );

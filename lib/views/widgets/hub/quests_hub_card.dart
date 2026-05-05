@@ -29,7 +29,7 @@ class QuestsHubCard extends StatelessWidget {
           header: HubCardHeader(
             icon: isActive ? Icons.assignment_late : Icons.assignment_outlined,
             title: 'Quests',
-            accentColor: AppColors.secondary,
+            accentColor: Theme.of(context).colorScheme.secondary,
             isActive: isActive,
           ),
           footer: isActive
@@ -80,7 +80,7 @@ class _IdleSnapshot extends StatelessWidget {
         AppLinearProgress(
           value: total > 0 ? completed / total : 0.0,
           height: 4,
-          color: AppColors.success,
+          color: context.appColors.success,
         ),
       ],
     );

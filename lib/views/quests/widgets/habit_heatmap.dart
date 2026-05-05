@@ -18,11 +18,13 @@ class HabitHeatmap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final appColors = context.appColors;
+    final theme = Theme.of(context);
     final weeks = _buildWeeks();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildDayLabels(),
+        _buildDayLabels(theme),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -34,18 +36,20 @@ class HabitHeatmap extends StatelessWidget {
                               state: day != null ? dateStates[_key(day)] : null,
                               isScheduled:
                                   day != null && scheduledDays[day.weekday - 1],
+                              appColors: appColors,
+                              theme: theme,
                             ))
                         .toList(),
                   ))
               .toList(),
         ),
         const SizedBox(height: 8),
-        _buildLegend(),
+        _buildLegend(appColors, theme),
       ],
     );
   }
 
-  Widget _buildDayLabels() {
+  Widget _buildDayLabels(ThemeData theme) {
     const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -55,23 +59,25 @@ class HabitHeatmap extends StatelessWidget {
               width: 18,
               child: Text(l,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                      fontSize: 10, color: AppColors.textSecondary)),
+                  style: TextStyle(
+                      fontSize: 10, color: theme.colorScheme.onSurfaceVariant)),
             )),
       ],
     );
   }
 
-  Widget _buildLegend() {
+  Widget _buildLegend(AppThemeExtension appColors, ThemeData theme) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        _LegendDot(color: AppColors.success, label: 'Full'),
+        _LegendDot(color: appColors.success, label: 'Full', theme: theme),
         const SizedBox(width: 12),
-        _LegendDot(color: AppColors.gold, label: 'Partial'),
+        _LegendDot(color: appColors.gold, label: 'Partial', theme: theme),
         const SizedBox(width: 12),
         _LegendDot(
-            color: AppColors.neutral.withValues(alpha: 0.3), label: 'Missed'),
+            color: theme.colorScheme.outline.withValues(alpha: 0.3),
+            label: 'Missed',
+            theme: theme),
       ],
     );
   }
@@ -103,8 +109,16 @@ class _DayCell extends StatelessWidget {
   final DateTime? date;
   final String? state; // 'full', 'partial', 'missed', null
   final bool isScheduled;
+  final AppThemeExtension appColors;
+  final ThemeData theme;
 
-  const _DayCell({this.date, this.state, required this.isScheduled});
+  const _DayCell({
+    this.date,
+    this.state,
+    required this.isScheduled,
+    required this.appColors,
+    required this.theme,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -122,12 +136,12 @@ class _DayCell extends StatelessWidget {
 
   Color _cellColor() {
     if (date == null) return Colors.transparent;
-    if (!isScheduled) return AppColors.surface;
+    if (!isScheduled) return theme.colorScheme.surface;
     return switch (state) {
-      'full' => AppColors.success.withValues(alpha: 0.85),
-      'partial' => AppColors.gold.withValues(alpha: 0.7),
-      'missed' => AppColors.neutral.withValues(alpha: 0.25),
-      _ => AppColors.neutral.withValues(alpha: 0.15),
+      'full' => appColors.success.withValues(alpha: 0.85),
+      'partial' => appColors.gold.withValues(alpha: 0.7),
+      'missed' => theme.colorScheme.outline.withValues(alpha: 0.25),
+      _ => theme.colorScheme.outline.withValues(alpha: 0.15),
     };
   }
 }
@@ -135,8 +149,10 @@ class _DayCell extends StatelessWidget {
 class _LegendDot extends StatelessWidget {
   final Color color;
   final String label;
+  final ThemeData theme;
 
-  const _LegendDot({required this.color, required this.label});
+  const _LegendDot(
+      {required this.color, required this.label, required this.theme});
 
   @override
   Widget build(BuildContext context) {
@@ -153,8 +169,8 @@ class _LegendDot extends StatelessWidget {
         ),
         const SizedBox(width: 4),
         Text(label,
-            style:
-                const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+            style: TextStyle(
+                fontSize: 10, color: theme.colorScheme.onSurfaceVariant)),
       ],
     );
   }

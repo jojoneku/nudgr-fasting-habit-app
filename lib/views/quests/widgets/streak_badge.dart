@@ -55,7 +55,8 @@ class _BadgeTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _color();
+    final theme = Theme.of(context);
+    final color = _color(context);
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -68,7 +69,8 @@ class _BadgeTile extends StatelessWidget {
               CircularProgressIndicator(
                 value: progress,
                 strokeWidth: 3,
-                backgroundColor: AppColors.neutral.withValues(alpha: 0.15),
+                backgroundColor:
+                    theme.colorScheme.outline.withValues(alpha: 0.15),
                 valueColor:
                     AlwaysStoppedAnimation(color.withValues(alpha: 0.7)),
               ),
@@ -78,12 +80,12 @@ class _BadgeTile extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isUnlocked
                       ? color.withValues(alpha: 0.2)
-                      : AppColors.surface,
+                      : theme.colorScheme.surface,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isUnlocked
                         ? color
-                        : AppColors.neutral.withValues(alpha: 0.3),
+                        : theme.colorScheme.outline.withValues(alpha: 0.3),
                     width: 1.5,
                   ),
                 ),
@@ -94,7 +96,7 @@ class _BadgeTile extends StatelessWidget {
                       fontSize: 16,
                       color: isUnlocked
                           ? color
-                          : AppColors.neutral.withValues(alpha: 0.4),
+                          : theme.colorScheme.outline.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
@@ -108,20 +110,23 @@ class _BadgeTile extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: isUnlocked ? FontWeight.bold : FontWeight.normal,
-            color: isUnlocked ? color : AppColors.textSecondary,
+            color: isUnlocked ? color : theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Color _color() => switch (milestone) {
-        7 => const Color(0xFF66BB6A),
-        21 => const Color(0xFF29B6F6),
-        30 => const Color(0xFFCE93D8),
-        66 => const Color(0xFFFFCA28),
-        _ => const Color(0xFFEF5350), // 100 — S-rank red
-      };
+  Color _color(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (milestone) {
+      7 => context.appColors.success,
+      21 => cs.tertiary,
+      30 => context.appColors.purple,
+      66 => context.appColors.gold,
+      _ => cs.error, // 100 — S-rank red
+    };
+  }
 
   String _emoji() => switch (milestone) {
         7 => '🌱',

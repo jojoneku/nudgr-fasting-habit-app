@@ -35,7 +35,6 @@ import 'widgets/system/overlays/app_bottom_sheet.dart';
 import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
-import '../app_colors.dart';
 
 class HubScreen extends StatelessWidget {
   const HubScreen({
@@ -117,37 +116,47 @@ class HubScreen extends StatelessWidget {
     ]);
   }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildHeader(BuildContext context) {
     final theme = Theme.of(context);
-    // 88% opacity so content is faintly visible through the pinned header.
-    final stickyBg = AppColors.surface.withValues(alpha: 0.88);
-
-    Widget nameTitle = Padding(
-      padding: const EdgeInsets.only(left: 16),
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.centerLeft,
-        child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
-      ),
-    );
-    // Re-render whenever auth resolves so "Champion" updates to the real name.
-    if (authPresenter != null) {
-      nameTitle = ListenableBuilder(
-        listenable: authPresenter!,
-        builder: (_, __) => Padding(
-          padding: const EdgeInsets.only(left: 16),
-          child: FittedBox(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(_getTitleText(), style: AppTextStyles.headlineMedium),
           ),
-        ),
+          const SizedBox(height: 2),
+          Text(
+            _todayLabel(),
+            style: AppTextStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    Widget header = _buildHeader(context);
+    // Re-render whenever auth resolves so "Champion" updates to the real name.
+    if (authPresenter != null) {
+      header = ListenableBuilder(
+        listenable: authPresenter!,
+        builder: (ctx, _) => _buildHeader(ctx),
       );
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       floatingActionButton: _ExpandableFab(
         onNutrition: nutritionPresenter != null
             ? () => _pushNutritionScreen(context)
@@ -167,27 +176,12 @@ class HubScreen extends StatelessWidget {
           slivers: [
             SliverAppBar(
               pinned: true,
-              toolbarHeight: 56,
-              collapsedHeight: 56,
+              toolbarHeight: 76,
+              collapsedHeight: 76,
               titleSpacing: 0,
               surfaceTintColor: Colors.transparent,
-              backgroundColor: AppColors.surface,
-              title: nameTitle,
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(24),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      _todayLabel(),
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              backgroundColor: theme.scaffoldBackgroundColor,
+              title: header,
             ),
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(

@@ -350,9 +350,9 @@ class _AttrCell extends StatelessWidget {
           if (canSpend)
             GestureDetector(
               onTap: onAllocate,
-              child: const AppIconBadge(
+              child: AppIconBadge(
                 icon: Icons.add,
-                color: AppColors.gold,
+                color: context.appColors.gold,
                 size: 28,
                 iconSize: 14,
               ),

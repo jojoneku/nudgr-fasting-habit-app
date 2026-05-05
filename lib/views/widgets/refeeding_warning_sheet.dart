@@ -135,7 +135,7 @@ class RefeedingWarningSheet extends StatelessWidget {
               instruction:
                   'Soft foods: banana, yogurt, soup, or plain rice. Small portions.',
               icon: Icons.restaurant_outlined,
-              color: AppColors.gold,
+              color: context.appColors.gold,
             ),
             const SizedBox(height: AppSpacing.sm),
             _buildStep(
@@ -144,7 +144,7 @@ class RefeedingWarningSheet extends StatelessWidget {
               instruction:
                   'Gradually return to normal meals. Avoid heavy fats immediately.',
               icon: Icons.check_circle_outline,
-              color: AppColors.success,
+              color: context.appColors.success,
             ),
             const SizedBox(height: AppSpacing.mdGenerous),
             AppDestructiveButton(

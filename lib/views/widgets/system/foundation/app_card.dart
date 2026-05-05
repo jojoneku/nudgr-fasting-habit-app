@@ -35,16 +35,32 @@ class AppCard extends StatelessWidget {
     final theme = Theme.of(context);
     final radius = borderRadius ?? AppRadii.lgBorder;
 
+    final isDark = theme.brightness == Brightness.dark;
+
     Color resolvedColor;
     BorderSide? border;
-    double elevation = 0;
+    List<BoxShadow> shadows = const [];
 
     switch (variant) {
       case AppCardVariant.elevated:
-        resolvedColor = color ?? theme.colorScheme.surfaceContainerHigh;
-        elevation = 1;
+        resolvedColor = color ?? theme.colorScheme.surfaceContainerLow;
+        border = BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          width: 0.5,
+        );
+        shadows = [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.10 : 0.05),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ];
       case AppCardVariant.filled:
         resolvedColor = color ?? theme.colorScheme.surfaceContainerLow;
+        border = BorderSide(
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          width: 0.5,
+        );
       case AppCardVariant.outlined:
         resolvedColor = color ?? theme.colorScheme.surface;
         border = BorderSide(color: theme.colorScheme.outlineVariant);
@@ -74,7 +90,7 @@ class AppCard extends StatelessWidget {
 
     Widget card = Material(
       color: resolvedColor,
-      elevation: elevation,
+      elevation: 0,
       borderRadius: border != null ? null : radius,
       shape: border != null
           ? RoundedRectangleBorder(borderRadius: radius, side: border)
@@ -90,6 +106,16 @@ class AppCard extends StatelessWidget {
       );
     }
 
-    return ClipRRect(borderRadius: radius, child: card);
+    if (shadows.isEmpty) {
+      return ClipRRect(borderRadius: radius, child: card);
+    }
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: shadows,
+      ),
+      child: ClipRRect(borderRadius: radius, child: card),
+    );
   }
 }

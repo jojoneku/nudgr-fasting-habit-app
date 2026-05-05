@@ -59,7 +59,7 @@ class _TimerTabState extends State<TimerTab> {
     if (presenter.isFasting) {
       return presenter.isOvertime
           ? Theme.of(context).colorScheme.error
-          : presenter.currentPhase.color;
+          : presenter.currentPhase.color(context);
     }
     if (_isEatingWindow) return Theme.of(context).colorScheme.primary;
     return Theme.of(context).colorScheme.outlineVariant;
@@ -149,17 +149,18 @@ class _TimerTabState extends State<TimerTab> {
     if (isShort) {
       final shouldDiscard = await showDialog<bool>(
         context: context,
-        builder: (_) => AlertDialog(
+        builder: (ctx) => AlertDialog(
           title: const Text('Discard session?'),
           content: const Text(
               "You've fasted less than 10 minutes. Discard with no penalty?"),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(context, false),
+                onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Keep fasting')),
             TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                style: TextButton.styleFrom(foregroundColor: AppColors.danger),
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                    foregroundColor: Theme.of(ctx).colorScheme.error),
                 child: const Text('Discard')),
           ],
         ),
@@ -509,6 +510,7 @@ class _TimerTabState extends State<TimerTab> {
 
   Widget _buildStatsStrip(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     return AppCard(
       padding: const EdgeInsets.symmetric(
           vertical: AppSpacing.md, horizontal: AppSpacing.xs),
@@ -522,7 +524,7 @@ class _TimerTabState extends State<TimerTab> {
                   : (presenter.currentStreak == 1 ? 'day' : 'days'),
               label: 'Streak',
               icon: Icons.local_fire_department_rounded,
-              iconColor: AppColors.gold,
+              iconColor: appColors.gold,
             ),
           ),
           Container(
@@ -535,7 +537,7 @@ class _TimerTabState extends State<TimerTab> {
                   : (presenter.longestStreak == 1 ? 'day' : 'days'),
               label: 'Best',
               icon: Icons.emoji_events_outlined,
-              iconColor: AppColors.success,
+              iconColor: appColors.success,
             ),
           ),
           Container(
@@ -582,7 +584,9 @@ class _TimerTabState extends State<TimerTab> {
           children: [
             AppIconBadge(
               icon: isSuccess ? Icons.check_rounded : Icons.close_rounded,
-              color: isSuccess ? AppColors.success : theme.colorScheme.error,
+              color: isSuccess
+                  ? context.appColors.success
+                  : theme.colorScheme.error,
               size: 36,
               iconSize: 18,
             ),
@@ -595,7 +599,7 @@ class _TimerTabState extends State<TimerTab> {
                     value: durationLabel,
                     size: AppNumberSize.title,
                     color: isSuccess
-                        ? AppColors.success
+                        ? context.appColors.success
                         : theme.colorScheme.onSurface,
                   ),
                   Text(

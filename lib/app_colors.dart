@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+// ignore_for_file: unused_element
 
 // ─────────────────────────────────────────────────────────────────────────────
 // NEUTRAL (GREY) SCALE — Base for all tiering
@@ -168,4 +169,65 @@ class AppColors {
   static const Color accentGlow = Color(0x4D00BCD4); // accent @ 30%
   static const Color successGlow = Color(0x334CAF50); // success @ 20%
   static const Color dangerGlow = Color(0x33F44336); // danger @ 20%
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THEME EXTENSION — custom semantic tokens not covered by M3 ColorScheme
+// ─────────────────────────────────────────────────────────────────────────────
+class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
+  const AppThemeExtension({
+    required this.success,
+    required this.gold,
+    required this.orange,
+    required this.purple,
+  });
+
+  final Color success;
+  final Color gold;
+  final Color orange; // energy / heat / extended fasting / utility
+  final Color purple; // RPG advanced / debt / ketosis
+
+  static const dark = AppThemeExtension(
+    success: AppColors.success,
+    gold: AppColors.gold,
+    orange: Color(0xFFFF7043), // Deep Orange 400 — vibrant on dark bg
+    purple: Color(0xFFAB47BC), // Purple 400 — vibrant on dark bg
+  );
+
+  static const light = AppThemeExtension(
+    success: AppColorsLight.success,
+    gold: AppColorsLight.gold,
+    orange: Color(0xFFE64A19), // Deep Orange 700 — AA contrast on light bg
+    purple: Color(0xFF7B1FA2), // Purple 800 — AA contrast on light bg
+  );
+
+  @override
+  AppThemeExtension copyWith({
+    Color? success,
+    Color? gold,
+    Color? orange,
+    Color? purple,
+  }) =>
+      AppThemeExtension(
+        success: success ?? this.success,
+        gold: gold ?? this.gold,
+        orange: orange ?? this.orange,
+        purple: purple ?? this.purple,
+      );
+
+  @override
+  AppThemeExtension lerp(AppThemeExtension? other, double t) {
+    if (other == null) return this;
+    return AppThemeExtension(
+      success: Color.lerp(success, other.success, t)!,
+      gold: Color.lerp(gold, other.gold, t)!,
+      orange: Color.lerp(orange, other.orange, t)!,
+      purple: Color.lerp(purple, other.purple, t)!,
+    );
+  }
+}
+
+extension AppThemeExtensionContext on BuildContext {
+  AppThemeExtension get appColors =>
+      Theme.of(this).extension<AppThemeExtension>() ?? AppThemeExtension.dark;
 }

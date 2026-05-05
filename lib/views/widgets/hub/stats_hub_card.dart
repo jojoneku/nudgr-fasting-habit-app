@@ -69,7 +69,7 @@ class _Snapshot extends StatelessWidget {
           value: xpProgress,
           valueText: '$currentXp / $nextXp',
           height: 6,
-          color: AppColors.gold,
+          color: context.appColors.gold,
         ),
       ],
     );

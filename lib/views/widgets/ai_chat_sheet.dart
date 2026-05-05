@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../app_colors.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
@@ -115,33 +114,34 @@ class _AiChatSheetState extends State<AiChatSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (_, scrollController) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           children: [
             _DragHandle(),
             _SheetHeader(meta: meta, presenter: _presenter),
-            const Divider(height: 1, color: Color(0xFF2A3140)),
+            Divider(
+                height: 1, color: Theme.of(context).colorScheme.outlineVariant),
             Expanded(
               child: ListenableBuilder(
                 listenable: _presenter,
                 builder: (_, __) {
                   if (_presenter.isInitializing) {
-                    return const Center(
+                    return Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircularProgressIndicator(
-                            color: Color(0xFF00E5FF),
+                            color: Theme.of(context).colorScheme.primary,
                             strokeWidth: 2,
                           ),
-                          SizedBox(height: 12),
+                          const SizedBox(height: 12),
                           Text(
                             'Loading AI Coach…',
                             style: TextStyle(
-                              color: Color(0xFF00E5FF),
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 13,
                             ),
                           ),
@@ -202,7 +202,10 @@ class _DragHandle extends StatelessWidget {
           width: 36,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.textSecondary.withValues(alpha: 0.4),
+            color: Theme.of(context)
+                .colorScheme
+                .onSurfaceVariant
+                .withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -215,95 +218,98 @@ class _SheetHeader extends StatelessWidget {
   const _SheetHeader({required this.meta, required this.presenter});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
-        child: Row(
-          children: [
-            Icon(meta.icon, color: AppColors.textSecondary, size: 18),
-            const SizedBox(width: 10),
-            Text(
-              meta.label,
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      child: Row(
+        children: [
+          Icon(meta.icon, color: cs.onSurfaceVariant, size: 18),
+          const SizedBox(width: 10),
+          Text(
+            meta.label,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
-            const Spacer(),
-            ListenableBuilder(
-              listenable: presenter,
-              builder: (_, __) => GestureDetector(
-                onTap: presenter.isResponding ? null : presenter.toggleThinking,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
+          ),
+          const Spacer(),
+          ListenableBuilder(
+            listenable: presenter,
+            builder: (_, __) => GestureDetector(
+              onTap: presenter.isResponding ? null : presenter.toggleThinking,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: presenter.isThinkingEnabled
+                      ? cs.primary.withValues(alpha: 0.2)
+                      : cs.onSurfaceVariant.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
                     color: presenter.isThinkingEnabled
-                        ? AppColors.primary.withValues(alpha: 0.2)
-                        : AppColors.textSecondary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
+                        ? cs.primary.withValues(alpha: 0.5)
+                        : cs.onSurfaceVariant.withValues(alpha: 0.2),
+                    width: 0.5,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      presenter.isThinkingEnabled
+                          ? Icons.psychology_outlined
+                          : Icons.bolt_outlined,
                       color: presenter.isThinkingEnabled
-                          ? AppColors.primary.withValues(alpha: 0.5)
-                          : AppColors.textSecondary.withValues(alpha: 0.2),
-                      width: 0.5,
+                          ? cs.primary
+                          : cs.onSurfaceVariant,
+                      size: 13,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        presenter.isThinkingEnabled
-                            ? Icons.psychology_outlined
-                            : Icons.bolt_outlined,
+                    const SizedBox(width: 4),
+                    Text(
+                      presenter.isThinkingEnabled ? 'Think' : 'Fast',
+                      style: TextStyle(
                         color: presenter.isThinkingEnabled
-                            ? AppColors.primary
-                            : AppColors.textSecondary,
-                        size: 13,
+                            ? cs.primary
+                            : cs.onSurfaceVariant,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        presenter.isThinkingEnabled ? 'Think' : 'Fast',
-                        style: TextStyle(
-                          color: presenter.isThinkingEnabled
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
-                  width: 0.5,
-                ),
-              ),
-              child: const Text(
-                'AI',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1,
-                ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: cs.primary.withValues(alpha: 0.3),
+                width: 0.5,
               ),
             ),
-          ],
-        ),
-      );
+            child: Text(
+              'AI',
+              style: TextStyle(
+                color: cs.primary,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _MessageList extends StatelessWidget {
@@ -320,10 +326,12 @@ class _MessageList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (messages.isEmpty) {
-      return const Center(
+      return Center(
         child: Text(
           'Ask me anything.',
-          style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 14),
         ),
       );
     }
@@ -358,27 +366,45 @@ class _MessageBubble extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             color: isUser
-                ? AppColors.primary.withValues(alpha: 0.18)
-                : const Color(0xFF242D3A),
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.18)
+                : Theme.of(context).colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.only(
               topLeft: const Radius.circular(16),
               topRight: const Radius.circular(16),
               bottomLeft: Radius.circular(isUser ? 16 : 4),
               bottomRight: Radius.circular(isUser ? 4 : 16),
             ),
-            border: isUser
-                ? Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    width: 0.5,
-                  )
-                : null,
+            border: Border.all(
+              color: isUser
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                  : Theme.of(context)
+                      .colorScheme
+                      .outlineVariant
+                      .withValues(alpha: 0.4),
+              width: 0.5,
+            ),
+            boxShadow: isUser
+                ? null
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(
+                        alpha: Theme.of(context).brightness == Brightness.dark
+                            ? 0.10
+                            : 0.05,
+                      ),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
           ),
           child: message.isStreaming && message.text.isEmpty
               ? const _TypingIndicator()
               : Text(
                   message.text,
                   style: TextStyle(
-                    color: isUser ? AppColors.primary : AppColors.textPrimary,
+                    color: isUser
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     height: 1.45,
                   ),
@@ -441,7 +467,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                 height: 6,
                 margin: const EdgeInsets.symmetric(horizontal: 2),
                 decoration: BoxDecoration(
-                  color: AppColors.textSecondary
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
                       .withValues(alpha: opacity.clamp(0.2, 1.0)),
                   shape: BoxShape.circle,
                 ),
@@ -466,67 +494,70 @@ class _InputBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          border: Border(
-            top: BorderSide(color: Color(0xFF2A3140), width: 1),
-          ),
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 12),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant, width: 1),
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: TextField(
-                controller: controller,
-                focusNode: focusNode,
-                enabled: enabled,
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.newline,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              enabled: enabled,
+              maxLines: 4,
+              minLines: 1,
+              textInputAction: TextInputAction.newline,
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 14,
+              ),
+              decoration: InputDecoration(
+                hintText: enabled ? 'Ask your coach…' : 'Coach not ready…',
+                hintStyle: TextStyle(
+                  color: cs.onSurfaceVariant,
                   fontSize: 14,
                 ),
-                decoration: InputDecoration(
-                  hintText: enabled ? 'Ask your coach…' : 'Coach not ready…',
-                  hintStyle: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 14,
+                filled: true,
+                fillColor: cs.surfaceContainerHighest,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: cs.outlineVariant,
+                    width: 1,
                   ),
-                  filled: true,
-                  fillColor: const Color(0xFF141A22),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: Color(0xFF2A3140),
-                      width: 1,
-                    ),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(
-                      color: AppColors.primary,
-                      width: 1,
-                    ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  borderSide: BorderSide(
+                    color: cs.primary,
+                    width: 1,
                   ),
                 ),
               ),
             ),
-            const SizedBox(width: 10),
-            _SendButton(enabled: enabled, onSend: onSend),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(width: 10),
+          _SendButton(enabled: enabled, onSend: onSend),
+        ],
+      ),
+    );
+  }
 }
 
 class _SendButton extends StatefulWidget {
@@ -579,13 +610,18 @@ class _SendButtonState extends State<_SendButton>
             height: 44,
             decoration: BoxDecoration(
               color: widget.enabled
-                  ? AppColors.primary
-                  : AppColors.textSecondary.withValues(alpha: 0.2),
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context)
+                      .colorScheme
+                      .onSurfaceVariant
+                      .withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
               Icons.send_rounded,
-              color: widget.enabled ? Colors.black : AppColors.textSecondary,
+              color: widget.enabled
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
               size: 20,
             ),
           ),
@@ -598,46 +634,48 @@ class _DownloadPrompt extends StatelessWidget {
   const _DownloadPrompt({required this.presenter});
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.psychology_outlined,
-                color: AppColors.primary, size: 48),
-            const SizedBox(height: 20),
-            const Text(
-              'AI Coach',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.psychology_outlined, color: cs.primary, size: 48),
+          const SizedBox(height: 20),
+          Text(
+            'AI Coach',
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Download the on-device model to unlock\ncoaching, food analysis, and insights.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppColors.textSecondary,
-                fontSize: 13,
-                height: 1.5,
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Download the on-device model to unlock\ncoaching, food analysis, and insights.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 13,
+              height: 1.5,
             ),
-            const SizedBox(height: 6),
-            const Text(
-              '~586 MB • One-time download • Private',
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-            ),
-            const SizedBox(height: 28),
-            AppPrimaryButton(
-              label: 'Download AI Coach',
-              onPressed: presenter.downloadModel,
-              height: 48,
-            ),
-          ],
-        ),
-      );
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '~586 MB • One-time download • Private',
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+          ),
+          const SizedBox(height: 28),
+          AppPrimaryButton(
+            label: 'Download AI Coach',
+            onPressed: presenter.downloadModel,
+            height: 48,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DownloadProgress extends StatelessWidget {
@@ -648,21 +686,21 @@ class _DownloadProgress extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = presenter.downloadProgress ?? 0;
     final isInitializing = progress >= 100;
+    final cs = Theme.of(context).colorScheme;
 
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.download_outlined,
-              color: AppColors.textSecondary, size: 40),
+          Icon(Icons.download_outlined, color: cs.onSurfaceVariant, size: 40),
           const SizedBox(height: 20),
           Text(
             isInitializing
                 ? 'Initializing AI model…'
                 : 'Downloading AI Coach… $progress%',
-            style: const TextStyle(
-              color: AppColors.textPrimary,
+            style: TextStyle(
+              color: cs.onSurface,
               fontSize: 15,
               fontWeight: FontWeight.w600,
             ),
@@ -671,15 +709,15 @@ class _DownloadProgress extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: isInitializing
-                ? const LinearProgressIndicator(
-                    backgroundColor: Color(0xFF1C2128),
-                    valueColor: AlwaysStoppedAnimation(AppColors.primary),
+                ? LinearProgressIndicator(
+                    backgroundColor: cs.surfaceContainerHigh,
+                    valueColor: AlwaysStoppedAnimation(cs.primary),
                     minHeight: 8,
                   )
                 : LinearProgressIndicator(
                     value: progress / 100.0,
-                    backgroundColor: AppColors.surface,
-                    valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                    backgroundColor: cs.surfaceContainerLow,
+                    valueColor: AlwaysStoppedAnimation(cs.primary),
                     minHeight: 8,
                   ),
           ),
@@ -688,8 +726,7 @@ class _DownloadProgress extends StatelessWidget {
             isInitializing
                 ? 'Loading model into memory — this takes a moment.'
                 : 'Keep the app open during download.',
-            style:
-                const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
             textAlign: TextAlign.center,
           ),
         ],
@@ -705,35 +742,38 @@ class _ErrorChip extends StatelessWidget {
   const _ErrorChip({required this.message, required this.onDismiss});
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: AppColors.danger.withValues(alpha: 0.3),
-            width: 0.5,
-          ),
+  Widget build(BuildContext context) {
+    final errorColor = Theme.of(context).colorScheme.error;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: errorColor.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: errorColor.withValues(alpha: 0.3),
+          width: 0.5,
         ),
-        child: Row(
-          children: [
-            const Icon(Icons.error_outline, color: AppColors.danger, size: 16),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                message,
-                style: const TextStyle(
-                  color: AppColors.danger,
-                  fontSize: 12,
-                ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: errorColor, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                color: errorColor,
+                fontSize: 12,
               ),
             ),
-            GestureDetector(
-              onTap: onDismiss,
-              child: const Icon(Icons.close, color: AppColors.danger, size: 16),
-            ),
-          ],
-        ),
-      );
+          ),
+          GestureDetector(
+            onTap: onDismiss,
+            child: Icon(Icons.close, color: errorColor, size: 16),
+          ),
+        ],
+      ),
+    );
+  }
 }
