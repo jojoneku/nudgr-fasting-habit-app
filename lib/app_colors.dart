@@ -229,5 +229,5 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
 
 extension AppThemeExtensionContext on BuildContext {
   AppThemeExtension get appColors =>
-      Theme.of(this).extension<AppThemeExtension>()!;
+      Theme.of(this).extension<AppThemeExtension>() ?? AppThemeExtension.dark;
 }
