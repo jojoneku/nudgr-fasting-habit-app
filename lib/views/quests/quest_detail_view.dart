@@ -51,6 +51,7 @@ class QuestDetailView extends StatelessWidget {
       children: [
         // Stats card
         AppCard(
+          variant: AppCardVariant.elevated,
           child: _StatsRow(quest: q),
         ),
         const SizedBox(height: AppSpacing.mdGenerous),
@@ -80,6 +81,7 @@ class QuestDetailView extends StatelessWidget {
           AppSection(
             title: 'Stat contribution',
             child: AppCard(
+              variant: AppCardVariant.elevated,
               padding: const EdgeInsets.all(AppSpacing.md),
               child: _StatContributionBar(quest: q, presenter: presenter),
             ),
@@ -263,7 +265,7 @@ class _StatContributionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final progress = presenter.statProgressFor(quest.id);
     final stat = quest.linkedStat!;
-    final color = linkedStatColor(stat);
+    final color = linkedStatColor(stat, context);
     final label = linkedStatLabel(stat);
     final completions = quest.streakCount % 21;
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -10,12 +9,12 @@ class GoalProgressCard extends StatelessWidget {
 
   const GoalProgressCard({super.key, required this.account, this.onTap});
 
-  Color _parseColor() {
+  Color _parseColor(BuildContext context) {
     try {
       final hex = account.colorHex.replaceFirst('#', '');
       return Color(int.parse('FF$hex', radix: 16));
     } catch (_) {
-      return AppColors.accent;
+      return Theme.of(context).colorScheme.tertiary;
     }
   }
 
@@ -36,7 +35,7 @@ class GoalProgressCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final color = _parseColor();
+    final color = _parseColor(context);
 
     return InkWell(
       onTap: onTap,

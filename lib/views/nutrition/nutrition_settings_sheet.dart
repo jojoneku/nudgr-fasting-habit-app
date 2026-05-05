@@ -260,6 +260,7 @@ class _ModeTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gold = context.appColors.gold;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -267,12 +268,12 @@ class _ModeTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.gold.withValues(alpha: 0.1)
+              ? gold.withValues(alpha: 0.1)
               : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
-                ? AppColors.gold.withValues(alpha: 0.5)
+                ? gold.withValues(alpha: 0.5)
                 : theme.colorScheme.outlineVariant,
           ),
         ),
@@ -281,7 +282,7 @@ class _ModeTile extends StatelessWidget {
             value: mode,
             groupValue: selected ? mode : null,
             onChanged: (_) => onTap(),
-            activeColor: AppColors.gold,
+            activeColor: gold,
             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
           const SizedBox(width: 8),
@@ -292,8 +293,7 @@ class _ModeTile extends StatelessWidget {
                 Text(
                   mode.label,
                   style: TextStyle(
-                    color:
-                        selected ? AppColors.gold : theme.colorScheme.onSurface,
+                    color: selected ? gold : theme.colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
@@ -353,7 +353,7 @@ class _TdeeCard extends StatelessWidget {
               value: '${profile.targetCalories}',
               suffix: 'kcal/day',
               size: AppNumberSize.title,
-              color: AppColors.gold,
+              color: context.appColors.gold,
               textAlign: TextAlign.start,
             ),
           if (profile != null) ...[
@@ -371,8 +371,8 @@ class _TdeeCard extends StatelessWidget {
             height: 44,
             child: OutlinedButton(
               style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.gold,
-                side: const BorderSide(color: AppColors.gold, width: 0.8),
+                foregroundColor: context.appColors.gold,
+                side: BorderSide(color: context.appColors.gold, width: 0.8),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12)),
               ),
@@ -429,12 +429,15 @@ class _ToggleRow extends StatelessWidget {
             ],
           ),
         ),
-        Switch.adaptive(
-          value: value,
-          onChanged: onChanged,
-          activeThumbColor: AppColors.gold,
-          activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
-        ),
+        Builder(builder: (ctx) {
+          final gold = ctx.appColors.gold;
+          return Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeThumbColor: gold,
+            activeTrackColor: gold.withValues(alpha: 0.4),
+          );
+        }),
       ],
     );
   }
@@ -492,9 +495,9 @@ class _AiCoachDownloadCard extends StatelessWidget {
                     ),
                   ),
                   if (available)
-                    const AppBadge(
+                    AppBadge(
                       text: 'Ready',
-                      color: AppColors.success,
+                      color: context.appColors.success,
                       variant: AppBadgeVariant.tonal,
                     ),
                 ],

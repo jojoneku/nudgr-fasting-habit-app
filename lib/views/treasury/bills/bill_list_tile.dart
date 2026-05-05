@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -18,20 +19,21 @@ class BillListTile extends StatelessWidget {
     this.onDelete,
   });
 
-  Color _billTypeColor(BillType type, ColorScheme colorScheme) {
+  Color _billTypeColor(BillType type, BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (type) {
       case BillType.creditCard:
         return colorScheme.error;
       case BillType.installment:
-        return const Color(0xFFFFB300);
+        return context.appColors.gold;
       case BillType.subscription:
         return colorScheme.primary;
       case BillType.insurance:
-        return const Color(0xFF4CAF50);
+        return context.appColors.success;
       case BillType.govtContribution:
-        return const Color(0xFF9C27B0);
+        return context.appColors.purple;
       case BillType.utility:
-        return const Color(0xFFFF9800);
+        return context.appColors.orange;
       case BillType.other:
         return colorScheme.onSurfaceVariant;
     }
@@ -73,7 +75,7 @@ class BillListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final typeColor = _billTypeColor(bill.billType, colorScheme);
+    final typeColor = _billTypeColor(bill.billType, context);
 
     Widget? subtitleWidget;
     {
@@ -91,7 +93,7 @@ class BillListTile extends StatelessWidget {
           'Paid ${formatPeso(bill.paidAmount!)}'
           '${bill.paidDate != null ? ' · ${DateFormat('MMM d').format(bill.paidDate!)}' : ''}',
           style: TextStyle(
-            color: const Color(0xFF4CAF50).withValues(alpha: 0.85),
+            color: context.appColors.success.withValues(alpha: 0.85),
             fontSize: 12,
           ),
         ));
@@ -144,7 +146,7 @@ class BillListTile extends StatelessWidget {
           subtitle: subtitleWidget,
           trailing: bill.isPaid
               ? Icon(Icons.check_circle,
-                  color: const Color(0xFF4CAF50), size: 24)
+                  color: context.appColors.success, size: 24)
               : SizedBox(
                   height: 44,
                   child: TextButton(

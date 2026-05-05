@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../app_colors.dart';
 import '../../models/habit_routine.dart';
 import '../../models/quest.dart';
 import '../../presenters/quest_presenter.dart';
@@ -347,8 +346,8 @@ class _QuestPickerTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statColor = quest.linkedStat != null
-        ? linkedStatColor(quest.linkedStat!)
-        : AppColors.neutral;
+        ? linkedStatColor(quest.linkedStat!, context)
+        : Theme.of(context).colorScheme.outline;
     return AppListTile(
       leading: Icon(
         quest.linkedStat != null
@@ -364,7 +363,7 @@ class _QuestPickerTile extends StatelessWidget {
       trailing: Checkbox(
         value: isSelected,
         onChanged: (v) => onToggle(v ?? false),
-        activeColor: AppColors.primary,
+        activeColor: Theme.of(context).colorScheme.primary,
       ),
       onTap: () => onToggle(!isSelected),
     );

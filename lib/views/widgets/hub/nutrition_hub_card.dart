@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../presenters/nutrition_presenter.dart';
 import '../system/system.dart';
-import '../../../app_colors.dart';
 import '../../../utils/app_text_styles.dart';
 import 'hub_card_header.dart';
 
@@ -45,7 +44,9 @@ class _Snapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = nutrition;
-    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
+    final theme = Theme.of(context);
+    final barColor =
+        p.isOverGoal ? theme.colorScheme.error : theme.colorScheme.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +54,7 @@ class _Snapshot extends StatelessWidget {
         Text(
           'CALORIES',
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textSecondary,
+            color: theme.colorScheme.onSurfaceVariant,
             letterSpacing: 0.6,
           ),
         ),
@@ -86,6 +87,7 @@ class _Cell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final align =
         alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     return Column(
@@ -94,7 +96,7 @@ class _Cell extends StatelessWidget {
         Text(
           value,
           style: AppTextStyles.labelMedium.copyWith(
-            color: AppColors.textPrimary,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -102,7 +104,7 @@ class _Cell extends StatelessWidget {
         Text(
           label,
           style: AppTextStyles.labelSmall.copyWith(
-            color: AppColors.textSecondary,
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../models/fasting_phase.dart';
 import '../../../presenters/fasting_presenter.dart';
 import '../system/system.dart';
 import '../../../utils/app_spacing.dart';
@@ -106,7 +107,7 @@ class _ActiveSnapshot extends StatelessWidget {
           value: progress,
           size: 80,
           strokeWidth: 6,
-          primaryColor: phase.color,
+          primaryColor: phase.color(context),
           center: Text(
             formatHM(remaining),
             style: AppTextStyles.numeric(fontSize: 11, weight: FontWeight.w600),
@@ -126,7 +127,8 @@ class _ActiveSnapshot extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 phase.label,
-                style: AppTextStyles.labelMedium.copyWith(color: phase.color),
+                style: AppTextStyles.labelMedium
+                    .copyWith(color: phase.color(context)),
               ),
               Text(
                 'of ${fasting.fastingGoalHours}h goal',

@@ -69,8 +69,8 @@ class _FastingAppState extends State<FastingApp> {
         error: AppColors.error,
       ),
       useMaterial3: true,
-      surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: 12,
+      surfaceMode: FlexSurfaceMode.level,
+      blendLevel: 0,
       appBarStyle: FlexAppBarStyle.surface,
       appBarElevation: 0,
       subThemesData: const FlexSubThemesData(
@@ -90,8 +90,19 @@ class _FastingAppState extends State<FastingApp> {
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
-    ).copyWith(
+    );
+    return base.copyWith(
       scaffoldBackgroundColor: AppColors.background,
+      colorScheme: base.colorScheme.copyWith(
+        surface: AppColors.surface,
+        surfaceContainerLowest: AppColors.background,
+        surfaceContainerLow: AppColors.surface,
+        surfaceContainer: AppColors.surfaceVariant,
+        surfaceContainerHigh: AppColors.surfaceVariant,
+        surfaceContainerHighest: AppColors.surfaceHigh,
+        onSurface: AppColors.textPrimary,
+        onSurfaceVariant: AppColors.textSecondary,
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.primary,
@@ -123,8 +134,8 @@ class _FastingAppState extends State<FastingApp> {
         bodyColor: AppColors.primary,
         displayColor: AppColors.primary,
       ),
+      extensions: const [AppThemeExtension.dark],
     );
-    return base;
   }
 
   ThemeData _lightTheme() {
@@ -140,8 +151,8 @@ class _FastingAppState extends State<FastingApp> {
         error: AppColorsLight.error,
       ),
       useMaterial3: true,
-      surfaceMode: FlexSurfaceMode.highScaffoldLowSurface,
-      blendLevel: 4,
+      surfaceMode: FlexSurfaceMode.level,
+      blendLevel: 0,
       appBarStyle: FlexAppBarStyle.surface,
       appBarElevation: 0,
       subThemesData: const FlexSubThemesData(
@@ -161,8 +172,19 @@ class _FastingAppState extends State<FastingApp> {
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
         },
       ),
-    ).copyWith(
+    );
+    return base.copyWith(
       scaffoldBackgroundColor: AppColorsLight.background,
+      colorScheme: base.colorScheme.copyWith(
+        surface: AppColorsLight.surface,
+        surfaceContainerLowest: AppColorsLight.background,
+        surfaceContainerLow: AppColorsLight.surface,
+        surfaceContainer: AppColorsLight.surfaceVariant,
+        surfaceContainerHigh: AppColorsLight.surfaceVariant,
+        surfaceContainerHighest: AppColorsLight.surfaceHigh,
+        onSurface: AppColorsLight.textPrimary,
+        onSurfaceVariant: AppColorsLight.textSecondary,
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: AppColorsLight.surface,
         foregroundColor: AppColorsLight.primary,
@@ -194,8 +216,8 @@ class _FastingAppState extends State<FastingApp> {
         bodyColor: AppColorsLight.primary,
         displayColor: AppColorsLight.primary,
       ),
+      extensions: const [AppThemeExtension.light],
     );
-    return base;
   }
 
   @override

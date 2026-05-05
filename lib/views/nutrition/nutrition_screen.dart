@@ -160,7 +160,7 @@ class _StatSection extends StatelessWidget {
     final p = presenter;
     final cs = Theme.of(context).colorScheme;
     final burned = p.selectedDateCaloriesBurned;
-    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
+    final barColor = p.isOverGoal ? cs.error : cs.primary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: AppCard(
@@ -243,7 +243,7 @@ class _StatSection extends StatelessWidget {
                         value: '${p.todayProtein.round()}g',
                         label: 'Protein',
                         color: cs.onSurface,
-                        barColor: AppColors.primary,
+                        barColor: cs.primary,
                         progress: p.proteinProgress,
                       ),
                       const _ColDivider(),
@@ -251,7 +251,7 @@ class _StatSection extends StatelessWidget {
                         value: '${p.todayCarbs.round()}g',
                         label: 'Carbs',
                         color: cs.onSurface,
-                        barColor: AppColors.gold,
+                        barColor: context.appColors.gold,
                         progress: p.carbsProgress,
                       ),
                       const _ColDivider(),
@@ -259,7 +259,7 @@ class _StatSection extends StatelessWidget {
                         value: '${p.todayFat.round()}g',
                         label: 'Fat',
                         color: cs.onSurface,
-                        barColor: AppColors.danger,
+                        barColor: cs.error,
                         progress: p.fatProgress,
                       ),
                     ],
@@ -348,7 +348,8 @@ class _NutritionDetailBody extends StatelessWidget {
     final burned = p.selectedDateCaloriesBurned;
     final calGoal = p.effectiveGoal;
     final remaining = p.remainingCalories;
-    final barColor = p.isOverGoal ? AppColors.danger : AppColors.primary;
+    final cs = Theme.of(context).colorScheme;
+    final barColor = p.isOverGoal ? cs.error : cs.primary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -364,7 +365,7 @@ class _NutritionDetailBody extends StatelessWidget {
           extra: burned > 0 ? '🔥 $burned kcal burned' : null,
         ),
         const SizedBox(height: 14),
-        Divider(color: Theme.of(context).colorScheme.outlineVariant, height: 1),
+        Divider(color: cs.outlineVariant, height: 1),
         const SizedBox(height: 14),
         if (p.proteinGoal != null)
           _DetailRow(
@@ -374,7 +375,7 @@ class _NutritionDetailBody extends StatelessWidget {
             remaining: (p.proteinGoal! - p.todayProtein.round())
                 .clamp(0, p.proteinGoal!),
             unit: 'g',
-            color: AppColors.primary,
+            color: cs.primary,
           ),
         if (p.proteinGoal != null) const SizedBox(height: 10),
         if (p.carbsGoal != null)
@@ -385,7 +386,7 @@ class _NutritionDetailBody extends StatelessWidget {
             remaining:
                 (p.carbsGoal! - p.todayCarbs.round()).clamp(0, p.carbsGoal!),
             unit: 'g',
-            color: AppColors.gold,
+            color: context.appColors.gold,
           ),
         if (p.carbsGoal != null) const SizedBox(height: 10),
         if (p.fatGoal != null)
@@ -395,7 +396,7 @@ class _NutritionDetailBody extends StatelessWidget {
             goal: p.fatGoal!,
             remaining: (p.fatGoal! - p.todayFat.round()).clamp(0, p.fatGoal!),
             unit: 'g',
-            color: AppColors.danger,
+            color: cs.error,
           ),
         if (p.proteinGoal == null && p.carbsGoal == null && p.fatGoal == null)
           Text(
@@ -589,11 +590,12 @@ class _ErrorBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.12),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(error,
-            style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.error, fontSize: 13)),
       ),
     );
   }
@@ -760,8 +762,8 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child:
-                const Text('Save', style: TextStyle(color: AppColors.primary)),
+            child: Text('Save',
+                style: TextStyle(color: Theme.of(context).colorScheme.primary)),
           ),
         ],
       ),
@@ -931,9 +933,10 @@ class _FoodItemDisplay extends StatelessWidget {
             ),
             const SizedBox(width: 6),
             if (item.needsConfirmation) ...[
-              const Tooltip(
+              Tooltip(
                 message: 'Low-confidence — tap edit to verify',
-                child: _NutriBadge(label: '?', color: AppColors.danger),
+                child: _NutriBadge(
+                    label: '?', color: Theme.of(context).colorScheme.error),
               ),
               const SizedBox(width: 4),
             ],
@@ -942,7 +945,7 @@ class _FoodItemDisplay extends StatelessWidget {
                 message: _sourceTooltip(item.estimationSource),
                 child: _NutriBadge(
                   label: item.estimationSource.badge,
-                  color: item.estimationSource.badgeColor,
+                  color: item.estimationSource.badgeColor(context),
                 ),
               ),
               const SizedBox(width: 4),
@@ -956,7 +959,7 @@ class _FoodItemDisplay extends StatelessWidget {
             ],
             _NutriBadge(
               label: '${item.calories} kcal',
-              color: AppColors.gold,
+              color: context.appColors.gold,
             ),
           ],
         ),
@@ -966,16 +969,22 @@ class _FoodItemDisplay extends StatelessWidget {
             children: [
               if (item.protein != null)
                 _MacroBadge(
-                    label: 'P', value: item.protein!, color: AppColors.primary),
+                    label: 'P',
+                    value: item.protein!,
+                    color: Theme.of(context).colorScheme.primary),
               if (item.carbs != null) ...[
                 const SizedBox(width: 4),
                 _MacroBadge(
-                    label: 'C', value: item.carbs!, color: AppColors.gold),
+                    label: 'C',
+                    value: item.carbs!,
+                    color: context.appColors.gold),
               ],
               if (item.fat != null) ...[
                 const SizedBox(width: 4),
                 _MacroBadge(
-                    label: 'F', value: item.fat!, color: AppColors.danger),
+                    label: 'F',
+                    value: item.fat!,
+                    color: Theme.of(context).colorScheme.error),
               ],
             ],
           ),
@@ -1078,8 +1087,8 @@ class _ExerciseAnalysisCard extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
             child: Row(
               children: [
-                const Icon(Icons.local_fire_department_outlined,
-                    color: AppColors.gold, size: 16),
+                Icon(Icons.local_fire_department_outlined,
+                    color: context.appColors.gold, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
@@ -1106,7 +1115,7 @@ class _ExerciseAnalysisCard extends StatelessWidget {
                 ),
                 _NutriBadge(
                   label: '−${e.caloriesBurned} kcal',
-                  color: AppColors.success,
+                  color: context.appColors.success,
                 ),
               ],
             ),
@@ -1165,16 +1174,16 @@ class _MessageFooter extends StatelessWidget {
           const Spacer(),
           if (editing) ...[
             if (saving)
-              const SizedBox(
+              SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
-                    strokeWidth: 2, color: AppColors.success),
+                    strokeWidth: 2, color: context.appColors.success),
               )
             else
               _FooterBtn(
                   icon: Icons.check,
-                  color: AppColors.success,
+                  color: context.appColors.success,
                   onTap: onConfirm),
             const SizedBox(width: 2),
             _FooterBtn(
@@ -1396,12 +1405,13 @@ class _TemplateBody extends StatelessWidget {
       final totalCal = t.entries.fold<int>(0, (sum, e) => sum + e.calories);
       return AppListTile(
         leading: t.isPinned
-            ? const Icon(Icons.push_pin, color: AppColors.primary, size: 14)
+            ? Icon(Icons.push_pin,
+                color: Theme.of(context).colorScheme.primary, size: 14)
             : null,
         title: Text(t.name),
         trailing: Text(
           totalCal > 0 ? '$totalCal kcal' : '',
-          style: const TextStyle(color: AppColors.gold, fontSize: 12),
+          style: TextStyle(color: context.appColors.gold, fontSize: 12),
         ),
         onTap: () {
           Navigator.pop(context);

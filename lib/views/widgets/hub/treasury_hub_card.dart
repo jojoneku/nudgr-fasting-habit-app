@@ -30,7 +30,7 @@ class TreasuryHubCard extends StatelessWidget {
                 ? Icons.account_balance
                 : Icons.account_balance_outlined,
             title: 'Finance',
-            accentColor: AppColors.gold,
+            accentColor: context.appColors.gold,
             isActive: isActive,
           ),
           child: _Snapshot(treasury: treasury, isActive: isActive),

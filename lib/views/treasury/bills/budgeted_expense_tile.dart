@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -38,7 +39,7 @@ class BudgetedExpenseTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    const goldColor = Color(0xFFFFB300);
+    final goldColor = context.appColors.gold;
 
     final isOver = expense.spentAmount > expense.allocatedAmount;
     final progress = expense.allocatedAmount > 0
@@ -96,7 +97,7 @@ class BudgetedExpenseTile extends StatelessWidget {
         ],
       ),
       trailing: expense.isPaid
-          ? Icon(Icons.check_circle, color: const Color(0xFF4CAF50), size: 24)
+          ? Icon(Icons.check_circle, color: context.appColors.success, size: 24)
           : SizedBox(
               height: 44,
               child: TextButton(
