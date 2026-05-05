@@ -32,18 +32,39 @@ You are the **System Architect**—an elite Senior Full-Stack Product Engineer. 
 ---
 
 ## 3. 🎨 "System" UI/UX Design Tokens
-*The aesthetic is dark, neon, and high-contrast.*
+*The app supports **dual themes**: dark (default, Solo Leveling RPG aesthetic) and light (premium, high-contrast). Mode is driven by `SettingsPresenter.themeMode` and the `MaterialApp` in `lib/views/fasting_app.dart`.*
 
-### **Color Palette (The "Dungeon" Theme)**
-| Token | Hex | Role |
+### **Theming Rules (Read First)**
+- **Never hardcode `AppColors.X` or `AppColorsLight.X` inside widgets.** Always pull from `Theme.of(context)` — `colorScheme.surface`, `scaffoldBackgroundColor`, `colorScheme.onSurfaceVariant`, etc. Hardcoded tokens break the opposite mode (e.g. dark-only `AppColors.background` renders black on a light scaffold).
+- Direct token references are only allowed in `fasting_app.dart` (where the `ThemeData` for each mode is built) or in clearly mode-specific assets.
+- When introducing a new color need, add it to **both** `AppColors` and `AppColorsLight` in `lib/app_colors.dart`, wire it into the `ColorScheme` (or a `ThemeExtension`), then consume via `Theme.of(context)` in widgets.
+
+### **Color Tokens — `lib/app_colors.dart`**
+Tokens are organized as paired sets. Read them as references for theme construction, not for direct widget use.
+
+**Dark mode (`AppColors`) — default, "Dungeon" aesthetic:**
+| Role | Token | Hex |
 | :--- | :--- | :--- |
-| **Background** | `#0A0E14` | Deep Black (Void) |
-| **Surface** | `#1C2128` | Slate Grey (Cards/Modals) |
-| **Primary** | `#00E5FF` | Mana Blue (Actions/Active State) |
-| **Danger** | `#FF1744` | HP Red (Delete/Errors) |
-| **Success** | `#00E676` | Level-up Green (Completion) |
-| **Text Primary** | `#FFFFFF` | High Emphasis |
-| **Text Secondary** | `#B0B3B8` | Low Emphasis |
+| Background | `background` | `#212121` (grey-900) |
+| Surface | `surface` | `#424242` (grey-800) |
+| Primary | `primary` | `#2196F3` (Sky Blue) |
+| Accent | `accent` | `#00BCD4` (Mana Teal) |
+| Danger | `danger` | `#F44336` (Ember Red) |
+| Success | `success` | `#4CAF50` (Forest Green) |
+| Text Primary | `textPrimary` | `#FFFFFF` |
+| Text Secondary | `textSecondary` | `#BDBDBD` (grey-400) |
+
+**Light mode (`AppColorsLight`) — premium identity:**
+| Role | Token | Hex |
+| :--- | :--- | :--- |
+| Background | `background` | `#FAFAFA` (grey-50) |
+| Surface | `surface` | `#FFFFFF` (grey-0) |
+| Primary | `primary` | `#1565C0` (deep blue, AA+ on light) |
+| Accent | `accent` | `#00838F` (deep teal) |
+| Danger | `danger` | `#D32F2F` |
+| Success | `success` | `#388E3C` |
+| Text Primary | `textPrimary` | `#212121` |
+| Text Secondary | `textSecondary` | `#757575` (grey-600) |
 
 ### **Mobile First Principles**
 - **The Thumb Zone:** Critical actions (Start/Stop, Confirm) **MUST** be in the bottom 30% of the screen.
@@ -83,6 +104,7 @@ You are the **System Architect**—an elite Senior Full-Stack Product Engineer. 
 - ❌ **Logic in UI:** Do not write `if (fastingHours > 16)` in the View. Ask `presenter.isFastComplete`.
 - ❌ **Magic Numbers:** Extract constants for styling (padding, colors, font sizes).
 - ❌ **Sluggish Animations:** Animations > 400ms feel slow. Keep them tight.
+- ❌ **Hardcoded mode-specific colors in widgets:** `Scaffold(backgroundColor: AppColors.background)` breaks light mode. Use `Theme.of(context).scaffoldBackgroundColor` (or the matching `ColorScheme` role) instead.
 
 ---
 
