@@ -141,7 +141,7 @@ class _Header extends StatelessWidget {
             AppNumberDisplay(
               value: formatPesoCompact(peak),
               size: AppNumberSize.body,
-              color: const Color(0xFFEF9A9A),
+              color: colorScheme.errorContainer,
             ),
           ],
         ),
@@ -401,7 +401,7 @@ class _DayRow extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final isPeak = peak > 0 && day.amount == peak;
     final ratio = peak > 0 ? day.amount / peak : 0.0;
-    final barColor = isPeak ? const Color(0xFFEF9A9A) : colorScheme.primary;
+    final barColor = isPeak ? colorScheme.errorContainer : colorScheme.primary;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -432,7 +432,8 @@ class _DayRow extends StatelessWidget {
             child: AppNumberDisplay(
               value: formatPesoCompact(day.amount),
               size: AppNumberSize.body,
-              color: isPeak ? const Color(0xFFEF9A9A) : colorScheme.onSurface,
+              color:
+                  isPeak ? colorScheme.errorContainer : colorScheme.onSurface,
               textAlign: TextAlign.right,
             ),
           ),

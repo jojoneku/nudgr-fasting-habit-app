@@ -73,7 +73,7 @@ Color _parseHex(String hex) {
   try {
     return Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
   } catch (_) {
-    return const Color(0xFF94A3B8);
+    return Colors.grey;
   }
 }
 

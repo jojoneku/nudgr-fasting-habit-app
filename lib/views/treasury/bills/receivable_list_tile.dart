@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -16,14 +17,15 @@ class ReceivableListTile extends StatelessWidget {
     this.onDelete,
   });
 
-  Color _typeColor(ReceivableType type, ColorScheme colorScheme) {
+  Color _typeColor(ReceivableType type, BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     switch (type) {
       case ReceivableType.salary:
-        return const Color(0xFF4CAF50);
+        return context.appColors.success;
       case ReceivableType.reimbursement:
         return colorScheme.primary;
       case ReceivableType.business:
-        return const Color(0xFFFFB300);
+        return context.appColors.gold;
       case ReceivableType.other:
         return colorScheme.onSurfaceVariant;
     }
@@ -45,7 +47,7 @@ class ReceivableListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final typeColor = _typeColor(receivable.receivableType, colorScheme);
+    final typeColor = _typeColor(receivable.receivableType, context);
 
     Widget subtitleWidget;
     {
@@ -60,7 +62,7 @@ class ReceivableListTile extends StatelessWidget {
           'Received ${formatPeso(receivable.receivedAmount!)}'
           '${receivable.receivedDate != null ? ' · ${DateFormat('MMM d').format(receivable.receivedDate!)}' : ''}',
           style: TextStyle(
-            color: const Color(0xFF4CAF50).withValues(alpha: 0.85),
+            color: context.appColors.success.withValues(alpha: 0.85),
             fontSize: 12,
           ),
         ));
@@ -103,13 +105,13 @@ class ReceivableListTile extends StatelessWidget {
       ),
       subtitle: subtitleWidget,
       trailing: receivable.isReceived
-          ? Icon(Icons.check_circle, color: const Color(0xFF4CAF50), size: 24)
+          ? Icon(Icons.check_circle, color: context.appColors.success, size: 24)
           : SizedBox(
               height: 44,
               child: TextButton(
                 onPressed: onMarkReceived,
                 style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF4CAF50),
+                  foregroundColor: context.appColors.success,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
                 child: const Text(

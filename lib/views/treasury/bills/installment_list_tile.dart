@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -174,7 +175,7 @@ class _PaidChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const successColor = Color(0xFF4CAF50);
+    final successColor = context.appColors.success;
     return GestureDetector(
       onTap: onUndo,
       child: Container(
@@ -187,7 +188,7 @@ class _PaidChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.check, color: successColor, size: 12),
+            Icon(Icons.check, color: successColor, size: 12),
             const SizedBox(width: 4),
             Text(
               'Paid · Undo',

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
@@ -171,7 +172,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
               },
             ),
             ListTile(
-              leading: Icon(Icons.attach_money, color: const Color(0xFF4CAF50)),
+              leading:
+                  Icon(Icons.attach_money, color: context.appColors.success),
               title: const Text('Add Receivable'),
               onTap: () {
                 Navigator.pop(context);
@@ -180,7 +182,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
             ),
             ListTile(
               leading:
-                  Icon(Icons.savings_outlined, color: const Color(0xFFFFB300)),
+                  Icon(Icons.savings_outlined, color: context.appColors.gold),
               title: const Text('Add Budgeted Expense'),
               onTap: () {
                 Navigator.pop(context);
@@ -340,7 +342,7 @@ class _StatsBar extends StatelessWidget {
           _StatChip(
             label: 'Paid',
             value: formatPesoCompact(presenter.totalBillsPaid),
-            color: const Color(0xFF4CAF50),
+            color: context.appColors.success,
           ),
           const SizedBox(width: 8),
           _StatChip(
@@ -451,7 +453,7 @@ class _ReceivablesSection extends StatelessWidget {
       title: 'Receivables',
       count: receivables.length,
       subtitle: '$receivedCount/${receivables.length} received',
-      accentColor: const Color(0xFF4CAF50),
+      accentColor: context.appColors.success,
       initiallyExpanded: true,
       emptyIcon: Icons.account_balance_wallet_outlined,
       emptyMessage: 'No receivables for this month',
@@ -489,7 +491,7 @@ class _BudgetedExpensesSection extends StatelessWidget {
       title: 'BUDGETED EXPENSES',
       count: expenses.length,
       subtitle: '$paidCount/${expenses.length} paid',
-      accentColor: const Color(0xFFFFB300),
+      accentColor: context.appColors.gold,
       initiallyExpanded: false,
       emptyIcon: Icons.savings_outlined,
       emptyMessage: 'No budgeted expenses for this month',
@@ -531,7 +533,7 @@ class _InstallmentsSection extends StatelessWidget {
       title: 'Installments',
       count: installments.length,
       subtitle: subtitle,
-      accentColor: const Color(0xFF9C27B0),
+      accentColor: context.appColors.purple,
       initiallyExpanded: installments.isNotEmpty,
       emptyIcon: Icons.credit_score_outlined,
       emptyMessage: 'No installments due this month',

@@ -310,8 +310,8 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
             if (_items.isNotEmpty)
               Text(
                 '$_totalCalories kcal',
-                style: const TextStyle(
-                    color: AppColors.gold,
+                style: TextStyle(
+                    color: context.appColors.gold,
                     fontSize: 12,
                     fontWeight: FontWeight.w600),
               ),
@@ -548,8 +548,8 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
                 ),
                 child: Text(
                   '$_previewCalories kcal',
-                  style: const TextStyle(
-                      color: AppColors.gold,
+                  style: TextStyle(
+                      color: context.appColors.gold,
                       fontSize: 13,
                       fontWeight: FontWeight.w600),
                 ),
@@ -615,8 +615,8 @@ class _ItemChip extends StatelessWidget {
           ),
           Text(
             '${entry.calories} kcal',
-            style: const TextStyle(
-                color: AppColors.gold,
+            style: TextStyle(
+                color: context.appColors.gold,
                 fontSize: 12,
                 fontWeight: FontWeight.w600),
           ),
@@ -698,8 +698,8 @@ class _TemplateRow extends StatelessWidget {
             width: 44,
             height: 44,
             child: IconButton(
-              icon:
-                  const Icon(Icons.add_circle, color: AppColors.gold, size: 22),
+              icon: Icon(Icons.add_circle,
+                  color: context.appColors.gold, size: 22),
               tooltip: template.isMeal ? 'Add all items' : 'Add',
               onPressed: () => _showSlotPicker(context),
             ),

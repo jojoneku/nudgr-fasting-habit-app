@@ -161,6 +161,7 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     final p = presenter;
     return Column(
       children: [
@@ -173,26 +174,27 @@ class _HeroSection extends StatelessWidget {
             builder: (context, _) => CustomPaint(
               painter: _RingPainter(
                 progress: animation.value,
-                ringColor: p.isGoalMet ? AppColors.success : AppColors.gold,
+                ringColor: p.isGoalMet ? appColors.success : appColors.gold,
                 trackColor: theme.colorScheme.surfaceContainerLow,
                 distanceProgress: p.distanceProgress,
-                distanceColor:
-                    p.isDistanceGoalMet ? AppColors.success : AppColors.accent,
+                distanceColor: p.isDistanceGoalMet
+                    ? appColors.success
+                    : theme.colorScheme.tertiary,
               ),
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (p.isGoalMet)
-                      const Icon(Icons.emoji_events,
-                          color: AppColors.success, size: 18),
+                      Icon(Icons.emoji_events,
+                          color: appColors.success, size: 18),
                     Text(
                       _numFmt.format(p.todaySteps),
                       style: TextStyle(
                         fontSize: 34,
                         fontWeight: FontWeight.bold,
                         color: p.isGoalMet
-                            ? AppColors.success
+                            ? appColors.success
                             : theme.colorScheme.onSurface,
                         letterSpacing: -1,
                       ),
@@ -218,7 +220,7 @@ class _HeroSection extends StatelessWidget {
               : '${_numFmt.format(p.goals.dailyStepGoal - p.todaySteps > 0 ? p.goals.dailyStepGoal - p.todaySteps : 0)} steps to goal',
           style: TextStyle(
             color: p.isGoalMet
-                ? AppColors.success
+                ? appColors.success
                 : theme.colorScheme.onSurfaceVariant,
             fontSize: 13,
             fontWeight: p.isGoalMet ? FontWeight.w600 : FontWeight.normal,
@@ -299,6 +301,7 @@ class _WeeklyChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     final logs = presenter.weeklyLogs;
     final maxSteps = presenter.weeklyMaxSteps;
     final goalSteps = presenter.goals.dailyStepGoal;
@@ -335,9 +338,9 @@ class _WeeklyChart extends StatelessWidget {
               final isToday = log.date == todayKey;
               final ratio = maxSteps > 0 ? log.steps / maxSteps : 0.0;
               final barColor = log.goalMet
-                  ? AppColors.success
+                  ? appColors.success
                   : log.steps > 0
-                      ? AppColors.gold
+                      ? appColors.gold
                       : theme.colorScheme.surfaceContainerHighest;
               final dayLabel = _dayFmt
                   .format(DateTime.parse(log.date))
@@ -417,7 +420,7 @@ class _WeeklyChart extends StatelessWidget {
           const SizedBox(height: 10),
           Row(
             children: [
-              _legendDot(AppColors.success),
+              _legendDot(appColors.success),
               const SizedBox(width: 4),
               Text(
                 'Goal met',
@@ -426,7 +429,7 @@ class _WeeklyChart extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              _legendDot(AppColors.gold),
+              _legendDot(appColors.gold),
               const SizedBox(width: 4),
               Text(
                 'Active',
@@ -471,6 +474,8 @@ class _HcStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = presenter;
+    final appColors = context.appColors;
+    final theme = Theme.of(context);
 
     if (p.hasHealthPermission) {
       return Padding(
@@ -478,19 +483,19 @@ class _HcStatusChip extends StatelessWidget {
         child: Tooltip(
           message: 'Health Connect active',
           child: Icon(Icons.favorite,
-              color: AppColors.success.withValues(alpha: 0.8), size: 18),
+              color: appColors.success.withValues(alpha: 0.8), size: 18),
         ),
       );
     }
 
     if (p.isConnecting) {
-      return const Padding(
-        padding: EdgeInsets.only(right: 8),
+      return Padding(
+        padding: const EdgeInsets.only(right: 8),
         child: SizedBox(
           width: 16,
           height: 16,
           child: CircularProgressIndicator(
-              strokeWidth: 2, color: AppColors.accent),
+              strokeWidth: 2, color: theme.colorScheme.tertiary),
         ),
       );
     }
@@ -499,6 +504,7 @@ class _HcStatusChip extends StatelessWidget {
     final onTap = p.healthPermissionDenied
         ? () => p.openHealthConnectSettings()
         : () => p.requestHealthPermission();
+    final gold = appColors.gold;
 
     return Padding(
       padding: const EdgeInsets.only(right: 4),
@@ -507,21 +513,19 @@ class _HcStatusChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
           decoration: BoxDecoration(
-            color: AppColors.gold.withValues(alpha: 0.15),
+            color: gold.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.gold.withValues(alpha: 0.4)),
+            border: Border.all(color: gold.withValues(alpha: 0.4)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.sync_outlined, color: AppColors.gold, size: 13),
+              Icon(Icons.sync_outlined, color: gold, size: 13),
               const SizedBox(width: 4),
               Text(
                 label,
-                style: const TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: gold, fontSize: 11, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -559,6 +563,7 @@ class _CalendarSectionState extends State<_CalendarSection> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     final p = widget.presenter;
     final today = DateTime.now();
     final month = DateTime(today.year, today.month);
@@ -658,13 +663,13 @@ class _CalendarSectionState extends State<_CalendarSection> {
               final ringColor = !hasSteps
                   ? Colors.transparent
                   : log.goalMet
-                      ? AppColors.success
-                      : AppColors.gold;
+                      ? appColors.success
+                      : appColors.gold;
               final distProgress = hasDist && goalDist > 0
                   ? (log.distanceMeters! / goalDist).clamp(0.0, 1.0).toDouble()
                   : 0.0;
               final distColor = hasDist && goalDist > 0
-                  ? AppColors.accent
+                  ? theme.colorScheme.tertiary
                   : Colors.transparent;
               final labelColor = ringColor != Colors.transparent
                   ? ringColor
@@ -741,11 +746,11 @@ class _CalendarSectionState extends State<_CalendarSection> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _calLegend(AppColors.success, 'Steps goal', theme),
+              _calLegend(appColors.success, 'Steps goal', theme),
               const SizedBox(width: 12),
-              _calLegend(AppColors.gold, 'Active', theme),
+              _calLegend(appColors.gold, 'Active', theme),
               const SizedBox(width: 12),
-              _calLegend(AppColors.accent, 'Distance', theme),
+              _calLegend(theme.colorScheme.tertiary, 'Distance', theme),
             ],
           ),
         ],
@@ -1161,6 +1166,7 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     final month = widget.month;
     final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
     final firstWeekday = DateTime(month.year, month.month, 1).weekday % 7;
@@ -1225,15 +1231,15 @@ class _MonthCalendarGridState extends State<_MonthCalendarGrid> {
               final ringColor = !hasSteps
                   ? Colors.transparent
                   : log.goalMet
-                      ? AppColors.success
-                      : AppColors.gold;
+                      ? appColors.success
+                      : appColors.gold;
               final distProgress = hasDist && widget.goalDistanceMeters > 0
                   ? (log.distanceMeters! / widget.goalDistanceMeters)
                       .clamp(0.0, 1.0)
                       .toDouble()
                   : 0.0;
               final distColor = hasDist && widget.goalDistanceMeters > 0
-                  ? AppColors.accent
+                  ? theme.colorScheme.tertiary
                   : Colors.transparent;
               final labelColor = ringColor != Colors.transparent
                   ? ringColor
@@ -1338,8 +1344,9 @@ class _DayDetail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final appColors = context.appColors;
     final date = DateTime.parse(log.date);
-    final accentColor = log.goalMet ? AppColors.success : AppColors.gold;
+    final accentColor = log.goalMet ? appColors.success : appColors.gold;
     return AppCard(
       variant: AppCardVariant.outlined,
       padding: const EdgeInsets.all(14),
@@ -1361,14 +1368,14 @@ class _DayDetail extends StatelessWidget {
               if (calories != null) ...[
                 const SizedBox(width: 8),
                 _chip(MdiIcons.fire, '${calories!.round()} kcal',
-                    const Color(0xFFFF6D00)),
+                    context.appColors.orange),
               ],
               if (log.distanceMeters != null) ...[
                 const SizedBox(width: 8),
                 _chip(
                     MdiIcons.mapMarkerDistance,
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
-                    AppColors.accent),
+                    theme.colorScheme.tertiary),
               ],
             ],
           ),
@@ -1485,7 +1492,8 @@ class _RingPainter extends CustomPainter {
     required this.ringColor,
     required this.trackColor,
     this.distanceProgress = 0.0,
-    this.distanceColor = AppColors.accent,
+    this.distanceColor = const Color(
+        0xFF00BCD4), // accent teal fallback — callers must pass colorScheme.tertiary
   });
 
   void _drawRing(Canvas canvas, Offset center, double radius,

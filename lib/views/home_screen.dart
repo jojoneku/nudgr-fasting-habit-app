@@ -25,7 +25,6 @@ import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/update_presenter.dart';
-import '../app_colors.dart';
 import 'hub_screen.dart';
 import 'settings_screen.dart';
 import 'stats_view.dart';
@@ -246,7 +245,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     return Stack(
       children: [
         Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: screens[_selectedIndex],
           floatingActionButton: _selectedIndex == 1
               ? _AiCoachFab(
@@ -336,28 +335,33 @@ class _AiCoachFabState extends State<_AiCoachFab>
         onTapCancel: () => _ctrl.reverse(),
         child: ScaleTransition(
           scale: _scale,
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.45),
-                width: 1,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.25),
-                  blurRadius: 18,
-                  offset: const Offset(0, 8),
+          child: Builder(
+            builder: (context) {
+              final theme = Theme.of(context);
+              return Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                      blurRadius: 18,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: const Center(
-              child: Icon(Icons.psychology_outlined,
-                  color: AppColors.background, size: 24),
-            ),
+                child: Center(
+                  child: Icon(Icons.psychology_outlined,
+                      color: theme.colorScheme.onPrimary, size: 24),
+                ),
+              );
+            },
           ),
         ),
       );

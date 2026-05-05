@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -78,9 +79,10 @@ class _BudgetProgressRow extends StatelessWidget {
     required this.isTotal,
   });
 
-  Color _progressColor(double ratio, ColorScheme colorScheme) {
+  Color _progressColor(double ratio, BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     if (ratio >= 1.0) return colorScheme.error;
-    if (ratio >= 0.75) return const Color(0xFFFFB300);
+    if (ratio >= 0.75) return context.appColors.gold;
     return colorScheme.tertiary;
   }
 
@@ -90,7 +92,7 @@ class _BudgetProgressRow extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final ratio = allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0;
     final barColor =
-        _progressColor(allocated > 0 ? spent / allocated : 0.0, colorScheme);
+        _progressColor(allocated > 0 ? spent / allocated : 0.0, context);
     final percentText =
         allocated > 0 ? '${(spent / allocated * 100).round()}%' : '—';
 

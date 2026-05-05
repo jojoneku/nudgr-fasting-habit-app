@@ -70,7 +70,7 @@ class _Snapshot extends StatelessWidget {
           value: progress,
           height: 4,
           color: activity.isGoalMet
-              ? AppColors.success
+              ? context.appColors.success
               : theme.colorScheme.primary,
         ),
         if (activity.todayLog.activeCalories != null) ...[

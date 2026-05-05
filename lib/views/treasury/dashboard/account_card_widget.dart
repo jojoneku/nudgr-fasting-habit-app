@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -16,12 +15,12 @@ class AccountCardWidget extends StatelessWidget {
     this.heldAmount = 0.0,
   });
 
-  Color _parseColor() {
+  Color _parseColor(BuildContext context) {
     try {
       final hex = account.colorHex.replaceFirst('#', '');
       return Color(int.parse('FF$hex', radix: 16));
     } catch (_) {
-      return AppColors.accent;
+      return Theme.of(context).colorScheme.tertiary;
     }
   }
 
@@ -70,7 +69,7 @@ class AccountCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final accentColor = _parseColor();
+    final accentColor = _parseColor(context);
 
     return Semantics(
       label:

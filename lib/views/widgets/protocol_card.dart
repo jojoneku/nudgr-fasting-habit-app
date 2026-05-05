@@ -72,13 +72,14 @@ class FastingProtocol {
     ),
   ];
 
-  Color get tierColor {
+  Color tierColor(BuildContext context) {
+    final theme = Theme.of(context);
     if (isExtended) {
-      return hours >= 48 ? AppColors.danger : const Color(0xFFFF7043);
+      return hours >= 48 ? theme.colorScheme.error : context.appColors.orange;
     }
-    if (hours >= 20) return const Color(0xFFAB47BC);
-    if (hours >= 16) return AppColors.secondary;
-    return AppColors.neutral;
+    if (hours >= 20) return context.appColors.purple;
+    if (hours >= 16) return theme.colorScheme.secondary;
+    return theme.colorScheme.outline;
   }
 }
 

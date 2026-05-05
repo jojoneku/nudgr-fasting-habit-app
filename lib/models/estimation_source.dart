@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_colors.dart';
 
 enum EstimationSource {
   db,
@@ -23,15 +24,6 @@ enum EstimationSource {
         EstimationSource.userManual => 'Set',
       };
 
-  Color get badgeColor => switch (this) {
-        EstimationSource.db ||
-        EstimationSource.personalDict ||
-        EstimationSource.userManual =>
-          const Color(0xFF6B7280),
-        EstimationSource.aiPerItem => const Color(0xFFF59E0B),
-        EstimationSource.keywordDensity => const Color(0xFFEF4444),
-      };
-
   static EstimationSource fromJson(String? value) => switch (value) {
         'personalDict' => EstimationSource.personalDict,
         'aiPerItem' => EstimationSource.aiPerItem,
@@ -39,4 +31,18 @@ enum EstimationSource {
         'userManual' => EstimationSource.userManual,
         _ => EstimationSource.db,
       };
+}
+
+extension EstimationSourceColor on EstimationSource {
+  Color badgeColor(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (this) {
+      EstimationSource.db ||
+      EstimationSource.personalDict ||
+      EstimationSource.userManual =>
+        cs.onSurfaceVariant,
+      EstimationSource.aiPerItem => context.appColors.gold,
+      EstimationSource.keywordDensity => cs.error,
+    };
+  }
 }

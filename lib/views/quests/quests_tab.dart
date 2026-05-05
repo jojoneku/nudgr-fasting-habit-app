@@ -297,6 +297,7 @@ class _DailyProgressHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.md, AppSpacing.md, AppSpacing.md, AppSpacing.sm),
       child: AppCard(
+        variant: AppCardVariant.elevated,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -306,7 +307,7 @@ class _DailyProgressHeader extends StatelessWidget {
                   allDone ? 'All done!' : "Today's progress",
                   style: AppTextStyles.titleSmall.copyWith(
                     color: allDone
-                        ? AppColors.success
+                        ? context.appColors.success
                         : theme.colorScheme.onSurface,
                   ),
                 ),
@@ -319,15 +320,15 @@ class _DailyProgressHeader extends StatelessWidget {
                 ),
                 if (allDone) ...[
                   const SizedBox(width: 6),
-                  const Icon(Icons.emoji_events,
-                      size: 16, color: AppColors.success),
+                  Icon(Icons.emoji_events,
+                      size: 16, color: context.appColors.success),
                 ],
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
             AppLinearProgress(
               value: progress,
-              color: allDone ? AppColors.success : null,
+              color: allDone ? context.appColors.success : null,
               height: 4,
             ),
           ],
@@ -402,7 +403,7 @@ class _QuestGroupCard extends StatelessWidget {
         .length;
 
     return AppCard(
-      variant: AppCardVariant.outlined,
+      variant: AppCardVariant.elevated,
       padding: EdgeInsets.zero,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

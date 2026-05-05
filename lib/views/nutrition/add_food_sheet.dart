@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../app_colors.dart';
+import '../../app_colors.dart'; // context.appColors
 import '../../models/food_entry.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
@@ -69,10 +69,10 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   Widget _buildHeader(ColorScheme cs) {
     return Row(
       children: [
-        const Text(
+        Text(
           'LOG FOOD',
           style: TextStyle(
-            color: AppColors.gold,
+            color: context.appColors.gold,
             fontSize: 12,
             letterSpacing: 2.0,
             fontWeight: FontWeight.w600,
@@ -193,7 +193,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
             height: 48,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
+                backgroundColor: context.appColors.gold,
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -226,7 +226,7 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.gold, width: 1),
+        borderSide: BorderSide(color: context.appColors.gold, width: 1),
       ),
     );
   }

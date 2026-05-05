@@ -124,8 +124,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
           const SizedBox(height: 10),
           _buildInputField(),
           if (_isSearching)
-            const LinearProgressIndicator(
-              color: AppColors.accent,
+            LinearProgressIndicator(
+              color: Theme.of(context).colorScheme.tertiary,
               backgroundColor: Colors.transparent,
               minHeight: 2,
             ),
@@ -231,7 +231,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
               borderSide: BorderSide.none),
           focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: const BorderSide(color: AppColors.accent, width: 1)),
+              borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.tertiary, width: 1)),
           contentPadding:
               const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         ),
@@ -284,12 +285,12 @@ class _LogMealSheetState extends State<LogMealSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 22,
               height: 22,
               child: CircularProgressIndicator(
                 strokeWidth: 2.5,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 14),
@@ -379,8 +380,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
                                   TextStyle(color: cs.onSurface, fontSize: 12)),
                           const SizedBox(width: 6),
                           Text('$cal',
-                              style: const TextStyle(
-                                  color: AppColors.gold,
+                              style: TextStyle(
+                                  color: ctx.appColors.gold,
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600)),
                         ],
@@ -472,8 +473,11 @@ class _LogMealSheetState extends State<LogMealSheet> {
               height: 44,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.accent.withValues(alpha: 0.12),
-                  foregroundColor: AppColors.accent,
+                  backgroundColor: Theme.of(context)
+                      .colorScheme
+                      .tertiary
+                      .withValues(alpha: 0.12),
+                  foregroundColor: Theme.of(context).colorScheme.tertiary,
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
@@ -519,18 +523,19 @@ class _LogMealSheetState extends State<LogMealSheet> {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.06),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: AppColors.danger, size: 15),
+            Icon(Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error, size: 15),
             const SizedBox(width: 8),
             Expanded(
               child: Text(parseError,
-                  style:
-                      const TextStyle(color: AppColors.danger, fontSize: 12)),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12)),
             ),
             GestureDetector(
               onTap: widget.presenter.clearParseResult,
@@ -569,18 +574,19 @@ class _LogMealSheetState extends State<LogMealSheet> {
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: AppColors.danger.withValues(alpha: 0.06),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
-            const Icon(Icons.warning_amber_rounded,
-                color: AppColors.danger, size: 15),
+            Icon(Icons.warning_amber_rounded,
+                color: Theme.of(context).colorScheme.error, size: 15),
             const SizedBox(width: 8),
             Expanded(
               child: Text(error,
-                  style:
-                      const TextStyle(color: AppColors.danger, fontSize: 12)),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12)),
             ),
             GestureDetector(
               onTap: widget.presenter.clearEstimate,
@@ -635,8 +641,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
             children: [
               Text(
                 '$_totalCalories kcal',
-                style: const TextStyle(
-                    color: AppColors.gold,
+                style: TextStyle(
+                    color: context.appColors.gold,
                     fontSize: 13,
                     fontWeight: FontWeight.w600),
               ),
@@ -646,7 +652,10 @@ class _LogMealSheetState extends State<LogMealSheet> {
                 child: Text(
                   'Clear all',
                   style: TextStyle(
-                      color: AppColors.danger.withValues(alpha: 0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .error
+                          .withValues(alpha: 0.7),
                       fontSize: 12),
                 ),
               ),
@@ -658,8 +667,8 @@ class _LogMealSheetState extends State<LogMealSheet> {
               Switch.adaptive(
                 value: _saveAsTemplate,
                 onChanged: (v) => setState(() => _saveAsTemplate = v),
-                activeThumbColor: AppColors.gold,
-                activeTrackColor: AppColors.gold.withValues(alpha: 0.4),
+                activeThumbColor: context.appColors.gold,
+                activeTrackColor: context.appColors.gold.withValues(alpha: 0.4),
                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               const SizedBox(width: 8),
@@ -698,7 +707,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor:
-                    hasItems ? AppColors.gold : cs.surfaceContainerHigh,
+                    hasItems ? context.appColors.gold : cs.surfaceContainerHigh,
                 foregroundColor:
                     hasItems ? Colors.black87 : cs.onSurfaceVariant,
                 elevation: 0,
@@ -755,8 +764,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
                   borderSide: BorderSide.none),
               focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide:
-                      const BorderSide(color: AppColors.primary, width: 1)),
+                  borderSide: BorderSide(color: cs.primary, width: 1)),
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
@@ -769,8 +777,7 @@ class _LogMealSheetState extends State<LogMealSheet> {
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Save',
-                  style: TextStyle(color: AppColors.primary)),
+              child: Text('Save', style: TextStyle(color: cs.primary)),
             ),
           ],
         ),
@@ -852,8 +859,8 @@ class _CartRow extends StatelessWidget {
           ),
           Text(
             '${pending.entry.calories} kcal',
-            style: const TextStyle(
-                color: AppColors.gold,
+            style: TextStyle(
+                color: context.appColors.gold,
                 fontSize: 12,
                 fontWeight: FontWeight.w500),
           ),
@@ -936,10 +943,10 @@ class _TemplateCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Text(
+                Text(
                   '+ Add',
                   style: TextStyle(
-                      color: AppColors.gold,
+                      color: context.appColors.gold,
                       fontSize: 12,
                       fontWeight: FontWeight.w600),
                 ),
@@ -1012,10 +1019,10 @@ class _ParseResultCardState extends State<_ParseResultCard> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.06),
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.2),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
           width: 0.5,
         ),
       ),
@@ -1024,15 +1031,15 @@ class _ParseResultCardState extends State<_ParseResultCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.manage_search_outlined,
-                  color: AppColors.primary, size: 14),
+              Icon(Icons.manage_search_outlined,
+                  color: Theme.of(context).colorScheme.primary, size: 14),
               const SizedBox(width: 6),
               Text(
                 widget.result.usedModel
                     ? 'AI parsed ${widget.result.items.length} items'
                     : '${widget.result.items.length} items matched',
-                style: const TextStyle(
-                    color: AppColors.primary,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w600,
                     fontSize: 13),
               ),
@@ -1069,7 +1076,7 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                       value: _selected[i],
                       onChanged: (v) =>
                           setState(() => _selected[i] = v ?? false),
-                      activeColor: AppColors.primary,
+                      activeColor: Theme.of(context).colorScheme.primary,
                       side: BorderSide(
                           color: Theme.of(context)
                               .colorScheme
@@ -1105,7 +1112,7 @@ class _ParseResultCardState extends State<_ParseResultCard> {
                     '${hasDb ? '' : '~'}$cal kcal',
                     style: TextStyle(
                         color: hasDb
-                            ? AppColors.gold
+                            ? context.appColors.gold
                             : Theme.of(context).colorScheme.onSurfaceVariant,
                         fontSize: 12,
                         fontWeight: FontWeight.w600),
@@ -1120,7 +1127,7 @@ class _ParseResultCardState extends State<_ParseResultCard> {
             height: 42,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.black,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -1169,20 +1176,23 @@ class _AiUnavailableBanner extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
-                    color: AppColors.accent.withValues(alpha: 0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .tertiary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.auto_awesome,
-                      color: AppColors.accent, size: 14),
+                  child: Icon(Icons.auto_awesome,
+                      color: Theme.of(context).colorScheme.tertiary, size: 14),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('On-Device AI',
+                      Text('On-Device AI',
                           style: TextStyle(
-                              color: AppColors.accent,
+                              color: Theme.of(context).colorScheme.tertiary,
                               fontWeight: FontWeight.w600,
                               fontSize: 13)),
                       Text('Fully private — no internet needed',
@@ -1212,8 +1222,8 @@ class _AiUnavailableBanner extends StatelessWidget {
                     minHeight: 6,
                     backgroundColor:
                         Theme.of(context).colorScheme.surfaceContainerHigh,
-                    valueColor:
-                        const AlwaysStoppedAnimation<Color>(AppColors.accent),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.tertiary),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1224,8 +1234,8 @@ class _AiUnavailableBanner extends StatelessWidget {
                         style: TextStyle(
                             color: cs.onSurfaceVariant, fontSize: 11)),
                     Text('$progress%',
-                        style: const TextStyle(
-                            color: AppColors.accent,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.tertiary,
                             fontSize: 11,
                             fontWeight: FontWeight.w600)),
                   ],
@@ -1236,8 +1246,11 @@ class _AiUnavailableBanner extends StatelessWidget {
                   height: 44,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent.withValues(alpha: 0.12),
-                      foregroundColor: AppColors.accent,
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .tertiary
+                          .withValues(alpha: 0.12),
+                      foregroundColor: Theme.of(context).colorScheme.tertiary,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10)),
@@ -1289,7 +1302,7 @@ class _AiResultCardState extends State<_AiResultCard> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.accent.withValues(alpha: 0.06),
+        color: Theme.of(context).colorScheme.tertiary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -1297,12 +1310,13 @@ class _AiResultCardState extends State<_AiResultCard> {
         children: [
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: AppColors.accent, size: 14),
+              Icon(Icons.auto_awesome,
+                  color: Theme.of(context).colorScheme.tertiary, size: 14),
               const SizedBox(width: 6),
               Text(
                 '~$total kcal estimated',
-                style: const TextStyle(
-                    color: AppColors.accent,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.tertiary,
                     fontWeight: FontWeight.w600,
                     fontSize: 13),
               ),
@@ -1333,21 +1347,23 @@ class _AiResultCardState extends State<_AiResultCard> {
                             fontSize: 12)),
                   ),
                   if (item.protein != null)
-                    _macroBadge('P', item.protein!.round(), AppColors.success),
+                    _macroBadge(
+                        'P', item.protein!.round(), context.appColors.success),
                   if (item.carbs != null)
-                    _macroBadge('C', item.carbs!.round(), AppColors.accent),
+                    _macroBadge('C', item.carbs!.round(),
+                        Theme.of(context).colorScheme.tertiary),
                   if (item.fat != null)
-                    _macroBadge('F', item.fat!.round(), AppColors.gold),
+                    _macroBadge('F', item.fat!.round(), context.appColors.gold),
                   const SizedBox(width: 4),
                   Text('${item.calories}',
-                      style: const TextStyle(
-                          color: AppColors.gold,
+                      style: TextStyle(
+                          color: context.appColors.gold,
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 4),
                   IconButton(
-                    icon: const Icon(Icons.remove_circle_outline,
-                        color: AppColors.danger, size: 14),
+                    icon: Icon(Icons.remove_circle_outline,
+                        color: Theme.of(context).colorScheme.error, size: 14),
                     onPressed: () => setState(() => _items.removeAt(i)),
                     padding: EdgeInsets.zero,
                     constraints:
@@ -1363,7 +1379,7 @@ class _AiResultCardState extends State<_AiResultCard> {
             height: 42,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accent,
+                backgroundColor: Theme.of(context).colorScheme.tertiary,
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10)),
@@ -1458,15 +1474,16 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     const SizedBox(height: 2),
                     Row(children: [
                       Text('$cal kcal',
-                          style: const TextStyle(
-                              color: AppColors.gold,
+                          style: TextStyle(
+                              color: context.appColors.gold,
                               fontSize: 12,
                               fontWeight: FontWeight.w600)),
                       if (protein != null) ...[
                         const SizedBox(width: 8),
                         Text('P ${protein.round()}g',
-                            style: const TextStyle(
-                                color: AppColors.success, fontSize: 11)),
+                            style: TextStyle(
+                                color: context.appColors.success,
+                                fontSize: 11)),
                       ],
                     ]),
                   ],
@@ -1510,14 +1527,14 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                     width: 34,
                     height: 34,
                     child: Material(
-                      color: AppColors.gold.withValues(alpha: 0.12),
+                      color: context.appColors.gold.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(8),
                         onTap: () =>
                             widget.onAdd(widget.entry.toFoodEntry(_grams)),
-                        child: const Icon(Icons.add,
-                            color: AppColors.gold, size: 18),
+                        child: Icon(Icons.add,
+                            color: context.appColors.gold, size: 18),
                       ),
                     ),
                   ),
@@ -1538,18 +1555,20 @@ class _SearchResultRowState extends State<_SearchResultRow> {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: selected
-                        ? AppColors.gold.withValues(alpha: 0.15)
+                        ? context.appColors.gold.withValues(alpha: 0.15)
                         : cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: selected ? AppColors.gold : cs.outlineVariant,
+                      color:
+                          selected ? context.appColors.gold : cs.outlineVariant,
                       width: selected ? 1 : 0.5,
                     ),
                   ),
                   child: Text('${g.round()}g',
                       style: TextStyle(
-                          color:
-                              selected ? AppColors.gold : cs.onSurfaceVariant,
+                          color: selected
+                              ? context.appColors.gold
+                              : cs.onSurfaceVariant,
                           fontSize: 11,
                           fontWeight:
                               selected ? FontWeight.w600 : FontWeight.normal)),
@@ -1689,7 +1708,7 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             height: 50,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.gold,
+                backgroundColor: context.appColors.gold,
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
@@ -1718,7 +1737,8 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             borderSide: BorderSide.none),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.accent, width: 1)),
+            borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.tertiary, width: 1)),
         isDense: true,
         contentPadding:
             const EdgeInsets.symmetric(horizontal: 12, vertical: 10),

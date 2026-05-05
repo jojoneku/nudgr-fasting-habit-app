@@ -9,13 +9,16 @@ import '../../../utils/app_spacing.dart';
 import '../../widgets/system/system.dart';
 import '../quest_detail_view.dart';
 
-Color linkedStatColor(LinkedStat stat) => switch (stat) {
-      LinkedStat.str => const Color(0xFFEF5350),
-      LinkedStat.vit => const Color(0xFF66BB6A),
-      LinkedStat.agi => const Color(0xFF29B6F6),
-      LinkedStat.intl => const Color(0xFFCE93D8),
-      LinkedStat.sen => const Color(0xFFFFCA28),
-    };
+Color linkedStatColor(LinkedStat stat, BuildContext context) {
+  final cs = Theme.of(context).colorScheme;
+  return switch (stat) {
+    LinkedStat.str => cs.error,
+    LinkedStat.vit => context.appColors.success,
+    LinkedStat.agi => cs.primary,
+    LinkedStat.intl => context.appColors.purple,
+    LinkedStat.sen => context.appColors.gold,
+  };
+}
 
 IconData linkedStatIcon(LinkedStat stat) => switch (stat) {
       LinkedStat.str => MdiIcons.weightLifter,
@@ -113,8 +116,9 @@ class _QuestTileState extends State<_QuestTile>
   Quest get q => widget.quest;
   QuestPresenter get presenter => widget.presenter;
 
-  Color get _statColor =>
-      q.linkedStat != null ? linkedStatColor(q.linkedStat!) : AppColors.primary;
+  Color _statColor(BuildContext context) => q.linkedStat != null
+      ? linkedStatColor(q.linkedStat!, context)
+      : Theme.of(context).colorScheme.primary;
 
   @override
   Widget build(BuildContext context) {
@@ -128,7 +132,7 @@ class _QuestTileState extends State<_QuestTile>
         scale: _scale,
         child: AppListTile(
           key: Key('quest_${q.id}'),
-          leading: _buildLeading(isCompleted),
+          leading: _buildLeading(context, isCompleted),
           title: Text(
             q.title,
             style: TextStyle(
@@ -161,20 +165,21 @@ class _QuestTileState extends State<_QuestTile>
     );
   }
 
-  Widget _buildLeading(bool isCompleted) {
+  Widget _buildLeading(BuildContext context, bool isCompleted) {
+    final sc = _statColor(context);
     final progress =
         q.linkedStat != null ? presenter.statProgressFor(q.id) : 0.0;
     return AppCircularProgress(
       value: progress,
       size: 44,
-      color: isCompleted ? null : _statColor,
-      backgroundColor: isCompleted ? null : _statColor.withValues(alpha: 0.12),
+      color: isCompleted ? null : sc,
+      backgroundColor: isCompleted ? null : sc.withValues(alpha: 0.12),
       centerChild: Icon(
         q.linkedStat != null
             ? linkedStatIcon(q.linkedStat!)
             : MdiIcons.circleDouble,
         size: 20,
-        color: isCompleted ? null : _statColor,
+        color: isCompleted ? null : sc,
       ),
     );
   }
@@ -182,6 +187,7 @@ class _QuestTileState extends State<_QuestTile>
   Widget _buildSubtitle(BuildContext context, bool isCompleted) {
     final timeStr = TimeOfDay(hour: q.hour, minute: q.minute).format(context);
     final theme = Theme.of(context);
+    final sc = _statColor(context);
     return Wrap(
       spacing: 8,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -194,7 +200,7 @@ class _QuestTileState extends State<_QuestTile>
             linkedStatLabel(q.linkedStat!),
             style: TextStyle(
               fontSize: 11,
-              color: _statColor.withValues(alpha: 0.8),
+              color: sc.withValues(alpha: 0.8),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -214,13 +220,15 @@ class _QuestTileState extends State<_QuestTile>
 
   Widget _buildTrailing(
       BuildContext context, bool isCompleted, bool isPartial) {
+    final theme = Theme.of(context);
+    final sc = _statColor(context);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         if (!isCompleted) ...[
           AppBadge(
             text: '+${q.xpReward} XP',
-            color: AppColors.gold,
+            color: context.appColors.gold,
             variant: AppBadgeVariant.tonal,
           ),
           const SizedBox(width: 4),
@@ -238,10 +246,10 @@ class _QuestTileState extends State<_QuestTile>
               color: isCompleted
                   ? null
                   : isPartial
-                      ? AppColors.secondary
+                      ? theme.colorScheme.secondary
                       : widget.isMissed
-                          ? AppColors.error
-                          : _statColor,
+                          ? theme.colorScheme.error
+                          : sc,
             ),
             onPressed: _onComplete,
           ),
@@ -303,8 +311,8 @@ class _QuestTileState extends State<_QuestTile>
         mainAxisSize: MainAxisSize.min,
         children: [
           AppListTile(
-            leading: const Icon(Icons.check_circle_outline,
-                color: AppColors.success),
+            leading: Icon(Icons.check_circle_outline,
+                color: context.appColors.success),
             title: const Text('Full completion'),
             subtitle: Text('+${q.xpReward} XP'),
             onTap: () {
@@ -313,7 +321,8 @@ class _QuestTileState extends State<_QuestTile>
             },
           ),
           AppListTile(
-            leading: const Icon(Icons.adjust, color: AppColors.secondary),
+            leading: Icon(Icons.adjust,
+                color: Theme.of(context).colorScheme.secondary),
             title: const Text('Minimum version'),
             subtitle: Text(
               q.minimumVersion ?? '',
@@ -363,8 +372,8 @@ class _EditTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statColor = quest.linkedStat != null
-        ? linkedStatColor(quest.linkedStat!)
-        : AppColors.neutral;
+        ? linkedStatColor(quest.linkedStat!, context)
+        : Theme.of(context).colorScheme.outline;
     final timeStr =
         TimeOfDay(hour: quest.hour, minute: quest.minute).format(context);
     const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

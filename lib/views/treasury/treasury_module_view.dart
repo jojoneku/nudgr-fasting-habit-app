@@ -45,7 +45,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
     return DefaultTabController(
       length: TreasuryModuleView.tabCount,
       child: Scaffold(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: colorScheme.surfaceContainer,
           title: Text(

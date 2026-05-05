@@ -53,10 +53,10 @@ class _LevelUpOverlayState extends State<LevelUpOverlay>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
+              Text(
                 'Level up!',
                 style: TextStyle(
-                  color: AppColors.gold,
+                  color: context.appColors.gold,
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.0,

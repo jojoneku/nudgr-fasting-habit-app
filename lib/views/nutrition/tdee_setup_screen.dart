@@ -226,7 +226,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                     value: '${profile.targetCalories}',
                     suffix: 'kcal / day',
                     size: AppNumberSize.headline,
-                    color: AppColors.gold,
+                    color: context.appColors.gold,
                     textAlign: TextAlign.start,
                   ),
                   const SizedBox(height: 4),
@@ -360,7 +360,7 @@ class _StepIndicator extends StatelessWidget {
             height: 3,
             decoration: BoxDecoration(
               color: active
-                  ? AppColors.gold
+                  ? context.appColors.gold
                   : theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(2),
             ),
@@ -426,6 +426,7 @@ class _RadioTile<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final gold = context.appColors.gold;
     final selected = value == groupValue;
     return GestureDetector(
       onTap: () => onChanged(value),
@@ -434,12 +435,12 @@ class _RadioTile<T> extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
-              ? AppColors.gold.withValues(alpha: 0.1)
+              ? gold.withValues(alpha: 0.1)
               : theme.colorScheme.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
-                ? AppColors.gold.withValues(alpha: 0.5)
+                ? gold.withValues(alpha: 0.5)
                 : theme.colorScheme.outlineVariant,
           ),
         ),
@@ -449,7 +450,7 @@ class _RadioTile<T> extends StatelessWidget {
               value: value,
               groupValue: groupValue,
               onChanged: onChanged,
-              activeColor: AppColors.gold,
+              activeColor: gold,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
             const SizedBox(width: 8),
@@ -460,9 +461,7 @@ class _RadioTile<T> extends StatelessWidget {
                   Text(
                     label,
                     style: TextStyle(
-                      color: selected
-                          ? AppColors.gold
-                          : theme.colorScheme.onSurface,
+                      color: selected ? gold : theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),

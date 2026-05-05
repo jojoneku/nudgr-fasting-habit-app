@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import '../../app_colors.dart';
 import '../../models/habit_routine.dart';
 import '../../models/quest.dart';
 import '../../presenters/quest_presenter.dart';
@@ -735,7 +734,9 @@ class _StatPicker extends StatelessWidget {
 
   Widget _chip(BuildContext context, LinkedStat? stat) {
     final isSelected = selected == stat;
-    final color = stat != null ? linkedStatColor(stat) : AppColors.neutral;
+    final theme = Theme.of(context);
+    final neutralColor = theme.colorScheme.outline;
+    final color = stat != null ? linkedStatColor(stat, context) : neutralColor;
     final label = stat != null ? linkedStatLabel(stat) : 'None';
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
@@ -744,20 +745,21 @@ class _StatPicker extends StatelessWidget {
         selectedColor: color.withValues(alpha: 0.2),
         checkmarkColor: color,
         side: BorderSide(
-            color:
-                isSelected ? color : AppColors.neutral.withValues(alpha: 0.4)),
+            color: isSelected ? color : neutralColor.withValues(alpha: 0.4)),
         label: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (stat != null) ...[
               Icon(linkedStatIcon(stat),
                   size: 13,
-                  color: isSelected ? color : AppColors.textSecondary),
+                  color:
+                      isSelected ? color : theme.colorScheme.onSurfaceVariant),
               const SizedBox(width: 4),
             ],
             Text(label,
                 style: TextStyle(
-                  color: isSelected ? color : AppColors.textSecondary,
+                  color:
+                      isSelected ? color : theme.colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 )),
           ],
@@ -799,7 +801,7 @@ class _GroupPicker extends StatelessWidget {
             label: 'No group',
             subtitle: 'Standalone quest',
             isSelected: selectedGroupId == null,
-            color: AppColors.neutral,
+            color: Theme.of(context).colorScheme.outline,
             onTap: () => onChanged(null),
           ),
           if (groups.isNotEmpty) ...[
