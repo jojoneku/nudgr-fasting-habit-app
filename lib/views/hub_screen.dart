@@ -218,18 +218,6 @@ class _HubScreenState extends State<HubScreen>
         controller: _fabCtrl,
         isOpen: _isFabOpen,
         onToggle: _toggleFab,
-        onClose: _closeFab,
-        onNutrition: widget.nutritionPresenter != null
-            ? () => _pushNutritionScreen(context)
-            : null,
-        onActivity: widget.activityPresenter != null
-            ? () => _pushActivityScreen(context)
-            : null,
-        onFinance: widget.treasuryPresenter != null
-            ? () => _pushTreasuryScreen(context)
-            : null,
-        onQuests: () => _pushQuestsTab(context),
-        onFasting: () => _pushTimerTab(context),
       ),
       bottomNavigationBar: AnimatedBuilder(
         animation: _fabCtrl,
@@ -345,6 +333,34 @@ class _HubScreenState extends State<HubScreen>
                 ),
               );
             },
+          ),
+          // Fan items live in the body Stack (not inside the FAB) so taps
+          // outside the FAB's tiny hit-test box still register. Rendered above
+          // the scrim so taps reach the items first.
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              ignoring: !_isFabOpen,
+              child: Center(
+                child: _FanLayer(
+                  controller: _fabCtrl,
+                  onClose: _closeFab,
+                  onNutrition: widget.nutritionPresenter != null
+                      ? () => _pushNutritionScreen(context)
+                      : null,
+                  onActivity: widget.activityPresenter != null
+                      ? () => _pushActivityScreen(context)
+                      : null,
+                  onFinance: widget.treasuryPresenter != null
+                      ? () => _pushTreasuryScreen(context)
+                      : null,
+                  onQuests: () => _pushQuestsTab(context),
+                  onFasting: () => _pushTimerTab(context),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -554,6 +570,78 @@ class _ExpandableFab extends StatelessWidget {
     required this.controller,
     required this.isOpen,
     required this.onToggle,
+  });
+
+  final AnimationController controller;
+  final bool isOpen;
+  final VoidCallback onToggle;
+
+  // Wide bell-curve dimensions. Top half (above the bar) renders a Gaussian
+  // bell; bottom half is rectangular and hidden inside the BottomAppBar.
+  static const double _fabWidth = 120;
+  static const double _fabHeight = 70;
+  // Positive values push the FAB down on the y-axis (deeper into the bar,
+  // less visible bump). Negative values lift it up.
+  static const double _fabYOffset = 6;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Transform.translate(
+      offset: const Offset(0, _fabYOffset),
+      child: SizedBox(
+        width: _fabWidth,
+        height: _fabHeight,
+        child: AnimatedBuilder(
+          animation: controller,
+          builder: (_, __) {
+            final t = controller.value;
+            final bg = Color.lerp(
+              theme.colorScheme.surfaceContainerHigh,
+              theme.colorScheme.primary,
+              t,
+            )!;
+            final fg = Color.lerp(
+              theme.colorScheme.onSurface,
+              theme.colorScheme.onPrimary,
+              t,
+            )!;
+            return ClipPath(
+              clipper: const _BellClipper(),
+              child: Material(
+                color: bg,
+                elevation: 0,
+                child: InkWell(
+                  onTap: onToggle,
+                  child: SizedBox(
+                    width: _fabWidth,
+                    height: _fabHeight,
+                    // Icon sits in the top half, centered on the bell's peak.
+                    child: Align(
+                      alignment: const Alignment(0, -0.5),
+                      child: Transform.rotate(
+                        angle: t * (math.pi / 4),
+                        child: Icon(Icons.add, size: 24, color: fg),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// Renders the fan items as a layer in the body Stack so taps outside the
+/// FAB's small hit-test box still register. Anchored at the bottom-center of
+/// the body, with items radiating up from the bell's visual position.
+class _FanLayer extends StatelessWidget {
+  const _FanLayer({
+    required this.controller,
     required this.onClose,
     required this.onNutrition,
     required this.onActivity,
@@ -563,8 +651,6 @@ class _ExpandableFab extends StatelessWidget {
   });
 
   final AnimationController controller;
-  final bool isOpen;
-  final VoidCallback onToggle;
   final VoidCallback onClose;
   final VoidCallback? onNutrition;
   final VoidCallback? onActivity;
@@ -572,18 +658,12 @@ class _ExpandableFab extends StatelessWidget {
   final VoidCallback? onQuests;
   final VoidCallback? onFasting;
 
-  // Wide bell-curve dimensions. Top half (above the bar) renders a Gaussian
-  // bell; bottom half is rectangular and hidden inside the BottomAppBar.
-  static const double _fabWidth = 120;
-  static const double _fabHeight = 70;
+  static const double _layerWidth = 360;
+  static const double _layerHeight = 220;
   static const double _fanRadius = 150;
-  // Positive values push the FAB down on the y-axis (deeper into the bar,
-  // less visible bump). Negative values lift it up.
-  static const double _fabYOffset = 6;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final items = <_FabAction>[
       _FabAction('Fasting', Icons.timer_outlined, onFasting),
       _FabAction('Nutrition', Icons.restaurant_outlined, onNutrition),
@@ -592,78 +672,36 @@ class _ExpandableFab extends StatelessWidget {
       _FabAction('Finance', Icons.account_balance_outlined, onFinance),
     ];
 
-    return Transform.translate(
-      offset: const Offset(0, _fabYOffset),
-      child: SizedBox(
-        width: _fabWidth,
-        height: _fabHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            for (int i = 0; i < items.length; i++)
-              _FanItem(
-                controller: controller,
-                angle: _angleFor(i, items.length),
-                radius: _fanRadius,
-                label: items[i].label,
-                icon: items[i].icon,
-                onTap: items[i].cb != null
-                    ? () {
-                        onClose();
-                        items[i].cb!();
-                      }
-                    : null,
-              ),
-            AnimatedBuilder(
-              animation: controller,
-              builder: (_, __) {
-                final t = controller.value;
-                final bg = Color.lerp(
-                  theme.colorScheme.surfaceContainerHigh,
-                  theme.colorScheme.primary,
-                  t,
-                )!;
-                final fg = Color.lerp(
-                  theme.colorScheme.onSurface,
-                  theme.colorScheme.onPrimary,
-                  t,
-                )!;
-                return ClipPath(
-                  clipper: const _BellClipper(),
-                  child: Material(
-                    color: bg,
-                    elevation: 0,
-                    child: InkWell(
-                      onTap: onToggle,
-                      child: SizedBox(
-                        width: _fabWidth,
-                        height: _fabHeight,
-                        // Icon sits in the top half, centered on the bell's peak.
-                        child: Align(
-                          alignment: const Alignment(0, -0.5),
-                          child: Transform.rotate(
-                            angle: t * (math.pi / 4),
-                            child: Icon(Icons.add, size: 24, color: fg),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
+    return SizedBox(
+      width: _layerWidth,
+      height: _layerHeight,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          for (int i = 0; i < items.length; i++)
+            _FanItem(
+              controller: controller,
+              angle: _angleFor(i, items.length),
+              radius: _fanRadius,
+              anchor: const Offset(_layerWidth / 2, _layerHeight),
+              label: items[i].label,
+              icon: items[i].icon,
+              onTap: items[i].cb != null
+                  ? () {
+                      onClose();
+                      items[i].cb!();
+                    }
+                  : null,
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  // Spread items across an arc above the FAB. 165° = upper-left, 15° =
+  // Spread items across an arc above the FAB. 140° = upper-left, 40° =
   // upper-right (0° points right in math convention; we negate y for screen).
   double _angleFor(int i, int n) {
     if (n <= 1) return math.pi / 2;
-    // Tighter arc keeps the bottom of each label clear of the BottomAppBar.
     const startDeg = 140.0;
     const endDeg = 40.0;
     final t = i / (n - 1);
@@ -684,6 +722,7 @@ class _FanItem extends StatelessWidget {
     required this.controller,
     required this.angle,
     required this.radius,
+    required this.anchor,
     required this.label,
     required this.icon,
     required this.onTap,
@@ -692,13 +731,13 @@ class _FanItem extends StatelessWidget {
   final AnimationController controller;
   final double angle; // radians
   final double radius;
+  final Offset
+      anchor; // (x, y) origin from which items radiate, in parent coords
   final String label;
   final IconData icon;
   final VoidCallback? onTap;
 
   static const double _itemSize = 48;
-  static const double _fabCenterX = _ExpandableFab._fabWidth / 2;
-  static const double _fabCenterY = _ExpandableFab._fabHeight / 2;
 
   @override
   Widget build(BuildContext context) {
@@ -715,11 +754,8 @@ class _FanItem extends StatelessWidget {
         final t = Curves.easeOutBack.transform(raw);
         final dx = math.cos(angle) * radius * t;
         final dy = -math.sin(angle) * radius * t;
-        // Anchor the column at the circle's center; FractionalTranslation
-        // re-centers horizontally so wider labels stay aligned with the
-        // circle above.
-        final left = _fabCenterX + dx;
-        final top = _fabCenterY + dy - _itemSize / 2;
+        final left = anchor.dx + dx;
+        final top = anchor.dy + dy - _itemSize / 2;
         final opacity = raw.clamp(0.0, 1.0);
         return Positioned(
           left: left,
