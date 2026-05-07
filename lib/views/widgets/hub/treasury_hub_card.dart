@@ -25,6 +25,10 @@ class TreasuryHubCard extends StatelessWidget {
         final isActive = treasury.hasBillImminent;
         return AppCard(
           onTap: onNavigate,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
           header: HubCardHeader(
             icon: isActive
                 ? Icons.account_balance
@@ -48,43 +52,109 @@ class _Snapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final todaySpend = treasury.todayOutflow;
-    final remaining = treasury.totalBudgetRemaining;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.baseline,
-          textBaseline: TextBaseline.alphabetic,
-          children: [
-            Text(
-              formatPesoCompact(todaySpend),
-              style: AppTextStyles.titleLarge,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              'today',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _StatCol(
+                  label: 'EXPENSE',
+                  value: formatPesoCompact(treasury.monthTotalOutflow),
+                  color: theme.colorScheme.error,
+                  align: CrossAxisAlignment.start,
+                ),
               ),
-            ),
-          ],
-        ),
-        if (treasury.hasBudget) ...[
-          const SizedBox(height: AppSpacing.xs),
-          AppStatPill(
-            label: 'Budget left',
-            value: formatPesoCompact(remaining),
-            color: remaining > 0 ? AppStatColor.success : AppStatColor.error,
-            size: AppStatSize.small,
+              _Divider(theme: theme),
+              Expanded(
+                child: _StatCol(
+                  label: 'INCOME',
+                  value: formatPesoCompact(treasury.monthTotalInflow),
+                  color: theme.colorScheme.tertiary,
+                  align: CrossAxisAlignment.center,
+                ),
+              ),
+              _Divider(theme: theme),
+              Expanded(
+                child: _StatCol(
+                  label: 'ENDING',
+                  value: formatPesoCompact(treasury.endingCash),
+                  color: treasury.endingCash >= 0
+                      ? theme.colorScheme.onSurface
+                      : theme.colorScheme.error,
+                  align: CrossAxisAlignment.end,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
         if (isActive) ...[
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
           _BillWarning(treasury: treasury),
         ],
       ],
+    );
+  }
+}
+
+class _StatCol extends StatelessWidget {
+  const _StatCol({
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.align,
+  });
+  final String label;
+  final String value;
+  final Color color;
+  final CrossAxisAlignment align;
+
+  TextAlign get _textAlign => switch (align) {
+        CrossAxisAlignment.end => TextAlign.end,
+        CrossAxisAlignment.center => TextAlign.center,
+        _ => TextAlign.start,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        Text(
+          label,
+          style: AppTextStyles.labelSmall.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            letterSpacing: 0.6,
+          ),
+          textAlign: _textAlign,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: AppTextStyles.numeric(fontSize: 16, weight: FontWeight.w700)
+              .copyWith(color: color),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: _textAlign,
+        ),
+      ],
+    );
+  }
+}
+
+class _Divider extends StatelessWidget {
+  const _Divider({required this.theme});
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context) {
+    return VerticalDivider(
+      width: AppSpacing.sm,
+      thickness: 0.5,
+      color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
     );
   }
 }

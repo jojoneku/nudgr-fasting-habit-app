@@ -81,9 +81,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
             .toList();
 
         return SingleChildScrollView(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-          ),
+          padding: const EdgeInsets.only(bottom: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

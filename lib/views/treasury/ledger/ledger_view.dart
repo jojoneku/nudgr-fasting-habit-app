@@ -230,9 +230,10 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
-      color: cs.surface,
+      color: theme.scaffoldBackgroundColor,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       child: Row(
         children: [
@@ -404,39 +405,38 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final inflow = presenter.filteredMonthInflow;
     final outflow = presenter.filteredMonthOutflow;
     final net = presenter.filteredMonthNet;
     final netColor = net >= 0 ? cs.tertiary : cs.error;
     final netPrefix = net >= 0 ? '+' : '';
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-      child: AppCard(
-        variant: AppCardVariant.filled,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        child: Row(
-          children: [
-            _SummaryChip(
-              label: 'Income',
-              value: formatPeso(inflow),
-              color: cs.tertiary,
-            ),
-            const SizedBox(width: 8),
-            _SummaryChip(
-              label: 'Expenses',
-              value: formatPeso(outflow),
-              color: cs.error,
-            ),
-            const SizedBox(width: 8),
-            _SummaryChip(
-              label: 'Net',
-              value: '$netPrefix${formatPeso(net.abs())}',
-              color: netColor,
-            ),
-          ],
-        ),
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Row(
+        children: [
+          _SummaryChip(
+            label: 'Income',
+            value: formatPeso(inflow),
+            color: cs.tertiary,
+          ),
+          const SizedBox(width: 8),
+          _SummaryChip(
+            label: 'Expenses',
+            value: formatPeso(outflow),
+            color: cs.error,
+          ),
+          const SizedBox(width: 8),
+          _SummaryChip(
+            label: 'Net',
+            value: '$netPrefix${formatPeso(net.abs())}',
+            color: netColor,
+          ),
+        ],
       ),
     );
   }

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../presenters/nutrition_presenter.dart';
-import '../system/system.dart';
+import '../../../utils/app_spacing.dart';
 import '../../../utils/app_text_styles.dart';
+import '../system/system.dart';
 import 'hub_card_header.dart';
 
 class NutritionHubCard extends StatelessWidget {
@@ -22,15 +23,14 @@ class NutritionHubCard extends StatelessWidget {
       listenable: nutrition,
       builder: (context, _) => AppCard(
         onTap: onNavigate,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.lg,
+        ),
         header: const HubCardHeader(
           icon: Icons.restaurant_outlined,
           title: 'Nutrition',
         ),
-        footer: AppPrimaryButton(
-            label: 'Log meal',
-            height: 44,
-            onPressed: onLogMeal,
-            variant: AppButtonVariant.tonal),
         child: _Snapshot(nutrition: nutrition),
       ),
     );
@@ -59,54 +59,131 @@ class _Snapshot extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        AppLinearProgress(
-            value: p.netCalorieProgress, color: barColor, height: 3),
-        const SizedBox(height: 8),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
           children: [
-            _Cell(value: '${p.todayCalories}', label: 'Eaten'),
-            _Cell(
-                value: '${p.remainingCalories}',
-                label: 'Remaining',
-                alignRight: true),
+            Text(
+              '${p.todayCalories}',
+              style:
+                  AppTextStyles.numeric(fontSize: 20, weight: FontWeight.w600),
+            ),
+            const SizedBox(width: 2),
+            Text(
+              '/${p.effectiveGoal} kcal',
+              style: AppTextStyles.bodySmall.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
+        ),
+        const SizedBox(height: 6),
+        AppLinearProgress(
+            value: p.netCalorieProgress, color: barColor, height: 6),
+        const SizedBox(height: 14),
+        Text(
+          'MACROS',
+          style: AppTextStyles.labelSmall.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            letterSpacing: 0.6,
+          ),
+        ),
+        const SizedBox(height: 6),
+        _MacrosRow(nutrition: p),
+      ],
+    );
+  }
+}
+
+class _MacrosRow extends StatelessWidget {
+  const _MacrosRow({required this.nutrition});
+  final NutritionPresenter nutrition;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: _Macro(
+            label: 'P',
+            grams: nutrition.todayProtein,
+            goal: nutrition.proteinGoal,
+            color: theme.colorScheme.error,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Macro(
+            label: 'C',
+            grams: nutrition.todayCarbs,
+            goal: nutrition.carbsGoal,
+            color: theme.colorScheme.tertiary,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _Macro(
+            label: 'F',
+            grams: nutrition.todayFat,
+            goal: nutrition.fatGoal,
+            color: theme.colorScheme.secondary,
+          ),
         ),
       ],
     );
   }
 }
 
-class _Cell extends StatelessWidget {
-  const _Cell(
-      {required this.value, required this.label, this.alignRight = false});
+class _Macro extends StatelessWidget {
+  const _Macro({
+    required this.label,
+    required this.grams,
+    required this.goal,
+    required this.color,
+  });
 
-  final String value;
   final String label;
-  final bool alignRight;
+  final double grams;
+  final int? goal;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final align =
-        alignRight ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final progress =
+        goal != null && goal! > 0 ? (grams / goal!).clamp(0.0, 1.0) : 0.0;
+    final valueText = goal != null && goal! > 0
+        ? '${grams.round()}/${goal}g'
+        : '${grams.round()}g';
     return Column(
-      crossAxisAlignment: align,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value,
-          style: AppTextStyles.labelMedium.copyWith(
-            color: theme.colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+        Row(
+          children: [
+            Text(
+              label,
+              style: AppTextStyles.labelSmall.copyWith(
+                color: color,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(width: 4),
+            Expanded(
+              child: Text(
+                valueText,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: AppTextStyles.labelSmall.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+        const SizedBox(height: 4),
+        AppLinearProgress(value: progress, color: color, height: 5),
       ],
     );
   }

@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../app_colors.dart';
 import '../../models/chat_message.dart';
 import '../../models/estimation_source.dart';
+import '../../models/food_db_entry.dart';
 import '../../models/food_entry.dart';
 import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
@@ -109,6 +112,7 @@ class _NutritionBody extends StatelessWidget {
             _WeekStripRow(presenter: presenter),
             _StatSection(presenter: presenter),
             Expanded(child: _ChatFeed(presenter: presenter)),
+            _SmartSearchBanner(presenter: presenter),
             _ChatInputBar(presenter: presenter),
           ],
         ),
@@ -578,6 +582,83 @@ class _EmptyChatState extends StatelessWidget {
   }
 }
 
+/// Subtle banner above the chat input. Rendered only when the smart-search
+/// feature is in a state worth surfacing (downloading, indexing, or active).
+/// Hidden in the steady-state "ready" mode after first-day usage to reduce
+/// chrome. Hidden entirely when the feature is unavailable / not opted in.
+class _SmartSearchBanner extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _SmartSearchBanner({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final status = presenter.foodSearchStatus;
+
+    final visible = status == FoodSearchStatus.downloading ||
+        status == FoodSearchStatus.indexing ||
+        status == FoodSearchStatus.loading;
+    if (!visible) return const SizedBox.shrink();
+
+    final progress = presenter.foodIndexProgress;
+    final (String label, double? value) = switch (status) {
+      FoodSearchStatus.downloading => (
+          'Downloading smart search… ${presenter.foodEmbedderDownloadProgress}%',
+          presenter.foodEmbedderDownloadProgress / 100.0,
+        ),
+      FoodSearchStatus.loading => (
+          'Loading smart search…',
+          null,
+        ),
+      FoodSearchStatus.indexing => (
+          'Indexing food database… ${progress.indexed} / ${progress.total}',
+          progress.fraction,
+        ),
+      _ => ('', null),
+    };
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.auto_awesome_outlined,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                LinearProgressIndicator(
+                  value: value,
+                  minHeight: 2,
+                  backgroundColor:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ErrorBubble extends StatelessWidget {
   final String error;
   const _ErrorBubble({required this.error});
@@ -613,7 +694,7 @@ class _ThinkingBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
+          color: cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
@@ -807,7 +888,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -831,7 +912,13 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
                 isLast: e.key == message.foodItems.length - 1,
                 editing: _editing,
                 controller: _controllers[e.key],
+                onDelete: _editing && message.foodItems.length > 1
+                    ? () =>
+                        widget.presenter.removeChatFoodItemAt(message.id, e.key)
+                    : null,
               )),
+          if (message.foodItems.length >= 2)
+            _MealTotalRow(items: message.foodItems),
           _MessageFooter(
             timestamp: message.timestamp,
             editing: _editing,
@@ -854,47 +941,48 @@ class _FoodItemRow extends StatelessWidget {
   final bool isLast;
   final bool editing;
   final TextEditingController controller;
+  final VoidCallback? onDelete;
   const _FoodItemRow({
     required this.item,
     required this.index,
     required this.isLast,
     required this.editing,
     required this.controller,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final body = editing
+        ? Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: _FoodEditField(
+                  controller: controller,
+                  autofocus: index == 0,
+                ),
+              ),
+              if (onDelete != null) ...[
+                const SizedBox(width: 6),
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  iconSize: 18,
+                  tooltip: 'Remove this item',
+                  icon: Icon(Icons.close, color: cs.error),
+                  onPressed: onDelete,
+                ),
+              ],
+            ],
+          )
+        : _FoodItemDisplay(item: item);
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-          child: editing
-              ? TextField(
-                  controller: controller,
-                  autofocus: index == 0,
-                  style: TextStyle(color: cs.onSurface, fontSize: 14),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                    fillColor: cs.surfaceContainerHighest,
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide:
-                          BorderSide(color: cs.primary.withValues(alpha: 0.4)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: cs.primary),
-                    ),
-                    hintText: 'e.g. 100g rice',
-                    hintStyle:
-                        TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                  ),
-                )
-              : _FoodItemDisplay(item: item),
+          child: body,
         ),
         if (!isLast)
           Divider(
@@ -904,6 +992,196 @@ class _FoodItemRow extends StatelessWidget {
             color: cs.outlineVariant,
           ),
       ],
+    );
+  }
+}
+
+/// Edit field with on-the-fly DB suggestions. Tap a suggestion to fill the
+/// text. Suggestions come from FoodDbService.search() — same path used by the
+/// resolution pipeline, so users can pick a known entry directly.
+class _FoodEditField extends StatefulWidget {
+  final TextEditingController controller;
+  final bool autofocus;
+  const _FoodEditField({required this.controller, required this.autofocus});
+
+  @override
+  State<_FoodEditField> createState() => _FoodEditFieldState();
+}
+
+class _FoodEditFieldState extends State<_FoodEditField> {
+  List<FoodDbEntry> _suggestions = const [];
+  Timer? _debounce;
+  String _lastQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_onChanged);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_onChanged);
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onChanged() {
+    final text = widget.controller.text.trim();
+    if (text == _lastQuery) return;
+    _lastQuery = text;
+    _debounce?.cancel();
+    if (text.length < 2) {
+      if (_suggestions.isNotEmpty) setState(() => _suggestions = const []);
+      return;
+    }
+    _debounce = Timer(const Duration(milliseconds: 200), () => _runQuery(text));
+  }
+
+  Future<void> _runQuery(String q) async {
+    final presenter = context
+        .findAncestorStateOfType<_FoodAnalysisCardState>()
+        ?.widget
+        .presenter;
+    if (presenter == null) return;
+    final results = await presenter.foodDb.search(q);
+    if (!mounted || widget.controller.text.trim() != q) return;
+    setState(() => _suggestions = results.take(5).toList(growable: false));
+  }
+
+  void _accept(FoodDbEntry entry) {
+    widget.controller.text = entry.name;
+    widget.controller.selection = TextSelection.collapsed(
+      offset: widget.controller.text.length,
+    );
+    setState(() => _suggestions = const []);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: widget.controller,
+          autofocus: widget.autofocus,
+          style: TextStyle(color: cs.onSurface, fontSize: 14),
+          decoration: InputDecoration(
+            isDense: true,
+            contentPadding:
+                const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+            fillColor: cs.surfaceContainerHighest,
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cs.primary.withValues(alpha: 0.4)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(color: cs.primary),
+            ),
+            hintText: 'e.g. 100g rice',
+            hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+          ),
+        ),
+        if (_suggestions.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Container(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: cs.outlineVariant),
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < _suggestions.length; i++)
+                  InkWell(
+                    onTap: () => _accept(_suggestions[i]),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search,
+                              size: 14, color: cs.onSurfaceVariant),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              _suggestions[i].name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  TextStyle(color: cs.onSurface, fontSize: 13),
+                            ),
+                          ),
+                          Text(
+                            _suggestions[i].densityLabel,
+                            style: TextStyle(
+                                color: cs.onSurfaceVariant, fontSize: 11),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Sums calories + macros across a multi-item meal and renders a footer row.
+class _MealTotalRow extends StatelessWidget {
+  final List<ChatFoodItem> items;
+  const _MealTotalRow({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    var kcal = 0;
+    double? p, c, f;
+    for (final item in items) {
+      kcal += item.calories;
+      if (item.protein != null) p = (p ?? 0) + item.protein!;
+      if (item.carbs != null) c = (c ?? 0) + item.carbs!;
+      if (item.fat != null) f = (f ?? 0) + item.fat!;
+    }
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(top: BorderSide(color: cs.outlineVariant)),
+      ),
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: Row(
+        children: [
+          Text(
+            'Total',
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.4,
+            ),
+          ),
+          const Spacer(),
+          if (p != null) ...[
+            _MacroBadge(label: 'P', value: p, color: cs.primary),
+            const SizedBox(width: 4),
+          ],
+          if (c != null) ...[
+            _MacroBadge(label: 'C', value: c, color: context.appColors.gold),
+            const SizedBox(width: 4),
+          ],
+          if (f != null) ...[
+            _MacroBadge(label: 'F', value: f, color: cs.error),
+            const SizedBox(width: 4),
+          ],
+          _NutriBadge(label: '$kcal kcal', color: context.appColors.gold),
+        ],
+      ),
     );
   }
 }
@@ -1065,7 +1343,7 @@ class _ExerciseAnalysisCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(

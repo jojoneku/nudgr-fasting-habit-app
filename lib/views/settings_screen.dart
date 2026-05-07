@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 
 import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/nutrition_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../utils/app_spacing.dart';
@@ -17,12 +18,14 @@ class SettingsScreen extends StatelessWidget {
     required this.authPresenter,
     required this.settingsPresenter,
     this.syncPresenter,
+    this.nutritionPresenter,
   });
 
   final FastingPresenter fastingPresenter;
   final AuthPresenter authPresenter;
   final SettingsPresenter settingsPresenter;
   final SyncPresenter? syncPresenter;
+  final NutritionPresenter? nutritionPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -36,11 +39,17 @@ class SettingsScreen extends StatelessWidget {
               bottom: AppSpacing.xl,
             ),
             child: ListenableBuilder(
-              listenable: Listenable.merge([authPresenter, settingsPresenter]),
+              listenable: Listenable.merge([
+                authPresenter,
+                settingsPresenter,
+                if (nutritionPresenter != null) nutritionPresenter!,
+              ]),
               builder: (context, _) => AppGroupedList(
                 sections: [
                   _accountSection(context),
                   _appearanceSection(context),
+                  if (nutritionPresenter?.isFoodSearchAvailable ?? false)
+                    _smartSearchSection(context),
                   _dataSection(context),
                   if (kDebugMode) _developerSection(context),
                 ],
@@ -359,6 +368,253 @@ class SettingsScreen extends StatelessWidget {
               }
             }
           },
+        ),
+      ],
+    );
+  }
+
+  AppGroupedListSection _smartSearchSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = nutritionPresenter!;
+    final status = p.foodSearchStatus;
+    final progress = p.foodIndexProgress;
+    final bundling = p.isAiBundleDownloading;
+
+    // Bundle download takes priority over single-component states.
+    if (bundling) {
+      return AppGroupedListSection(
+        title: 'AI Models',
+        footer:
+            'Smart search lights up after step 1. Downloads run sequentially.',
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    AppIconBadge(
+                      icon: Icons.cloud_download_outlined,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            p.aiBundlePhaseLabel,
+                            style: theme.textTheme.bodyLarge,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${p.aiBundleProgress}% overall',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: p.aiBundleProgress / 100.0,
+                  minHeight: 4,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Bundle entry point — when neither model is installed, offer one combined action.
+    if (p.isAiBundleAvailable) {
+      return AppGroupedListSection(
+        title: 'AI Models',
+        footer:
+            'Both models run on-device after install. No cloud, no data leaves your phone.',
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
+            child: Row(
+              children: [
+                const AppIconBadge(icon: Icons.auto_awesome_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Get the AI bundle',
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Smart food search (75 MB) + AI Coach (586 MB). '
+                        'Downloads in stages — search works after step 1.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: () async {
+                    await p.downloadAiBundle();
+                  },
+                  child: const Text('Download'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    final (
+      String title,
+      String subtitle,
+      IconData icon,
+      String? actionLabel,
+      VoidCallback? onAction,
+    ) info = switch (status) {
+      FoodSearchStatus.notInstalled => (
+          'Smart food search',
+          'Download the embedder to enable semantic search. ${p.foodEmbedderSizeLabel ?? '~75 MB'}.',
+          Icons.auto_awesome_outlined,
+          'Download',
+          () async {
+            await p.enableFoodSearch();
+          },
+        ),
+      FoodSearchStatus.downloading => (
+          'Downloading smart search…',
+          '${p.foodEmbedderDownloadProgress}% • ${p.foodEmbedderName ?? 'Embedder'}',
+          Icons.cloud_download_outlined,
+          null,
+          null,
+        ),
+      FoodSearchStatus.loading => (
+          'Loading smart search…',
+          'Initialising the embedder.',
+          Icons.hourglass_top,
+          null,
+          null,
+        ),
+      FoodSearchStatus.idle => (
+          'Smart food search',
+          'Embedder ready. Tap to build the food index.',
+          Icons.auto_awesome_outlined,
+          'Build index',
+          () async {
+            await p.enableFoodSearch();
+          },
+        ),
+      FoodSearchStatus.indexing => (
+          'Indexing food database…',
+          '${progress.indexed} / ${progress.total} '
+              '(${(progress.fraction * 100).round()}%)',
+          Icons.sync,
+          null,
+          null,
+        ),
+      FoodSearchStatus.ready => (
+          'Smart food search active',
+          '${progress.total} foods indexed. Type meals naturally — '
+              '"creamy yogurt with berries" works.',
+          Icons.auto_awesome,
+          'Rebuild',
+          () async {
+            await p.rebuildFoodIndex();
+          },
+        ),
+      FoodSearchStatus.failed => (
+          'Smart search unavailable',
+          'Your device does not support the on-device embedder. '
+              'Falling back to keyword search.',
+          Icons.error_outline,
+          null,
+          null,
+        ),
+      FoodSearchStatus.disabled => (
+          'Smart search',
+          'Not configured.',
+          Icons.help_outline,
+          null,
+          null,
+        ),
+    };
+
+    return AppGroupedListSection(
+      title: 'Smart Food Search',
+      footer: 'Powered by an on-device AI. No cloud required after install.',
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm + 2,
+          ),
+          child: Row(
+            children: [
+              AppIconBadge(
+                icon: info.$3,
+                color: status == FoodSearchStatus.ready
+                    ? theme.colorScheme.primary
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(info.$1, style: theme.textTheme.bodyLarge),
+                    const SizedBox(height: 2),
+                    Text(
+                      info.$2,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    if (status == FoodSearchStatus.downloading)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: LinearProgressIndicator(
+                          value: p.foodEmbedderDownloadProgress / 100.0,
+                          minHeight: 3,
+                        ),
+                      ),
+                    if (status == FoodSearchStatus.indexing)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: LinearProgressIndicator(
+                          value: progress.fraction,
+                          minHeight: 3,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (info.$4 != null && info.$5 != null) ...[
+                const SizedBox(width: 8),
+                TextButton(
+                  onPressed: info.$5,
+                  child: Text(info.$4!),
+                ),
+              ],
+            ],
+          ),
         ),
       ],
     );

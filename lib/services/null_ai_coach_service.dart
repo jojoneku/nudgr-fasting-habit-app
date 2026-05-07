@@ -3,6 +3,7 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
+import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
 
 /// Stub implementation used before the on-device model is downloaded or
@@ -43,6 +44,13 @@ class NullAiCoachService implements AiCoachService {
   @override
   Future<List<AiParsedFood>?> normalizeFoodInput(
           List<String> fragments) async =>
+      null;
+
+  @override
+  Future<FoodDisambiguation?> disambiguateFood(
+    String userQuery,
+    List<FoodSearchCandidate> candidates,
+  ) async =>
       null;
 
   @override

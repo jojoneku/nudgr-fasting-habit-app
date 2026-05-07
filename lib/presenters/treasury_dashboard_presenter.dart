@@ -139,6 +139,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     }).fold(0.0, (sum, t) => sum + t.amount);
   }
 
+  double get todayInflow {
+    final now = DateTime.now();
+    return _transactions.where((t) {
+      return t.type == TransactionType.inflow &&
+          t.date.year == now.year &&
+          t.date.month == now.month &&
+          t.date.day == now.day;
+    }).fold(0.0, (sum, t) => sum + t.amount);
+  }
+
   bool isBillOverdue(Bill bill) => bill.dueDay < DateTime.now().day;
 
   // --- Budget ---

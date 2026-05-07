@@ -331,6 +331,7 @@ class _TdeeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final profile = presenter.tdeeProfile;
     return AppCard(
+      color: Theme.of(context).colorScheme.surfaceContainerHigh,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -460,6 +461,7 @@ class _AiCoachDownloadCard extends StatelessWidget {
         final progress = presenter.downloadProgress ?? 0;
 
         return AppCard(
+          color: theme.colorScheme.surfaceContainerHigh,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

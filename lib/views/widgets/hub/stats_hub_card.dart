@@ -22,6 +22,10 @@ class StatsHubCard extends StatelessWidget {
       listenable: stats,
       builder: (context, _) => AppCard(
         onTap: onNavigate,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.lg,
+        ),
         header: const HubCardHeader(
           icon: Icons.person_outlined,
           title: 'Character',
@@ -68,7 +72,7 @@ class _Snapshot extends StatelessWidget {
           label: 'XP',
           value: xpProgress,
           valueText: '$currentXp / $nextXp',
-          height: 6,
+          height: 8,
           color: context.appColors.gold,
         ),
       ],

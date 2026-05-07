@@ -64,22 +64,15 @@ void main() {
       expect(find.byIcon(Icons.lock_outline), findsNothing);
     });
 
-    testWidgets('Fasting card shows "End fast" button when fasting',
+    testWidgets('Fasting card has no inline buttons (tap-to-navigate)',
         (tester) async {
+      // Inline "Start fast"/"End fast" footers were removed; the whole card
+      // is now tappable to navigate to the fasting screen for the action.
       when(mockFasting.isFasting).thenReturn(true);
-
       await tester.pumpWidget(_wrap(_buildHub()));
       await tester.pump();
-
-      expect(find.text('End fast'), findsOneWidget);
-    });
-
-    testWidgets('Fasting card shows "Start fast" button when idle',
-        (tester) async {
-      await tester.pumpWidget(_wrap(_buildHub()));
-      await tester.pump();
-
-      expect(find.text('Start fast'), findsOneWidget);
+      expect(find.text('End fast'), findsNothing);
+      expect(find.text('Start fast'), findsNothing);
     });
   });
 }

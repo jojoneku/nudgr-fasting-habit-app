@@ -199,88 +199,40 @@ class _AccountSetupViewState extends State<AccountSetupView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final isEdit = widget.existing != null;
-    final isSubAccount = widget.parentAccountId != null;
 
-    final String title;
-    if (isEdit) {
-      title = 'Edit Account';
-    } else if (isSubAccount) {
-      title = 'Add Sub-Account';
-    } else {
-      title = 'Add Account';
-    }
-
-    // AccountSetupView is used as the builder body of showModalBottomSheet.
-    // We render the sheet chrome here (handle + title + form).
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(context).bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 8),
-          // Drag handle
-          Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: theme.colorScheme.outlineVariant,
-              borderRadius: BorderRadius.circular(2),
-            ),
+    // AppBottomSheet.show owns the chrome (handle, title, close) and keyboard
+    // inset padding — render only the form body here.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: _AccountSetupForm(
+            formKey: _formKey,
+            nameController: _nameController,
+            balanceController: _balanceController,
+            goalTargetController: _goalTargetController,
+            availableCategories: _availableCategories,
+            category: _category,
+            onCategoryChanged: (c) => setState(() => _category = c!),
+            selectedColor: _selectedColor,
+            onColorSelected: (hex) => setState(() => _selectedColor = hex),
+            maturityDate: _maturityDate,
+            onPickMaturityDate: _pickMaturityDate,
+            linkedAccountId: _linkedAccountId,
+            onLinkedAccountChanged: (id) =>
+                setState(() => _linkedAccountId = id),
+            liquidAccounts: widget.presenter.liquidAccounts,
+            isGoal: _isGoal,
+            isTimeDeposit: _isTimeDeposit,
+            isCustodian: _isCustodian,
+            isEdit: isEdit,
+            isSubmitting: _isSubmitting,
+            onSubmit: _submit,
+            onDelete: isEdit ? _confirmDelete : null,
           ),
-          const SizedBox(height: 16),
-          // Header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Text(title, style: theme.textTheme.titleLarge),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          // Form body
-          Flexible(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _AccountSetupForm(
-                formKey: _formKey,
-                nameController: _nameController,
-                balanceController: _balanceController,
-                goalTargetController: _goalTargetController,
-                availableCategories: _availableCategories,
-                category: _category,
-                onCategoryChanged: (c) => setState(() => _category = c!),
-                selectedColor: _selectedColor,
-                onColorSelected: (hex) => setState(() => _selectedColor = hex),
-                maturityDate: _maturityDate,
-                onPickMaturityDate: _pickMaturityDate,
-                linkedAccountId: _linkedAccountId,
-                onLinkedAccountChanged: (id) =>
-                    setState(() => _linkedAccountId = id),
-                liquidAccounts: widget.presenter.liquidAccounts,
-                isGoal: _isGoal,
-                isTimeDeposit: _isTimeDeposit,
-                isCustodian: _isCustodian,
-                isEdit: isEdit,
-                isSubmitting: _isSubmitting,
-                onSubmit: _submit,
-                onDelete: isEdit ? _confirmDelete : null,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
