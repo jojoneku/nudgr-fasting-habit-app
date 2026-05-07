@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/habit_routine.dart';
@@ -276,22 +277,27 @@ class QuestPresenter extends ChangeNotifier {
   Future<void> addQuest(Quest quest) async {
     _quests.add(quest);
     notifyListeners();
-    if (quest.isEnabled) {
-      await _notifications.scheduleQuestNotifications(quest);
-    }
     await _saveQuests();
+    if (quest.isEnabled) {
+      // Notification scheduling can take seconds on Android (alarmClock mode +
+      // exact-alarm permission round-trip). Don't block the UI on it.
+      unawaited(_notifications.scheduleQuestNotifications(quest));
+    }
   }
 
   Future<void> updateQuest(Quest quest) async {
     final idx = _indexById(quest.id);
     if (idx == -1) return;
-    await _notifications.cancelQuestNotifications(_quests[idx]);
+    final old = _quests[idx];
     _quests[idx] = quest;
     notifyListeners();
-    if (quest.isEnabled) {
-      await _notifications.scheduleQuestNotifications(quest);
-    }
     await _saveQuests();
+    unawaited(_notifications.cancelQuestNotifications(old).then((_) {
+      if (quest.isEnabled) {
+        return _notifications.scheduleQuestNotifications(quest);
+      }
+      return null;
+    }));
   }
 
   Future<void> deleteQuest(int questId) async {

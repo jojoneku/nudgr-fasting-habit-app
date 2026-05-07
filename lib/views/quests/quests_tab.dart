@@ -357,21 +357,35 @@ class _QuestSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return SliverPadding(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.md, AppSpacing.mdGenerous, AppSpacing.md, 0),
       sliver: SliverToBoxAdapter(
         child: AppSection(
           title: title,
-          child: Column(
-            children: quests
-                .map((q) => QuestMissionTile(
-                      quest: q,
-                      presenter: presenter,
-                      isMissed: isMissed,
-                      onEdit: () => onEditQuest(q),
-                    ))
-                .toList(),
+          child: AppCard(
+            variant: AppCardVariant.filled,
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (int i = 0; i < quests.length; i++) ...[
+                  QuestMissionTile(
+                    quest: quests[i],
+                    presenter: presenter,
+                    isMissed: isMissed,
+                    onEdit: () => onEditQuest(quests[i]),
+                  ),
+                  if (i < quests.length - 1)
+                    Divider(
+                      height: 1,
+                      indent: AppSpacing.md,
+                      endIndent: AppSpacing.md,
+                      color: cs.outlineVariant.withValues(alpha: 0.4),
+                    ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
