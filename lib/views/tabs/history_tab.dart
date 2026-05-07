@@ -125,7 +125,7 @@ class _HistoryListState extends State<HistoryList> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
+          color: cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -245,7 +245,7 @@ class _HistoryListState extends State<HistoryList> {
 
     return Card(
       elevation: 0,
-      color: cs.surfaceContainerHigh,
+      color: cs.surfaceContainerLow,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
