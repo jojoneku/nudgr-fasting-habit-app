@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
@@ -20,6 +19,7 @@ import '../services/food_semantic_search_service.dart';
 import '../services/health_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/remote_secrets_service.dart';
 import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
 import '../presenters/auth_presenter.dart';
@@ -86,12 +86,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     );
     _foodDb = FoodDbService();
     _onDeviceAi = OnDeviceAiCoachService();
-    // Embedder reuses the HuggingFace token from .env (same gated repo
-    // permissions as the LLM model).
-    final hfToken = dotenv.maybeGet('HF_TOKEN');
+    final remoteSecrets = RemoteSecretsService();
     _embedder = EmbeddingService(
-      huggingFaceToken:
-          (hfToken != null && hfToken.isNotEmpty) ? hfToken : null,
+      tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
     _semanticSearch = FoodSemanticSearchService(
       embedder: _embedder,
