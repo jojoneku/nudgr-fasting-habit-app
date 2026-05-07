@@ -439,8 +439,20 @@ class NutritionPresenter extends ChangeNotifier {
   /// True while the bundle download is in flight (either phase).
   bool _isBundleDownloading = false;
   int _bundlePhase = 0; // 0 = idle, 1 = embedder, 2 = LLM
+  String? _bundleError;
 
   bool get isAiBundleDownloading => _isBundleDownloading;
+
+  /// Last bundle download error message, or null if none / cleared.
+  /// Cleared automatically when a new download starts.
+  String? get aiBundleError => _bundleError;
+
+  /// Clear the surfaced error after the UI has shown it.
+  void clearAiBundleError() {
+    if (_bundleError == null) return;
+    _bundleError = null;
+    notifyListeners();
+  }
 
   /// Coarse percent across both downloads, weighted by size (75 MB / 586 MB).
   /// Returns 0 when not bundling.
@@ -476,6 +488,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (embedder == null) return;
 
     _isBundleDownloading = true;
+    _bundleError = null;
 
     // Phase 1 — embedder.
     if (!embedder.isInstalled) {
@@ -485,6 +498,7 @@ class NutritionPresenter extends ChangeNotifier {
         await embedder.downloadModel(onProgress: (_) => notifyListeners());
       } catch (e) {
         debugPrint('NutritionPresenter.downloadAiBundle: embedder failed: $e');
+        _bundleError = 'Smart search download failed: ${_summarize(e)}';
         _isBundleDownloading = false;
         _bundlePhase = 0;
         notifyListeners();
@@ -504,12 +518,22 @@ class NutritionPresenter extends ChangeNotifier {
         await _ai.downloadModel(onProgress: (_) => notifyListeners());
       } catch (e) {
         debugPrint('NutritionPresenter.downloadAiBundle: LLM failed: $e');
+        _bundleError = 'AI Coach download failed: ${_summarize(e)}';
       }
     }
 
     _isBundleDownloading = false;
     _bundlePhase = 0;
     notifyListeners();
+  }
+
+  /// Trim long stack traces / framework noise so the SnackBar stays readable.
+  String _summarize(Object e) {
+    final msg = e.toString();
+    final firstLine = msg.split('\n').first.trim();
+    return firstLine.length > 140
+        ? '${firstLine.substring(0, 140)}…'
+        : firstLine;
   }
 
   // ── NLP parser getters ───────────────────────────────────────────────────────
