@@ -69,23 +69,34 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
   Widget build(BuildContext context) {
     return AppPageScaffold(
       title: 'TDEE Setup · Step ${_step + 1} of 3',
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _StepIndicator(current: _step),
-          const SizedBox(height: 32),
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 200),
-              child: KeyedSubtree(
-                key: ValueKey(_step),
-                child: _buildStep(),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _StepIndicator(current: _step),
+            const SizedBox(height: 32),
+            Expanded(
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                layoutBuilder: (currentChild, previousChildren) => Stack(
+                  alignment: Alignment.topCenter,
+                  children: [
+                    ...previousChildren,
+                    if (currentChild != null) currentChild,
+                  ],
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey(_step),
+                  child: _buildStep(),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-          _buildNavButtons(),
-        ],
+            const SizedBox(height: 24),
+            _buildNavButtons(),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }

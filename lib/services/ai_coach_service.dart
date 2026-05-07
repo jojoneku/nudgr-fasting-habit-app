@@ -3,6 +3,7 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
+import '../models/food_search_candidate.dart';
 
 /// Tier of the active AI Coach service.
 enum AiCoachTier { onDevice, cloud }
@@ -54,5 +55,26 @@ abstract class AiCoachService {
   /// Normalize raw food fragments into clean names and gram weights.
   Future<List<AiParsedFood>?> normalizeFoodInput(List<String> fragments);
 
+  /// Re-rank semantic search [candidates] against the user's [userQuery].
+  ///
+  /// Returns the picked candidate's `food_id` plus a confidence ∈ [0, 1].
+  /// Returns null if the model is unavailable, the response can't be parsed,
+  /// or no candidate is a clear winner.
+  ///
+  /// Implementations should keep prompts small (top-5 names + ids) and
+  /// time-bound (≤ 5 s). Used by [NutritionPresenter] when semantic top-1
+  /// score is in the "ambiguous" band.
+  Future<FoodDisambiguation?> disambiguateFood(
+    String userQuery,
+    List<FoodSearchCandidate> candidates,
+  );
+
   void dispose();
+}
+
+/// Result of [AiCoachService.disambiguateFood].
+class FoodDisambiguation {
+  final String foodId;
+  final double confidence;
+  const FoodDisambiguation({required this.foodId, required this.confidence});
 }

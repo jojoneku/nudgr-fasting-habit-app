@@ -10,6 +10,7 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
+import '../models/food_search_candidate.dart';
 import '../utils/food_nlp_parser.dart';
 import '../utils/food_unit_converter.dart';
 import 'ai_coach_service.dart';
@@ -558,6 +559,84 @@ class OnDeviceAiCoachService implements AiCoachService {
     return items.cast<AiParsedFood>();
   }
 
+  // ── Disambiguate food candidates ──────────────────────────────────────────
+
+  @override
+  Future<FoodDisambiguation?> disambiguateFood(
+    String userQuery,
+    List<FoodSearchCandidate> candidates,
+  ) async {
+    final model = _model;
+    if (model == null || candidates.isEmpty) return null;
+
+    // Number candidates 1..N for the prompt; keep ids on a parallel list.
+    final ids = candidates.map((c) => c.entry.id).toList();
+    final menu = StringBuffer();
+    for (var i = 0; i < candidates.length; i++) {
+      menu.writeln(
+        '${i + 1}. ${candidates[i].entry.name}'
+        '${candidates[i].entry.category != null ? ' [${candidates[i].entry.category}]' : ''}',
+      );
+    }
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      await chat.addQuery(
+        Message(
+          text: '$_disambiguatePrompt'
+              'Query: "${userQuery.trim()}"\n'
+              'Candidates:\n$menu'
+              'Output:',
+          isUser: true,
+        ),
+      );
+
+      final response =
+          await chat.generateChatResponse().timeout(const Duration(seconds: 5));
+
+      final text =
+          response is TextResponse ? response.token : response.toString();
+
+      return _parseDisambiguateResponse(text, ids);
+    } catch (e) {
+      debugPrint('OnDeviceAiCoachService.disambiguateFood failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  FoodDisambiguation? _parseDisambiguateResponse(
+      String text, List<String> ids) {
+    final match = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+    if (match == null) return null;
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(match.group(0)!);
+    } catch (_) {
+      return null;
+    }
+
+    final json = decoded as Map<String, dynamic>;
+    final pick = (json['pick'] as num?)?.toInt();
+    final confidence = (json['confidence'] as num?)?.toDouble() ?? 0.0;
+    if (pick == null || pick < 1 || pick > ids.length) return null;
+
+    return FoodDisambiguation(
+      foodId: ids[pick - 1],
+      confidence: confidence.clamp(0.0, 1.0),
+    );
+  }
+
   // ── Estimate macros per item ──────────────────────────────────────────────
 
   @override
@@ -695,6 +774,20 @@ class OnDeviceAiCoachService implements AiCoachService {
       'Output: [{"i":0,"name":"chicken breast","calories":330,"protein":62,"carbs":0,"fat":7,"confidence":0.9}]\n'
       '$_localeHint'
       'Input: ';
+
+  static const _disambiguatePrompt =
+      'You are a food matcher. Given a user query and a numbered list of '
+      'candidate foods, pick the candidate that best matches the query.\n'
+      'Output ONLY a JSON object: {"pick": integer_1_to_N, "confidence": 0.0_to_1.0}\n'
+      'Confidence reflects how certain you are. Lower it when multiple candidates fit. '
+      'Use the candidate category as a tiebreaker.\n'
+      'No markdown, no explanation.\n'
+      '$_localeHint'
+      'Examples:\n'
+      'Query: "creamy yogurt with berries"\n'
+      'Candidates:\n1. Yogurt, plain, whole milk [Dairy]\n'
+      '2. Berries, mixed, frozen [Fruit]\n3. Yogurt, vanilla, low fat [Dairy]\n'
+      'Output: {"pick":1,"confidence":0.85}\n\n';
 
   static const _foodParsePrompt =
       'You are a food parser. Extract food items from the input.\n'
