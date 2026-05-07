@@ -17,6 +17,8 @@ class FastingHubCard extends StatelessWidget {
 
   final FastingPresenter fasting;
   final VoidCallback onNavigate;
+  // Tap-to-navigate now drives all primary actions; the inline buttons were
+  // removed to keep the hub uniform across modules.
   final VoidCallback onStartFast;
   final VoidCallback onEndFast;
 
@@ -36,23 +38,16 @@ class FastingHubCard extends StatelessWidget {
         final theme = Theme.of(context);
         return AppCard(
           onTap: onNavigate,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
           header: HubCardHeader(
             icon: isActive ? Icons.timer : Icons.timer_outlined,
             title: 'Fasting',
             accentColor: theme.colorScheme.primary,
             isActive: isActive,
           ),
-          footer: isActive
-              ? AppPrimaryButton(
-                  label: 'End fast',
-                  height: 44,
-                  onPressed: onEndFast,
-                  variant: AppButtonVariant.tonal)
-              : AppPrimaryButton(
-                  label: 'Start fast',
-                  height: 44,
-                  onPressed: onStartFast,
-                  variant: AppButtonVariant.tonal),
           child: isActive
               ? _ActiveSnapshot(fasting: fasting, formatHM: _formatHM)
               : _IdleSnapshot(fasting: fasting),
