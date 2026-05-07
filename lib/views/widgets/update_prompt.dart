@@ -50,7 +50,7 @@ class _UpdatePromptState extends State<UpdatePrompt> {
         final theme = Theme.of(context);
         return SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             child: Material(
               color: Colors.transparent,
               child: Container(

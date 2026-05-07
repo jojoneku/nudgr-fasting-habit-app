@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/ai_coach_context.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
@@ -28,10 +27,8 @@ import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/update_presenter.dart';
+import 'auth/login_view.dart';
 import 'hub_screen.dart';
-import 'settings_screen.dart';
-import 'stats_view.dart';
-import 'widgets/ai_chat_sheet.dart';
 import 'widgets/update_prompt.dart';
 
 class AppShell extends StatefulWidget {
@@ -72,7 +69,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   SyncPresenter? _syncPresenter;
   SyncQueue? _syncQueue;
   NutritionPresenter? _nutritionPresenter;
-  int _selectedIndex = 0;
 
   @override
   void initState() {
@@ -157,9 +153,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _syncQueue!.load(); // restore persisted queue before auth
       await AuthService.instance.init(); // init Supabase + restore session
       _authPresenter.init();
-      // If already signed in from cached session, init sync immediately
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
+      } else if (mounted) {
+        // New/unauthenticated session — show welcome screen.
+        // onFirstSignIn callback handles sync init if user signs in.
+        await LoginView.show(context, _authPresenter);
       }
     });
   }
@@ -238,78 +237,30 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    final screens = [
-      HubScreen(
-        hubPresenter: _hubPresenter,
-        fastingPresenter: _fastingPresenter,
-        statsPresenter: _statsPresenter,
-        questPresenter: _questPresenter,
-        nutritionPresenter: _nutritionPresenter,
-        activityPresenter: _activityPresenter,
-        aiCoachPresenter: _aiCoachPresenter,
-        treasuryPresenter: _treasuryPresenter,
-        ledgerPresenter: _ledgerPresenter,
-        billsPresenter: _billsPresenter,
-        budgetPresenter: _budgetPresenter,
-        historyPresenter: _historyPresenter,
-        installmentPresenter: _installmentPresenter,
-        authPresenter: _authPresenter,
-        syncPresenter: _syncPresenter,
-        settingsPresenter: widget.settingsPresenter,
-      ),
-      StatsView(
-        presenter: _statsPresenter,
-        fastingPresenter: _fastingPresenter,
-        authPresenter: _authPresenter,
-        syncPresenter: _syncPresenter,
-        settingsPresenter: widget.settingsPresenter,
-      ),
-      SettingsScreen(
-        fastingPresenter: _fastingPresenter,
-        authPresenter: _authPresenter,
-        settingsPresenter: widget.settingsPresenter,
-        syncPresenter: _syncPresenter,
-        nutritionPresenter: _nutritionPresenter,
-      ),
-    ];
-
     return Stack(
       children: [
-        Scaffold(
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: screens[_selectedIndex],
-          floatingActionButton: _selectedIndex == 1
-              ? _AiCoachFab(
-                  presenter: _aiCoachPresenter,
-                  entryPoint: AiCoachEntryPoint.stats,
-                )
-              : null,
-          floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-          bottomNavigationBar: NavigationBar(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (i) => setState(() => _selectedIndex = i),
-            destinations: const [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Hub',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
-                label: 'Stats',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Settings',
-              ),
-            ],
-          ),
+        HubScreen(
+          hubPresenter: _hubPresenter,
+          fastingPresenter: _fastingPresenter,
+          statsPresenter: _statsPresenter,
+          questPresenter: _questPresenter,
+          nutritionPresenter: _nutritionPresenter,
+          activityPresenter: _activityPresenter,
+          aiCoachPresenter: _aiCoachPresenter,
+          treasuryPresenter: _treasuryPresenter,
+          ledgerPresenter: _ledgerPresenter,
+          billsPresenter: _billsPresenter,
+          budgetPresenter: _budgetPresenter,
+          historyPresenter: _historyPresenter,
+          installmentPresenter: _installmentPresenter,
+          authPresenter: _authPresenter,
+          syncPresenter: _syncPresenter,
+          settingsPresenter: widget.settingsPresenter,
+          updatePresenter: widget.updatePresenter,
         ),
         if (widget.updatePresenter != null)
           Positioned(
-            bottom: 70,
+            bottom: 0,
             left: 0,
             right: 0,
             child: UpdatePrompt(presenter: widget.updatePresenter!),
@@ -321,79 +272,3 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
 // Keep HomeScreen as an alias so fasting_app.dart compiles until updated.
 typedef HomeScreen = AppShell;
-
-class _AiCoachFab extends StatefulWidget {
-  final AiCoachPresenter presenter;
-  final AiCoachEntryPoint entryPoint;
-
-  const _AiCoachFab({required this.presenter, required this.entryPoint});
-
-  @override
-  State<_AiCoachFab> createState() => _AiCoachFabState();
-}
-
-class _AiCoachFabState extends State<_AiCoachFab>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _ctrl;
-  late final Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-    );
-    _scale = Tween(begin: 1.0, end: 0.9).animate(
-      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: (_) => _ctrl.forward(),
-        onTapUp: (_) {
-          _ctrl.reverse();
-          AiChatSheet.show(context,
-              presenter: widget.presenter, entryPoint: widget.entryPoint);
-        },
-        onTapCancel: () => _ctrl.reverse(),
-        child: ScaleTransition(
-          scale: _scale,
-          child: Builder(
-            builder: (context) {
-              final theme = Theme.of(context);
-              return Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.45),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.25),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Icon(Icons.psychology_outlined,
-                      color: theme.colorScheme.onPrimary, size: 24),
-                ),
-              );
-            },
-          ),
-        ),
-      );
-}

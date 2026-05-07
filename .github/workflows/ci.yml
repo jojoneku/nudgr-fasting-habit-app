@@ -260,7 +260,8 @@ jobs:
           flutter build apk --release \
             --build-number=${{ steps.meta.outputs.build_number }} \
             --build-name=${{ steps.meta.outputs.new_version }} \
-            --dart-define=UPDATE_MANIFEST_URL=${{ steps.meta.outputs.manifest_url }}
+            --dart-define=UPDATE_MANIFEST_URL=${{ steps.meta.outputs.manifest_url }} \
+            --dart-define=APP_VERSION=${{ steps.meta.outputs.new_version }}
 
       - name: Generate manifest.json
         run: |
