@@ -137,9 +137,10 @@ class _MetricCell extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, color: color, size: 12),
             const SizedBox(width: 3),
@@ -158,6 +159,7 @@ class _MetricCell extends StatelessWidget {
             fontWeight: FontWeight.w700,
           ),
           overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
         ),
       ],
     );

@@ -23,6 +23,7 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/index_progress.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
 import 'storage_service.dart';
@@ -1008,6 +1009,31 @@ class LocalStorageService extends StorageService {
       debugPrint('LocalStorageService: Error loading personal food dict: $e');
       return [];
     }
+  }
+
+  // ── Food Search Index (RAG) ──────────────────────────────────────────────────
+
+  @override
+  Future<IndexProgress> loadFoodIndexProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyFoodIndexProgress);
+    if (raw == null) return const IndexProgress.empty();
+    return IndexProgress.decode(raw);
+  }
+
+  @override
+  Future<void> saveFoodIndexProgress(IndexProgress progress) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      StorageService.keyFoodIndexProgress,
+      progress.encode(),
+    );
+  }
+
+  @override
+  Future<void> clearFoodIndexProgress() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(StorageService.keyFoodIndexProgress);
   }
 
   // ── Export / Import ──────────────────────────────────────────────────────────

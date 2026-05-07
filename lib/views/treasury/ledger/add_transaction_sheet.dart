@@ -239,7 +239,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             ),
           ),
         ),
-        const _KeyboardSpacer(),
       ],
     );
   }
@@ -538,16 +537,5 @@ class _NoCategoriesHint extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-/// Isolated widget so only this rebuilds on keyboard animation frames,
-/// not the entire form above it.
-class _KeyboardSpacer extends StatelessWidget {
-  const _KeyboardSpacer();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(height: MediaQuery.of(context).viewInsets.bottom);
   }
 }

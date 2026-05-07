@@ -73,7 +73,21 @@ android {
             }
             packaging {
                 jniLibs {
-                    excludes += setOf("lib/x86_64/**", "lib/x86/**", "lib/armeabi-v7a/**")
+                    excludes += setOf(
+                        // Strip non-arm64 ABIs (we only ship arm64-v8a in release).
+                        "lib/x86_64/**",
+                        "lib/x86/**",
+                        "lib/armeabi-v7a/**",
+                        // Strip flutter_gemma libs the app doesn't use:
+                        //  - Gecko: we use Gemma embeddings instead (~17 MB)
+                        //  - Image generator: we don't generate images (~24 MB combined)
+                        //  - MediaPipe vision: deferred to Plan 022 (food vision) (~14 MB)
+                        // If you implement Plan 022, remove these vision excludes.
+                        "lib/arm64-v8a/libgecko_embedding_model_jni.so",
+                        "lib/arm64-v8a/libimagegenerator_gpu.so",
+                        "lib/arm64-v8a/libmediapipe_tasks_vision_image_generator_jni.so",
+                        "lib/arm64-v8a/libmediapipe_tasks_vision_jni.so",
+                    )
                 }
             }
         }

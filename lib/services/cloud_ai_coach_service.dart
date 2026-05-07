@@ -8,6 +8,7 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/food_parse_result.dart';
+import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
 
 /// Cloud AI Coach — calls the AWS Lambda → Bedrock Claude Haiku endpoint.
@@ -106,6 +107,13 @@ class CloudAiCoachService implements AiCoachService {
   Future<List<AiParsedFood>?> normalizeFoodInput(
           List<String> fragments) async =>
       null;
+
+  @override
+  Future<FoodDisambiguation?> disambiguateFood(
+    String userQuery,
+    List<FoodSearchCandidate> candidates,
+  ) async =>
+      null; // Cloud tier delegates disambiguation to the on-device path.
 
   // ── Internals ─────────────────────────────────────────────────────────────
 

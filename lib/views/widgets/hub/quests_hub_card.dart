@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../models/quest.dart';
 import '../../../presenters/quest_presenter.dart';
 import '../system/system.dart';
 import '../../../app_colors.dart';
@@ -26,20 +27,16 @@ class QuestsHubCard extends StatelessWidget {
         final isActive = quests.hasUrgentQuest;
         return AppCard(
           onTap: onNavigate,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.lg,
+          ),
           header: HubCardHeader(
             icon: isActive ? Icons.assignment_late : Icons.assignment_outlined,
             title: 'Quests',
             accentColor: Theme.of(context).colorScheme.secondary,
             isActive: isActive,
           ),
-          footer: isActive
-              ? AppPrimaryButton(
-                  label: 'Mark done',
-                  height: 44,
-                  onPressed: onMarkComplete,
-                  variant: AppButtonVariant.tonal,
-                )
-              : null,
           child: isActive
               ? _ActiveSnapshot(quests: quests)
               : _IdleSnapshot(quests: quests),
@@ -56,9 +53,9 @@ class _IdleSnapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final active = quests.todayActiveQuests.length;
+    final active = quests.todayActiveQuests;
     final completed = quests.todayCompletedQuests.length;
-    final total = active + completed;
+    final total = active.length + completed;
 
     if (total == 0) {
       return Text(
@@ -69,6 +66,7 @@ class _IdleSnapshot extends StatelessWidget {
       );
     }
 
+    final preview = active.take(3).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -79,9 +77,21 @@ class _IdleSnapshot extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs),
         AppLinearProgress(
           value: total > 0 ? completed / total : 0.0,
-          height: 4,
+          height: 6,
           color: context.appColors.success,
         ),
+        if (preview.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.sm),
+          ...preview.map((q) => _QuoteItem(
+                quest: q,
+                accent: theme.colorScheme.secondary,
+              )),
+          if (active.length > preview.length)
+            _SeeMore(
+              count: active.length - preview.length,
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+        ],
       ],
     );
   }
@@ -94,40 +104,159 @@ class _ActiveSnapshot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final quest = quests.nextUrgentQuest;
-    final overdueCount = quests.todayOverdueQuests.length;
+    final overdue = quests.todayOverdueQuests;
+    final preview = overdue.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                quest?.title ?? 'Overdue quest',
-                style: AppTextStyles.bodyMedium,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-            AppStatPill(
-              value: '${quest?.xpReward ?? 0} XP',
-              color: AppStatColor.warning,
-              size: AppStatSize.small,
-            ),
-          ],
-        ),
-        if (overdueCount > 1) ...[
-          const SizedBox(height: 4),
-          Text(
-            '+${overdueCount - 1} more overdue',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: theme.colorScheme.error,
-            ),
+        ...preview.map((q) => _QuoteItem(
+              quest: q,
+              accent: theme.colorScheme.error,
+              showXp: true,
+            )),
+        if (overdue.length > preview.length)
+          _SeeMore(
+            count: overdue.length - preview.length,
+            color: theme.colorScheme.error,
+            suffix: 'overdue',
           ),
-        ],
       ],
     );
   }
+}
+
+class _SeeMore extends StatelessWidget {
+  const _SeeMore({
+    required this.count,
+    required this.color,
+    this.suffix,
+  });
+
+  final int count;
+  final Color color;
+  final String? suffix;
+
+  @override
+  Widget build(BuildContext context) {
+    final label =
+        suffix == null ? 'See $count more' : 'See $count more $suffix';
+    return Padding(
+      padding: const EdgeInsets.only(left: AppSpacing.md, top: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(width: 2),
+          Icon(Icons.chevron_right, size: 14, color: color),
+        ],
+      ),
+    );
+  }
+}
+
+/// Block-quote style row: thin vertical accent bar + indent.
+class _QuoteItem extends StatelessWidget {
+  const _QuoteItem({
+    required this.quest,
+    required this.accent,
+    this.showXp = false,
+  });
+
+  final Quest quest;
+  final Color accent;
+  final bool showXp;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final timeStr =
+        TimeOfDay(hour: quest.hour, minute: quest.minute).format(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              width: 3,
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    quest.title,
+                    style: AppTextStyles.bodyMedium,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 1),
+                  Row(
+                    children: [
+                      Icon(Icons.schedule,
+                          size: 11, color: theme.colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 3),
+                      Text(
+                        timeStr,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      if (quest.streakCount > 0) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          '🔥 ${quest.streakCount}',
+                          style: AppTextStyles.labelSmall,
+                        ),
+                      ],
+                      if (quest.linkedStat != null) ...[
+                        const SizedBox(width: 8),
+                        Text(
+                          _statLabel(quest.linkedStat!),
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            if (showXp) ...[
+              const SizedBox(width: AppSpacing.xs),
+              AppStatPill(
+                value: '${quest.xpReward} XP',
+                color: AppStatColor.warning,
+                size: AppStatSize.small,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _statLabel(LinkedStat stat) => switch (stat) {
+        LinkedStat.str => 'STR',
+        LinkedStat.vit => 'VIT',
+        LinkedStat.agi => 'AGI',
+        LinkedStat.intl => 'INT',
+        LinkedStat.sen => 'SEN',
+      };
 }

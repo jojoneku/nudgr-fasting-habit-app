@@ -98,6 +98,46 @@ class FoodDbService {
     return rows.isEmpty ? null : FoodDbEntry.fromRow(rows.first);
   }
 
+  /// Total row count — used by the index builder to size progress bars.
+  Future<int> totalRowCount() async {
+    if (_db == null) return 0;
+    final rows = await _db!.rawQuery('SELECT COUNT(*) AS c FROM foods');
+    return (rows.first['c'] as num?)?.toInt() ?? 0;
+  }
+
+  /// Paged iteration for the embedding index builder. Returns up to [limit]
+  /// rows whose id sorts after [afterId] (or from the start when null).
+  ///
+  /// Order is by id (string), which matches the natural order of the food DB
+  /// asset and gives a stable resumable cursor.
+  Future<List<FoodDbEntry>> getAllForIndex({
+    String? afterId,
+    int limit = 500,
+  }) async {
+    if (_db == null) return const [];
+    final rows = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods '
+      '${afterId != null ? "WHERE id > ?" : ""} '
+      'ORDER BY id ASC LIMIT ?',
+      afterId != null ? [afterId, limit] : [limit],
+    );
+    return rows.map(FoodDbEntry.fromRow).toList();
+  }
+
+  /// Lookup a batch of ids in one query — used to hydrate semantic search hits
+  /// when the metadata round-trip isn't trusted.
+  Future<List<FoodDbEntry>> getByIds(List<String> ids) async {
+    if (_db == null || ids.isEmpty) return const [];
+    final placeholders = List.filled(ids.length, '?').join(',');
+    final rows = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods WHERE id IN ($placeholders)',
+      ids,
+    );
+    return rows.map(FoodDbEntry.fromRow).toList();
+  }
+
   // ── Internals ─────────────────────────────────────────────────────────────
 
   Future<String> _resolveDbPath() async {
