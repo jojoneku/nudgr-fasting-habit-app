@@ -1,14 +1,19 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/settings_presenter.dart';
+import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
+import '../presenters/update_presenter.dart';
 import '../utils/app_spacing.dart';
 import 'auth/login_view.dart';
+import 'stats_view.dart';
 import 'widgets/system/system.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -19,6 +24,9 @@ class SettingsScreen extends StatelessWidget {
     required this.settingsPresenter,
     this.syncPresenter,
     this.nutritionPresenter,
+    this.statsPresenter,
+    this.aiCoachPresenter,
+    this.updatePresenter,
   });
 
   final FastingPresenter fastingPresenter;
@@ -26,6 +34,9 @@ class SettingsScreen extends StatelessWidget {
   final SettingsPresenter settingsPresenter;
   final SyncPresenter? syncPresenter;
   final NutritionPresenter? nutritionPresenter;
+  final StatsPresenter? statsPresenter;
+  final AiCoachPresenter? aiCoachPresenter;
+  final UpdatePresenter? updatePresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -43,14 +54,16 @@ class SettingsScreen extends StatelessWidget {
                 authPresenter,
                 settingsPresenter,
                 if (nutritionPresenter != null) nutritionPresenter!,
+                if (statsPresenter != null) statsPresenter!,
+                if (updatePresenter != null) updatePresenter!,
               ]),
               builder: (context, _) => AppGroupedList(
                 sections: [
-                  _accountSection(context),
-                  _appearanceSection(context),
+                  _accountGroupSection(context),
                   if (nutritionPresenter?.isFoodSearchAvailable ?? false)
                     _smartSearchSection(context),
                   _dataSection(context),
+                  _aboutSection(context),
                   if (kDebugMode) _developerSection(context),
                 ],
               ),
@@ -61,77 +74,15 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  AppGroupedListSection _appearanceSection(BuildContext context) {
+  AppGroupedListSection _accountGroupSection(BuildContext context) {
     final theme = Theme.of(context);
-    return AppGroupedListSection(
-      title: 'Appearance',
-      footer: 'Theme follows your device by default.',
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.sm + 4,
-          ),
-          child: Row(
-            children: [
-              const AppIconBadge(
-                icon: Icons.palette_outlined,
-                size: 36,
-                iconSize: 18,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('Theme', style: theme.textTheme.bodyLarge),
-              ),
-              AppSegmentedControl<ThemeMode>(
-                selected: settingsPresenter.themeMode,
-                onChanged: (mode) {
-                  settingsPresenter.setThemeMode(mode);
-                },
-                segments: const [
-                  (value: ThemeMode.system, label: 'Auto', icon: null),
-                  (value: ThemeMode.light, label: 'Light', icon: null),
-                  (value: ThemeMode.dark, label: 'Dark', icon: null),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+    final children = <Widget>[];
 
-  AppGroupedListSection _accountSection(BuildContext context) {
+    // Account
     if (authPresenter.isSignedIn) {
-      return _signedInAccountSection(context);
-    }
-    return _signedOutAccountSection(context);
-  }
-
-  AppGroupedListSection _signedOutAccountSection(BuildContext context) {
-    return AppGroupedListSection(
-      title: 'Account',
-      children: [
-        AppListTile(
-          insetGrouped: true,
-          leading: const AppIconBadge(icon: Icons.cloud_outlined),
-          title: const Text('Cloud Sync'),
-          subtitle: const Text('Sign in to back up and sync'),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: () => LoginView.show(context, authPresenter),
-        ),
-      ],
-    );
-  }
-
-  AppGroupedListSection _signedInAccountSection(BuildContext context) {
-    final theme = Theme.of(context);
-    final email = authPresenter.userEmail ?? 'Signed in';
-    final avatarUrl = authPresenter.userAvatarUrl;
-
-    return AppGroupedListSection(
-      title: 'Account',
-      children: [
+      final email = authPresenter.userEmail ?? 'Signed in';
+      final avatarUrl = authPresenter.userAvatarUrl;
+      children.addAll([
         AppListTile(
           insetGrouped: true,
           leading: CircleAvatar(
@@ -156,8 +107,8 @@ class SettingsScreen extends StatelessWidget {
               insetGrouped: true,
               leading: syncPresenter!.isSyncing
                   ? const SizedBox(
-                      width: 36,
-                      height: 36,
+                      width: 44,
+                      height: 44,
                       child: Center(
                         child: SizedBox(
                           width: 20,
@@ -166,11 +117,7 @@ class SettingsScreen extends StatelessWidget {
                         ),
                       ),
                     )
-                  : const AppIconBadge(
-                      icon: Icons.sync,
-                      size: 36,
-                      iconSize: 18,
-                    ),
+                  : const AppIconBadge(icon: Icons.sync),
               title: Text(syncPresenter!.statusLabel),
               trailing: TextButton(
                 onPressed: syncPresenter!.isSyncing
@@ -209,7 +156,80 @@ class SettingsScreen extends StatelessWidget {
             if (confirm) await authPresenter.signOut();
           },
         ),
-      ],
+      ]);
+    } else {
+      children.add(AppListTile(
+        insetGrouped: true,
+        leading: const AppIconBadge(icon: Icons.cloud_outlined),
+        title: const Text('Cloud Sync'),
+        subtitle: const Text('Sign in to back up and sync'),
+        trailing: const Icon(Icons.chevron_right, size: 18),
+        onTap: () => LoginView.show(context, authPresenter),
+      ));
+    }
+
+    // Profile
+    if (statsPresenter != null) {
+      final stats = statsPresenter!.stats;
+      children.add(AppListTile(
+        insetGrouped: true,
+        leading: AppIconBadge(
+          icon: Icons.shield_outlined,
+          color: theme.colorScheme.primary,
+        ),
+        title: const Text('Character'),
+        subtitle: Text('Level ${stats.level} · ${stats.currentXp} XP'),
+        trailing: const Icon(Icons.chevron_right, size: 18),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => Scaffold(
+              body: StatsView(
+                presenter: statsPresenter!,
+                fastingPresenter: fastingPresenter,
+                authPresenter: authPresenter,
+                syncPresenter: syncPresenter,
+                settingsPresenter: settingsPresenter,
+                aiCoachPresenter: aiCoachPresenter,
+              ),
+            ),
+          ),
+        ),
+      ));
+    }
+
+    // Appearance
+    children.add(Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm + 4,
+      ),
+      child: Row(
+        children: [
+          const AppIconBadge(icon: Icons.palette_outlined),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text('Theme', style: theme.textTheme.bodyLarge),
+          ),
+          AppSegmentedControl<ThemeMode>(
+            selected: settingsPresenter.themeMode,
+            onChanged: (mode) {
+              settingsPresenter.setThemeMode(mode);
+            },
+            segments: const [
+              (value: ThemeMode.system, label: 'Auto', icon: null),
+              (value: ThemeMode.light, label: 'Light', icon: null),
+              (value: ThemeMode.dark, label: 'Dark', icon: null),
+            ],
+          ),
+        ],
+      ),
+    ));
+
+    return AppGroupedListSection(
+      title: 'Account',
+      footer: 'Theme follows your device by default.',
+      children: children,
     );
   }
 
@@ -616,6 +636,87 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  AppGroupedListSection _aboutSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final up = updatePresenter;
+    final version = up?.currentVersion ?? '—';
+    final remoteVersion = up?.latestManifest?.version;
+    final hasUpdate = up?.updateAvailable ?? false;
+    final apkUrl = up?.latestManifest?.apkUrl;
+
+    return AppGroupedListSection(
+      title: 'About',
+      children: [
+        AppListTile(
+          insetGrouped: true,
+          leading: const AppIconBadge(icon: Icons.info_outline),
+          title: const Text('Version'),
+          subtitle: Text(
+            hasUpdate && remoteVersion != null
+                ? '$version · update to $remoteVersion available'
+                : version,
+          ),
+          trailing: hasUpdate
+              ? FilledButton.tonal(
+                  onPressed: apkUrl == null
+                      ? null
+                      : () async {
+                          final ok = await launchUrl(
+                            Uri.parse(apkUrl),
+                            mode: LaunchMode.externalApplication,
+                          );
+                          if (!context.mounted) return;
+                          if (ok) {
+                            AppToast.success(
+                                context, 'Opening download in browser…');
+                          } else {
+                            AppToast.error(
+                                context, 'Could not open the update link.');
+                          }
+                        },
+                  child: const Text('Update'),
+                )
+              : (up?.isChecking ?? false)
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : TextButton(
+                      onPressed: up == null
+                          ? null
+                          : () async {
+                              await up.checkForUpdates();
+                              if (!context.mounted) return;
+                              if (!up.updateAvailable) {
+                                AppToast.show(
+                                    context, 'You’re on the latest version.');
+                              }
+                            },
+                      child: const Text('Check'),
+                    ),
+        ),
+        if (hasUpdate)
+          AppListTile(
+            insetGrouped: true,
+            leading: AppIconBadge(
+              icon: Icons.system_update,
+              color: theme.colorScheme.primary,
+            ),
+            title: Text(
+              'Update available',
+              style: TextStyle(color: theme.colorScheme.primary),
+            ),
+            subtitle: Text(
+              up?.latestManifest?.releaseNotes.isNotEmpty == true
+                  ? up!.latestManifest!.releaseNotes
+                  : 'Tap Update to download the latest APK.',
+            ),
+          ),
       ],
     );
   }

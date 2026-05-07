@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -17,11 +19,13 @@ import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
+import '../presenters/update_presenter.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
 import 'nutrition/log_meal_sheet.dart';
 import 'nutrition/nutrition_screen.dart';
 import 'quests/quests_tab.dart';
+import 'settings_screen.dart';
 import 'stats_view.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/ledger/add_transaction_sheet.dart';
@@ -36,7 +40,7 @@ import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
 
-class HubScreen extends StatelessWidget {
+class HubScreen extends StatefulWidget {
   const HubScreen({
     super.key,
     required this.hubPresenter,
@@ -55,6 +59,7 @@ class HubScreen extends StatelessWidget {
     this.authPresenter,
     this.syncPresenter,
     required this.settingsPresenter,
+    this.updatePresenter,
   });
 
   final HubPresenter hubPresenter;
@@ -73,14 +78,63 @@ class HubScreen extends StatelessWidget {
   final AuthPresenter? authPresenter;
   final SyncPresenter? syncPresenter;
   final SettingsPresenter settingsPresenter;
+  final UpdatePresenter? updatePresenter;
+
+  @override
+  State<HubScreen> createState() => _HubScreenState();
+}
+
+class _HubScreenState extends State<HubScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _fabCtrl;
+  bool _isFabOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fabCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 260),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fabCtrl.dispose();
+    super.dispose();
+  }
+
+  void _toggleFab() {
+    setState(() {
+      _isFabOpen = !_isFabOpen;
+      _isFabOpen ? _fabCtrl.forward() : _fabCtrl.reverse();
+    });
+  }
+
+  void _closeFab() {
+    if (!_isFabOpen) return;
+    setState(() {
+      _isFabOpen = false;
+      _fabCtrl.reverse();
+    });
+  }
 
   String _firstName() {
-    final name = authPresenter?.userDisplayName;
-    if (name != null && name.isNotEmpty) return name.split(' ').first;
-    final email = authPresenter?.userEmail ?? '';
-    if (email.contains('@')) {
-      final part = email.split('@').first.split('.').first;
-      return part[0].toUpperCase() + part.substring(1).toLowerCase();
+    // userDisplayName / userEmail reach into Supabase.instance, which throws
+    // an assertion if accessed before AppShell's post-frame init runs (e.g.
+    // on the very first build after a hot restart). Treat any failure here
+    // as "not yet known" — the ListenableBuilder will rebuild once auth is
+    // ready and resolve the real name.
+    try {
+      final name = widget.authPresenter?.userDisplayName;
+      if (name != null && name.isNotEmpty) return name.split(' ').first;
+      final email = widget.authPresenter?.userEmail ?? '';
+      if (email.contains('@')) {
+        final part = email.split('@').first.split('.').first;
+        return part[0].toUpperCase() + part.substring(1).toLowerCase();
+      }
+    } catch (_) {
+      // Supabase not yet initialized — fall through.
     }
     return 'Champion';
   }
@@ -109,10 +163,12 @@ class HubScreen extends StatelessWidget {
 
   Future<void> _refresh() async {
     await Future.wait([
-      fastingPresenter.loadState(),
-      questPresenter.reload(),
-      if (activityPresenter != null) activityPresenter!.loadState(),
-      if (nutritionPresenter != null) nutritionPresenter!.loadState(),
+      widget.fastingPresenter.loadState(),
+      widget.questPresenter.reload(),
+      if (widget.activityPresenter != null)
+        widget.activityPresenter!.loadState(),
+      if (widget.nutritionPresenter != null)
+        widget.nutritionPresenter!.loadState(),
     ]);
   }
 
@@ -148,94 +204,149 @@ class HubScreen extends StatelessWidget {
 
     Widget header = _buildHeader(context);
     // Re-render whenever auth resolves so "Champion" updates to the real name.
-    if (authPresenter != null) {
+    if (widget.authPresenter != null) {
       header = ListenableBuilder(
-        listenable: authPresenter!,
+        listenable: widget.authPresenter!,
         builder: (ctx, _) => _buildHeader(ctx),
       );
     }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: _ExpandableFab(
-        onNutrition: nutritionPresenter != null
+        controller: _fabCtrl,
+        isOpen: _isFabOpen,
+        onToggle: _toggleFab,
+        onClose: _closeFab,
+        onNutrition: widget.nutritionPresenter != null
             ? () => _pushNutritionScreen(context)
             : null,
-        onActivity: activityPresenter != null
+        onActivity: widget.activityPresenter != null
             ? () => _pushActivityScreen(context)
             : null,
-        onFinance: treasuryPresenter != null
+        onFinance: widget.treasuryPresenter != null
             ? () => _pushTreasuryScreen(context)
             : null,
         onQuests: () => _pushQuestsTab(context),
         onFasting: () => _pushTimerTab(context),
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              pinned: true,
-              toolbarHeight: 76,
-              collapsedHeight: 76,
-              titleSpacing: 0,
-              surfaceTintColor: Colors.transparent,
-              backgroundColor: theme.scaffoldBackgroundColor,
-              title: header,
-            ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.md,
-                AppSpacing.sm,
-                AppSpacing.md,
-                AppSpacing.xl,
-              ),
-              sliver: ListenableBuilder(
-                listenable: hubPresenter,
-                builder: (ctx, _) => SliverReorderableList(
-                  itemCount: hubPresenter.cardOrder.length,
-                  onReorder: (old, neo) {
-                    HapticFeedback.mediumImpact();
-                    hubPresenter.reorderCards(old, neo);
-                  },
-                  proxyDecorator: (child, index, animation) => Stack(
-                    children: [
-                      child,
-                      // Border only over the card — stops before the 8px spacing.
-                      Positioned(
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: AppSpacing.sm,
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.5),
-                              width: 1.5,
+      bottomNavigationBar: AnimatedBuilder(
+        animation: _fabCtrl,
+        builder: (ctx, _) {
+          final color = Color.lerp(
+            theme.colorScheme.surfaceContainerHigh,
+            theme.colorScheme.primary,
+            _fabCtrl.value,
+          )!;
+          return BottomAppBar(
+            color: color,
+            elevation: 0,
+            height: 56,
+            padding: EdgeInsets.zero,
+            child: const SizedBox.shrink(),
+          );
+        },
+      ),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _refresh,
+            child: CustomScrollView(
+              slivers: [
+                SliverAppBar(
+                  pinned: true,
+                  toolbarHeight: 76,
+                  collapsedHeight: 76,
+                  titleSpacing: 0,
+                  surfaceTintColor: Colors.transparent,
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                  title: header,
+                  actions: [
+                    IconButton(
+                      tooltip: 'Settings',
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: () => _pushSettings(context),
+                    ),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.md,
+                    AppSpacing.sm,
+                    AppSpacing.md,
+                    AppSpacing.xl,
+                  ),
+                  sliver: ListenableBuilder(
+                    listenable: widget.hubPresenter,
+                    builder: (ctx, _) => SliverReorderableList(
+                      itemCount: widget.hubPresenter.cardOrder.length,
+                      onReorder: (old, neo) {
+                        HapticFeedback.mediumImpact();
+                        widget.hubPresenter.reorderCards(old, neo);
+                      },
+                      proxyDecorator: (child, index, animation) => Stack(
+                        children: [
+                          child,
+                          // Border only over the card — stops before the 8px spacing.
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: AppSpacing.sm,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: theme.colorScheme.primary
+                                      .withValues(alpha: 0.5),
+                                  width: 1.5,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
+                      itemBuilder: (ctx, i) {
+                        final type = widget.hubPresenter.cardOrder[i];
+                        return ReorderableDelayedDragStartListener(
+                          key: ValueKey(type),
+                          index: i,
+                          child: Padding(
+                            padding:
+                                const EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: _buildCard(type, ctx),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  itemBuilder: (ctx, i) {
-                    final type = hubPresenter.cardOrder[i];
-                    return ReorderableDelayedDragStartListener(
-                      key: ValueKey(type),
-                      index: i,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                        child: _buildCard(type, ctx),
-                      ),
-                    );
-                  },
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+          // Tap-outside scrim, only while the FAB fan is open.
+          AnimatedBuilder(
+            animation: _fabCtrl,
+            builder: (_, __) {
+              final v = _fabCtrl.value;
+              if (v == 0) return const SizedBox.shrink();
+              return Positioned.fill(
+                child: IgnorePointer(
+                  ignoring: !_isFabOpen,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _closeFab,
+                    child: ColoredBox(
+                      color: Colors.black.withValues(alpha: 0.28 * v),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -243,32 +354,32 @@ class HubScreen extends StatelessWidget {
   Widget _buildCard(HubCardType type, BuildContext context) {
     return switch (type) {
       HubCardType.fasting => FastingHubCard(
-          fasting: fastingPresenter,
+          fasting: widget.fastingPresenter,
           onNavigate: () => _pushTimerTab(context),
-          onStartFast: fastingPresenter.startFast,
+          onStartFast: widget.fastingPresenter.startFast,
           onEndFast: () => _endFast(context),
         ),
-      HubCardType.nutrition => nutritionPresenter != null
+      HubCardType.nutrition => widget.nutritionPresenter != null
           ? NutritionHubCard(
-              nutrition: nutritionPresenter!,
+              nutrition: widget.nutritionPresenter!,
               onNavigate: () => _pushNutritionScreen(context),
               onLogMeal: () => _showLogMealSheet(context),
             )
           : const SizedBox.shrink(),
       HubCardType.quests => QuestsHubCard(
-          quests: questPresenter,
+          quests: widget.questPresenter,
           onNavigate: () => _pushQuestsTab(context),
           onMarkComplete: () => _markNextQuestDone(context),
         ),
-      HubCardType.activity => activityPresenter != null
+      HubCardType.activity => widget.activityPresenter != null
           ? ActivityHubCard(
-              activity: activityPresenter!,
+              activity: widget.activityPresenter!,
               onNavigate: () => _pushActivityScreen(context),
             )
           : const SizedBox.shrink(),
-      HubCardType.treasury => treasuryPresenter != null
+      HubCardType.treasury => widget.treasuryPresenter != null
           ? TreasuryHubCard(
-              treasury: treasuryPresenter!,
+              treasury: widget.treasuryPresenter!,
               onNavigate: () => _pushTreasuryScreen(context),
             )
           : const SizedBox.shrink(),
@@ -284,20 +395,20 @@ class HubScreen extends StatelessWidget {
       MaterialPageRoute(
         builder: (_) => Scaffold(
           appBar: AppBar(title: const Text('Fasting')),
-          body: TimerTab(presenter: fastingPresenter),
+          body: TimerTab(presenter: widget.fastingPresenter),
         ),
       ),
     );
   }
 
   void _pushNutritionScreen(BuildContext context) {
-    final n = nutritionPresenter;
+    final n = widget.nutritionPresenter;
     if (n == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-            NutritionScreen(presenter: n, aiCoachPresenter: aiCoachPresenter),
+        builder: (_) => NutritionScreen(
+            presenter: n, aiCoachPresenter: widget.aiCoachPresenter),
       ),
     );
   }
@@ -305,12 +416,13 @@ class HubScreen extends StatelessWidget {
   void _pushQuestsTab(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => QuestsTab(presenter: questPresenter)),
+      MaterialPageRoute(
+          builder: (_) => QuestsTab(presenter: widget.questPresenter)),
     );
   }
 
   void _pushActivityScreen(BuildContext context) {
-    final ap = activityPresenter;
+    final ap = widget.activityPresenter;
     if (ap == null) return;
     Navigator.push(
       context,
@@ -323,12 +435,12 @@ class HubScreen extends StatelessWidget {
   }
 
   void _pushTreasuryScreen(BuildContext context) {
-    final dash = treasuryPresenter;
-    final ledger = ledgerPresenter;
-    final bills = billsPresenter;
-    final budget = budgetPresenter;
-    final history = historyPresenter;
-    final installments = installmentPresenter;
+    final dash = widget.treasuryPresenter;
+    final ledger = widget.ledgerPresenter;
+    final bills = widget.billsPresenter;
+    final budget = widget.budgetPresenter;
+    final history = widget.historyPresenter;
+    final installments = widget.installmentPresenter;
     if (dash == null ||
         ledger == null ||
         bills == null ||
@@ -351,19 +463,40 @@ class HubScreen extends StatelessWidget {
   }
 
   void _pushStatsView(BuildContext context) {
-    final auth = authPresenter;
+    final auth = widget.authPresenter;
     if (auth == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => Scaffold(
           body: StatsView(
-            presenter: statsPresenter,
-            fastingPresenter: fastingPresenter,
+            presenter: widget.statsPresenter,
+            fastingPresenter: widget.fastingPresenter,
             authPresenter: auth,
-            syncPresenter: syncPresenter,
-            settingsPresenter: settingsPresenter,
+            syncPresenter: widget.syncPresenter,
+            settingsPresenter: widget.settingsPresenter,
+            aiCoachPresenter: widget.aiCoachPresenter,
           ),
+        ),
+      ),
+    );
+  }
+
+  void _pushSettings(BuildContext context) {
+    final auth = widget.authPresenter;
+    if (auth == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SettingsScreen(
+          fastingPresenter: widget.fastingPresenter,
+          authPresenter: auth,
+          settingsPresenter: widget.settingsPresenter,
+          syncPresenter: widget.syncPresenter,
+          nutritionPresenter: widget.nutritionPresenter,
+          statsPresenter: widget.statsPresenter,
+          aiCoachPresenter: widget.aiCoachPresenter,
+          updatePresenter: widget.updatePresenter,
         ),
       ),
     );
@@ -372,7 +505,7 @@ class HubScreen extends StatelessWidget {
   // ── Quick actions ────────────────────────────────────────────────────────────
 
   Future<void> _endFast(BuildContext context) async {
-    final (xp, _) = await fastingPresenter.stopFast();
+    final (xp, _) = await widget.fastingPresenter.stopFast();
     if (context.mounted) {
       AppToast.success(
           context, xp > 0 ? 'Fast complete! +$xp XP' : 'Fast ended');
@@ -380,7 +513,7 @@ class HubScreen extends StatelessWidget {
   }
 
   void _showLogMealSheet(BuildContext context) {
-    final n = nutritionPresenter;
+    final n = widget.nutritionPresenter;
     if (n == null) return;
     showModalBottomSheet(
       context: context,
@@ -390,9 +523,9 @@ class HubScreen extends StatelessWidget {
   }
 
   Future<void> _markNextQuestDone(BuildContext context) async {
-    final quest = questPresenter.nextUrgentQuest;
+    final quest = widget.questPresenter.nextUrgentQuest;
     if (quest == null) return;
-    final (xp, isCrit) = await questPresenter.completeQuest(quest.id);
+    final (xp, isCrit) = await widget.questPresenter.completeQuest(quest.id);
     if (context.mounted) {
       final label = isCrit ? 'Critical! +$xp XP' : '+$xp XP';
       AppToast.success(context, '${quest.title} done · $label');
@@ -400,7 +533,7 @@ class HubScreen extends StatelessWidget {
   }
 
   void _showAddTransactionSheet(BuildContext context) {
-    final ledger = ledgerPresenter;
+    final ledger = widget.ledgerPresenter;
     if (ledger == null) return;
     AppBottomSheet.show(
       context: context,
@@ -411,9 +544,17 @@ class HubScreen extends StatelessWidget {
 }
 
 // ── Expandable feature FAB ────────────────────────────────────────────────────
+//
+// Center-docked FAB that fans its items out in a half-arc above when tapped.
+// The FAB and the BottomAppBar share the same animation: grey when closed,
+// primary blue when open.
 
-class _ExpandableFab extends StatefulWidget {
+class _ExpandableFab extends StatelessWidget {
   const _ExpandableFab({
+    required this.controller,
+    required this.isOpen,
+    required this.onToggle,
+    required this.onClose,
     required this.onNutrition,
     required this.onActivity,
     required this.onFinance,
@@ -421,202 +562,256 @@ class _ExpandableFab extends StatefulWidget {
     required this.onFasting,
   });
 
+  final AnimationController controller;
+  final bool isOpen;
+  final VoidCallback onToggle;
+  final VoidCallback onClose;
   final VoidCallback? onNutrition;
   final VoidCallback? onActivity;
   final VoidCallback? onFinance;
   final VoidCallback? onQuests;
   final VoidCallback? onFasting;
 
-  @override
-  State<_ExpandableFab> createState() => _ExpandableFabState();
-}
-
-class _ExpandableFabState extends State<_ExpandableFab>
-    with SingleTickerProviderStateMixin {
-  bool _isOpen = false;
-  late final AnimationController _ctrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    );
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  void _toggle() {
-    setState(() {
-      _isOpen = !_isOpen;
-      _isOpen ? _ctrl.forward() : _ctrl.reverse();
-    });
-  }
-
-  void _close() {
-    if (!_isOpen) return;
-    setState(() {
-      _isOpen = false;
-      _ctrl.reverse();
-    });
-  }
+  // Wide bell-curve dimensions. Top half (above the bar) renders a Gaussian
+  // bell; bottom half is rectangular and hidden inside the BottomAppBar.
+  static const double _fabWidth = 120;
+  static const double _fabHeight = 70;
+  static const double _fanRadius = 150;
+  // Positive values push the FAB down on the y-axis (deeper into the bar,
+  // less visible bump). Negative values lift it up.
+  static const double _fabYOffset = 6;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final items = [
-      (
-        label: 'Nutrition',
-        icon: Icons.restaurant_outlined,
-        cb: widget.onNutrition
-      ),
-      (
-        label: 'Activity',
-        icon: Icons.directions_run_rounded,
-        cb: widget.onActivity
-      ),
-      (
-        label: 'Finance',
-        icon: Icons.account_balance_wallet_outlined,
-        cb: widget.onFinance
-      ),
-      (label: 'Quests', icon: Icons.flag_outlined, cb: widget.onQuests),
-      (
-        label: 'Fasting',
-        icon: Icons.hourglass_empty_rounded,
-        cb: widget.onFasting
-      ),
+    final items = <_FabAction>[
+      _FabAction('Fasting', Icons.timer_outlined, onFasting),
+      _FabAction('Nutrition', Icons.restaurant_outlined, onNutrition),
+      _FabAction('Quests', Icons.assignment_outlined, onQuests),
+      _FabAction('Activity', Icons.directions_run_outlined, onActivity),
+      _FabAction('Finance', Icons.account_balance_outlined, onFinance),
     ];
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          alignment: Alignment.bottomCenter,
-          child: _isOpen
-              ? Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    for (int i = 0; i < items.length; i++) ...[
-                      _FabItem(
-                        label: items[i].label,
-                        icon: items[i].icon,
-                        controller: _ctrl,
-                        intervalStart: i * 0.07,
-                        onTap: items[i].cb != null
-                            ? () {
-                                _close();
-                                items[i].cb!();
-                              }
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                    ],
-                  ],
-                )
-              : const SizedBox.shrink(),
-        ),
-        FloatingActionButton(
-          heroTag: 'hub_feature_fab',
-          onPressed: _toggle,
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          elevation: 3,
-          child: AnimatedRotation(
-            turns: _isOpen ? 0.125 : 0,
-            duration: const Duration(milliseconds: 220),
-            child: const Icon(Icons.add, size: 26),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _FabItem extends StatelessWidget {
-  const _FabItem({
-    required this.label,
-    required this.icon,
-    required this.controller,
-    required this.intervalStart,
-    required this.onTap,
-  });
-
-  final String label;
-  final IconData icon;
-  final AnimationController controller;
-  final double intervalStart;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final anim = CurvedAnimation(
-      parent: controller,
-      curve: Interval(intervalStart, (intervalStart + 0.6).clamp(0, 1.0),
-          curve: Curves.easeOutCubic),
-    );
-
-    return FadeTransition(
-      opacity: anim,
-      child: SlideTransition(
-        position: Tween<Offset>(
-          begin: const Offset(0, 0.4),
-          end: Offset.zero,
-        ).animate(anim),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+    return Transform.translate(
+      offset: const Offset(0, _fabYOffset),
+      child: SizedBox(
+        width: _fabWidth,
+        height: _fabHeight,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.25),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+            for (int i = 0; i < items.length; i++)
+              _FanItem(
+                controller: controller,
+                angle: _angleFor(i, items.length),
+                radius: _fanRadius,
+                label: items[i].label,
+                icon: items[i].icon,
+                onTap: items[i].cb != null
+                    ? () {
+                        onClose();
+                        items[i].cb!();
+                      }
+                    : null,
+              ),
+            AnimatedBuilder(
+              animation: controller,
+              builder: (_, __) {
+                final t = controller.value;
+                final bg = Color.lerp(
+                  theme.colorScheme.surfaceContainerHigh,
+                  theme.colorScheme.primary,
+                  t,
+                )!;
+                final fg = Color.lerp(
+                  theme.colorScheme.onSurface,
+                  theme.colorScheme.onPrimary,
+                  t,
+                )!;
+                return ClipPath(
+                  clipper: const _BellClipper(),
+                  child: Material(
+                    color: bg,
+                    elevation: 0,
+                    child: InkWell(
+                      onTap: onToggle,
+                      child: SizedBox(
+                        width: _fabWidth,
+                        height: _fabHeight,
+                        // Icon sits in the top half, centered on the bell's peak.
+                        child: Align(
+                          alignment: const Alignment(0, -0.5),
+                          child: Transform.rotate(
+                            angle: t * (math.pi / 4),
+                            child: Icon(Icons.add, size: 24, color: fg),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
-                ],
-              ),
-              child: Text(
-                label,
-                style: AppTextStyles.labelMedium.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Material(
-              color: theme.colorScheme.primaryContainer,
-              shape: const CircleBorder(),
-              elevation: 2,
-              child: InkWell(
-                onTap: onTap,
-                customBorder: const CircleBorder(),
-                child: Padding(
-                  padding: const EdgeInsets.all(10),
-                  child: Icon(
-                    icon,
-                    size: 20,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                ),
-              ),
+                );
+              },
             ),
           ],
         ),
       ),
     );
   }
+
+  // Spread items across an arc above the FAB. 165° = upper-left, 15° =
+  // upper-right (0° points right in math convention; we negate y for screen).
+  double _angleFor(int i, int n) {
+    if (n <= 1) return math.pi / 2;
+    // Tighter arc keeps the bottom of each label clear of the BottomAppBar.
+    const startDeg = 140.0;
+    const endDeg = 40.0;
+    final t = i / (n - 1);
+    final deg = startDeg + (endDeg - startDeg) * t;
+    return deg * math.pi / 180;
+  }
+}
+
+class _FabAction {
+  const _FabAction(this.label, this.icon, this.cb);
+  final String label;
+  final IconData icon;
+  final VoidCallback? cb;
+}
+
+class _FanItem extends StatelessWidget {
+  const _FanItem({
+    required this.controller,
+    required this.angle,
+    required this.radius,
+    required this.label,
+    required this.icon,
+    required this.onTap,
+  });
+
+  final AnimationController controller;
+  final double angle; // radians
+  final double radius;
+  final String label;
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  static const double _itemSize = 48;
+  static const double _fabCenterX = _ExpandableFab._fabWidth / 2;
+  static const double _fabCenterY = _ExpandableFab._fabHeight / 2;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (_, __) {
+        final raw = controller.value;
+        // Skip building entirely when fully closed so the label Text is not
+        // in the tree (avoids duplicate matches with hub card titles).
+        if (raw == 0) return const SizedBox.shrink();
+        // easeOutBack gives a small overshoot so items "pop" into place.
+        final t = Curves.easeOutBack.transform(raw);
+        final dx = math.cos(angle) * radius * t;
+        final dy = -math.sin(angle) * radius * t;
+        // Anchor the column at the circle's center; FractionalTranslation
+        // re-centers horizontally so wider labels stay aligned with the
+        // circle above.
+        final left = _fabCenterX + dx;
+        final top = _fabCenterY + dy - _itemSize / 2;
+        final opacity = raw.clamp(0.0, 1.0);
+        return Positioned(
+          left: left,
+          top: top,
+          child: FractionalTranslation(
+            translation: const Offset(-0.5, 0),
+            child: IgnorePointer(
+              ignoring: raw < 0.4,
+              child: Opacity(
+                opacity: opacity,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Material(
+                      color: theme.colorScheme.primaryContainer,
+                      shape: const CircleBorder(),
+                      elevation: 3,
+                      child: InkWell(
+                        onTap: onTap,
+                        customBorder: const CircleBorder(),
+                        child: SizedBox(
+                          width: _itemSize,
+                          height: _itemSize,
+                          child: Icon(
+                            icon,
+                            size: 22,
+                            color: theme.colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      label,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: theme.colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Gaussian bell-curve clipper. Top half of the rect renders the bell; bottom
+// half is rectangular and sits embedded in the BottomAppBar. Used by
+// _ExpandableFab.
+class _BellClipper extends CustomClipper<Path> {
+  const _BellClipper();
+
+  // Width of the bell relative to the rect: ~3.6 sigma per half-width keeps
+  // the curve visually grounded by the time it reaches the rect edges.
+  static const double _sigmaDivisor = 3.6;
+  static const int _samples = 72;
+
+  @override
+  Path getClip(Size size) {
+    final w = size.width;
+    final h = size.height;
+    final bumpHeight = h * 0.5;
+    final sigma = w / _sigmaDivisor;
+    final cx = w / 2;
+
+    final path = Path()..moveTo(0, bumpHeight);
+    for (int i = 0; i <= _samples; i++) {
+      final t = i / _samples;
+      final x = w * t;
+      final dx = x - cx;
+      final y =
+          bumpHeight - bumpHeight * math.exp(-(dx * dx) / (2 * sigma * sigma));
+      path.lineTo(x, y);
+    }
+    path
+      ..lineTo(w, bumpHeight)
+      ..lineTo(w, h)
+      ..lineTo(0, h)
+      ..close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(_BellClipper oldClipper) => false;
 }

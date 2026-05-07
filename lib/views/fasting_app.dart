@@ -21,7 +21,12 @@ class _FastingAppState extends State<FastingApp> {
   late final SettingsPresenter _settingsPresenter;
   late final UpdatePresenter _updatePresenter;
 
-  static const String _currentVersion = '1.0.1';
+  // Injected by CI via `--dart-define=APP_VERSION=${new_version}`. The fallback
+  // only fires on local `flutter run` — production builds always set it.
+  static const String _currentVersion = String.fromEnvironment(
+    'APP_VERSION',
+    defaultValue: 'dev',
+  );
 
   @override
   void initState() {
