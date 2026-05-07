@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../app_colors.dart';
+import '../models/ai_coach_context.dart';
+import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
@@ -8,8 +10,8 @@ import '../presenters/sync_presenter.dart';
 import '../models/user_stats.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
+import 'widgets/ai_chat_sheet.dart';
 import 'widgets/level_up_overlay.dart';
-import 'settings_screen.dart';
 import 'widgets/system/system.dart';
 
 class StatsView extends StatelessWidget {
@@ -20,6 +22,7 @@ class StatsView extends StatelessWidget {
     required this.authPresenter,
     required this.settingsPresenter,
     this.syncPresenter,
+    this.aiCoachPresenter,
   });
 
   final StatsPresenter presenter;
@@ -27,6 +30,7 @@ class StatsView extends StatelessWidget {
   final AuthPresenter authPresenter;
   final SettingsPresenter settingsPresenter;
   final SyncPresenter? syncPresenter;
+  final AiCoachPresenter? aiCoachPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -38,23 +42,9 @@ class StatsView extends StatelessWidget {
           children: [
             AppPageScaffold.large(
               title: 'Character',
-              actions: [
-                IconButton(
-                  tooltip: 'Settings',
-                  icon: const Icon(Icons.settings_outlined),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SettingsScreen(
-                        fastingPresenter: fastingPresenter,
-                        authPresenter: authPresenter,
-                        settingsPresenter: settingsPresenter,
-                        syncPresenter: syncPresenter,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+              floatingActionButton: aiCoachPresenter != null
+                  ? _AiCoachFab(presenter: aiCoachPresenter!)
+                  : null,
               slivers: [
                 SliverPadding(
                   padding: const EdgeInsets.fromLTRB(
@@ -83,6 +73,85 @@ class StatsView extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _AiCoachFab extends StatefulWidget {
+  final AiCoachPresenter presenter;
+
+  const _AiCoachFab({required this.presenter});
+
+  @override
+  State<_AiCoachFab> createState() => _AiCoachFabState();
+}
+
+class _AiCoachFabState extends State<_AiCoachFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 150),
+    );
+    _scale = Tween(begin: 1.0, end: 0.9).animate(
+      CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTapDown: (_) => _ctrl.forward(),
+      onTapUp: (_) {
+        _ctrl.reverse();
+        AiChatSheet.show(
+          context,
+          presenter: widget.presenter,
+          entryPoint: AiCoachEntryPoint.stats,
+        );
+      },
+      onTapCancel: () => _ctrl.reverse(),
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: theme.colorScheme.primary.withValues(alpha: 0.45),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Center(
+            child: Icon(
+              Icons.psychology_outlined,
+              color: theme.colorScheme.onPrimary,
+              size: 24,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
