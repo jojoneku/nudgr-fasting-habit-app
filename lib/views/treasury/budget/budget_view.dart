@@ -98,7 +98,7 @@ class _MonthSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: theme.colorScheme.surface,
+      color: theme.scaffoldBackgroundColor,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Row(
@@ -150,43 +150,51 @@ class _SummaryBanner extends StatelessWidget {
     final remaining = presenter.totalRemaining;
     final isOver = remaining < 0;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      child: AppCard(
-        variant: AppCardVariant.filled,
-        child: Row(
-          children: [
-            Expanded(
-              child: AppNumberDisplay(
-                value: formatPesoCompact(allocated),
-                label: 'Allocated',
-                size: AppNumberSize.body,
-                color: cs.primary,
-                textAlign: TextAlign.start,
-              ),
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: AppNumberDisplay(
+              value: formatPesoCompact(allocated),
+              label: 'Allocated',
+              size: AppNumberSize.body,
+              color: cs.primary,
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppNumberDisplay(
-                value: formatPesoCompact(spent),
-                label: 'Spent',
-                size: AppNumberSize.body,
-                color: cs.onSurface,
-                textAlign: TextAlign.start,
-              ),
+          ),
+          Container(
+            width: 1,
+            height: 32,
+            color: cs.outlineVariant.withValues(alpha: 0.5),
+          ),
+          Expanded(
+            child: AppNumberDisplay(
+              value: formatPesoCompact(spent),
+              label: 'Spent',
+              size: AppNumberSize.body,
+              color: cs.onSurface,
+              textAlign: TextAlign.center,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppNumberDisplay(
-                value: formatPesoCompact(remaining.abs()),
-                label: isOver ? 'Over by' : 'Remaining',
-                size: AppNumberSize.body,
-                color: isOver ? cs.error : cs.tertiary,
-                textAlign: TextAlign.start,
-              ),
+          ),
+          Container(
+            width: 1,
+            height: 32,
+            color: cs.outlineVariant.withValues(alpha: 0.5),
+          ),
+          Expanded(
+            child: AppNumberDisplay(
+              value: formatPesoCompact(remaining.abs()),
+              label: isOver ? 'Over by' : 'Remaining',
+              size: AppNumberSize.body,
+              color: isOver ? cs.error : cs.tertiary,
+              textAlign: TextAlign.center,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

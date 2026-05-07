@@ -47,7 +47,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: colorScheme.surfaceContainer,
+          backgroundColor: theme.scaffoldBackgroundColor,
           title: Text(
             'TREASURY',
             style: theme.textTheme.titleSmall?.copyWith(
