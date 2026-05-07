@@ -493,6 +493,20 @@ class SettingsScreen extends StatelessWidget {
                 TextButton(
                   onPressed: () async {
                     await p.downloadAiBundle();
+                    final err = p.aiBundleError;
+                    if (err != null && context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(err),
+                          duration: const Duration(seconds: 6),
+                          action: SnackBarAction(
+                            label: 'Dismiss',
+                            onPressed: p.clearAiBundleError,
+                          ),
+                        ),
+                      );
+                      p.clearAiBundleError();
+                    }
                   },
                   child: const Text('Download'),
                 ),

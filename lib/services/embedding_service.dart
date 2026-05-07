@@ -13,15 +13,17 @@ import 'package:flutter_gemma/rag/embedding_models.dart' as fg_rag;
 /// Defaults to `EmbeddingModel.embeddingGemma300M4bit` (75 MB, 768 dims,
 /// multilingual). Choice rationale lives in `docs/rag_food_search_spec.md`.
 class EmbeddingService {
-  /// HuggingFace read token — required to download the gated embedder.
-  /// Reuse the same token used by the LLM (`AiEstimationService`).
-  final String? huggingFaceToken;
+  /// Resolves the HuggingFace read token at download time.
+  /// Returns null if no token is available (offline + uncached).
+  /// Lazy by design — the token is fetched from the server on each install
+  /// attempt rather than bundled into the APK.
+  final Future<String?> Function()? tokenProvider;
 
   /// Which embedder to install on first use.
   final fg_rag.EmbeddingModel modelChoice;
 
   EmbeddingService({
-    this.huggingFaceToken,
+    this.tokenProvider,
     this.modelChoice = fg_rag.EmbeddingModel.embeddingGemma300M4bit,
   });
 
@@ -82,11 +84,12 @@ class EmbeddingService {
         }
       }
 
+      final token = await tokenProvider?.call();
       await fg.FlutterGemma.installEmbedder()
-          .modelFromNetwork(modelChoice.url, token: huggingFaceToken)
+          .modelFromNetwork(modelChoice.url, token: token)
           .tokenizerFromNetwork(
             modelChoice.tokenizerUrl,
-            token: huggingFaceToken,
+            token: token,
           )
           .withModelProgress((p) {
         modelPct = p;
