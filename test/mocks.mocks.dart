@@ -16,6 +16,7 @@ import 'package:intermittent_fasting/models/ai_coach_context.dart' as _i31;
 import 'package:intermittent_fasting/models/ai_meal_estimate.dart' as _i33;
 import 'package:intermittent_fasting/models/ai_parsed_food.dart' as _i34;
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart' as _i3;
+import 'package:intermittent_fasting/models/extracted_food_item.dart' as _i45;
 import 'package:intermittent_fasting/models/fasting_log.dart' as _i10;
 import 'package:intermittent_fasting/models/fasting_phase.dart' as _i40;
 import 'package:intermittent_fasting/models/finance/bill.dart' as _i21;
@@ -1428,6 +1429,16 @@ class MockAiCoachService extends _i1.Mock implements _i29.AiCoachService {
         ),
         returnValue: _i9.Future<_i32.FoodParseResult?>.value(),
       ) as _i9.Future<_i32.FoodParseResult?>);
+
+  @override
+  _i9.Future<List<_i45.ExtractedFoodItem>?> extractFoodItems(String? text) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #extractFoodItems,
+          [text],
+        ),
+        returnValue: _i9.Future<List<_i45.ExtractedFoodItem>?>.value(),
+      ) as _i9.Future<List<_i45.ExtractedFoodItem>?>);
 
   @override
   _i9.Future<_i33.AiMealEstimate?> estimateMacros(String? description) =>

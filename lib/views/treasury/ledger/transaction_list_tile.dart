@@ -108,7 +108,12 @@ class TransactionListTile extends StatelessWidget {
                 if (action == 'delete' && onDelete != null) onDelete!();
               }
             : null,
-        onDelete: onDelete != null ? () async => true : null,
+        onDelete: onDelete != null
+            ? () async {
+                onDelete!();
+                return true;
+              }
+            : null,
       ),
     );
   }

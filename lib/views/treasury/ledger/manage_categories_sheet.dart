@@ -54,17 +54,31 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
 
   Future<void> _confirmDelete(
       BuildContext context, FinanceCategory category) async {
+    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await AppConfirmDialog.confirm(
       context: context,
       title: 'Delete category?',
-      body:
-          '"${category.name}" will be removed. Existing transactions will keep the ID but won\'t display a label.',
+      body: '"${category.name}" will be removed. '
+          'You can only delete categories with no transactions linked to them.',
       confirmLabel: 'Delete',
       cancelLabel: 'Cancel',
       isDestructive: true,
     );
-    if (confirmed) {
-      widget.presenter.deleteCategory(category.id);
+    if (!confirmed || !mounted) return;
+    try {
+      await widget.presenter.deleteCategory(category.id);
+    } on StateError catch (e) {
+      if (!mounted) return;
+      final message = e.message == 'has_transactions'
+          ? 'This category has transactions linked to it. '
+              'Delete or reassign those entries first.'
+          : 'Could not delete category: ${e.message}';
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

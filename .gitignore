@@ -47,3 +47,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/build/
+
+# Claude Code runtime — keep skills/plans/agents tracked, ignore scratch state
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
+# Supabase CLI scratch
+supabase/.temp/

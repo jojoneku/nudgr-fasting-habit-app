@@ -91,6 +91,24 @@ class LedgerPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Steps the selected date by [delta] days. If no date is selected, anchors
+  /// at today (or the 1st of the selected month if today is in a different month).
+  void stepDay(int delta) {
+    final anchor = _selectedDate ??
+        (() {
+          final now = DateTime.now();
+          final monthParts = _selectedMonth.split('-');
+          final y = int.parse(monthParts[0]);
+          final m = int.parse(monthParts[1]);
+          return (now.year == y && now.month == m) ? now : DateTime(y, m, 1);
+        })();
+    final next = anchor.add(Duration(days: delta));
+    _selectedDate = next;
+    _selectedMonth =
+        '${next.year.toString().padLeft(4, '0')}-${next.month.toString().padLeft(2, '0')}';
+    notifyListeners();
+  }
+
   double get filteredAccountBalance {
     if (_selectedAccountId == null) return 0.0;
     final account =
@@ -288,7 +306,12 @@ class LedgerPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Throws [StateError('has_transactions')] if any transaction still
+  /// references this category — refusing to delete prevents broken category
+  /// references in the ledger feed and pie chart.
   Future<void> deleteCategory(String id) async {
+    final inUse = _allTransactions.any((t) => t.categoryId == id);
+    if (inUse) throw StateError('has_transactions');
     _categories = _categories.where((c) => c.id != id).toList();
     await _storage.saveFinanceCategories(_categories);
     notifyListeners();
@@ -309,15 +332,22 @@ class LedgerPresenter extends ChangeNotifier {
 
   void _applyBalanceDelta(
       String accountId, double amount, TransactionType type) {
+    // Sub-accounts share the same real-world money as their parent, so any
+    // transaction-driven delta on a sub also moves the parent. Transfers
+    // between a parent and its own sub net to zero on the parent (re-tagging),
+    // while external inflows/outflows on a sub correctly hit both accounts.
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    final parentId = account?.parentAccountId;
+    final delta = type == TransactionType.inflow ? amount : -amount;
+
     _accounts = [
       for (final a in _accounts)
-        a.id == accountId
-            ? a.copyWith(
-                balance: type == TransactionType.inflow
-                    ? a.balance + amount
-                    : a.balance - amount,
-              )
-            : a,
+        if (a.id == accountId)
+          a.copyWith(balance: a.balance + delta)
+        else if (parentId != null && a.id == parentId)
+          a.copyWith(balance: a.balance + delta)
+        else
+          a,
     ];
   }
 

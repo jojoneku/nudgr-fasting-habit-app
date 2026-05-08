@@ -916,6 +916,12 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
                     ? () =>
                         widget.presenter.removeChatFoodItemAt(message.id, e.key)
                     : null,
+                onSwapAlternative: (altIndex) =>
+                    widget.presenter.swapChatFoodAlternative(
+                  message.id,
+                  e.key,
+                  altIndex,
+                ),
               )),
           if (message.foodItems.length >= 2)
             _MealTotalRow(items: message.foodItems),
@@ -942,6 +948,7 @@ class _FoodItemRow extends StatelessWidget {
   final bool editing;
   final TextEditingController controller;
   final VoidCallback? onDelete;
+  final ValueChanged<int>? onSwapAlternative;
   const _FoodItemRow({
     required this.item,
     required this.index,
@@ -949,6 +956,7 @@ class _FoodItemRow extends StatelessWidget {
     required this.editing,
     required this.controller,
     this.onDelete,
+    this.onSwapAlternative,
   });
 
   @override
@@ -978,12 +986,20 @@ class _FoodItemRow extends StatelessWidget {
           )
         : _FoodItemDisplay(item: item);
 
+    final showAlternatives =
+        !editing && item.alternatives.isNotEmpty && onSwapAlternative != null;
+
     return Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
           child: body,
         ),
+        if (showAlternatives)
+          _AlternativesStrip(
+            alternatives: item.alternatives,
+            onTap: onSwapAlternative!,
+          ),
         if (!isLast)
           Divider(
             height: 1,
@@ -1135,6 +1151,75 @@ class _FoodEditFieldState extends State<_FoodEditField> {
 }
 
 /// Sums calories + macros across a multi-item meal and renders a footer row.
+/// Renders runner-up DB matches as tap-to-swap chips. Shown beneath a chat
+/// food item when the matcher's auto-pick was low-confidence (Plan 022 §2.2).
+/// Tapping a chip calls [onTap] with the alternative index — the presenter
+/// swaps it into today's log and learns the choice into the personal dict.
+class _AlternativesStrip extends StatelessWidget {
+  final List<ChatFoodAlternative> alternatives;
+  final ValueChanged<int> onTap;
+
+  const _AlternativesStrip({required this.alternatives, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Not this? Try:',
+            style: TextStyle(
+              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (var i = 0; i < alternatives.length; i++)
+                _AlternativeChip(
+                  alt: alternatives[i],
+                  onTap: () => onTap(i),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AlternativeChip extends StatelessWidget {
+  final ChatFoodAlternative alt;
+  final VoidCallback onTap;
+
+  const _AlternativeChip({required this.alt, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return ActionChip(
+      onPressed: onTap,
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      backgroundColor: cs.surfaceContainerHigh,
+      side: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.6)),
+      label: Text(
+        '${alt.name} · ${alt.calories} kcal',
+        style: TextStyle(
+          color: cs.onSurface,
+          fontSize: 11,
+        ),
+      ),
+    );
+  }
+}
+
 class _MealTotalRow extends StatelessWidget {
   final List<ChatFoodItem> items;
   const _MealTotalRow({required this.items});

@@ -7,6 +7,7 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
+import '../models/extracted_food_item.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
@@ -92,6 +93,13 @@ class CloudAiCoachService implements AiCoachService {
   Future<FoodParseResult?> parseFood(String description) async {
     // Cloud tier delegates food parsing to the on-device path.
     // No need to make a remote call just for NLP parsing.
+    return null;
+  }
+
+  @override
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async {
+    // Cloud tier delegates food extraction to the on-device path. The
+    // NutritionPresenter uses the on-device service directly for this flow.
     return null;
   }
 

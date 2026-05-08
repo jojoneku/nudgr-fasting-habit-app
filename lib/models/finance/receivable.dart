@@ -17,6 +17,10 @@ class Receivable {
   final DateTime? receivedDate;
   final double? receivedAmount; // may differ from expected
   final String? transactionId; // linked TransactionRecord
+  /// Optional default destination account — pre-fills the dropdown in
+  /// _MarkReceivedSheet so recurring receivables don't need re-picking each
+  /// month. Null means "no preference, ask at received-time".
+  final String? accountId;
   final DateTime updatedAt;
 
   Receivable({
@@ -34,6 +38,7 @@ class Receivable {
     this.receivedDate,
     this.receivedAmount,
     this.transactionId,
+    this.accountId,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -58,6 +63,7 @@ class Receivable {
           : null,
       receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
+      accountId: json['accountId'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -78,6 +84,7 @@ class Receivable {
         'receivedDate': receivedDate?.toIso8601String(),
         'receivedAmount': receivedAmount,
         'transactionId': transactionId,
+        'accountId': accountId,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -95,6 +102,7 @@ class Receivable {
     DateTime? receivedDate,
     double? receivedAmount,
     String? transactionId,
+    String? accountId,
     DateTime? updatedAt,
   }) {
     return Receivable(
@@ -112,6 +120,7 @@ class Receivable {
       receivedDate: receivedDate ?? this.receivedDate,
       receivedAmount: receivedAmount ?? this.receivedAmount,
       transactionId: transactionId ?? this.transactionId,
+      accountId: accountId ?? this.accountId,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

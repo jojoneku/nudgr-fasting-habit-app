@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -11,12 +12,33 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 class BudgetPresenter extends ChangeNotifier {
   BudgetPresenter(
     StorageService storage,
-    StatsPresenter stats,
-  )   : _storage = storage,
-        _stats = stats;
+    StatsPresenter stats, [
+    LedgerPresenter? ledger,
+  ])  : _storage = storage,
+        _stats = stats,
+        _ledger = ledger {
+    _ledger?.addListener(_syncFromLedger);
+  }
 
   final StorageService _storage;
   final StatsPresenter _stats;
+  final LedgerPresenter? _ledger;
+
+  /// Pull transactions and categories from LedgerPresenter so budget spending
+  /// totals stay in sync after ledger mutations or mark-paid flows.
+  void _syncFromLedger() {
+    final ledger = _ledger;
+    if (ledger == null) return;
+    _allTransactions = ledger.allTransactions;
+    _categories = ledger.categories;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ledger?.removeListener(_syncFromLedger);
+    super.dispose();
+  }
 
   String _selectedMonth = toMonthKey(DateTime.now());
   List<Budget> _allBudgets = [];
@@ -168,6 +190,19 @@ class BudgetPresenter extends ChangeNotifier {
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────
+
+  Future<void> addCategory(FinanceCategory category) async {
+    final ledger = _ledger;
+    if (ledger != null) {
+      // Delegate so other presenters (Ledger view, Bills view) pick it up
+      // through the ledger's listener fan-out.
+      await ledger.addCategory(category);
+      return;
+    }
+    _categories = [..._categories, category];
+    await _storage.saveFinanceCategories(_categories);
+    notifyListeners();
+  }
 
   Future<void> load() async {
     _allBudgets = await _storage.loadBudgets();

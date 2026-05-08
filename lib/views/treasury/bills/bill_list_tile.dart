@@ -144,34 +144,58 @@ class BillListTile extends StatelessWidget {
             ],
           ),
           subtitle: subtitleWidget,
-          trailing: bill.isPaid
-              ? Icon(Icons.check_circle,
-                  color: context.appColors.success, size: 24)
-              : SizedBox(
-                  height: 44,
+          trailing: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatPeso(bill.amount),
+                style: TextStyle(
+                  color: bill.isPaid
+                      ? colorScheme.onSurfaceVariant
+                      : colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                  decoration: bill.isPaid ? TextDecoration.lineThrough : null,
+                ),
+              ),
+              if (bill.isPaid)
+                Icon(Icons.check_circle,
+                    color: context.appColors.success, size: 18)
+              else
+                SizedBox(
+                  height: 28,
                   child: TextButton(
                     onPressed: onMarkPaid,
                     style: TextButton.styleFrom(
                       foregroundColor: colorScheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                     child: const Text(
                       'Mark Paid',
                       style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
+            ],
+          ),
           onLongPress: onEdit != null ? () => _showContextMenu(context) : null,
           onDelete: onDelete != null
-              ? () => AppConfirmDialog.confirm(
+              ? () async {
+                  final confirmed = await AppConfirmDialog.confirm(
                     context: context,
                     title: 'Delete Bill',
                     body: 'Delete "${bill.name}"?',
                     confirmLabel: 'Delete',
                     cancelLabel: 'Cancel',
                     isDestructive: true,
-                  )
+                  );
+                  if (confirmed) onDelete!();
+                  return confirmed;
+                }
               : null,
         ),
       ],

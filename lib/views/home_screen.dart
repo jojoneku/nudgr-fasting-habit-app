@@ -85,8 +85,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       stats: _statsPresenter,
     );
     _foodDb = FoodDbService();
-    _onDeviceAi = OnDeviceAiCoachService();
     final remoteSecrets = RemoteSecretsService();
+    _onDeviceAi = OnDeviceAiCoachService(
+      tokenProvider: remoteSecrets.getHuggingFaceToken,
+    );
     _embedder = EmbeddingService(
       tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
@@ -101,11 +103,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       healthService: _healthService,
       storage: _storage,
     );
-    _treasuryPresenter = TreasuryDashboardPresenter(_storage);
     _ledgerPresenter = LedgerPresenter(_storage, _statsPresenter);
-    _billsPresenter =
-        BillsReceivablesPresenter(_storage, _ledgerPresenter, _statsPresenter);
-    _budgetPresenter = BudgetPresenter(_storage, _statsPresenter);
+    _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
+    _budgetPresenter =
+        BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);
+    _billsPresenter = BillsReceivablesPresenter(
+      _storage,
+      _ledgerPresenter,
+      _statsPresenter,
+      dashboard: _treasuryPresenter,
+      budget: _budgetPresenter,
+    );
     _historyPresenter = TreasuryHistoryPresenter(_storage);
     _installmentPresenter =
         InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);

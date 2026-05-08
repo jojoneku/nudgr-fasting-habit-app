@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
+final _dateFilterFmt = DateFormat('MMM d, yyyy');
 
 class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -242,8 +243,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter
-                  .setMonth(previousMonth(widget.presenter.selectedMonth)),
+              onPressed: () => widget.presenter.stepDay(-1),
             ),
           ),
           Expanded(
@@ -255,7 +255,10 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      monthLabel(widget.presenter.selectedMonth),
+                      widget.presenter.selectedDate != null
+                          ? _dateFilterFmt
+                              .format(widget.presenter.selectedDate!)
+                          : monthLabel(widget.presenter.selectedMonth),
                       style: TextStyle(
                         color: cs.onSurface,
                         fontWeight: FontWeight.w600,
@@ -278,8 +281,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter
-                  .setMonth(nextMonth(widget.presenter.selectedMonth)),
+              onPressed: () => widget.presenter.stepDay(1),
             ),
           ),
         ],

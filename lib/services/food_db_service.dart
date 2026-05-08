@@ -15,7 +15,7 @@ import '../models/food_db_entry.dart';
 /// schema bump triggers a fresh copy automatically.
 class FoodDbService {
   static const _assetPath = 'assets/food_db.sqlite';
-  static const _dbFilename = 'food_db_v4.sqlite';
+  static const _dbFilename = 'food_db_v7.sqlite';
 
   Database? _db;
   bool _fts5Available = false;

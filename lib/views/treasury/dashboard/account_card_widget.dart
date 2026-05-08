@@ -71,9 +71,12 @@ class AccountCardWidget extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final accentColor = _parseColor(context);
 
+    final hasHeld = heldAmount > 0 && !account.isLiability;
+    final shownBalance =
+        hasHeld ? account.balance - heldAmount : account.balance;
     return Semantics(
       label:
-          "${account.name}, ${account.isLiability ? 'Owed' : 'Balance'}: ${formatPesoCompact(account.balance)}",
+          "${account.name}, ${account.isLiability ? 'Owed' : (hasHeld ? 'Yours' : 'Balance')}: ${formatPesoCompact(shownBalance)}",
       child: AppCard(
         variant: AppCardVariant.elevated,
         padding: EdgeInsets.zero,
@@ -165,6 +168,8 @@ class _CardBalance extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasHeld = heldAmount > 0 && !account.isLiability;
+    final yours = account.balance - heldAmount;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,15 +186,16 @@ class _CardBalance extends StatelessWidget {
         AppNumberDisplay(
           value: account.isLiability
               ? 'Owed: ${formatPesoCompact(account.balance)}'
-              : formatPesoCompact(account.balance),
+              : formatPesoCompact(hasHeld ? yours : account.balance),
           size: AppNumberSize.body,
           color: account.isLiability
               ? colorScheme.error
               : colorScheme.onSurfaceVariant,
         ),
-        if (heldAmount > 0) ...[
+        if (hasHeld) ...[
           const SizedBox(height: 2),
           Text(
+            'of ${formatPesoCompact(account.balance)} · '
             '${formatPesoCompact(heldAmount)} held',
             style: theme.textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
