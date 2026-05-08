@@ -25,6 +25,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
 
   ReceivableType _receivableType = ReceivableType.other;
   String? _selectedCategoryId;
+  String? _selectedAccountId;
   DateTime _expectedDate = DateTime.now();
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
@@ -39,6 +40,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
       _amountController.text = r.amount.toStringAsFixed(2);
       _receivableType = r.receivableType;
       _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
+      _selectedAccountId = r.accountId;
       _expectedDate = r.expectedDate;
       _isRecurring = r.isRecurring;
       _recurrenceType = r.recurrenceType ?? RecurrenceType.monthly;
@@ -81,6 +83,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
         expectedDate: _expectedDate,
         month: widget.presenter.selectedMonth,
         categoryId: _selectedCategoryId ?? '',
+        accountId: _selectedAccountId,
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
       );
@@ -198,6 +201,30 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
                       setState(() => _selectedCategoryId = cat.id),
                 );
               }).toList(),
+            ),
+          ],
+
+          // Destination account (optional) — pre-fills _MarkReceivedSheet
+          // dropdown. Leave blank to be asked at received-time.
+          if (widget.presenter.accounts.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedAccountId,
+              decoration: const InputDecoration(
+                labelText: 'Destination account (optional)',
+                helperText: 'Pre-fills when you mark this received',
+              ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Ask me when received',
+                      style: TextStyle(fontStyle: FontStyle.italic)),
+                ),
+                ...widget.presenter.accounts.map(
+                  (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ),
+              ],
+              onChanged: (v) => setState(() => _selectedAccountId = v),
             ),
           ],
 

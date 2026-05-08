@@ -398,6 +398,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
         expectedDate: expectedDate,
         month: month,
         categoryId: r.categoryId,
+        accountId: r.accountId,
         isRecurring: r.isRecurring,
         recurrenceType: r.recurrenceType,
       );

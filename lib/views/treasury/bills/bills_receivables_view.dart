@@ -827,9 +827,15 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   void initState() {
     super.initState();
     _amountController.text = widget.receivable.amount.toStringAsFixed(2);
-    _selectedAccountId = widget.presenter.accounts.isNotEmpty
-        ? widget.presenter.accounts.first.id
-        : null;
+    // Prefer the receivable's saved destination account; fall back to first
+    // account when none was set at creation time.
+    final preferred = widget.receivable.accountId;
+    final accounts = widget.presenter.accounts;
+    if (preferred != null && accounts.any((a) => a.id == preferred)) {
+      _selectedAccountId = preferred;
+    } else if (accounts.isNotEmpty) {
+      _selectedAccountId = accounts.first.id;
+    }
   }
 
   @override
