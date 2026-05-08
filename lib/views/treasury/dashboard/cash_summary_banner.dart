@@ -26,12 +26,14 @@ class _TotalLiquidRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final held = presenter.totalHeldForOthers;
+    final hasHeld = held > 0;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'TOTAL LIQUID CASH',
+          hasHeld ? 'CASH (YOURS)' : 'TOTAL LIQUID CASH',
           style: theme.textTheme.labelSmall?.copyWith(
             color: colorScheme.onSurfaceVariant,
             letterSpacing: 1.2,
@@ -44,6 +46,17 @@ class _TotalLiquidRow extends StatelessWidget {
           size: AppNumberSize.headline,
           color: colorScheme.primary,
         ),
+        if (hasHeld) ...[
+          const SizedBox(height: 2),
+          Text(
+            'of ${formatPeso(presenter.totalLiquidCashGross)} total · '
+            '${formatPeso(held)} held for others',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
         const SizedBox(height: 6),
         Row(
           children: [

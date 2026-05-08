@@ -1,8 +1,11 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBudgetSheet extends StatefulWidget {
@@ -75,9 +78,55 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       _selectedCategoryId != null &&
       widget.presenter.budgetFor(_selectedCategoryId!) != null;
 
+  Future<FinanceCategory?> _showCreateCategoryDialog(
+      BuildContext context) async {
+    final nameCtrl = TextEditingController();
+    final existing = widget.presenter.expenseCategories;
+    final colorHex =
+        categoryColorAt(existing.length, isExpense: true);
+    final cat = await showDialog<FinanceCategory>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New Expense Category'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          decoration: const InputDecoration(labelText: 'Category name'),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final name = nameCtrl.text.trim();
+              if (name.isEmpty) return;
+              Navigator.pop(
+                ctx,
+                FinanceCategory(
+                  id: '${DateTime.now().microsecondsSinceEpoch}_'
+                      '${Random().nextInt(9999)}',
+                  name: name,
+                  type: CategoryType.expense,
+                  icon: 'tag',
+                  colorHex: colorHex,
+                ),
+              );
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    return cat;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final allCategories = widget.presenter.allCategories;
+    final expenseCategories = widget.presenter.expenseCategories;
 
     return Form(
       key: _formKey,
@@ -88,25 +137,72 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           children: [
             // Category selector or display
             if (widget.preselectedCategoryId == null) ...[
-              DropdownButtonFormField<String>(
-                initialValue: _selectedCategoryId,
-                hint: Text(
-                  'Select Category',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+              if (expenseCategories.isEmpty) ...[
+                _NoCategoriesHint(
+                  onAdd: () async {
+                    final newCat =
+                        await _showCreateCategoryDialog(context);
+                    if (newCat != null) {
+                      await widget.presenter.addCategory(newCat);
+                      if (mounted) {
+                        setState(() => _selectedCategoryId = newCat.id);
+                      }
+                    }
+                  },
                 ),
-                decoration: const InputDecoration(labelText: 'Category'),
-                items: allCategories
-                    .map((c) =>
-                        DropdownMenuItem(value: c.id, child: Text(c.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedCategoryId = v),
-                validator: (v) => v == null ? 'Select a category' : null,
-              ),
+              ] else ...[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        initialValue: _selectedCategoryId,
+                        hint: Text(
+                          'Select Category',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                        ),
+                        decoration:
+                            const InputDecoration(labelText: 'Category'),
+                        items: expenseCategories
+                            .map((c) => DropdownMenuItem(
+                                value: c.id, child: Text(c.name)))
+                            .toList(),
+                        onChanged: (v) =>
+                            setState(() => _selectedCategoryId = v),
+                        validator: (v) =>
+                            v == null ? 'Select a category' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.outlined(
+                      icon: const Icon(Icons.add, size: 20),
+                      tooltip: 'Create category',
+                      onPressed: () async {
+                        final newCat =
+                            await _showCreateCategoryDialog(context);
+                        if (newCat != null) {
+                          await widget.presenter.addCategory(newCat);
+                          if (mounted) {
+                            setState(() => _selectedCategoryId = newCat.id);
+                          }
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
             ] else ...[
               _CategoryDisplay(
-                category: allCategories.cast<FinanceCategory?>().firstWhere(
+                category: widget.presenter.expenseCategories
+                    .cast<FinanceCategory?>()
+                    .firstWhere(
                       (c) => c?.id == _selectedCategoryId,
                       orElse: () => null,
                     ),
@@ -203,6 +299,37 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _NoCategoriesHint extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _NoCategoriesHint({required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No expense categories yet.',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+          TextButton(
+            onPressed: onAdd,
+            child: const Text('Create'),
+          ),
+        ],
       ),
     );
   }

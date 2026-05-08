@@ -27,6 +27,17 @@ class TreasuryDashboardView extends StatelessWidget {
     );
   }
 
+  void _showGoalSavingsSheet(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Add Goal or Savings',
+      body: AccountSetupView(
+        presenter: presenter,
+        initialCategory: AccountCategory.savings,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -44,6 +55,7 @@ class TreasuryDashboardView extends StatelessWidget {
             presenter: presenter,
             onAddAccount: () => _showAccountSheet(context),
             onEditAccount: (account) => _showAccountSheet(context, account),
+            onAddGoalSavings: () => _showGoalSavingsSheet(context),
           ),
           floatingActionButton: _AddAccountFab(
             onTap: () => _showAccountSheet(context),
@@ -77,11 +89,13 @@ class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final VoidCallback onAddAccount;
   final ValueChanged<FinancialAccount> onEditAccount;
+  final VoidCallback onAddGoalSavings;
 
   const _DashboardScrollBody({
     required this.presenter,
     required this.onAddAccount,
     required this.onEditAccount,
+    required this.onAddGoalSavings,
   });
 
   @override
@@ -121,12 +135,12 @@ class _DashboardScrollBody extends StatelessWidget {
             BudgetOverviewCard(presenter: presenter),
             const SizedBox(height: 16),
           ],
-          if (presenter.goalAccounts.isNotEmpty ||
-              presenter.savingsAccounts.isNotEmpty)
-            _GoalSection(presenter: presenter, onEdit: onEditAccount),
-          if (presenter.goalAccounts.isNotEmpty ||
-              presenter.savingsAccounts.isNotEmpty)
-            const SizedBox(height: 16),
+          _GoalSection(
+            presenter: presenter,
+            onEdit: onEditAccount,
+            onAdd: onAddGoalSavings,
+          ),
+          const SizedBox(height: 16),
           if (presenter.liabilityAccounts.isNotEmpty)
             _LiabilitiesCard(presenter: presenter, onEdit: onEditAccount),
           if (presenter.custodianAccounts.isNotEmpty) ...[
@@ -197,8 +211,13 @@ class _LiquidAccountsRow extends StatelessWidget {
 class _GoalSection extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final ValueChanged<FinancialAccount> onEdit;
+  final VoidCallback onAdd;
 
-  const _GoalSection({required this.presenter, required this.onEdit});
+  const _GoalSection({
+    required this.presenter,
+    required this.onEdit,
+    required this.onAdd,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -207,30 +226,48 @@ class _GoalSection extends StatelessWidget {
 
     return AppSection(
       title: 'Goals & Savings',
-      child: AppCard(
-        variant: AppCardVariant.elevated,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            for (int i = 0; i < goals.length; i++) ...[
-              GoalProgressCard(
-                account: goals[i],
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  onEdit(goals[i]);
-                },
-              ),
-              if (i < goals.length - 1)
-                Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-                ),
-            ],
-          ],
-        ),
+      trailing: IconButton(
+        icon: Icon(Icons.add, size: 20, color: colorScheme.primary),
+        tooltip: 'Add Goal or Savings',
+        onPressed: onAdd,
+        visualDensity: VisualDensity.compact,
       ),
+      child: goals.isEmpty
+          ? AppCard(
+              variant: AppCardVariant.elevated,
+              child: AppEmptyState(
+                icon: Icons.savings_outlined,
+                title: 'No goals or savings yet',
+                body: 'Add a savings account or financial goal to track progress',
+                actionLabel: 'Add Goal / Savings',
+                onAction: onAdd,
+                iconSize: 40,
+              ),
+            )
+          : AppCard(
+              variant: AppCardVariant.elevated,
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (int i = 0; i < goals.length; i++) ...[
+                    GoalProgressCard(
+                      account: goals[i],
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        onEdit(goals[i]);
+                      },
+                    ),
+                    if (i < goals.length - 1)
+                      Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                      ),
+                  ],
+                ],
+              ),
+            ),
     );
   }
 }

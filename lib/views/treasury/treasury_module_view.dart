@@ -36,64 +36,105 @@ class TreasuryModuleView extends StatefulWidget {
   static const int tabCount = 5;
 }
 
-class _TreasuryModuleViewState extends State<TreasuryModuleView> {
+class _TreasuryModuleViewState extends State<TreasuryModuleView>
+    with SingleTickerProviderStateMixin {
+  late final TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(
+        length: TreasuryModuleView.tabCount, vsync: this);
+    _tabController.addListener(_onTabChanged);
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _onTabChanged() {
+    if (_tabController.indexIsChanging) return;
+    // Each tab keeps its own presenter cache. Reload on focus so cross-tab
+    // mutations (e.g. mark-paid in Bills, transfer in Ledger) show up without
+    // an app restart.
+    switch (_tabController.index) {
+      case 0:
+        widget.dashPresenter.load();
+        break;
+      case 1:
+        widget.ledgerPresenter.load();
+        break;
+      case 2:
+        widget.billsPresenter.load();
+        break;
+      case 3:
+        widget.budgetPresenter.load();
+        break;
+      case 4:
+        widget.historyPresenter.load();
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return DefaultTabController(
-      length: TreasuryModuleView.tabCount,
-      child: Scaffold(
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(
-          backgroundColor: theme.scaffoldBackgroundColor,
-          title: Text(
-            'TREASURY',
-            style: theme.textTheme.titleSmall?.copyWith(
-              letterSpacing: 2.0,
-            ),
-          ),
-          centerTitle: true,
-        ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: colorScheme.surfaceContainer,
-            border: Border(
-              top: BorderSide(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-                width: 1,
-              ),
-            ),
-          ),
-          child: TabBar(
-            indicatorColor: colorScheme.primary,
-            indicatorWeight: 3,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelColor: colorScheme.primary,
-            unselectedLabelColor: colorScheme.onSurfaceVariant,
-            tabs: const [
-              Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
-              Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
-              Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),
-              Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
-              Tab(icon: Icon(Icons.history_outlined), text: 'History'),
-            ],
+        title: Text(
+          'TREASURY',
+          style: theme.textTheme.titleSmall?.copyWith(
+            letterSpacing: 2.0,
           ),
         ),
-        body: TabBarView(
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            TreasuryDashboardView(presenter: widget.dashPresenter),
-            LedgerView(presenter: widget.ledgerPresenter),
-            BillsReceivablesView(
-              presenter: widget.billsPresenter,
-              installmentPresenter: widget.installmentPresenter,
+        centerTitle: true,
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainer,
+          border: Border(
+            top: BorderSide(
+              color: colorScheme.outlineVariant.withValues(alpha: 0.5),
+              width: 1,
             ),
-            BudgetView(presenter: widget.budgetPresenter),
-            TreasuryHistoryView(presenter: widget.historyPresenter),
+          ),
+        ),
+        child: TabBar(
+          controller: _tabController,
+          indicatorColor: colorScheme.primary,
+          indicatorWeight: 3,
+          indicatorSize: TabBarIndicatorSize.label,
+          labelColor: colorScheme.primary,
+          unselectedLabelColor: colorScheme.onSurfaceVariant,
+          tabs: const [
+            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
+            Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
+            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),
+            Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
+            Tab(icon: Icon(Icons.history_outlined), text: 'History'),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          TreasuryDashboardView(presenter: widget.dashPresenter),
+          LedgerView(presenter: widget.ledgerPresenter),
+          BillsReceivablesView(
+            presenter: widget.billsPresenter,
+            installmentPresenter: widget.installmentPresenter,
+          ),
+          BudgetView(presenter: widget.budgetPresenter),
+          TreasuryHistoryView(presenter: widget.historyPresenter),
+        ],
       ),
     );
   }

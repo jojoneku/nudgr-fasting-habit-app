@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
@@ -16,11 +17,34 @@ class DailySpend {
 }
 
 class TreasuryDashboardPresenter extends ChangeNotifier {
-  TreasuryDashboardPresenter(StorageService storage) : _storage = storage {
+  TreasuryDashboardPresenter(StorageService storage, [LedgerPresenter? ledger])
+      : _storage = storage,
+        _ledger = ledger {
     load();
+    _ledger?.addListener(_syncFromLedger);
   }
 
   final StorageService _storage;
+  final LedgerPresenter? _ledger;
+
+  /// Mirror accounts/transactions/categories from LedgerPresenter so that
+  /// dashboard summaries reflect ledger mutations without waiting for a tab
+  /// switch or app restart. Bills/receivables/budgets stay loaded from storage
+  /// because they're owned by other presenters.
+  void _syncFromLedger() {
+    final ledger = _ledger;
+    if (ledger == null) return;
+    _accounts = ledger.accounts;
+    _transactions = ledger.allTransactions;
+    _categories = ledger.categories;
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _ledger?.removeListener(_syncFromLedger);
+    super.dispose();
+  }
 
   bool _isLoading = true;
   List<FinancialAccount> _accounts = [];
@@ -60,8 +84,24 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   // --- Summary values ---
 
-  double get totalLiquidCash =>
+  /// Total cash that is actually yours — full parent balances minus money
+  /// held for someone else (custodian accounts). Sub-account balances are
+  /// already represented inside their parent, so summing parents alone
+  /// covers the whole "yours + held" pool.
+  double get totalLiquidCash {
+    final parents = liquidAccounts.fold(0.0, (sum, a) => sum + a.balance);
+    final held = custodianAccounts.fold(0.0, (sum, a) => sum + a.balance);
+    return parents - held;
+  }
+
+  /// Full real-world balance across parent accounts, including money held
+  /// for others. Useful when an "of X total" subtitle is needed.
+  double get totalLiquidCashGross =>
       liquidAccounts.fold(0.0, (sum, a) => sum + a.balance);
+
+  /// Total amount currently held for someone else across all accounts.
+  double get totalHeldForOthers =>
+      custodianAccounts.fold(0.0, (sum, a) => sum + a.balance);
 
   double get totalLiabilities =>
       liabilityAccounts.fold(0.0, (sum, a) => sum + a.balance);
@@ -88,10 +128,18 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get netWorth {
+    // Only sum top-level accounts. Sub-account balances are already reflected
+    // in their parent's balance via the propagation rule in
+    // [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
+    // Custodian balances represent money held for others, so subtract them.
     final assets = _accounts
-        .where((a) => a.isActive && !a.isLiability && !a.isCustodian)
+        .where((a) =>
+            a.isActive &&
+            !a.isLiability &&
+            !a.isCustodian &&
+            a.parentAccountId == null)
         .fold(0.0, (sum, a) => sum + a.balance);
-    return assets - totalLiabilities;
+    return assets - totalHeldForOthers - totalLiabilities;
   }
 
   List<FinancialAccount> get custodianAccounts =>
@@ -298,9 +346,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   }
 
   /// Throws [StateError('has_sub_accounts')] if the account has sub-accounts.
+  /// Throws [StateError('has_transactions')] if any transaction, bill,
+  /// receivable, or budgeted expense still references this account — refusing
+  /// to delete prevents orphaned references in the ledger and bills tabs.
   Future<void> deleteAccount(String id) async {
     final hasSubs = _accounts.any((a) => a.parentAccountId == id);
     if (hasSubs) throw StateError('has_sub_accounts');
+    final hasTxns = _transactions.any(
+        (t) => t.accountId == id || t.transferToAccountId == id);
+    final hasBills = _bills.any((b) => b.accountId == id);
+    if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();
     await _storage.saveAccounts(_accounts);
     notifyListeners();

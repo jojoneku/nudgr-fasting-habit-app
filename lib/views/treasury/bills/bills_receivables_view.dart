@@ -464,6 +464,7 @@ class _ReceivablesSection extends StatelessWidget {
                 key: ValueKey(r.id),
                 receivable: r,
                 onMarkReceived: () => onMarkReceived(r),
+                onEdit: () => onEdit(r),
                 onDelete: () => presenter.deleteReceivable(r.id),
               ))
           .toList(),
@@ -502,6 +503,7 @@ class _BudgetedExpensesSection extends StatelessWidget {
                 key: ValueKey(e.id),
                 expense: e,
                 onMarkPaid: () => onMarkPaid(e),
+                onEdit: () => onEdit(e),
                 onDelete: () => presenter.deleteBudgetedExpense(e.id),
               ))
           .toList(),
@@ -605,7 +607,10 @@ class _SectionCard extends StatelessWidget {
       variant: AppCardVariant.outlined,
       padding: EdgeInsets.zero,
       child: Theme(
-        data: theme.copyWith(dividerColor: Colors.transparent),
+        data: theme.copyWith(
+          dividerColor: Colors.transparent,
+          dividerTheme: const DividerThemeData(thickness: 0, space: 0),
+        ),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
           tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -814,6 +819,7 @@ class _MarkReceivedSheet extends StatefulWidget {
 
 class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   final _amountController = TextEditingController();
+  String? _selectedAccountId;
   DateTime _receivedDate = DateTime.now();
   bool _isSubmitting = false;
 
@@ -821,6 +827,9 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   void initState() {
     super.initState();
     _amountController.text = widget.receivable.amount.toStringAsFixed(2);
+    _selectedAccountId = widget.presenter.accounts.isNotEmpty
+        ? widget.presenter.accounts.first.id
+        : null;
   }
 
   @override
@@ -842,11 +851,13 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
+    if (_selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
     try {
       await widget.presenter.markReceivableReceived(
         widget.receivable.id,
         receivedAmount: amount,
+        accountId: _selectedAccountId!,
         receivedDate: _receivedDate,
       );
       if (mounted) Navigator.pop(context);
@@ -881,6 +892,18 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
             ),
+            if (widget.presenter.accounts.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedAccountId,
+                decoration: const InputDecoration(labelText: 'Account'),
+                items: widget.presenter.accounts
+                    .map((a) =>
+                        DropdownMenuItem(value: a.id, child: Text(a.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedAccountId = v),
+              ),
+            ],
             const SizedBox(height: 12),
             InkWell(
               onTap: _pickDate,

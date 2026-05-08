@@ -35,8 +35,16 @@ class UpdateService {
 
   Future<UpdateManifest?> fetchLatestManifest() async {
     try {
-      final response = await http.get(Uri.parse(manifestUrl)).timeout(
-            const Duration(seconds: 10),
+      final bustUrl = Uri.parse(manifestUrl).replace(
+        queryParameters: {
+          '_t': DateTime.now().millisecondsSinceEpoch.toString(),
+        },
+      );
+      final response = await http.get(bustUrl, headers: {
+        'Cache-Control': 'no-cache, no-store',
+        'Pragma': 'no-cache',
+      }).timeout(
+            const Duration(seconds: 15),
             onTimeout: () => throw Exception('Timeout fetching manifest'),
           );
 

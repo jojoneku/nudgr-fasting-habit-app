@@ -7,8 +7,10 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
@@ -16,14 +18,30 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   BillsReceivablesPresenter(
     StorageService storage,
     LedgerPresenter ledger,
-    StatsPresenter stats,
-  )   : _storage = storage,
+    StatsPresenter stats, {
+    TreasuryDashboardPresenter? dashboard,
+    BudgetPresenter? budget,
+  })  : _storage = storage,
         _ledger = ledger,
-        _stats = stats;
+        _stats = stats,
+        _dashboard = dashboard,
+        _budget = budget;
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
+  final TreasuryDashboardPresenter? _dashboard;
+  final BudgetPresenter? _budget;
+
+  /// Refresh the dashboard and budget presenters' bill/receivable/expense
+  /// state after this presenter mutates storage. Ledger sync handles the
+  /// transaction/account fan-out automatically via the listener chain.
+  Future<void> _notifyDependents() async {
+    await Future.wait([
+      if (_dashboard != null) _dashboard.load(),
+      if (_budget != null) _budget.load(),
+    ]);
+  }
 
   String _selectedMonth = toMonthKey(DateTime.now());
   List<Bill> _allBills = [];
@@ -106,18 +124,21 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     _allBills = [..._allBills, bill];
     await _storage.saveBills(_allBills);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> updateBill(Bill bill) async {
     _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
     await _storage.saveBills(_allBills);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> deleteBill(String id) async {
     _allBills = _allBills.where((b) => b.id != id).toList();
     await _storage.saveBills(_allBills);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> markBillPaid(
@@ -146,6 +167,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     await _storage.saveBills(_allBills);
     await _checkAllBillsPaidXp();
     notifyListeners();
+    await _notifyDependents();
   }
 
   // ─── Receivable CRUD ─────────────────────────────────────────────────────────
@@ -154,6 +176,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     _allReceivables = [..._allReceivables, receivable];
     await _storage.saveReceivables(_allReceivables);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> updateReceivable(Receivable receivable) async {
@@ -162,24 +185,27 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     ];
     await _storage.saveReceivables(_allReceivables);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> deleteReceivable(String id) async {
     _allReceivables = _allReceivables.where((r) => r.id != id).toList();
     await _storage.saveReceivables(_allReceivables);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> markReceivableReceived(
     String receivableId, {
     required double receivedAmount,
+    required String accountId,
     DateTime? receivedDate,
   }) async {
     final rec = _allReceivables.firstWhere((r) => r.id == receivableId);
     final txn = _buildInflowTxn(
       id: _generateId(),
       amount: receivedAmount,
-      accountId: _ledger.accounts.isNotEmpty ? _ledger.accounts.first.id : '',
+      accountId: accountId,
       categoryId: rec.categoryId,
       description: rec.name,
       date: receivedDate ?? DateTime.now(),
@@ -194,6 +220,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     ));
     await _storage.saveReceivables(_allReceivables);
     notifyListeners();
+    await _notifyDependents();
   }
 
   // ─── Budgeted Expense CRUD ────────────────────────────────────────────────────
@@ -202,6 +229,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     _allExpenses = [..._allExpenses, expense];
     await _storage.saveBudgetedExpenses(_allExpenses);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> updateBudgetedExpense(BudgetedExpense expense) async {
@@ -210,12 +238,14 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     ];
     await _storage.saveBudgetedExpenses(_allExpenses);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> deleteBudgetedExpense(String id) async {
     _allExpenses = _allExpenses.where((e) => e.id != id).toList();
     await _storage.saveBudgetedExpenses(_allExpenses);
     notifyListeners();
+    await _notifyDependents();
   }
 
   Future<void> markExpensePaid(
@@ -241,6 +271,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     ));
     await _storage.saveBudgetedExpenses(_allExpenses);
     notifyListeners();
+    await _notifyDependents();
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────

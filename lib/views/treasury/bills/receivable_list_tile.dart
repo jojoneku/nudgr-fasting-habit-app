@@ -8,12 +8,14 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class ReceivableListTile extends StatelessWidget {
   final Receivable receivable;
   final VoidCallback onMarkReceived;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const ReceivableListTile({
     super.key,
     required this.receivable,
     required this.onMarkReceived,
+    this.onEdit,
     this.onDelete,
   });
 
@@ -104,32 +106,98 @@ class ReceivableListTile extends StatelessWidget {
         ],
       ),
       subtitle: subtitleWidget,
-      trailing: receivable.isReceived
-          ? Icon(Icons.check_circle, color: context.appColors.success, size: 24)
-          : SizedBox(
-              height: 44,
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            formatPeso(receivable.amount),
+            style: TextStyle(
+              color: receivable.isReceived
+                  ? colorScheme.onSurfaceVariant
+                  : colorScheme.onSurface,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              decoration:
+                  receivable.isReceived ? TextDecoration.lineThrough : null,
+            ),
+          ),
+          if (receivable.isReceived)
+            Icon(Icons.check_circle,
+                color: context.appColors.success, size: 18)
+          else
+            SizedBox(
+              height: 28,
               child: TextButton(
                 onPressed: onMarkReceived,
                 style: TextButton.styleFrom(
                   foregroundColor: context.appColors.success,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 child: const Text(
                   'Mark Received',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
+        ],
+      ),
+      onLongPress: onEdit != null || onDelete != null
+          ? () => _showContextMenu(context)
+          : null,
       onDelete: onDelete != null
-          ? () => AppConfirmDialog.confirm(
+          ? () async {
+              final confirmed = await AppConfirmDialog.confirm(
                 context: context,
                 title: 'Delete Receivable',
                 body: 'Delete "${receivable.name}"?',
                 confirmLabel: 'Delete',
                 cancelLabel: 'Cancel',
                 isDestructive: true,
-              )
+              );
+              if (confirmed) onDelete!();
+              return confirmed;
+            }
           : null,
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onEdit != null)
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: colorScheme.primary),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit!();
+                },
+              ),
+            if (onDelete != null)
+              ListTile(
+                leading:
+                    Icon(Icons.delete_outline, color: colorScheme.error),
+                title: Text('Delete',
+                    style: TextStyle(color: colorScheme.error)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete!();
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -8,12 +8,14 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class BudgetedExpenseTile extends StatelessWidget {
   final BudgetedExpense expense;
   final VoidCallback onMarkPaid;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   const BudgetedExpenseTile({
     super.key,
     required this.expense,
     required this.onMarkPaid,
+    this.onEdit,
     this.onDelete,
   });
 
@@ -112,16 +114,60 @@ class BudgetedExpenseTile extends StatelessWidget {
                 ),
               ),
             ),
+      onLongPress: onEdit != null || onDelete != null
+          ? () => _showContextMenu(context)
+          : null,
       onDelete: onDelete != null
-          ? () => AppConfirmDialog.confirm(
+          ? () async {
+              final confirmed = await AppConfirmDialog.confirm(
                 context: context,
                 title: 'Delete Expense',
                 body: 'Delete "${expense.name}"?',
                 confirmLabel: 'Delete',
                 cancelLabel: 'Cancel',
                 isDestructive: true,
-              )
+              );
+              if (confirmed) onDelete!();
+              return confirmed;
+            }
           : null,
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (onEdit != null)
+              ListTile(
+                leading: Icon(Icons.edit_outlined, color: colorScheme.primary),
+                title: const Text('Edit'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onEdit!();
+                },
+              ),
+            if (onDelete != null)
+              ListTile(
+                leading:
+                    Icon(Icons.delete_outline, color: colorScheme.error),
+                title: Text('Delete',
+                    style: TextStyle(color: colorScheme.error)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete!();
+                },
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
