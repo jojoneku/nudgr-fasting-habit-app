@@ -17,6 +17,7 @@ import 'package:intermittent_fasting/models/ai_coach_context.dart';
 import 'package:intermittent_fasting/models/ai_meal_estimate.dart';
 import 'package:intermittent_fasting/models/ai_parsed_food.dart';
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
+import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/food_db_entry.dart';
 import 'package:intermittent_fasting/models/food_parse_result.dart';
 import 'package:intermittent_fasting/models/food_search_candidate.dart';
@@ -370,6 +371,9 @@ class _FakeAiCoach implements AiCoachService {
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;
+
+  @override
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async => null;
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;

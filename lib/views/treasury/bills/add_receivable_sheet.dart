@@ -242,7 +242,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
           if (_isRecurring) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<RecurrenceType>(
-              value: _recurrenceType,
+              initialValue: _recurrenceType,
               decoration: const InputDecoration(labelText: 'Recurrence'),
               items: RecurrenceType.values
                   .map((r) => DropdownMenuItem(

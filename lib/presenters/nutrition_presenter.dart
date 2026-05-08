@@ -4,7 +4,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
-import '../models/ai_parsed_food.dart';
 import '../models/chat_message.dart';
 import '../models/extracted_food_item.dart';
 import '../models/daily_nutrition_log.dart';
@@ -854,14 +853,13 @@ class NutritionPresenter extends ChangeNotifier {
   }) async {
     // Parallel: FTS5 on the user's `name`, semantic on the HyDE description.
     final ftsFuture = _foodDb.search(name);
+    final semantic = _semanticSearch;
     final semanticFuture =
-        (_semanticSearch != null && _semanticSearch!.isReady && hyde.isNotEmpty)
-            ? _semanticSearch!
-                .search(hyde, k: 10)
-                .catchError((Object e) {
-                  debugPrint('NutritionPresenter: semantic search failed: $e');
-                  return const <FoodSearchCandidate>[];
-                })
+        (semantic != null && semantic.isReady && hyde.isNotEmpty)
+            ? semantic.search(hyde, k: 10).catchError((Object e) {
+                debugPrint('NutritionPresenter: semantic search failed: $e');
+                return const <FoodSearchCandidate>[];
+              })
             : Future<List<FoodSearchCandidate>>.value(const []);
 
     final results = await Future.wait([ftsFuture, semanticFuture]);
@@ -1317,23 +1315,6 @@ class NutritionPresenter extends ChangeNotifier {
     await _checkProteinGoalMet();
     await _checkOvershoot();
   }
-
-  /// Builds a [FoodEntry] from an [AiItemEstimate] returned by
-  /// [estimateMacrosForItems]. Calories are already computed for the exact
-  /// gram weight (the prompt included grams), so no scaling is needed.
-  FoodEntry _aiItemToFoodEntry(AiItemEstimate ai, ParsedFoodItem parsed) =>
-      FoodEntry(
-        id: FoodEntry.generateId(),
-        name: _formatDisplayName(parsed.name),
-        calories: ai.calories,
-        protein: ai.protein,
-        carbs: ai.carbs,
-        fat: ai.fat,
-        grams: parsed.grams,
-        estimationSource: EstimationSource.aiPerItem,
-        confidence: ai.confidence,
-        loggedAt: DateTime.now(),
-      );
 
   Future<void> _parseChatAsExercise(String text) async {
     final weightKg = _tdeeProfile?.weightKg ?? 70.0;
