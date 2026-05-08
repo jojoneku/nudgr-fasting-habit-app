@@ -22,6 +22,8 @@ const _topLevelCategories = [
   AccountCategory.bank,
   AccountCategory.ewallet,
   AccountCategory.cash,
+  AccountCategory.savings,
+  AccountCategory.goal,
   AccountCategory.creditCard,
   AccountCategory.creditLine,
   AccountCategory.bnpl,
@@ -39,12 +41,14 @@ class AccountSetupView extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
   final FinancialAccount? existing;
   final String? parentAccountId;
+  final AccountCategory? initialCategory;
 
   const AccountSetupView({
     super.key,
     required this.presenter,
     this.existing,
     this.parentAccountId,
+    this.initialCategory,
   });
 
   @override
@@ -77,6 +81,9 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     super.initState();
     if (widget.parentAccountId != null) {
       _category = AccountCategory.savings;
+    }
+    if (widget.initialCategory != null) {
+      _category = widget.initialCategory!;
     }
 
     final existing = widget.existing;
@@ -183,15 +190,21 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       await widget.presenter.deleteAccount(widget.existing!.id);
       if (mounted) Navigator.pop(context);
     } on StateError catch (e) {
-      if (e.message == 'has_sub_accounts' && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-                'Remove all sub-accounts first before deleting this account.'),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      if (!mounted) return;
+      final message = switch (e.message) {
+        'has_sub_accounts' =>
+          'Remove all sub-accounts first before deleting this account.',
+        'has_transactions' =>
+          'This account has transactions or bills linked to it. '
+              'Delete or reassign them first.',
+        _ => 'Could not delete account: ${e.message}',
+      };
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

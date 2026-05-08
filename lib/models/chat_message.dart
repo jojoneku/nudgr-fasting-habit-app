@@ -7,6 +7,51 @@ import 'meal_slot.dart';
 
 enum ChatMessageKind { food, exercise }
 
+/// One alternative DB entry the matcher considered for a chat food item.
+/// Rendered as a tap-to-swap chip when the auto-pick was low-confidence
+/// (Plan 022 §2.2). Lightweight — no entryId since it's not logged yet.
+class ChatFoodAlternative {
+  final String name;
+  final int calories;
+  final double? protein;
+  final double? carbs;
+  final double? fat;
+  final double? grams;
+  final EstimationSource estimationSource;
+
+  const ChatFoodAlternative({
+    required this.name,
+    required this.calories,
+    this.protein,
+    this.carbs,
+    this.fat,
+    this.grams,
+    this.estimationSource = EstimationSource.db,
+  });
+
+  factory ChatFoodAlternative.fromJson(Map<String, dynamic> json) =>
+      ChatFoodAlternative(
+        name: json['name'] as String,
+        calories: json['calories'] as int,
+        protein: (json['protein'] as num?)?.toDouble(),
+        carbs: (json['carbs'] as num?)?.toDouble(),
+        fat: (json['fat'] as num?)?.toDouble(),
+        grams: (json['grams'] as num?)?.toDouble(),
+        estimationSource:
+            EstimationSource.fromJson(json['estimationSource'] as String?),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'calories': calories,
+        'protein': protein,
+        'carbs': carbs,
+        'fat': fat,
+        'grams': grams,
+        'estimationSource': estimationSource.name,
+      };
+}
+
 /// A snapshot of one food item as it appears in the chat feed.
 /// Stores its own copy of nutritional data so edits don't require a join.
 class ChatFoodItem {
@@ -21,6 +66,11 @@ class ChatFoodItem {
   final EstimationSource estimationSource;
   final double? confidence;
 
+  /// Up to 2 sibling DB matches the matcher rejected. Rendered as tap-to-swap
+  /// chips when [needsConfirmation] is true. Empty when the auto-pick was
+  /// confident or no other plausible candidates existed.
+  final List<ChatFoodAlternative> alternatives;
+
   const ChatFoodItem({
     required this.entryId,
     required this.name,
@@ -32,6 +82,7 @@ class ChatFoodItem {
     this.amountText,
     this.estimationSource = EstimationSource.db,
     this.confidence,
+    this.alternatives = const [],
   });
 
   bool get isEstimated => !estimationSource.isTrusted;
@@ -42,7 +93,11 @@ class ChatFoodItem {
   /// exact entry). UI uses this to flag items the user should review.
   bool get needsConfirmation => (confidence ?? 1.0) < 0.6;
 
-  factory ChatFoodItem.fromFoodEntry(FoodEntry e, {String? amountText}) =>
+  factory ChatFoodItem.fromFoodEntry(
+    FoodEntry e, {
+    String? amountText,
+    List<ChatFoodAlternative> alternatives = const [],
+  }) =>
       ChatFoodItem(
         entryId: e.id,
         name: e.name,
@@ -54,10 +109,12 @@ class ChatFoodItem {
         amountText: amountText,
         estimationSource: e.estimationSource,
         confidence: e.confidence,
+        alternatives: alternatives,
       );
 
   factory ChatFoodItem.fromJson(Map<String, dynamic> json) {
     final legacyEstimated = json['isEstimated'] as bool? ?? false;
+    final altsRaw = json['alternatives'] as List<dynamic>?;
     return ChatFoodItem(
       entryId: json['entryId'] as String,
       name: json['name'] as String,
@@ -73,6 +130,12 @@ class ChatFoodItem {
               ? EstimationSource.aiPerItem
               : EstimationSource.db),
       confidence: (json['confidence'] as num?)?.toDouble(),
+      alternatives: altsRaw == null
+          ? const []
+          : altsRaw
+              .map((a) =>
+                  ChatFoodAlternative.fromJson(a as Map<String, dynamic>))
+              .toList(),
     );
   }
 
@@ -88,6 +151,8 @@ class ChatFoodItem {
         'estimationSource': estimationSource.name,
         'isEstimated': isEstimated, // keep for backward compat
         'confidence': confidence,
+        if (alternatives.isNotEmpty)
+          'alternatives': alternatives.map((a) => a.toJson()).toList(),
       };
 
   ChatFoodItem copyWith({
@@ -100,6 +165,7 @@ class ChatFoodItem {
     String? amountText,
     EstimationSource? estimationSource,
     double? confidence,
+    List<ChatFoodAlternative>? alternatives,
   }) =>
       ChatFoodItem(
         entryId: entryId,
@@ -112,6 +178,7 @@ class ChatFoodItem {
         amountText: amountText ?? this.amountText,
         estimationSource: estimationSource ?? this.estimationSource,
         confidence: confidence ?? this.confidence,
+        alternatives: alternatives ?? this.alternatives,
       );
 }
 

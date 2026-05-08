@@ -2,6 +2,7 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
+import '../models/extracted_food_item.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
@@ -32,6 +33,9 @@ class NullAiCoachService implements AiCoachService {
 
   @override
   Future<FoodParseResult?> parseFood(String description) async => null;
+
+  @override
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async => null;
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;

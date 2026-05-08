@@ -2,6 +2,7 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
+import '../models/extracted_food_item.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 
@@ -37,6 +38,11 @@ abstract class AiCoachService {
 
   /// Attempt to parse [description] as a food log entry.
   Future<FoodParseResult?> parseFood(String description);
+
+  /// Single-pass extraction with HyDE descriptions for hybrid search
+  /// (Plan 022 §2.3). Returns one item per food the user mentioned, or null
+  /// if the model isn't loaded / output couldn't be parsed.
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text);
 
   /// Estimate calories and macros for a natural-language food description.
   /// Used for the standalone estimation UI (estimateMeal flow).

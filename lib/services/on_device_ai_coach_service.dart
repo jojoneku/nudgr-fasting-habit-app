@@ -9,6 +9,7 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
+import '../models/extracted_food_item.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../utils/food_nlp_parser.dart';
@@ -26,6 +27,10 @@ import 'ai_coach_service.dart';
 class OnDeviceAiCoachService implements AiCoachService {
   static const _modelUrl =
       'https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/Qwen3-0.6B.litertlm';
+
+  final Future<String?> Function()? tokenProvider;
+
+  OnDeviceAiCoachService({this.tokenProvider});
 
   InferenceModel? _model;
   bool _isDownloading = false;
@@ -66,7 +71,8 @@ class OnDeviceAiCoachService implements AiCoachService {
     _downloadProgress = 0;
 
     try {
-      await FlutterGemma.initialize();
+      final token = await tokenProvider?.call();
+      await FlutterGemma.initialize(huggingFaceToken: token);
 
       if (FlutterGemma.hasActiveModel()) {
         await _loadModel();
@@ -76,7 +82,7 @@ class OnDeviceAiCoachService implements AiCoachService {
       await FlutterGemma.installModel(
         modelType: ModelType.qwen,
         fileType: ModelFileType.task,
-      ).fromNetwork(_modelUrl).withProgress((p) {
+      ).fromNetwork(_modelUrl, token: token).withProgress((p) {
         _downloadProgress = p;
         onProgress?.call(p);
       }).install();
@@ -463,12 +469,17 @@ class OnDeviceAiCoachService implements AiCoachService {
     final rawItems = json['items'] as List<dynamic>? ?? [];
     final items = rawItems.map((raw) {
       final item = raw as Map<String, dynamic>;
+      final calories = (item['calories'] as num?)?.toInt() ?? 0;
+      final protein = (item['protein'] as num?)?.toDouble();
+      final carbs = (item['carbs'] as num?)?.toDouble();
+      final fat = (item['fat'] as num?)?.toDouble();
+      final (ep, ec, ef) = _fillMacros(calories, protein, carbs, fat);
       return AiItemEstimate(
         name: (item['name'] as String?) ?? description,
-        calories: (item['calories'] as num?)?.toInt() ?? 0,
-        protein: (item['protein'] as num?)?.toDouble(),
-        carbs: (item['carbs'] as num?)?.toDouble(),
-        fat: (item['fat'] as num?)?.toDouble(),
+        calories: calories,
+        protein: ep,
+        carbs: ec,
+        fat: ef,
       );
     }).toList();
 
@@ -478,6 +489,136 @@ class OnDeviceAiCoachService implements AiCoachService {
       items: items,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 0.7,
     );
+  }
+
+  /// If the AI omitted or zeroed out macros but reported valid calories,
+  /// back-calculate macros from a standard ratio (15% P, 50% C, 35% F).
+  /// Returns the original values when macros already look reasonable.
+  (double?, double?, double?) _fillMacros(
+    int calories,
+    double? protein,
+    double? carbs,
+    double? fat,
+  ) {
+    if (calories <= 0) return (protein, carbs, fat);
+    final macroKcal = (protein ?? 0) * 4 + (carbs ?? 0) * 4 + (fat ?? 0) * 9;
+    if (macroKcal >= calories * 0.5) return (protein, carbs, fat);
+    // Macros are missing or unrealistically small — estimate from calories.
+    return (
+      double.parse(((calories * 0.15) / 4).toStringAsFixed(1)),
+      double.parse(((calories * 0.50) / 4).toStringAsFixed(1)),
+      double.parse(((calories * 0.35) / 9).toStringAsFixed(1)),
+    );
+  }
+
+  // ── Extract food items (Plan 022 §2.3) ────────────────────────────────────
+
+  /// Single-inference structured extraction. Returns one [ExtractedFoodItem]
+  /// per food the user mentioned, with a HyDE-style canonical description for
+  /// downstream embedding search. Returns null when the model isn't loaded
+  /// or output couldn't be parsed.
+  ///
+  /// Replaces the old normalize+macro-estimate two-call dance with one pass.
+  @override
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async {
+    final model = _model;
+    if (model == null) return null;
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      await chat.addQuery(
+        Message(text: '$_extractFoodPrompt$text\nOutput:', isUser: true),
+      );
+
+      final response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 25));
+
+      final raw =
+          response is TextResponse ? response.token : response.toString();
+
+      return _parseExtractResponse(raw, text);
+    } catch (e) {
+      debugPrint('OnDeviceAiCoachService.extractFoodItems failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  List<ExtractedFoodItem>? _parseExtractResponse(String text, String original) {
+    final match = RegExp(r'\[[\s\S]*\]').firstMatch(text);
+    if (match == null) return null;
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(match.group(0)!);
+    } catch (_) {
+      return null;
+    }
+
+    final raw = decoded as List<dynamic>;
+    final items = <ExtractedFoodItem>[];
+    for (final r in raw) {
+      final m = r as Map<String, dynamic>;
+      final name = (m['name'] as String?)?.trim() ?? '';
+      final grams = (m['grams'] as num?)?.toDouble() ?? 0.0;
+      final hyde = (m['hyde'] as String?)?.trim() ?? '';
+      if (name.isEmpty || grams <= 0) continue;
+      items.add(ExtractedFoodItem(
+        name: name,
+        grams: grams,
+        hydeDescription: hyde,
+        rawText: original,
+      ));
+    }
+    if (items.isEmpty) return null;
+
+    // Safety net: if the user explicitly said "Xg total" / "Xg altogether" and
+    // the model's per-item sum doesn't match, scale all items proportionally.
+    // Only triggers on the explicit-total wording — implicit cases like
+    // "150g pansit canton with pork" rely on the prompt examples to guide
+    // the model, since detecting that pattern reliably from text is fragile.
+    final stated = _explicitTotalGrams(original);
+    if (stated != null && items.length > 1) {
+      final sum = items.fold<double>(0, (s, i) => s + i.grams);
+      // Only rescale when the model's drift is meaningful (>10% off).
+      if (sum > 0 && (sum - stated).abs() / stated > 0.10) {
+        final factor = stated / sum;
+        return [
+          for (final i in items)
+            ExtractedFoodItem(
+              name: i.name,
+              grams: double.parse((i.grams * factor).toStringAsFixed(1)),
+              hydeDescription: i.hydeDescription,
+              rawText: i.rawText,
+            ),
+        ];
+      }
+    }
+    return items;
+  }
+
+  /// Extracts an explicit total like "200g total" / "150 grams altogether".
+  /// Returns null when the user didn't use a totalling keyword — implicit
+  /// "150g [composite phrase]" is not matched here on purpose to avoid
+  /// rescaling cases like "150g pork with rice" (single-ingredient weight).
+  static double? _explicitTotalGrams(String text) {
+    final m = RegExp(
+      r'(\d+\.?\d*)\s*(?:g|gm|gms|gram|grams)\s*'
+      r'(?:total|all in all|in total|altogether|all together)',
+      caseSensitive: false,
+    ).firstMatch(text);
+    if (m == null) return null;
+    return double.tryParse(m.group(1)!);
   }
 
   // ── Normalize food input ──────────────────────────────────────────────────
@@ -708,12 +849,16 @@ class OnDeviceAiCoachService implements AiCoachService {
       if (idx == null || idx < 0 || idx >= expectedCount) return null;
       final calories = (map['calories'] as num?)?.toInt() ?? 0;
       if (calories <= 0) return null;
+      final protein = (map['protein'] as num?)?.toDouble();
+      final carbs = (map['carbs'] as num?)?.toDouble();
+      final fat = (map['fat'] as num?)?.toDouble();
+      final (ep, ec, ef) = _fillMacros(calories, protein, carbs, fat);
       results[idx] = AiItemEstimate(
         name: (map['name'] as String?) ?? '',
         calories: calories,
-        protein: (map['protein'] as num?)?.toDouble(),
-        carbs: (map['carbs'] as num?)?.toDouble(),
-        fat: (map['fat'] as num?)?.toDouble(),
+        protein: ep,
+        carbs: ec,
+        fat: ef,
         confidence: (map['confidence'] as num?)?.toDouble() ?? 0.7,
       );
     }
@@ -728,6 +873,98 @@ class OnDeviceAiCoachService implements AiCoachService {
   // dish recognition without changing Western food behavior.
   static const _localeHint = 'Cuisine context: Filipino + Western mix. '
       'Common Filipino dishes: adobo, sinigang, kare-kare, tocino, longganisa, pancit, tinola, bulalo.\n';
+
+  // Single-pass food extraction prompt with HyDE-style canonical description.
+  // Plan 022 §2.3 — Qwen3 0.6B handles this in one inference, replacing the
+  // old normalize → DB lookup → AI macro estimate three-step dance.
+  //
+  // Decomposition rules (the "pansit canton with pork and cabbage" case):
+  // when the user mixes a base dish with explicit add-ins/sides, output ONE
+  // item per ingredient so each can be matched + scaled in the DB. When the
+  // user names a single canonical dish ("chicken adobo", "sinigang"), keep
+  // it as ONE item — the DB has those rows directly with accurate macros.
+  static const _extractFoodPrompt =
+      'You are a food parser for a calorie tracking app. Given user text, '
+      'output ONLY a JSON array. No prose, no markdown.\n'
+      'Each item: {"name":"clean food name","grams":number,"hyde":"USDA-style canonical description"}\n'
+      'Rules:\n'
+      '1. Convert units to grams. 1 cup ≈ 240g (rice/oats: 80g cooked weight = 1/3 cup dry). '
+      '   1 scoop = 30g. 1 tbsp = 15g. 1 tsp = 5g. 1 piece varies by food.\n'
+      '2. DECOMPOSE composite dishes when the user lists ingredients ("with", "and", '
+      '   commas, multiple foods named). One JSON item per ingredient.\n'
+      '   KEEP single canonical dishes as ONE item ("chicken adobo", "sinigang na baboy", '
+      '   "kare-kare", "lechon kawali") — the DB has them with accurate macros.\n'
+      '3. TOTAL-WEIGHT DISTRIBUTION: when the user gives ONE total weight for the whole '
+      '   composite dish ("150g pansit canton with pork", "200g eggplant with sardines"), '
+      '   distribute that total across the ingredients PROPORTIONALLY. The sum of "grams" '
+      '   across items MUST equal the user-stated total.\n'
+      '   Typical ratios when distributing a composite total:\n'
+      '     stir-fry / pansit / fried-rice: starch 50%, protein 25%, veg 20%, oil+sauces 5%\n'
+      '     soup / sinigang / nilaga / tinola: broth 40%, protein 20%, veg 35%, season 5%\n'
+      '     ulam over rice (split rice from ulam if both stated): 50/50 unless user says\n'
+      '4. For ingredients with NO total stated AND no per-ingredient grams, estimate Filipino '
+      '   home-cooking portions:\n'
+      '   • Main starch (rice, pansit, bihon, sotanghon): 150g cooked\n'
+      '   • Protein (pork, chicken, beef, tofu, eggs): 80g cooked\n'
+      '   • Vegetables (cabbage, sayote, kangkong, carrots, eggplant): 50g per veg\n'
+      '   • Flavoring/canned (sardines as flavor, hotdog slices): 25g\n'
+      '   • Cooking oil: 10g — INCLUDE for any sauteed/fried/stir-fried dish\n'
+      '   • Soy sauce / patis: 10g if mentioned\n'
+      '5. "name" is what the user said, lightly cleaned. "hyde" is the USDA canonical '
+      '   description (preparation state included). Filipino dishes: keep local name + brief gloss.\n'
+      'Examples:\n'
+      '"1 cup rolled oats" -> [{"name":"rolled oats","grams":80,"hyde":"Oats, rolled, regular and quick, dry, unenriched"}]\n'
+      '"kefir milk" -> [{"name":"kefir","grams":240,"hyde":"Kefir, lowfat, plain"}]\n'
+      '"1 scoop soy protein isolate" -> [{"name":"soy protein isolate","grams":30,"hyde":"Soy protein isolate, dry powder"}]\n'
+      '"100g chicken adobo" -> [{"name":"chicken adobo","grams":100,"hyde":"Chicken adobo, Filipino braised chicken in soy sauce and vinegar"}]\n'
+      '"pansit canton with pork and cabbage" -> ['
+      '{"name":"pansit canton noodles","grams":150,"hyde":"Egg noodles, cooked"},'
+      '{"name":"pork","grams":80,"hyde":"Pork, ground or sliced, cooked"},'
+      '{"name":"cabbage","grams":50,"hyde":"Cabbage, raw shredded"},'
+      '{"name":"carrots","grams":30,"hyde":"Carrots, raw"},'
+      '{"name":"cooking oil","grams":10,"hyde":"Vegetable oil"},'
+      '{"name":"soy sauce","grams":10,"hyde":"Soy sauce, made from soy and wheat"}]\n'
+      // Total-weight distribution case — sums to user-stated 150g
+      '"150g pansit canton with pork and cabbage" -> ['
+      '{"name":"pansit canton noodles","grams":75,"hyde":"Egg noodles, cooked"},'
+      '{"name":"pork","grams":38,"hyde":"Pork, ground or sliced, cooked"},'
+      '{"name":"cabbage","grams":22,"hyde":"Cabbage, raw shredded"},'
+      '{"name":"cooking oil","grams":8,"hyde":"Vegetable oil"},'
+      '{"name":"soy sauce","grams":7,"hyde":"Soy sauce, made from soy and wheat"}]\n'
+      // Soup distribution — 300g sinigang split per soup ratios
+      '"300g sinigang na baboy with kangkong and gabi" -> ['
+      '{"name":"sinigang broth","grams":120,"hyde":"Sinigang broth, sour soup base with tamarind"},'
+      '{"name":"pork","grams":60,"hyde":"Pork, ribs or shoulder, cooked"},'
+      '{"name":"kangkong","grams":55,"hyde":"Water spinach (kangkong), cooked"},'
+      '{"name":"gabi","grams":50,"hyde":"Taro root (gabi), cooked"},'
+      '{"name":"patis","grams":15,"hyde":"Fish sauce (patis)"}]\n'
+      // Explicit "total" keyword — same distribution as implicit
+      '"eggplant sauteed with sardine and tomato, 200g total" -> ['
+      '{"name":"eggplant","grams":140,"hyde":"Eggplant, raw"},'
+      '{"name":"sardines","grams":30,"hyde":"Sardines, canned in tomato sauce, drained"},'
+      '{"name":"tomato","grams":20,"hyde":"Tomatoes, red, raw"},'
+      '{"name":"cooking oil","grams":10,"hyde":"Vegetable oil"}]\n'
+      // Per-ingredient grams stay as-stated, NOT redistributed
+      '"150g pansit canton, 80g pork, 50g cabbage" -> ['
+      '{"name":"pansit canton noodles","grams":150,"hyde":"Egg noodles, cooked"},'
+      '{"name":"pork","grams":80,"hyde":"Pork, ground or sliced, cooked"},'
+      '{"name":"cabbage","grams":50,"hyde":"Cabbage, raw shredded"},'
+      '{"name":"cooking oil","grams":10,"hyde":"Vegetable oil"}]\n'
+      '"sardine pansit bihon" -> ['
+      '{"name":"pansit bihon","grams":150,"hyde":"Rice noodles, cooked"},'
+      '{"name":"sardines","grams":30,"hyde":"Sardines, canned in tomato sauce, drained"},'
+      '{"name":"cooking oil","grams":10,"hyde":"Vegetable oil"}]\n'
+      '"eggplant sauteed with sardines and tomato" -> ['
+      '{"name":"eggplant","grams":150,"hyde":"Eggplant, raw"},'
+      '{"name":"sardines","grams":25,"hyde":"Sardines, canned in tomato sauce, drained"},'
+      '{"name":"tomato","grams":40,"hyde":"Tomatoes, red, raw"},'
+      '{"name":"cooking oil","grams":10,"hyde":"Vegetable oil"}]\n'
+      '"rice and adobo" -> ['
+      '{"name":"white rice","grams":150,"hyde":"Rice, white, long-grain, regular, cooked"},'
+      '{"name":"chicken adobo","grams":100,"hyde":"Chicken adobo, Filipino braised chicken in soy sauce and vinegar"}]\n'
+      '"sinigang na baboy" -> [{"name":"sinigang na baboy","grams":300,"hyde":"Sinigang, Filipino sour pork soup with vegetables and tamarind broth"}]\n'
+      '$_localeHint'
+      'User: ';
 
   static const _normalizePrompt =
       'You are a food normalizer. Given a JSON array of {"i":index,"t":"raw food text"}, '

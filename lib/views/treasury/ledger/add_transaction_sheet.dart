@@ -233,6 +233,41 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     isLoading: _isSubmitting,
                     onPressed: _isSubmitting ? null : _submit,
                   ),
+                  if (isEdit) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          final nav = Navigator.of(context);
+                          final confirmed = await AppConfirmDialog.confirm(
+                            context: context,
+                            title: 'Delete Transaction',
+                            body: 'Delete "${widget.existing!.description}"?',
+                            confirmLabel: 'Delete',
+                            isDestructive: true,
+                          );
+                          if (confirmed && mounted) {
+                            await widget.presenter
+                                .deleteTransaction(widget.existing!.id);
+                            nav.pop();
+                          }
+                        },
+                        icon: Icon(Icons.delete_outline,
+                            color: Theme.of(context).colorScheme.error),
+                        label: Text('Delete',
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.error)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .error
+                                  .withValues(alpha: 0.5)),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                 ],
               ),

@@ -1,8 +1,12 @@
 """
-import_usda_fdc.py — Download USDA FoodData Central SR Legacy and rebuild food_db.sqlite.
+import_usda_fdc.py — Download USDA FoodData Central and rebuild food_db.sqlite.
 
-Downloads ~30 MB ZIP, parses nutrient CSVs, merges with curated data from
-build_food_db.py, then writes assets/food_db.sqlite with ~9,400+ entries.
+Pulls two USDA datasets:
+  - SR Legacy (~6 MB ZIP): lab-tested raw foods (~7,800 entries)
+  - FNDDS Survey Foods (~3 MB ZIP): foods as actually eaten (~7,000 entries)
+
+Merges with curated data from build_food_db.py, then writes
+assets/food_db.sqlite with ~16,000 entries total.
 
 Usage:
     python scripts/import_usda_fdc.py
@@ -20,11 +24,25 @@ import sys
 import urllib.request
 import zipfile
 
-# USDA FDC SR Legacy — public domain, last updated Oct 2021 (data unchanged since)
-FDC_URL = (
+# USDA FDC dataset URLs — public domain.
+# SR Legacy is frozen at 2018-04; FNDDS is updated periodically (latest 2024-10-31).
+SR_LEGACY_URL = (
     "https://fdc.nal.usda.gov/fdc-datasets/"
     "FoodData_Central_sr_legacy_food_csv_2018-04.zip"
 )
+FNDDS_URL = (
+    "https://fdc.nal.usda.gov/fdc-datasets/"
+    "FoodData_Central_survey_food_csv_2024-10-31.zip"
+)
+FOUNDATION_URL = (
+    "https://fdc.nal.usda.gov/fdc-datasets/"
+    "FoodData_Central_foundation_food_csv_2025-04-24.zip"
+)
+
+# FDC data_type values we want to keep, per dataset.
+SR_LEGACY_TYPES = {"sr_legacy_food"}
+FNDDS_TYPES = {"survey_fndds_food"}
+FOUNDATION_TYPES = {"foundation_food"}
 
 # ---------------------------------------------------------------------------
 # Import curated foods from build_food_db.py
@@ -65,8 +83,12 @@ def download(url: str) -> bytes:
 # Parse USDA FDC SR Legacy ZIP
 # ---------------------------------------------------------------------------
 
-def parse_fdc_sr(zip_bytes: bytes) -> list[tuple]:
-    print("Parsing USDA FDC SR Legacy ...")
+def parse_fdc_zip(
+    zip_bytes: bytes,
+    allowed_types: set[str],
+    label: str,
+) -> list[tuple]:
+    print(f"Parsing USDA FDC {label} ...")
     with zipfile.ZipFile(io.BytesIO(zip_bytes)) as z:
         # Map basename -> zip path
         files = {os.path.basename(n): n for n in z.namelist() if n.endswith(".csv")}
@@ -92,11 +114,11 @@ def parse_fdc_sr(zip_bytes: bytes) -> list[tuple]:
                 for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8")):
                     categories[row["id"]] = row["description"]
 
-        # ── food.csv: SR Legacy rows only ─────────────────────────────────────
+        # ── food.csv: filter to the data_types we care about ─────────────────
         foods: dict[str, dict] = {}
         with z.open(files["food.csv"]) as f:
             for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8")):
-                if row.get("data_type") != "sr_legacy_food":
+                if row.get("data_type") not in allowed_types:
                     continue
                 fid = row["fdc_id"]
                 foods[fid] = {
@@ -104,9 +126,13 @@ def parse_fdc_sr(zip_bytes: bytes) -> list[tuple]:
                     "category": categories.get(row.get("food_category_id", ""), "Other"),
                 }
 
-        print(f"  SR Legacy foods found: {len(foods)}")
+        print(f"  {label} foods found: {len(foods)}")
 
         # ── food_nutrient.csv ─────────────────────────────────────────────────
+        # FNDDS stores nutrient_id as the legacy nutrient_nbr (e.g. "208" for
+        # energy), while SR Legacy uses the new numeric ids ("1008"). Accept
+        # either by merging both mappings into a single id->key dictionary.
+        id_to_key: dict[str, str] = {**rev_id, **NBR_MAP}
         nutrients: dict[str, dict] = {}
         with z.open(files["food_nutrient.csv"]) as f:
             for row in csv.DictReader(io.TextIOWrapper(f, encoding="utf-8")):
@@ -114,11 +140,16 @@ def parse_fdc_sr(zip_bytes: bytes) -> list[tuple]:
                 if fid not in foods:
                     continue
                 nid = row["nutrient_id"]
-                if nid not in want:
+                key = id_to_key.get(nid)
+                if key is None:
                     continue
-                key = rev_id[nid]
                 val = float(row["amount"]) if row["amount"] else 0.0
-                nutrients.setdefault(fid, {})[key] = val
+                # Don't overwrite a non-zero value with zero (some FDC entries
+                # have multiple rows for the same nutrient — keep the first
+                # meaningful one).
+                existing = nutrients.setdefault(fid, {})
+                if key not in existing or existing[key] == 0.0:
+                    existing[key] = val
 
     # ── Build output rows ─────────────────────────────────────────────────────
     rows: list[tuple] = []
@@ -137,7 +168,7 @@ def parse_fdc_sr(zip_bytes: bytes) -> list[tuple]:
             round(n.get("fat",     0), 1),
         ))
 
-    print(f"  Parsed {len(rows)} USDA foods with calorie data")
+    print(f"  Parsed {len(rows)} {label} foods with calorie data")
     return rows
 
 
@@ -150,7 +181,13 @@ def _title(s: str) -> str:
 # Build SQLite
 # ---------------------------------------------------------------------------
 
-def build_db(curated: list[tuple], usda: list[tuple], db_path: str) -> None:
+def build_db(
+    curated: list[tuple],
+    foundation: list[tuple],
+    sr_legacy: list[tuple],
+    fndds: list[tuple],
+    db_path: str,
+) -> None:
     if os.path.exists(db_path):
         os.remove(db_path)
 
@@ -184,21 +221,73 @@ def build_db(curated: list[tuple], usda: list[tuple], db_path: str) -> None:
         END
     """)
 
-    # Curated first so INSERT OR IGNORE keeps them over USDA duplicates
+    # Source priority for dedup: lower wins on collision. Curated represents
+    # the user's overrides and PH-specific data, so it ranks highest.
+    sources = [
+        ("curated",    curated,    0),
+        ("foundation", foundation, 1),
+        ("sr_legacy",  sr_legacy,  2),
+        ("fndds",      fndds,      3),
+    ]
+    final_rows, kept_by_source, dropped_by_source = _dedupe(sources)
+
     cur.executemany(
         "INSERT OR IGNORE INTO foods (id, name, category, cal, protein, carbs, fat) "
         "VALUES (?,?,?,?,?,?,?)",
-        list(curated) + list(usda),
+        final_rows,
     )
     conn.commit()
     cur.execute("VACUUM")
     conn.close()
 
+    total = len(final_rows)
     kb = os.path.getsize(db_path) / 1024
     print(f"\nOK: {db_path}")
-    print(f"  {len(curated) + len(usda):,} total entries")
-    print(f"  {len(curated):,} curated  |  {len(usda):,} USDA SR Legacy")
+    print(f"  {total:,} total entries after dedup")
+    parts = []
+    for name, rows, _ in sources:
+        kept = kept_by_source.get(name, 0)
+        dropped = dropped_by_source.get(name, 0)
+        parts.append(f"{kept:,} {name} ({dropped:,} dropped)")
+    print("  " + "  |  ".join(parts))
     print(f"  {kb:.0f} KB on disk")
+
+
+def _dedupe(sources):
+    """Drop near-duplicate entries across sources, preferring lower-priority
+    indices. Two entries collide when their normalized names are identical.
+
+    Returns (final_rows, kept_by_source, dropped_by_source).
+    """
+    seen: dict[str, str] = {}  # norm_name -> winning source name
+    final: list[tuple] = []
+    kept: dict[str, int] = {}
+    dropped: dict[str, int] = {}
+
+    for source_name, rows, _priority in sources:
+        for row in rows:
+            # row = (id, name, category, cal, protein, carbs, fat)
+            norm = _normalize_name(row[1])
+            if norm in seen:
+                dropped[source_name] = dropped.get(source_name, 0) + 1
+                continue
+            seen[norm] = source_name
+            final.append(row)
+            kept[source_name] = kept.get(source_name, 0) + 1
+    return final, kept, dropped
+
+
+_NORM_RE = re.compile(r"[^a-z0-9 ]+")
+_WS_RE = re.compile(r"\s+")
+
+
+def _normalize_name(name: str) -> str:
+    """Lowercase + strip non-alphanumeric + collapse whitespace.
+    "Oats, Rolled, Dry" → "oats rolled dry"; "Bear Brand (Powdered)" → "bear brand powdered".
+    """
+    s = _NORM_RE.sub(" ", name.lower())
+    s = _WS_RE.sub(" ", s).strip()
+    return s
 
 
 # ---------------------------------------------------------------------------
@@ -210,9 +299,18 @@ def main() -> None:
     repo_root  = os.path.dirname(script_dir)
     db_path    = os.path.join(repo_root, "assets", "food_db.sqlite")
 
-    zip_bytes = download(FDC_URL)
-    usda_rows = parse_fdc_sr(zip_bytes)
-    build_db(CURATED_FOODS, usda_rows, db_path)
+    foundation_zip = download(FOUNDATION_URL)
+    foundation_rows = parse_fdc_zip(
+        foundation_zip, FOUNDATION_TYPES, "Foundation"
+    )
+
+    sr_zip = download(SR_LEGACY_URL)
+    sr_rows = parse_fdc_zip(sr_zip, SR_LEGACY_TYPES, "SR Legacy")
+
+    fndds_zip = download(FNDDS_URL)
+    fndds_rows = parse_fdc_zip(fndds_zip, FNDDS_TYPES, "FNDDS")
+
+    build_db(CURATED_FOODS, foundation_rows, sr_rows, fndds_rows, db_path)
 
 
 if __name__ == "__main__":
