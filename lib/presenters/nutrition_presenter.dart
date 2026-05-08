@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/chat_message.dart';
+import '../models/extracted_food_item.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/estimation_source.dart';
 import '../models/exercise_entry.dart';
@@ -842,6 +843,81 @@ class NutritionPresenter extends ChangeNotifier {
   /// [altName] is searched alongside [item.name] in the FTS5 step, e.g. the
   /// original NLP name before AI normalisation. This catches cases where AI
   /// renamed "adobo" to "braised chicken" — both searches run, best score wins.
+  /// Hybrid retrieval: parallel FTS5 (lexical) and semantic (vector) searches
+  /// fused via Reciprocal Rank Fusion. Returns the top-1 entry plus runner-up
+  /// alternatives and a confidence score derived from the gap between top-1
+  /// and top-2 RRF scores. (Plan 022 §2.3 — replaces the old layered
+  /// _resolveOneDbItem confidence-band logic.)
+  Future<_HybridMatch?> _hybridResolveItem({
+    required String name,
+    required String hyde,
+  }) async {
+    // Parallel: FTS5 on the user's `name`, semantic on the HyDE description.
+    final ftsFuture = _foodDb.search(name);
+    final semanticFuture =
+        (_semanticSearch != null && _semanticSearch!.isReady && hyde.isNotEmpty)
+            ? _semanticSearch!
+                .search(hyde, k: 10)
+                .catchError((Object e) {
+                  debugPrint('NutritionPresenter: semantic search failed: $e');
+                  return const <FoodSearchCandidate>[];
+                })
+            : Future<List<FoodSearchCandidate>>.value(const []);
+
+    final results = await Future.wait([ftsFuture, semanticFuture]);
+    final ftsHits = results[0] as List<FoodDbEntry>;
+    final semHits = results[1] as List<FoodSearchCandidate>;
+
+    if (ftsHits.isEmpty && semHits.isEmpty) return null;
+
+    // RRF fusion: score(entry) = Σ 1/(k + rank), with k=60 by convention.
+    const rrfK = 60;
+    final scores = <String, double>{};
+    final byId = <String, FoodDbEntry>{};
+
+    for (var i = 0; i < ftsHits.length; i++) {
+      final id = ftsHits[i].id;
+      scores[id] = (scores[id] ?? 0) + 1.0 / (rrfK + i + 1);
+      byId.putIfAbsent(id, () => ftsHits[i]);
+    }
+    for (var i = 0; i < semHits.length; i++) {
+      final id = semHits[i].entry.id;
+      scores[id] = (scores[id] ?? 0) + 1.0 / (rrfK + i + 1);
+      byId.putIfAbsent(id, () => semHits[i].entry);
+    }
+
+    final ranked = scores.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final pick = byId[ranked.first.key]!;
+    final runnerUps = ranked.skip(1).take(4).map((e) => byId[e.key]!).toList();
+
+    // Confidence: how dominant is top-1 vs top-2? RRF gives small absolute
+    // numbers so we look at the relative dominance.
+    final top1 = ranked.first.value;
+    final top2 = ranked.length > 1 ? ranked[1].value : 0.0;
+    double confidence = top2 == 0
+        ? 0.7 // single hit — moderate confidence, no runner-up to compare
+        : (top1 / (top1 + top2)).clamp(0.5, 0.95);
+
+    // Lexical bonus: if the picked entry's name contains all query words,
+    // bump confidence — it's a real match, not just a semantic neighbor.
+    final qWords = name
+        .toLowerCase()
+        .split(RegExp(r'\s+'))
+        .where((w) => w.length > 2)
+        .toSet();
+    final pickLower = pick.name.toLowerCase();
+    if (qWords.isNotEmpty && qWords.every(pickLower.contains)) {
+      confidence = (confidence + 0.15).clamp(0.0, 1.0);
+    }
+
+    return _HybridMatch(
+      pick: pick,
+      alternatives: runnerUps,
+      confidence: confidence,
+    );
+  }
+
   Future<FoodDbEntry?> _resolveOneDbItem(
     ParsedFoodItem item, {
     String? altName,
@@ -947,14 +1023,31 @@ class NutritionPresenter extends ChangeNotifier {
       return base.copyWith(name: _formatDisplayName(name));
     }
 
+    final estimatedKcal = _estimateCalories(parsed.name, parsed.grams);
+    final (estProtein, estCarbs, estFat) = _macrosFromCalories(estimatedKcal);
     return FoodEntry(
       id: FoodEntry.generateId(),
       name: _formatDisplayName(parsed.name),
-      calories: _estimateCalories(parsed.name, parsed.grams),
+      calories: estimatedKcal,
+      protein: estProtein,
+      carbs: estCarbs,
+      fat: estFat,
       grams: parsed.grams,
       estimationSource: EstimationSource.keywordDensity,
       confidence: 0.3,
       loggedAt: DateTime.now(),
+    );
+  }
+
+  /// Coarse macro split (15% P / 50% C / 35% F) used when neither the food DB
+  /// nor the on-device AI returned macros. Better than logging zero so the
+  /// user's daily macro totals stay informative.
+  (double, double, double) _macrosFromCalories(int calories) {
+    if (calories <= 0) return (0.0, 0.0, 0.0);
+    return (
+      double.parse(((calories * 0.15) / 4).toStringAsFixed(1)),
+      double.parse(((calories * 0.50) / 4).toStringAsFixed(1)),
+      double.parse(((calories * 0.35) / 9).toStringAsFixed(1)),
     );
   }
 
@@ -1074,149 +1167,127 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> _parseChatAsFood(String text) async {
-    // Step 1: NLP parse — always the source of truth for grams when exact.
-    final nlpResult = FoodNlpParser.parse(text);
-    if (nlpResult.isEmpty) {
-      _chatParseError = 'Could not identify any food items.';
-      return;
-    }
+    // Plan 022 §2 — three-layer pipeline replacing the old 6-step dance.
+    //   Layer 1: AI single-pass extraction (or NLP fallback when no AI).
+    //   Layer 2: per-item resolution: personal dict → hybrid FTS + semantic.
+    //   Layer 3: confidence-gated commit with optional swap chips.
 
-    // Step 2 (parallel): kick off AI normalize AND speculative DB lookups
-    // using the raw NLP names. The AI normalize is only useful when DB misses
-    // on the raw name (it refines the name for retry) or when NLP grams are
-    // estimated (it refines grams). For the common case where DB hits on raw
-    // input, AI normalize is wasted but no longer blocking.
-    final aiNormalizeFuture = _ai.isAvailable
-        ? _ai
-            .normalizeFoodInput(nlpResult.items.map((i) => i.rawText).toList())
-            .timeout(const Duration(seconds: 15))
-            .catchError((Object e) {
-            debugPrint('NutritionPresenter: AI normalize failed: $e');
-            return null;
-          })
-        : Future<List<AiParsedFood>?>.value(null);
-
-    final speculativeDbFuture =
-        Future.wait(nlpResult.items.map((i) => _resolveOneDbItem(i)));
-
-    final results = await Future.wait([aiNormalizeFuture, speculativeDbFuture]);
-    final aiNormalized = results[0] as List<AiParsedFood>?;
-    final speculativeDb = results[1] as List<FoodDbEntry?>;
-
-    // Merge AI normalize back in (preserving the same name/grams policy as
-    // before): adopt AI name only if it's a reasonable normalization, and
-    // adopt AI grams only when NLP couldn't determine an exact value.
-    final items =
-        (aiNormalized != null && aiNormalized.length == nlpResult.items.length)
-            ? List.generate(nlpResult.items.length, (i) {
-                final ai = aiNormalized[i];
-                final nlp = nlpResult.items[i];
-                final keepName =
-                    FoodMatchScorer.isReasonableNormalization(nlp.name, ai.name)
-                        ? ai.name
-                        : nlp.name;
-                final keepGrams = nlp.isEstimated ? ai.grams : nlp.grams;
-                return ParsedFoodItem(
-                  rawText: nlp.rawText,
-                  name: keepName,
-                  grams: keepGrams,
-                  isEstimated: nlp.isEstimated,
-                );
-              })
-            : nlpResult.items;
-
-    // Step 3: Personal dictionary — highest priority for user-confirmed foods.
-    final entries = List<FoodEntry?>.filled(items.length, null);
-    for (var i = 0; i < items.length; i++) {
-      final dictHit = _personalDict.lookup(items[i].name);
-      if (dictHit == null) {
-        // Also try the original NLP name in case normalization changed it.
-        final nlpHit = _personalDict.lookup(nlpResult.items[i].name);
-        if (nlpHit != null) {
-          entries[i] = _buildEntryFromDict(items[i], nlpHit);
+    // ── Layer 1: extract items + grams + HyDE descriptions ────────────────
+    List<ExtractedFoodItem> items = const [];
+    if (_ai.isAvailable) {
+      try {
+        final extracted = await _ai
+            .extractFoodItems(text)
+            .timeout(const Duration(seconds: 25));
+        if (extracted != null && extracted.isNotEmpty) {
+          items = extracted;
         }
-      } else {
-        entries[i] = _buildEntryFromDict(items[i], dictHit);
+      } catch (e) {
+        debugPrint('NutritionPresenter: extractFoodItems failed: $e');
       }
     }
 
-    // Step 4: DB resolution. If the speculative DB lookup (using NLP name)
-    // already hit, use it. Otherwise, retry with the AI-normalized name when
-    // it differs from NLP. Learn each DB hit into the personal dict so the
-    // next parse of the same food goes O(1).
-    final dbRetries = <Future<void>>[];
-    for (var i = 0; i < items.length; i++) {
-      if (entries[i] != null) continue;
+    if (items.isEmpty) {
+      // No-AI fallback (Plan 022 §2.4): rule-based parser, no HyDE.
+      final nlpResult = FoodNlpParser.parse(text);
+      if (nlpResult.isEmpty) {
+        _chatParseError = 'Could not identify any food items.';
+        return;
+      }
+      items = nlpResult.items
+          .map((p) => ExtractedFoodItem(
+                name: p.name,
+                grams: p.grams,
+                hydeDescription: p.name, // reuse name when HyDE unavailable
+                rawText: p.rawText,
+              ))
+          .toList();
+    }
 
-      final nameSameAsNlp =
-          items[i].name.toLowerCase() == nlpResult.items[i].name.toLowerCase();
+    // ── Layer 2 + 3: resolve each item, commit, build chat row ────────────
+    final entries = <FoodEntry>[];
+    final altsList = <List<ChatFoodAlternative>>[];
 
-      if (nameSameAsNlp && speculativeDb[i] != null) {
-        entries[i] = _buildEntry(items[i], speculativeDb[i]);
-        // ignore: unawaited_futures
-        _learnFromEntry(items[i].name, entries[i]!);
+    for (final item in items) {
+      // Personal dict — instant, always trusted, max confidence.
+      final dictHit = _personalDict.lookup(item.name);
+      if (dictHit != null) {
+        entries.add(_buildEntryFromDict(
+          ParsedFoodItem(
+              rawText: item.rawText,
+              name: item.name,
+              grams: item.grams,
+              isEstimated: false),
+          dictHit,
+        ));
+        altsList.add(const []);
         continue;
       }
 
-      // Either the name was AI-normalized OR the speculative lookup missed.
-      // Retry with both names so scoring picks the best.
-      final idx = i;
-      dbRetries.add(() async {
-        final altName = nlpResult.items[idx].name != items[idx].name
-            ? nlpResult.items[idx].name
-            : null;
-        final dbEntry = await _resolveOneDbItem(items[idx], altName: altName);
-        if (dbEntry != null) {
-          entries[idx] = _buildEntry(items[idx], dbEntry);
-          await _learnFromEntry(items[idx].name, entries[idx]!);
-        }
-      }());
-    }
-    await Future.wait(dbRetries);
+      // Hybrid FTS + semantic with RRF fusion.
+      final hybrid = await _hybridResolveItem(
+        name: item.name,
+        hyde: item.hydeDescription,
+      );
 
-    // Step 5: AI per-item macro estimate for still-unresolved items.
-    final unresolvedIndices = [
-      for (var i = 0; i < items.length; i++)
-        if (entries[i] == null) i,
-    ];
-    if (unresolvedIndices.isNotEmpty && _ai.isAvailable) {
-      try {
-        final aiInputs = unresolvedIndices
-            .map(
-                (i) => AiParsedFood(name: items[i].name, grams: items[i].grams))
-            .toList();
-        final aiResults = await _ai
-            .estimateMacrosForItems(aiInputs)
-            .timeout(const Duration(seconds: 25));
-        if (aiResults != null && aiResults.length == aiInputs.length) {
-          for (var j = 0; j < unresolvedIndices.length; j++) {
-            final i = unresolvedIndices[j];
-            entries[i] = _aiItemToFoodEntry(aiResults[j], items[i]);
-          }
+      if (hybrid != null) {
+        final entry = hybrid.pick.toFoodEntry(item.grams).copyWith(
+              estimationSource: EstimationSource.db,
+              confidence: hybrid.confidence,
+            );
+        entries.add(entry);
+        // Learn confident matches into personal dict for instant next-time.
+        if (hybrid.confidence >= 0.75) {
+          // ignore: unawaited_futures
+          _learnFromEntry(item.name, entry);
         }
-      } catch (e) {
-        debugPrint('NutritionPresenter: AI macro estimate failed: $e');
+        // Stash up to 2 alternatives when the auto-pick was uncertain so
+        // the chat row can render swap chips (ChatFoodItem.needsConfirmation
+        // gates the rendering at the < 0.6 threshold).
+        if (hybrid.confidence < 0.6 && hybrid.alternatives.isNotEmpty) {
+          altsList.add(hybrid.alternatives.take(2).map((e) {
+            final alt = e.toFoodEntry(item.grams);
+            return ChatFoodAlternative(
+              name: alt.name,
+              calories: alt.calories,
+              protein: alt.protein,
+              carbs: alt.carbs,
+              fat: alt.fat,
+              grams: alt.grams,
+              estimationSource: EstimationSource.db,
+            );
+          }).toList());
+        } else {
+          altsList.add(const []);
+        }
+        continue;
       }
+
+      // Last-ditch: keyword-density estimate with macro split-from-calories.
+      final estKcal = _estimateCalories(item.name, item.grams);
+      final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+      entries.add(FoodEntry(
+        id: FoodEntry.generateId(),
+        name: _formatDisplayName(item.name),
+        calories: estKcal,
+        protein: estProtein,
+        carbs: estCarbs,
+        fat: estFat,
+        grams: item.grams,
+        estimationSource: EstimationSource.keywordDensity,
+        confidence: 0.3,
+        loggedAt: DateTime.now(),
+      ));
+      altsList.add(const []);
     }
 
-    // Step 6: Keyword density fallback (last resort).
-    for (var i = 0; i < items.length; i++) {
-      entries[i] ??= _buildEntry(items[i], null);
-    }
-
-    // IF-Sync gate: same rule as addFoodEntry — drop the message if the user
-    // is fasting and ifSync is enabled.
+    // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
 
-    // If the parse spanned a midnight boundary, _todayLog may still be keyed
-    // for yesterday. Refresh before mutating so entries land on the right day.
+    // Refresh today's log if midnight crossed mid-parse.
     await _ensureTodayLogFresh();
 
-    // Apply all entries to today's log in a single mutation, save once, and
-    // run goal checks once. Avoids N redundant storage saves and
-    // notifyListeners() calls when logging multiple items at once.
-    final resolvedEntries = [for (final e in entries) e!];
-    _todayLog = _todayLog.addEntries(resolvedEntries, MealSlot.meal);
+    _todayLog = _todayLog.addEntries(entries, MealSlot.meal);
 
     final msg = ChatMessage(
       id: ChatMessage.generateId(),
@@ -1225,8 +1296,11 @@ class NutritionPresenter extends ChangeNotifier {
       kind: ChatMessageKind.food,
       foodItems: [
         for (var i = 0; i < items.length; i++)
-          ChatFoodItem.fromFoodEntry(resolvedEntries[i],
-              amountText: items[i].rawText),
+          ChatFoodItem.fromFoodEntry(
+            entries[i],
+            amountText: items[i].rawText,
+            alternatives: altsList[i],
+          ),
       ],
       mealSlot: MealSlot.meal,
     );
@@ -1287,6 +1361,83 @@ class NutritionPresenter extends ChangeNotifier {
     );
     _chatMessages.add(msg);
     await _persistChatMessages();
+  }
+
+  /// Swap the auto-picked food item with one of its alternatives. Triggered
+  /// when the user taps an alternative chip on a low-confidence chat row.
+  /// Updates today's log, replaces the chat row, learns the swap into the
+  /// personal dictionary so the same input next time auto-resolves correctly.
+  Future<void> swapChatFoodAlternative(
+    String messageId,
+    int itemIndex,
+    int alternativeIndex,
+  ) async {
+    final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
+    if (msgIdx == -1) return;
+    final msg = _chatMessages[msgIdx];
+    if (msg.kind != ChatMessageKind.food) return;
+    if (itemIndex < 0 || itemIndex >= msg.foodItems.length) return;
+
+    final item = msg.foodItems[itemIndex];
+    if (alternativeIndex < 0 ||
+        alternativeIndex >= item.alternatives.length) {
+      return;
+    }
+    final alt = item.alternatives[alternativeIndex];
+
+    // Replace the existing FoodEntry in today's log with one built from the
+    // chosen alternative, keeping the same id so other indexes stay valid.
+    final newEntry = FoodEntry(
+      id: item.entryId,
+      name: alt.name,
+      calories: alt.calories,
+      protein: alt.protein,
+      carbs: alt.carbs,
+      fat: alt.fat,
+      grams: alt.grams,
+      estimationSource: alt.estimationSource,
+      // Tap-to-swap is an explicit user choice — mark it confidently logged.
+      confidence: 0.95,
+      loggedAt: DateTime.now(),
+    );
+    _todayLog = _todayLog.replaceEntry(newEntry, msg.mealSlot);
+
+    // Build the updated chat row. The picked alternative becomes the primary;
+    // the previous primary moves into the alternatives list so the user can
+    // swap back if they tapped the wrong chip.
+    final previousAsAlt = ChatFoodAlternative(
+      name: item.name,
+      calories: item.calories,
+      protein: item.protein,
+      carbs: item.carbs,
+      fat: item.fat,
+      grams: item.grams,
+      estimationSource: item.estimationSource,
+    );
+    final newAlts = [
+      for (var i = 0; i < item.alternatives.length; i++)
+        if (i != alternativeIndex) item.alternatives[i],
+      previousAsAlt,
+    ];
+    final updatedItem = ChatFoodItem.fromFoodEntry(
+      newEntry,
+      amountText: item.amountText,
+      alternatives: newAlts.take(2).toList(),
+    );
+
+    final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
+    updatedItems[itemIndex] = updatedItem;
+    _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
+    notifyListeners();
+
+    await Future.wait([
+      _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
+
+    // Learn the swap so the same query next time goes straight to this entry.
+    // ignore: unawaited_futures
+    _learnFromEntry(item.amountText ?? alt.name, newEntry);
   }
 
   /// Remove a single food item at [itemIndex] from [messageId]. Used by the
@@ -1624,4 +1775,19 @@ enum FoodSearchStatus {
 
   /// Fully ready — semantic search is live.
   ready,
+}
+
+/// Result of [NutritionPresenter._hybridResolveItem]: the top-1 DB entry,
+/// up to 4 runner-up alternatives (for chip rendering), and a 0..1 confidence
+/// score derived from the RRF fusion gap between top-1 and top-2.
+class _HybridMatch {
+  final FoodDbEntry pick;
+  final List<FoodDbEntry> alternatives;
+  final double confidence;
+
+  const _HybridMatch({
+    required this.pick,
+    required this.alternatives,
+    required this.confidence,
+  });
 }

@@ -100,6 +100,18 @@ class DailyNutritionLog {
     return DailyNutritionLog(date: date, meals: updated);
   }
 
+  /// Replace a single entry by id within [slot]. Used by chip-swap UX so the
+  /// chat row's entryId stays stable while the underlying food changes.
+  DailyNutritionLog replaceEntry(FoodEntry entry, MealSlot slot) {
+    final updated = Map<MealSlot, List<FoodEntry>>.from(
+      meals.map((k, v) => MapEntry(k, List<FoodEntry>.from(v))),
+    );
+    updated[slot] = (updated[slot] ?? [])
+        .map((e) => e.id == entry.id ? entry : e)
+        .toList();
+    return DailyNutritionLog(date: date, meals: updated);
+  }
+
   DailyNutritionLog addEntries(List<FoodEntry> entries, MealSlot slot) {
     final updated = Map<MealSlot, List<FoodEntry>>.from(
       meals.map((k, v) => MapEntry(k, List<FoodEntry>.from(v))),
