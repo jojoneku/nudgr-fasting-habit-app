@@ -123,8 +123,7 @@ class ReceivableListTile extends StatelessWidget {
             ),
           ),
           if (receivable.isReceived)
-            Icon(Icons.check_circle,
-                color: context.appColors.success, size: 18)
+            Icon(Icons.check_circle, color: context.appColors.success, size: 18)
           else
             SizedBox(
               height: 28,
@@ -186,10 +185,9 @@ class ReceivableListTile extends StatelessWidget {
               ),
             if (onDelete != null)
               ListTile(
-                leading:
-                    Icon(Icons.delete_outline, color: colorScheme.error),
-                title: Text('Delete',
-                    style: TextStyle(color: colorScheme.error)),
+                leading: Icon(Icons.delete_outline, color: colorScheme.error),
+                title:
+                    Text('Delete', style: TextStyle(color: colorScheme.error)),
                 onTap: () {
                   Navigator.pop(context);
                   onDelete!();

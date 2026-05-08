@@ -37,8 +37,8 @@ class ChatFoodAlternative {
         carbs: (json['carbs'] as num?)?.toDouble(),
         fat: (json['fat'] as num?)?.toDouble(),
         grams: (json['grams'] as num?)?.toDouble(),
-        estimationSource: EstimationSource.fromJson(
-            json['estimationSource'] as String?),
+        estimationSource:
+            EstimationSource.fromJson(json['estimationSource'] as String?),
       );
 
   Map<String, dynamic> toJson() => {

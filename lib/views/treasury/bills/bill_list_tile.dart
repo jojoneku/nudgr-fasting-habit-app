@@ -156,8 +156,7 @@ class BillListTile extends StatelessWidget {
                       : colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
-                  decoration:
-                      bill.isPaid ? TextDecoration.lineThrough : null,
+                  decoration: bill.isPaid ? TextDecoration.lineThrough : null,
                 ),
               ),
               if (bill.isPaid)

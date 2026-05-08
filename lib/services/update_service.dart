@@ -44,9 +44,9 @@ class UpdateService {
         'Cache-Control': 'no-cache, no-store',
         'Pragma': 'no-cache',
       }).timeout(
-            const Duration(seconds: 15),
-            onTimeout: () => throw Exception('Timeout fetching manifest'),
-          );
+        const Duration(seconds: 15),
+        onTimeout: () => throw Exception('Timeout fetching manifest'),
+      );
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;

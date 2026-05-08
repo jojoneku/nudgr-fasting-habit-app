@@ -100,9 +100,7 @@ class LedgerPresenter extends ChangeNotifier {
           final monthParts = _selectedMonth.split('-');
           final y = int.parse(monthParts[0]);
           final m = int.parse(monthParts[1]);
-          return (now.year == y && now.month == m)
-              ? now
-              : DateTime(y, m, 1);
+          return (now.year == y && now.month == m) ? now : DateTime(y, m, 1);
         })();
     final next = anchor.add(Duration(days: delta));
     _selectedDate = next;

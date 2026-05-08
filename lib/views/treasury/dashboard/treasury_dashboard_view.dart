@@ -238,7 +238,8 @@ class _GoalSection extends StatelessWidget {
               child: AppEmptyState(
                 icon: Icons.savings_outlined,
                 title: 'No goals or savings yet',
-                body: 'Add a savings account or financial goal to track progress',
+                body:
+                    'Add a savings account or financial goal to track progress',
                 actionLabel: 'Add Goal / Savings',
                 onAction: onAdd,
                 iconSize: 40,
@@ -262,7 +263,8 @@ class _GoalSection extends StatelessWidget {
                         height: 1,
                         indent: 16,
                         endIndent: 16,
-                        color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        color:
+                            colorScheme.outlineVariant.withValues(alpha: 0.4),
                       ),
                   ],
                 ],

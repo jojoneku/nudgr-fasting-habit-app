@@ -156,10 +156,9 @@ class BudgetedExpenseTile extends StatelessWidget {
               ),
             if (onDelete != null)
               ListTile(
-                leading:
-                    Icon(Icons.delete_outline, color: colorScheme.error),
-                title: Text('Delete',
-                    style: TextStyle(color: colorScheme.error)),
+                leading: Icon(Icons.delete_outline, color: colorScheme.error),
+                title:
+                    Text('Delete', style: TextStyle(color: colorScheme.error)),
                 onTap: () {
                   Navigator.pop(context);
                   onDelete!();

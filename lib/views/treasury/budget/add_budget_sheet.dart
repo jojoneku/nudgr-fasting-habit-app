@@ -82,8 +82,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       BuildContext context) async {
     final nameCtrl = TextEditingController();
     final existing = widget.presenter.expenseCategories;
-    final colorHex =
-        categoryColorAt(existing.length, isExpense: true);
+    final colorHex = categoryColorAt(existing.length, isExpense: true);
     final cat = await showDialog<FinanceCategory>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -140,8 +139,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               if (expenseCategories.isEmpty) ...[
                 _NoCategoriesHint(
                   onAdd: () async {
-                    final newCat =
-                        await _showCreateCategoryDialog(context);
+                    final newCat = await _showCreateCategoryDialog(context);
                     if (newCat != null) {
                       await widget.presenter.addCategory(newCat);
                       if (mounted) {
@@ -184,8 +182,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                       icon: const Icon(Icons.add, size: 20),
                       tooltip: 'Create category',
                       onPressed: () async {
-                        final newCat =
-                            await _showCreateCategoryDialog(context);
+                        final newCat = await _showCreateCategoryDialog(context);
                         if (newCat != null) {
                           await widget.presenter.addCategory(newCat);
                           if (mounted) {

@@ -352,8 +352,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   Future<void> deleteAccount(String id) async {
     final hasSubs = _accounts.any((a) => a.parentAccountId == id);
     if (hasSubs) throw StateError('has_sub_accounts');
-    final hasTxns = _transactions.any(
-        (t) => t.accountId == id || t.transferToAccountId == id);
+    final hasTxns = _transactions
+        .any((t) => t.accountId == id || t.transferToAccountId == id);
     final hasBills = _bills.any((b) => b.accountId == id);
     if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();

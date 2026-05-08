@@ -106,9 +106,8 @@ class DailyNutritionLog {
     final updated = Map<MealSlot, List<FoodEntry>>.from(
       meals.map((k, v) => MapEntry(k, List<FoodEntry>.from(v))),
     );
-    updated[slot] = (updated[slot] ?? [])
-        .map((e) => e.id == entry.id ? entry : e)
-        .toList();
+    updated[slot] =
+        (updated[slot] ?? []).map((e) => e.id == entry.id ? entry : e).toList();
     return DailyNutritionLog(date: date, meals: updated);
   }
 

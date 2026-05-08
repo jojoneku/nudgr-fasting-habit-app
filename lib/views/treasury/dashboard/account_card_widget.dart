@@ -72,7 +72,8 @@ class AccountCardWidget extends StatelessWidget {
     final accentColor = _parseColor(context);
 
     final hasHeld = heldAmount > 0 && !account.isLiability;
-    final shownBalance = hasHeld ? account.balance - heldAmount : account.balance;
+    final shownBalance =
+        hasHeld ? account.balance - heldAmount : account.balance;
     return Semantics(
       label:
           "${account.name}, ${account.isLiability ? 'Owed' : (hasHeld ? 'Yours' : 'Balance')}: ${formatPesoCompact(shownBalance)}",

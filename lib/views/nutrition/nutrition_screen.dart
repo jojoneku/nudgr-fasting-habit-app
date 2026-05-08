@@ -986,9 +986,8 @@ class _FoodItemRow extends StatelessWidget {
           )
         : _FoodItemDisplay(item: item);
 
-    final showAlternatives = !editing &&
-        item.alternatives.isNotEmpty &&
-        onSwapAlternative != null;
+    final showAlternatives =
+        !editing && item.alternatives.isNotEmpty && onSwapAlternative != null;
 
     return Column(
       children: [

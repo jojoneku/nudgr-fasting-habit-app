@@ -43,8 +43,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-        length: TreasuryModuleView.tabCount, vsync: this);
+    _tabController =
+        TabController(length: TreasuryModuleView.tabCount, vsync: this);
     _tabController.addListener(_onTabChanged);
   }
 

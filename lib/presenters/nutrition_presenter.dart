@@ -1360,8 +1360,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (itemIndex < 0 || itemIndex >= msg.foodItems.length) return;
 
     final item = msg.foodItems[itemIndex];
-    if (alternativeIndex < 0 ||
-        alternativeIndex >= item.alternatives.length) {
+    if (alternativeIndex < 0 || alternativeIndex >= item.alternatives.length) {
       return;
     }
     final alt = item.alternatives[alternativeIndex];

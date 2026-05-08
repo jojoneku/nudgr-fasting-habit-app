@@ -243,8 +243,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           final confirmed = await AppConfirmDialog.confirm(
                             context: context,
                             title: 'Delete Transaction',
-                            body:
-                                'Delete "${widget.existing!.description}"?',
+                            body: 'Delete "${widget.existing!.description}"?',
                             confirmLabel: 'Delete',
                             isDestructive: true,
                           );
@@ -258,8 +257,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             color: Theme.of(context).colorScheme.error),
                         label: Text('Delete',
                             style: TextStyle(
-                                color:
-                                    Theme.of(context).colorScheme.error)),
+                                color: Theme.of(context).colorScheme.error)),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(
                               color: Theme.of(context)
