@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
@@ -24,13 +25,14 @@ class BudgetPresenter extends ChangeNotifier {
   final StatsPresenter _stats;
   final LedgerPresenter? _ledger;
 
-  /// Pull transactions and categories from LedgerPresenter so budget spending
-  /// totals stay in sync after ledger mutations or mark-paid flows.
+  /// Pull transactions, accounts, and categories from LedgerPresenter so
+  /// budget totals stay in sync after ledger mutations or mark-paid flows.
   void _syncFromLedger() {
     final ledger = _ledger;
     if (ledger == null) return;
     _allTransactions = ledger.allTransactions;
     _categories = ledger.categories;
+    _accounts = ledger.accounts;
     notifyListeners();
   }
 
@@ -44,6 +46,7 @@ class BudgetPresenter extends ChangeNotifier {
   List<Budget> _allBudgets = [];
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
+  List<FinancialAccount> _accounts = [];
 
   // ─── Public state ────────────────────────────────────────────────────────────
 
@@ -59,8 +62,11 @@ class BudgetPresenter extends ChangeNotifier {
   double get totalAllocated =>
       _budgetsForMonth.fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
+  /// Total "spent" across all budget rows. For expense rows that's outflows
+  /// against the matched category; for savings rows it's contributions into
+  /// the matched account.
   double get totalSpent =>
-      _outflowsForMonth.fold(0.0, (sum, t) => sum + t.amount);
+      _budgetsForMonth.fold(0.0, (sum, b) => sum + spentFor(b.categoryId));
 
   double get totalRemaining => totalAllocated - totalSpent;
 
@@ -71,15 +77,40 @@ class BudgetPresenter extends ChangeNotifier {
   List<FinanceCategory> get expenseCategories =>
       _categories.where((c) => c.type == CategoryType.expense).toList();
 
-  /// Returns categories that have a budget set for the selected month, grouped by BudgetGroup.
+  /// Savings + goal accounts available as budget targets. Only active accounts.
+  List<FinancialAccount> get savingsTargets => _accounts
+      .where((a) =>
+          a.isActive &&
+          (a.category == AccountCategory.savings ||
+              a.category == AccountCategory.goal))
+      .toList();
+
+  /// Returns categories that have an *expense* budget set for the selected
+  /// month, grouped by BudgetGroup. The `savings` group is rendered separately
+  /// via [savingsBudgets].
   Map<BudgetGroup, List<FinanceCategory>> get categoriesByGroup {
     final result = <BudgetGroup, List<FinanceCategory>>{
-      for (final g in BudgetGroup.values) g: [],
+      for (final g in BudgetGroup.values)
+        if (g != BudgetGroup.savings) g: [],
     };
     for (final b in _budgetsForMonth) {
+      if (b.group == BudgetGroup.savings) continue;
       final matches = _categories.where((c) => c.id == b.categoryId);
       if (matches.isEmpty) continue;
       result[b.group]!.add(matches.first);
+    }
+    return result;
+  }
+
+  /// Savings/goal budgets for the selected month. Each entry pairs the budget
+  /// with its target account. Filters out budgets whose account no longer
+  /// exists.
+  List<({Budget budget, FinancialAccount account})> get savingsBudgets {
+    final result = <({Budget budget, FinancialAccount account})>[];
+    for (final b
+        in _budgetsForMonth.where((b) => b.group == BudgetGroup.savings)) {
+      final acct = _accounts.where((a) => a.id == b.categoryId).firstOrNull;
+      if (acct != null) result.add((budget: b, account: acct));
     }
     return result;
   }
@@ -89,6 +120,12 @@ class BudgetPresenter extends ChangeNotifier {
       .fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
   double sectionSpent(BudgetGroup group) {
+    if (group == BudgetGroup.savings) {
+      return savingsBudgets.fold(
+        0.0,
+        (sum, e) => sum + contributedTo(e.account.id),
+      );
+    }
     final catIds = _budgetsForMonth
         .where((b) => b.group == group)
         .map((b) => b.categoryId)
@@ -99,6 +136,22 @@ class BudgetPresenter extends ChangeNotifier {
             t.type == TransactionType.outflow &&
             catIds.contains(t.categoryId))
         .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// Contributions into [accountId] this month — inflows + the receiving leg
+  /// of transfers. Used for savings/goal progress.
+  double contributedTo(String accountId) {
+    var total = 0.0;
+    for (final t in _allTransactions) {
+      if (t.month != _selectedMonth) continue;
+      if (t.type == TransactionType.inflow && t.accountId == accountId) {
+        total += t.amount;
+      } else if (t.type == TransactionType.transfer &&
+          t.transferToAccountId == accountId) {
+        total += t.amount;
+      }
+    }
+    return total;
   }
 
   bool isCategoryIncome(String categoryId) {
@@ -131,12 +184,20 @@ class BudgetPresenter extends ChangeNotifier {
     }
   }
 
-  double spentFor(String categoryId) => _allTransactions
-      .where((t) =>
-          t.month == _selectedMonth &&
-          t.categoryId == categoryId &&
-          t.type == TransactionType.outflow)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double spentFor(String categoryId) {
+    final budget = budgetFor(categoryId);
+    if (budget?.group == BudgetGroup.savings) {
+      // For savings rows the "categoryId" is actually a target account id —
+      // count contributions, not outflows.
+      return contributedTo(categoryId);
+    }
+    return _allTransactions
+        .where((t) =>
+            t.month == _selectedMonth &&
+            t.categoryId == categoryId &&
+            t.type == TransactionType.outflow)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   double remainingFor(String categoryId) {
     final budget = budgetFor(categoryId);
@@ -208,6 +269,7 @@ class BudgetPresenter extends ChangeNotifier {
     _allBudgets = await _storage.loadBudgets();
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
+    _accounts = await _storage.loadAccounts();
     notifyListeners();
   }
 

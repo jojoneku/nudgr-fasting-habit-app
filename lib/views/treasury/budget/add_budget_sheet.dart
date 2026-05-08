@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBudgetSheet extends StatefulWidget {
@@ -123,9 +125,12 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     return cat;
   }
 
+  bool get _isSavings => _group == BudgetGroup.savings;
+
   @override
   Widget build(BuildContext context) {
     final expenseCategories = widget.presenter.expenseCategories;
+    final savingsTargets = widget.presenter.savingsTargets;
 
     return Form(
       key: _formKey,
@@ -134,9 +139,32 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Category selector or display
+            // Category / account selector or display
             if (widget.preselectedCategoryId == null) ...[
-              if (expenseCategories.isEmpty) ...[
+              if (_isSavings) ...[
+                if (savingsTargets.isEmpty)
+                  _NoSavingsHint()
+                else
+                  DropdownButtonFormField<String>(
+                    initialValue: _selectedCategoryId,
+                    hint: Text(
+                      'Select Account',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
+                    ),
+                    decoration: const InputDecoration(
+                        labelText: 'Savings / Goal Account'),
+                    items: savingsTargets
+                        .map((a) => DropdownMenuItem(
+                              value: a.id,
+                              child: Text(_savingsAccountLabel(a)),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategoryId = v),
+                    validator: (v) => v == null ? 'Select an account' : null,
+                  ),
+              ] else if (expenseCategories.isEmpty) ...[
                 _NoCategoriesHint(
                   onAdd: () async {
                     final newCat = await _showCreateCategoryDialog(context);
@@ -247,9 +275,19 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   label: 'Variable',
                   icon: null
                 ),
+                (value: BudgetGroup.savings, label: 'Savings', icon: null),
               ],
               selected: _group,
-              onChanged: (g) => setState(() => _group = g),
+              onChanged: (g) {
+                // Switching between expense ↔ savings invalidates the picked
+                // id since categories and accounts share the same `categoryId`
+                // slot but draw from different lists.
+                final crossing = (g == BudgetGroup.savings) != _isSavings;
+                setState(() {
+                  _group = g;
+                  if (crossing) _selectedCategoryId = null;
+                });
+              },
             ),
             const SizedBox(height: 16),
 
@@ -296,6 +334,36 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 8),
           ],
         ),
+      ),
+    );
+  }
+}
+
+String _savingsAccountLabel(FinancialAccount a) {
+  if (a.category == AccountCategory.goal && a.goalTarget != null) {
+    return '${a.name}  ·  goal ${formatPesoCompact(a.goalTarget!)}';
+  }
+  return a.name;
+}
+
+class _NoSavingsHint extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'No savings or goal accounts yet — add one in the Dashboard first.',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }

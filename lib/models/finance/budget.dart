@@ -1,5 +1,10 @@
-// Maps to the 3 sections in the Budget sheet.
-enum BudgetGroup { nonNegotiables, livingExpense, variableOptional }
+// Maps to the 4 sections in the Budget sheet.
+//
+// `savings` is a savings/goal section — for these rows the [Budget.categoryId]
+// stores a *FinancialAccount id* (a savings or goal account) instead of a
+// finance category id, and "spent" semantics flip: inflows / transfers into
+// the account count as contributions toward the allocation.
+enum BudgetGroup { nonNegotiables, livingExpense, variableOptional, savings }
 
 // Affects styling and calculation logic.
 enum BudgetType { monthly, fixed, goal, variable }
