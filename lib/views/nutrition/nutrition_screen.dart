@@ -923,7 +923,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
                   altIndex,
                 ),
               )),
-          if (message.foodItems.length >= 2)
+          if (message.foodItems.isNotEmpty)
             _MealTotalRow(items: message.foodItems),
           _MessageFooter(
             timestamp: message.timestamp,

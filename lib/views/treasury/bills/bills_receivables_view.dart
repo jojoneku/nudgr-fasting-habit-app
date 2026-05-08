@@ -491,7 +491,7 @@ class _BudgetedExpensesSection extends StatelessWidget {
     final paidCount = expenses.where((e) => e.isPaid).length;
 
     return _SectionCard(
-      title: 'BUDGETED EXPENSES',
+      title: 'Budgeted Expenses',
       count: expenses.length,
       subtitle: '$paidCount/${expenses.length} paid',
       accentColor: context.appColors.gold,
@@ -613,7 +613,9 @@ class _SectionCard extends StatelessWidget {
         ),
         child: ExpansionTile(
           initiallyExpanded: initiallyExpanded,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          minTileHeight: 0,
+          visualDensity: VisualDensity.compact,
           childrenPadding: EdgeInsets.zero,
           title: Row(
             children: [

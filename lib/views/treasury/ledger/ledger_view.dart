@@ -601,16 +601,11 @@ class _DateGroup extends StatelessWidget {
                       HapticFeedback.mediumImpact();
                       final deleted = txn;
                       presenter.deleteTransaction(deleted.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Deleted "${deleted.description}"'),
-                          duration: const Duration(seconds: 4),
-                          behavior: SnackBarBehavior.floating,
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () => presenter.addTransaction(deleted),
-                          ),
-                        ),
+                      AppToast.action(
+                        context,
+                        message: 'Deleted "${deleted.description}"',
+                        actionLabel: 'Undo',
+                        onAction: () => presenter.addTransaction(deleted),
                       );
                     },
                   ),

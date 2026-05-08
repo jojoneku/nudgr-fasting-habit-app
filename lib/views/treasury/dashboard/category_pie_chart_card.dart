@@ -182,20 +182,6 @@ class _PieChartPainter extends CustomPainter {
           ..strokeCap = StrokeCap.butt,
       );
 
-      // Subtle glow
-      canvas.drawArc(
-        rect,
-        startAngle,
-        sweepAngle,
-        false,
-        Paint()
-          ..color = color.withValues(alpha: 0.18)
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = _strokeWidth + 6
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4)
-          ..strokeCap = StrokeCap.butt,
-      );
-
       startAngle += sweepAngle + _gapAngle;
     }
 
@@ -290,9 +276,6 @@ class _LegendRow extends StatelessWidget {
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(color: color.withValues(alpha: 0.5), blurRadius: 4)
-            ],
           ),
         ),
         const SizedBox(width: 7),
