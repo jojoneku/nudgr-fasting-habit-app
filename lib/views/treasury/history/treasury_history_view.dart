@@ -28,6 +28,7 @@ class _TreasuryHistoryViewState extends State<TreasuryHistoryView> {
         builder: (_) => MonthlySummaryDetailView(
           summary: summary,
           categories: widget.presenter.categories,
+          accounts: widget.presenter.accounts,
         ),
       ),
     );

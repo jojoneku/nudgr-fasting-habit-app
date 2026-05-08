@@ -50,7 +50,11 @@ class AppToast {
         : base;
     final fg = color ?? cs.onSurface;
 
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    // Replace any in-flight snackbar instead of queueing — repeated deletes
+    // shouldn't pile up.
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
       SnackBar(
         backgroundColor: bg,
         elevation: 0,

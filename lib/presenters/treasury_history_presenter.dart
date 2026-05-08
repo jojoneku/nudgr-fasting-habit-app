@@ -36,6 +36,8 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   List<FinanceCategory> get categories => List.unmodifiable(_categories);
 
+  List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
+
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
   Future<void> load() async {

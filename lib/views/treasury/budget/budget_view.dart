@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/budget/add_budget_sheet.dart';
@@ -42,7 +43,9 @@ class _BudgetViewState extends State<BudgetView> {
       listenable: widget.presenter,
       builder: (context, _) {
         final byGroup = widget.presenter.categoriesByGroup;
-        final hasAny = byGroup.values.any((list) => list.isNotEmpty);
+        final savings = widget.presenter.savingsBudgets;
+        final hasAny =
+            byGroup.values.any((list) => list.isNotEmpty) || savings.isNotEmpty;
 
         return Scaffold(
           body: Column(
@@ -54,8 +57,19 @@ class _BudgetViewState extends State<BudgetView> {
                     ? ListView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                         children: [
-                          for (final group in BudgetGroup.values)
-                            if (byGroup[group]!.isNotEmpty)
+                          for (final group in BudgetGroup.values) ...[
+                            if (group == BudgetGroup.savings &&
+                                savings.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16),
+                                child: _SavingsSection(
+                                  presenter: widget.presenter,
+                                  rows: savings,
+                                  onTap: _showAddBudgetSheet,
+                                ),
+                              )
+                            else if (group != BudgetGroup.savings &&
+                                (byGroup[group] ?? const []).isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: _GroupSection(
@@ -65,6 +79,7 @@ class _BudgetViewState extends State<BudgetView> {
                                   onTapCategory: _showAddBudgetSheet,
                                 ),
                               ),
+                          ],
                         ],
                       )
                     : AppEmptyState(
@@ -219,6 +234,7 @@ class _GroupSection extends StatelessWidget {
     BudgetGroup.nonNegotiables: 'NON-NEGOTIABLES',
     BudgetGroup.livingExpense: 'LIVING EXPENSE',
     BudgetGroup.variableOptional: 'VARIABLE / OPTIONAL',
+    BudgetGroup.savings: 'SAVINGS / GOALS',
   };
 
   @override
@@ -254,6 +270,122 @@ class _GroupSection extends StatelessWidget {
                   color: Theme.of(context).colorScheme.outlineVariant,
                 ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Savings Section ──────────────────────────────────────────────────────────
+
+class _SavingsSection extends StatelessWidget {
+  final BudgetPresenter presenter;
+  final List<({Budget budget, FinancialAccount account})> rows;
+  final ValueChanged<String> onTap;
+
+  const _SavingsSection({
+    required this.presenter,
+    required this.rows,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final allocated = presenter.sectionAllocated(BudgetGroup.savings);
+    final saved = presenter.sectionSpent(BudgetGroup.savings);
+
+    return AppSection(
+      title: 'SAVINGS / GOALS',
+      hint: '${formatPesoCompact(saved)} / ${formatPesoCompact(allocated)}',
+      child: AppCard(
+        variant: AppCardVariant.outlined,
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = 0; i < rows.length; i++) ...[
+              _SavingsTile(
+                budget: rows[i].budget,
+                account: rows[i].account,
+                contributed: presenter.contributedTo(rows[i].account.id),
+                onTap: () => onTap(rows[i].account.id),
+              ),
+              if (i < rows.length - 1)
+                Divider(
+                  height: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: cs.outlineVariant,
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SavingsTile extends StatelessWidget {
+  final Budget budget;
+  final FinancialAccount account;
+  final double contributed;
+  final VoidCallback onTap;
+
+  const _SavingsTile({
+    required this.budget,
+    required this.account,
+    required this.contributed,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final allocated = budget.allocatedAmount;
+    final progress =
+        allocated > 0 ? (contributed / allocated).clamp(0.0, 1.5) : 0.0;
+    final met = contributed >= allocated && allocated > 0;
+    final color = met ? cs.tertiary : cs.primary;
+
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  account.category == AccountCategory.goal
+                      ? Icons.flag_outlined
+                      : Icons.savings_outlined,
+                  size: 16,
+                  color: cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    account.name,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ),
+                Text(
+                  '${formatPesoCompact(contributed)} / ${formatPesoCompact(allocated)}',
+                  style: theme.textTheme.labelMedium?.copyWith(color: color),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            AppLinearProgress(
+              value: progress.clamp(0.0, 1.0),
+              height: 4,
+              color: color,
+            ),
           ],
         ),
       ),
