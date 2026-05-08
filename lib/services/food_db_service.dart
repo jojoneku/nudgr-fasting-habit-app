@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/food_db_entry.dart';
+import '../utils/food_fuzzy.dart';
 
 /// Wraps the bundled SQLite food database (assets/food_db.sqlite).
 ///
@@ -57,33 +58,83 @@ class FoodDbService {
 
   /// Full-text search with automatic FTS5 → LIKE fallback.
   /// FTS5 availability is detected once at init to avoid per-query exceptions.
+  ///
+  /// On a miss, two fuzzy passes kick in (Plan 023):
+  ///   1. **Compound splits** for glued tokens — "bearbrand" → "bear brand".
+  ///   2. **Damerau–Levenshtein** rerank — "pansit" → "pancit".
   Future<List<FoodDbEntry>> search(String query) async {
     if (_db == null || query.trim().isEmpty) return [];
 
+    final trimmed = query.trim();
+    final tokens =
+        trimmed.split(RegExp(r'\s+')).where((t) => t.isNotEmpty).toList();
+
     if (_fts5Available) {
-      // Prefix-match every token so "chick adobo" matches "chicken adobo".
-      final q = query
-          .trim()
-          .split(RegExp(r'\s+'))
-          .where((t) => t.isNotEmpty)
-          .map((t) => '${t.replaceAll('"', '""')}*')
-          .join(' ');
-      try {
-        final rows = await _db!.rawQuery(
-          'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
-          'FROM foods f '
-          'JOIN foods_fts ON foods_fts.rowid = f.rowid '
-          'WHERE foods_fts MATCH ? '
-          'LIMIT 20',
-          [q],
-        );
-        return rows.map(FoodDbEntry.fromRow).toList();
-      } catch (_) {
-        _fts5Available = false;
+      final exact = await _searchFts(tokens);
+      if (exact.isNotEmpty) return exact;
+
+      // Pass 1: compound-split — only meaningful when the user typed a
+      // single glued token like "bearbrand".
+      if (tokens.length == 1) {
+        for (final variant in compoundSplits(tokens.first)) {
+          final variantTokens = variant.split(' ');
+          final hits = await _searchFts(variantTokens);
+          if (hits.isNotEmpty) return hits;
+        }
       }
     }
 
-    return _searchLike(query);
+    // Pass 2: edit-distance rerank against a candidate set pulled from the
+    // first 3 chars of the longest token. Covers "pansit" → "pancit",
+    // "bearbrand" → "bear brand" (when split pass missed), and small typos.
+    final fuzzy = await _fuzzyRerank(tokens);
+    if (fuzzy.isNotEmpty) return fuzzy;
+
+    return _searchLike(trimmed);
+  }
+
+  Future<List<FoodDbEntry>> _searchFts(List<String> tokens) async {
+    if (tokens.isEmpty) return const [];
+    final q = tokens.map((t) => '${t.replaceAll('"', '""')}*').join(' ');
+    try {
+      final rows = await _db!.rawQuery(
+        'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
+        'FROM foods f '
+        'JOIN foods_fts ON foods_fts.rowid = f.rowid '
+        'WHERE foods_fts MATCH ? '
+        'LIMIT 20',
+        [q],
+      );
+      return rows.map(FoodDbEntry.fromRow).toList();
+    } catch (_) {
+      _fts5Available = false;
+      return const [];
+    }
+  }
+
+  Future<List<FoodDbEntry>> _fuzzyRerank(List<String> tokens) async {
+    if (tokens.isEmpty) return const [];
+    // Use the longest token as the seed — it's the most distinctive.
+    final seed =
+        tokens.reduce((a, b) => a.length >= b.length ? a : b).toLowerCase();
+    if (seed.length < 3) return const [];
+    final prefix = seed.substring(0, 3);
+
+    // Pull a wide candidate slice; rerank in Dart with edit distance.
+    final rows = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods WHERE lower(name) LIKE ? LIMIT 200',
+      ['%$prefix%'],
+    );
+    if (rows.isEmpty) return const [];
+    final candidates = rows.map(FoodDbEntry.fromRow).toList(growable: false);
+    final query = tokens.join(' ');
+    return rankByEditDistance<FoodDbEntry>(
+      query,
+      candidates,
+      extractName: (e) => e.name,
+      limit: 20,
+    );
   }
 
   /// Exact lookup by USDA FDC id.
