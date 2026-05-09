@@ -1,5 +1,5 @@
 # Plan 004e — Treasury Module: Calendar Spending Heatmap
-**Status:** DRAFT — Awaiting Approval
+**Status:** IMPLEMENTED (calendar surfaced via popover instead of inline toggle — see `lib/views/treasury/ledger/spending_calendar.dart`)
 **Phase:** Extension to 004b (Ledger)
 **Depends on:** Plan 004b completed (LedgerPresenter and LedgerView exist)
 **Package already available:** `table_calendar: ^3.0.9` (already in pubspec.yaml)

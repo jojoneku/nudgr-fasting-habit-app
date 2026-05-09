@@ -2,7 +2,7 @@
 
 **Branch:** `feat/ai-calorie-accuracy`
 **Date:** 2026-04-29
-**Status:** Awaiting approval
+**Status:** IMPLEMENTED (further refined by Plan 022)
 **Depends on:** Plan 018 (calorie counter overhaul), Plan 010 (local AI), Plan 009 (food DB)
 
 ---

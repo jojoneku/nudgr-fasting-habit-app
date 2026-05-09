@@ -1,5 +1,5 @@
 # Plan 004f — Treasury Dashboard: Enrichment + Account Card Fix
-**Status:** DRAFT — Awaiting Approval
+**Status:** IMPLEMENTED (overdue-bill pulse animation skipped; metrics live in MetricCardsGrid card rather than inside CashSummaryBanner)
 **Phase:** Dashboard Enhancement (post-004b)
 **Depends on:** Plan 004b completed, Plan 004c models available (Budget, BudgetedExpense)
 
