@@ -566,7 +566,7 @@ class OnDeviceAiCoachService implements AiCoachService {
     }
 
     final raw = decoded as List<dynamic>;
-    final items = <ExtractedFoodItem>[];
+    var items = <ExtractedFoodItem>[];
     for (final r in raw) {
       final m = r as Map<String, dynamic>;
       final name = (m['name'] as String?)?.trim() ?? '';
@@ -581,6 +581,44 @@ class OnDeviceAiCoachService implements AiCoachService {
       ));
     }
     if (items.isEmpty) return null;
+
+    // Canonical-USDA-name guard: short comma-separated noun phrases like
+    // "Oats, Rolled, Dry" or "Beef, Ground, 80% Lean" are ONE ingredient.
+    // The decompose prompt was over-eager and split them into 3+ items each.
+    if (items.length > 1 && _looksLikeCanonicalUsdaName(original)) {
+      final fallbackGrams =
+          _singleItemExplicitGrams(original) ?? items.first.grams;
+      return [
+        ExtractedFoodItem(
+          name: original.trim(),
+          grams: fallbackGrams,
+          hydeDescription: items.first.hydeDescription,
+          rawText: original,
+        ),
+      ];
+    }
+
+    // Single-item gram reconciliation: when the user wrote one explicit gram
+    // figure ("rolled oats 50g") and the LLM extracted exactly one item, trust
+    // the user's number. The prompt examples nudge the model to canned values
+    // ("1 cup rolled oats → 80g") and it sometimes re-anchors on those even
+    // when the user provided an explicit weight.
+    if (items.length == 1) {
+      final userGrams = _singleItemExplicitGrams(original);
+      if (userGrams != null && userGrams > 0) {
+        final i = items.first;
+        if ((i.grams - userGrams).abs() / userGrams > 0.05) {
+          items = [
+            ExtractedFoodItem(
+              name: i.name,
+              grams: userGrams,
+              hydeDescription: i.hydeDescription,
+              rawText: i.rawText,
+            ),
+          ];
+        }
+      }
+    }
 
     // Safety net: if the user explicitly said "Xg total" / "Xg altogether" and
     // the model's per-item sum doesn't match, scale all items proportionally.
@@ -605,6 +643,42 @@ class OnDeviceAiCoachService implements AiCoachService {
       }
     }
     return items;
+  }
+
+  /// Single explicit gram figure in the original text — used to override the
+  /// model when the user gave a weight but the LLM hallucinated a different one.
+  /// Returns null when zero or multiple gram figures appear (multi-item input).
+  static double? _singleItemExplicitGrams(String text) {
+    final matches = RegExp(
+      r'(\d+(?:\.\d+)?)\s*(?:g|gm|gms|gram|grams)\b',
+      caseSensitive: false,
+    ).allMatches(text).toList();
+    if (matches.length != 1) return null;
+    return double.tryParse(matches.first.group(1)!);
+  }
+
+  /// True when the input looks like one canonical USDA-style name made of
+  /// comma-separated short modifiers — e.g. "Oats, Rolled, Dry" or "Beef,
+  /// Ground, 80% Lean". Used to suppress the decompose-on-comma prompt rule
+  /// for these single-ingredient inputs.
+  static bool _looksLikeCanonicalUsdaName(String text) {
+    final lower = text.toLowerCase().trim();
+    if (lower.length > 40) return false;
+    if (lower.contains(' with ') ||
+        lower.contains(' and ') ||
+        lower.contains(' + ') ||
+        lower.contains(' plus ')) {
+      return false;
+    }
+    if (!lower.contains(',')) return false;
+    final parts = lower.split(',').map((p) => p.trim()).toList();
+    if (parts.length < 2) return false;
+    // Each comma-separated part must be ONE short token (canonical descriptor).
+    return parts.every((p) =>
+        p.isNotEmpty &&
+        !p.contains(' ') &&
+        p.length <= 14 &&
+        RegExp(r'^[a-z0-9%]+$').hasMatch(p));
   }
 
   /// Extracts an explicit total like "200g total" / "150 grams altogether".
@@ -912,6 +986,12 @@ class OnDeviceAiCoachService implements AiCoachService {
       '   • Soy sauce / patis: 10g if mentioned\n'
       '5. "name" is what the user said, lightly cleaned. "hyde" is the USDA canonical '
       '   description (preparation state included). Filipino dishes: keep local name + brief gloss.\n'
+      '6. Fix obvious English typos in "name" (eg→egg, chiken→chicken, brocoli→broccoli, '
+      '   yougurt→yogurt). Do NOT correct Filipino/Tagalog spelling — pansit/pancit, '
+      '   adobong/adobo, lugaw/lugao are all valid; leave them as the user wrote them.\n'
+      '7. Single canonical names with USDA-style commas like "Oats, Rolled, Dry" or '
+      '   "Beef, Ground, 80% Lean" are ONE ingredient — DO NOT decompose them. '
+      '   Output one item with the input as the name.\n'
       'Examples:\n'
       '"1 cup rolled oats" -> [{"name":"rolled oats","grams":80,"hyde":"Oats, rolled, regular and quick, dry, unenriched"}]\n'
       '"kefir milk" -> [{"name":"kefir","grams":240,"hyde":"Kefir, lowfat, plain"}]\n'

@@ -8,6 +8,7 @@ import '../models/chat_message.dart';
 import '../models/extracted_food_item.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/estimation_source.dart';
+import '../models/food_feedback.dart';
 import '../models/exercise_entry.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_entry.dart';
@@ -22,6 +23,7 @@ import '../services/ai_coach_service.dart';
 import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
+import '../services/open_food_facts_service.dart';
 import '../models/personal_food_entry.dart';
 import '../services/personal_food_dictionary.dart';
 import '../services/storage_service.dart';
@@ -39,6 +41,7 @@ class NutritionPresenter extends ChangeNotifier {
   final AiCoachService _ai;
   final FoodSemanticSearchService? _semanticSearch;
   final EmbeddingService? _embedder;
+  final OpenFoodFactsService _barcodeLookup;
   StreamSubscription<IndexProgress>? _indexProgressSub;
 
   // Confidence thresholds — see docs/rag_food_search_spec.md for tuning notes.
@@ -201,6 +204,11 @@ class NutritionPresenter extends ChangeNotifier {
   bool _isChatParsing = false;
   String? _chatParseError;
 
+  // ── Matcher feedback (telemetry, local-only) ─────────────────────────────
+  // Loaded once from storage on init; appended to in-memory and persisted on
+  // every event so the curation backlog survives app restarts.
+  List<FoodFeedback> _feedback = const [];
+
   static final _dateFmt = DateFormat('yyyy-MM-dd');
   static final _calFmt = NumberFormat('#,###');
 
@@ -212,13 +220,15 @@ class NutritionPresenter extends ChangeNotifier {
     required AiCoachService aiCoach,
     FoodSemanticSearchService? semanticSearch,
     EmbeddingService? embedder,
+    OpenFoodFactsService? barcodeLookup,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
         _storage = storage,
         _foodDb = foodDb,
         _ai = aiCoach,
         _semanticSearch = semanticSearch,
-        _embedder = embedder {
+        _embedder = embedder,
+        _barcodeLookup = barcodeLookup ?? OpenFoodFactsService() {
     _personalDict = PersonalFoodDictionary(storage);
     // Surface index progress to the UI without polling.
     _indexProgressSub =
@@ -889,25 +899,34 @@ class NutritionPresenter extends ChangeNotifier {
     final pick = byId[ranked.first.key]!;
     final runnerUps = ranked.skip(1).take(4).map((e) => byId[e.key]!).toList();
 
-    // Confidence: how dominant is top-1 vs top-2? RRF gives small absolute
-    // numbers so we look at the relative dominance.
+    // Confidence model. Three independent signals, multiplied/added so weak
+    // matches genuinely fall below 0.6 and trigger the swap-chip UX.
+    //   (a) dominance over runner-up — the RRF dominance ratio, no clamp floor
+    //       (the previous floor of 0.5 made the gate unreachable)
+    //   (b) both-channel bonus — if the pick was hit by FTS AND semantic, +0.10
+    //   (c) word-boundary lexical bonus — every query word ≥3 chars appears as
+    //       a whole word in the entry name. Substring matches don't count, so
+    //       "red" no longer matches "layered" (the Sapin-Sapin / Red Rice case).
     final top1 = ranked.first.value;
     final top2 = ranked.length > 1 ? ranked[1].value : 0.0;
     double confidence = top2 == 0
-        ? 0.7 // single hit — moderate confidence, no runner-up to compare
-        : (top1 / (top1 + top2)).clamp(0.5, 0.95);
+        ? 0.55 // single hit — modest, intentionally below the 0.6 chip threshold
+        : top1 / (top1 + top2);
 
-    // Lexical bonus: if the picked entry's name contains all query words,
-    // bump confidence — it's a real match, not just a semantic neighbor.
-    final qWords = name
-        .toLowerCase()
-        .split(RegExp(r'\s+'))
-        .where((w) => w.length > 2)
-        .toSet();
-    final pickLower = pick.name.toLowerCase();
-    if (qWords.isNotEmpty && qWords.every(pickLower.contains)) {
-      confidence = (confidence + 0.15).clamp(0.0, 1.0);
+    final pickId = pick.id;
+    final inFts = ftsHits.any((h) => h.id == pickId);
+    final inSem = semHits.any((h) => h.entry.id == pickId);
+    if (inFts && inSem) {
+      confidence += 0.10;
     }
+
+    final qWords = SearchNormalize.wordTokens(name);
+    final entryWords = SearchNormalize.wordTokens(pick.name);
+    if (qWords.isNotEmpty && qWords.every(entryWords.contains)) {
+      confidence += 0.10;
+    }
+
+    confidence = confidence.clamp(0.05, 0.95);
 
     return _HybridMatch(
       pick: pick,
@@ -1277,6 +1296,18 @@ class NutritionPresenter extends ChangeNotifier {
         loggedAt: DateTime.now(),
       ));
       altsList.add(const []);
+      // Telemetry: this is a DB miss — record the query so it shows up in the
+      // curation backlog. Fire-and-forget; storage failure shouldn't block the
+      // user's log.
+      // ignore: unawaited_futures
+      _logFeedback(
+        kind: FoodFeedbackKind.fallbackMiss,
+        userQuery: item.name,
+        pickedName: item.name,
+        pickedDbId: null,
+        estimationSource: EstimationSource.keywordDensity,
+        confidence: 0.3,
+      );
     }
 
     // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
@@ -1418,6 +1449,157 @@ class NutritionPresenter extends ChangeNotifier {
     // Learn the swap so the same query next time goes straight to this entry.
     // ignore: unawaited_futures
     _learnFromEntry(item.amountText ?? alt.name, newEntry);
+
+    // Telemetry: implicit negative on the original pick + explicit positive on
+    // the alternative. Useful for both "what was wrong" and "what's frequently
+    // chosen as a swap target".
+    // ignore: unawaited_futures
+    _logFeedback(
+      kind: FoodFeedbackKind.swap,
+      userQuery: item.amountText ?? item.name,
+      pickedName: item.name,
+      pickedDbId: null,
+      estimationSource: item.estimationSource,
+      confidence: item.confidence,
+      swappedToName: alt.name,
+    );
+  }
+
+  // ── Barcode scan ─────────────────────────────────────────────────────────────
+
+  /// Look up [barcode] against OpenFoodFacts. Returns the parsed result, or
+  /// null when OFF doesn't have the barcode / the entry lacks calories. Pure
+  /// I/O; the caller (UI) handles preview + confirm before logging.
+  Future<BarcodeLookupResult?> lookupBarcode(String barcode) async {
+    try {
+      return await _barcodeLookup.lookup(barcode);
+    } catch (e) {
+      debugPrint('NutritionPresenter.lookupBarcode failed: $e');
+      return null;
+    }
+  }
+
+  /// Log [result] as a chat row + nutrition entry at [grams]. Also caches the
+  /// product into [PersonalFoodDictionary] so future text searches like
+  /// "bear brand 33g" hit it instantly without another network round-trip.
+  Future<void> logScannedProduct(
+    BarcodeLookupResult result, {
+    required double grams,
+  }) async {
+    if (grams <= 0) return;
+    if (_isChatParsing) return;
+    _isChatParsing = true;
+    notifyListeners();
+
+    try {
+      final entry = result.entry.toFoodEntry(grams).copyWith(
+            estimationSource: EstimationSource.db,
+            confidence: 0.95,
+          );
+
+      // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
+      if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+
+      await _ensureTodayLogFresh();
+      _todayLog = _todayLog.addEntries([entry], MealSlot.meal);
+
+      final msg = ChatMessage(
+        id: ChatMessage.generateId(),
+        rawText: '📷 ${result.displayName}',
+        timestamp: DateTime.now(),
+        kind: ChatMessageKind.food,
+        foodItems: [
+          ChatFoodItem.fromFoodEntry(entry,
+              amountText: '${grams.toStringAsFixed(0)}g')
+        ],
+        mealSlot: MealSlot.meal,
+      );
+      _chatMessages.add(msg);
+      notifyListeners();
+
+      await Future.wait([
+        _storage.saveNutritionLog(_todayLog),
+        _persistChatMessages(),
+      ]);
+      // Cache so the next "bear brand" text query also finds this product.
+      // ignore: unawaited_futures
+      _learnFromEntry(result.entry.name, entry);
+
+      await _updateLogStreak();
+      await _checkGoalMet();
+      await _checkProteinGoalMet();
+      await _checkOvershoot();
+    } finally {
+      _isChatParsing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Mark every item in a chat food message as a bad match. Captures one
+  /// [FoodFeedbackKind.userDislike] entry per item so a curator sees both the
+  /// raw query and what the matcher picked. The log entries themselves stay —
+  /// the user already ate the food; this only flags the parse for review.
+  Future<void> markChatMessageDisliked(String messageId) async {
+    final msg = _chatMessages.firstWhere(
+      (m) => m.id == messageId,
+      orElse: () => ChatMessage(
+        id: '',
+        rawText: '',
+        timestamp: DateTime.now(),
+        kind: ChatMessageKind.food,
+      ),
+    );
+    if (msg.id.isEmpty || msg.kind != ChatMessageKind.food) return;
+    if (msg.foodItems.isEmpty) return;
+
+    for (final item in msg.foodItems) {
+      // ignore: unawaited_futures
+      _logFeedback(
+        kind: FoodFeedbackKind.userDislike,
+        userQuery: msg.rawText,
+        pickedName: item.name,
+        pickedDbId: null,
+        estimationSource: item.estimationSource,
+        confidence: item.confidence,
+      );
+    }
+  }
+
+  /// Read-only view of stored feedback. Used by future curation/debug UIs.
+  List<FoodFeedback> get foodFeedback => List.unmodifiable(_feedback);
+
+  /// Append [entry] to the in-memory list and persist (capped). Append-only —
+  /// older entries are evicted from storage in [LocalStorageService].
+  Future<void> _logFeedback({
+    required FoodFeedbackKind kind,
+    required String userQuery,
+    required String pickedName,
+    required String? pickedDbId,
+    required EstimationSource estimationSource,
+    double? confidence,
+    String? swappedToName,
+  }) async {
+    final entry = FoodFeedback(
+      id: FoodFeedback.generateId(),
+      timestamp: DateTime.now(),
+      kind: kind,
+      userQuery: userQuery,
+      pickedName: pickedName,
+      pickedDbId: pickedDbId,
+      estimationSource: estimationSource.name,
+      confidence: confidence,
+      swappedToName: swappedToName,
+    );
+    _feedback = [..._feedback, entry];
+    if (_feedback.length > FoodFeedback.maxStoredEntries) {
+      _feedback =
+          _feedback.sublist(_feedback.length - FoodFeedback.maxStoredEntries);
+    }
+    try {
+      await _storage.saveFoodFeedback(_feedback);
+    } catch (e) {
+      debugPrint('NutritionPresenter: saveFoodFeedback failed: $e');
+    }
   }
 
   /// Remove a single food item at [itemIndex] from [messageId]. Used by the
@@ -1655,6 +1837,7 @@ class NutritionPresenter extends ChangeNotifier {
       _storage.loadNutritionGoalMetDate().then((v) => _goalMetDate = v),
       _storage.loadLogStreak().then((v) => _logStreak = v),
       _storage.loadLogStreakDate().then((v) => _logStreakDate = v),
+      _storage.loadFoodFeedback().then((v) => _feedback = v),
       _personalDict.init(),
     ]);
     final todayKey = _dateFmt.format(DateTime.now());

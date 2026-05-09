@@ -15,7 +15,7 @@ import '../models/food_db_entry.dart';
 /// schema bump triggers a fresh copy automatically.
 class FoodDbService {
   static const _assetPath = 'assets/food_db.sqlite';
-  static const _dbFilename = 'food_db_v7.sqlite';
+  static const _dbFilename = 'food_db_v9.sqlite';
 
   Database? _db;
   bool _fts5Available = false;
@@ -29,7 +29,7 @@ class FoodDbService {
       final path = await _resolveDbPath();
       _db = await openDatabase(path, readOnly: true);
       _fts5Available = await _checkFts5();
-      debugPrint('FoodDbService: fts5=${_fts5Available}');
+      debugPrint('FoodDbService: fts5=$_fts5Available');
     } catch (e) {
       // Asset not bundled or copy failed — search will return empty results.
       debugPrint('FoodDbService: init failed: $e');
@@ -40,7 +40,7 @@ class FoodDbService {
     try {
       await _db!.rawQuery(
         'SELECT rowid FROM foods_fts WHERE foods_fts MATCH ? LIMIT 1',
-        ['test*'],
+        ['"abc"'],
       );
       return true;
     } catch (_) {
@@ -55,35 +55,50 @@ class FoodDbService {
 
   // ── Queries ───────────────────────────────────────────────────────────────
 
-  /// Full-text search with automatic FTS5 → LIKE fallback.
-  /// FTS5 availability is detected once at init to avoid per-query exceptions.
+  /// Substring-tolerant full-text search over the trigram-indexed `name_norm`
+  /// column. Folds Pinoy spelling variants (pancit↔pansit, ñ→n) and ignores
+  /// spacing/punctuation so "bearbrand" and "Bear Brand" both match.
+  ///
+  /// Builds an OR query with each whitespace-split token AND the spaceless
+  /// "dense" form so retrieval works in both directions:
+  ///   "rolled oats" → matches "Oats, Rolled, Dry" via per-word substrings
+  ///   "bearbrand"   → matches "Bear Brand Sterilized Milk" via dense form
+  ///
+  /// Falls back to LIKE when FTS5 isn't available (older SQLite builds).
   Future<List<FoodDbEntry>> search(String query) async {
     if (_db == null || query.trim().isEmpty) return [];
 
+    final dense = SearchNormalize.dense(query);
+    if (dense.length < 3) return [];
+
     if (_fts5Available) {
-      // Prefix-match every token so "chick adobo" matches "chicken adobo".
-      final q = query
-          .trim()
-          .split(RegExp(r'\s+'))
-          .where((t) => t.isNotEmpty)
-          .map((t) => '${t.replaceAll('"', '""')}*')
-          .join(' ');
+      final terms = <String>{
+        ...SearchNormalize.tokens(query),
+        dense,
+      }.where((t) => t.length >= 3).toList();
+      if (terms.isEmpty) return [];
+
+      final match =
+          terms.map((t) => '"${t.replaceAll('"', '""')}"').join(' OR ');
+
       try {
         final rows = await _db!.rawQuery(
           'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
           'FROM foods f '
           'JOIN foods_fts ON foods_fts.rowid = f.rowid '
           'WHERE foods_fts MATCH ? '
+          'ORDER BY rank '
           'LIMIT 20',
-          [q],
+          [match],
         );
         return rows.map(FoodDbEntry.fromRow).toList();
-      } catch (_) {
+      } catch (e) {
+        debugPrint('FoodDbService: FTS5 query failed, falling back: $e');
         _fts5Available = false;
       }
     }
 
-    return _searchLike(query);
+    return _searchLike(dense);
   }
 
   /// Exact lookup by USDA FDC id.
@@ -155,21 +170,65 @@ class FoodDbService {
     return path;
   }
 
-  Future<List<FoodDbEntry>> _searchLike(String query) async {
-    final term = query.trim().toLowerCase();
-    // Two-pass: prefix matches first (index-friendly), then contains matches.
+  Future<List<FoodDbEntry>> _searchLike(String dense) async {
     final prefix = await _db!.rawQuery(
       'SELECT id, name, category, cal, protein, carbs, fat '
-      'FROM foods WHERE lower(name) LIKE ? LIMIT 20',
-      ['$term%'],
+      'FROM foods WHERE name_norm LIKE ? LIMIT 20',
+      ['$dense%'],
     );
     if (prefix.length >= 20) return prefix.map(FoodDbEntry.fromRow).toList();
 
     final contains = await _db!.rawQuery(
       'SELECT id, name, category, cal, protein, carbs, fat '
-      'FROM foods WHERE lower(name) LIKE ? AND lower(name) NOT LIKE ? LIMIT ?',
-      ['%$term%', '$term%', 20 - prefix.length],
+      'FROM foods WHERE name_norm LIKE ? AND name_norm NOT LIKE ? LIMIT ?',
+      ['%$dense%', '$dense%', 20 - prefix.length],
     );
     return [...prefix, ...contains].map(FoodDbEntry.fromRow).toList();
+  }
+}
+
+/// Mirrored helpers for normalizing food names + queries to a comparable form.
+/// Kept in sync with `scripts/migrate_food_db_v8.py::normalize_for_search` and
+/// the import scripts. Anything that touches `name_norm` MUST go through here.
+class SearchNormalize {
+  SearchNormalize._();
+
+  static final _pancitRe = RegExp(r'\bpancit\b');
+  static final _nonAlphanumRe = RegExp(r'[^a-z0-9]+');
+  static final _wsRe = RegExp(r'\s+');
+
+  /// Lowercase, fold Pinoy variants, strip ALL non-alphanumeric (incl spaces).
+  ///   "Bear Brand (Powder)"   → "bearbrandpowder"
+  ///   "Pancit Canton"          → "pansitcanton"
+  ///   "Oats, Rolled, Dry"      → "oatsrolleddry"
+  static String dense(String input) {
+    var s = input.toLowerCase().replaceAll('ñ', 'n');
+    s = s.replaceAll(_pancitRe, 'pansit');
+    return s.replaceAll(_nonAlphanumRe, '');
+  }
+
+  /// Split [input] on whitespace (after lowering + Pinoy fold), strip
+  /// punctuation per token, drop tokens shorter than 3 chars (the trigram
+  /// tokenizer can't index them so they're noise in MATCH).
+  static List<String> tokens(String input) {
+    var s = input.toLowerCase().replaceAll('ñ', 'n');
+    s = s.replaceAll(_pancitRe, 'pansit');
+    return s
+        .split(_wsRe)
+        .map((w) => w.replaceAll(_nonAlphanumRe, ''))
+        .where((w) => w.length >= 3)
+        .toList();
+  }
+
+  /// Whole-word tokens for the lexical confidence bonus (≥3 chars, alnum-only).
+  /// Used to check that every query word appears as a discrete word in the
+  /// matched entry's name — substring matches like "red" inside "layered"
+  /// don't count, which prevents the Sapin-Sapin/Red Rice false positive.
+  static Set<String> wordTokens(String input) {
+    return RegExp(r'[a-z0-9]+')
+        .allMatches(input.toLowerCase())
+        .map((m) => m.group(0)!)
+        .where((w) => w.length >= 3)
+        .toSet();
   }
 }
