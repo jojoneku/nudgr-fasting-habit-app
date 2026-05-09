@@ -4,6 +4,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
 import '../models/food_db_entry.dart';
+import '../utils/food_fuzzy.dart';
 
 /// Wraps the bundled SQLite food database (assets/food_db.sqlite).
 ///
@@ -59,12 +60,14 @@ class FoodDbService {
   /// column. Folds Pinoy spelling variants (pancit↔pansit, ñ→n) and ignores
   /// spacing/punctuation so "bearbrand" and "Bear Brand" both match.
   ///
-  /// Builds an OR query with each whitespace-split token AND the spaceless
-  /// "dense" form so retrieval works in both directions:
-  ///   "rolled oats" → matches "Oats, Rolled, Dry" via per-word substrings
-  ///   "bearbrand"   → matches "Bear Brand Sterilized Milk" via dense form
-  ///
-  /// Falls back to LIKE when FTS5 isn't available (older SQLite builds).
+  /// Pipeline (resolves Plan 022/023/024):
+  ///   1. **Trigram FTS5** with per-word + dense-form OR query — handles
+  ///      spacing/punctuation differences and Pinoy variants via the
+  ///      normalized index.
+  ///   2. **Damerau–Levenshtein rerank** when trigram returns empty — catches
+  ///      one-edit typos like "chiken→chicken" that trigram can't (different
+  ///      sequence of trigrams).
+  ///   3. **LIKE** as the very last fallback when FTS5 isn't available.
   Future<List<FoodDbEntry>> search(String query) async {
     if (_db == null || query.trim().isEmpty) return [];
 
@@ -76,29 +79,64 @@ class FoodDbService {
         ...SearchNormalize.tokens(query),
         dense,
       }.where((t) => t.length >= 3).toList();
-      if (terms.isEmpty) return [];
 
-      final match =
-          terms.map((t) => '"${t.replaceAll('"', '""')}"').join(' OR ');
-
-      try {
-        final rows = await _db!.rawQuery(
-          'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
-          'FROM foods f '
-          'JOIN foods_fts ON foods_fts.rowid = f.rowid '
-          'WHERE foods_fts MATCH ? '
-          'ORDER BY rank '
-          'LIMIT 20',
-          [match],
-        );
-        return rows.map(FoodDbEntry.fromRow).toList();
-      } catch (e) {
-        debugPrint('FoodDbService: FTS5 query failed, falling back: $e');
-        _fts5Available = false;
+      if (terms.isNotEmpty) {
+        final match =
+            terms.map((t) => '"${t.replaceAll('"', '""')}"').join(' OR ');
+        try {
+          final rows = await _db!.rawQuery(
+            'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
+            'FROM foods f '
+            'JOIN foods_fts ON foods_fts.rowid = f.rowid '
+            'WHERE foods_fts MATCH ? '
+            'ORDER BY rank '
+            'LIMIT 20',
+            [match],
+          );
+          if (rows.isNotEmpty) return rows.map(FoodDbEntry.fromRow).toList();
+        } catch (e) {
+          debugPrint('FoodDbService: FTS5 query failed, falling back: $e');
+          _fts5Available = false;
+        }
       }
     }
 
+    // Pass 2: trigram missed — try edit-distance rerank for 1-edit typos
+    // (chiken→chicken, brocoli→broccoli) that trigram can't catch because
+    // the substrings don't overlap. Seeded on the longest token to keep
+    // the candidate slice small.
+    final tokens = SearchNormalize.tokens(query);
+    final fuzzy = await _fuzzyRerank(tokens);
+    if (fuzzy.isNotEmpty) return fuzzy;
+
     return _searchLike(dense);
+  }
+
+  /// Damerau–Levenshtein fallback. Pulls a candidate slice via a 3-char
+  /// prefix LIKE on the longest query token, then reranks in Dart by edit
+  /// distance against the entry's display name. Bounded at 200 candidates
+  /// so even a hot query stays under ~5ms.
+  Future<List<FoodDbEntry>> _fuzzyRerank(List<String> tokens) async {
+    if (tokens.isEmpty) return const [];
+    final seed =
+        tokens.reduce((a, b) => a.length >= b.length ? a : b).toLowerCase();
+    if (seed.length < 3) return const [];
+    final prefix = seed.substring(0, 3);
+
+    final rows = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat '
+      'FROM foods WHERE lower(name) LIKE ? LIMIT 200',
+      ['%$prefix%'],
+    );
+    if (rows.isEmpty) return const [];
+    final candidates = rows.map(FoodDbEntry.fromRow).toList(growable: false);
+    final query = tokens.join(' ');
+    return rankByEditDistance<FoodDbEntry>(
+      query,
+      candidates,
+      extractName: (e) => e.name,
+      limit: 20,
+    );
   }
 
   /// Exact lookup by USDA FDC id.

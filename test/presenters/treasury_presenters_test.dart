@@ -493,6 +493,7 @@ void main() {
       when(mockStorage.loadBudgets()).thenAnswer((_) async => []);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => []);
       when(mockStorage.saveBudgets(any)).thenAnswer((_) async {});
       when(mockStats.addXp(any)).thenAnswer((_) async {});
       when(mockStats.stats).thenReturn(UserStats.initial());

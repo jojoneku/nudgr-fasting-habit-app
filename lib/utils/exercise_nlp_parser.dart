@@ -135,9 +135,20 @@ class ExerciseNlpParser {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   /// Returns true if [text] likely describes physical activity.
+  ///
+  /// Uses word-boundary matching so a food token like "bearbrand" doesn't
+  /// trip the parser via the substring "ran".
   static bool looksLikeExercise(String text) {
     final lower = text.toLowerCase();
-    return _keywords.any(lower.contains);
+    for (final kw in _keywords) {
+      final escaped = RegExp.escape(kw);
+      // Word-boundary on letter side; allow keyword to abut a non-letter
+      // (so "walked" still matches "walked 3km"). For multi-word keywords
+      // like "jump rope", the inner space already provides the boundary.
+      final re = RegExp(r'(?<![a-z])' + escaped + r'(?![a-z])');
+      if (re.hasMatch(lower)) return true;
+    }
+    return false;
   }
 
   /// Parse [text] into an [ExerciseParseResult].
@@ -152,7 +163,8 @@ class ExerciseNlpParser {
       ..sort((a, b) => b.length.compareTo(a.length));
     String? activityKey;
     for (final key in sortedKeys) {
-      if (lower.contains(key)) {
+      final re = RegExp(r'(?<![a-z])' + RegExp.escape(key) + r'(?![a-z])');
+      if (re.hasMatch(lower)) {
         activityKey = key;
         break;
       }

@@ -413,6 +413,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (embedder == null || semantic == null) return;
     if (embedder.isDownloading) return;
 
+    _bundleError = null;
     notifyListeners(); // flip status to downloading
     try {
       if (!embedder.isInstalled) {
@@ -422,6 +423,7 @@ class NutritionPresenter extends ChangeNotifier {
       }
     } catch (e) {
       debugPrint('NutritionPresenter.enableFoodSearch failed: $e');
+      _bundleError = 'Smart search download failed: ${_summarize(e)}';
       notifyListeners();
       return;
     }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -7,11 +8,13 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class MonthlySummaryDetailView extends StatelessWidget {
   final MonthlySummary summary;
   final List<FinanceCategory> categories;
+  final List<FinancialAccount> accounts;
 
   const MonthlySummaryDetailView({
     super.key,
     required this.summary,
     required this.categories,
+    this.accounts = const [],
   });
 
   @override
@@ -33,7 +36,7 @@ class MonthlySummaryDetailView extends StatelessWidget {
               const SizedBox(height: 16),
               _CategorySpendSection(summary: summary, categories: categories),
               const SizedBox(height: 16),
-              _AccountSnapshotsSection(summary: summary),
+              _AccountSnapshotsSection(summary: summary, accounts: accounts),
             ]),
           ),
         ),
@@ -235,8 +238,12 @@ class _CategorySpendSection extends StatelessWidget {
 
 class _AccountSnapshotsSection extends StatelessWidget {
   final MonthlySummary summary;
+  final List<FinancialAccount> accounts;
 
-  const _AccountSnapshotsSection({required this.summary});
+  const _AccountSnapshotsSection({
+    required this.summary,
+    required this.accounts,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -244,6 +251,7 @@ class _AccountSnapshotsSection extends StatelessWidget {
 
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final nameById = {for (final a in accounts) a.id: a.name};
 
     return AppSection(
       title: 'ACCOUNT BALANCES AT CLOSE',
@@ -254,7 +262,7 @@ class _AccountSnapshotsSection extends StatelessWidget {
               .map(
                 (e) => AppListTile(
                   dense: true,
-                  title: Text(e.key),
+                  title: Text(nameById[e.key] ?? e.key),
                   trailing: AppNumberDisplay(
                     value: formatPeso(e.value),
                     size: AppNumberSize.body,
