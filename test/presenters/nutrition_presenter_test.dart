@@ -52,6 +52,8 @@ void main() {
     when(mockStorage.saveLogStreak(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreakDate(any)).thenAnswer((_) async {});
     when(mockStorage.loadPersonalDict()).thenAnswer((_) async => []);
+    when(mockStorage.loadFoodFeedback()).thenAnswer((_) async => []);
+    when(mockStorage.saveFoodFeedback(any)).thenAnswer((_) async {});
     when(mockStorage.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
 
     // Stats stubs

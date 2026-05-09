@@ -1,0 +1,1543 @@
+﻿Food_ID,Food Name and Description,Scientific Name,Alternate/Common Name(s),Edible Portion,Energy (kcal),Protein (g),Fat (g),Carbs (g)
+A001,"Corn grits, white",Zea mays,"Mais, durog, puti",100%,357,8.3,1.5,77.5
+A002,"Corn grits, yellow",Zea mays,"Mais, durog, dilaw",100%,350,7.7,0.8,78.1
+A003,"Corn on cob, white",Zea mays,"Mais sa busal, puti",30%,148,4.4,0.8,30.9
+A004,"Corn on cob, yellow",Zea mays,"Mais sa busal, dilaw",39%,173,4.4,1.5,35.4
+A005,"Corn on cob, yellow, boiled",Zea mays,"Mais sa busal, dilaw, nilaga",54%,167,3.3,1.2,35.7
+A006,"Cornmeal, white",Zea mays,"Mais, giniling, puti",100%,353,7.6,0.6,79.2
+A007,"Cornmeal, yellow",Zea mays,"Mais, giniling, dilaw",100%,371,8.5,3.2,77.0
+A008,Job's tears grain,Coix lacryma-jobi,Adlay/Tigbe butil,100%,368,13.1,2.5,73.3
+A009,"Millet, glutinous",Panicum miliaceum,N/A,100%,353,10.3,2.5,72.3
+A010,Rice bran,Oryza sativa,Darak,100%,316,7.8,5.0,59.9
+A011,"Rice, glutinous, parboiled, flattened",Oryza sativa,Pinipig,100%,340,4.3,1.0,78.5
+A012,"Rice, milled, glutinous",Oryza sativa,"Bigas, malagkit",100%,355,6.9,0.8,80.1
+A013,"Rice, milled, glutinous, milled w/ water",Oryza sativa,"Bigas, malagkit, galapong",100%,210,4.4,0.1,47.9
+A014,"Rice, undermilled",Oryza sativa,Brown rice/Pinawa,100%,363,8.1,2.8,76.3
+A015,"Rice, undermilled, glutinous, purple",Oryza sativa,"Bigas, malagkit, pirurutong",100%,358,8.7,2.0,76.3
+A016,"Rice, undermilled, glutinous, purple, boiled",Oryza sativa,"Bigas, malagkit, pirurutong, sinaing",100%,124,2.4,0.4,27.8
+A017,"Rice, undermilled, red",Oryza sativa,"Bigas, mapula",100%,358,7.5,0.9,80.0
+A019,"Rice, well-milled",Oryza sativa,"Bigas, maputi",100%,356,7.4,0.5,80.4
+A020,"Rice, well-milled, boiled",Oryza sativa,"Bigas, maputi, sinaing",100%,129,2.1,0.2,29.7
+A021,"Rice, well-milled, fried",N/A,"Bigas, maputi, sinangag",100%,187,2.6,4.0,35.2
+A022,Rice-corn mixture (1:1),N/A,Bigas-mais pinaghalo (1:1),100%,366,7.5,1.0,81.8
+A023,"Rice-corn mixture (1:1), boiled",N/A,"Bigas-mais pinaghalo (1:1), sinaing",100%,96,2.2,0.3,21.0
+A024,Sorghum,Sorghum bicolor,"Batad/Batag, butil",100%,382,9.5,3.9,77.1
+A025,"Sorghum, boiled",Sorghum bicolor,"Batad/Batag, butil, nilaga",100%,150,3.5,1.0,31.7
+A026,"Ampaw, pinipig",N/A,N/A,100%,392,3.1,1.6,91.3
+A027,"Ampaw, rice",N/A,N/A,100%,385,4.5,2.1,87.1
+A028,Bicho-bicho,N/A,Bitsu-bitso,100%,376,7.4,14.0,55.2
+A029,"Biscuit, cocohoney",N/A,N/A,100%,453,7.0,14.7,73.2
+A030,"Bread, w/ margarine & sugar filling",N/A,Spanish bread,100%,371,9.3,12.4,55.5
+A031,"Bread, brown",N/A,N/A,100%,313,12.1,0.9,64.1
+A032,"Bread, cheese roll",N/A,N/A,100%,342,10.1,13.5,45.1
+A033,"Bread, cinnamon roll",N/A,N/A,100%,387,9.1,13.1,58.1
+A034,"Bread, hotdog roll",N/A,N/A,100%,320,10.2,3.8,61.3
+A035,"Bread, toasted, w/ margarine-sugar topping",N/A,Biscocho,100%,412,9.3,7.4,77.1
+A036,"Bread, mung bean loaf",N/A,Munggo bread,100%,352,13.5,8.3,55.8
+A037,"Bread, pan de bonete",N/A,N/A,100%,329,12.3,4.4,60.0
+A038,"Bread, pan de coco",N/A,N/A,100%,349,9.2,7.6,60.9
+A039,"Bread, pan de leche",N/A,N/A,100%,323,10.5,3.0,63.5
+A040,"Bread, pan de limon",N/A,N/A,100%,321,10.6,3.9,60.9
+A041,"Bread, pan de monay",N/A,N/A,100%,318,10.6,3.4,61.3
+A042,"Bread, pan de sal",N/A,N/A,100%,330,10.1,4.2,62.9
+A043,"Bread, raisin",N/A,N/A,100%,295,9.4,4.6,53.9
+A044,"Bread, rye",N/A,N/A,100%,304,12.1,3.5,56.0
+A045,"Bread, sweet roll",N/A,Ensaymada,100%,326,8.6,5.0,61.6
+A046,"Bread, sweet roll w/ mung bean filling",N/A,"Ensaymada, may munggo",100%,307,9.6,2.1,62.5
+A047,"Bread, toasted",N/A,"Toast/Tinapay, tostado",100%,349,11.2,5.3,64.2
+A048,"Bread, white, loaf",N/A,American loaf/Pan Amerikano,100%,329,9.7,5.1,61.1
+A049,Bunuelos,N/A,N/A,100%,497,9.5,34.8,36.4
+A050,"Cake, angel food",N/A,N/A,100%,262,7.2,0.3,57.7
+A051,"Cake, banana",N/A,N/A,100%,331,5.4,13.4,47.2
+A052,"Cake, butter",N/A,N/A,100%,399,2.8,20.4,51.0
+A053,"Cake, cheese cupcake",N/A,N/A,100%,410,5.6,16.4,60.0
+A054,"Cake, chiffon",N/A,N/A,100%,332,7.2,11.6,49.8
+A055,"Cake, chocolate",N/A,N/A,100%,373,5.6,12.6,59.3
+A056,"Cake, cream-filled roll",N/A,N/A,100%,366,9.2,16.3,45.6
+A057,"Cake, fruit",N/A,N/A,100%,365,5.0,14.6,53.4
+A058,"Cake, jelly roll",N/A,Pianono,100%,326,5.3,2.8,69.9
+A059,"Cake, kababayan",N/A,N/A,100%,361,6.3,9.9,61.6
+A060,"Cake, mamon",N/A,N/A,100%,368,5.4,10.7,62.6
+A061,"Cake, mamon, toasted",N/A,N/A,100%,416,10.4,6.7,78.5
+A062,"Cake, marshmallow roll",N/A,N/A,100%,338,6.5,5.1,66.4
+A063,"Cake, mocha roll",N/A,N/A,100%,353,6.7,9.0,61.2
+A064,"Cake, pineapple roll",N/A,N/A,100%,255,3.5,2.5,54.5
+A065,"Cake, sponge",N/A,N/A,100%,306,8.2,5.3,56.3
+A066,"Chips, cheese flvr",N/A,N/A,100%,489,7.2,24.1,60.7
+A067,"Chips, corn, bbq flvr",N/A,N/A,100%,535,6.5,30.7,58.1
+A068,"Chips, corn, nacho cheese flvr",N/A,N/A,100%,528,7.5,30.0,57.1
+A069,"Chips, corn, natural flvr",N/A,N/A,100%,527,5.9,29.1,60.3
+A070,"Chips, corn-potato based, cheese flvr",N/A,N/A,100%,540,3.1,33.4,56.8
+A071,"Chips, corn, taco & bbq flvr",N/A,N/A,100%,527,4.2,29.0,62.4
+A072,"Chips, corn, taco flvr",N/A,N/A,100%,515,6.8,27.4,60.2
+A073,"Chips, fish crackers",N/A,N/A,100%,456,5.0,16.6,71.7
+A074,"Chips, fish kroepeck",N/A,N/A,100%,502,4.0,27.0,60.8
+A075,"Chips, prawn crackers",N/A,N/A,100%,442,6.8,13.1,74.2
+A076,"Chips, prawn crackers, flvrd",N/A,N/A,100%,543,3.9,33.0,57.7
+A077,"Chips, shrimp crackers",N/A,N/A,100%,462,6.0,18.4,68.1
+A078,"Chips, shrimp kroepeck",N/A,N/A,100%,493,7.3,24.4,61.1
+A079,"Chips, squid crackers",N/A,N/A,100%,434,7.4,12.4,73.1
+A080,"Chips, sticks, onion flvr",N/A,N/A,100%,514,5.4,27.2,62.0
+A081,"Chips, tortilla, bbq flvr",N/A,N/A,100%,489,7.2,23.3,62.7
+A082,"Chips, tortilla, nacho cheese flvr",N/A,N/A,100%,496,7.4,23.2,64.4
+A083,"Cookies, apas",N/A,N/A,100%,388,5.4,0.5,90.4
+A084,"Cookies, arrowroot",N/A,Uraro/Araro cookies,100%,417,1.1,8.5,83.9
+A085,"Cookies, assorted",N/A,N/A,100%,442,6.2,11.3,78.9
+A086,"Cookies, brownies",N/A,N/A,100%,417,7.4,16.8,59.1
+A087,"Cookies, butter",N/A,N/A,100%,508,8.3,24.1,64.5
+A088,"Cookies, camachili",N/A,N/A,100%,443,7.8,12.2,75.6
+A089,"Cookies, gem",N/A,Iced gem cookies,100%,426,11.0,9.7,73.6
+A090,"Cookies, jacobina special",N/A,N/A,100%,449,7.0,13.3,75.4
+A091,"Cookies, lady finger",N/A,Brohas,100%,388,8.6,6.5,73.7
+A092,"Cookies, marie",N/A,N/A,100%,421,8.1,8.9,77.1
+A093,"Cookies, ogoy-ogoy",N/A,N/A,100%,441,8.3,11.8,75.3
+A094,"Cookies, otap",N/A,N/A,100%,462,10.1,14.3,73.3
+A095,"Cookies, pasencia",N/A,Pacencia/Paciencia,100%,397,6.9,3.3,84.9
+A096,"Cookies, pili nut",N/A,N/A,100%,532,6.6,28.3,62.6
+A097,"Cookies, pilipit",N/A,N/A,100%,470,6.7,17.0,72.6
+A098,"Cookies, polvoron",N/A,N/A,100%,478,5.2,19.2,71.0
+A099,"Cookies, sandwich type, choc-filled",N/A,"Biskwit, may palaman na tsokolate",100%,515,5.7,24.9,67.1
+A100,"Cookies, sandwich type, cream-filled",N/A,N/A,100%,472,5.9,18.0,71.7
+A101,"Cookies, vanilla wafer, choc-coated",N/A,N/A,100%,510,5.4,24.2,67.7
+A102,"Cookies, wafer",N/A,N/A,100%,505,4.6,22.9,70.0
+A103,"Corn flakes, enr",N/A,N/A,100%,387,8.2,0.6,87.2
+A104,Corn pudding,N/A,Maja blanca,100%,149,1.3,1.1,33.4
+A105,"Corn pudding, w/ grtd coconut topping",N/A,"Maja blanca, may niyog",100%,187,1.0,1.4,42.6
+A106,"Corn pudding, maja, yellow",N/A,"Maja, mais",100%,127,1.1,1.3,27.6
+A107,"Corn pudding, maja, yellow w/ grtd coconut topping",N/A,"Maja, mais, may niyog",100%,151,1.8,1.3,32.9
+A108,"Corn, fried, seasoned",N/A,Kornik,100%,483,8.5,21.8,63.2
+A109,"Corn, whole kernel, cnd",N/A,"Mais butil, de lata",85%,70,1.3,0.4,15.4
+A110,Cornstarch,N/A,N/A,100%,370,0.3,0.3,91.5
+A111,"Cracker, egg",N/A,Galyetas de patatas,100%,422,15.0,8.1,72.3
+A112,"Cracker, graham, honey-flvr",N/A,N/A,100%,423,8.0,8.1,79.5
+A113,"Cracker, plain",N/A,N/A,100%,482,7.5,19.7,68.7
+A114,"Cracker, salted",N/A,N/A,100%,480,9.6,19.9,65.5
+A115,"Cracker, salted, round",N/A,N/A,100%,505,7.2,24.7,63.4
+A116,Cream puff,N/A,N/A,100%,293,5.4,7.5,50.9
+A117,"Curls, bbq flvr",N/A,N/A,100%,455,7.8,15.5,71.1
+A119,"Curls, cheese flvr",N/A,N/A,100%,447,7.6,15.4,69.5
+A121,"Curls, prawn flvr",N/A,N/A,100%,483,7.2,20.2,68.0
+A122,"Curls, shrimp flvr",N/A,N/A,100%,419,6.6,9.0,77.9
+A124,"Doughnut, fried, w/ sugar",N/A,"Donut, prito, may asukal",100%,431,7.5,22.7,49.2
+A125,Gurgurya,N/A,N/A,100%,515,6.7,26.5,62.4
+A126,Hominy,N/A,Binatog,100%,126,3.0,1.4,25.4
+A127,Hopyang baboy,N/A,N/A,100%,414,5.0,13.1,69.1
+A128,Hopyang Hapon,N/A,N/A,100%,352,8.7,5.7,66.4
+A129,Hopyang munggo,N/A,N/A,100%,383,6.5,12.0,62.3
+A130,Karyoka,N/A,Carioca,100%,359,4.2,12.1,58.2
+A131,"Lohuwa, peanut",N/A,N/A,100%,500,16.9,25.6,50.6
+A132,"Lohuwa, rice",N/A,N/A,100%,415,3.4,8.4,81.4
+A133,"Lohuwa, sesame seed",N/A,N/A,100%,473,10.7,19.1,64.5
+A134,"Noodles, mung bean starch",N/A,Sotanghon,100%,345,0.2,0.2,85.5
+A135,"Noodles, mung bean starch, boiled",N/A,"Sotanghon, nilaga",100%,78,0.0,0.1,19.3
+A136,"Noodles, rice, fideos",N/A,Fideos,100%,357,9.6,0.4,78.7
+A137,"Noodles, rice",N/A,Bihon,100%,353,2.7,0.5,84.5
+A138,"Noodles, rice, boiled",N/A,"Bihon, nilaga",100%,115,0.5,0.6,26.9
+A140,"Noodles, wheat, canton, dry",N/A,Canton,100%,487,12.8,23.2,56.8
+A141,"Noodles, wheat, mami, fresh",N/A,"Mami, sariwa",100%,73,6.8,0.2,10.9
+A142,"Noodles, wheat, inst, w/ flvr",N/A,"Mami, inst, may pampalasa",100%,433,10.4,18.1,57.1
+A143,"Noodles, wheat, inst, w/ flvr, fortified",N/A,"Mami, inst, may pampalasa,fortified",100%,465,9.2,22.3,56.8
+A144,"Noodles, wheat, thin",N/A,Misua/Miswa,100%,344,12.2,0.3,73.0
+A145,"Noodles, wheat, thin, boiled",N/A,"Misua/Miswa, nilaga",100%,100,0.9,0.1,23.8
+A146,"Noodles, wheat, miki, dry",N/A,"Miki, tuyo",100%,472,12.4,22.4,55.3
+A147,"Noodles, wheat, miki, dry, boiled",N/A,"Miki, tuyo, nilaga",100%,110,1.7,2.9,19.2
+A148,"Oatmeal, instant",N/A,N/A,100%,394,10.0,4.7,77.9
+A149,"Oats, quick-cooking",N/A,N/A,100%,423,11.4,9.1,73.8
+A150,"Oats, quick-cooking, ckd",N/A,N/A,100%,60,1.6,1.1,11.0
+A151,Pancake,N/A,Hotcake,100%,269,8.4,7.6,41.8
+A152,"Pasta, macaroni",N/A,N/A,100%,353,14.3,0.2,73.5
+A153,"Pasta, spaghetti",N/A,N/A,100%,361,12.4,1.1,75.4
+A154,"Pasta, spaghetti, boiled",N/A,N/A,100%,156,5.5,0.1,33.3
+A155,"Popcorn and peanuts, sweetn",N/A,N/A,100%,447,5.1,12.8,77.8
+A156,"Popcorn, salted",N/A,N/A,100%,471,6.7,18.6,69.2
+A157,"Popcorn, sweetn",N/A,N/A,100%,443,4.0,11.0,81.9
+A158,"Pretzel, choc-coated",N/A,N/A,100%,475,8.1,18.6,68.8
+A159,"Pretzel, sweetn",N/A,N/A,100%,442,8.5,11.1,76.9
+A160,"Pudding, pineapple",N/A,N/A,100%,268,4.7,1.7,58.5
+A161,"Pudding, raisin",N/A,N/A,100%,221,8.1,2.9,40.5
+A162,"Pudding, vanilla",N/A,N/A,100%,286,6.2,1.5,61.8
+A163,"Puffs, bbq flvr",N/A,N/A,100%,445,7.5,14.6,70.9
+A164,"Puffs, cheese flvr",N/A,N/A,100%,503,6.0,26.5,60.0
+A165,"Puffs, chicken flvr",N/A,N/A,100%,449,6.8,13.4,75.2
+A166,"Puffs, spiced",N/A,N/A,100%,418,7.4,8.9,77.0
+A167,"Rice cake (glutinous), bibingka",N/A,"Bibingka, malagkit",100%,256,2.8,1.0,59.0
+A168,"Rice cake (glutinous), biko",N/A,Biko/Sinukmani,100%,252,2.2,0.9,58.7
+A169,"Rice cake (glutinous), biko, w/ grtd coconut topping",N/A,"Biko/Sinukmani, may niyog",100%,246,3.3,1.6,54.7
+A170,"Rice cake (glutinous), biko, w/ purple rice",N/A,"Biko, may pirurutong",100%,227,2.6,0.4,53.2
+A171,"Rice cake (glutinous), Chinese, tikoy",N/A,Tikoy,100%,250,2.5,0.3,59.4
+A172,"Rice cake (glutinous), Chinese, tikoy, w/ peanut",N/A,"Tikoy, may mani",100%,247,6.4,1.8,51.4
+A173,"Rice cake, bibingka",N/A,Bibingkang galapong,100%,234,3.6,0.9,52.9
+A174,"Rice cake, bibingka, w/ cheese & coconut topping",N/A,"Bibingkang galapong, may keso at niyog",100%,223,2.8,2.6,47.2
+A175,"Rice cake, puto bumbong, purple",N/A,Puto bumbong,100%,252,3.5,1.3,56.5
+A176,"Rice cake, puto, brown",N/A,"Puto, brown",100%,206,2.0,0.1,49.3
+A177,"Rice cake, puto, white",N/A,Puto puti,100%,214,2.8,0.3,49.9
+A178,"Rice cake, puto, white, w/ grtd coconut topping",N/A,"Puto puti, may niyog",100%,209,2.7,1.1,47.1
+A179,"Rice cake, cuchinta",N/A,Cuchinta/Kutsinta,100%,166,1.4,0.8,38.4
+A180,"Rice cake, cuchinta, w/ grtd coconut topping",N/A,"Cuchinta/Kutsinta, may niyog",100%,165,1.6,3.2,32.4
+A181,Rice flour,N/A,"Arina, bigas",100%,358,7.6,0.3,81.3
+A182,"Rice flour prep, tamales",N/A,Tamales,100%,101,1.3,0.9,21.8
+A183,"Rice gruel, thin",N/A,"Lugaw, malabnaw",100%,71,1.4,1.1,13.9
+A184,"Rice prep (glutinous), butse, w/ mung bean filling",N/A,"Butse/Buchi, munggo",100%,329,6.4,12.0,48.9
+A185,"Rice prep (glutinous), butse, w/ sweet potato filling",N/A,"Butse/Buchi, kamote",100%,310,5.6,8.2,53.5
+A186,"Rice prep (glutinous), kalamay, w/ coconut curd topping",N/A,"Kalamay, may latik",100%,208,2.7,0.4,48.5
+A187,"Rice prep (glutinous), kalamay, w/ yam",N/A,"Kalamay, ube",100%,178,2.2,0.3,41.7
+A188,"Rice prep (glutinous), palitaw",N/A,Palitaw,100%,206,2.6,2.8,42.5
+A189,"Rice prep (glutinous), palitaw, w/ grtd coconut & sugar",N/A,"Palitaw, may niyog at asukal",100%,213,2.6,4.5,40.5
+A190,"Rice prep (glutinous), sapin-sapin",N/A,Sapin-sapin,100%,129,1.1,0.4,30.3
+A191,"Rice prep (glutinous), suman sa ibos",N/A,Suman sa ibos,100%,171,3.1,0.7,38.0
+A192,"Rice prep (glutinous), suman, lye-treated",N/A,Suman sa lihiya,100%,191,3.2,0.4,43.6
+A193,"Rice prep (glutinous), suman, w/ grtd coconut topping",N/A,"Suman maruwekos, may niyog",100%,211,2.6,2.4,44.8
+A194,"Rice prep (glutinous), tupig",N/A,Tupig,100%,300,3.6,2.6,65.6
+A195,"Rice prep, espasol",N/A,Espasol,100%,312,4.0,3.6,65.8
+A196,"Rice water, ckd, thin",N/A,"Am, malabnaw",100%,17,0.1,0.2,3.8
+A197,"Rice, crispies",N/A,N/A,100%,373,3.0,0.6,88.8
+A198,"Rice-bread prep, toasted, puto seko",N/A,Puto seko,100%,388,6.0,1.8,87.0
+A199,"Rice-bread prep, toasted, puto seko, w/ grtd coconut",N/A,"Puto seko, may niyog",100%,402,4.4,5.5,83.8
+A200,"Spring roll wrapper, plain",N/A,Balat ng lumpia/Lumpia wrapper,100%,316,10.6,0.5,67.2
+A201,"Wheat flour, all-purpose",N/A,"Arina, trigo, all-purpose",100%,352,12.6,0.8,73.7
+A202,"Wheat flour, all-purpose, enr, bleached",N/A,"Arina trigo, all-purpose, enr, pinaputi",100%,377,11.0,3.6,75.2
+A203,"Wheat flour, cake flour, enr, bleached",N/A,"Arina trigo, cake, enr, pinaputi",100%,370,8.9,1.7,79.7
+A204,"Instant noodles, chicken flvr, raw",N/A,-,100%,429,10.5,17.5,57.3
+A205,"Instant noodles, chicken flvr, ckd",N/A,-,100%,48,1.3,2.1,6.0
+B001,Cassava,Manihot esculenta,Kamoteng kahoy/Balinghoy,74%,145,0.6,0.2,35.3
+B002,"Cassava, boiled",Manihot esculenta,"Kamoteng kahoy/Balinghoy, nilaga",71%,111,0.4,0.1,27.1
+B003,"Cassava, yellow",Manihot esculenta,"Kamoteng kahoy/Balinghoy, dilaw",85%,155,0.7,0.2,37.7
+B004,East Indian arrowroot,Tacca leontopetaloides,Yabyaban,85%,144,3.1,0.1,32.6
+B005,"East Indian arrowroot, boiled",Tacca leontopetaloides,"Yabyaban, nilaga",100%,88,3.1,0.2,18.5
+B006,Palauan,Cyrtosperma merkusii,Galiang/Swamp taro,75%,153,0.5,0.2,37.3
+B007,Potato,Solanum tuberosum,Patatas,85%,78,2.4,0.1,16.8
+B008,"Potato, boiled",Solanum tuberosum,"Patatas, nilaga",100%,63,1.7,0.1,13.7
+B009,"Sweet potato, purple",Ipomoea batatas,"Kamote, murado",77%,125,0.6,0.4,29.8
+B010,"Sweet potato, purple, boiled",Ipomoea batatas,"Kamote, murado, nilaga",90%,122,0.6,0.2,29.5
+B011,"Sweet potato, white",Ipomoea batatas,"Kamote, puti",89%,105,0.7,0.5,24.3
+B012,"Sweet potato, white, boiled",Ipomoea batatas,"Kamote, puti, nilaga",86%,126,0.4,0.8,29.3
+B013,"Sweet potato, yellow",Ipomoea batatas,"Kamote, dilaw",88%,135,1.1,0.4,31.8
+B014,"Sweet potato, yellow, boiled",Ipomoea batatas,"Kamote, dilaw, nilaga",86%,128,0.5,0.3,30.7
+B015,Taro,Colocasia esculenta,Gabi,77%,141,2.3,0.2,32.6
+B016,"Taro, boiled",Colocasia esculenta,"Gabi, nilaga",69%,105,1.5,0.1,24.4
+B017,White spot arum,Amorphophallus paeoniifolius,Pongapong,91%,61,3.1,0.2,11.7
+B018,"Yam, Luzon",Dioscorea luzonensis,Pakit/Kamangeg,77%,99,2.5,0.1,22.1
+B019,"Yam, nami",Dioscorea hispida,Nami/Asiatic bitter yam,86%,105,2.3,0.3,23.3
+B020,"Yam, purple",Dioscorea alata,Ubi/Ube,83%,97,1.7,0.2,22.2
+B021,"Yam, purple, boiled",Dioscorea alata,"Ubi/Ube, nilaga",74%,77,0.7,0.1,18.2
+B022,"Yam, spiny",Dioscorea esculenta,Tugi/Lesser yam,82%,141,1.0,2.7,28.2
+B023,"Yam, spiny, boiled",Dioscorea esculenta,"Tugi/Lesser yam, nilaga",97%,69,0.4,1.2,14.1
+B024,Yautia,Xanthosoma sagittifolium,Gabing Cebu,95%,122,0.8,0.1,29.4
+B025,Arrowroot starch,N/A,Uraro starch,100%,351,0.1,0.5,86.4
+B026,"Cassava cake, bibingka",N/A,"Kamoteng kahoy, bibingka",100%,181,0.4,0.3,44.1
+B027,Cassava flour,N/A,"Kamoteng kahoy, arina",100%,362,1.1,0.7,87.8
+B028,Cassava fritter,N/A,"Kamoteng kahoy, maruya",100%,360,0.7,10.0,66.7
+B029,Cassava pudding,N/A,"Kamoteng kahoy, budin",100%,203,1.2,0.5,48.4
+B030,"Cassava, mashed, w/ sugar & marg",N/A,"Kamoteng kahoy, linupak",100%,183,0.4,1.3,42.4
+B031,"Cassava, suman",N/A,"Kamoteng kahoy, suman",100%,210,0.5,1.4,48.9
+B032,East Indian arrowroot starch,N/A,Yabyaban starch,100%,348,0.1,0.5,85.8
+B033,"Potato chips, cheese flvr",N/A,N/A,100%,556,6.2,36.0,51.8
+B034,"Potato, French-fried",N/A,French fries,100%,328,3.7,16.8,40.5
+B035,Tapioca starch ball,N/A,Sago/Tapioca pearl,100%,341,0.4,1.1,82.4
+B036,"Tapioca starch ball, boiled",N/A,"Sago, nilaga/Tapioca pearl, boiled",100%,83,0.0,0.2,20.3
+B037,"Sweet potato, w/ sugar, fried",N/A,Kamote cue,100%,239,1.1,6.9,43.1
+B038,"Yam, nami, brined",N/A,"Nami, inasnan",100%,66,1.0,0.2,15.0
+B039,"Yam, nami, dried",N/A,"Nami, tuyo",100%,351,6.6,0.4,80.3
+B040,"Yam, purple, pudding",N/A,"Ubi, maja",100%,187,1.2,0.8,43.8
+B041,"Yam, purple, pudding,w/ grtd coconut topping",N/A,"Ubi, maja, may niyog",100%,191,1.7,1.2,43.4
+B042,"Yacon tuber, raw",Smallanthus sonchifolius,Peruvian ground apple,87%,35,0.4,0.1,8.1
+B043,"Sweet potato, orange",Ipomoea batatas,-,80%,121,1.1,0.3,28.4
+C002,"Cashew nut, roasted",Anacardium occidentale,"Kasuy, binusa",85%,603,19.2,47.4,24.8
+C003,"Chestnut, roasted",Castanea,"Kastanyas, binusa",75%,256,5.0,1.2,56.4
+C004,"Chickpea, dried",Cicer arietinum,"Garbansos/Garbanzo, tuyo",100%,377,19.2,6.2,61.2
+C005,"Chickpea, dried, boiled",Cicer arietinum,"Garbansos/Garbanzo, tuyo, nilaga",86%,198,5.7,2.0,39.2
+C006,"Coconut meat, mature",Cocos nucifera,"Niyog, magulang",56%,319,3.9,26.1,17.2
+C007,"Coconut meat, very young",Cocos nucifera,"Buko, malauhog",8%,42,0.8,1.3,6.8
+C008,"Coconut meat, young",Cocos nucifera,"Buko, malakanin",14%,102,1.4,5.3,12.1
+C009,Coconut sport,Cocos nucifera,Makapuno,74%,226,2.4,17.6,14.5
+C010,"Cowpea seed, dried",Vigna unguiculata,"Paayap buto, tuyo",100%,358,20.4,1.5,65.8
+C011,"Davao wonder bean seed, dried",-,"Mecan pea buto, tuyo",100%,351,23.4,2.7,58.3
+C014,"Coastal jack-bean seed, dried",Canavalia rosea,"Pataning-dagat buto, tuyo",82%,364,24.1,2.8,60.7
+C015,"Coastal jack-bean seed, dried, boiled",Canavalia rosea,"Pataning-dagat buto, tuyo, nilaga",78%,170,9.6,1.1,30.3
+C016,"Java olive seed, dried",Sterculia foetida L.,"Kalumpang buto, tuyo",-,603,15.4,45.0,34.1
+C017,"Kaatoan bangkal seed, dried",Neolamarckia cadamba,N/A,100%,339,14.4,0.4,69.5
+C018,"Kidney bean seed, black, dried",Phaseolus vulgaris,"Abitsuwelas buto, itim, tuyo",100%,374,20.2,1.9,69.1
+C019,"Kidney bean seed, black, dried, boiled",Phaseolus vulgaris,"Abitsuwelas buto, itim, tuyo, nilaga",100%,117,3.9,0.6,24.1
+C020,"Kidney bean seed, red, dried",Phaseolus vulgaris,"Abitsuwelas buto, pula, tuyo",100%,348,19.3,1.5,64.2
+C021,"Kidney bean seed, red, dried, boiled",Phaseolus vulgaris,"Abitsuwelas buto, pula, tuyo, nilaga",100%,138,7.9,0.9,24.6
+C022,"Kidney bean seed, white, dried",Phaseolus vulgaris,"Abitsuwelas buto, puti, tuyo",100%,354,18.8,1.1,67.1
+C023,"Kidney bean seed, white, dried, boiled",Phaseolus vulgaris,"Abitsuwelas buto, puti, tuyo, nilaga",100%,142,6.5,0.7,27.3
+C024,"Lima bean seed, dried",Phaseolus lunatus,"Patani buto, tuyo",100%,348,19.8,1.0,64.9
+C025,"Marang seed, dried",Artocarpus odoratissimus,"Johey oak, seed",78%,305,7.4,12.5,40.7
+C026,"Marang seed, dried, boiled",Artocarpus odoratissimus,"Johey oak, seed, boiled",70%,238,5.7,7.6,36.6
+C027,"Mung bean seed, green, dried",Vigna radiata var radiata,"Munggo buto, berde, tuyo",100%,348,23.2,1.6,60.1
+C028,"Mung bean seed, green, dried, boiled",Vigna radiata var radiata,"Munggo buto, berde, tuyo, nilaga",100%,155,11.0,0.3,27.1
+C029,"Mung bean seed, red, dried",Vigna radiata var radiata,"Munggo buto, pula, tuyo",100%,347,22.2,1.0,62.2
+C030,"Mung bean seed, red, dried, boiled",Vigna radiata var radiata,"Munggo buto, pula, tuyo, nilaga",100%,150,6.9,0.7,28.9
+C031,"Mung bean seed, yellow, dried",Vigna radiata var radiata,"Munggo buto, dilaw, tuyo",100%,365,23.5,1.4,64.5
+C032,"Mung bean seed, yellow, dried, boiled",Vigna radiata var radiata,"Munggo buto, dilaw, tuyo, nilaga",100%,116,7.2,0.3,21.1
+C033,"Negro coffee seed, dried",Senna occidentalis,"Balatong aso buto, tuyo/Coffee senna seed, dried",100%,373,17.5,2.6,69.8
+C034,Peanut w/ shell,Arachis hypogaea,"Mani, may balat",67%,401,17.4,26.6,22.9
+C035,"Peanut w/ shell, boiled",Arachis hypogaea,"Mani, may balat, nilaga",48%,315,13.0,22.4,15.3
+C036,"Peanut w/ skin, roasted",Arachis hypogaea,"Mani, may balok, binusa",100%,621,32.1,50.7,9.1
+C037,Peanut w/o skin,Arachis hypogaea,"Mani, walang balok",100%,617,25.8,49.5,17.1
+C038,"Peanut w/o skin, roasted",Arachis hypogaea,"Mani, walang balok, binusa",100%,629,33.2,51.8,7.6
+C039,"Pigeon pea seed, dried",Cajanus cajan,"Kadyos buto, tuyo",100%,348,21.2,1.2,63.2
+C040,"Pigeon pea seed, dried, boiled",Cajanus cajan,"Kadyos buto, tuyo, nilaga",100%,125,5.7,0.6,24.3
+C041,Pili nut,Canarium ovatum,Pili bunga,16%,699,14.2,68.5,6.4
+C042,"Rice bean seed, dried",Vigna umbellata,"Tapilan buto, tuyo",100%,356,18.4,3.1,63.7
+C043,"Sesame seed, dried",Sesamum indicum,"Linga, tuyo",100%,642,25.1,53.5,15.1
+C044,"Soybean seed, dried",Glycine max,"Utaw buto, tuyo",100%,442,35.8,17.2,35.9
+C045,"Soybean seed, black, dried",Glycine max,"Utaw buto, itim, tuyo",100%,451,36.6,19.8,31.6
+C046,"Soybean seed, black, dried, boiled",Glycine max,"Utaw buto, itim, tuyo, nilaga",100%,241,15.3,6.1,31.2
+C047,"Soybean seed, yellow, dried",Glycine max,"Utaw buto, dilaw, tuyo",100%,456,35.8,19.5,34.2
+C048,"Soybean seed, yellow, dried, boiled",Glycine max,"Utaw buto, dilaw, tuyo, nilaga",100%,267,12.4,6.9,38.9
+C049,"String/Yard long bean seed, dried",Vigna unguiculata ssp. sesquipedalis,"Sitaw buto, tuyo",100%,371,30.7,2.3,56.8
+C050,"Velvet bean seed, dried",Mucuna pruriens,N/A,-,378,28.2,4.7,55.8
+C051,"Chickpea, cnd",N/A,"Garbansos, de lata",100%,132,7.4,2.4,20.1
+C052,"Coconut chip, toasted, sweetn",N/A,N/A,100%,580,4.2,37.5,56.5
+C053,"Coconut, cream curd",N/A,Latik,100%,620,13.2,52.0,24.8
+C054,"Green pea, dried, fried & seasoned",N/A,"Gisantes, tuyo, prito, tinimpla",100%,468,19.0,20.3,52.4
+C055,"Green pea, in brine, cnd",N/A,"Gisantes, de lata",100%,118,6.9,1.1,20.1
+C056,"Green pea-corn-peanut mixture, fried",N/A,N/A,100%,511,19.8,26.5,48.4
+C057,"Lima bean, fried & seasoned",N/A,"Patani, prito, may timpla",100%,500,24.4,26.0,42.2
+C058,Peanut butter,N/A,N/A,100%,616,25.4,45.4,26.4
+C059,"Peanut butter, choc flvr",N/A,N/A,100%,631,17.2,48.2,32.0
+C060,Peanut cracker,N/A,N/A,100%,541,23.0,31.2,42.1
+C061,"Soybean cheese, salted",N/A,Tahure,100%,117,11.4,6.2,4.0
+C062,"Soybean seed, black, fermented",N/A,Tausi,100%,143,12.0,7.2,7.6
+C063,"Soybean cheese, soft curd",N/A,Tofu,100%,89,8.1,5.4,2.0
+C064,"Soybean cheese, hard curd",N/A,Tokwa,100%,123,12.9,7.0,2.0
+C065,Soybean pudding/ Geerlig's cheese,N/A,Taho/Tahu,100%,34,2.9,1.4,2.4
+C066,Soybean pudding/Geerlig's cheese w/ syrup & tapioca starch ball,N/A,"Taho/Tahu, may arnibal at sago",100%,62,2.2,0.1,13.1
+C067,"Soybean paste, miso",N/A,Miso,100%,144,13.0,3.5,15.2
+C068,"Soybean seed, yellow, cnd, drnd",N/A,"Utaw, dilaw, de lata",75%,138,11.8,5.9,9.4
+C069,"Watermelon seed, dried, salted",N/A,Butong pakwan,35%,562,40.2,43.2,3.1
+D001,American black nightshade lvs,Solanum americanum,Amti dahon,41%,56,4.9,0.6,7.9
+D002,Apat-apat fern lvs,Marsilea crenata,Four leaves clover/Kaya-kayapuan,-,131,7.6,0.4,24.2
+D003,Aragan lvs,Najas graminea,Ricefield waternymph,-,29,1.2,0.3,5.4
+D004,Asystasia lvs & stems,Asystasia gangetica,Asistasia/Philippine violet,55%,61,3.6,0.9,9.6
+D005,Aurora lvs & stems,Ipomoea triloba,Three-lobed morning glory,-,108,2.8,1.9,19.9
+D006,Bago lvs,Gnetum gnemon,Spanish joint-fir lvs,75%,91,6.6,1.5,12.8
+D007,"Bago lvs, boiled",Gnetum gnemon,"Spanish joint-fir lvs, boiled",100%,42,3.0,0.4,6.5
+D008,"Bago bagin fruit, boiled",Gnetum gnemon,"Spanish joint-fir, fruit, boiled",31%,159,5.8,0.4,33.1
+D010,Bamboo shoot,Bambusa blumeana,Labong,22%,28,1.9,0.4,4.1
+D011,"Bamboo shoot, boiled",Bambusa blumeana,"Labong, nilaga",100%,26,1.2,0.3,4.5
+D012,Banana stem,Musa x balbisiana,Ubod ng saging/Banana pith,100%,16,0.8,0.1,3.0
+D013,"Banana heart, butuan",Musa x balbisiana,"Puso, saging, butuan",52%,39,1.6,0.4,7.2
+D014,"Banana heart, butuan, boiled",Musa x balbisiana,"Puso, saging, butuan, nilaga",100%,18,0.9,0.2,3.2
+D015,Bayuno fruit,Mangifera caesia,Binjai,59%,74,3.0,0.7,13.9
+D016,Beet,Beta vulgaris,Remolacha,82%,41,1.7,0.2,8.0
+D017,"Beet, boiled",Beta vulgaris,"Remolacha, nilaga",100%,45,1.9,0.1,9.1
+D018,Bitter melon/gourd fruit,Momordica charantia,Ampalaya bunga,78%,23,1.0,0.2,4.2
+D019,"Bitter melon/gourd fruit, boiled",Momordica charantia,"Ampalaya bunga, nilaga",100%,19,0.4,0.2,3.8
+D020,Bitter melon/gourd lvs,Momordica charantia,Ampalaya dahon,42%,34,4.2,0.6,3.0
+D021,"Bitter melon/gourd lvs, boiled",Momordica charantia,"Ampalaya dahon, nilaga",100%,50,2.2,0.6,9.0
+D023,Blue pea pod,Clitoria ternatea,Pukinggan bunga/Asian pigeonwings pod,94%,68,3.8,0.4,12.2
+D024,Borreria lvs & stems,Spermacoce laevis,Siksik parang dahon at tangkay/Slender false buttonweed,-,68,1.7,0.2,14.8
+D025,Bottle gourd fruit,Lagenaria siceraria,Upo bunga,90%,20,0.4,0.1,4.3
+D026,"Bottle gourd fruit, boiled",Lagenaria siceraria,"Upo bunga, nilaga",100%,16,0.2,0.0,3.8
+D027,Bottle gourd lvs,Lagenaria siceraria,Upo dahon,59%,43,3.3,0.6,6.2
+D028,"Bottle gourd lvs, boiled",Lagenaria siceraria,"Upo dahon, nilaga",100%,22,1.7,0.3,3.2
+D029,Breadfruit fruit,Artocarpus altilis,Rimas bunga,71%,65,2.4,0.5,12.8
+D030,Breadnut fruit,Artocarpus camansi,Kamansi bunga,46%,55,2.5,1.1,8.7
+D031,Breadnut seed,Artocarpus camansi,Kamansi buto,36%,72,3.4,1.2,11.9
+D032,Bulak-bulakan pod,Thespesia lampas,N/A,98%,68,1.6,0.9,13.4
+D033,Busi-busi lvs,Synedrella nodiflora,N/A,-,54,3.1,2.0,6.0
+D035,"Cabbage, green",Brassica oleracea var. capitata,"Repolyo, berde",63%,31,1.6,0.1,5.9
+D036,"Cabbage, green, boiled",Brassica oleracea var. capitata,"Repolyo, berde, nilaga",100%,23,0.6,0.1,5.0
+D037,"Cabbage, red",Brassica oleracea var. capitata,"Repolyo, pula",86%,32,1.6,0.2,6.0
+D038,"Cabbage, red, boiled",Brassica oleracea var. capitata,"Repolyo, pula, nilaga",100%,28,0.9,0.2,5.6
+D039,Carrot,Daucus carota,Karot,79%,42,1.1,0.3,8.6
+D040,"Carrot, boiled",Daucus carota,"Karot, nilaga",100%,42,1.1,0.4,8.6
+D041,"Cashew, young lvs",Anacardium occidentale,Kasuy talbos,48%,113,4.9,0.6,22.0
+D042,"Cashew, young lvs, boiled",Anacardium occidentale,"Kasuy talbos, nilaga",100%,57,2.4,0.4,10.9
+D043,Cassava lvs,Manihot esculenta,Kamoteng kahoy/Balinghoy dahon,34%,83,7.1,1.4,10.5
+D044,"Cassava lvs, boiled",Manihot esculenta,"Kamoteng kahoy/Balinghoy dahon, nilaga",100%,43,3.4,0.7,5.7
+D045,Cauliflower,Brassica oleracea var. botrytis,N/A,64%,32,2.1,0.3,5.2
+D046,"Cauliflower, boiled",Brassica oleracea var. botrytis,N/A,100%,27,1.5,0.2,4.8
+D047,Celery lvs & petioles,Apium graveolens,Baguio celery dahon at tangkay,53%,25,1.2,0.0,5.1
+D048,"Celery, Chinese, lvs & petioles",Apium graveolens var. secalinum,Kinchay dahon at tangkay/Leaf celery,76%,37,2.4,0.6,5.4
+D049,"Celery, Chinese, lvs & petioles, boiled",Apium graveolens var. secalinum,"Kinchay dahon at tangkay, nilaga/Leaf celery, boiled",100%,27,1.4,0.1,5.0
+D050,Chayote fruit,Sechium edule,Sayote bunga/Vegetable pear fruit,79%,23,0.5,0.1,5.1
+D051,"Chayote fruit, boiled",Sechium edule,"Sayote bunga, nilaga/Vegetable pear fruit, boiled",100%,16,0.3,0.1,3.5
+D052,Chayote lvs,Sechium edule,Sayote dahon/Vegetable pear lvs,35%,44,4.6,0.3,5.7
+D053,"Chayote lvs, boiled",Sechium edule,"Sayote dahon, nilaga/Vegetable pear lvs, boiled",100%,21,2.5,0.2,2.3
+D054,Chinese cabbage,Brassica pekinensis,Pechay Baguio/Napa cabbage,94%,21,1.7,0.3,2.9
+D055,"Chinese cabbage, boiled",Brassica pekinensis,"Pechay Baguio, nilaga/Napa cabbage, boiled",100%,15,1.0,0.1,2.4
+D056,Coconut cotyledon,Cocos nucifera,Niyog tumbong,99%,67,1.7,1.8,11.1
+D057,"Coconut, heart of palm",Cocos nucifera,Niyog ubod,34%,47,4.3,0.8,5.7
+D059,Fragrant manjack lvs,Cordia dichotoma,Anonang dahon,-,61,4.6,0.3,9.9
+D060,Coriander lvs,Coriandrum sativum,Cilantro/Wansoy dahon,84%,37,3.0,0.6,4.8
+D061,Cowpea lvs,Vigna unguiculata,Paayap dahon,64%,49,4.9,1.4,4.3
+D062,"Cowpea lvs, boiled",Vigna unguiculata,"Paayap dahon, nilaga",100%,30,1.9,0.4,4.6
+D063,Cowpea pod,Vigna unguiculata,Paayap bunga,87%,51,3.4,0.4,8.5
+D064,"Cowpea pod, boiled",Vigna unguiculata,"Paayap bunga, nilaga",100%,52,2.8,0.4,9.4
+D065,"Cowpea seed, fresh",Vigna unguiculata,"Paayap buto, sariwa",28%,86,5.1,0.1,16.1
+D066,Crown daisy lvs,Chrysanthemum coronarium,Tangó dahon/Garland chrysanthemum lvs,77%,23,2.3,0.4,2.6
+D067,"Kutcharitas lvs, green",Alternanthera bettzickiana,"Calico plant lvs, green",74%,54,2.6,0.8,9.2
+D068,"Kutcharitas lvs, red",Alternanthera bettzickiana,"Calico plant lvs, red",100%,84,2.3,0.6,17.4
+D069,Cucumber,Cucumis sativus,Pipino,88%,16,0.5,0.1,3.2
+D070,East Indian lotus fruit,Nelumbo nucifera,Baino bunga,49%,80,4.1,1.1,13.5
+D071,East Indian lotus lvs,Nelumbo nucifera,Baino dahon,86%,46,4.7,0.8,5.0
+D072,"East Indian lotus lvs, boiled",Nelumbo nucifera,"Baino dahon, nilaga",100%,28,2.9,0.4,3.1
+D073,Eggplant,Solanum melongena,Talong/Aubergine,88%,29,1.2,0.2,5.5
+D074,"Eggplant, boiled",Solanum melongena,"Talong, nilaga/Aubergine, boiled",100%,25,1.0,0.1,4.9
+D075,Endive lvs,Cichorium endivia,Eskarola dahon,71%,29,1.6,0.2,5.3
+D077,"Flowering fern, lvs",Helminthostachys zeylanica,Tukod langit dahon/Kamraj lvs,76%,68,3.0,0.6,12.6
+D078,Foetid cassia lvs,Senna tora,Katanda dahon,-,88,4.4,1.0,15.3
+D079,Fragrant premna lvs,Premna odorata,Alagaw dahon,44%,100,5.4,1.1,17.0
+D080,"Fragrant premna lvs, boiled",Premna odorata,"Alagaw dahon, nilaga",82%,53,1.1,0.3,11.4
+D081,"Galo fruit, whole",Anacolosa frutescens,N/A,87%,165,3.9,1.8,33.4
+D082,"Galo pulp, boiled",Anacolosa frutescens,N/A,100%,80,3.0,0.4,16.2
+D083,"Galo seed, boiled",Anacolosa frutescens,N/A,29%,215,5.1,3.7,40.3
+D084,Garlic bulb,Allium sativum,Bawang ulo,85%,129,7.0,0.3,24.6
+D085,Garlic lvs,Allium sativum,Bawang dahon,87%,50,2.0,0.6,9.2
+D086,"Garlic lvs, boiled",Allium sativum,"Bawang dahon, nilaga",100%,45,1.1,0.6,8.8
+D087,Garlic lvs & bulb,Allium sativum,Bawang dahon at ulo,67%,79,2.6,0.6,15.8
+D088,Glynus lvs,Glinus oppositifolius,Sarsalida/Papait dahon,74%,39,3.7,0.8,4.2
+D089,Guava lvs,Psidium guajava,Bayabas dahon,-,131,4.5,2.4,22.9
+D090,Himbaba-o flower,Broussonetia luzonica,Alokon bulaklak,100%,68,6.3,1.1,8.1
+D091,"Himbaba-o flower, boiled",Broussonetia luzonica,"Alokon bulaklak, nilaga",100%,52,2.9,0.9,8.1
+D092,Himbaba-o lvs,Broussonetia luzonica,Alokon dahon,46%,86,5.8,1.4,12.6
+D093,"Himbaba-o lvs, boiled",Broussonetia luzonica,"Alokon dahon, nilaga",100%,49,1.6,0.5,9.6
+D094,Horseradish tree lvs,Moringa oleifera,Malunggay dahon/Drumstick tree lvs,50%,108,9.7,2.0,12.7
+D095,"Horseradish tree lvs, boiled",Moringa oleifera,"Malunggay dahon, nilaga/ Drumstick tree lvs, boiled",100%,63,3.1,0.9,10.6
+D096,"Horseradish tree lvs, dwarf",Moringa oleifera,"Malunggay dahon, unano",48%,89,9.0,3.1,6.2
+D097,"Horseradish tree lvs, dwarf, boiled",Moringa oleifera,"Malunggay dahon, unano, nilaga",100%,48,3.0,1.0,6.8
+D098,"Horseradish tree lvs, Japanese",Moringa oleifera,"Malunggay dahon, Hapon",29%,60,6.2,1.6,5.2
+D099,"Horseradish tree lvs, Japanese, boiled",Moringa oleifera,"Malunggay dahon, Hapon, nilaga",100%,42,2.4,1.1,5.5
+D100,Horseradish tree pod,Moringa oleifera,Malunggay bunga,49%,93,2.5,0.4,19.9
+D101,"Horseradish tree pod, boiled",Moringa oleifera,"Malunggay bunga, nilaga",52%,25,1.1,0.2,4.6
+D102,Hyacinth bean pod,Lablab purpureus,Bataw bunga,97%,45,2.5,0.4,7.8
+D103,"Hyacinth bean pod, boiled",Lablab purpureus,"Bataw bunga, nilaga",100%,34,1.3,0.1,6.9
+D104,"Jackfruit fruit, unripe",Artocarpus heterophyllus,"Langka bunga, hilaw",60%,58,2.0,0.6,11.1
+D105,Jackfruit seed,Artocarpus heterophyllus,Langka buto,85%,164,5.5,0.5,34.4
+D106,"Jackfruit seed, boiled",Artocarpus heterophyllus,"Langka buto, nilaga",86%,156,4.5,0.3,33.7
+D107,Jute lvs,Corchorus olitorius,Saluyot/Pasaw dahon,51%,71,6.1,1.1,9.1
+D108,"Jute lvs, boiled",Corchorus olitorius,"Saluyot/Pasaw dahon, nilaga",100%,44,2.9,0.6,6.8
+D111,Lagikway lvs,Abelmoschus manihot,Sunset muskmallow lvs,68%,54,4.0,1.2,6.8
+D112,"Lagikway lvs, boiled",Abelmoschus manihot,"Sunset muskmallow lvs, boiled",100%,30,1.3,0.4,5.3
+D113,Chinese leek lvs,Allium tuberosum,Kutsay dahon/Chinese chives lvs,84%,34,2.4,0.7,4.6
+D114,"Chinese leek lvs, boiled",Allium tuberosum,"Kutsay dahon, nilaga/Chinese chives lvs, boiled",100%,19,1.3,0.4,2.6
+D115,Lettuce lvs & petioles,Lactuca sativa,Letsugas dahon at tangkay,79%,22,1.3,0.4,3.4
+D116,"Lettuce tree, young lvs",Pisonia grandis,Koles maluko talbos,62%,43,3.6,1.0,5.0
+D117,"Lettuce tree, young lvs, boiled",Pisonia grandis,"Koles maluko talbos, nilaga",100%,26,0.7,1.2,3.1
+D118,Lima bean pod,Phaseolus lunatus,Patani bunga,43%,126,8.3,0.7,21.7
+D119,"Lima bean pod, boiled",Phaseolus lunatus,"Patani bunga, nilaga",46%,100,7.0,0.3,17.2
+D120,"Limang sugat, young lvs",Pseuderanthemum bicolor,N/A,100%,56,3.4,0.2,10.1
+D121,Malabar nightshade lvs,Basella alba,Alugbati dahon/Spinach vine lvs,59%,33,2.4,0.4,5.0
+D122,"Malabar nightshade lvs, boiled",Basella alba,"Alugbati dahon, nilaga",100%,21,0.6,0.2,4.3
+D123,Malibaddu,Syzygium lineatum,Lubeg,79%,50,1.2,0.2,10.8
+D124,"Mango, young lvs",Mangifera indica,Mangga talbos,64%,90,3.0,0.7,17.8
+D125,"Mango, young lvs, boiled",Mangifera indica,"Mangga talbos, nilaga",100%,50,1.6,0.4,9.9
+D126,Marrow-stem kale lvs and stems,Brassica oleracea var. medullosa,Kales dahon at tangkay,71%,34,3.1,0.5,4.3
+D127,Mexican lilac flower,Gliricidia sepium,Kakawati bulaklak,85%,58,2.8,0.7,10.1
+D128,"Mexican lilac flowers, boiled",Gliricidia sepium,"Kakawati bulaklak, nilaga",100%,31,1.4,0.2,5.8
+D129,Morning glory lvs,Ipomoea alba,Malakamote dahon,-,57,4.0,0.4,9.3
+D130,"Mung bean seed, fresh",Vigna radiata var radiata,"Munggo buto, sariwa",40%,119,7.7,0.2,21.6
+D131,Mung bean sprout,Vigna radiata var radiata,Toge,91%,64,5.7,0.1,10.0
+D132,"Mung bean sprout, boiled",Vigna radiata var radiata,"Toge, nilaga",100%,54,4.8,0.7,7.0
+D133,"Mushroom, fresh",Agaricus campestris,"Kabuti, sariwa",94%,48,3.8,0.6,6.9
+D134,Mustard lvs,Brassica juncea,Mustasa dahon,89%,24,2.3,0.4,2.7
+D135,"Mustard lvs, boiled",Brassica juncea,"Mustasa dahon, nilaga",100%,21,1.3,0.6,2.7
+D137,New Zealand spinach lvs,Tetragonia tetragonioides,Ispinaka dahon,54%,33,3.3,0.5,3.7
+D138,"New Zealand spinach lvs, boiled",Tetragonia tetragonioides,"Ispinaka dahon, nilaga",100%,28,1.4,0.3,4.9
+D139,Okra,Abelmoschus esculentus,Ladyfinger,92%,34,1.8,0.3,5.9
+D140,"Okra, boiled",Abelmoschus esculentus,"Ladyfinger, boiled",90%,30,1.0,0.2,6.1
+D141,"Onion, Bombay bulb",Allium cepa,"Sibuyas, Bombay ulo",93%,52,1.7,0.3,10.5
+D142,"Onion, Bombay bulb, boiled",Allium cepa,"Sibuyas, Bombay ulo, nilaga",100%,47,1.2,0.4,9.7
+D143,"Onion, garden shallot bulb",Allium cepa var. aggregatum,"Sibuyas, Tagalog ulo",83%,68,1.7,0.5,14.1
+D144,"Onion, garden shallot bulb, boiled",Allium cepa var. aggregatum,"Sibuyas, Tagalog ulo, nilaga",100%,62,1.1,0.5,13.3
+D145,"Onion, garden shallot lvs",Allium cepa var. aggregatum,"Sibuyas, Tagalog, dahon",83%,37,1.7,1.0,5.4
+D146,"Onion, garden shallot lvs, boiled",Allium cepa var. aggregatum,"Sibuyas, Tagalog, dahon, nilaga",100%,27,1.3,0.6,4.1
+D147,"Onion, spring",Allium cepa,"Sibuyas, mura",77%,41,1.8,0.5,7.2
+D148,"Onion, spring, boiled",Allium cepa,"Sibuyas, mura, nilaga",100%,36,1.3,0.4,6.9
+D149,Pako fern lvs,Diplazium esculentum,Fiddlehead fern lvs/Vegetable fern lvs,30%,31,3.2,0.4,3.7
+D150,"Pako fern lvs, boiled",Diplazium esculentum,"Fiddlehead fern lvs, boiled",100%,33,1.9,0.4,5.5
+D151,"Palm-like fig, young lvs",Ficus pseudopalma,"Philippine fig, young lvs/Lubi-lubi talbos",42%,50,3.9,0.7,6.9
+D152,"Palm-like fig, young lvs, boiled",Ficus pseudopalma,"Philippine fig, young lvs, boiled/Lubi-lubi talbos, nilaga",100%,19,1.2,0.2,3.2
+D153,Pansit-pansitan,Peperomia pellucida,Olasiman-bato,68%,15,0.9,0.2,2.5
+D154,"Papaya fruit, unripe",Carica papaya,N/A,64%,27,1.0,0.1,5.5
+D155,"Papaya, young lvs",Carica papaya,N/A,78%,106,6.1,1.6,16.7
+D156,"Papaya, young lvs, boiled",Carica papaya,N/A,100%,67,4.6,1.2,9.5
+D157,Papaya petioles,Carica papaya,N/A,82%,27,0.6,0.2,5.8
+D158,"Papaya petioles, boiled",Carica papaya,N/A,100%,24,0.7,0.2,4.9
+D159,Parsley lvs,Petroselinum crispum,N/A,65%,58,4.0,0.9,8.4
+D160,Pechay lvs,Brassica chinensis,Petsay dahon,93%,22,2.1,0.4,2.6
+D161,"Pechay lvs, boiled",Brassica chinensis,"Petsay dahon, nilaga",100%,21,1.7,0.5,2.4
+D162,Pechay petioles,Brassica chinensis,Petsay tangkay,81%,14,0.6,0.3,2.1
+D163,"Pechay petioles, boiled",Brassica chinensis,"Petsay tangkay, nilaga",100%,11,0.4,0.2,1.9
+D164,"Pepper, chili fruit",Capsicum frutescens,"Sili, labuyo, bunga",89%,75,4.8,2.2,9.0
+D165,"Pepper, chili lvs",Capsicum frutescens,"Sili, labuyo, dahon",42%,60,5.8,1.2,6.4
+D166,"Pepper, chili lvs, boiled",Capsicum frutescens,"Sili, labuyo, dahon, nilaga",100%,52,1.8,0.3,10.5
+D167,"Pepper, sweet/bell long, green",Capsicum annuum var. annuum,"Sili, sweet/bell, mahaba, berde",95%,44,1.8,0.5,8.1
+D168,"Pepper, sweet/bell, long, green, boiled",Capsicum annuum var. annuum,"Sili, sweet/bell, mahaba, berde, nilaga",71%,32,0.9,0.3,6.4
+D169,"Pepper, sweet/bell, long, red",Capsicum annuum var. annuum,"Sili, sweet/bell, mahaba, pula",95%,75,2.4,0.9,14.4
+D170,"Pepper, sweet/bell, round, green",Capsicum annuum var. annuum,"Sili, sweet/bell, bilog, berde",82%,28,0.9,0.2,5.6
+D171,"Pepper, sweet/bell, round, green, boiled",Capsicum annuum var. annuum,"Sili, sweet/bell, bilog, berde, nilaga",74%,17,0.5,0.2,3.2
+D172,"Pepper, sweet/bell, round, red",Capsicum annuum var. annuum,"Sili, sweet/bell, bilog, pula",85%,36,0.5,0.3,7.8
+D173,Philippine spinach lvs,Talinum triangulare,Talinum dahon/Ceylon spinach lvs,66%,29,2.7,0.5,3.5
+D174,"Philippine spinach lvs, boiled",Talinum triangulare,"Talinum dahon, nilaga/Ceylon spinach lvs, boiled",100%,23,0.8,0.2,4.6
+D175,Pigeon pea pod,Cajanus cajan,Kadyos bunga,54%,149,8.2,0.7,27.4
+D176,"Pigeon pea pod, boiled",Cajanus cajan,"Kadyos bunga, nilaga",100%,84,5.6,0.3,14.7
+D177,"Pigeon pea seed, fresh",Cajanus cajan,"Kadyos buto, sariwa",100%,143,8.2,0.7,26.0
+D178,Malabar bauhinia lvs,Piliostigma malabaricum,Alibangbang/Alambangbang dahon,83%,60,2.5,1.6,8.9
+D179,"Prickly chaff-flower, lvs",Achyranthes aspera,Lupo-lupo/Hangod,72%,59,6.4,1.0,6.2
+D180,Purslane lvs,Portulaca oleracea,Olasiman dahon,46%,31,2.3,0.4,4.5
+D181,"Purslane lvs, boiled",Portulaca oleracea,"Olasiman dahon, nilaga",100%,26,1.3,0.3,4.6
+D182,Racaba lvs,Alternanthera sessilis,Bunga-bunga dahon/Dwarf copperleaf lvs,-,58,3.3,1.0,8.9
+D183,Radish,Raphanus sativus,"Labanos/Rabanos, lamang ugat",82%,20,0.6,0.1,4.1
+D184,"Radish, boiled",Raphanus sativus,"Labanos/Rabanos, lamang ugat, nilaga",100%,15,0.2,0.1,3.2
+D185,"Radish, pod",Raphanus sativus,"Labanos/Rabanos, bunga",87%,33,1.7,0.1,6.2
+D186,"Rhubarb, young petioles",Rheum rhabarbarum,Garden rhubarb,73%,27,0.6,0.5,5.1
+D187,Roselle lvs,Hibiscus sabdariffa,N/A,56%,63,2.8,0.6,11.6
+D188,"Sabitan, lvs",Planchonella obovata,N/A,-,70,6.2,0.7,9.6
+D189,"Seaweed, gut weed, dried",Enteromorpha intestinalis,"Bitukang manok, tuyo/Hollow green nori, dried",-,108,1.4,0.4,24.8
+D190,Sea purslane lvs,Sesuvium portulacastrum,Dampalit dahon,87%,25,1.8,0.4,3.6
+D191,"Sea purslane lvs, boiled",Sesuvium portulacastrum,"Dampalit dahon, nilaga",100%,36,1.0,0.2,7.5
+D192,"Seaweed, balbalulang",Hydroclathrus clathratus,Balbalulang/Balbalolang,100%,23,0.4,0.3,4.6
+D193,"Seaweed, gamet, dried",Porphyra sp.,"Gamet, tuyo",100%,252,23.7,1.2,36.7
+D194,"Seaweed, kawkawayan",Gracilaria verrucosa,Kawkawayan/Gulaman dagat/Ceylon moss seaweed,100%,67,2.2,1.5,11.2
+D195,"Seaweed, kulot",Laurencia sp.,Kulot,87%,24,0.6,0.4,4.6
+D196,"Seaweed, lato",Caulerpa racemosa,Lato,100%,10,0.1,0.1,2.1
+D198,"Seaweed, pokpoklo",Codium intricatum Okamura,Pokpoklo,100%,14,1.2,0.2,1.8
+D199,Sesbania flower,Sesbania grandiflora,Katuray bulaklak,55%,31,1.0,0.3,6.1
+D200,"Sesbania flower, boiled",Sesbania grandiflora,"Katuray bulaklak, nilaga",100%,28,1.0,0.3,5.4
+D201,Sesbania lvs,Sesbania grandiflora,Katuray dahon,49%,76,6.6,1.4,9.2
+D202,"Sesbania lvs, boiled",Sesbania grandiflora,"Katuray dahon, nilaga",100%,51,6.0,0.8,4.9
+D203,Slender/Spineless amaranth lvs,Amaranthus viridis,Kulitis dahon,71%,59,4.5,1.1,7.8
+D204,"Slender/Spineless amaranth lvs, boiled",Amaranthus viridis,"Kulitis dahon, nilaga",100%,34,3.3,0.4,4.4
+D205,Snake gourd fruit,Trichosanthes cucumerina var. anguina,Pakupis bunga,86%,18,0.6,0.0,4.0
+D206,"Snap bean pod, green",Phaseolus vulgaris,"Abitsuwelas/Baguio beans bunga, berde",96%,36,2.0,0.1,6.8
+D207,"Snap bean pod, green, boiled",Phaseolus vulgaris,"Abitsuwelas/Baguio beans bunga, berde, nilaga",100%,27,0.8,0.1,5.6
+D208,"Snap bean pod, white",Phaseolus vulgaris,"Abitsuwelas/Baguio beans bunga, puti",94%,31,1.9,0.2,5.3
+D209,"Snap bean pod, white, boiled",Phaseolus vulgaris,"Abitsuwelas/Baguio beans bunga, puti, nilaga",100%,14,1.0,0.1,2.3
+D210,"Snap bean seed, black & brown, fresh",Phaseolus vulgaris,"Abitsuwelas/Baguio beans buto, kulay kape, sariwa",100%,185,11.3,0.6,33.5
+D211,Snow/Sugar pea pod,Pisum sativum var. macrocarpon,Sitsaro,93%,67,3.0,0.4,12.8
+D212,"Snow/Sugar pea pod, boiled",Pisum sativum var. macrocarpon,"Sitsaro, nilaga",100%,40,1.5,0.4,7.6
+D213,"Soybean seed, fresh",Glycine max,"Utaw buto, sariwa",54%,151,13.1,6.1,10.9
+D214,"Soybean seed, fresh, boiled",Glycine max,"Utaw buto, sariwa, nilaga",100%,144,12.4,6.4,9.3
+D215,"Spanish plum, young lvs",Spondias purpurea,Siniguelas talbos,81%,66,4.5,1.2,9.3
+D216,"Spanish plum, young lvs, boiled",Spondias purpurea,"Siniguelas talbos, nilaga",100%,39,1.9,0.6,6.4
+D217,Spiny pigweed/Thorny amaranth lvs,Amaranthus spinosus,Uray dahon,17%,63,5.5,0.9,8.2
+D218,"Spiny pigweed/Thorny amaranth lvs, boiled",Amaranthus spinosus,"Uray dahon, nilaga",100%,37,1.6,0.3,6.9
+D219,Sponge gourd fruit,Luffa cyclindrica,Patola bunga,84%,21,0.7,0.1,4.3
+D220,"Sponge gourd fruit, boiled",Luffa cyclindrica,"Patola bunga, nilaga",100%,16,0.4,0.4,2.7
+D221,Sponge gourd lvs,Luffa cyclindrica,Patola dahon,48%,37,4.0,0.6,3.9
+D222,"Sponge gourd lvs, boiled",Luffa cyclindrica,"Patola dahon, nilaga",100%,14,1.4,0.1,1.8
+D223,Squash flower,Cucurbita maxima,Kalabasa bulaklak,63%,33,1.9,0.5,5.2
+D224,"Squash flower, boiled",Cucurbita maxima,"Kalabasa bulaklak, nilaga",100%,19,0.4,0.1,4.1
+D225,Squash fruit,Cucurbita maxima,Kalabasa bunga,77%,68,1.2,0.2,15.3
+D226,"Squash fruit, boiled",Cucurbita maxima,"Kalabasa bunga, nilaga",100%,47,0.4,0.2,10.8
+D227,Squash lvs,Cucurbita maxima,Kalabasa dahon,47%,38,3.4,0.6,4.8
+D228,"Squash lvs, boiled",Cucurbita maxima,"Kalabasa dahon, nilaga",100%,27,1.6,0.4,4.2
+D229,"Squash, summer fruit",Cucurbita moschata,"Kalabasa bunga, puti",82%,21,0.6,0.2,4.3
+D230,String/Yard long bean lvs,Vigna unguiculata ssp. sesquipedalis,Sitaw talbos,54%,44,4.2,0.4,6.0
+D231,"String/Yard long bean lvs, boiled",Vigna unguiculata ssp. sesquipedalis,"Sitaw talbos, nilaga",100%,27,2.1,0.2,4.3
+D232,"String/Yard long bean pod, green",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, berde",95%,38,2.7,0.3,6.2
+D233,"String/Yard long bean pod, green, boiled",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, berde, nilaga",100%,52,4.0,0.5,7.9
+D234,"String/Yard long bean pod, red",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, pula",92%,44,2.8,0.2,7.8
+D235,"String/Yard long bean pod, red, boiled",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, pula, nilaga",100%,35,1.5,0.2,6.7
+D236,"String/Yard long bean pod, white",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, puti",95%,47,2.2,0.3,8.8
+D237,"String/Yard long bean pod, white, boiled",Vigna unguiculata ssp. sesquipedalis,"Sitaw bunga, puti, nilaga",100%,23,1.4,0.1,4.1
+D238,"String/Yard long bean seed, green, fresh",Vigna unguiculata ssp. sesquipedalis,"Sitaw buto, berde, sariwa",100%,119,9.2,0.8,18.8
+D239,"String/Yard long bean seed, green, fresh, boiled",Vigna unguiculata ssp. sesquipedalis,"Sitaw buto, berde, sariwa, nilaga",100%,119,12.7,0.4,16.1
+D240,"Sugar palm, heart of palm",Arenga pinnata,Kaong ubod,85%,38,1.3,0.5,7.0
+D241,Swamp amaranth lvs,Alternanthera paronychioides,Lupo dahon,-,52,5.1,0.2,7.5
+D242,Swamp cabbage lvs,Ipomoea aquatica,Kangkong dahon/Water spinach lvs,59%,39,3.3,0.4,5.5
+D243,"Swamp cabbage lvs, boiled",Ipomoea aquatica,"Kangkong dahon, nilaga/Water spinach lvs, boiled",100%,28,1.5,0.4,4.7
+D244,Sweet potato lvs,Ipomoea batatas,Kamote dahon,34%,49,3.9,0.5,7.2
+D245,"Sweet potato lvs, boiled",Ipomoea batatas,"Kamote dahon, nilaga",100%,29,1.1,0.7,4.6
+D246,"Sweet potato lvs, purple",Ipomoea batatas,"Kamote dahon, murado",59%,69,4.7,0.6,11.3
+D247,"Sweet potato lvs, purple, boiled",Ipomoea batatas,"Kamote dahon, murado, nilaga",38%,24,1.8,0.3,3.5
+D248,Tamarind flower,Tamarindus indica,Sampalok bulaklak,78%,86,2.5,1.8,15.0
+D249,Tamarind lvs,Tamarindus indica,Sampalok dahon,81%,80,3.9,1.0,13.9
+D250,"Tamarind lvs, boiled",Tamarindus indica,"Sampalok dahon, nilaga",100%,54,2.4,0.5,9.9
+D251,Ivy gourd lvs,Coccinia grandis,Tamling dahon,48%,49,4.9,1.5,3.9
+D252,"Ivy gourd lvs, boiled",Coccinia grandis,"Tamling dahon, nilaga",100%,49,3.5,0.8,7.0
+D253,Taro lvs,Colocasia esculenta,Gabi dahon,55%,73,4.3,1.8,10.0
+D254,"Taro lvs, boiled",Colocasia esculenta,"Gabi dahon, nilaga",100%,48,1.4,0.4,9.7
+D255,Taro petioles,Colocasia esculenta,Gabi tangkay,84%,21,0.3,0.2,4.6
+D256,"Taro petioles, boiled",Colocasia esculenta,"Gabi tangkay, nilaga",100%,15,0.2,0.1,3.2
+D257,Tomato,Lycopersicon esculentum,Kamatis,99%,25,0.8,0.1,5.2
+D258,"Tomato, boiled",Lycopersicon esculentum,"Kamatis, nilaga",98%,25,0.4,0.1,5.6
+D259,"Tomato, Spanish, ripe",Lycopersicon esculentum,"Kamatis, Kastila, hinog",100%,64,2.3,0.4,12.9
+D260,Yam bean,Pachyrhizus erosus,Singkamas lamang-ugat/Jicama,87%,45,1.1,0.2,9.8
+D261,"Yam bean, pod",Pachyrhizus erosus,Singkamas bunga,90%,52,2.6,0.3,9.6
+D263,"Water caltrop, boiled",Trapa natans,"Sungay kalabaw, nilaga/Bullnut, boiled",44%,226,9.4,0.1,46.8
+D264,Water chestnut,Eleocharis dulcis,Apulid lamang-ugat,63%,176,2.3,0.7,40.3
+D265,"Water chestnut, boiled",Eleocharis dulcis,"Apulid lamang-ugat, nilaga",60%,246,2.7,0.1,58.6
+D268,Watercress,Nasturtium officinale,Tonghoy,49%,26,1.0,0.3,4.8
+D269,Wax gourd fruit,Benincasa hispida,Kundol bunga,77%,20,0.4,0.3,3.8
+D270,"Wax gourd fruit, boiled",Benincasa hispida,"Kundol bunga, nilaga",100%,13,0.1,0.1,3.0
+D271,Wild ginger,Zingiber zerumbet,Tumbong aso/Bitter ginger,72%,32,2.1,0.4,5.0
+D272,Winged bean pod,Psophocarpus tetragonolobus,"Sigarilyas/Kalamismis, bunga",97%,31,2.0,0.3,5.1
+D273,"Winged bean pod, boiled",Psophocarpus tetragonolobus,"Sigarilyas/Kalamismis bunga, nilaga",100%,35,1.6,0.3,6.4
+D274,"Asparagus, cnd",N/A,N/A,100%,30,1.6,0.4,5.1
+D275,"Bamboo shoot, cnd",N/A,"Labong, de lata",100%,18,1.1,0.4,2.6
+D276,"Bamboo shoot, dried",N/A,"Labong, tuyo",100%,357,17.1,1.4,69.0
+D277,"Black wood ear mushroom, dried",Auricularia auricula-judae,"Tengang daga, tuyo",100%,325,8.4,0.5,71.6
+D278,"Cucumber, salted, cnd",N/A,"Pipino, inasnan, de lata",100%,37,2.9,0.2,5.8
+D279,"Mushroom, cnd",N/A,"Kabuti, de lata",100%,23,2.3,0.4,2.5
+D280,"Mushroom, dried",N/A,"Kabuti, tuyo",100%,331,16.0,0.9,64.6
+D281,"Mustard lvs, pickled",N/A,"Mustasa dahon, buro",84%,16,1.4,0.1,2.3
+D282,"Mustard lvs, salted",N/A,"Mustasa dahon, inasnan",100%,28,1.9,1.0,2.9
+D283,"Olive, green, in brine",Olea europaea L.,"Aseytuna, berde",70%,132,1.3,12.6,3.4
+D284,"Olive, ripe, in brine",N/A,"Aseytuna, hinog",78%,158,1.0,16.0,2.6
+D285,"Papaya fruit, unripe, dried",N/A,"Papaya bunga, hilaw, tuyo",100%,335,6.7,0.6,75.7
+D286,Pickle relish,N/A,N/A,100%,145,0.3,0.9,33.9
+D287,"Pickles, mixed",N/A,N/A,100%,163,0.2,3.1,33.5
+D288,"Pickles, papaya",N/A,"Atsara, papaya",100%,203,0.8,8.7,30.3
+D289,"Pickles, whole, gherkins",N/A,N/A,100%,132,0.4,1.7,28.7
+D290,"Pimiento, cnd",N/A,N/A,100%,20,0.6,0.5,3.3
+D292,"Radish, salted, cnd",N/A,"Labanos, inasnan, de lata",100%,46,2.7,0.4,7.8
+D293,"Taro lvs, dried",N/A,"Gabi dahon, tuyo",-,388,23.1,9.2,53.1
+D294,"Bagbagkong flower, raw",Telosma procumbens,Sabidukong/Latok,74%,49,4.1,0.6,6.9
+D295,"Batwan, immature fruit, raw",Garcinia binucao,Binucao/Binukaw,98%,53,0.6,0.1,12.4
+D296,"Bitter melon/gourd, wild, fruit, raw",Momordica charantia,Ampalayang ligaw,74%,29,1.2,0.3,5.4
+D297,"Malunggay leaves powder, dry",-,-,100%,382,28.8,8.7,47.0
+D298,"Mangrove apple, raw",Sonneratia caseolaris,Bakawan bunga,87%,72,1.6,0.5,15.2
+D299,"Ivy gourd, immature fruit, raw",Coccinia grandis,Tamling bunga,96%,28,1.2,0.3,5.2
+D300,"Basil, sweet, fresh",Ocimum basilicum,-,-,46,3.3,0.6,6.9
+D301,"Libas, mature lvs",Spondias pinnata,"Common hog plum lvs, mature",-,90,3.8,1.3,15.7
+D302,"Libas, young lvs",Spondias pinnata,"Common hog plum lvs, young",-,84,2.8,0.7,16.5
+D303,"Thyme, fresh",Thymus vulgaris,N/A,63%,118,5.3,1.9,20.0
+E001,"Apple, green",Malus domestica,"Mansanas, berde",77%,63,0.5,0.1,14.9
+E002,"Apple, red",Malus domestica,"Mansanas, pula",76%,67,0.7,0.1,15.8
+E003,Atemoya,Annona cherimola x Annona squamosa,N/A,46%,63,0.5,0.3,14.5
+E004,"Avocado, green",Persea americana,"Abokado, berde",70%,101,0.9,6.2,10.5
+E005,"Avocado, red",Persea americana,"Abokado, murado",68%,100,0.9,7.6,7.0
+E006,"Banana, bungulan",Musa x paradisiaca,"Saging, bungulan",67%,106,1.0,0.4,24.5
+E007,"Banana, butuan",Musa x balbisiana,"Saging, butuan",57%,101,1.3,0.3,23.2
+E008,"Banana, cavendish, ripe",Musa x paradisiaca,"Saging, cavendish, hinog",64%,104,0.9,0.9,23.1
+E009,"Banana, cavendish, unripe",Musa x paradisiaca,"Saging, cavendish, hilaw",73%,112,1.1,0.7,25.4
+E010,"Banana, gloria",Musa x paradisiaca,"Saging, gloria",62%,132,1.1,0.1,31.7
+E011,"Banana, lacatan",Musa x paradisiaca,"Saging, lakatan",69%,126,1.4,0.2,29.6
+E012,"Banana, latundan",Musa x paradisiaca,"Saging, latundan",73%,105,1.2,0.3,24.4
+E013,"Banana, murado",Musa x paradisiaca,"Saging, murado",67%,107,1.2,0.5,24.5
+E014,"Banana, saba",Musa x balbisiana,"Saging, saba",57%,110,1.1,0.4,25.5
+E015,"Banana, saba, boiled",Musa x balbisiana,"Saging, saba, nilaga",60%,159,1.2,0.0,38.6
+E016,"Banana, ternate",Musa x paradisiaca,"Saging, ternate",64%,134,0.9,0.4,31.6
+E017,"Banana, tuldok",Musa x paradisiaca,"Saging, tuldok/tindok/tandok",76%,99,1.1,0.2,23.3
+E018,Bignay,Antidesma bunius,Bugnay/Salamander tree fruit,67%,35,0.7,0.8,6.3
+E019,Bilimbi,Averrhoa bilimbi,Kamyas/Kamias/Kalamyas,100%,23,0.7,0.2,4.5
+E020,Black/Java plum,Syzygium cumini,Duhat/Jambolan,75%,71,0.8,0.4,16.0
+E021,Barbados gooseberry,Pereskia aculeata,N/A,46%,36,1.0,0.7,6.3
+E022,Buri palm,Corypha utan,Buli,16%,75,0.7,0.1,17.8
+E023,Calamansi/Philippine lemon,X Citrofortunella microcarpa,Kalamansi/Calamondin,38%,44,0.4,1.0,8.3
+E024,Canistel,Pouteria campechiana,Tiesa/Eggfruit,73%,172,2.5,0.6,39.1
+E025,Cashew fruit,Anacardium occidentale,Kasuy bunga,90%,63,0.7,0.6,13.8
+E026,Java apple,Syzygium samarangense,Makopa/Wax jambu/Wax apple,80%,34,0.4,0.1,7.8
+E027,Custard apple,Annona reticulata,Anonas/Bullock's heart,55%,131,1.4,0.2,31.0
+E028,Durian,Durio zibethinus,N/A,20%,163,2.0,1.2,36.1
+E029,Velvet apple,Diospyros blancoi,Mabolo,60%,88,0.6,0.3,20.8
+E030,Grape,Vitis vinifera,Ubas,80%,83,0.4,0.3,19.7
+E031,"Guava, red",Psidium guajava,"Bayabas, pula",99%,102,0.9,0.4,23.8
+E032,"Guava, white",Psidium guajava,"Bayabas, puti",99%,70,0.8,0.3,16.0
+E033,Jackfruit,Artocarpus heterophyllus,Langka/Nangka,34%,111,1.4,0.4,25.4
+E034,Johey oak,Artocarpus odoratissimus,Marang,29%,128,1.0,0.4,30.0
+E035,Jamaica cherry,Muntingia calabura,Datiles/Aratiles,82%,100,2.0,0.6,21.6
+E036,Jujube Indian/Chinese date,Ziziphus jujuba,Mansanitas,91%,73,1.0,0.4,16.4
+E037,Kaffir lime,Citrus hystrix,Kabuyaw,31%,42,0.6,1.3,7.0
+E038,Kalumpit,Terminalia microcarpa,Batangas cherry,67%,77,1.3,0.4,17.0
+E039,Lanzon,Lansium domesticum,Lansones/Langsat,68%,64,1.0,0.3,14.2
+E040,Lemon,Citrus limon,Limon,50%,42,0.5,1.6,6.3
+E041,Lemon peel,Citrus limon,"Limon, balat",100%,82,1.1,0.3,18.6
+E042,Lime,Citrus aurantiifolia,Dayap/Key lime,59%,50,0.8,2.4,6.3
+E043,Lime peel,Citrus aurantiifolia,"Dayap, balat",100%,121,3.4,0.2,26.5
+E044,Lipoti,Syzygium polycephaloides,Lipote/Igot,83%,77,0.7,2.5,12.9
+E045,Lychee/Litchi,Litchi chinensis,Lechiyas/Litsiyas,65%,87,1.5,0.1,20.1
+E046,Madras thorn,Pithecellobium dulce,Camachile/Kamatsile/Manila tamarind,50%,93,3.2,0.4,19.1
+E047,Malay apple,Syzygium malaccense,Yambo,68%,44,0.5,0.2,10.0
+E048,Malay gooseberry,Phyllanthus acidus,Iba/Karmay/Bangkiling/Tahitian gooseberry,91%,40,0.8,0.7,7.7
+E049,"Mango, Indian, unripe",Mangifera indica,"Mangga, Indiyan, hilaw",57%,53,0.3,0.2,12.5
+E050,"Mango, Manila super, medium ripe",Mangifera indica,"Mangga, kalabaw, manibalang",72%,66,0.4,0.4,15.2
+E051,"Mango, Manila super, ripe",Mangifera indica,"Mangga, kalabaw, hinog",67%,70,0.6,0.2,16.4
+E052,"Mango, Manila super, unripe",Mangifera indica,"Mangga, kalabaw, hilaw",72%,63,0.5,0.2,14.9
+E053,"Mango, paho, unripe",Mangifera altissima,"Mangga, paho/pahutan, hilaw",76%,74,0.7,0.6,16.4
+E054,"Mango, piko, medium ripe",Mangifera indica,"Mangga, piko, manibalang",71%,83,0.3,0.9,18.4
+E055,"Mango, piko, ripe",Mangifera indica,"Mangga, piko, hinog",58%,80,0.7,0.2,18.9
+E056,"Mango, piko, unripe",Mangifera indica,"Mangga, piko, hilaw",73%,69,0.5,0.4,15.8
+E057,"Mango, supsupin, ripe",Mangifera indica,"Mangga, supsupin, hinog",53%,91,1.2,0.5,20.5
+E058,Mangosteen,Garcinia mangostana,N/A,26%,84,0.7,0.8,18.6
+E059,Many-spiked flacourtia,Flacourtia indica,Seryale/Bitangol/Governor's Plum,39%,118,0.6,0.6,27.6
+E060,Marmalade plum,Pouteria sapota,Chico-mamey,73%,113,1.2,0.3,26.4
+E061,Melon,Cucumis melo,Milon,68%,23,0.5,0.3,4.8
+E062,"Melon, honey dew",Cucumis melo,N/A,84%,42,0.3,0.3,9.5
+E064,"Melon, watermelon",Citrullus lanatus,Pakwan,62%,31,0.1,0.2,7.2
+E065,"Orange, Ladu",Citrus reticulata,"Dalandan, Ladu",45%,35,0.4,0.2,7.8
+E066,"Orange, Szinkom",Citrus reticulata,"Dalandan, Szinkom",46%,31,0.3,0.2,6.9
+E068,"Papaya fruit, medium ripe",Carica papaya,N/A,83%,53,0.7,0.2,12.0
+E069,"Papaya fruit, ripe",Carica papaya,N/A,64%,53,0.5,0.3,12.1
+E070,Pear,Pyrus communis,Peras,73%,57,0.4,0.6,12.6
+E071,"Persimmon, kaki",Diospyros kaki,Asian persimmon,57%,86,0.4,0.6,19.7
+E072,Philippine dillenia,Dillenia philippinensis,Katmon,40%,33,0.3,0.2,7.4
+E073,Pineapple,Ananas comosus,Pinya,58%,55,0.4,0.2,13.0
+E074,Pomegranate,Punica granatum,Granada,44%,64,0.7,0.4,14.5
+E075,Pomelo,Citrus maxima,Suha/Lukban,64%,51,0.7,0.6,10.6
+E076,Rambutan,Nephelium lappaceum,N/A,36%,87,1.2,0.9,18.6
+E077,Rattan fruit,Calamus ornatus var. philippinensis,Alimuran,42%,88,0.6,1.2,18.6
+E078,Santol,Sandoricum koetjape,Cotton fruit,59%,67,0.7,1.0,13.8
+E079,Sapodilla,Manilkara zapota,Chico,84%,108,0.5,0.9,24.5
+E080,Sapote,Diospyros ebenum,Ebony persimmon,72%,93,0.8,0.5,21.2
+E081,Stinking passion flower fruit,Passiflora foetida,Pasionaryang mabaho,50%,62,0.6,0.5,13.7
+E082,Stinking passion flower juice,Passiflora foetida,"Pasionaryang mabaho, katas",100%,56,0.8,0.6,11.8
+E083,Soursop,Annona muricata,Guyabano,70%,70,1.1,0.1,16.2
+E084,Spanish plum,Spondias purpurea,Siniguwelas,64%,88,0.9,0.2,20.6
+E085,"Star apple, green",Chrysophyllum cainito,"Kaymito, berde",53%,74,0.7,1.1,15.3
+E086,"Star apple, purple",Chrysophyllum cainito,"Kaymito, murado",63%,80,1.3,0.6,17.4
+E087,Starfruit,Averrhoa carambola,Balimbing,88%,39,0.5,0.7,7.7
+E088,Strawberry,Fragaria × ananassa Duchesne,N/A,98%,34,0.8,0.2,7.2
+E089,Sugar apple/Sweetsop,Annona squamosa,Atis,50%,104,1.3,0.4,23.7
+E090,Sugar palm,Arenga pinnata,Kaong,100%,19,0.1,0.2,4.3
+E091,"Sugar palm, boiled",Arenga pinnata,"Kaong, nilaga",100%,13,0.1,0.2,2.8
+E092,Susong-kalabaw,Uvaria rufa,Carabao's teats,43%,39,0.7,0.4,8.1
+E093,"Tamarind, ripe",Tamarindus indica,"Sampalok, hinog",44%,258,2.0,0.6,61.1
+E094,"Tamarind, unripe",Tamarindus indica,"Sampalok, hilaw",40%,77,0.9,0.3,17.7
+E095,"Tamarind, unripe, boiled",Tamarindus indica,"Sampalok, hilaw, nilaga",100%,30,0.7,0.1,6.6
+E096,"Banana chips, salted",N/A,N/A,100%,585,1.8,41.2,51.8
+E097,"Banana chips, sweetn",N/A,N/A,100%,568,1.5,35.1,61.6
+E098,"Banana cracker, sweetn",N/A,N/A,100%,509,2.1,27.7,62.8
+E099,Banana fritter,N/A,"Maruya, saging",100%,240,3.0,3.9,48.1
+E100,"Banana, saba, mashed, w/ sugar & marg",N/A,"Linupak, saging saba",100%,204,1.4,3.6,41.4
+E101,"Banana, saba, w/ sugar, fried",N/A,Banana cue,100%,183,2.0,2.6,37.8
+E102,"Banana, saba, w/ sugar, wrapped, fried",N/A,"Turon, saging saba",100%,259,2.4,6.4,48.0
+E103,"Bilimbi, pickled",N/A,"Kamias, buro",100%,22,0.5,0.1,4.7
+E104,"Cherry, in syrup, drnd",N/A,N/A,65%,106,0.2,0.5,25.1
+E105,"Date, dried",N/A,N/A,100%,346,1.7,2.8,78.6
+E106,Dikyam,N/A,N/A,100%,246,1.9,1.6,56.1
+E107,"Fruit cocktail, tropical, in syrup, cnd",N/A,N/A,100%,103,0.2,0.2,25.0
+E108,"Jujube Indian/Chinese date, dried",N/A,"Mansanitas, tuyo",93%,333,1.1,0.5,80.9
+E109,"Mango chips, dried",N/A,N/A,100%,365,1.6,1.0,87.3
+E110,"Peach, in heavy syrup, cnd",N/A,"Milokoton, hiniwa, may arnibal, nakalata",100%,73,0.4,0.9,15.8
+E113,"Pineapple, crushed, cnd",N/A,N/A,100%,87,0.5,0.2,20.9
+E114,"Pineapple, slice, cnd",N/A,N/A,100%,119,0.4,0.8,27.5
+E115,Prune,N/A,N/A,100%,278,2.5,0.7,65.5
+E116,Raisin,N/A,Pasas,100%,340,3.5,1.1,78.9
+E117,Dragon fruit,Hylocereus undatus,Pitaya,63%,66,1.0,1.0,13.2
+E118,"Kandis, flesh",Garcinia lateriflora,N/A,44%,65,0.3,0.5,14.9
+E119,"Kandis, pulp",Garcinia lateriflora,N/A,40%,60,0.3,0.2,14.3
+E120,"Libas fruit, ripe",Spondias pinnata,"Common hog plum fruit, ripe",22%,51,0.8,0.1,11.7
+E121,"Libas fruit, unripe",Spondias pinnata,"Common hog plum fruit, unripe",80%,40,0.8,0.1,8.9
+E122,Maraitum,Nephelium sp.,N/A,19%,92,0.5,0.2,22.0
+E123,Palau-biyok,Willughbeia sp.,N/A,23%,115,0.6,0.3,27.5
+E124,Sapinit,Rubus moluccanus,Wild raspberry,100%,76,1.2,1.1,15.2
+E125,Tabo,Willughbeia sp.,N/A,14%,110,0.4,0.2,26.7
+F001,Beef blood,Bos taurus,Baka dugo,100%,90,20.6,0.6,0.5
+F002,"Beef blood, bbq",Bos taurus,"Baka dugo, bbq/""rambo""",100%,93,19.7,1.1,1.1
+F003,Beef brain,Bos taurus,Baka utak,100%,127,10.3,9.4,0.3
+F004,"Beef brain, boiled",Bos taurus,"Baka utak, nilaga",100%,155,12.2,11.3,1.2
+F005,Beef brisket,Bos taurus,Baka punta y pecho,84%,211,18.2,15.4,0.0
+F006,Beef chuck,Bos taurus,Baka paypay,94%,171,19.0,10.5,0.0
+F007,"Beef chuck, lean, boiled",Bos taurus,"Baka paypay, laman, nilaga",100%,109,11.4,2.4,10.4
+F008,Beef club steak,Bos taurus,"Baka tagiliran, unahan",82%,104,23.1,1.3,0.0
+F009,Beef flank,Bos taurus,Baka camto,100%,231,19.4,17.0,0.0
+F010,Beef head,Bos taurus,Baka ulo,44%,139,25.0,4.2,0.4
+F011,Beef heart,Bos taurus,Baka puso,100%,139,18.8,6.2,1.9
+F012,"Beef intestine, large",Bos taurus,Baka bitukang malaki,100%,103,5.0,8.1,2.6
+F013,"Beef intestine, small",Bos taurus,Baka bitukang maliit,100%,109,16.4,4.2,1.4
+F014,Beef kidney,Bos taurus,Baka bato,80%,89,16.2,2.2,1.1
+F015,Beef lean meat,Bos taurus,Baka laman,100%,134,23.1,4.6,0.0
+F016,"Beef lean meat, boiled",Bos taurus,"Baka laman, nilaga",100%,146,25.3,5.0,0.0
+F017,"Beef lean meat, broiled",Bos taurus,"Baka laman, inihaw",100%,149,30.4,3.0,0.0
+F018,"Beef lean meat, fried",Bos taurus,"Baka laman, prito",100%,183,30.2,6.9,0.0
+F019,Beef liver,Bos taurus,Baka atay,100%,144,20.6,3.2,8.3
+F020,"Beef liver, boiled",Bos taurus,"Baka atay, nilaga",100%,154,25.5,4.0,4.0
+F021,Beef lung,Bos taurus,Baka baga,87%,98,17.2,1.8,3.2
+F022,Beef mammary,Bos taurus,Baka sinuso,84%,550,6.6,55.4,6.2
+F023,Beef omasum,Bos taurus,Baka librilyo,100%,95,15.1,3.8,0.0
+F024,"Beef omasum, boiled",Bos taurus,"Baka librilyo, nilaga",100%,93,14.8,3.7,0.0
+F025,Beef plate,Bos taurus,Baka tadyang,66%,203,18.2,14.5,0.0
+F026,Beef porterhouse steak,Bos taurus,"Baka tagiliran, gitna",69%,105,23.4,1.3,0.0
+F027,Beef reticulum,Bos taurus,Baka mansanilya,100%,170,13.9,12.1,1.4
+F028,"Beef reticulum, boiled",Bos taurus,"Baka mansanilya, nilaga",100%,167,11.5,13.4,0.0
+F029,Beef rib roast,Bos taurus,Baka kadera,64%,314,15.1,28.2,0.0
+F030,Beef round,Bos taurus,Baka pierna corta at pierna larga,83%,139,20.7,6.2,0.0
+F031,"Beef round, boiled",Bos taurus,"Baka pierna corta at pierna larga, nilaga",100%,106,19.2,3.2,0.0
+F032,"Beef round, broiled",Bos taurus,"Baka pierna corta at pierna larga, inihaw",100%,132,21.4,5.1,0.0
+F033,"Beef round, fried",Bos taurus,"Baka pierna corta at pierna larga, prito",100%,140,21.1,6.2,0.0
+F034,Beef rump,Bos taurus,Baka tapadera,88%,104,20.7,2.4,0.0
+F035,Beef shank,Bos taurus,Baka kenchi,89%,115,21.5,3.2,0.0
+F036,"Beef shank, boiled",Bos taurus,"Baka kenchi, nilaga",89%,92,19.5,1.5,0.0
+F037,Beef short rib,Bos taurus,Baka tadyang,79%,248,20.2,18.6,0.0
+F038,Beef sirloin,Bos taurus,"Baka tagiliran, hulihan",91%,132,20.5,5.6,0.0
+F039,"Beef sirloin, boiled",Bos taurus,"Baka tagiliran, hulihan, nilaga",100%,106,18.3,3.6,0.0
+F040,"Beef sirloin, broiled",Bos taurus,"Baka tagiliran, hulihan, inihaw",100%,138,22.2,5.5,0.0
+F041,"Beef sirloin, fried",Bos taurus,"Baka tagiliran, hulihan, prito",100%,152,23.5,6.4,0.0
+F042,Beef spleen,Bos taurus,Baka lapay,100%,95,18.2,2.0,1.0
+F043,"Beef spleen, boiled",Bos taurus,"Baka lapay, nilaga",100%,85,16.4,2.2,0.0
+F044,Beef stomach,Bos taurus,Baka sikmura,100%,119,17.6,5.3,0.2
+F045,Beef tail,Bos taurus,Baka buntot,70%,360,15.8,33.0,0.0
+F046,Beef tenderloin,Bos taurus,Baka solomilyo,100%,128,22.8,4.1,0.0
+F047,Beef tongue,Bos taurus,Baka dila,86%,214,14.8,15.2,4.4
+F048,"Beef tongue, boiled",Bos taurus,"Baka dila, nilaga",86%,227,11.4,12.0,18.3
+F049,Beef tripe,Bos taurus,Baka goto,100%,102,11.0,5.8,1.4
+F050,"Beef tripe, boiled",Bos taurus,"Baka goto, nilaga",100%,94,10.3,5.2,1.5
+F051,Beef uterus,Bos taurus,Baka bahay guya,97%,88,15.8,1.2,3.5
+F052,Carabeef blood,Bubalus bubalis,Kalabaw dugo,100%,75,18.6,0.0,0.2
+F053,Carabeef brain,Bubalus bubalis,Kalabaw utak,100%,136,9.4,10.1,1.9
+F054,Carabeef chuck,Bubalus bubalis,Kalabaw paypay,100%,100,18.6,2.8,0.0
+F055,Carabeef heart,Bubalus bubalis,Kalabaw puso,100%,114,17.4,4.6,0.7
+F056,"Carabeef intestine, large",Bubalus bubalis,Kalabaw bitukang malaki,100%,165,9.3,11.9,5.2
+F057,"Carabeef intestine, small",Bubalus bubalis,Kalabaw bitukang maliit,100%,148,10.4,9.7,4.7
+F058,Carabeef kidney,Bubalus bubalis,Kalabaw bato,100%,77,14.0,1.8,1.1
+F059,Carabeef lean meat,Bubalus bubalis,Kalabaw laman,100%,90,20.6,0.8,0.0
+F060,"Carabeef lean meat, boiled",Bubalus bubalis,"Kalabaw laman, nilaga",88%,100,22.4,1.2,0.0
+F061,Carabeef liver,Bubalus bubalis,Kalabaw atay,100%,108,15.5,1.7,7.6
+F062,Carabeef lung,Bubalus bubalis,Kalabaw baga,100%,87,18.6,1.4,0.0
+F063,Carabeef omasum,Bubalus bubalis,Kalabaw librilyo,81%,37,8.7,0.2,0.1
+F064,Carabeef reticulum,Bubalus bubalis,Kalabaw mansanilya,100%,119,11.2,6.9,2.9
+F065,Carabeef round,Bubalus bubalis,Kalabaw hita,96%,94,20.4,1.4,0.0
+F066,Carabeef round steak,Bubalus bubalis,Kalabaw pierna corta at pierna larga,83%,100,21.4,1.6,0.0
+F067,Carabeef rump,Bubalus bubalis,Kalabaw tapadera,100%,85,19.3,0.9,0.0
+F068,Carabeef shank,Bubalus bubalis,Kalabaw kenchi,44%,102,20.2,2.4,0.0
+F069,Carabeef spleen,Bubalus bubalis,Kalabaw lapay,100%,98,21.2,1.5,0.0
+F070,Carabeef stomach,Bubalus bubalis,Kalabaw sikmura,100%,81,18.7,0.7,0.0
+F071,Carabeef w/ fat,Bubalus bubalis,"Kalabaw laman, may taba",86%,119,21.8,3.6,0.0
+F072,"Carabeef w/ fat, boiled",Bubalus bubalis,"Kalabaw laman, may taba, nilaga",100%,147,26.9,4.4,0.0
+F075,Chevon back,Capra hircus,Kambing likod,-,96,20.4,1.6,0.0
+F076,Chevon breast,Capra hircus,Kambing dibdib,-,82,17.7,1.2,0.0
+F077,Chevon flank,Capra hircus,Kambing tiyan,100%,149,16.6,9.2,0.0
+F078,Chevon heart,Capra hircus,Kambing puso,100%,125,17.1,5.9,0.8
+F079,"Chevon intestine, small",Capra hircus,Kambing bitukang maliit,100%,71,10.2,3.4,0.0
+F080,Chevon kidney,Capra hircus,Kambing bato,100%,97,15.9,3.5,0.4
+F081,Chevon leg,Capra hircus,Kambing hita at binti,-,72,17.0,0.4,0.0
+F082,Chevon liver,Capra hircus,Kambing atay,100%,129,22.1,3.4,2.6
+F083,Chevon loin,Capra hircus,Kambing lomo,100%,95,22.3,0.6,0.0
+F084,Chevon lung,Capra hircus,Kambing baga,100%,93,17.0,2.1,1.6
+F085,Chevon neck,Capra hircus,Kambing leeg,-,121,23.3,3.1,0.0
+F086,Chevon rib,Capra hircus,Kambing tadyang,-,90,19.9,1.2,0.0
+F087,Chevon shank,Capra hircus,Kambing biyas,-,89,19.8,1.1,0.0
+F088,Chevon shoulder,Capra hircus,Kambing balikat,-,90,17.4,2.3,0.0
+F089,Chevon stomach,Capra hircus,Kambing sikmura,100%,57,9.8,1.1,1.9
+F090,"Chick, one-day old, fried",Gallus gallus,N/A,100%,237,25.3,14.6,1.2
+F091,Chicken back,Gallus gallus,Manok likod,45%,207,17.4,15.3,0.0
+F092,Chicken blood,Gallus gallus,Manok dugo,100%,59,13.9,0.1,0.5
+F093,Chicken breast,Gallus gallus,Manok pitso,84%,131,21.6,5.0,0.0
+F094,Chicken feet,Gallus gallus,Manok paa,34%,187,24.7,9.8,0.0
+F095,"Chicken feet, bbq",Gallus gallus,"Manok paa, bbq/""adidas""",55%,229,26.9,11.9,3.6
+F096,Chicken gizzard,Gallus gallus,Manok balun-balunan,100%,106,21.8,1.0,2.5
+F097,Chicken head,Gallus gallus,Manok ulo,61%,129,13.1,8.2,0.8
+F098,"Chicken head, bbq",Gallus gallus,"Manok ulo, bbq/""helmet""",64%,220,20.5,14.7,1.3
+F099,Chicken heart,Gallus gallus,Manok puso,100%,197,11.6,15.9,1.9
+F100,Chicken intestine,Gallus gallus,Manok bituka,41%,155,13.0,11.4,0.0
+F101,"Chicken intestine, bbq",Gallus gallus,"Manok bituka, bbq/""IUD""/Isaw manok",100%,210,28.2,9.6,3.0
+F102,Chicken leg/drumstick,Gallus gallus,Manok binti,85%,204,17.1,15.1,0.0
+F103,Chicken liver,Gallus gallus,Manok atay,100%,124,18.1,3.9,4.0
+F104,Chicken neck,Gallus gallus,Manok leeg,48%,314,14.1,28.6,0.0
+F105,"Chicken pullet, breast",Gallus gallus,"Manok dumalaga, pitso",85%,103,19.6,2.7,0.0
+F106,"Chicken pullet, thigh",Gallus gallus,"Manok dumalaga, hita",74%,103,19.6,2.7,0.0
+F107,Chicken thigh,Gallus gallus,Manok hita,66%,149,19.8,7.7,0.0
+F108,Chicken thigh & leg,Gallus gallus,Manok hita at binti,74%,187,17.6,13.0,0.0
+F109,Chicken wing,Gallus gallus,Manok pakpak,62%,194,18.9,13.2,0.0
+F110,Chicken white meat,Gallus gallus,Manok laman,70%,110,20.6,3.1,0.0
+F111,"Chicken, white meat, boiled",Gallus gallus,"Manok laman, nilaga",72%,173,32.9,4.6,0.0
+F112,"Chicken, white meat, fried",Gallus gallus,"Manok laman, prito",70%,226,40.3,7.2,0.0
+F113,"Chicken, whole",Gallus gallus,Manok buo,60%,215,17.4,16.2,0.0
+F116,Duck back,Cairina moschata,Pato likod,47%,191,22.6,11.2,0.0
+F117,Duck blood,Cairina moschata,Pato dugo,100%,62,10.7,0.1,4.5
+F118,Duck breast,Cairina moschata,Pato pitso,71%,157,22.8,7.3,0.0
+F119,Duck gizzard,Cairina moschata,Pato balun-balunan,100%,108,22.1,2.2,0.0
+F120,Duck liver,Cairina moschata,Pato atay,100%,116,15.6,3.8,4.9
+F121,Duck thigh,Cairina moschata,Pato hita,71%,171,20.5,9.9,0.0
+F122,Duck wing,Cairina moschata,Pato pakpak,54%,144,24.4,5.2,0.0
+F123,"Duck, wild, breast",Dendrocygna arcuata,Baliwis pitso,-,85,19.9,0.6,0.0
+F124,"Duck, wild, thigh",Dendrocygna arcuata,Baliwis hita,-,85,19.5,0.8,0.0
+F125,Frog meat,Fejervarya vittigera,Palaka laman,31%,89,20.9,0.6,0.0
+F126,Goose breast,Anser cygnoides,Gansa dibdib,72%,122,23.4,3.2,0.0
+F127,Goose thigh,Anser cygnoides,Gansa hita,71%,127,23.0,3.9,0.0
+F128,Lamb flank,Ovis aries,Tupa tiyan,100%,149,16.6,9.2,0.0
+F129,Lamb foreshank,Ovis aries,"Tupa biyas, harapan",48%,135,19.9,6.1,0.0
+F130,Lamb hind shank,Ovis aries,"Tupa biyas, likod",48%,124,20.6,4.6,0.0
+F131,Lamb liver,Ovis aries,Tupa atay,100%,136,21.8,4.0,3.1
+F132,Lamb loin,Ovis aries,Tupa lomo,100%,123,20.2,4.7,0.0
+F133,Lamb lung,Ovis aries,Tupa baga,100%,95,17.3,1.7,2.5
+F134,Lamb neck,Ovis aries,Tupa leeg,47%,141,18.9,7.3,0.0
+F135,Lamb riblet,Ovis aries,Tupa tadyang,-,157,16.9,9.9,0.0
+F136,Lamb roast/back,Ovis aries,Tupa likod,-,129,19.2,5.8,0.0
+F137,Lamb shoulder,Ovis aries,Tupa balikat,55%,134,16.1,7.7,0.0
+F139,Moor hen breast,Gallinula chloropus,Ulok pitso,-,147,21.4,6.8,0.0
+F140,Moor hen gizzard,Gallinula chloropus,Ulok balun-balunan,100%,113,22.5,1.6,2.2
+F141,Moor hen liver,Gallinula chloropus,Ulok atay,100%,130,18.0,3.5,6.5
+F142,Moor hen thigh,Gallinula chloropus,Ulok hita,-,134,20.1,5.9,0.0
+F143,Pigeon breast,Columba livia,Kalapati pitso,-,207,17.1,15.4,0.0
+F144,Pigeon thigh,Columba livia,Kalapati hita,-,239,14.6,20.1,0.0
+F145,"Pigeon, squab/young meat",Columba livia,Kalapati pitson,-,154,17.0,9.5,0.0
+F146,Pork back fat,Sus scrofa scrofa,Baboy taba sa likod,94%,513,11.6,51.8,0.0
+F147,Pork belly,Sus scrofa scrofa,Baboy liempo,97%,393,14.5,37.2,0.0
+F148,"Pork belly, broiled",Sus scrofa scrofa,"Baboy liempo, inihaw",93%,213,14.0,17.4,0.0
+F149,"Pork belly, fried",Sus scrofa scrofa,"Baboy liempo, prito",86%,245,12.3,21.8,0.0
+F151,"Pork belly, boiled",Sus scrofa scrofa,"Baboy liempo, nilaga",96%,444,13.0,43.6,0.0
+F152,Pork blood,Sus scrofa scrofa,Baboy dugo,100%,55,11.6,0.0,2.1
+F153,Pork Boston butt,Sus scrofa scrofa,Baboy paypay,97%,329,14.3,30.2,0.0
+F154,"Pork Boston butt, boiled",Sus scrofa scrofa,"Baboy paypay, nilaga",-,346,10.1,33.9,0.0
+F155,"Pork Boston butt, broiled",Sus scrofa scrofa,"Baboy paypay, inihaw",-,203,13.9,16.4,0.0
+F156,"Pork Boston butt, fried",Sus scrofa scrofa,"Baboy paypay, prito",-,239,14.2,20.2,0.0
+F157,"Pork Boston butt, lean",Sus scrofa scrofa,"Baboy paypay, laman",100%,278,17.3,23.2,0.0
+F158,"Pork Boston butt, lean, boiled",Sus scrofa scrofa,"Baboy paypay, laman, nilaga",100%,212,15.6,16.6,0.0
+F159,"Pork Boston butt, lean, broiled",Sus scrofa scrofa,"Baboy paypay, laman, inihaw",100%,154,22.3,7.2,0.0
+F160,"Pork Boston butt, lean, fried",Sus scrofa scrofa,"Baboy paypay, laman, prito",100%,136,20.5,6.0,0.0
+F161,Pork center loin,Sus scrofa scrofa,"Baboy tagiliran, laman",100%,519,12.5,52.1,0.0
+F162,Pork chop,Sus scrofa scrofa,Baboy kostillas,82%,390,14.5,36.9,0.0
+F163,Pork ear,Sus scrofa scrofa,Baboy tenga,100%,385,11.8,36.9,1.3
+F164,"Pork ear, bbq",Sus scrofa scrofa,"Baboy tenga, bbq/",100%,350,23.8,25.9,5.4
+F165,Pork ham,Sus scrofa scrofa,Baboy pigi/pigue,100%,298,16.3,25.8,0.1
+F166,Pork head,Sus scrofa scrofa,Baboy ulo,60%,326,14.4,28.8,2.3
+F167,Pork heart,Sus scrofa scrofa,Baboy puso,100%,116,16.4,5.3,0.6
+F168,"Pork intestine, large",Sus scrofa scrofa,Baboy bitukang malaki,100%,81,9.6,2.2,5.6
+F169,"Pork intestine, small",Sus scrofa scrofa,Baboy bitukang maliit,100%,71,12.6,2.3,0.0
+F170,"Pork intestine, small, bbq",Sus scrofa scrofa,"Baboy bitukang maliit, bbq/Isaw baboy",100%,318,20.6,24.8,3.0
+F171,Pork kidney,Sus scrofa scrofa,Baboy bato,80%,105,14.4,3.9,3.1
+F172,"Pork kidney, boiled",Sus scrofa scrofa,"Baboy bato, nilaga",100%,106,13.9,3.2,5.3
+F173,Pork leg,Sus scrofa scrofa,Baboy pata,58%,203,20.2,13.6,0.0
+F174,Pork liver,Sus scrofa scrofa,Baboy atay,100%,119,18.0,2.8,5.5
+F175,"Pork liver, boiled",Sus scrofa scrofa,"Baboy atay, nilaga",100%,170,17.8,3.5,16.9
+F176,"Pork liver, broiled",Sus scrofa scrofa,"Baboy atay, inihaw",100%,180,19.8,4.4,15.4
+F177,"Pork liver, fried",Sus scrofa scrofa,"Baboy atay, prito",100%,197,19.9,5.4,17.1
+F178,Pork lung,Sus scrofa scrofa,Baboy baga,100%,73,12.2,1.8,2.0
+F179,Pork picnic,Sus scrofa scrofa,Baboy kasim,100%,387,13.4,37.0,0.0
+F180,"Pork picnic, boiled",Sus scrofa scrofa,"Baboy kasim, nilaga",100%,368,14.8,34.3,0.0
+F181,Pork skin,Sus scrofa scrofa,Baboy balat,100%,319,19.8,26.6,0.0
+F182,Pork spare rib,Sus scrofa scrofa,Baboy tadyang,46%,293,14.6,26.1,0.0
+F183,Pork spleen,Sus scrofa scrofa,Baboy lapay,100%,87,16.1,2.5,0.0
+F184,"Pork spleen, boiled",Sus scrofa scrofa,"Baboy lapay, nilaga",100%,94,15.2,3.7,0.0
+F185,Pork stomach,Sus scrofa scrofa,Baboy sikmura,96%,121,13.1,6.5,2.6
+F186,Pork tail,Sus scrofa scrofa,Baboy buntot,76%,477,15.4,46.1,0.0
+F187,Pork tenderloin,Sus scrofa scrofa,Baboy lomo,100%,237,16.7,18.9,0.0
+F188,Pork tongue,Sus scrofa scrofa,Baboy dila,86%,241,14.8,20.2,0.1
+F189,Pork uterus,Sus scrofa scrofa,Baboy bahay-guya,94%,77,15.4,1.7,0.0
+F190,"Pork, suckling, belly",Sus scrofa scrofa,"Baboy litsunin, liempo",100%,174,18.3,11.2,0.0
+F191,"Pork, suckling, blood",Sus scrofa scrofa,"Baboy litsunin, dugo",100%,56,11.5,0.0,2.6
+F192,"Pork, suckling, brain",Sus scrofa scrofa,"Baboy litsunin, utak",100%,129,10.2,9.7,0.2
+F193,"Pork, suckling, heart",Sus scrofa scrofa,"Baboy litsunin, puso",100%,125,16.3,6.6,0.0
+F194,"Pork, suckling, intestine, large",Sus scrofa scrofa,"Baboy litsunin, bitukang malaki",100%,87,9.1,2.5,6.9
+F195,"Pork, suckling, intestine, small",Sus scrofa scrofa,"Baboy litsunin, bitukang maliit",100%,61,12.5,0.9,0.6
+F196,"Pork, suckling, kidney",Sus scrofa scrofa,"Baboy litsunin, bato",100%,95,15.9,3.4,0.3
+F197,"Pork, suckling, leg",Sus scrofa scrofa,"Baboy litsunin, pata",56%,128,19.9,5.4,0.0
+F198,"Pork, suckling, liver",Sus scrofa scrofa,"Baboy litsunin, atay",100%,116,16.0,2.8,6.6
+F199,"Pork, suckling, lung",Sus scrofa scrofa,"Baboy litsunin, baga",100%,87,15.8,2.4,0.6
+F200,"Pork, suckling, spare rib",Sus scrofa scrofa,"Baboy litsunin, tadyang",46%,168,17.0,11.1,0.0
+F201,"Pork, suckling, spleen",Sus scrofa scrofa,"Baboy litsunin, lapay",100%,105,15.6,4.2,1.3
+F202,"Pork, suckling, stomach",Sus scrofa scrofa,"Baboy litsunin, sikmura",100%,95,14.3,4.2,0.0
+F203,Quail meat,Coturnix coturnix,Pugo laman,69%,154,21.1,7.7,0.0
+F204,Rabbit liver,Oryctolagus cuniculus,Kuneho atay,100%,111,15.4,2.5,6.6
+F205,Rabbit thigh,Oryctolagus cuniculus,Kuneho hita,-,94,18.6,2.2,0.0
+F206,Rabbit white meat,Oryctolagus cuniculus,Kuneho laman,100%,94,18.2,2.4,0.0
+F207,Snipe lean meat,Gallinago gallinago,Agatsona laman,100%,113,21.0,3.2,0.0
+F208,Turkey breast,Meleagris gallopavo,Pabo pitso,-,100,24.1,0.4,0.0
+F209,Turkey liver,Meleagris gallopavo,Pabo atay,100%,124,19.2,3.9,2.9
+F210,Turkey thigh,Meleagris gallopavo,Pabo hita,-,100,20.3,2.1,0.0
+F211,Venison rib,Rusa marianna,Usa tadyang,-,89,21.9,0.1,0.0
+F212,Venison thigh,Rusa marianna,Usa hita,-,89,21.9,0.2,0.0
+F213,Bacon,N/A,-,100%,603,11.1,58.3,8.4
+F214,"Beef chunk, cnd",N/A,N/A,100%,252,14.7,18.3,7.0
+F215,Beef jerky,N/A,"Tapa, baka",100%,102,13.8,3.6,3.7
+F217,Beef spread,N/A,N/A,100%,227,14.6,14.5,9.6
+F218,"Beef, sweet cured",N/A,"Tocino, baka",100%,80,18.1,0.8,0.0
+F219,Carabeef jerky,N/A,"Tapa, kalabaw",100%,220,51.7,1.5,0.0
+F220,Chicken liver spread,N/A,N/A,100%,211,8.4,15.4,9.8
+F221,Chicken meat ball,N/A,N/A,100%,147,9.8,4.8,16.1
+F222,Chicken nugget,N/A,N/A,100%,220,15.5,11.2,14.3
+F223,"Sausage, chicken",N/A,"Longanisa, manok",100%,185,10.7,10.8,11.3
+F224,Chicken spread,N/A,N/A,100%,211,10.4,14.5,9.6
+F225,Corned beef loaf,N/A,N/A,99%,227,13.3,17.9,3.1
+F226,"Corned beef, cnd",N/A,Karne norte,100%,168,17.9,10.7,0.0
+F227,Embotido,N/A,-,100%,164,10.1,8.5,11.7
+F228,Ham,N/A,Hamon,100%,421,16.4,39.5,0.0
+F229,"Ham, chopped, cnd",N/A,N/A,100%,220,14.1,16.1,4.6
+F230,"Ham, deviled spread",N/A,N/A,100%,254,13.8,18.9,7.2
+F231,"Ham, pork, sweet, chopped",N/A,-,100%,117,10.7,4.4,8.7
+F232,Hamburger patty,N/A,-,100%,319,10.8,20.1,23.8
+F233,"Liver pate, cnd",N/A,N/A,100%,232,14.5,17.5,4.0
+F234,Liver spread,N/A,N/A,100%,185,9.3,9.8,14.9
+F235,"Luncheon meat, cnd",N/A,-,100%,307,13.7,26.4,3.7
+F236,"Luncheon meat, deviled spread",N/A,N/A,100%,308,12.1,28.4,1.0
+F237,"Luncheon meat, pork & ham",N/A,N/A,100%,321,13.6,28.6,2.3
+F238,"Luncheon meat, pork, Chinese style",N/A,N/A,100%,296,10.7,25.0,7.1
+F240,Meat loaf,N/A,-,100%,161,9.7,7.7,13.1
+F241,"Pork crackling, internal organ",N/A,"Chicharon/Sitsaron baboy, lamang loob",100%,373,37.8,24.6,0.0
+F242,"Pork crackling, skin",N/A,"Chicharon/Sitsaron baboy, balat",100%,591,65.6,36.5,0.0
+F243,Pork jerky,N/A,"Tapa, baboy",100%,277,15.8,19.2,10.2
+F245,"Pork, sweet cured",N/A,"Tocino, baboy",100%,206,11.2,6.4,25.9
+F246,"Pork, sweet cured, Pampanga",N/A,"Tocino, baboy, Pampanga",100%,223,10.1,13.8,14.7
+F247,"Potted meat spread, w/ cereal, cnd",N/A,-,100%,186,7.7,9.9,16.6
+F248,"Sausage, bologna",N/A,N/A,100%,165,10.1,11.7,4.9
+F249,"Sausage, chorizo",N/A,"Longanisa, chorizo",100%,440,29.6,33.2,5.8
+F250,"Sausage, chorizo, Bilbao style",N/A,"Longanisa, chorizo de Bilbao",100%,436,18.0,40.3,0.2
+F251,"Sausage, frankfurter",N/A,N/A,100%,208,13.3,15.1,4.8
+F252,"Sausage, ham",-,-,100%,160,14.1,10.3,2.8
+F253,"Sausage, hotdog",N/A,-,100%,226,13.4,17.0,4.8
+F254,"Sausage, hotdog, smoked",N/A,N/A,100%,160,12.9,10.8,2.7
+F255,"Sausage, hotdog, w/ cheese",N/A,Cheese dog,100%,245,11.7,18.1,8.8
+F256,"Sausage, mortadella",N/A,N/A,100%,260,8.6,22.1,6.7
+F257,"Sausage, pork",N/A,"Longanisa, baboy",100%,315,11.8,22.7,15.8
+F258,"Sausage, pork & beef",N/A,"Longanisa, baboy at baka",95%,432,13.5,38.5,7.8
+F259,"Sausage, pork, Chinese",N/A,"Longanisa, baboy, Chinese/Chorizo de Macau",100%,498,15.6,42.6,13.0
+F260,"Sausage, salami",N/A,N/A,100%,244,16.2,18.7,2.7
+F261,"Sausage, Vienna",N/A,N/A,100%,163,8.8,10.5,8.4
+F262,"Sausage, Vienna, tidbits",N/A,N/A,100%,127,8.3,6.6,8.5
+F263,Venison jerky,N/A,"Tapa, usa",100%,323,62.8,8.0,0.0
+F264,"Chicken blood, bbq",Gallus gallus,Betamax,100%,91,16.0,1.7,2.8
+F265,"Chicken, whole, seasoned, roasted",Gallus gallus,Lechon manok,70%,226,24.8,12.0,4.7
+F266,"Chicken, whole, seasoned, roasted, skin and visible fat removed",Gallus gallus,"Lechon manok, walang balat",62%,162,26.2,5.4,2.2
+F267,"Pork, bbq",Sus scrofa scrofa,Barbekyung baboy,100%,408,21.5,29.8,13.5
+F268,"Pork back, seasoned, roasted, skin and visible fat removed",Sus scrofa scrofa,"Baboy likod, laman, litson",67%,177,31.2,4.9,2.0
+F269,"Pork belly, seasoned, roasted",Sus scrofa scrofa,"Baboy liempo, litson",99%,385,21.0,31.6,4.1
+F270,"Pork belly, seasoned, roasted, skin and visible fat removed",Sus scrofa scrofa,"Baboy liempo, litson, walang balat at taba",69%,299,24.0,22.6,0.0
+F271,"Pork skin, seasoned, roasted",Sus scrofa scrofa,"Baboy balat, litson",100%,559,33.0,47.4,0.0
+F272,"Beef franks, raw",N/A,-,100%,205,13.9,16.1,1.0
+F273,"Sausage, pepperoni, raw",N/A,-,100%,237,12.8,18.6,4.6
+G001,Abalone,Haliotis spp.,Lapas/Kapinan,67%,120,20.5,0.9,7.4
+G002,Abalone juice,Haliotis spp.,Lapas/Kapinan katas,100%,74,10.6,0.4,7.1
+G003,Amber fish,Seriola sp.,Tonto,54%,81,18.1,0.9,0.0
+G004,Sinarapan,Mystichthys luzoninses,Tabios,97%,64,13.3,1.2,0.0
+G005,"Anchovy, Indian (adult)",Stolephorus indicus,Tuakang,75%,85,20.9,0.1,0.1
+G006,"Anchovy, long-jawed, w/o head",Stolephorus commersonnii,"Dilis, walang ulo",100%,129,19.9,5.5,0.0
+G007,"Anchovy, long-jawed, whole",Stolephorus commersonnii,"Dilis, buo",100%,69,14.1,1.4,0.0
+G008,"Barracuda, striped",Sphyraena obtusata,Turcillo,50%,90,19.7,1.2,0.0
+G009,"Butterfly fish, threadfin",Chaetodon auriga,Paru-paro,49%,85,19.8,0.6,0.0
+G010,"Fusilier, goldband",Pterocaesio chrysozona,Dalagang bukid,69%,128,21.5,4.7,0.0
+G011,Cardinal fish,Fibramia amboinensis,Dangat,45%,73,17.4,0.4,0.0
+G012,Carp,Cyprinus carpio,Karpa,55%,185,17.8,12.6,0.0
+G013,"Catfish, freshwater",Clarias batrachus,Hito,70%,80,18.7,0.6,0.0
+G014,"Catfish, saltwater",Arius manillensis,Kanduli,36%,86,18.2,1.5,0.0
+G015,"Cavalla, banded",Caranx sexfasciatus,Talakitok/Maliputo,48%,108,20.1,3.1,0.0
+G016,"Cavalla, banded, fried",Caranx sexfasciatus,"Talakitok, prito",64%,160,20.2,8.8,0.0
+G017,"Cavalla, banded, steamed",Caranx sexfasciatus,"Talakitok, pinasingawan",65%,67,11.2,2.5,0.0
+G018,"Clam, bilakong",Pharella acutidens,Bilakong,31%,82,10.2,2.0,5.8
+G019,"Clam, freshwater, tulya",Corbicula manilensis,Tulya,22%,95,7.6,1.9,11.8
+G020,"Clam, freshwater, tulya, boiled",Corbicula manilensis,"Tulya, nilaga",42%,105,8.9,1.9,13.0
+G021,"Clam, halaan",Cyraeidae,Halaan,31%,47,6.7,0.7,3.5
+G022,"Clam, halaan, boiled",Cyraeidae,"Halaan, nilaga",52%,74,10.5,1.1,5.4
+G023,"Clam, imbao",Anodontia edentula,Imbao,40%,64,6.8,0.8,7.3
+G024,"Clam, imbao, boiled",Anodontia edentula,"Imbao, nilaga",-,47,6.4,0.6,4.1
+G025,"Clam, kabibi",Soletellina cumingiana,Kabibi,24%,62,9.0,1.6,3.0
+G026,"Clam, kanturi",Venus sp.,Kanturi,13%,59,12.2,1.0,0.3
+G027,"Clam, lukan",Cyrena ventricosa,Lukan,30%,43,5.1,0.7,4.0
+G028,"Clam, rayed shell",Gari elongata,Paros,61%,48,8.7,0.8,1.4
+G029,"Clam, razor shell",Pharella sp.,Tikhan,37%,41,8.0,0.4,1.4
+G030,"Clam, tongue",Lingula unguis,Balay,43%,98,12.4,3.4,4.4
+G031,"Clam, tongue, head, blanched",Lingula unguis,"Balay, ulo, binanlian",-,79,5.9,2.0,9.4
+G032,"Clam, tongue, tail",Lingula unguis,"Balay, buntot",58%,51,9.4,0.4,2.5
+G033,"Clam, venus",Circe scripta,Bigatan,8%,138,12.8,2.0,17.3
+G034,"Clam, wedge shell/bean",Donax faba,Alamis,20%,71,8.8,1.7,5.1
+G035,"Climbing perch, common",Anabas testudineus,Martiniko,44%,71,17.4,0.2,0.0
+G036,"Crab, blue swimming, fat",Portunus pelagicus,Alimasag alige,100%,86,11.5,4.4,0.0
+G037,"Crab, blue swimming, w/o fat",Portunus pelagicus,Alimasag laman,34%,93,19.9,0.5,2.2
+G038,"Crab, blue swimming, w/o fat, boiled",Portunus pelagicus,"Alimasag laman, nilaga",30%,98,19.4,0.9,3.1
+G039,"Crab, mud/mangrove, fat",Scylla serrata,Alimango alige,100%,188,26.0,5.6,8.5
+G040,"Crab, mud/mangrove, w/o fat",Scylla serrata,Alimango laman,42%,103,18.5,3.2,0.0
+G041,"Crab, mud/mangrove, w/o fat, boiled",Scylla serrata,"Alimango laman, nilaga",32%,88,17.6,1.9,0.0
+G042,"Crab, shore",Varuna litterata,Talangka,45%,122,13.8,3.8,8.1
+G043,"Crevalle, deep-bellied",Alepes kleinii,Salay-salay aso,56%,87,19.4,1.0,0.0
+G044,"Crevalle, even-bellied",Alepes djedaba,Salay-salay,35%,85,17.7,1.6,0.0
+G045,"Croaker, tigertooth",Otolithes ruber,Abo,47%,89,19.1,1.4,0.0
+G046,"Croaker, plain",Pennahia anea,"Alakaak/Croaker, truncate-tail",49%,80,19.1,0.4,0.0
+G047,"Croaker, smooth-scaled whiskered",Johnius dussumieri,N/A,44%,84,18.6,1.1,0.0
+G048,"Drepane, speckled",Drepane punctata,Mayang,28%,80,16.8,1.4,0.0
+G049,"Eel, silver pike",Muraenesox cinereus,Pindanga,66%,72,17.5,0.2,0.0
+G050,"Eel, swamp",Ophisternon bengalense,Palos,52%,139,19.2,6.9,0.0
+G051,Fish roe,N/A,"Isda, itlog",100%,123,17.3,5.6,0.9
+G052,"Flatfish/Brill, rough-scaled",Pseudorhombus oligodon,Dapa,60%,84,20.5,0.2,0.0
+G053,"Flatfish/Brill, smooth-scaled",Pseudorhombus arsius,Dapang bilog,48%,81,19.7,0.2,0.0
+G054,"Flatfish/Turbot, Indian",Psettodes erumei,Kalangkaw,59%,94,23.0,0.2,0.0
+G055,"Flathead, Indian",Platycephalus indicus,Sunog,63%,90,22.1,0.2,0.0
+G056,Flying fish,Cypselurus oligolepis,Bulador/Borador,62%,86,21.0,0.2,0.0
+G057,"Garfish, common",Tylosurus crocodilus,Kambabalo/Hound needlefish,64%,115,26.6,0.9,0.0
+G058,"Gizzard shad, short-finned",Anodontostoma chacunda,Kabasi/Chacunda gizzard shad,36%,78,18.6,0.4,0.0
+G059,"Goatfish, ochrebanded",Upeneus sundaicus,Saramulyete,38%,87,18.7,1.3,0.0
+G060,"Goby, flat-headed",Glossogobius giurus,Biyang puti/Tank goby,39%,81,19.7,0.2,0.0
+G061,"Goby, long-tailed",Oxyurichthys microlepis,Talimusak,100%,89,16.8,2.4,0.0
+G062,Gouramy,Osphronemus goramy,Gurami/Goramy,55%,91,16.9,2.6,0.0
+G063,"Grouper, whitespotted",Epinephelus corallicola,Lapu-lapu,49%,63,14.9,0.4,0.0
+G064,"Hair tail, largehead",Trichiurus lepturus,Balila,55%,80,19.1,0.4,0.0
+G065,"Halfbeak, long billed",Rhynchorhamphus georgii,Buguing,56%,88,19.2,1.2,0.0
+G066,Hard-tail,Megalaspis cordyla,Oriles,37%,96,21.4,1.2,0.0
+G067,"Herring, big-eyed",Pellona ditchela,Tuabak/Dilat,31%,96,22.2,0.8,0.0
+G068,"Herring, deep-bodied",Sardinella albella,Lapad/White sardinella,59%,91,19.7,1.3,0.0
+G069,"Lizard fish, common",Saurida tumbil,Kalaso,45%,75,18.2,0.2,0.0
+G070,"Mackerel, short-bodied",Rastrelliger brachysoma,Hasa-hasa,52%,108,21.6,2.4,0.0
+G071,"Mackerel, short-bodied, fried",Rastrelliger brachysoma,"Hasa-hasa, prito",68%,221,21.6,14.9,0.0
+G072,"Mackerel, Spanish",Scomberomorus commerson,Tangigi,69%,80,17.6,1.1,0.0
+G073,"Mackerel, Indian",Rastrelliger kanagurta,Alumahan,60%,118,21.8,3.4,0.0
+G074,Milkfish,Chanos chanos,Bangus,65%,137,19.8,6.4,0.0
+G075,"Milkfish, broiled",Chanos chanos,"Bangus, inihaw",71%,137,23.4,4.8,0.0
+G076,"Milkfish, fried",Chanos chanos,"Bangus, prito",82%,188,23.6,10.4,0.0
+G077,"Mojarra, longfin",Pentaprion longimanus,Hubad,50%,77,18.9,0.2,0.0
+G078,"Mojarra, whipfin",Gerres filamentosus,Malakapas,46%,87,20.4,0.6,0.0
+G079,"Moonfish, spotted",Mene maculata,Chabita/Hiwas,48%,116,24.4,2.0,0.0
+G080,Moray,Muraenidae sp,Malabanos,85%,116,20.1,4.0,0.0
+G081,"Mudfish/Murrel, striated",Channa striata,Dalag,61%,99,21.2,1.6,0.0
+G082,"Mudfish/Murrel, striated, boiled",Channa striata,"Dalag, nilaga",-,95,22.8,0.4,0.0
+G083,"Mullet, black-finned",Planiliza melinopterus,Talilong/Otomebora mullet,49%,113,19.3,4.0,0.0
+G084,"Mullet, large-scaled",Ellochelon vaigiensis,Banak,67%,89,20.0,1.0,0.0
+G085,"Mussel, green",Perna viridis,Tahong,56%,166,13.6,7.5,11.1
+G086,"Mussel, green, boiled",Perna viridis,"Tahong, nilaga",48%,33,3.1,0.4,4.3
+G087,"Bream, doublewhip threadfin",Nemipterus nematophorus,Bisugo,45%,90,19.0,1.5,0.0
+G088,Octopus,Octopus spp.,Pugita,94%,59,13.3,0.6,0.0
+G089,Oyster,Crassostrea sp.,Talaba,12%,60,5.9,1.7,5.2
+G090,"Oyster, window pane, meat",Placuna placenta,"Kapis, laman",-,119,23.3,1.4,3.3
+G091,"Parrot fish, daisy",Chlorurus sordidus,Isdang loro,35%,84,20.0,0.4,0.0
+G092,"Threadfish, Indian",Alectis indica,Damis/Diamond trevally,54%,89,20.5,0.8,0.0
+G093,"Silvergrunt, bluecheek",Pomadasys argyreus,Bangok-ngok,29%,83,19.2,0.7,0.0
+G094,"Pomfret, black",Parastromateus niger,Pampano,48%,93,18.8,2.0,0.0
+G095,"Bream, humpnose big-eye",Monotaxis grandoculis,Malaking mata,46%,80,18.9,0.5,0.0
+G096,"Emperor, pink ear",Lethrinus lentjan,Bitilla,45%,89,21.1,0.5,0.0
+G097,"Seabream, goldsilk",Acanthopagrus berda,Bakokong moro,40%,77,19.0,0.1,0.0
+G098,Red snapper/Malabar,Lutjanus malabaricus,Maya-maya,44%,64,15.6,0.2,0.0
+G099,"Runner, rainbow",Elagatis bipinnulata,Salmon,44%,85,19.6,0.7,0.0
+G100,"Sardine, bombon",Sardinella tawilis,Tawilis/Freshwater sardinella,-,114,19.3,4.1,0.0
+G101,"Sardine, fimbriated",Sardinella brachysoma,Tabagak,54%,106,20.5,2.7,0.0
+G102,"Sardine, fimbriated, fry",Sardinella fimbriata,Silinyasi,68%,101,20.6,2.1,0.0
+G103,"Sardine, Indian",Sardinella longiceps,"Tamban/Sardine, Indian oil",52%,120,19.5,4.7,0.0
+G104,"Scad, big-eye",Selar crumenophthalmus,Matang baka,53%,105,20.8,2.4,0.0
+G105,"Scad, round",Decapterus macrosoma,Galunggong,49%,100,20.4,2.1,0.0
+G106,Sea bass,Lates calcarifer,Apahap,55%,75,17.8,0.4,0.0
+G107,"Sea catfish, smooth-headed",Plicofollis nella,Bunguan/Bongoan,45%,89,21.3,0.4,0.0
+G108,Sea cucumber,Holothuria spp.,Balatan/Trepang,100%,23,5.1,0.1,0.3
+G113,"Shrimp, banana prawn",Fenneropenaeus merguiensis,"Hipon, puti",62%,91,19.0,0.8,2.0
+G114,"Shrimp, banana prawn, boiled",Fenneropenaeus merguiensis,"Hipon, puti, nilaga",49%,104,11.2,0.4,14.0
+G115,"Shrimp, freshwater",Macrobrachium,Ulang,54%,93,19.4,1.7,0.0
+G116,"Shrimp, freshwater (small)",Palaemon sp.,"Hipon, tagunton",100%,98,20.2,1.9,0.0
+G117,"Shrimp, giant tiger prawn",Penaeus monodon,Sugpo,63%,93,20.0,0.9,1.2
+G118,"Shrimp, giant tiger prawn, head",Penaeus monodon,"Sugpo, ulo",50%,74,11.9,2.2,1.6
+G119,"Shrimp, greasy back",Metapenaeus ensis,"Hipon, suwahe",60%,78,17.7,0.6,0.4
+G120,"Shrimp, greasy back, boiled",Metapenaeus ensis,"Hipon, suwahe, nilaga",50%,84,18.2,0.4,1.9
+G121,"Shrimp, sergestid",Acetes sibogae,Alamang,100%,78,16.6,1.3,0.0
+G122,"Siganid, javan",Siganus javus,Samaral/Streaked spinefoot,46%,89,19.8,1.1,0.0
+G123,Silver-bar fish,Chirocentrus dorab,Parang-parang/Dorab wolf-herring,70%,87,21.1,0.3,0.0
+G125,"Slipmouth, black-finned",Karalla daura,Dalangat,38%,88,18.7,1.5,0.0
+G126,"Slipmouth, common",Leiognathus equulus,Sapsap,40%,91,18.2,2.0,0.0
+G127,"Snail, black",Pila luzonica,"Kuhol, itim",41%,79,12.2,0.4,6.6
+G128,"Snail, freshwater",Melanoides sp.,Susong pilipit,29%,94,9.4,0.8,12.2
+G129,"Snail, golden",Pomacea insularis,"Kuhol, kulay ginto",52%,74,12.8,0.6,4.3
+G130,Spadefish,Scatophagus argus,Kitang/Spotted scat,45%,99,20.3,2.0,0.0
+G131,Squid,Loligo pealeii,Pusit,96%,71,15.6,1.0,0.0
+G132,"Squid, boiled",Loligo pealeii,"Pusit, nilaga",98%,80,17.4,1.2,0.0
+G133,"Sting ray, blue-spotted",Neotrygon kuhlii,Dahonan/Dahunan,41%,74,18.3,0.1,0.0
+G134,"Sting ray, honeycomb",Himantura uarnak,"Paging, bulik",36%,59,14.3,0.2,0.0
+G135,"Surgeonfish, blue-lined",Acanthurus mata,Labahita,41%,78,17.8,0.7,0.0
+G136,Swordfish,Xiphias gladius,Malasugi,55%,113,19.2,4.0,0.0
+G137,Tarpon,Megalops cyprinoides,Buwan-buwan,48%,88,20.8,0.5,0.0
+G138,"Ten-pounder, Hawaiian",Elops hawaiensis,Bidbid/Hawaiian ladyfish,56%,77,18.8,0.2,0.0
+G139,"Therapon, convex-lined",Terapon jarbua,Bagaong,39%,79,18.3,0.6,0.0
+G140,"Theraponid, silvery",Leiopotherapon plumbeus,Ayungin/Silver perch,35%,75,18.4,0.2,0.0
+G141,"Terapon, largescaled",Terapon theraps,Babansi,40%,89,20.8,0.6,0.0
+G142,Threadfin fish,Filimanus heptadactyla,Mamale,35%,81,18.4,0.8,0.0
+G143,"Threadfin, fourfinger",Eleutheronema tetradactylum,Mamale,40%,73,17.9,0.1,0.0
+G144,"Threadfin, small-mouth",Polydactylus microstomus,Mamaleng-bato,42%,81,19.7,0.2,0.0
+G145,Tilapia,Oreochromis mossambicus,N/A,46%,107,18.1,3.8,0.0
+G146,"Tuna, frigate",Auxis thazard,Tulingan,62%,119,24.0,2.6,0.0
+G147,"Tuna, yellow-fin",Thunnus albacares,Tambakol,67%,107,23.6,1.4,0.0
+G148,"Whiting, common",Sillago sihama,Asohos,46%,89,21.1,0.5,0.0
+G149,"Amber fish, dried",N/A,"Tonto, daing",65%,275,57.2,5.1,0.0
+G150,"Anchovy, long-jawed, dried",N/A,"Dilis, tuyo",100%,318,69.0,4.7,0.0
+G151,"Anchovy, long-jawed, dried, ground",N/A,"Dilis, giniling",100%,351,82.0,2.6,0.0
+G152,"Fusilier, goldband, dried",N/A,"Dalagang bukid, daing",66%,214,42.6,4.9,0.0
+G153,"Catfish, freshwater, dried",N/A,"Hito, daing",65%,275,45.6,10.3,0.0
+G154,"Catfish, saltwater, dried",N/A,"Kanduli, daing",56%,201,43.9,2.8,0.0
+G155,"Cavalla, banded, dried",N/A,"Talakitok/Maliputo, daing",65%,218,44.2,4.6,0.0
+G156,"Cod, dried",N/A,"Bakalaw, daing",73%,218,51.8,1.2,0.0
+G157,"Crab, mud/mangrove, meat, cnd",N/A,"Alimango laman, de lata",100%,102,23.5,0.8,0.3
+G158,"Crevalle, deep-bellied, dried",N/A,"Salay-salay aso, daing",46%,288,43.6,12.6,0.0
+G159,"Croaker, plain, dried",N/A,"Alakaak, daing",59%,201,41.9,3.7,0.0
+G160,"Eel, swamp, dried",N/A,"Palos, daing",82%,238,47.4,5.4,0.0
+G161,Fish ball,N/A,N/A,100%,121,8.6,0.5,20.6
+G162,"Fish ball, fried",N/A,N/A,100%,266,10.3,10.2,33.3
+G163,"Fish preparation, quekiam",N/A,Kikyam,100%,129,4.2,2.1,23.4
+G164,"Flatfish/Brill, rough-scaled, dried",N/A,"Dapa, tuyo",74%,266,54.7,1.4,8.7
+G165,"Flatfish/Brill, rough-scaled, dried",N/A,"Dapa, daing",83%,201,47.7,1.1,0.0
+G166,"Gizzard shad, short-finned, dried",N/A,"Kabasi, daing",47%,149,26.0,5.0,0.0
+G167,"Gizzard shad, short-finned, smoked",N/A,"Kabasi, tinapa",53%,130,26.6,2.6,0.0
+G168,"Goby, flat-headed, dried",N/A,"Biyang puti, daing",68%,187,44.8,0.9,0.0
+G169,"Sinarapan, dried",N/A,"Tabyos, tuyo",100%,291,55.5,7.7,0.0
+G170,"Grouper, whitespotted, dried",N/A,"Lapu-lapu, daing",52%,158,35.8,1.6,0.0
+G171,"Hard-tail, dried",N/A,"Oriles, daing",67%,219,48.7,2.7,0.0
+G172,"Jellyfish, dried",N/A,"Dikya, tuyo",100%,69,7.2,0.5,8.8
+G173,"Lizard fish, common, dried",N/A,"Kalaso, daing",78%,178,41.5,1.3,0.0
+G174,"Mackerel scad, in tomato sce, cnd",N/A,"Bakutut, sa tomato sce, de lata",100%,147,13.4,9.4,2.2
+G175,"Mackerel, short-bodied, dried",N/A,"Hasa-hasa, tuyo",66%,202,41.2,4.1,0.0
+G176,"Mackerel, short-bodied, smoked",N/A,"Hasa-hasa, tinapa",59%,139,29.8,2.2,0.0
+G177,"Mackerel, Spanish, dried",N/A,"Tangigi, daing",96%,184,41.0,2.2,0.0
+G178,"Mackerel, Indian, dried",N/A,"Alumahan, daing",62%,193,41.0,3.2,0.0
+G179,"Mackerel, Indian, in tomato sce",N/A,"Alumahan, sa tomato sce",100%,105,16.5,4.1,0.0
+G180,"Milkfish, dried",N/A,"Bangus, daing",84%,415,51.2,23.3,0.0
+G181,"Milkfish, in natural oil, cnd",N/A,"Bangus, salmon style, de lata",100%,108,16.6,4.5,0.3
+G182,"Milkfish, in spiced oil, cnd",N/A,"Bangus, Spanish style, de lata",100%,295,15.8,25.4,0.9
+G183,"Milkfish, smoked",N/A,"Bangus, tinapa",65%,212,27.2,11.5,0.0
+G184,"Mudfish/Murrel, striated, dried",N/A,"Dalag, daing",67%,215,45.7,3.6,0.0
+G185,"Mullet, black-finned, dried",N/A,"Talilong, daing",51%,189,31.3,7.1,0.0
+G186,"Mullet, large-scaled, dried",N/A,"Banak, daing",67%,199,45.4,1.9,0.0
+G187,"Bream, doublewhip threadfin, dried",N/A,"Bisugo, daing",54%,162,35.4,2.3,0.0
+G188,"Oyster, dried",N/A,"Talaba, tuyo",100%,355,46.0,7.9,24.9
+G189,"Parrot fish, daisy, dried",N/A,"Isdang loro, daing",51%,242,59.2,0.6,0.0
+G190,"Emperor, pink ear, dried",N/A,"Bitilla, tuyo",30%,181,43.3,0.9,0.0
+G191,"Seabream, goldsilk, dried",N/A,"Bakokong moro, daing",46%,193,40.1,3.6,0.0
+G192,"Red snapper/Malabar, dried",N/A,"Maya-maya, daing",73%,204,45.0,2.7,0.0
+G193,"Runner, rainbow, in oil, cnd",N/A,"Salmon, sa mantika, de lata",100%,192,20.4,8.2,9.0
+G194,"Sardine, bombon, dried",N/A,"Tawilis, tuyo",48%,157,26.2,5.8,0.0
+G195,"Sardine, bombon, smoked",N/A,"Tawilis, tinapa",55%,155,31.0,3.4,0.0
+G196,"Sardine, fimbriated, fry, dried",N/A,"Silinyasi, tuyo",57%,183,40.9,2.1,0.0
+G197,"Sardine, fimbriated, fry, dried",N/A,"Silinyasi, daing",60%,343,57.3,12.6,0.0
+G198,"Sardine, fimbriated, smoked",N/A,"Tabagak, tinapa",58%,168,31.2,4.0,1.9
+G199,"Sardine, Indian, dried",N/A,"Tamban, daing",77%,160,37.4,1.1,0.0
+G200,"Sardine, Indian, dried",N/A,"Tamban, tuyo",54%,215,43.0,4.8,0.0
+G201,"Sardine, Indian, smoked",N/A,"Tamban, tinapa",60%,160,30.0,4.4,0.0
+G202,"Sardines, in spiced oil, cnd",N/A,"Sardinas, Spanish style, de lata",100%,438,19.8,39.9,0.0
+G203,"Sardines, in tomato sce, cnd",N/A,"Sardinas, sa tomato sce, de lata",100%,88,9.7,4.3,2.7
+G204,"Sardines, smoked, cnd",N/A,"Sardinas, tinapa, de lata",100%,157,29.0,4.2,0.8
+G205,"Scad, big-eye, dried",N/A,"Matang baka, daing",58%,175,39.8,1.7,0.0
+G206,"Scad, big-eye, smoked",N/A,"Matang baka, tinapa",66%,134,25.5,3.6,0.0
+G207,"Scad, round, dried",N/A,"Galunggong, daing",61%,199,41.1,3.8,0.0
+G208,"Scad, round, smoked",N/A,"Galunggong, tinapa",70%,158,31.6,3.5,0.0
+G209,"Sea bass, dried",N/A,"Apahap, daing",55%,244,44.0,7.6,0.0
+G210,"Shrimp, freshwater (small), dried",N/A,"Tagunton, tuyo",100%,246,23.1,2.3,33.2
+G211,"Shrimp, sergestid, dried",N/A,"Alamang, tuyo",100%,283,52.4,3.6,10.2
+G212,"Shrimp, small marine, dried",N/A,Hibe,100%,263,57.4,2.2,3.4
+G213,"Siganid, javan, dried",N/A,"Samaral, daing",57%,184,42.5,1.6,0.0
+G215,"Slipmouth, common, dried",N/A,"Sapsap, daing",51%,185,36.0,4.5,0.0
+G216,"Slipmouth, common, dried",N/A,"Sapsap, tuyo",43%,214,42.8,4.7,0.0
+G217,"Squid, dried",N/A,"Pusit, tuyo",98%,289,62.3,4.4,0.0
+G218,"Sting ray, honeycomb, dried",N/A,"Paging, bulik, daing",-,209,49.0,0.9,1.3
+G219,"Surgeonfish, blue-lined, dried",N/A,"Labahita, daing",73%,186,34.7,5.2,0.0
+G220,"Swordfish, dried",N/A,"Malasugi, daing",90%,250,53.5,4.0,0.0
+G221,"Theraponid, silvery, dried",N/A,"Ayungin, tuyo",64%,340,54.6,13.5,0.0
+G222,"Tilapia, dried",N/A,N/A,46%,313,60.6,7.8,0.0
+G223,"Tuna adobo, cnd",N/A,N/A,100%,140,14.0,7.6,4.0
+G224,"Tuna fillet, in soya oil, cnd",N/A,N/A,-,309,28.6,21.6,0.0
+G225,"Tuna fillet, in veg oil, cnd",N/A,N/A,100%,258,28.0,15.9,0.6
+G226,"Tuna flakes, in brine, cnd",N/A,N/A,100%,95,17.9,2.6,0.1
+G227,"Tuna flakes, in veg oil, cnd",N/A,N/A,100%,309,15.4,26.7,1.7
+G228,"Tuna mechado, cnd",N/A,N/A,100%,121,11.1,5.7,6.3
+G229,"Tuna sardines, in oil, cnd",N/A,N/A,-,183,16.4,12.5,1.3
+G230,"Tuna spread, cnd",N/A,N/A,100%,331,25.2,25.6,0.0
+G231,"Tuna, frigate, dried",N/A,"Tulingan, daing",81%,251,52.7,2.4,4.7
+G232,"Tuna, yellow-fin, dried",N/A,"Tambakol, daing",94%,230,54.5,1.3,0.0
+H001,"Egg, ant",N/A,"Itlog, langgam",100%,124,17.4,3.8,5.0
+H002,"Egg, chicken, white",N/A,"Itlog, manok, puti",100%,61,12.7,0.2,2.0
+H003,"Egg, chicken, whole",N/A,"Itlog, manok, buo",87%,139,12.3,9.4,1.4
+H004,"Egg, chicken, whole, boiled",N/A,"Itlog, manok, buo, nilaga",89%,166,14.0,12.0,0.6
+H005,"Egg, chicken, yolk",N/A,"Itlog, manok, pula",100%,316,14.3,27.0,3.9
+H006,"Egg, duck, white",N/A,"Itlog, pato, puti",100%,56,13.8,0.1,0.0
+H007,"Egg, duck, whole",N/A,"Itlog, pato, buo",87%,177,11.7,12.6,4.1
+H008,"Egg, duck, yolk",N/A,"Itlog, pato, pula",100%,357,16.4,31.0,3.1
+H010,"Egg, quail",N/A,"Itlog, pugo",85%,153,11.8,10.6,2.7
+H011,"Egg, quail, boiled",N/A,"Itlog, pugo, nilaga",88%,150,11.8,10.4,2.2
+H015,"Egg, duck, century",N/A,Century egg/Pidan,77%,215,12.5,11.6,15.1
+H016,"Egg, duck, fertilized, boiled",N/A,"Balut, nilaga",74%,172,12.8,12.4,2.2
+H017,"Egg, duck, fertilized, embryo",N/A,"Balut, sisiw",100%,55,9.6,0.7,2.6
+H018,"Egg, duck, fertilized, white",N/A,"Balut, bato",100%,137,25.4,0.6,7.6
+H019,"Egg, duck, fertilized, yolk",N/A,"Balut, pula",100%,352,14.8,31.2,2.9
+H020,"Egg, duck, infertile, boiled",N/A,"Penoy, nilaga",84%,198,13.6,14.4,3.5
+H021,"Egg, duck, whole, salted",N/A,"Itlog, pato, maalat",83%,192,13.6,13.3,4.4
+H022,"Egg, quail, pickled",N/A,"Itlog, pugo, pickled",100%,102,8.1,6.9,1.8
+J001,"Cheese, cheddar, pasteurized, processed",N/A,N/A,100%,322,21.7,22.7,7.8
+J002,"Cheese, cottage",N/A,N/A,100%,94,13.2,3.0,3.6
+J003,"Cheese, filled",N/A,N/A,100%,297,16.2,23.4,5.5
+J004,"Cheese, native",N/A,Kesong puti,100%,299,13.2,25.0,5.3
+J005,"Cheese, pimiento",N/A,N/A,100%,354,19.9,27.9,5.8
+J006,"Cheese, spread",N/A,N/A,100%,210,14.0,11.0,13.7
+J007,Cream,N/A,Krema,100%,241,2.3,23.9,4.2
+J008,Ice cream,N/A,Sorbetes/Street ice cream,100%,157,4.2,9.5,13.7
+J009,"Ice cream, strawberry flvr",N/A,"Sorbetes, lasang strawberry",100%,183,3.4,10.9,17.7
+J010,"Milk drink, cultured",N/A,N/A,100%,71,1.2,0.2,16.0
+J011,"Milk drink, recon, strawberry, UHT",N/A,N/A,100%,66,2.9,1.2,10.8
+J012,"Milk, buttermilk",N/A,"Gatas, buttermilk",100%,43,3.5,0.5,6.2
+J013,"Milk, carabao",N/A,"Gatas, kalabaw",100%,124,5.4,9.5,4.3
+J014,"Milk, cow",N/A,"Gatas, baka",100%,65,3.3,3.6,4.8
+J015,"Milk, evaporated",N/A,"Gatas, evaporada",100%,148,7.7,7.8,11.7
+J016,"Milk, evaporated, filled",N/A,"Gatas, evaporada, filled",100%,120,7.6,4.8,11.6
+J017,"Milk, goat",N/A,"Gatas, kambing",100%,73,3.6,4.1,5.3
+J018,"Milk, human",N/A,Gatas ng ina/Breast milk,100%,68,1.4,3.5,7.6
+J019,"Milk, pwdr, filled, inst",N/A,"Gatas, pulbos, filled, inst",100%,508,26.2,28.0,37.8
+J020,"Milk, pwdr, full cream",N/A,"Gatas, pulbos, full cream",100%,480,24.1,22.5,45.2
+J021,"Milk, pwdr, infant formula",N/A,"Gatas, pulbos, infant formula",100%,389,18.3,3.0,72.2
+J022,"Milk, pwdr, non-fat, inst",N/A,"Gatas, pulbos, non-fat, inst",100%,361,34.9,1.0,53.1
+J023,"Milk, pwdr, skim",N/A,"Gatas, pulbos, skim",100%,362,40.8,0.8,48.0
+J024,"Milk, recombined",N/A,"Gatas, recombined",100%,87,5.2,5.5,4.2
+J025,"Milk, sweetn, cond, filled",N/A,"Gatas, kondensada, filled",100%,334,8.5,7.0,59.3
+J026,Yoghurt,N/A,N/A,100%,83,5.3,4.5,5.4
+K001,Butter,N/A,Mantekilya,100%,772,0.5,85.5,0.0
+K002,Coconut milk,N/A,"Niyog, gata",100%,343,5.5,34.8,1.9
+K003,"Fat, pork",N/A,"Mantika, baboy",100%,900,0.0,100.0,0.0
+K004,Margarine,N/A,Margarina,100%,831,0.3,91.9,0.5
+K006,"Margarine, fortified",N/A,N/A,100%,818,0.1,90.8,0.0
+K007,Mayonnaise,N/A,N/A,100%,715,1.2,78.3,1.4
+K008,"Oil, coconut",N/A,"Langis, niyog",100%,892,0.0,99.1,0.0
+K009,"Oil, corn",N/A,"Langis, mais",100%,896,0.0,99.6,0.0
+K010,"Oil, fish",N/A,"Aseyte/aceite, isda",100%,900,0.0,100.0,0.0
+K011,Sandwich spread,N/A,N/A,100%,366,0.7,29.4,24.7
+M001,"Breadfruit, candied",N/A,"Rimas, candied",100%,341,0.6,0.5,83.4
+M002,"Candy bar, peanut",N/A,Matamis na mani,100%,535,20.3,29.9,46.1
+M003,"Candy bar, pili nut",N/A,Matamis na pili/Mazapan de pili,100%,537,5.7,30.1,60.7
+M004,"Candy, custard",N/A,Yema,100%,381,4.1,1.6,87.6
+M005,"Candy, hard",N/A,N/A,100%,401,0.1,1.8,96.0
+M006,"Candy, milk choc",N/A,N/A,100%,518,9.8,26.4,60.2
+M007,"Candy, pili nut",N/A,N/A,100%,639,7.5,52.7,33.6
+M008,"Candy, pulled",N/A,Tira-tira,100%,386,0.6,0.2,95.4
+M009,"Candy, toffee",N/A,N/A,100%,367,2.2,0.3,88.8
+M010,"Carageenan gel, assorted fruit-flvr",N/A,"Gulaman, may lasang prutas",100%,121,0.0,1.2,27.5
+M011,Caramelo,N/A,N/A,100%,398,0.0,0.0,99.5
+M012,Champoy,N/A,N/A,90%,390,0.3,0.8,95.5
+M013,"Chocolate, tablea",N/A,N/A,100%,481,4.3,18.2,75.1
+M014,Coco jam,N/A,Matamis na bao,100%,377,1.0,1.8,89.2
+M016,Creme custard,N/A,Leche flan,100%,228,5.9,4.3,41.4
+M017,"Fudge, durian",N/A,"Pastilyas, durian",100%,358,13.5,0.2,75.5
+M018,"Fudge, jackfruit",N/A,"Pastilyas, langka",100%,358,8.9,0.3,79.9
+M019,"Fudge, milk",N/A,"Pastilyas, gatas",100%,370,9.9,1.4,79.5
+M020,"Fudge, yam",N/A,"Pastilyas, ube",100%,349,8.0,1.5,75.9
+M021,Honey,N/A,Pulot-pukyutan,100%,258,0.1,0.1,64.1
+M022,Ice candy,N/A,N/A,100%,66,0.0,0.0,16.5
+M023,Ice drop,N/A,N/A,100%,82,0.6,0.2,19.5
+M024,"Jam, jackfruit & pineapple, cnd",N/A,N/A,100%,198,0.7,0.1,48.6
+M025,"Jam, mango, cnd",N/A,N/A,100%,287,0.9,0.2,70.5
+M026,"Jam, pineapple",N/A,N/A,100%,298,0.2,1.1,71.7
+M027,"Jam, yam",N/A,"Halaya, ubi",100%,296,7.1,0.4,66.1
+M028,"Jelly, guava",N/A,N/A,100%,345,0.0,0.8,84.5
+M030,"Jelly, pineapple",N/A,N/A,100%,310,0.1,0.7,75.9
+M031,"Jelly, strawberry",N/A,N/A,100%,255,0.1,1.0,61.4
+M032,Masareal,N/A,Mazareal,100%,484,13.9,21.2,59.4
+M033,Marshmallow,N/A,N/A,100%,317,3.0,0.3,75.6
+M034,"Milk choc bar, orange crunch",N/A,N/A,100%,535,2.7,28.7,66.5
+M035,"Nata de coco, sweetn",N/A,N/A,100%,146,0.0,0.2,36.1
+M036,"Nata de piña, sweetn",N/A,N/A,100%,181,0.1,0.2,44.6
+M037,Peanut brittle,N/A,N/A,100%,493,15.0,24.2,53.9
+M038,Peanut brittle w/ sesame seed,N/A,N/A,100%,522,14.0,27.6,54.4
+M039,"Peanut, milk choc-coated",N/A,"Mani, binalot sa tsokolate gatas",100%,506,13.8,25.2,56.0
+M040,Polvoron,N/A,N/A,100%,469,6.8,16.4,73.6
+M041,"Popsicle, choc flvr",N/A,N/A,100%,83,0.8,0.5,18.8
+M042,"Sugar, brown",N/A,"Asukal, pula",100%,398,0.1,0.3,98.7
+M043,"Sugar, crude, pakaskas",N/A,Pakaskas,100%,346,2.2,0.2,83.9
+M044,"Sugar, crude, panocha",N/A,Panocha,100%,376,0.2,0.4,92.8
+M045,"Sugar, pwdr",N/A,"Asukal, pulbos/Confectioner's sugar",100%,400,0.0,0.0,100.0
+M046,"Sugar, white, refined",N/A,"Asukal, puti, refinado",100%,400,0.0,0.0,99.9
+M047,Syrup,N/A,Arnibal,100%,308,0.0,0.1,76.8
+M048,"Syrup, molasses, cane",N/A,Pulot,100%,260,1.8,0.4,62.4
+M049,"Tamarind, candied",N/A,"Sampalok, candied",93%,335,0.4,0.7,81.7
+M050,"Wax gourd, candied",N/A,"Kundol, candied",100%,327,0.2,0.1,81.2
+M051,"Sugar, coconut sap",N/A,Coco sugar,100%,385,1.2,0.1,94.8
+M052,"Syrup, coconut sap",N/A,Coco syrup,100%,321,1.0,0.1,79.1
+N001,"Bilimbi, dried",N/A,"Kamyas, tuyo",100%,401,11.4,9.0,68.5
+N002,"Bouillon cube, beef",N/A,Beef cube,100%,284,10.4,21.2,13.0
+N003,"Bouillon cube, chicken",N/A,Chicken cube,100%,306,15.3,22.3,11.0
+N004,"Catsup, banana",N/A,N/A,100%,221,0.7,0.2,54.0
+N005,"Catsup, tomato",N/A,N/A,100%,131,1.6,0.6,29.9
+N006,"Clam paste, ginamos",N/A,"Bagoong tulya, ginamos",100%,69,7.5,0.4,8.9
+N007,"Fish paste, anchovy",N/A,Bagoong dilis,100%,133,10.0,2.5,17.5
+N008,"Fish paste, balatohan",N/A,Bagoong balatohan,-,162,8.1,3.2,25.1
+N009,"Fish paste, ginamos",N/A,"Bagoong isda, ginamos",100%,110,23.4,1.8,0.0
+N010,"Fish paste, siganid fry",N/A,Bagoong padas,100%,54,9.6,1.7,0.0
+N011,Fish sauce,N/A,Patis,100%,49,10.6,0.3,0.9
+N013,Lechon sauce,N/A,Litson sarsa,100%,118,1.2,0.3,27.6
+N014,Lemon grass lvs,Cymbopogon citratus,Tanglad dahon,-,111,1.4,1.4,23.1
+N015,"Lemon grass lvs, boiled",Cymbopogon citratus,"Tanglad dahon, nilaga",100%,57,0.3,0.3,13.2
+N016,"Banana, flowers, dried",N/A,"Saging bulaklak, tuyo",98%,329,9.6,1.3,69.6
+N017,Oyster paste,N/A,Bagoong talaba/Sise,100%,54,3.7,1.8,5.8
+N018,"Safflower, flowers, dried",Carthamus tinctorius,"Kasubha bulaklak, tuyo",100%,340,16.2,4.3,59.0
+N019,"Salt, coarse",N/A,"Asin, magaspang",100%,0,0.0,0.0,0.0
+N020,Shrimp paste,N/A,Bagoong hipon,100%,68,12.5,1.9,0.1
+N021,"Shrimp paste, alamang",N/A,"Bagoong hipon, alamang",100%,61,12.4,1.0,0.6
+N022,"Shrimp paste, bastos",N/A,"Bagoong hipon, bastos",100%,57,12.0,0.8,0.4
+N023,Soy sauce,N/A,Toyo,100%,75,3.5,0.1,15.0
+N024,Tomato paste,N/A,N/A,100%,112,4.3,0.1,23.4
+N025,Tomato sauce,N/A,N/A,100%,45,0.9,0.2,10.0
+N027,"Vinegar, coconut",N/A,"Suka, niyog",100%,7,0.0,0.1,1.4
+N028,"Vinegar, palm",N/A,"Suka, sasa",100%,11,0.2,0.0,2.6
+N029,"Vinegar, pineapple",N/A,"Suka, pinya",100%,7,0.1,0.1,1.3
+N030,Worcestershire sauce,N/A,N/A,100%,31,0.7,0.3,6.3
+N031,"Shrimp paste, sauteed",N/A,"Bagoong alamang, ginisa",100%,401,10.2,32.1,17.7
+P001,"Beer, lager type",N/A,Serbesa,100%,16,0.3,0.0,3.6
+P002,"Palm sap, fermented",N/A,Tuba,100%,35,0.2,0.3,7.9
+P003,Rum,N/A,N/A,100%,1,0.0,0.0,0.2
+P004,"Sugarcane, fermented",N/A,Basi,100%,21,0.0,0.1,5.0
+P005,"Wine, Chinese",N/A,"Alak, Tsina",100%,30,0.0,0.0,7.4
+Q001,"Ceylon moss/Agar-agar, in light syrup",N/A,Gulaman palamig,100%,56,0.0,2.5,8.3
+Q002,"Choc-flvr drink, prep",N/A,N/A,100%,80,1.5,0.3,17.7
+Q003,"Choc-flvr drink, pwdr",N/A,N/A,100%,394,5.7,3.6,84.8
+Q004,"Choc-flvr drink, UHT",N/A,N/A,100%,78,3.0,2.1,11.8
+Q005,"Choc-flvr energy drnk, granules, fortified",N/A,N/A,100%,406,11.0,6.6,75.7
+Q006,"Choc-flvr energy drnk, pwdr, fortified",N/A,N/A,100%,432,13.8,11.6,68.0
+Q007,"Choc-flvr food milk, pwdr",N/A,N/A,100%,398,21.7,5.0,66.7
+Q008,"Cocoa, pwdr, imported",N/A,"Kakaw, pulbos, imported",100%,474,20.0,21.1,51.0
+Q009,"Cocoa, pwdr, local",N/A,"Kakaw, pulbos, lokal",100%,465,21.7,19.8,49.9
+Q010,Coconut water,N/A,"Niyog, tubig",100%,22,0.0,0.2,5.1
+Q011,"Coffee, creamer & sugar (3 in 1)",N/A,N/A,100%,392,3.6,0.8,92.5
+Q012,"Coffee, inst, 100% pure",N/A,N/A,100%,329,21.6,0.1,60.3
+Q013,"Coffee, roasted",N/A,N/A,100%,406,15.2,7.1,70.4
+Q014,"Coffee, soybean, w/ seed coat",N/A,N/A,100%,442,39.0,17.1,32.9
+Q015,"Coffee, soybean, w/o seed coat",N/A,N/A,100%,492,39.5,23.0,31.8
+Q016,"Fruit jce drnk conc, calamansi",N/A,N/A,100%,239,0.2,0.6,58.3
+Q017,"Fruit jce drnk conc, grape",N/A,N/A,100%,257,0.2,0.4,63.2
+Q018,"Fruit jce drnk conc, grapefruit",N/A,N/A,100%,230,0.0,1.3,54.6
+Q019,"Fruit jce drnk conc, guyabano",N/A,N/A,100%,109,0.3,0.3,26.3
+Q020,"Fruit jce drnk conc, mango",N/A,N/A,100%,75,0.2,0.2,18.2
+Q021,"Fruit jce drnk conc, orange",N/A,N/A,100%,244,0.0,0.7,59.5
+Q022,"Fruit jce drnk, apple, ttb",N/A,N/A,100%,50,0.1,0.2,12.0
+Q023,"Fruit jce drnk, citrus cooler, ttb",N/A,N/A,100%,47,0.1,0.2,11.2
+Q025,"Fruit jce drnk, grape, ttpk",N/A,N/A,100%,45,0.2,0.1,10.8
+Q026,"Fruit jce drnk, guava, ttpk",N/A,N/A,100%,46,0.1,0.3,10.7
+Q027,"Fruit jce drnk, guyabano, btl",N/A,N/A,100%,75,0.1,1.0,16.3
+Q028,"Fruit jce drnk, mango, btl",N/A,N/A,100%,57,0.2,0.2,13.7
+Q029,"Fruit jce drnk, mango, polyfoil",N/A,N/A,100%,49,0.1,0.2,11.6
+Q030,"Fruit jce drnk, mango, ttb",N/A,N/A,100%,49,0.1,0.2,11.8
+Q031,"Fruit jce drnk, orange & pineapple, ttb",N/A,N/A,100%,47,0.1,0.2,11.2
+Q032,"Fruit jce drnk, orange, btl",N/A,N/A,100%,43,0.2,0.2,10.1
+Q033,"Fruit jce drnk, orange, polyfoil",N/A,N/A,100%,49,0.1,0.2,11.8
+Q034,"Fruit jce drnk, orange, ttb",N/A,N/A,100%,46,0.1,0.2,10.9
+Q035,"Fruit jce drnk, pineapple & lychee, ttb",N/A,N/A,100%,51,0.2,0.5,11.3
+Q036,"Fruit jce drnk, pineapple & orange, cnd",N/A,N/A,100%,48,0.1,0.1,11.6
+Q037,"Fruit jce drnk, pineapple, ttb",N/A,N/A,100%,46,0.2,0.3,10.6
+Q038,"Fruit jce drnk, strawberry, polyfoil",N/A,N/A,100%,50,0.0,0.2,12.0
+Q039,"Fruit jce drnk, sugarcane, ttb",N/A,N/A,100%,51,0.2,0.1,12.2
+Q040,"Fruit-flvr drnk conc, orange",N/A,N/A,100%,237,0.2,0.5,58.0
+Q041,"Fruit-flvr drnk conc, strawberry",N/A,N/A,100%,272,0.1,0.7,66.4
+Q042,"Fruit-flvr drnk, pwdr, orange",N/A,N/A,100%,407,0.0,2.2,96.8
+Q043,"Juice, apple, cnd",N/A,N/A,100%,65,0.1,0.2,15.7
+Q044,"Juice, calamansi (nectar)",N/A,N/A,100%,150,0.1,0.4,36.4
+Q045,"Juice, mango",N/A,N/A,100%,56,0.4,0.7,12.1
+Q046,"Juice, orange, unsweetn, cnd",N/A,N/A,100%,46,0.7,0.3,10.2
+Q047,"Juice, pineapple & grapefruit, cnd",N/A,N/A,100%,63,1.2,0.5,13.4
+Q048,"Juice, pineapple, cnd",N/A,N/A,100%,62,0.0,0.1,15.3
+Q049,"Juice, sugarcane",N/A,"Katas, tubo",100%,50,0.1,0.2,11.9
+Q050,"Juice, tomato, cnd",N/A,N/A,100%,25,0.8,0.2,4.9
+Q051,"Lemon tea drink, ttb",N/A,N/A,100%,51,0.0,0.3,12.0
+Q052,Sago in light syrup,N/A,Sago palamig,100%,73,0.0,1.2,15.5
+Q053,"Softdrink, cola",N/A,N/A,100%,41,0.0,0.1,9.9
+Q054,"Softdrink, orange flvr",N/A,N/A,100%,46,0.0,0.0,11.6
+Q055,"Soy drink, pwdr, plain",N/A,N/A,100%,449,21.8,13.7,59.6
+Q056,"Soy drnk, pwdr, corn flvr",N/A,N/A,100%,448,19.4,13.6,62.0
+Q057,"Soy drnk, pwdr, pandan flvr",N/A,N/A,100%,414,18.3,6.5,70.6
+Q058,"Soybean milk drink, choc-flvr",N/A,N/A,100%,76,2.2,0.3,16.1
+Q059,Soybean milk drnk,N/A,N/A,100%,51,2.6,0.8,8.3
+Q060,"Tea lvs, dried",N/A,"Tsaa dahon, tuyo",-,357,21.7,1.0,65.3
+Q061,Young coconut (shredded) drnk,N/A,Buko palamig,100%,39,0.2,0.2,9.0
+R001,Cheese pimiento sandwich,N/A,N/A,100%,268,9.6,8.0,39.3
+R002,Cheese sandwich,N/A,N/A,100%,302,11.2,6.2,50.3
+R003,Cheeseburger sandwich,N/A,N/A,100%,250,11.2,9.5,30.0
+R004,"Steamed bun, mung bean filling",N/A,"Siopao, munggo",100%,279,6.7,2.9,56.4
+R005,"Steamed bun, pork filling",N/A,"Siopao, baboy",100%,294,9.2,11.2,39.0
+R006,Glutinous rice w/ mung bean & cocomilk,N/A,Ginataang munggo,100%,130,1.8,3.0,24.0
+R007,Hamburger sandwich w/ coleslaw,N/A,N/A,100%,246,12.1,8.4,30.5
+R008,"Hamburger sandwich, reg",N/A,N/A,100%,265,14.0,9.9,30.1
+R009,Meat pie,N/A,Empanada,100%,435,11.9,24.8,41.1
+R010,Meat roll,N/A,Mechado roll,100%,313,10.4,10.4,44.4
+R011,Rice gruel w/ chicken,N/A,Arroz caldo,100%,63,2.0,0.4,12.8
+R012,Rice gruel w/ choc & milk,N/A,"Champorado, may gatas",100%,97,1.7,0.2,22.0
+R013,Rice gruel w/ tripe,N/A,"Lugaw, may goto",100%,53,2.0,1.3,8.3
+R014,"Spaghetti, meat balls & tomato sce, cnd",N/A,N/A,100%,83,4.8,1.0,13.8
+R015,"Spaghetti, Vienna sausage & tomato sce, cnd",N/A,N/A,100%,86,2.9,1.7,14.8
+R016,Buko pie,N/A,N/A,100%,266,4.4,7.2,45.9
+R017,Egg pie,N/A,N/A,100%,228,9.6,3.5,40.0
+R018,"Halu-halo, cnd",N/A,N/A,100%,242,2.3,0.3,57.4
+R019,"Halu-halo, w/ ice",N/A,N/A,100%,82,1.0,0.3,18.7
+R020,Pineapple pie,N/A,N/A,100%,279,1.1,0.3,67.9
+R021,Pizza pie,N/A,N/A,100%,271,10.3,5.8,44.4
+R022,"Milk fish, w/ black beans, cnd",N/A,"Bangus may tawsi, de lata",94%,243,18.6,18.7,0.0
+R023,"Spring roll, crab, unckd",N/A,"Lumpia, alimango, hindi luto",100%,207,5.8,2.6,40.1
+R024,"Spring roll, fish, unckd",N/A,"Lumpia, isda, hindi luto",100%,185,5.9,0.2,40.0
+R025,"Spring roll, shrimp, unckd",N/A,"Lumpia, hipon, hindi luto",100%,200,6.3,0.2,43.2
+R026,"Beef & tomato spread, cnd",N/A,N/A,100%,193,9.8,11.7,12.1
+R027,"Beef caldereta, cnd",N/A,N/A,95%,284,13.3,24.9,1.6
+R028,"Beef callos, cnd",N/A,N/A,100%,144,9.6,7.3,9.9
+R029,"Beef curry, cnd",N/A,N/A,100%,165,9.5,11.2,6.6
+R030,"Beef hamburger w/ tomato sce, cnd",N/A,N/A,100%,145,9.4,4.6,16.5
+R031,"Beef kare-kare, cnd",N/A,N/A,-,64,9.0,1.1,4.4
+R032,"Beef roll, mechado, cnd",N/A,N/A,100%,140,11.6,8.7,3.8
+R033,"Beef roll, morcon, cnd",N/A,N/A,100%,187,13.9,8.0,14.9
+R034,"Beef steak, cnd",N/A,N/A,100%,161,9.6,11.8,4.0
+R035,"Beef stew, cnd",N/A,N/A,100%,169,9.5,11.4,7.1
+R036,"Beef w/ gravy, cnd",N/A,N/A,100%,101,12.1,5.8,0.0
+R037,"Beef w/ mushroom sce, cnd",N/A,N/A,100%,103,13.3,3.7,4.0
+R038,"Beef w/chickpeas, cnd",N/A,N/A,100%,95,6.3,3.0,10.6
+R039,"Beef, chili con carne, cnd",N/A,N/A,100%,94,7.5,1.8,11.9
+R040,"Chicken stew, cnd",N/A,N/A,-,72,3.6,2.7,8.3
+R041,"Corned beef hash, cnd",N/A,N/A,100%,104,8.4,3.1,10.7
+R042,"Duck meat, pato tim, cnd",N/A,"Pato tim, de lata",100%,134,11.0,8.7,2.8
+R045,"Meat ball & quail egg, sw & sr sce, cnd",N/A,N/A,100%,207,9.8,13.1,12.4
+R047,"Pork & chicken adobo, cnd",N/A,N/A,100%,189,14.5,14.6,0.0
+R050,"Pork adobo, cnd",N/A,N/A,100%,277,10.3,24.8,3.1
+R051,"Pork adobo, w/ egg, cnd",N/A,N/A,-,261,13.4,20.2,6.3
+R052,"Pork afritada, cnd",N/A,"Apritadang baboy, de lata",100%,123,6.3,8.1,6.3
+R053,"Pork blood stew, cnd",N/A,"Dinuguan baboy, de lata",-,155,14.8,10.6,0.0
+R054,"Pork humba, cnd",N/A,N/A,100%,127,7.1,4.7,14.0
+R055,"Pork leg w/ mushroom sce, cnd",N/A,N/A,89%,271,7.7,19.7,15.7
+R056,"Pork leg, mushroom & chestnut, cnd",N/A,N/A,-,228,12.0,19.6,0.8
+R057,"Pork leg, pinaksiw, cnd",N/A,N/A,88%,188,13.1,12.1,6.6
+R058,"Pork pastel, cnd",N/A,N/A,100%,147,8.8,10.4,4.6
+R059,"Pork w/ black beans, cnd",N/A,"Baboy may tawsi, de lata",100%,215,11.2,16.2,6.1
+R060,"Pork, roasted, pinaksiw, cnd",N/A,"Lechon paksiw, de lata",-,214,12.8,15.2,6.4
+R061,"Roast beef hash, cnd",N/A,N/A,100%,201,15.0,12.0,8.2
+R062,"Spring roll, beef, unckd",N/A,"Lumpia, baka, hindi luto",100%,202,7.6,1.2,40.3
+R063,"Spring roll, chicken, unckd",N/A,"Lumpia, manok, hindi luto",100%,224,5.7,4.8,39.6
+R064,"Spring roll, Shanghai, unckd",N/A,"Lumpia, Shanghai, hindi luto",100%,266,5.8,10.0,38.3
+R065,"Chicken noodle broth, inst",N/A,N/A,100%,61,1.7,1.8,9.5
+R066,"Soup, beans w/ bacon, cond, cnd",N/A,N/A,100%,50,2.6,0.6,8.6
+R067,"Soup, beef & veg, cnd",N/A,N/A,100%,60,3.3,2.7,5.7
+R068,"Soup, bird's nest (nido), cond, cnd",N/A,N/A,100%,45,1.3,2.1,5.3
+R069,"Soup, chicken & asparagus, cnd",N/A,N/A,100%,20,2.1,0.6,1.5
+R070,"Soup, chicken & veg, cnd",N/A,N/A,100%,33,1.2,0.3,6.3
+R071,"Soup, chicken & veg, cond, cnd",N/A,N/A,100%,60,2.0,3.4,5.4
+R072,"Soup, chicken noodle, cnd",N/A,N/A,100%,49,2.6,1.6,6.0
+R073,"Soup, corn potage, cond, cnd",N/A,N/A,100%,92,3.5,0.4,18.7
+R074,"Soup, cream of asparagus, cond, cnd",N/A,N/A,100%,79,1.8,4.2,8.5
+R075,"Soup, cream of chicken, cond, cnd",N/A,N/A,100%,62,2.5,2.0,8.4
+R076,"Soup, cream of mushroom, cnd",N/A,N/A,100%,102,1.7,6.7,8.7
+R077,"Soup, mungbean w/ shrimp, ckd",N/A,N/A,100%,50,3.1,0.5,8.3
+R078,"Soup, noodles & beef, cond, cnd",N/A,N/A,100%,55,1.9,2.3,6.7
+R079,"Soup, pansit molo, cond, cnd",N/A,N/A,100%,54,2.4,2.4,5.6
+R081,"Soup, sotanghon, cond",N/A,N/A,100%,27,0.8,1.4,2.8
+R082,"Soup, turkey noodle, cnd",N/A,N/A,100%,42,2.4,0.4,7.3
+R083,"Soup, veg alphabet, cnd",N/A,N/A,100%,69,2.0,1.4,12.0
+R084,"Soup, veg, cond, cnd",N/A,N/A,100%,25,1.1,0.4,4.2
+R085,"Soup, vermicelli & chicken, cond, cnd",N/A,N/A,100%,38,1.3,1.2,5.5
+R086,"Pork & beans, cnd",N/A,N/A,100%,105,4.7,1.8,17.6
+R088,"Hotcake, prep, w/ MLP",N/A,N/A,100%,242,5.3,7.1,39.3
+R089,"Polvoron, prep, w/ MLP",N/A,N/A,100%,497,9.2,23.4,62.3
+R090,"Gelatin drink, w/ MLP",N/A,Jello almond w/ MLP,100%,63,0.9,0.8,13.0
+R091,"Ice candy, prep, w/ MLP",N/A,Frozen refreshment w/ MLP,100%,96,1.4,1.1,20.1
+R092,"Yacon shake, prep",N/A,Yacon cooler,100%,77,0.2,0.2,18.7
+R093,"Carbonara, prep, w/ MLP",N/A,N/A,100%,148,5.5,6.4,17.2
+R094,"Fruit salad, prep, w/ yacon",N/A,Yacon salad twister,100%,62,0.4,0.3,14.3
+R095,"Macaroni salad, prep, w/ yacon",N/A,Yacon macaroni salad,100%,191,3.4,14.9,10.7
+R096,"Waldorf salad, prep, w/ yacon",N/A,"Yacon, waldorf salad",100%,177,1.8,11.8,16.0
+R097,"Anchovy fry omelet, prep, w/ MLP",N/A,Dulong omelet w/ MLP,100%,186,13.1,12.8,4.5
+R098,"Red snapper fritata, prep, w/ MLP",N/A,Maya-maya torta w/ MLP,100%,260,15.3,19.5,5.7
+R099,"Chopsuey, prep, w/ yacon",N/A,Yacon chopsuey,100%,70,2.7,2.8,8.5
+R100,"Wonton soup, prep, w/ MLP",N/A,"Pancit molo, w/ MLP",100%,93,5.0,5.3,6.3
+R101,"Pork wonton, prep, w/ MLP",N/A,Siomai w/ MLP,100%,217,13.3,10.2,18.0
+R102,"Scrambled egg, prep, w/ MLP",N/A,N/A,100%,207,10.0,16.5,4.6
+R103,"Shanghai pork roll, prep, w/ yacon",N/A,Yacon lumpiang shanghai,100%,285,10.3,15.5,26.0
+R104,"Fried rice mix, w/ yacon",N/A,Yacon-rice medley,100%,140,3.0,4.0,23.1
+R105,"Vegetable stir-fry w/ quail eggs, prep, w/ yacon",N/A,Yacon w/ quail eggs,100%,105,4.2,6.0,8.6
+R106,"Vegetable soup, prep, w/ yacon",N/A,Yacon-veggie summer vegetable soup,100%,34,1.6,0.8,5.1
+R107,"Vegetable spring roll, fresh, w/ yacon",N/A,Yacon lumpiang sariwa,100%,147,3.8,4.2,23.6
+R108,"Pork ball, wrapped",N/A,Pork wonton/Pork siomai,100%,298,10.5,16.7,26.4
+S001,"Beef w/ veg, str",N/A,N/A,100%,48,3.8,0.3,7.5
+S002,"Beef, egg noodle, veg, str",N/A,N/A,100%,41,2.8,0.1,7.3
+S003,"Carrot, str",N/A,N/A,100%,23,0.6,0.1,4.8
+S004,"Cereals, applesce & banana, str",N/A,N/A,100%,84,1.0,0.8,18.2
+S005,"Chicken noodle, str",N/A,N/A,100%,50,2.6,0.4,8.9
+S006,"Chicken w/ veg, str",N/A,N/A,100%,111,8.8,5.4,6.9
+S007,"Chicken, asparagus, str",N/A,N/A,100%,39,7.9,0.8,0.0
+S008,"Cream chicken soup, str",N/A,N/A,100%,48,1.8,0.5,9.0
+S009,"Custard pudding, choco, str",N/A,N/A,100%,87,1.4,0.8,18.6
+S010,"Custard pudding, vanilla, str",N/A,N/A,100%,94,1.3,1.1,19.7
+S011,"Fruit w/ tapioca, str",N/A,N/A,100%,91,0.2,1.0,20.4
+S013,"Mango & papaya, str",N/A,N/A,100%,91,0.2,0.3,21.8
+S014,"Mango, str",N/A,N/A,100%,87,0.2,1.2,18.8
+S015,"Mixed fruits, str",N/A,N/A,100%,90,0.2,0.9,20.3
+S016,"Mixed veg, str",N/A,N/A,100%,42,1.4,0.2,8.7
+S017,"Peach, str",N/A,N/A,100%,112,0.6,0.3,26.6
+S018,"Rice w/ chicken, str",N/A,N/A,100%,46,1.6,0.6,8.6
+S019,"Squash, str",N/A,N/A,100%,33,0.4,0.1,7.5
+S021,"Veg, liver & bacon, str",N/A,N/A,100%,47,2.1,0.9,7.6
+T001,Azolla pinnata,N/A,N/A,100%,18,1.4,0.4,2.1
+T002,Baking powder,N/A,N/A,100%,166,0.2,0.3,40.7
+T004,Ceylon moss/Agar-agar bar,N/A,Gulaman,100%,311,2.6,0.3,74.5
+T005,"Coffee creamer, non-dairy",N/A,N/A,100%,390,4.1,0.7,91.9
+T006,Chlorella,Chlorella pyrenoidosa,N/A,100%,351,53.3,4.9,23.4
+T007,Gelatin powder,N/A,N/A,100%,351,85.4,1.0,0.0
+T008,Rice washing,N/A,Hugas-bigas,100%,6,0.1,0.2,1.0
+T009,"Yeast, baker's, active, dry",N/A,"Lebadura, baker's, tuyo",100%,363,37.2,1.3,50.5
+M015,"Coconut meat, grated, sweetn",N/A,Bukayo,100%,399,2.2,2.1,92.8
+D304,Ginger,Zingiber officinale,Luya,74%,46,1.1,0.8,8.5
+D305,Turmeric,Curcuma longa L.,Luyang dilaw,71%,71,2.0,2.7,9.6
+H023,"Egg mass, sea hare",Dolabella auricularia,Lukot,100%,17,2.4,0.2,1.3
+Q062,"Tea, prep w/ water, no sugar",N/A,N/A,100%,1,0.1,0.0,0.2
+T012,Locust,Locusta migratoria manilensis,Balang,81%,147,13.7,4.3,13.4

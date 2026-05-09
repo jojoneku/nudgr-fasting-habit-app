@@ -18,6 +18,7 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
 import '../models/personal_food_entry.dart';
 
@@ -58,6 +59,7 @@ abstract class StorageService {
   static const String keyMonthlySummaries = 'finance_monthly_summaries';
   static const String keyInstallments = 'finance_installments';
   static const String keyPersonalFoodDict = 'personalFoodDict';
+  static const String keyFoodFeedback = 'nutrition.foodFeedback';
   static const String keyFoodIndexProgress = 'nutrition.foodIndexProgress';
   static const String kThemeMode = 'themeMode';
 
@@ -150,6 +152,10 @@ abstract class StorageService {
   //  Personal Food Dictionary
   Future<void> savePersonalDict(List<PersonalFoodEntry> entries);
   Future<List<PersonalFoodEntry>> loadPersonalDict();
+
+  //  Food Matcher Feedback (telemetry — local-only) ─
+  Future<void> saveFoodFeedback(List<FoodFeedback> entries);
+  Future<List<FoodFeedback>> loadFoodFeedback();
 
   //  Food Search Index (RAG) ─
   Future<IndexProgress> loadFoodIndexProgress();

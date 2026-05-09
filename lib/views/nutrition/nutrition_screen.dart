@@ -11,6 +11,7 @@ import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
+import 'barcode_scanner_sheet.dart';
 import 'food_library_screen.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
@@ -810,6 +811,18 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
     });
   }
 
+  Future<void> _onDislike(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    await widget.presenter.markChatMessageDisliked(widget.message.id);
+    if (!mounted) return;
+    messenger.showSnackBar(
+      const SnackBar(
+        content: Text("Thanks — we'll improve the match next time."),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
   Future<void> _saveAsTemplate(BuildContext context) async {
     final rawText = widget.message.rawText;
     final suggested = rawText.length > 40 ? rawText.substring(0, 40) : rawText;
@@ -932,6 +945,7 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
             onEdit: () => setState(() => _editing = true),
             onDelete: () => widget.presenter.removeChatMessage(message.id),
             onSaveTemplate: () => _saveAsTemplate(context),
+            onDislike: () => _onDislike(context),
             onConfirm: _save,
             onCancel: _cancel,
           ),
@@ -1508,6 +1522,7 @@ class _MessageFooter extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback onDelete;
   final VoidCallback? onSaveTemplate;
+  final VoidCallback? onDislike;
   final VoidCallback onConfirm;
   final VoidCallback onCancel;
 
@@ -1518,6 +1533,7 @@ class _MessageFooter extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onSaveTemplate,
+    this.onDislike,
     required this.onConfirm,
     required this.onCancel,
   });
@@ -1563,6 +1579,13 @@ class _MessageFooter extends StatelessWidget {
                   icon: Icons.bookmark_border,
                   color: cs.onSurfaceVariant,
                   onTap: onSaveTemplate!),
+            ],
+            if (onDislike != null) ...[
+              const SizedBox(width: 2),
+              _FooterBtn(
+                  icon: Icons.thumb_down_outlined,
+                  color: cs.onSurfaceVariant,
+                  onTap: onDislike!),
             ],
             const SizedBox(width: 2),
             _FooterBtn(
@@ -1664,6 +1687,15 @@ class _ChatInputBarState extends State<_ChatInputBar> {
             icon: Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
             onPressed: isToday ? () => _showTemplates(context) : null,
             tooltip: 'Templates',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+          IconButton(
+            icon: Icon(Icons.qr_code_scanner, color: cs.onSurfaceVariant),
+            onPressed: isToday && !locked
+                ? () =>
+                    showBarcodeScanFlow(context, presenter: widget.presenter)
+                : null,
+            tooltip: 'Scan barcode',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           IconButton(
