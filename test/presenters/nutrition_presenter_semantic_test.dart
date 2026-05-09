@@ -78,6 +78,8 @@ void main() {
     when(mockStorage.loadLogStreak()).thenAnswer((_) async => 0);
     when(mockStorage.loadLogStreakDate()).thenAnswer((_) async => null);
     when(mockStorage.loadPersonalDict()).thenAnswer((_) async => []);
+    when(mockStorage.loadFoodFeedback()).thenAnswer((_) async => []);
+    when(mockStorage.saveFoodFeedback(any)).thenAnswer((_) async {});
     when(mockStorage.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
 
     when(mockFasting.isFasting).thenReturn(false);

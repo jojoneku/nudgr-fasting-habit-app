@@ -13,6 +13,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Need history for the food-db asset/_dbFilename bump check below.
+          fetch-depth: 0
 
       - uses: subosito/flutter-action@v2
         with:
@@ -34,6 +37,24 @@ jobs:
 
       - name: Check formatting
         run: dart format --output none --set-exit-if-changed .
+
+      # Guards against the most common food-DB regression: editing the
+      # bundled asset without bumping _dbFilename, which leaves existing
+      # installs stuck on the cached old DB until they reinstall.
+      - name: Verify food DB asset/_dbFilename pair
+        if: github.event_name == 'pull_request'
+        run: |
+          base="${{ github.event.pull_request.base.sha }}"
+          if git diff --name-only "$base" HEAD | grep -q '^assets/food_db\.sqlite$'; then
+            if ! git diff "$base" HEAD -- lib/services/food_db_service.dart | grep -qE '^[-+].*_dbFilename'; then
+              echo "::error file=assets/food_db.sqlite::assets/food_db.sqlite changed but _dbFilename was not bumped in lib/services/food_db_service.dart"
+              echo "Bump _dbFilename (e.g. food_db_v9 -> food_db_v10) so existing installs replace their cached copy on next launch. Otherwise users keep the OLD database forever."
+              exit 1
+            fi
+            echo "OK: asset bump is paired with a _dbFilename change."
+          else
+            echo "OK: food DB asset unchanged."
+          fi
 
   test:
     name: Test

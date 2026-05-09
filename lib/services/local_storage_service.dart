@@ -23,6 +23,7 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
@@ -1007,6 +1008,38 @@ class LocalStorageService extends StorageService {
           .toList();
     } catch (e) {
       debugPrint('LocalStorageService: Error loading personal food dict: $e');
+      return [];
+    }
+  }
+
+  // ── Food Matcher Feedback (telemetry) ────────────────────────────────────────
+
+  @override
+  Future<void> saveFoodFeedback(List<FoodFeedback> entries) async {
+    // Cap at FoodFeedback.maxStoredEntries — keep newest. The cap prevents
+    // SharedPreferences from growing forever; once we add a curation UI we
+    // can offer "export & clear" so older signal isn't lost.
+    final capped = entries.length > FoodFeedback.maxStoredEntries
+        ? entries.sublist(entries.length - FoodFeedback.maxStoredEntries)
+        : entries;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      StorageService.keyFoodFeedback,
+      jsonEncode(capped.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  @override
+  Future<List<FoodFeedback>> loadFoodFeedback() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyFoodFeedback);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => FoodFeedback.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading food feedback: $e');
       return [];
     }
   }

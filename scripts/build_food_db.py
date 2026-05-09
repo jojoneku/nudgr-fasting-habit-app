@@ -421,6 +421,8 @@ FOODS = [
     ("7038", "Chapati / Roti",                   "Grains",       331, 11.9, 57.0,  6.7),
     ("7039", "Vermicelli, Cooked",               "Grains",       138,  4.7, 27.9,  0.6),
     ("7040", "Gluten-Free Bread",                "Grains",       250,  3.0, 48.0,  5.0),
+    ("7041", "Red Rice, Cooked",                 "Grains",       125,  2.6, 26.0,  1.0),
+    ("7042", "Red Rice, Dry",                    "Grains",       362,  7.5, 76.0,  2.5),
 
     # ── Additional Legumes ────────────────────────────────────────────────────
     ("8013", "Mung Beans, Cooked",               "Legumes",      105,  7.0, 19.2,  0.4),
@@ -1713,6 +1715,75 @@ FOODS = [
     ("32195", "Mang Tomas Lechon Sauce (per 100g)",          "PH Fast Food",  185,  2.0, 38.0,  2.5),
     ("32196", "Reyes Barbecue Pork BBQ (per 100g)",          "PH Fast Food",  280, 18.0, 11.0, 18.0),
     ("32199", "Goldilocks Embutido (per 100g)",              "PH Fast Food",  250, 14.0,  6.0, 19.0),
+
+    # ── PH Chains v2 — gap fills (ids 32200+) ───────────────────────────────
+    # Filled from real menu items users log that weren't yet curated.
+    # Macros are best-effort estimates from chain nutrition disclosures
+    # and standard recipe analogues; per 100g unless the name says otherwise.
+
+    # Max's Restaurant
+    ("32200", "Max's Kare-Kare (per 100g)",                  "PH Fast Food",  150,  7.0, 10.0,  9.0),
+    ("32201", "Max's Pancit Canton (per 100g)",              "PH Fast Food",  130,  6.0, 18.0,  4.0),
+    ("32202", "Max's Lumpiang Ubod (per 100g)",              "PH Fast Food",  155,  5.0, 18.0,  6.5),
+    ("32203", "Max's Sizzling Pork Sisig (per 100g)",        "PH Fast Food",  290, 16.0,  4.0, 23.0),
+    ("32204", "Max's Halo-Halo (per 300ml)",                 "PH Fast Food",   90,  2.5, 17.0,  1.5),
+    ("32205", "Max's Caramel Bar (per piece ~80g)",          "PH Fast Food",  395,  4.0, 50.0, 19.0),
+    ("32206", "Max's Garlic Pepper Beef (per 100g)",         "PH Fast Food",  205, 18.0,  6.0, 12.0),
+    ("32207", "Max's Onion Rings (per 100g)",                "PH Fast Food",  315,  4.0, 38.0, 16.0),
+
+    # Goldilocks
+    ("32208", "Goldilocks Brazo de Mercedes (per 100g)",     "PH Fast Food",  295,  6.0, 36.0, 14.0),
+    ("32209", "Goldilocks Egg Pie (per 100g)",               "PH Fast Food",  300,  6.0, 38.0, 14.0),
+    ("32210", "Goldilocks Mango Bravo (per slice ~110g)",    "PH Fast Food",  385,  4.5, 42.0, 22.0),
+    ("32211", "Goldilocks Ube Cake (per 100g)",              "PH Fast Food",  310,  4.5, 44.0, 13.0),
+    ("32212", "Goldilocks Sansrival (per 100g)",             "PH Fast Food",  455,  6.0, 38.0, 31.0),
+    ("32213", "Goldilocks Mocha Cake (per slice ~80g)",      "PH Fast Food",  365,  4.5, 50.0, 16.0),
+    ("32214", "Goldilocks Ube Halaya (per 100g)",            "PH Fast Food",  195,  3.0, 30.0,  7.5),
+
+    # Red Ribbon
+    ("32215", "Red Ribbon Ube Cake (per slice ~100g)",       "PH Fast Food",  295,  4.0, 41.0, 13.0),
+    ("32216", "Red Ribbon Cheesecake (per slice ~110g)",     "PH Fast Food",  345,  6.0, 32.0, 21.0),
+    ("32217", "Red Ribbon Yema Cake (per slice ~100g)",      "PH Fast Food",  330,  5.0, 42.0, 16.0),
+    ("32218", "Red Ribbon Tiramisu (per slice ~100g)",       "PH Fast Food",  360,  5.5, 36.0, 22.0),
+    ("32219", "Red Ribbon Mocha Roll (per slice ~80g)",      "PH Fast Food",  330,  4.5, 42.0, 16.0),
+    ("32220", "Red Ribbon Triple Choco Roll (per slice ~80g)", "PH Fast Food",  345,  4.5, 42.0, 17.5),
+    ("32221", "Red Ribbon Choco Mousse (per slice ~100g)",   "PH Fast Food",  360,  5.0, 38.0, 21.0),
+
+    # Greenwich
+    ("32222", "Greenwich Pasta Carbonara (per 100g)",        "PH Fast Food",  170,  6.5, 22.0,  6.5),
+    ("32223", "Greenwich Garlic Bread (per 100g)",           "PH Fast Food",  340,  8.0, 44.0, 14.0),
+    ("32224", "Greenwich Wings Lechon Manok (per 100g)",     "PH Fast Food",  235, 17.0,  4.0, 16.0),
+    ("32225", "Greenwich Cheesy Bacon Burger (per 100g)",    "PH Fast Food",  280, 13.0, 25.0, 14.0),
+    ("32226", "Greenwich Calzone (per 100g)",                "PH Fast Food",  255, 11.0, 28.0, 11.0),
+
+    # Mang Inasal additions
+    ("32227", "Mang Inasal Bistek Palabok (per 100g)",       "PH Fast Food",  180,  9.0, 26.0,  4.5),
+    ("32228", "Mang Inasal Sinangag Garlic Rice (per 100g)", "PH Fast Food",  180,  3.0, 36.0,  3.0),
+
+    # Chowking additions
+    ("32229", "Chowking Sweet & Sour Chicken (per 100g)",    "PH Fast Food",  225, 11.0, 24.0,  9.5),
+    ("32230", "Chowking Beef Wonton Mami (per 100g)",        "PH Fast Food",  140,  8.0, 18.0,  4.0),
+    ("32231", "Chowking Lugaw with Tokwa't Baboy (per 100g)", "PH Fast Food",  130,  6.0, 17.0,  4.0),
+    ("32232", "Chowking Camto Special (per 100g)",           "PH Fast Food",  180,  8.0, 22.0,  6.5),
+
+    # Milk tea / cafe chains (commonly logged, not yet covered)
+    ("32233", "CoCo Fresh Milk Tea (per 500ml)",             "PH Fast Food",   45,  0.8, 10.0,  0.5),
+    ("32234", "CoCo Pearl Milk Tea (per 500ml)",             "PH Fast Food",   90,  0.8, 18.0,  1.5),
+    ("32235", "Macao Imperial Wintermelon Milk Tea (500ml)", "PH Fast Food",   75,  0.5, 15.0,  1.2),
+    ("32236", "Macao Imperial Cookies & Cream (per 500ml)",  "PH Fast Food",  130,  2.5, 20.0,  4.5),
+    ("32237", "Serenitea Wintermelon Milk Tea (per 500ml)",  "PH Fast Food",   75,  0.5, 15.0,  1.2),
+
+    # Bakery / cafe chains
+    ("32238", "French Baker Tuna Bun (per piece ~80g)",      "PH Fast Food",  280,  9.0, 36.0, 11.0),
+    ("32239", "French Baker Pandesal (per piece ~30g)",      "PH Fast Food",  295,  9.0, 56.0,  4.0),
+    ("32240", "French Baker Chocolate Crinkle (per piece ~30g)", "PH Fast Food",  395,  5.0, 60.0, 15.0),
+    ("32241", "Brothers Burger Classic (per 100g)",          "PH Fast Food",  255, 13.0, 22.0, 13.0),
+    ("32242", "Brothers Burger Cheese (per 100g)",           "PH Fast Food",  275, 14.0, 22.0, 15.0),
+
+    # Jollibee additions (commonly logged variants)
+    ("32243", "Jollibee Coke Float (per 16oz)",              "PH Fast Food",   70,  1.5, 13.0,  1.5),
+    ("32244", "Jollibee Iced Coffee (per 16oz)",             "PH Fast Food",   55,  0.8, 11.0,  1.0),
+    ("32245", "Jollibee Mashed Potato w/ Gravy (per 100g)",  "PH Fast Food",  120,  2.5, 18.0,  4.0),
 ]
 
 # ---------------------------------------------------------------------------

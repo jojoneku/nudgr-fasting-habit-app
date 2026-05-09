@@ -45,10 +45,11 @@ FNDDS_TYPES = {"survey_fndds_food"}
 FOUNDATION_TYPES = {"foundation_food"}
 
 # ---------------------------------------------------------------------------
-# Import curated foods from build_food_db.py
+# Import curated foods from build_food_db.py + PhilFCT (DOST-FNRI)
 # ---------------------------------------------------------------------------
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_food_db import FOODS as CURATED_FOODS  # noqa: E402
+from load_philfct import load_philfct  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -183,6 +184,7 @@ def _title(s: str) -> str:
 
 def build_db(
     curated: list[tuple],
+    philfct: list[tuple],
     foundation: list[tuple],
     sr_legacy: list[tuple],
     fndds: list[tuple],
@@ -196,45 +198,66 @@ def build_db(
 
     cur.execute("""
         CREATE TABLE foods (
-            id       TEXT PRIMARY KEY,
-            name     TEXT NOT NULL,
-            category TEXT,
-            cal      REAL NOT NULL,
-            protein  REAL,
-            carbs    REAL,
-            fat      REAL
+            id        TEXT PRIMARY KEY,
+            name      TEXT NOT NULL,
+            name_norm TEXT NOT NULL,
+            category  TEXT,
+            cal       REAL NOT NULL,
+            protein   REAL,
+            carbs     REAL,
+            fat       REAL
         )
     """)
+    # Trigram tokenizer indexes overlapping 3-char shingles, giving substring
+    # search semantics so "bearbrand" matches "Bear Brand Sterilized Milk" and
+    # "rolled oats" matches "Oats, Rolled, Dry". case_sensitive=0 lets us pass
+    # already-lowercased queries.
     cur.execute("""
         CREATE VIRTUAL TABLE foods_fts USING fts5(
-            name,
+            name_norm,
             content='foods',
-            content_rowid='rowid'
+            content_rowid='rowid',
+            tokenize='trigram case_sensitive 0'
         )
     """)
     cur.execute("""
         CREATE INDEX idx_foods_name_lower ON foods(lower(name))
     """)
     cur.execute("""
+        CREATE INDEX idx_foods_name_norm ON foods(name_norm)
+    """)
+    cur.execute("""
         CREATE TRIGGER foods_ai AFTER INSERT ON foods BEGIN
-            INSERT INTO foods_fts(rowid, name) VALUES (new.rowid, new.name);
+            INSERT INTO foods_fts(rowid, name_norm) VALUES (new.rowid, new.name_norm);
         END
     """)
 
-    # Source priority for dedup: lower wins on collision. Curated represents
-    # the user's overrides and PH-specific data, so it ranks highest.
+    # Source priority for dedup: lower wins on collision. Curated > PhilFCT
+    # (DOST-FNRI, authoritative for PH foods) > USDA Foundation > SR Legacy >
+    # FNDDS. Sources may produce 7- or 8-tuples; the 8th element (when
+    # present) is a precomputed name_norm with Tagalog/aliases folded in.
     sources = [
         ("curated",    curated,    0),
-        ("foundation", foundation, 1),
-        ("sr_legacy",  sr_legacy,  2),
-        ("fndds",      fndds,      3),
+        ("philfct",    philfct,    1),
+        ("foundation", foundation, 2),
+        ("sr_legacy",  sr_legacy,  3),
+        ("fndds",      fndds,      4),
     ]
     final_rows, kept_by_source, dropped_by_source = _dedupe(sources)
 
+    # 7-tuple: (id, name, category, cal, protein, carbs, fat) — compute norm.
+    # 8-tuple: (id, name, name_norm, category, cal, protein, carbs, fat) — keep.
+    def _to_8(r: tuple) -> tuple:
+        if len(r) == 8:
+            return r
+        return (r[0], r[1], _search_norm(r[1]), r[2], r[3], r[4], r[5], r[6])
+
+    rows_with_norm = [_to_8(r) for r in final_rows]
     cur.executemany(
-        "INSERT OR IGNORE INTO foods (id, name, category, cal, protein, carbs, fat) "
-        "VALUES (?,?,?,?,?,?,?)",
-        final_rows,
+        "INSERT OR IGNORE INTO foods "
+        "(id, name, name_norm, category, cal, protein, carbs, fat) "
+        "VALUES (?,?,?,?,?,?,?,?)",
+        rows_with_norm,
     )
     conn.commit()
     cur.execute("VACUUM")
@@ -284,10 +307,26 @@ _WS_RE = re.compile(r"\s+")
 def _normalize_name(name: str) -> str:
     """Lowercase + strip non-alphanumeric + collapse whitespace.
     "Oats, Rolled, Dry" → "oats rolled dry"; "Bear Brand (Powdered)" → "bear brand powdered".
+    Used only for de-dup keying across sources.
     """
     s = _NORM_RE.sub(" ", name.lower())
     s = _WS_RE.sub(" ", s).strip()
     return s
+
+
+_PANCIT_RE = re.compile(r"\bpancit\b")
+_NON_ALPHANUM_RE = re.compile(r"[^a-z0-9]+")
+
+
+def _search_norm(name: str) -> str:
+    """Mirrors lib/services/food_db_service.dart::SearchNormalize.dense and
+    scripts/migrate_food_db_v8.py::normalize_for_search. Stripped-of-spaces,
+    Pinoy-folded form used as the trigram-FTS5 indexed column.
+    "Oats, Rolled, Dry" → "oatsrolleddry"; "Pancit Canton" → "pansitcanton".
+    """
+    s = name.lower().replace("ñ", "n")
+    s = _PANCIT_RE.sub("pansit", s)
+    return _NON_ALPHANUM_RE.sub("", s)
 
 
 # ---------------------------------------------------------------------------
@@ -298,6 +337,10 @@ def main() -> None:
     script_dir = os.path.dirname(os.path.abspath(__file__))
     repo_root  = os.path.dirname(script_dir)
     db_path    = os.path.join(repo_root, "assets", "food_db.sqlite")
+
+    print("Loading PhilFCT (DOST-FNRI) ...")
+    philfct_rows = load_philfct()
+    print(f"  PhilFCT rows: {len(philfct_rows)}")
 
     foundation_zip = download(FOUNDATION_URL)
     foundation_rows = parse_fdc_zip(
@@ -310,7 +353,14 @@ def main() -> None:
     fndds_zip = download(FNDDS_URL)
     fndds_rows = parse_fdc_zip(fndds_zip, FNDDS_TYPES, "FNDDS")
 
-    build_db(CURATED_FOODS, foundation_rows, sr_rows, fndds_rows, db_path)
+    build_db(
+        CURATED_FOODS,
+        philfct_rows,
+        foundation_rows,
+        sr_rows,
+        fndds_rows,
+        db_path,
+    )
 
 
 if __name__ == "__main__":
