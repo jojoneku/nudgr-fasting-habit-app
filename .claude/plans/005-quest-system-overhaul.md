@@ -1,5 +1,5 @@
 # Plan 005 — Quest System Overhaul: From Reminders to Habit Architecture
-**Status:** DRAFT — Awaiting Approval
+**Status:** IMPLEMENTED
 
 ---
 

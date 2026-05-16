@@ -1,5 +1,5 @@
 # Plan 004a — Treasury Module: Foundation
-**Status:** DRAFT v2 — Awaiting Approval (updated: sub-accounts, no seeding)
+**Status:** IMPLEMENTED
 **Phase:** 1 of 3
 **Depends on:** Plan 001 (Nav Hub) approved and merged
 

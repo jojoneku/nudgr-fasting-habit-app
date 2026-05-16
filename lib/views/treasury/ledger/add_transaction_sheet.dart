@@ -8,14 +8,23 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   final LedgerPresenter presenter;
   final TransactionRecord? existing;
 
-  const AddTransactionSheet(
-      {super.key, required this.presenter, this.existing});
+  /// Optional draft from chat-logging fallback — fills the form with what
+  /// the AI managed to extract so the user can finish entry by hand.
+  final ParsedTransaction? prefill;
+
+  const AddTransactionSheet({
+    super.key,
+    required this.presenter,
+    this.existing,
+    this.prefill,
+  });
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
@@ -58,6 +67,20 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _transferToAccountId = existing.transferToAccountId;
       _selectedCategoryId = existing.categoryId;
       _date = existing.date;
+    } else {
+      final prefill = widget.prefill;
+      if (prefill != null) {
+        if (prefill.type != null) _type = prefill.type!;
+        if (prefill.amount != null) {
+          _amountController.text = prefill.amount!.toStringAsFixed(2);
+        }
+        if (prefill.description.isNotEmpty) {
+          _descriptionController.text = prefill.description;
+        }
+        _selectedAccountId = prefill.accountId;
+        _transferToAccountId = prefill.transferToAccountId;
+        _selectedCategoryId = prefill.categoryId;
+      }
     }
   }
 

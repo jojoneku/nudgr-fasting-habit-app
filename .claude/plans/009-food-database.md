@@ -1,6 +1,6 @@
 # Feature Plan: Local Food Database — Alchemy Lab DB Layer
 
-> Status: DRAFT
+> Status: IMPLEMENTED (DB expanded to 14k entries via Plan 022)
 > Created: 2026-03-22
 > Depends on: Plan 007 (Calorie Counting v2) — `FoodDbService` stub must exist before this plan executes
 > Blocks: Plan 007 step 5 (FoodDbService real implementation)

@@ -1,5 +1,5 @@
 # Plan 015 — AI Finance Suggestions
-**Status:** DRAFT — Awaiting Approval
+**Status:** NOT IMPLEMENTED
 **Phase:** 1 of 1
 **Depends on:** Plan 013 (Authentication) — user must be signed in to call the proxy
 **Depends on:** Plan 014 (Supabase Sync) — MonthlySummary data must be available

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -28,12 +29,47 @@ class LedgerView extends StatefulWidget {
 
 class _LedgerViewState extends State<LedgerView> {
   LedgerPresenter get presenter => widget.presenter;
+  String? _lastSnackbarSummary;
 
-  void _showAddTransactionSheet() {
+  @override
+  void initState() {
+    super.initState();
+    presenter.addListener(_onPresenterChange);
+  }
+
+  @override
+  void dispose() {
+    presenter.removeListener(_onPresenterChange);
+    super.dispose();
+  }
+
+  /// Surfaces post-commit snackbars and the form-prefill fallback as side
+  /// effects of presenter state changes. Anything more complex (animations,
+  /// scroll restoration) belongs in the build path, not here.
+  void _onPresenterChange() {
+    if (!mounted) return;
+    final summary = presenter.lastCommittedSummary;
+    if (summary != null && summary != _lastSnackbarSummary) {
+      _lastSnackbarSummary = summary;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(summary), duration: const Duration(seconds: 2)),
+      );
+      presenter.clearLastCommittedSummary();
+    }
+    final prefill = presenter.pendingFormPrefill;
+    if (prefill != null) {
+      presenter.consumeFormPrefill();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showAddTransactionSheet(prefill: prefill);
+      });
+    }
+  }
+
+  void _showAddTransactionSheet({ParsedTransaction? prefill}) {
     AppBottomSheet.show(
       context: context,
       title: 'Log Transaction',
-      body: AddTransactionSheet(presenter: presenter),
+      body: AddTransactionSheet(presenter: presenter, prefill: prefill),
     );
   }
 
@@ -55,51 +91,344 @@ class _LedgerViewState extends State<LedgerView> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return ListenableBuilder(
       listenable: presenter,
       builder: (context, _) {
         return Scaffold(
-          body: Column(
-            children: [
-              _MonthSelectorRow(presenter: presenter),
-              if (presenter.selectedDate != null)
-                _DateFilterChip(
-                  date: presenter.selectedDate!,
-                  onClear: () => presenter.setSelectedDate(null),
+          body: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                _MonthSelectorRow(presenter: presenter),
+                if (presenter.selectedDate != null)
+                  _DateFilterChip(
+                    date: presenter.selectedDate!,
+                    onClear: () => presenter.setSelectedDate(null),
+                  ),
+                _SummaryCard(presenter: presenter),
+                _AccountFilterRow(presenter: presenter),
+                Expanded(
+                  child: _TransactionList(
+                    presenter: presenter,
+                    onEditTransaction: _showEditTransactionSheet,
+                  ),
                 ),
-              _SummaryCard(presenter: presenter),
-              _AccountFilterRow(presenter: presenter),
-              Expanded(
-                child: _TransactionList(
+                _ChatHardErrorChip(presenter: presenter),
+                _LedgerChatDrawer(presenter: presenter),
+                _LedgerChatInputBar(
                   presenter: presenter,
-                  onEditTransaction: _showEditTransactionSheet,
+                  onOpenForm: _showAddTransactionSheet,
+                  onOpenCategories: _showManageCategoriesSheet,
                 ),
-              ),
-            ],
-          ),
-          floatingActionButton: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FloatingActionButton.small(
-                heroTag: 'categories',
-                onPressed: _showManageCategoriesSheet,
-                backgroundColor: cs.surfaceContainerHigh,
-                foregroundColor: cs.onSurfaceVariant,
-                elevation: 2,
-                child: const Icon(Icons.label_outline),
-              ),
-              const SizedBox(height: 12),
-              FloatingActionButton(
-                heroTag: 'add_txn',
-                onPressed: _showAddTransactionSheet,
-                elevation: 4,
-                child: const Icon(Icons.add),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+// ── Chat drawer + input row ────────────────────────────────────────────────
+
+/// Renders the transient AI dialog above the input bar. Hidden when
+/// [LedgerChatState.phase] is idle.
+class _LedgerChatDrawer extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _LedgerChatDrawer({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final state = presenter.chatState;
+    final visible = state.phase != ChatPhase.idle;
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      alignment: Alignment.bottomCenter,
+      child: !visible
+          ? const SizedBox(width: double.infinity)
+          : Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+              color: cs.surfaceContainerLow,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _Transcript(turns: state.turns),
+                  const SizedBox(height: 8),
+                  if (state.lastStep is StepClarify)
+                    _ClarifyActions(
+                      presenter: presenter,
+                      step: state.lastStep as StepClarify,
+                    )
+                  else if (state.lastStep is StepResolved)
+                    _ResolveActions(presenter: presenter)
+                  else if (state.phase == ChatPhase.classifying)
+                    Row(
+                      children: [
+                        const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Thinking…',
+                          style: TextStyle(color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+class _Transcript extends StatelessWidget {
+  final List<LedgerChatTurn> turns;
+  const _Transcript({required this.turns});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    // Show last 3 turns only — anything older isn't load-bearing for the
+    // user's decision and the drawer should stay compact.
+    final visible = turns.length > 3 ? turns.sublist(turns.length - 3) : turns;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final t in visible)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: t.isUser ? 'You: ' : 'AI: ',
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
+                    ),
+                  ),
+                  TextSpan(
+                    text: t.text,
+                    style: TextStyle(color: cs.onSurface, fontSize: 14),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ClarifyActions extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final StepClarify step;
+  const _ClarifyActions({required this.presenter, required this.step});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final replies = step.quickReplies ?? const <QuickReply>[];
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Expanded(
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              for (final r in replies)
+                ActionChip(
+                  label: Text(r.label),
+                  onPressed: () => presenter.sendChatInput(r.replyText),
+                ),
+            ],
+          ),
+        ),
+        TextButton(
+          onPressed: presenter.cancelChat,
+          style: TextButton.styleFrom(foregroundColor: cs.onSurfaceVariant),
+          child: const Text('Cancel'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ResolveActions extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ResolveActions({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        TextButton(
+            onPressed: presenter.cancelChat, child: const Text('Cancel')),
+        const SizedBox(width: 4),
+        TextButton(
+            onPressed: presenter.editResolved, child: const Text('Edit')),
+        const SizedBox(width: 4),
+        FilledButton(
+          onPressed: presenter.confirmResolved,
+          child: const Text('Yes'),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChatHardErrorChip extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _ChatHardErrorChip({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final error = presenter.chatHardError;
+    if (error == null) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      color: cs.errorContainer,
+      padding: const EdgeInsets.fromLTRB(12, 6, 8, 6),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 16, color: cs.onErrorContainer),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              error.userMessage,
+              style: TextStyle(color: cs.onErrorContainer, fontSize: 13),
+            ),
+          ),
+          IconButton(
+            icon: Icon(Icons.close, color: cs.onErrorContainer, size: 18),
+            onPressed: presenter.clearChatHardError,
+            tooltip: 'Dismiss',
+            constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            padding: EdgeInsets.zero,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LedgerChatInputBar extends StatefulWidget {
+  final LedgerPresenter presenter;
+  final void Function({ParsedTransaction? prefill}) onOpenForm;
+  final VoidCallback onOpenCategories;
+
+  const _LedgerChatInputBar({
+    required this.presenter,
+    required this.onOpenForm,
+    required this.onOpenCategories,
+  });
+
+  @override
+  State<_LedgerChatInputBar> createState() => _LedgerChatInputBarState();
+}
+
+class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
+  final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+  bool _sending = false;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      _ctrl.clear();
+      await widget.presenter.sendChatInput(text);
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  String _hint(LedgerPresenter p) {
+    if (!p.isSelectedDateToday) return 'View only — clear date filter to log';
+    if (p.chatState.phase == ChatPhase.clarifying) return 'Reply…';
+    return 'Log a transaction…';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final canSend = widget.presenter.isSelectedDateToday;
+    return Container(
+      color: cs.surface,
+      padding: EdgeInsets.fromLTRB(
+          12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
+      child: Row(
+        children: [
+          IconButton(
+            icon: Icon(Icons.label_outline, color: cs.onSurfaceVariant),
+            onPressed: widget.onOpenCategories,
+            tooltip: 'Manage categories',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+          IconButton(
+            icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
+            onPressed: canSend ? () => widget.onOpenForm() : null,
+            tooltip: 'Open form',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+          Expanded(
+            child: TextField(
+              controller: _ctrl,
+              focusNode: _focus,
+              enabled: canSend,
+              decoration: InputDecoration(
+                hintText: _hint(widget.presenter),
+                filled: true,
+                fillColor: cs.surfaceContainerHigh,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(22),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                isDense: true,
+              ),
+              textInputAction: TextInputAction.send,
+              onSubmitted: (_) => _send(),
+            ),
+          ),
+          const SizedBox(width: 4),
+          SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              icon: _sending ||
+                      widget.presenter.chatState.phase == ChatPhase.classifying
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.send),
+              onPressed: canSend ? _send : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

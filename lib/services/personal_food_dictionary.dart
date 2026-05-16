@@ -59,6 +59,26 @@ class PersonalFoodDictionary {
 
   PersonalFoodEntry? lookup(String name) => _map[normalizeKey(name)];
 
+  /// Returns dictionary entries whose normalized name has any word starting
+  /// with [query], sorted by `lastUsedAt` desc. Used for typeahead — surfaces
+  /// foods the user has already confirmed before falling back to the food DB.
+  List<PersonalFoodEntry> prefixSearch(String query, {int limit = 5}) {
+    final q = normalizeKey(query);
+    if (q.isEmpty) return const [];
+    final hits = <PersonalFoodEntry>[];
+    for (final entry in _map.values) {
+      for (final token in entry.key.split(' ')) {
+        if (token.startsWith(q)) {
+          hits.add(entry);
+          break;
+        }
+      }
+    }
+    hits.sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
+    if (hits.length <= limit) return hits;
+    return hits.sublist(0, limit);
+  }
+
   Future<void> upsert({
     required String name,
     required double kcalPer100g,

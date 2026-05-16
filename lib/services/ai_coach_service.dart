@@ -3,6 +3,9 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
+import '../models/finance/finance_category.dart';
+import '../models/finance/finance_parse_result.dart';
+import '../models/finance/financial_account.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 
@@ -74,6 +77,30 @@ abstract class AiCoachService {
     String userQuery,
     List<FoodSearchCandidate> candidates,
   );
+
+  /// One turn of the chat-logging classifier (Plan 026 §3.3).
+  ///
+  /// Returns one of three concrete [ClassifierStep]s:
+  /// - [StepResolved] when all required fields are filled (≥ 0.6 confidence).
+  /// - [StepClarify] when the model needs to ask one targeted question.
+  /// - [StepGiveUp] when the model can't pin it down — caller falls back to
+  ///   opening the form prefilled with whatever's known.
+  ///
+  /// Returns null only when the underlying service is unavailable or the
+  /// model output couldn't be parsed at all. The caller treats null the
+  /// same as [StepGiveUp].
+  ///
+  /// Implementations MUST validate every named entity against the live
+  /// [accounts] / [categories] lists; hallucinated names force the step to
+  /// downgrade to [StepGiveUp] before returning.
+  Future<ClassifierStep?> runFinanceClassifierStep({
+    required List<LedgerChatTurn> conversation,
+    required PreparseResult preparse,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required int turnCount,
+  });
 
   void dispose();
 }

@@ -8,6 +8,9 @@ import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
 import '../models/ai_parsed_food.dart';
 import '../models/extracted_food_item.dart';
+import '../models/finance/finance_category.dart';
+import '../models/finance/finance_parse_result.dart';
+import '../models/finance/financial_account.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import 'ai_coach_service.dart';
@@ -122,6 +125,17 @@ class CloudAiCoachService implements AiCoachService {
     List<FoodSearchCandidate> candidates,
   ) async =>
       null; // Cloud tier delegates disambiguation to the on-device path.
+
+  @override
+  Future<ClassifierStep?> runFinanceClassifierStep({
+    required List<LedgerChatTurn> conversation,
+    required PreparseResult preparse,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required int turnCount,
+  }) async =>
+      null; // Cloud tier delegates ledger classification to on-device for now.
 
   // ── Internals ─────────────────────────────────────────────────────────────
 

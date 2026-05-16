@@ -11,13 +11,13 @@ investigation or larger changes. Quick wins were merged inline.
 | 2 | "BUDGETED EXPENSES" all caps | ✅ Fixed → "Budgeted Expenses" |
 | 3 | Bill delete not in dashboard liabilities | 🔍 Plan A below |
 | 4 | Goals/savings inside Budget | 🔮 Plan B below |
-| 5 | AI crash on "red rice" | 🔍 Plan C below |
+| 5 | AI crash on "red rice" | ✅ Soft circuit breaker + defensive createChat (native crashes still uncatchable) |
 | 6 | Smartsearch "model not found" 404 | 🔍 Plan D below |
 | 7 | "Check latest" stuck on already-on-latest | 🔍 Plan E below |
 | 8 | Faint divider above meal totals | ✅ Fixed (always render `_MealTotalRow`) |
 | 9 | Edit-meal: only delete, can't add items | 🔮 Plan F below |
-| 10 | Confirmation prompt skipped (sapin sapin repeat) | 🔍 Plan G below |
-| 11 | Fuzzy search ("bearbrand"/"pansit") | 🔮 Plan H below |
+| 10 | Confirmation prompt skipped (sapin sapin repeat) | ✅ Auto-learn now requires lexical match; learn-key strips quantity tokens |
+| 11 | Fuzzy search ("bearbrand"/"pansit") | ✅ Shipped in commit 6a59b4a (compound splits + Damerau–Levenshtein) |
 | 12 | "could not identify the exercise" on food query | ✅ Fixed (word-boundary match) |
 | 13 | Account snapshots show raw IDs | ✅ Fixed (lookup by name) |
 | 14 | Pie chart: glow, single income color, overflow | ✅ Glow removed; Plan I for top-N + colors |

@@ -103,7 +103,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       healthService: _healthService,
       storage: _storage,
     );
-    _ledgerPresenter = LedgerPresenter(_storage, _statsPresenter);
+    _ledgerPresenter =
+        LedgerPresenter(_storage, _statsPresenter, ai: _onDeviceAi);
     _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
     _budgetPresenter =
         BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);
@@ -233,7 +234,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      _ledgerPresenter.notifyAppPaused();
+    }
     if (state == AppLifecycleState.resumed) {
+      _ledgerPresenter.notifyAppResumed();
       _fastingPresenter.loadState();
       _syncService?.pushPending();
       _syncService?.pullIfStale();

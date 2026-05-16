@@ -368,6 +368,29 @@ class NutritionPresenter extends ChangeNotifier {
   // ── AI getters ───────────────────────────────────────────────────────────────
 
   FoodDbService get foodDb => _foodDb;
+
+  /// Typeahead for the chat input. Returns food names ranked by
+  /// personal-dict recency first, then FTS5 matches from the bundled food DB.
+  /// Deduped case-insensitively, capped at [limit]. Returns empty for queries
+  /// shorter than 2 chars.
+  Future<List<String>> suggestFoodNames(String query, {int limit = 6}) async {
+    final q = query.trim();
+    if (q.length < 2) return const [];
+    final dictHits = _personalDict.prefixSearch(q, limit: limit);
+    final result = <String>[];
+    final seen = <String>{};
+    for (final e in dictHits) {
+      if (seen.add(e.name.toLowerCase())) result.add(e.name);
+      if (result.length >= limit) return result;
+    }
+    final dbHits = await _foodDb.search(q);
+    for (final e in dbHits) {
+      if (result.length >= limit) break;
+      if (seen.add(e.name.toLowerCase())) result.add(e.name);
+    }
+    return result;
+  }
+
   bool get isAiAvailable => _ai.isAvailable;
   bool get isAiEstimating => _isAiEstimating;
   bool get isAiDownloading => _ai.downloadProgress != null;
