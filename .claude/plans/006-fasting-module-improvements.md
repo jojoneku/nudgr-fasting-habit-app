@@ -1,6 +1,6 @@
 # Plan 006 — Fasting Module Improvements
 
-**Status:** Awaiting Approval
+**Status:** PARTIAL — most improvements shipped; overdrive mode UI pending
 **Branch:** `feat/fasting-module-improvements`
 **Inspired by:** Zero, Fastic, LIFE Fasting Tracker
 **Note:** `FastingPresenter` will be modified again by **Plan 008** (Gamification Overhaul) to route XP through `GamificationService`. Keep XP calls via `StatsPresenter.addXp()` for now — Plan 008 refactors them.

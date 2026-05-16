@@ -1,4 +1,6 @@
-# OTA Self-Update — Implementation Plan
+# Plan 024 — OTA Self-Update
+
+> Status: IMPLEMENTED (`lib/services/update_service.dart` + `lib/presenters/update_presenter.dart`)
 
 ## Goal
 Deliver a zero-USB update flow: new APK built → pushed to Supabase Storage → app detects it on

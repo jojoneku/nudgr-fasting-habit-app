@@ -1,5 +1,7 @@
 # Plan 016: Google Sheets Import
 
+> Status: NOT IMPLEMENTED
+
 ## Overview
 Allow users to import their existing expense data from a Google Sheets file directly into the app via Google Sheets API + OAuth 2.0. This eliminates manual re-entry for users who already track finances in Sheets.
 

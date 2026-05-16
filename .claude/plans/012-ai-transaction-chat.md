@@ -1,5 +1,5 @@
 # Plan 012 — AI Transaction Chat
-**Status:** DRAFT v2 — Awaiting Approval
+**Status:** NOT IMPLEMENTED — none of the planned files (`ai_transaction_parse_result.dart`, `transaction_chat_presenter.dart`, `transaction_chat_view.dart`) or symbols (`ChatIntent`, `AiTransactionParseResult`) exist. Superseded conceptually by the (also-unshipped) Plan 026 (`026-ledger-chat-logging.md`).
 **Phase:** 1 of 1
 **Depends on:** Plans 004a–004c (Treasury module) — completed
 

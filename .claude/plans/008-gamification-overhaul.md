@@ -1,6 +1,6 @@
 # Plan 008 — Gamification Overhaul: Modular Profile System
 
-**Status:** DRAFT — awaiting approval
+**Status:** PARTIAL — modules call statsPresenter.addXp() directly; GamificationService abstraction not built
 **Author:** System Architect
 **Date:** 2026-03-20
 **Depends on:** Plan 001 (Nav Hub), Plan 005 (Quest Overhaul)

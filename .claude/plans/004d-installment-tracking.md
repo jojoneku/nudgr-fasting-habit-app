@@ -1,5 +1,5 @@
 # Plan 004d — Treasury Module: Installment Tracking
-**Status:** DRAFT — Awaiting Approval
+**Status:** IMPLEMENTED
 **Phase:** Extension to 004c
 **Depends on:** Plan 004c completed (Bills & Receivables screen exists)
 

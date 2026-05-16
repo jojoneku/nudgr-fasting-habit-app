@@ -1,5 +1,5 @@
 # Plan 004c — Treasury Module: Bills, Budget & History
-**Status:** DRAFT v2 — Awaiting Approval (updated from sheet screenshots)
+**Status:** IMPLEMENTED
 **Phase:** 3 of 3
 **Depends on:** Plan 004b completed
 
