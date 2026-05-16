@@ -19,6 +19,7 @@ import '../models/finance/budget.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/finance_category.dart';
+import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
@@ -1008,6 +1009,31 @@ class LocalStorageService extends StorageService {
           .toList();
     } catch (e) {
       debugPrint('LocalStorageService: Error loading personal food dict: $e');
+      return [];
+    }
+  }
+
+  // ── Finance Personal Dictionary (chat-logging learned tokens) ───────────────
+
+  @override
+  Future<void> saveFinanceDictionary(List<FinanceDictEntry> entries) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.keyFinanceDictionary,
+        jsonEncode(entries.map((e) => e.toJson()).toList()));
+    _markDirty(SyncDomain.userCollections, 'default');
+  }
+
+  @override
+  Future<List<FinanceDictEntry>> loadFinanceDictionary() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyFinanceDictionary);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => FinanceDictEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading finance dictionary: $e');
       return [];
     }
   }

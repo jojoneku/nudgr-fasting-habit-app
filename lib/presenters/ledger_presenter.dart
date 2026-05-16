@@ -2,22 +2,34 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/services/ai_coach_service.dart';
+import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
 
 class LedgerPresenter extends ChangeNotifier {
-  LedgerPresenter(StorageService storage, StatsPresenter stats)
-      : _storage = storage,
-        _stats = stats {
+  LedgerPresenter(
+    StorageService storage,
+    StatsPresenter stats, {
+    AiCoachService? ai,
+    FinancePersonalDictionary? financeDict,
+  })  : _storage = storage,
+        _stats = stats,
+        _ai = ai,
+        _financeDict = financeDict ?? FinancePersonalDictionary(storage) {
     load();
   }
 
   final StorageService _storage;
   final StatsPresenter _stats;
+  final AiCoachService? _ai;
+  final FinancePersonalDictionary _financeDict;
 
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
@@ -26,6 +38,19 @@ class LedgerPresenter extends ChangeNotifier {
   List<FinancialAccount> _accounts = [];
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
+
+  // ── Chat-logging state (Plan 026 — ephemeral, never persisted) ──────────────
+  LedgerChatState _chatState = const LedgerChatState.idle();
+  FinanceParseError? _chatHardError;
+  String? _lastCommittedSummary;
+  ParsedTransaction? _pendingFormPrefill;
+  DateTime? _pausedAt;
+  static const _staleConversationThreshold = Duration(minutes: 5);
+
+  LedgerChatState get chatState => _chatState;
+  FinanceParseError? get chatHardError => _chatHardError;
+  String? get lastCommittedSummary => _lastCommittedSummary;
+  ParsedTransaction? get pendingFormPrefill => _pendingFormPrefill;
 
   // --- Public state ---
 
@@ -174,6 +199,7 @@ class LedgerPresenter extends ChangeNotifier {
     _accounts = await _storage.loadAccounts();
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
+    await _financeDict.init();
 
     // One-time migration: reassign any category that still has the old
     // white default (#FFFFFF / near-white luminance > 0.65) to a palette color.
@@ -309,12 +335,286 @@ class LedgerPresenter extends ChangeNotifier {
   /// Throws [StateError('has_transactions')] if any transaction still
   /// references this category — refusing to delete prevents broken category
   /// references in the ledger feed and pie chart.
+  ///
+  /// Cascade-clears any personal-dict entries that pointed at this category,
+  /// so re-typing a learned token after delete won't resolve to a dead id.
   Future<void> deleteCategory(String id) async {
     final inUse = _allTransactions.any((t) => t.categoryId == id);
     if (inUse) throw StateError('has_transactions');
     _categories = _categories.where((c) => c.id != id).toList();
     await _storage.saveFinanceCategories(_categories);
+    await _financeDict.removeForCategory(id);
     notifyListeners();
+  }
+
+  // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────
+
+  /// Handles every user message in the chat input row — whether starting a
+  /// new conversation or replying to a clarifying question.
+  ///
+  /// Flow:
+  /// 1. Preprocess the input (regex + dict). If hard-errored → set
+  ///    [chatHardError], no AI call, no state change.
+  /// 2. If fully resolved AND no live conversation → commit + snackbar.
+  /// 3. Otherwise enter `classifying` phase and invoke the AI for one turn.
+  /// 4. Map the [ClassifierStep] to the next [LedgerChatState] phase.
+  Future<void> sendChatInput(String text) async {
+    final isReply = _chatState.phase == ChatPhase.clarifying;
+    final viewingPast = !isSelectedDateToday;
+
+    if (!isReply) {
+      // Fresh input — preprocess.
+      final preparse = preparseFinanceInput(
+        input: text,
+        categories: _categories,
+        accounts: _accounts,
+        learnedDict: _financeDict.snapshot(),
+        viewingPastDate: viewingPast,
+      );
+      if (preparse.hardError != null) {
+        _chatHardError = preparse.hardError;
+        notifyListeners();
+        return;
+      }
+      _chatHardError = null;
+      if (preparse.isFullyResolved && _ai == null || preparse.isFullyResolved) {
+        await _commitParsed(preparse.toDraft());
+        return;
+      }
+      _chatState = _chatState.copyWith(
+        phase: ChatPhase.classifying,
+        turns: [
+          LedgerChatTurn(text: text, isUser: true, at: DateTime.now()),
+        ],
+        draft: preparse.toDraft(),
+        turnCount: 0,
+      );
+      notifyListeners();
+      await _runClassifier(preparse);
+    } else {
+      // Reply turn — append, advance the AI.
+      final updatedTurns = [
+        ..._chatState.turns,
+        LedgerChatTurn(text: text, isUser: true, at: DateTime.now()),
+      ];
+      _chatState = _chatState.copyWith(
+        phase: ChatPhase.classifying,
+        turns: updatedTurns,
+        turnCount: _chatState.turnCount + 1,
+        clearLastStep: true,
+      );
+      notifyListeners();
+      // Rebuild a preparse summary from the current draft for the prompt.
+      final preparse = PreparseResult(
+        rawInput: text,
+        amount: _chatState.draft.amount,
+        type: _chatState.draft.type,
+        accountId: _chatState.draft.accountId,
+        transferToAccountId: _chatState.draft.transferToAccountId,
+        categoryId: _chatState.draft.categoryId,
+      );
+      await _runClassifier(preparse);
+    }
+  }
+
+  Future<void> _runClassifier(PreparseResult preparse) async {
+    final ai = _ai;
+    if (ai == null || !ai.isAvailable) {
+      _fallbackToForm(preparse.toDraft(), 'AI unavailable.');
+      return;
+    }
+    final step = await ai.runFinanceClassifierStep(
+      conversation: _chatState.turns,
+      preparse: preparse,
+      categories: _categories,
+      accounts: _accounts,
+      learnedMappings: _financeDict.snapshot(),
+      turnCount: _chatState.turnCount,
+    );
+    if (step == null) {
+      _fallbackToForm(_chatState.draft, 'Couldn\'t reach the model.');
+      return;
+    }
+    _chatState = _chatState.copyWith(
+      phase: ChatPhase.clarifying,
+      lastStep: step,
+      draft: switch (step) {
+        StepResolved s => s.transaction,
+        StepClarify s => _chatState.draft.mergeWith(s.partialDraft),
+        StepGiveUp s => _chatState.draft.mergeWith(s.partialDraft),
+      },
+      turns: [
+        ..._chatState.turns,
+        LedgerChatTurn(
+          text: switch (step) {
+            StepResolved s => s.summaryText,
+            StepClarify s => s.question,
+            StepGiveUp s => s.reason,
+          },
+          isUser: false,
+          quickReplies: step is StepClarify ? step.quickReplies : null,
+          at: DateTime.now(),
+        ),
+      ],
+    );
+    if (step is StepGiveUp) {
+      _fallbackToForm(_chatState.draft, step.reason);
+      return;
+    }
+    notifyListeners();
+  }
+
+  /// User tapped "Yes" on the resolving turn — commit + learn + reset.
+  Future<void> confirmResolved() async {
+    final step = _chatState.lastStep;
+    if (step is! StepResolved) return;
+    await _commitParsed(step.transaction);
+    if (step.learnedToken != null && step.transaction.categoryId != null) {
+      await _financeDict.learn(
+          step.learnedToken!, step.transaction.categoryId!);
+    }
+  }
+
+  /// User tapped "Edit" — close drawer and surface a draft for the form to
+  /// read on its next open. [pendingFormPrefill] is consumed by the view.
+  void editResolved() {
+    final step = _chatState.lastStep;
+    final draft = step is StepResolved ? step.transaction : _chatState.draft;
+    _pendingFormPrefill = draft;
+    _chatState = const LedgerChatState.idle();
+    notifyListeners();
+  }
+
+  /// User tapped Cancel — drop conversation, clear input. No commit, no learn.
+  void cancelChat() {
+    _chatState = const LedgerChatState.idle();
+    _chatHardError = null;
+    _pendingFormPrefill = null;
+    notifyListeners();
+  }
+
+  /// Called by the view after it consumes [pendingFormPrefill].
+  void consumeFormPrefill() {
+    if (_pendingFormPrefill == null) return;
+    _pendingFormPrefill = null;
+    notifyListeners();
+  }
+
+  void clearChatHardError() {
+    if (_chatHardError == null) return;
+    _chatHardError = null;
+    notifyListeners();
+  }
+
+  void clearLastCommittedSummary() {
+    if (_lastCommittedSummary == null) return;
+    _lastCommittedSummary = null;
+    notifyListeners();
+  }
+
+  /// View calls this when the app backgrounds. We record the timestamp so
+  /// [notifyAppResumed] can decide whether to reset the in-flight conversation.
+  void notifyAppPaused() {
+    _pausedAt = DateTime.now();
+  }
+
+  /// Resets the chat state when the app has been backgrounded longer than
+  /// [_staleConversationThreshold]. Ledger entries should be deliberate —
+  /// resuming a half-typed conversation an hour later is worse than starting
+  /// fresh.
+  void notifyAppResumed() {
+    final pausedAt = _pausedAt;
+    _pausedAt = null;
+    if (pausedAt == null) return;
+    if (_chatState.phase == ChatPhase.idle) return;
+    if (DateTime.now().difference(pausedAt) > _staleConversationThreshold) {
+      _chatState = const LedgerChatState.idle();
+      notifyListeners();
+    }
+  }
+
+  bool get isSelectedDateToday {
+    final d = _selectedDate;
+    if (d == null) return true;
+    final now = DateTime.now();
+    return d.year == now.year && d.month == now.month && d.day == now.day;
+  }
+
+  Future<void> _commitParsed(ParsedTransaction draft) async {
+    if (!draft.isComplete) {
+      _fallbackToForm(draft, 'Missing required fields.');
+      return;
+    }
+    final now = DateTime.now();
+    final description = _truncateDescription(draft.description);
+    if (draft.type == TransactionType.transfer) {
+      await addTransfer(
+        fromAccountId: draft.accountId!,
+        toAccountId: draft.transferToAccountId!,
+        amount: draft.amount!,
+        categoryId: _firstCategoryIdForTransfer(),
+        description: description,
+        date: now,
+      );
+    } else {
+      await addTransaction(TransactionRecord(
+        id: _generateId(),
+        date: now,
+        accountId: draft.accountId!,
+        categoryId: draft.categoryId!,
+        amount: draft.amount!,
+        type: draft.type!,
+        description: description,
+        month: toMonthKey(now),
+      ));
+    }
+    _lastCommittedSummary = _summaryFor(draft);
+    _chatState = const LedgerChatState.idle();
+    _chatHardError = null;
+    notifyListeners();
+  }
+
+  String _summaryFor(ParsedTransaction draft) {
+    final accountName = _accounts
+        .where((a) => a.id == draft.accountId)
+        .map((a) => a.name)
+        .firstOrNull;
+    final categoryName = _categories
+        .where((c) => c.id == draft.categoryId)
+        .map((c) => c.name)
+        .firstOrNull;
+    if (draft.type == TransactionType.transfer) {
+      final toName = _accounts
+          .where((a) => a.id == draft.transferToAccountId)
+          .map((a) => a.name)
+          .firstOrNull;
+      return 'Transferred ₱${draft.amount!.toStringAsFixed(0)} '
+          '${accountName ?? '?'} → ${toName ?? '?'}';
+    }
+    final verb = draft.type == TransactionType.inflow ? 'Received' : 'Logged';
+    return '$verb ₱${draft.amount!.toStringAsFixed(0)} → '
+        '${categoryName ?? '?'} (${accountName ?? '?'})';
+  }
+
+  /// Falls back to the form prefilled with the partial draft, clears chat.
+  void _fallbackToForm(ParsedTransaction draft, String reason) {
+    _pendingFormPrefill = draft;
+    _chatState = const LedgerChatState.idle();
+    notifyListeners();
+  }
+
+  /// Plan 026 §4 — description captured from raw input, capped at 60.
+  String _truncateDescription(String raw) {
+    final trimmed = raw.trim();
+    return trimmed.length <= 60 ? trimmed : trimmed.substring(0, 60);
+  }
+
+  /// Transfers still need a categoryId per the data model. Picks the first
+  /// expense category; if none exists, picks any category. Caller has already
+  /// validated that at least one category exists for the transfer path.
+  String _firstCategoryIdForTransfer() {
+    final expense = _categories.where((c) => c.type == CategoryType.expense);
+    return (expense.isNotEmpty ? expense : _categories).first.id;
   }
 
   // --- Private helpers ---
