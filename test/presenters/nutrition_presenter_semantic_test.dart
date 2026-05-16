@@ -18,6 +18,9 @@ import 'package:intermittent_fasting/models/ai_meal_estimate.dart';
 import 'package:intermittent_fasting/models/ai_parsed_food.dart';
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
 import 'package:intermittent_fasting/models/extracted_food_item.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/food_db_entry.dart';
 import 'package:intermittent_fasting/models/food_parse_result.dart';
 import 'package:intermittent_fasting/models/food_search_candidate.dart';
@@ -398,6 +401,17 @@ class _FakeAiCoach implements AiCoachService {
     List<FoodSearchCandidate> candidates,
   ) async =>
       disambiguation;
+
+  @override
+  Future<ClassifierStep?> runFinanceClassifierStep({
+    required List<LedgerChatTurn> conversation,
+    required PreparseResult preparse,
+    required List<FinanceCategory> categories,
+    required List<FinancialAccount> accounts,
+    required Map<String, String> learnedMappings,
+    required int turnCount,
+  }) async =>
+      null;
 
   @override
   void dispose() {}

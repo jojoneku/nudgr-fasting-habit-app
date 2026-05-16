@@ -238,6 +238,8 @@ void main() {
           ]);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
+      when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
       when(mockStorage.saveTransactions(any)).thenAnswer((_) async {});
       when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
       when(mockStats.addXp(any)).thenAnswer((_) async {});
@@ -388,6 +390,8 @@ void main() {
           ]);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
+      when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
       when(mockStorage.loadBills()).thenAnswer((_) async => []);
       when(mockStorage.loadReceivables()).thenAnswer((_) async => []);
       when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => []);
