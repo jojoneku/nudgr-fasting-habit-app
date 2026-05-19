@@ -17,6 +17,7 @@ import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
 import '../services/health_service.dart';
+import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/remote_secrets_service.dart';
@@ -52,6 +53,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final QuestPresenter _questPresenter;
   late final FoodDbService _foodDb;
   late final OnDeviceAiCoachService _onDeviceAi;
+  late final CloudAiCoachService _cloudAi;
   late final EmbeddingService _embedder;
   late final FoodSemanticSearchService _semanticSearch;
   late final HealthService _healthService;
@@ -89,6 +91,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _onDeviceAi = OnDeviceAiCoachService(
       tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
+    _cloudAi = CloudAiCoachService(
+      tokenProvider: () => AuthService.instance.currentAccessToken,
+    );
+    _cloudAi.enabled = widget.settingsPresenter.useCloudAi;
+    widget.settingsPresenter.addListener(_onSettingsChanged);
     _embedder = EmbeddingService(
       tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
@@ -124,6 +131,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       storage: _storage,
       foodDb: _foodDb,
       aiCoach: _onDeviceAi,
+      cloudAi: _cloudAi,
       semanticSearch: _semanticSearch,
       embedder: _embedder,
     );
@@ -171,6 +179,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    widget.settingsPresenter.removeListener(_onSettingsChanged);
     WidgetsBinding.instance.removeObserver(this);
     _fastingPresenter.dispose();
     _statsPresenter.dispose();
@@ -193,6 +202,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _syncService?.dispose();
     _syncPresenter?.dispose();
     super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    _cloudAi.enabled = widget.settingsPresenter.useCloudAi;
   }
 
   Future<void> _initSync(String userId) async {

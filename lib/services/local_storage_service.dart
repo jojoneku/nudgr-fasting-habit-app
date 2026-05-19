@@ -28,6 +28,7 @@ import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
+import '../models/weight_entry.dart';
 import 'storage_service.dart';
 import 'sync_queue.dart';
 
@@ -1097,6 +1098,30 @@ class LocalStorageService extends StorageService {
 
   // ── Export / Import ──────────────────────────────────────────────────────────
 
+  // ── Weight Log ───────────────────────────────────────────────────────────────
+
+  @override
+  Future<void> saveWeightLog(List<WeightEntry> entries) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.keyWeightLog,
+        jsonEncode(entries.map((e) => e.toJson()).toList()));
+  }
+
+  @override
+  Future<List<WeightEntry>> loadWeightLog() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyWeightLog);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => WeightEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading weight log: $e');
+      return [];
+    }
+  }
+
   @override
   Future<String> exportAllData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -1117,6 +1142,18 @@ class LocalStorageService extends StorageService {
   Future<String?> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(StorageService.kThemeMode);
+  }
+
+  @override
+  Future<void> saveUseCloudAi(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(StorageService.kUseCloudAi, value);
+  }
+
+  @override
+  Future<bool> loadUseCloudAi() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(StorageService.kUseCloudAi) ?? false;
   }
 
   @override

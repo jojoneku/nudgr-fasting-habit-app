@@ -1080,7 +1080,9 @@ class _FoodEditFieldState extends State<_FoodEditField> {
   }
 
   void _accept(FoodDbEntry entry) {
-    widget.controller.text = entry.name;
+    // Strip USDA-style `, qualifier` commas so the NLP parser doesn't split
+    // "oats rolled, dry" into two separate food items on submit.
+    widget.controller.text = entry.name.replaceAll(', ', ' ');
     widget.controller.selection = TextSelection.collapsed(
       offset: widget.controller.text.length,
     );

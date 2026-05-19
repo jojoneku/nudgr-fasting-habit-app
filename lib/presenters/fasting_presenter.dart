@@ -19,6 +19,7 @@ class FastingPresenter extends ChangeNotifier {
   int fastingGoalHours = 16;
   List<FastingLog> history = [];
   Timer? _ticker;
+  bool _disposed = false;
 
   FastingPresenter({
     this.statsPresenter,
@@ -122,6 +123,7 @@ class FastingPresenter extends ChangeNotifier {
         } catch (_) {}
       }
     }
+    if (_disposed) return;
     notifyListeners();
   }
 
@@ -605,6 +607,7 @@ class FastingPresenter extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _ticker?.cancel();
     super.dispose();
   }
