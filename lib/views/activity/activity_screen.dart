@@ -3,7 +3,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../app_colors.dart';
 import '../../models/activity_log.dart';
 import '../../presenters/activity_presenter.dart';
@@ -274,14 +273,14 @@ class _MetricPillsRow extends StatelessWidget {
         ),
         if (cals != null)
           AppStatPill(
-            icon: MdiIcons.fire,
+            icon: Icons.local_fire_department,
             label: 'Cal',
             value: '${_numFmt.format(cals.round())} kcal',
             color: AppStatColor.warning,
           ),
         if (log.distanceMeters != null)
           AppStatPill(
-            icon: MdiIcons.mapMarkerDistance,
+            icon: Icons.route,
             label: 'Dist',
             value: '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
             color: AppStatColor.primary,
@@ -1367,13 +1366,13 @@ class _DayDetail extends StatelessWidget {
                   accentColor),
               if (calories != null) ...[
                 const SizedBox(width: 8),
-                _chip(MdiIcons.fire, '${calories!.round()} kcal',
+                _chip(Icons.local_fire_department, '${calories!.round()} kcal',
                     context.appColors.orange),
               ],
               if (log.distanceMeters != null) ...[
                 const SizedBox(width: 8),
                 _chip(
-                    MdiIcons.mapMarkerDistance,
+                    Icons.route,
                     '${(log.distanceMeters! / 1000).toStringAsFixed(1)} km',
                     theme.colorScheme.tertiary),
               ],
