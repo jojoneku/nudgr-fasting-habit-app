@@ -67,15 +67,19 @@ class AuthPresenter extends ChangeNotifier {
     try {
       await _auth.signInWithGoogle();
       if (kDebugMode) {
-        final token = Supabase.instance.client.auth.currentSession?.accessToken;
-        if (token != null) {
-          debugPrint('🔑 JWT for AWS test (copy all parts):');
-          const chunk = 800;
-          for (var i = 0; i < token.length; i += chunk) {
-            debugPrint(token.substring(i, (i + chunk).clamp(0, token.length)));
+        try {
+          final token =
+              Supabase.instance.client.auth.currentSession?.accessToken;
+          if (token != null) {
+            debugPrint('🔑 JWT for AWS test (copy all parts):');
+            const chunk = 800;
+            for (var i = 0; i < token.length; i += chunk) {
+              debugPrint(
+                  token.substring(i, (i + chunk).clamp(0, token.length)));
+            }
+            debugPrint('🔑 END JWT');
           }
-          debugPrint('🔑 END JWT');
-        }
+        } catch (_) {}
       }
       if (!wasSignedIn && userId != null) {
         onFirstSignIn?.call(userId!);

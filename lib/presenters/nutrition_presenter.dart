@@ -263,11 +263,11 @@ class NutritionPresenter extends ChangeNotifier {
   // ── Weight log ───────────────────────────────────────────────────────────────
 
   List<WeightEntry> get weightLog => _weightLog;
-  WeightEntry? get latestWeight =>
-      _weightLog.isEmpty ? null : _weightLog.last;
+  WeightEntry? get latestWeight => _weightLog.isEmpty ? null : _weightLog.last;
   double? get weightDelta {
     if (_weightLog.length < 2) return null;
-    return _weightLog.last.weightKg - _weightLog[_weightLog.length - 2].weightKg;
+    return _weightLog.last.weightKg -
+        _weightLog[_weightLog.length - 2].weightKg;
   }
 
   // ── Calorie getters ──────────────────────────────────────────────────────────

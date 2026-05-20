@@ -61,12 +61,10 @@ class SettingsScreen extends StatelessWidget {
               builder: (context, _) => AppGroupedList(
                 sections: [
                   _accountGroupSection(context),
-                  if (nutritionPresenter != null)
-                    _bodySection(context),
+                  if (nutritionPresenter != null) _bodySection(context),
                   if (nutritionPresenter?.isFoodSearchAvailable ?? false)
                     _smartSearchSection(context),
-                  if (authPresenter.isSignedIn)
-                    _cloudAiSection(context),
+                  if (authPresenter.isSignedIn) _cloudAiSection(context),
                   _dataSection(context),
                   _aboutSection(context),
                   if (kDebugMode) _developerSection(context),
@@ -955,19 +953,17 @@ class _WeightLogSheetState extends State<_WeightLogSheet> {
                       Expanded(
                         child: Text(
                           '${entry.weightKg.toStringAsFixed(1)} kg',
-                          style:
-                              TextStyle(color: cs.onSurface, fontSize: 14),
+                          style: TextStyle(color: cs.onSurface, fontSize: 14),
                         ),
                       ),
                       Text(
                         _formatDate(entry.loggedAt),
-                        style: TextStyle(
-                            color: cs.onSurfaceVariant, fontSize: 12),
+                        style:
+                            TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
-                        onTap: () =>
-                            widget.presenter.deleteWeight(entry.id),
+                        onTap: () => widget.presenter.deleteWeight(entry.id),
                         child: Icon(Icons.close,
                             size: 16, color: cs.onSurfaceVariant),
                       ),
