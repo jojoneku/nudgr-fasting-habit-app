@@ -814,6 +814,7 @@ class NotificationService {
   // ── RPG Achievement notifications ────────────────────────────────────────────
 
   Future<void> showLevelUpNotification(int level, String rank) async {
+    if (!_isInitialized) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdAchievements,
@@ -836,6 +837,7 @@ class NotificationService {
 
   Future<void> showRankPromotionNotification(
       String fromRank, String toRank) async {
+    if (!_isInitialized) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdAchievements,
@@ -857,6 +859,7 @@ class NotificationService {
   }
 
   Future<void> cancelAchievementNotifications() async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdLevelUp);
     await flutterLocalNotificationsPlugin.cancel(notifIdRankPromotion);
   }
@@ -866,6 +869,7 @@ class NotificationService {
   /// Schedule a daily weight-log reminder at [time]. Fires daily via
   /// [DateTimeComponents.time] — persists across app restarts automatically.
   Future<void> scheduleWeightReminder(TimeOfDay time) async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
 
     final now = tz.TZDateTime.now(tz.local);
@@ -908,10 +912,12 @@ class NotificationService {
   }
 
   Future<void> cancelWeightReminder() async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
   }
 
   Future<void> showCalorieGoalNotification(int calories, int goal) async {
+    if (!_isInitialized) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdMilestones,
@@ -937,6 +943,7 @@ class NotificationService {
   /// Schedule a monthly bills reminder on [dayOfMonth] at 9 AM via
   /// [DateTimeComponents.dayOfMonthAndTime].
   Future<void> scheduleBillsReminder(int dayOfMonth) async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
 
     final day = dayOfMonth.clamp(1, 28);
@@ -975,6 +982,7 @@ class NotificationService {
   }
 
   Future<void> cancelBillsReminder() async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
   }
 
@@ -985,6 +993,7 @@ class NotificationService {
     double limit,
     int thresholdPercent,
   ) async {
+    if (!_isInitialized) return;
     final id = _budgetWarningId(budgetId);
     final spentLabel = spent.toStringAsFixed(0);
     final limitLabel = limit.toStringAsFixed(0);
@@ -1010,6 +1019,7 @@ class NotificationService {
   }
 
   Future<void> cancelBudgetWarning(String budgetId) async {
+    if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(_budgetWarningId(budgetId));
   }
 
