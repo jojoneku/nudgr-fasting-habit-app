@@ -47,6 +47,20 @@ abstract class AiCoachService {
   /// if the model isn't loaded / output couldn't be parsed.
   Future<List<ExtractedFoodItem>?> extractFoodItems(String text);
 
+  /// Plan 026 §3 + Plan 027 §5 — combined extract + resolve + estimate in a
+  /// single round trip, with combine-vs-split intent.
+  ///
+  /// The caller pre-fetches a candidate pool from the local DB via alias-
+  /// aware FTS; the model picks `food_id` from candidates when one matches,
+  /// or returns `estimatedMacros` when no candidate fits. The model also
+  /// classifies the intent: `singleDish` means combine items into one log
+  /// entry (e.g. "egg with sardines"), `itemsList` means keep them separate
+  /// (e.g. "100g rice and 80g chicken").
+  Future<ParseFoodResult?> parseFoodWithCandidates(
+    String text,
+    List<FoodSearchCandidate> candidates,
+  );
+
   /// Estimate calories and macros for a natural-language food description.
   /// Used for the standalone estimation UI (estimateMeal flow).
   Future<AiMealEstimate?> estimateMacros(String description);

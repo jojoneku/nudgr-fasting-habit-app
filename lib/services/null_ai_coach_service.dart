@@ -41,6 +41,13 @@ class NullAiCoachService implements AiCoachService {
   Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async => null;
 
   @override
+  Future<ParseFoodResult?> parseFoodWithCandidates(
+    String text,
+    List<FoodSearchCandidate> candidates,
+  ) async =>
+      null;
+
+  @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;
 
   @override

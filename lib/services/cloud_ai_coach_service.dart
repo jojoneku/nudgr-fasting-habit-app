@@ -151,6 +151,57 @@ class CloudAiCoachService implements AiCoachService {
     }
   }
 
+  // ── Parse food with candidates (Plan 026) ────────────────────────────────
+
+  @override
+  Future<ParseFoodResult?> parseFoodWithCandidates(
+    String text,
+    List<FoodSearchCandidate> candidates,
+  ) async {
+    final result = await _call('parseFoodWithCandidates', {
+      'text': text,
+      'candidates': candidates
+          .take(15)
+          .map((c) => {'food_id': c.entry.id, 'name': c.entry.name})
+          .toList(),
+    });
+    if (result == null) return null;
+    try {
+      final items = result['items'] as List<dynamic>;
+      final parsed = items
+          .cast<Map<String, dynamic>>()
+          .map((item) {
+            final macrosJson = item['estimated_macros'] as Map<String, dynamic>?;
+            final macros = macrosJson == null
+                ? null
+                : EstimatedMacros(
+                    calories: (macrosJson['calories'] as num?)?.toDouble() ?? 0,
+                    proteinG: (macrosJson['protein_g'] as num?)?.toDouble() ?? 0,
+                    carbsG: (macrosJson['carbs_g'] as num?)?.toDouble() ?? 0,
+                    fatG: (macrosJson['fat_g'] as num?)?.toDouble() ?? 0,
+                  );
+            return ExtractedFoodItem(
+              name: item['name'] as String,
+              grams: (item['grams'] as num?)?.toDouble() ?? 100,
+              hydeDescription: (item['hyde'] as String?) ?? '',
+              rawText: item['name'] as String,
+              resolvedFoodId: item['food_id'] as String?,
+              resolverConfidence:
+                  (item['confidence'] as num?)?.toDouble() ?? 0.0,
+              estimatedMacros: macros,
+            );
+          })
+          .toList();
+      return ParseFoodResult(
+        items: parsed,
+        intent: ParseFoodResult.intentFromJson(result['intent'] as String?),
+      );
+    } catch (e) {
+      debugPrint('CloudAiCoachService.parseFoodWithCandidates parse error: $e');
+      return null;
+    }
+  }
+
   // ── Estimate macros ───────────────────────────────────────────────────────
 
   @override

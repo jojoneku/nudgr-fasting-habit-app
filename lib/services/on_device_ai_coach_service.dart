@@ -560,6 +560,128 @@ class OnDeviceAiCoachService implements AiCoachService {
     }
   }
 
+  /// Plan 027 §2.1 — on-device single-call parity (pick-only variant).
+  /// Qwen extracts items AND attempts to pick a food_id from the candidate
+  /// pool when one clearly matches. Unlike the cloud op, this does NOT
+  /// estimate macros for unmatched items — the presenter falls through to
+  /// the keyword bucket for those. Keeps Qwen on a task it can handle
+  /// reliably (picking from a short list).
+  @override
+  Future<ParseFoodResult?> parseFoodWithCandidates(
+    String text,
+    List<FoodSearchCandidate> candidates,
+  ) async {
+    final model = _model;
+    if (model == null) return null;
+
+    final chat = await model.createChat(
+      temperature: 0.1,
+      topK: 1,
+      isThinking: false,
+      modelType: ModelType.qwen,
+    );
+
+    try {
+      final candidatesBlock = candidates.isEmpty
+          ? '(no candidates — set food_id to null for every item)'
+          : candidates
+              .take(10)
+              .map((c) => '- id: ${c.entry.id}, name: ${c.entry.name}')
+              .join('\n');
+
+      final prompt =
+          '$_parseFoodWithCandidatesPrompt\n\nCandidates:\n$candidatesBlock\n\n'
+          'User: $text\nOutput:';
+      await chat.addQuery(Message(text: prompt, isUser: true));
+
+      final response = await chat
+          .generateChatResponse()
+          .timeout(const Duration(seconds: 25));
+
+      final raw =
+          response is TextResponse ? response.token : response.toString();
+
+      return _parseExtractWithCandidatesResponse(raw, text, candidates);
+    } catch (e) {
+      debugPrint(
+          'OnDeviceAiCoachService.parseFoodWithCandidates failed: $e');
+      return null;
+    } finally {
+      try {
+        await chat.session.close();
+      } catch (_) {}
+    }
+  }
+
+  /// Parses Qwen's JSON output for the candidate-picking variant. Validates
+  /// every food_id against the actual candidate list — Qwen sometimes
+  /// hallucinates ids that aren't in the input, which would resolve to the
+  /// wrong food. Hallucinated ids are dropped to null so the caller falls
+  /// through.
+  ParseFoodResult? _parseExtractWithCandidatesResponse(
+    String text,
+    String original,
+    List<FoodSearchCandidate> candidates,
+  ) {
+    // Try to find the wrapping object first (Plan 027 — {intent, items}).
+    // Fall back to plain array if Qwen omitted the wrapper.
+    String? intentStr;
+    String? arrayJson;
+    final objMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
+    if (objMatch != null) {
+      try {
+        final obj = jsonDecode(objMatch.group(0)!);
+        if (obj is Map<String, dynamic>) {
+          intentStr = obj['intent'] as String?;
+          final items = obj['items'];
+          if (items is List) arrayJson = jsonEncode(items);
+        }
+      } catch (_) {}
+    }
+    if (arrayJson == null) {
+      final arrMatch = RegExp(r'\[[\s\S]*\]').firstMatch(text);
+      if (arrMatch == null) return null;
+      arrayJson = arrMatch.group(0);
+    }
+
+    final dynamic decoded;
+    try {
+      decoded = jsonDecode(arrayJson!);
+    } catch (_) {
+      return null;
+    }
+    if (decoded is! List) return null;
+
+    final validIds = {for (final c in candidates) c.entry.id};
+
+    final out = <ExtractedFoodItem>[];
+    for (final item in decoded) {
+      if (item is! Map<String, dynamic>) continue;
+      final name = (item['name'] as String?)?.trim();
+      if (name == null || name.isEmpty) continue;
+      final grams = (item['grams'] as num?)?.toDouble() ?? 100;
+      final hyde = (item['hyde'] as String?)?.trim() ?? name;
+      String? foodId = item['food_id'] as String?;
+      if (foodId == 'null' || foodId == '') foodId = null;
+      // Drop hallucinated ids — must appear in the candidate set we sent.
+      if (foodId != null && !validIds.contains(foodId)) foodId = null;
+      final confidence = (item['confidence'] as num?)?.toDouble() ?? 0.0;
+      out.add(ExtractedFoodItem(
+        name: name,
+        grams: grams,
+        hydeDescription: hyde,
+        rawText: name,
+        resolvedFoodId: foodId,
+        resolverConfidence: confidence,
+      ));
+    }
+    if (out.isEmpty) return null;
+    return ParseFoodResult(
+      items: out,
+      intent: ParseFoodResult.intentFromJson(intentStr),
+    );
+  }
+
   List<ExtractedFoodItem>? _parseExtractResponse(String text, String original) {
     final match = RegExp(r'\[[\s\S]*\]').firstMatch(text);
     if (match == null) return null;
@@ -1124,6 +1246,31 @@ class OnDeviceAiCoachService implements AiCoachService {
   // item per ingredient so each can be matched + scaled in the DB. When the
   // user names a single canonical dish ("chicken adobo", "sinigang"), keep
   // it as ONE item — the DB has those rows directly with accurate macros.
+  // Plan 027 §2.1 — pick-only candidate-aware extraction. Same rules as
+  // _extractFoodPrompt but each item gains a "food_id" + "confidence" pair,
+  // plus a top-level "intent" classification for combine-vs-split logging.
+  // No macro estimation here — keyword bucket handles unmatched items.
+  static const _parseFoodWithCandidatesPrompt =
+      'You are a food parser. Given user text and a list of candidate foods '
+      'from the database, output ONLY a JSON object (no prose, no markdown):\n'
+      '{"intent":"single_dish"|"items_list","items":[...]}\n\n'
+      'Each item: {"name":"clean name","grams":number,"hyde":"USDA-style description",'
+      '"food_id":"<id from candidates or null>","confidence":0.0-1.0}\n\n'
+      'intent rules:\n'
+      '- "single_dish": user is logging ONE composite dish (connectors like "with"/'
+      '"at"/"into" with 2-4 ingredients, OR no per-item weights). Caller combines.\n'
+      '- "items_list": user is logging SEPARATE items (per-item weights like '
+      '"100g rice and 80g chicken", OR commas/"and" as list separators).\n\n'
+      'Item rules:\n'
+      '1. Convert units to grams (1 cup ≈ 240g, 1 tbsp = 15g, etc.).\n'
+      '2. Decompose composite dishes when ingredients are listed; keep canonical '
+      'dishes ("chicken adobo", "lechon kawali") as one item.\n'
+      '3. For food_id: ONLY use ids from the Candidates list. No candidate fits → '
+      'food_id=null, confidence=0.\n'
+      '4. confidence: 0.0–0.5 weak, 0.6–0.8 decent, 0.9+ very confident.\n'
+      '5. Default portion: 100g when unclear.\n'
+      'Now process this input. ';
+
   static const _extractFoodPrompt =
       'You are a food parser for a calorie tracking app. Given user text, '
       'output ONLY a JSON array. No prose, no markdown.\n'
