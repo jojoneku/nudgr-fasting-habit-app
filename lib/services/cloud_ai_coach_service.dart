@@ -17,32 +17,79 @@ import 'ai_coach_service.dart';
 
 /// Cloud AI Coach — calls the AWS Lambda → Bedrock Claude Haiku endpoint.
 ///
-/// Endpoint is configured at build time via:
-///   flutter run --dart-define=AI_COACH_ENDPOINT=https://xxxx.execute-api.amazonaws.com/coach
+/// Endpoint configured at build time via:
+///   flutter run --dart-define=AI_COACH_ENDPOINT=https://xxxx.execute-api.amazonaws.com/v1/coach
 ///
-/// Falls back gracefully when offline or endpoint not configured.
+/// [tokenProvider] must return the current Supabase JWT (may be null when
+/// signed out). The Lambda's JWT authorizer rejects calls without a valid
+/// Bearer token, so all ops become no-ops when the token is absent.
 class CloudAiCoachService implements AiCoachService {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
   static const _timeoutSeconds = 30;
+
+  /// Returns the current Supabase access token, or null when signed out.
+  final String? Function() tokenProvider;
+
+  bool _enabled = false;
+
+  /// Set to true when the user enables Cloud AI in Settings.
+  set enabled(bool value) => _enabled = value;
+
+  CloudAiCoachService({required this.tokenProvider});
 
   @override
   AiCoachTier get tier => AiCoachTier.cloud;
 
   @override
-  bool get isAvailable => _endpoint.isNotEmpty;
+  bool get isAvailable =>
+      _endpoint.isNotEmpty && _enabled && tokenProvider() != null;
 
   @override
   int? get downloadProgress => null;
 
   @override
-  Future<void> downloadModel({void Function(int progress)? onProgress}) async {
-    // No-op — cloud tier requires no download.
-  }
+  Future<void> downloadModel({void Function(int progress)? onProgress}) async {}
 
   @override
   void dispose() {}
 
-  // ── Respond ───────────────────────────────────────────────────────────────
+  // ── HTTP helpers ──────────────────────────────────────────────────────────
+
+  Map<String, String> get _headers {
+    final token = tokenProvider();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  Future<Map<String, dynamic>?> _call(
+    String op,
+    Map<String, dynamic> payload,
+  ) async {
+    if (!isAvailable) return null;
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: _headers,
+            body: jsonEncode({'op': op, 'payload': payload}),
+          )
+          .timeout(const Duration(seconds: _timeoutSeconds));
+
+      if (response.statusCode != 200) {
+        debugPrint(
+            'CloudAiCoachService[$op] HTTP ${response.statusCode}: ${response.body}');
+        return null;
+      }
+      return jsonDecode(response.body) as Map<String, dynamic>;
+    } catch (e) {
+      debugPrint('CloudAiCoachService[$op] error: $e');
+      return null;
+    }
+  }
+
+  // ── Respond (chat) ────────────────────────────────────────────────────────
 
   @override
   Stream<String> respond({
@@ -52,11 +99,11 @@ class CloudAiCoachService implements AiCoachService {
   }) async* {
     if (!isAvailable) {
       yield 'Cloud AI Coach is not configured. '
-          'Ask your developer to set AI_COACH_ENDPOINT.';
+          'Sign in and enable Cloud AI in Settings.';
       return;
     }
 
-    final payload = {
+    final result = await _call('respond', {
       'context': _contextToJson(context),
       'messages': messages
           .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
@@ -65,49 +112,71 @@ class CloudAiCoachService implements AiCoachService {
                 'text': m.text,
               })
           .toList(),
-    };
+    });
 
-    try {
-      final response = await http
-          .post(
-            Uri.parse(_endpoint),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(payload),
-          )
-          .timeout(const Duration(seconds: _timeoutSeconds));
-
-      if (response.statusCode != 200) {
-        yield 'Coach unavailable (${response.statusCode}). Try again later.';
-        return;
-      }
-
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      final text = (decoded['response'] as String?) ?? '';
-      yield text;
-    } catch (e) {
-      debugPrint('CloudAiCoachService.respond error: $e');
+    if (result == null) {
       yield 'Cloud coach unreachable. Check your connection and try again.';
+      return;
     }
+    yield (result['response'] as String?) ?? '';
   }
 
   // ── Parse food ────────────────────────────────────────────────────────────
 
   @override
-  Future<FoodParseResult?> parseFood(String description) async {
-    // Cloud tier delegates food parsing to the on-device path.
-    // No need to make a remote call just for NLP parsing.
-    return null;
-  }
+  Future<FoodParseResult?> parseFood(String description) async => null;
+
+  // ── Extract food items ────────────────────────────────────────────────────
 
   @override
   Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async {
-    // Cloud tier delegates food extraction to the on-device path. The
-    // NutritionPresenter uses the on-device service directly for this flow.
-    return null;
+    final result = await _call('extractFoodItems', {'text': text});
+    if (result == null) return null;
+    try {
+      final items = result['items'] as List<dynamic>;
+      return items
+          .cast<Map<String, dynamic>>()
+          .map(
+            (item) => ExtractedFoodItem(
+              name: item['name'] as String,
+              grams: (item['grams'] as num?)?.toDouble() ?? 100,
+              hydeDescription: (item['hyde'] as String?) ?? '',
+              rawText: item['name'] as String,
+            ),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('CloudAiCoachService.extractFoodItems parse error: $e');
+      return null;
+    }
   }
 
+  // ── Estimate macros ───────────────────────────────────────────────────────
+
   @override
-  Future<AiMealEstimate?> estimateMacros(String description) async => null;
+  Future<AiMealEstimate?> estimateMacros(String description) async {
+    final result = await _call('estimateMacros', {'description': description});
+    if (result == null) return null;
+    try {
+      final calories = (result['calories'] as num?)?.toInt() ?? 0;
+      return AiMealEstimate(
+        totalCalories: calories,
+        confidence: 0.8,
+        items: [
+          AiItemEstimate(
+            name: description,
+            calories: calories,
+            protein: (result['protein_g'] as num?)?.toDouble(),
+            carbs: (result['carbs_g'] as num?)?.toDouble(),
+            fat: (result['fat_g'] as num?)?.toDouble(),
+          ),
+        ],
+      );
+    } catch (e) {
+      debugPrint('CloudAiCoachService.estimateMacros parse error: $e');
+      return null;
+    }
+  }
 
   @override
   Future<List<AiItemEstimate>?> estimateMacrosForItems(
@@ -119,12 +188,29 @@ class CloudAiCoachService implements AiCoachService {
           List<String> fragments) async =>
       null;
 
+  // ── Disambiguate food ─────────────────────────────────────────────────────
+
   @override
   Future<FoodDisambiguation?> disambiguateFood(
     String userQuery,
     List<FoodSearchCandidate> candidates,
-  ) async =>
-      null; // Cloud tier delegates disambiguation to the on-device path.
+  ) async {
+    if (candidates.isEmpty) return null;
+    final result = await _call('disambiguateFood', {
+      'query': userQuery,
+      'candidates': candidates
+          .take(5)
+          .map((c) => {'food_id': c.entry.id, 'name': c.entry.name})
+          .toList(),
+    });
+    if (result == null) return null;
+    final foodId = result['foodId'] as String?;
+    final confidence = (result['confidence'] as num?)?.toDouble() ?? 0.0;
+    if (foodId == null) return null;
+    return FoodDisambiguation(foodId: foodId, confidence: confidence);
+  }
+
+  // ── Finance classifier (not implemented in cloud tier) ────────────────────
 
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({
@@ -135,7 +221,7 @@ class CloudAiCoachService implements AiCoachService {
     required Map<String, String> learnedMappings,
     required int turnCount,
   }) async =>
-      null; // Cloud tier delegates ledger classification to on-device for now.
+      null;
 
   // ── Internals ─────────────────────────────────────────────────────────────
 

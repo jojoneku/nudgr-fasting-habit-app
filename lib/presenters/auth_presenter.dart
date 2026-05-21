@@ -36,7 +36,22 @@ class AuthPresenter extends ChangeNotifier {
   /// Call from AppShell.initState (after Supabase.initialize) to silently
   /// restore a cached session and subscribe to future auth changes.
   void init() {
-    _authSub = _auth.authStateChanges.listen((_) => notifyListeners());
+    _authSub = _auth.authStateChanges.listen((state) {
+      if (kDebugMode &&
+          (state.event == AuthChangeEvent.tokenRefreshed ||
+              state.event == AuthChangeEvent.signedIn)) {
+        final token = state.session?.accessToken;
+        if (token != null) {
+          debugPrint('🔑 JWT [${state.event.name}] (copy all parts):');
+          const chunk = 800;
+          for (var i = 0; i < token.length; i += chunk) {
+            debugPrint(token.substring(i, (i + chunk).clamp(0, token.length)));
+          }
+          debugPrint('🔑 END JWT');
+        }
+      }
+      notifyListeners();
+    });
     notifyListeners(); // reflect any already-cached session immediately
   }
 
@@ -51,6 +66,21 @@ class AuthPresenter extends ChangeNotifier {
     final wasSignedIn = isSignedIn;
     try {
       await _auth.signInWithGoogle();
+      if (kDebugMode) {
+        try {
+          final token =
+              Supabase.instance.client.auth.currentSession?.accessToken;
+          if (token != null) {
+            debugPrint('🔑 JWT for AWS test (copy all parts):');
+            const chunk = 800;
+            for (var i = 0; i < token.length; i += chunk) {
+              debugPrint(
+                  token.substring(i, (i + chunk).clamp(0, token.length)));
+            }
+            debugPrint('🔑 END JWT');
+          }
+        } catch (_) {}
+      }
       if (!wasSignedIn && userId != null) {
         onFirstSignIn?.call(userId!);
       }

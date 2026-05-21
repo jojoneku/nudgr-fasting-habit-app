@@ -38,8 +38,15 @@ class SyncPresenter extends ChangeNotifier {
     }
   }
 
-  void _onSyncStateChanged() => notifyListeners();
-  void _onAuthChanged() => notifyListeners();
+  bool _disposed = false;
+
+  void _onSyncStateChanged() {
+    if (!_disposed) notifyListeners();
+  }
+
+  void _onAuthChanged() {
+    if (!_disposed) notifyListeners();
+  }
 
   String _timeAgo(DateTime time) {
     final diff = DateTime.now().difference(time);
@@ -51,6 +58,7 @@ class SyncPresenter extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _auth.removeListener(_onAuthChanged);
     super.dispose();
   }

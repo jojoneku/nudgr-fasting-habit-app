@@ -7,11 +7,15 @@ class SettingsPresenter extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   ThemeMode get themeMode => _themeMode;
 
+  bool _useCloudAi = false;
+  bool get useCloudAi => _useCloudAi;
+
   SettingsPresenter(this._storage);
 
   Future<void> init() async {
     final saved = await _storage.loadThemeMode();
     _themeMode = _parse(saved);
+    _useCloudAi = await _storage.loadUseCloudAi();
     notifyListeners();
   }
 
@@ -20,6 +24,13 @@ class SettingsPresenter extends ChangeNotifier {
     _themeMode = mode;
     notifyListeners();
     await _storage.saveThemeMode(_serialize(mode));
+  }
+
+  Future<void> setUseCloudAi(bool value) async {
+    if (_useCloudAi == value) return;
+    _useCloudAi = value;
+    notifyListeners();
+    await _storage.saveUseCloudAi(value);
   }
 
   static ThemeMode _parse(String? value) => switch (value) {

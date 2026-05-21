@@ -23,6 +23,7 @@ import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
+import '../models/weight_entry.dart';
 
 abstract class StorageService {
   static const String keyIsFasting = 'isFasting';
@@ -65,6 +66,8 @@ abstract class StorageService {
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
   static const String keyFoodIndexProgress = 'nutrition.foodIndexProgress';
   static const String kThemeMode = 'themeMode';
+  static const String kUseCloudAi = 'useCloudAi';
+  static const String keyWeightLog = 'weightLog';
   static const String keyNotificationPreferences = 'notification_preferences';
 
   //  User Stats
@@ -170,6 +173,10 @@ abstract class StorageService {
   Future<void> saveFoodIndexProgress(IndexProgress progress);
   Future<void> clearFoodIndexProgress();
 
+  //  Weight Log
+  Future<void> saveWeightLog(List<WeightEntry> entries);
+  Future<List<WeightEntry>> loadWeightLog();
+
   //  Notification Preferences
   Future<void> saveNotificationPreferences(NotificationPreferences prefs);
   Future<NotificationPreferences> loadNotificationPreferences();
@@ -177,6 +184,10 @@ abstract class StorageService {
   //  Theme
   Future<void> saveThemeMode(String mode);
   Future<String?> loadThemeMode();
+
+  //  Settings flags
+  Future<void> saveUseCloudAi(bool value);
+  Future<bool> loadUseCloudAi();
 
   //  Export / Import ─
   Future<String> exportAllData();
