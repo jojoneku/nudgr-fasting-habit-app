@@ -168,30 +168,26 @@ class CloudAiCoachService implements AiCoachService {
     if (result == null) return null;
     try {
       final items = result['items'] as List<dynamic>;
-      final parsed = items
-          .cast<Map<String, dynamic>>()
-          .map((item) {
-            final macrosJson = item['estimated_macros'] as Map<String, dynamic>?;
-            final macros = macrosJson == null
-                ? null
-                : EstimatedMacros(
-                    calories: (macrosJson['calories'] as num?)?.toDouble() ?? 0,
-                    proteinG: (macrosJson['protein_g'] as num?)?.toDouble() ?? 0,
-                    carbsG: (macrosJson['carbs_g'] as num?)?.toDouble() ?? 0,
-                    fatG: (macrosJson['fat_g'] as num?)?.toDouble() ?? 0,
-                  );
-            return ExtractedFoodItem(
-              name: item['name'] as String,
-              grams: (item['grams'] as num?)?.toDouble() ?? 100,
-              hydeDescription: (item['hyde'] as String?) ?? '',
-              rawText: item['name'] as String,
-              resolvedFoodId: item['food_id'] as String?,
-              resolverConfidence:
-                  (item['confidence'] as num?)?.toDouble() ?? 0.0,
-              estimatedMacros: macros,
-            );
-          })
-          .toList();
+      final parsed = items.cast<Map<String, dynamic>>().map((item) {
+        final macrosJson = item['estimated_macros'] as Map<String, dynamic>?;
+        final macros = macrosJson == null
+            ? null
+            : EstimatedMacros(
+                calories: (macrosJson['calories'] as num?)?.toDouble() ?? 0,
+                proteinG: (macrosJson['protein_g'] as num?)?.toDouble() ?? 0,
+                carbsG: (macrosJson['carbs_g'] as num?)?.toDouble() ?? 0,
+                fatG: (macrosJson['fat_g'] as num?)?.toDouble() ?? 0,
+              );
+        return ExtractedFoodItem(
+          name: item['name'] as String,
+          grams: (item['grams'] as num?)?.toDouble() ?? 100,
+          hydeDescription: (item['hyde'] as String?) ?? '',
+          rawText: item['name'] as String,
+          resolvedFoodId: item['food_id'] as String?,
+          resolverConfidence: (item['confidence'] as num?)?.toDouble() ?? 0.0,
+          estimatedMacros: macros,
+        );
+      }).toList();
       return ParseFoodResult(
         items: parsed,
         intent: ParseFoodResult.intentFromJson(result['intent'] as String?),

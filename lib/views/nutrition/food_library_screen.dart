@@ -803,7 +803,8 @@ class _EditMacrosDialogState extends State<_EditMacrosDialog> {
   @override
   void initState() {
     super.initState();
-    _kcal = TextEditingController(text: widget.entry.kcalPer100g.toStringAsFixed(0));
+    _kcal = TextEditingController(
+        text: widget.entry.kcalPer100g.toStringAsFixed(0));
     _protein = TextEditingController(
         text: widget.entry.proteinPer100g?.toStringAsFixed(1) ?? '');
     _carbs = TextEditingController(

@@ -603,8 +603,7 @@ class OnDeviceAiCoachService implements AiCoachService {
 
       return _parseExtractWithCandidatesResponse(raw, text, candidates);
     } catch (e) {
-      debugPrint(
-          'OnDeviceAiCoachService.parseFoodWithCandidates failed: $e');
+      debugPrint('OnDeviceAiCoachService.parseFoodWithCandidates failed: $e');
       return null;
     } finally {
       try {

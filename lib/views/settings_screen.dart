@@ -70,8 +70,7 @@ class SettingsScreen extends StatelessWidget {
                   if (nutritionPresenter?.isFoodSearchAvailable ?? false)
                     _smartSearchSection(context),
                   if (authPresenter.isSignedIn) _cloudAiSection(context),
-                  if (nutritionPresenter != null)
-                    _foodLearningSection(context),
+                  if (nutritionPresenter != null) _foodLearningSection(context),
                   _dataSection(context),
                   _aboutSection(context),
                   if (kDebugMode) _developerSection(context),
@@ -333,8 +332,7 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Learned foods',
-                          style: theme.textTheme.bodyLarge),
+                      Text('Learned foods', style: theme.textTheme.bodyLarge),
                       const SizedBox(height: 2),
                       Text(
                         '${p.learnedFoodCount} saved',

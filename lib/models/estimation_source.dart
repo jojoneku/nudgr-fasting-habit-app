@@ -4,13 +4,16 @@ import '../app_colors.dart';
 enum EstimationSource {
   db,
   personalDict,
+
   /// Cloud AI (Bedrock Haiku) either picked from DB candidates or estimated
   /// macros from its own knowledge for out-of-DB foods. Plan 027.
   cloudAi,
+
   /// On-device AI (Qwen) either picked from DB candidates or estimated.
   /// Plan 027. Reserved for the on-device-parity work; legacy code may still
   /// use [aiPerItem] until migrated.
   localAi,
+
   /// Legacy generic AI tag. New code should prefer [cloudAi] or [localAi].
   aiPerItem,
   keywordDensity,

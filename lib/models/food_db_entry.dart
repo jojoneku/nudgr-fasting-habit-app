@@ -34,7 +34,11 @@ class FoodDbEntry {
       category: row['category'] as String?,
       aliases: aliasRaw == null || aliasRaw.isEmpty
           ? const []
-          : aliasRaw.split(',').map((a) => a.trim()).where((a) => a.isNotEmpty).toList(),
+          : aliasRaw
+              .split(',')
+              .map((a) => a.trim())
+              .where((a) => a.isNotEmpty)
+              .toList(),
     );
   }
 

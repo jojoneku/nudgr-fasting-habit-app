@@ -449,8 +449,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   /// Persist the skip timestamp so we don't nag for [_aiPromptCooldown].
   Future<void> skipAiPrompt() async {
-    await _storage.saveAiPromptSkippedAt(
-        DateTime.now().millisecondsSinceEpoch);
+    await _storage.saveAiPromptSkippedAt(DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Clear the skip timestamp — used after sign-in / download succeeds so
@@ -493,6 +492,7 @@ class NutritionPresenter extends ChangeNotifier {
     );
     notifyListeners();
   }
+
   int get aiDownloadProgress => _ai.downloadProgress ?? 0;
   String get aiSizeLabel => '~586 MB';
   AiMealEstimate? get lastEstimate => _lastEstimate;
@@ -1364,8 +1364,8 @@ class NutritionPresenter extends ChangeNotifier {
     if ((_cloudAi?.isAvailable ?? false)) {
       final cloudResult = await _tryCloudParseFood(text);
       if (cloudResult != null) {
-        await _commitFoodChat(text, cloudResult.entries, cloudResult.alts,
-            cloudResult.rawTexts);
+        await _commitFoodChat(
+            text, cloudResult.entries, cloudResult.alts, cloudResult.rawTexts);
         return;
       }
     }
@@ -1374,8 +1374,8 @@ class NutritionPresenter extends ChangeNotifier {
     if (_ai.isAvailable) {
       final localResult = await _tryLocalParseFood(text);
       if (localResult != null) {
-        await _commitFoodChat(text, localResult.entries, localResult.alts,
-            localResult.rawTexts);
+        await _commitFoodChat(
+            text, localResult.entries, localResult.alts, localResult.rawTexts);
         return;
       }
     }
@@ -1669,9 +1669,8 @@ class NutritionPresenter extends ChangeNotifier {
             // the cloudAi badge so users can distinguish them from local AI
             // estimates and from raw keyword fallbacks.
             estimationSource: EstimationSource.cloudAi,
-            confidence: item.resolverConfidence > 0
-                ? item.resolverConfidence
-                : 0.6,
+            confidence:
+                item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
             loggedAt: DateTime.now(),
           );
           // Auto-promote even AI estimates when the model was confident.
@@ -1725,7 +1724,8 @@ class NutritionPresenter extends ChangeNotifier {
   /// extraction as a single composite dish. The resulting `estimationSource`
   /// is the worst-quality (most-degraded) source among constituents so the
   /// badge accurately reflects the lowest-confidence ingredient.
-  FoodEntry _combineEntriesAsOneDish(List<FoodEntry> parts, String originalText) {
+  FoodEntry _combineEntriesAsOneDish(
+      List<FoodEntry> parts, String originalText) {
     int cal = 0;
     double? p = 0, c = 0, f = 0;
     double grams = 0;
@@ -1805,8 +1805,8 @@ class NutritionPresenter extends ChangeNotifier {
     // whole-text hit list.
     final seen = <String, FoodSearchCandidate>{};
     const maxTotal = 15;
-    final maxDepth = hitLists.fold<int>(
-        0, (m, list) => list.length > m ? list.length : m);
+    final maxDepth =
+        hitLists.fold<int>(0, (m, list) => list.length > m ? list.length : m);
     for (var depth = 0; depth < maxDepth; depth++) {
       for (final list in hitLists) {
         if (depth >= list.length) continue;

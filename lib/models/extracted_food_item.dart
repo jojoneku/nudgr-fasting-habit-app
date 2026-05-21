@@ -85,6 +85,8 @@ class ParseFoodResult {
   const ParseFoodResult({required this.items, required this.intent});
 
   static ParseIntent intentFromJson(String? value) {
-    return value == 'single_dish' ? ParseIntent.singleDish : ParseIntent.itemsList;
+    return value == 'single_dish'
+        ? ParseIntent.singleDish
+        : ParseIntent.itemsList;
   }
 }

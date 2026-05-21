@@ -142,8 +142,8 @@ class _AiTierBadge extends StatelessWidget {
       listenable: presenter,
       builder: (context, _) {
         final cs = Theme.of(context).colorScheme;
-        final isCloud = presenter.isCloudAiConfigured &&
-            presenter.isCloudAiAvailable;
+        final isCloud =
+            presenter.isCloudAiConfigured && presenter.isCloudAiAvailable;
         final label = isCloud ? 'Cloud' : 'Local';
         final icon =
             isCloud ? Icons.cloud_outlined : Icons.phone_android_outlined;
@@ -154,7 +154,8 @@ class _AiTierBadge extends StatelessWidget {
           decoration: BoxDecoration(
             color: color.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: color.withValues(alpha: 0.35), width: 0.8),
+            border:
+                Border.all(color: color.withValues(alpha: 0.35), width: 0.8),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -844,16 +845,14 @@ class _CloudStatusChip extends StatelessWidget {
         final color =
             active ? theme.colorScheme.primary : theme.colorScheme.outline;
         final label = active ? 'Cloud AI' : 'Local only';
-        final icon =
-            active ? Icons.cloud_outlined : Icons.cloud_off_outlined;
+        final icon = active ? Icons.cloud_outlined : Icons.cloud_off_outlined;
 
         return Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.10),
                   borderRadius: BorderRadius.circular(12),
