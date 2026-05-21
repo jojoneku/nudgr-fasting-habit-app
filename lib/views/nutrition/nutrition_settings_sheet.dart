@@ -82,12 +82,23 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
     final cal = int.tryParse(_calCtrl.text.trim());
     if (cal == null || cal <= 0) return;
 
+    final isStandard = _mode == TrackingMode.standard;
+    // In standard mode macros are owned by the TDEE wizard — read the live
+    // presenter value so we never overwrite wizard-set macros with stale text.
+    final liveGoals = widget.presenter.goals;
+
     final goals = NutritionGoals(
       mode: _mode,
       dailyCalories: cal,
-      proteinGrams: double.tryParse(_proteinCtrl.text.trim()),
-      carbsGrams: double.tryParse(_carbsCtrl.text.trim()),
-      fatGrams: double.tryParse(_fatCtrl.text.trim()),
+      proteinGrams: isStandard
+          ? liveGoals.proteinGrams
+          : double.tryParse(_proteinCtrl.text.trim()),
+      carbsGrams: isStandard
+          ? liveGoals.carbsGrams
+          : double.tryParse(_carbsCtrl.text.trim()),
+      fatGrams: isStandard
+          ? liveGoals.fatGrams
+          : double.tryParse(_fatCtrl.text.trim()),
       ifSyncEnabled: _ifSync,
       overshootPenaltyEnabled: _overshootPenalty,
     );
@@ -159,7 +170,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                       )),
                   const SizedBox(height: 20),
 
-                  // ── Simple: manual calorie goal ──────────────────────────
+                  // ── Simple: manual calorie + optional macro goals ────────
                   if (!isStandard) ...[
                     Text('Daily calorie goal',
                         style: theme.textTheme.labelMedium?.copyWith(
@@ -171,13 +182,7 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                       hint: 'e.g. 2000',
                       keyboardType: TextInputType.number,
                     ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // ── Standard: TDEE + macros + toggles ───────────────────
-                  if (isStandard) ...[
-                    _TdeeCard(presenter: widget.presenter),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
                     Text('Macro targets (optional, g)',
                         style: theme.textTheme.labelMedium?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant)),
@@ -204,6 +209,13 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                               hint: 'g',
                               keyboardType: TextInputType.number)),
                     ]),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // ── Standard: TDEE card + fasting lock ──────────────────
+                  // Macros come from the TDEE wizard — no duplicate field here.
+                  if (isStandard) ...[
+                    _TdeeCard(presenter: widget.presenter),
                     const SizedBox(height: 20),
                     _ToggleRow(
                       label: 'Lock logging during fast',
@@ -314,9 +326,9 @@ class _ModeTile extends StatelessWidget {
   String _modeDescription(TrackingMode m) {
     switch (m) {
       case TrackingMode.simple:
-        return 'Manual calorie goal — quick and minimal';
+        return 'Manual calorie + macro goals — quick and minimal';
       case TrackingMode.standard:
-        return 'TDEE goal · optional macros · optional fasting lock';
+        return 'TDEE-based calorie goal · macros from wizard · fasting lock';
     }
   }
 }
@@ -360,7 +372,7 @@ class _TdeeCard extends StatelessWidget {
           if (profile != null) ...[
             const SizedBox(height: 4),
             Text(
-              profile.goal.toUpperCase(),
+              profile.goalLabel.toUpperCase(),
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 11),

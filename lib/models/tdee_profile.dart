@@ -7,6 +7,7 @@ class TdeeProfile {
   final String sex; // 'male' | 'female'
   final ActivityLevel activityLevel;
   final String goal; // 'cut' | 'maintain' | 'bulk'
+  final int? calorieAdjustment; // when set, overrides goal-default delta
 
   const TdeeProfile({
     required this.weightKg,
@@ -15,6 +16,7 @@ class TdeeProfile {
     required this.sex,
     required this.activityLevel,
     required this.goal,
+    this.calorieAdjustment,
   });
 
   // Mifflin-St Jeor formula
@@ -26,15 +28,22 @@ class TdeeProfile {
   int get tdee => (bmr * activityLevel.multiplier).round();
 
   int get targetCalories {
-    switch (goal) {
-      case 'cut':
-        return tdee - 300;
-      case 'bulk':
-        return tdee + 250;
-      case 'maintain':
-      default:
-        return tdee;
-    }
+    final adj = calorieAdjustment;
+    if (adj != null) return (tdee + adj).clamp(500, 99999);
+    return switch (goal) {
+      'cut' => tdee - 300,
+      'bulk' => tdee + 250,
+      _ => tdee,
+    };
+  }
+
+  /// Human-readable goal label, e.g. "Cut (−300 kcal)" or "Maintain".
+  String get goalLabel {
+    final delta = targetCalories - tdee;
+    if (delta == 0) return 'Maintain';
+    final sign = delta > 0 ? '+' : '';
+    final base = goal == 'cut' ? 'Cut' : 'Bulk';
+    return '$base ($sign$delta kcal)';
   }
 
   // Suggested macros derived from goal + body weight
@@ -71,6 +80,7 @@ class TdeeProfile {
         sex: json['sex'] as String,
         activityLevel: ActivityLevel.fromJson(json['activityLevel'] as String),
         goal: json['goal'] as String,
+        calorieAdjustment: json['calorieAdjustment'] as int?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -80,6 +90,7 @@ class TdeeProfile {
         'sex': sex,
         'activityLevel': activityLevel.name,
         'goal': goal,
+        'calorieAdjustment': calorieAdjustment,
       };
 
   TdeeProfile copyWith({
@@ -89,6 +100,7 @@ class TdeeProfile {
     String? sex,
     ActivityLevel? activityLevel,
     String? goal,
+    int? calorieAdjustment,
   }) =>
       TdeeProfile(
         weightKg: weightKg ?? this.weightKg,
@@ -97,5 +109,6 @@ class TdeeProfile {
         sex: sex ?? this.sex,
         activityLevel: activityLevel ?? this.activityLevel,
         goal: goal ?? this.goal,
+        calorieAdjustment: calorieAdjustment ?? this.calorieAdjustment,
       );
 }
