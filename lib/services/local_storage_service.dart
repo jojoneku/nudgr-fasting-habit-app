@@ -26,6 +26,7 @@ import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
+import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
 import 'storage_service.dart';
@@ -1117,6 +1118,31 @@ class LocalStorageService extends StorageService {
   Future<String?> loadThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(StorageService.kThemeMode);
+  }
+
+  // ── Notification Preferences ─────────────────────────────────────────────────
+
+  @override
+  Future<void> saveNotificationPreferences(
+      NotificationPreferences prefs) async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(
+        StorageService.keyNotificationPreferences, jsonEncode(prefs.toJson()));
+  }
+
+  @override
+  Future<NotificationPreferences> loadNotificationPreferences() async {
+    final sp = await SharedPreferences.getInstance();
+    final raw = sp.getString(StorageService.keyNotificationPreferences);
+    if (raw == null) return NotificationPreferences.defaults();
+    try {
+      return NotificationPreferences.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint(
+          'LocalStorageService: Error loading notification preferences: $e');
+      return NotificationPreferences.defaults();
+    }
   }
 
   @override

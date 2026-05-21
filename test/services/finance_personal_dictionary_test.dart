@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/finance_dict_entry.dart';
 import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
@@ -11,6 +12,8 @@ void main() {
 
   setUp(() {
     storage = MockStorageService();
+    when(storage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     when(storage.loadFinanceDictionary())
         .thenAnswer((_) async => <FinanceDictEntry>[]);
     when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});

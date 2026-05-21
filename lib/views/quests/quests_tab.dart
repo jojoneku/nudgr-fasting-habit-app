@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../app_colors.dart';
 import '../../models/habit_routine.dart';
 import '../../models/quest.dart';
@@ -81,7 +80,7 @@ class _QuestsTabState extends State<QuestsTab> {
         if (isEmpty)
           SliverFillRemaining(
             child: AppEmptyState(
-              icon: MdiIcons.swordCross,
+              icon: Icons.sports_martial_arts,
               title: 'No quests yet',
               body: 'Add a quest to start building habits.',
               actionLabel: 'Create one',
@@ -183,7 +182,7 @@ class _QuestsTabState extends State<QuestsTab> {
         if (isEmpty)
           SliverFillRemaining(
             child: AppEmptyState(
-              icon: MdiIcons.swordCross,
+              icon: Icons.sports_martial_arts,
               title: 'No quests yet',
               body: 'Add a quest to start building habits.',
               actionLabel: 'Create one',

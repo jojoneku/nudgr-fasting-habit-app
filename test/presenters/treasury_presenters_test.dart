@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
@@ -117,6 +118,8 @@ void main() {
 
     setUp(() {
       mockStorage = MockStorageService();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
       when(mockStorage.loadAccounts()).thenAnswer((_) async => []);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
       when(mockStorage.loadBills()).thenAnswer((_) async => []);
@@ -229,6 +232,8 @@ void main() {
 
     setUp(() {
       mockStorage = MockStorageService();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
       mockStats = MockStatsPresenter();
 
       when(mockStorage.loadAccounts()).thenAnswer((_) async => [
@@ -382,6 +387,8 @@ void main() {
 
     setUp(() {
       mockStorage = MockStorageService();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
       mockStats = MockStatsPresenter();
 
       when(mockStorage.loadAccounts()).thenAnswer((_) async => [
@@ -493,6 +500,8 @@ void main() {
 
     setUp(() {
       mockStorage = MockStorageService();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
       mockStats = MockStatsPresenter();
       when(mockStorage.loadBudgets()).thenAnswer((_) async => []);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
@@ -623,6 +632,8 @@ void main() {
 
     setUp(() {
       mockStorage = MockStorageService();
+      when(mockStorage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
       when(mockStorage.loadMonthlySummaries()).thenAnswer((_) async => []);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
       when(mockStorage.loadBills()).thenAnswer((_) async => []);

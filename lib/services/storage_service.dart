@@ -21,6 +21,7 @@ import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
+import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 
 abstract class StorageService {
@@ -64,6 +65,7 @@ abstract class StorageService {
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
   static const String keyFoodIndexProgress = 'nutrition.foodIndexProgress';
   static const String kThemeMode = 'themeMode';
+  static const String keyNotificationPreferences = 'notification_preferences';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -167,6 +169,10 @@ abstract class StorageService {
   Future<IndexProgress> loadFoodIndexProgress();
   Future<void> saveFoodIndexProgress(IndexProgress progress);
   Future<void> clearFoodIndexProgress();
+
+  //  Notification Preferences
+  Future<void> saveNotificationPreferences(NotificationPreferences prefs);
+  Future<NotificationPreferences> loadNotificationPreferences();
 
   //  Theme
   Future<void> saveThemeMode(String mode);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../app_colors.dart';
 import '../../presenters/activity_presenter.dart';
 import '../../utils/app_spacing.dart';
@@ -26,7 +25,7 @@ class ActivityPermissionScreen extends StatelessWidget {
               const Spacer(),
               Center(
                 child: Icon(
-                  MdiIcons.heartPulse,
+                  Icons.monitor_heart,
                   size: 72,
                   color: context.appColors.success,
                 ),
@@ -55,7 +54,7 @@ class ActivityPermissionScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               _BenefitRow(
-                icon: MdiIcons.flash,
+                icon: Icons.bolt,
                 label: '+1 AGI every 5 consecutive days goal met',
               ),
               const SizedBox(height: 12),

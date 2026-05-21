@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 // Presenter-level state machine tests for the chat-logging flow (Plan 026 §7).
 // Uses a FakeAiCoachService that replays a scripted sequence of
 // ClassifierSteps, so these tests cover the presenter contract end-to-end
@@ -127,6 +128,8 @@ void main() {
 
   setUp(() {
     storage = MockStorageService();
+    when(storage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     stats = MockStatsPresenter();
     when(storage.loadAccounts()).thenAnswer((_) async => [gcash, bpi]);
     when(storage.loadFinanceCategories())
