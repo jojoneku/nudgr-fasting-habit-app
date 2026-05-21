@@ -1,0 +1,956 @@
+{
+  "usda_2707570": [
+    "almond milk yogurt",
+    "dairy free yogurt",
+    "non dairy yogurt",
+    "vegan yogurt",
+    "almond yogurt",
+    "plant based yogurt",
+    "almond milk based yogurt",
+    "nut milk yogurt"
+  ],
+  "usda_2707571": [
+    "sweetened coconut cream",
+    "canned coconut cream",
+    "coconut cream can",
+    "sweet coconut cream",
+    "kakang gata sweetened",
+    "gata sweetened",
+    "coconut cream tinned",
+    "dessert coconut cream",
+    "thick coconut cream sweetened"
+  ],
+  "usda_2707572": [
+    "buko juice",
+    "coconut water plain",
+    "fresh coconut water",
+    "natural coconut water",
+    "plain coconut water",
+    "unsweetened buko juice",
+    "coconut drink unsweetened",
+    "pure coconut water",
+    "buko water"
+  ],
+  "usda_2707573": [
+    "sweetened coconut water",
+    "sweet coconut water",
+    "coconut water drink",
+    "flavored coconut water",
+    "sweetened buko juice",
+    "buko juice sweetened",
+    "coconut water with sugar",
+    "sweet buko water"
+  ],
+  "usda_2707574": [
+    "trail mix",
+    "mixed nuts and fruit snack",
+    "hiking mix",
+    "snack mix",
+    "nut mix",
+    "mixed snack bag",
+    "granola mix",
+    "trail snack",
+    "outdoor snack mix"
+  ],
+  "usda_2707575": [
+    "nut trail mix",
+    "nuts mix snack",
+    "mixed nuts trail",
+    "hiking nut mix",
+    "nut snack mix",
+    "trail nuts",
+    "mixed nuts bag",
+    "nut blend snack",
+    "nuts only trail mix"
+  ],
+  "usda_2707576": [
+    "fruit and nut mix",
+    "nuts and dried fruit mix",
+    "trail mix with dried fruit",
+    "hiking snack fruit nuts",
+    "mixed nuts and raisins",
+    "fruit nut snack mix",
+    "dried fruit and nut blend",
+    "gorp",
+    "mixed dried fruit nuts"
+  ],
+  "usda_2707577": [
+    "chocolate trail mix",
+    "m&m trail mix",
+    "choco nut mix",
+    "chocolate and nut snack",
+    "sweet trail mix",
+    "candy trail mix",
+    "chocolate chip nut mix",
+    "trail mix with candy",
+    "chocolatey snack mix",
+    "m and m nut mix"
+  ],
+  "usda_2707578": [
+    "crunchy trail mix",
+    "granola trail mix",
+    "pretzel snack mix",
+    "cereal trail mix",
+    "pretzel nut mix",
+    "granola nut mix",
+    "crunchy snack mix",
+    "trail mix with pretzels",
+    "savory trail mix"
+  ],
+  "usda_2707579": [
+    "pepitas",
+    "pumpkin seeds",
+    "roasted pumpkin seeds",
+    "squash seeds",
+    "pumpkin seed snack",
+    "toasted pumpkin seeds",
+    "pepita seeds",
+    "dried pumpkin seeds"
+  ],
+  "usda_2707580": [
+    "salted pepitas",
+    "salted pumpkin seeds",
+    "roasted salted pumpkin seeds",
+    "salty pumpkin seeds",
+    "salted squash seeds",
+    "seasoned pumpkin seeds",
+    "pepitas salted",
+    "salty pepitas"
+  ],
+  "usda_2707581": [
+    "unsalted pepitas",
+    "unsalted pumpkin seeds",
+    "plain pumpkin seeds",
+    "raw pumpkin seeds",
+    "no salt pumpkin seeds",
+    "plain pepitas",
+    "unseasoned pumpkin seeds",
+    "natural pumpkin seeds"
+  ],
+  "usda_2707582": [
+    "plain sunflower seeds",
+    "unsalted sunflower seeds",
+    "raw sunflower seeds",
+    "sunflower kernels unsalted",
+    "shelled sunflower seeds",
+    "no salt sunflower seeds",
+    "natural sunflower seeds",
+    "sunflower seed kernels plain"
+  ],
+  "usda_2707583": [
+    "salted sunflower seeds",
+    "salty sunflower seeds",
+    "roasted salted sunflower seeds",
+    "sunflower kernels salted",
+    "sunflower seeds with salt",
+    "seasoned sunflower seeds",
+    "salty sunflower kernels",
+    "salted sunflower snack"
+  ],
+  "usda_2707584": [
+    "flavored sunflower seeds",
+    "seasoned sunflower seeds",
+    "bbq sunflower seeds",
+    "ranch sunflower seeds",
+    "spicy sunflower seeds",
+    "flavored sunflower kernels",
+    "seasoned pepitas sunflower",
+    "buffalo sunflower seeds"
+  ],
+  "usda_2707585": [
+    "sunflower seeds",
+    "sunflower kernels",
+    "sunflower snack",
+    "shelled sunflower",
+    "roasted sunflower seeds",
+    "sunflower seed mix",
+    "dried sunflower seeds",
+    "sunflower seed bag"
+  ],
+  "usda_2707587": [
+    "sesame paste",
+    "sesame seed paste",
+    "ground sesame",
+    "sesame butter",
+    "hummus base paste",
+    "tahina",
+    "sesame spread",
+    "middle eastern sesame paste",
+    "sesame seed butter"
+  ],
+  "usda_2707588": [
+    "flaxseed",
+    "ground flaxseed",
+    "milled flax",
+    "linseed",
+    "ground flax",
+    "flax meal",
+    "whole flax seeds",
+    "flaxseeds",
+    "ground linseed",
+    "flax seed"
+  ],
+  "usda_2707589": [
+    "seed mix",
+    "mixed seed blend",
+    "multi seed mix",
+    "assorted seeds",
+    "blend of seeds",
+    "seed mixture",
+    "variety seeds",
+    "seed medley",
+    "mixed seeds blend"
+  ],
+  "usda_2707591": [
+    "bread",
+    "plain bread",
+    "slice of bread",
+    "loaf bread",
+    "regular bread",
+    "white or wheat bread",
+    "bread slice",
+    "sandwich bread",
+    "tinapay"
+  ],
+  "usda_2707592": [
+    "toasted bread",
+    "toast",
+    "bread toast",
+    "toasted slice",
+    "toasted loaf bread",
+    "grilled bread slice",
+    "browned bread",
+    "toasted tinapay",
+    "crispy toast"
+  ],
+  "usda_2707593": [
+    "homemade bread",
+    "bakery bread",
+    "fresh baked bread",
+    "artisan bread",
+    "freshly baked bread",
+    "panaderya bread",
+    "home baked loaf",
+    "bakery loaf",
+    "fresh bread loaf"
+  ],
+  "usda_2707594": [
+    "toasted homemade bread",
+    "toasted bakery bread",
+    "toasted fresh bread",
+    "grilled artisan bread",
+    "toasted artisan bread",
+    "toasted homemade toast",
+    "bakery toast",
+    "freshly baked toast"
+  ],
+  "usda_2707595": [
+    "dinner roll",
+    "bread roll",
+    "plain roll",
+    "small bread roll",
+    "soft roll",
+    "tinapay roll",
+    "roll bread",
+    "table roll",
+    "small loaf roll"
+  ],
+  "usda_2707596": [
+    "hard roll",
+    "crusty roll",
+    "crusty bread roll",
+    "hard bread roll",
+    "kaiser roll",
+    "crispy roll",
+    "firm bread roll",
+    "crusty dinner roll",
+    "artisan hard roll"
+  ],
+  "usda_2707597": [
+    "bran roll",
+    "high fiber roll",
+    "wheat bran roll",
+    "fiber roll",
+    "oat bran roll",
+    "bran bread roll",
+    "wholegrain roll",
+    "healthy roll"
+  ],
+  "usda_2707599": [
+    "white toast",
+    "toasted white bread",
+    "white bread toast",
+    "toast white",
+    "white bread toasted",
+    "white sandwich toast",
+    "white loaf toast",
+    "plain white toast"
+  ],
+  "usda_2707600": [
+    "homemade white bread",
+    "bakery white bread",
+    "fresh white bread",
+    "white bakery loaf",
+    "fresh baked white bread",
+    "panaderya white bread",
+    "artisan white bread",
+    "bakery white loaf"
+  ],
+  "usda_2707601": [
+    "toasted homemade white bread",
+    "toasted bakery white bread",
+    "white bread toast homemade",
+    "fresh white bread toast",
+    "artisan white toast",
+    "bakery white toast",
+    "toasted fresh white bread"
+  ],
+  "usda_2707602": [
+    "swirl bread",
+    "white wheat swirl bread",
+    "marbled bread",
+    "white and wheat bread",
+    "swirled loaf",
+    "mixed grain swirl bread",
+    "white whole wheat bread swirl",
+    "marble bread loaf"
+  ],
+  "usda_2707603": [
+    "toasted swirl bread",
+    "toasted marbled bread",
+    "toasted white wheat swirl",
+    "marbled bread toast",
+    "swirl bread toasted",
+    "white wheat swirl toast"
+  ],
+  "usda_2707604": [
+    "cuban bread",
+    "pan cubano",
+    "cuban loaf",
+    "cuban style bread",
+    "cuban sandwich bread",
+    "pan de cuba",
+    "cuban bakery bread",
+    "cuban white bread"
+  ],
+  "usda_2707605": [
+    "toasted cuban bread",
+    "toasted pan cubano",
+    "grilled cuban bread",
+    "cuban toast",
+    "pan cubano tostado",
+    "cuban bread toasted"
+  ],
+  "usda_2707606": [
+    "puerto rican water bread",
+    "pan de agua",
+    "puerto rican bread",
+    "water bread puerto rico",
+    "caribbean water bread",
+    "pan agua puerto rico",
+    "puerto rican native bread"
+  ],
+  "usda_2707607": [
+    "toasted puerto rican bread",
+    "toasted pan de agua",
+    "puerto rican toast",
+    "grilled water bread",
+    "pan de agua toasted",
+    "caribbean bread toast"
+  ],
+  "usda_2707608": [
+    "puerto rican lard bread",
+    "pan de manteca",
+    "lard bread puerto rico",
+    "manteca bread",
+    "puerto rico lard loaf",
+    "pan manteca puerto rican"
+  ],
+  "usda_2707609": [
+    "toasted puerto rican lard bread",
+    "toasted pan de manteca",
+    "lard bread toast",
+    "grilled manteca bread",
+    "pan de manteca tostado"
+  ],
+  "usda_2707610": [
+    "french bread",
+    "baguette",
+    "vienna bread",
+    "french loaf",
+    "french baguette",
+    "crusty french bread",
+    "white french bread",
+    "pain ordinaire",
+    "french stick"
+  ],
+  "usda_2707611": [
+    "toasted french bread",
+    "toasted baguette",
+    "french bread toast",
+    "grilled french bread",
+    "baguette toast",
+    "toasted vienna bread",
+    "crusty french toast bread"
+  ],
+  "usda_2707612": [
+    "focaccia",
+    "italian flatbread",
+    "plain focaccia",
+    "focaccia bread",
+    "olive oil flatbread",
+    "italian focaccia",
+    "flat italian bread",
+    "focaccia plain",
+    "herbed flatbread"
+  ],
+  "usda_2707613": [
+    "naan bread",
+    "indian flatbread",
+    "naan",
+    "tandoor bread",
+    "soft flatbread",
+    "indian naan",
+    "garlic naan plain",
+    "naan flatbread",
+    "tandoori bread"
+  ],
+  "usda_2707614": [
+    "italian bread",
+    "greek bread",
+    "armenian bread",
+    "mediterranean bread",
+    "italian loaf",
+    "artisan italian bread",
+    "greek style loaf",
+    "crusty italian bread"
+  ],
+  "usda_2707615": [
+    "toasted italian bread",
+    "grilled italian bread",
+    "italian bread toast",
+    "toasted greek bread",
+    "toasted mediterranean bread",
+    "toasted artisan italian bread"
+  ],
+  "usda_2707616": [
+    "pita bread",
+    "pita",
+    "flatbread pita",
+    "pocket bread",
+    "arabic bread",
+    "lebanese bread",
+    "pita pocket",
+    "middle eastern flatbread",
+    "pitta bread"
+  ],
+  "usda_2707617": [
+    "fruit pita",
+    "pita with fruit filling",
+    "sweet pita",
+    "fruity pita bread",
+    "pita stuffed with fruit",
+    "fruit filled flatbread",
+    "sweet pocket bread"
+  ],
+  "usda_2707619": [
+    "cheese toast",
+    "toasted cheese bread",
+    "cheesy toast",
+    "cheese bread toasted",
+    "cheesy bread toast",
+    "melted cheese bread",
+    "cheese on toast",
+    "cheesy toasted bread"
+  ],
+  "usda_2707621": [
+    "cinnamon toast",
+    "toasted cinnamon bread",
+    "cinnamon bread toast",
+    "spiced toast",
+    "cinnamon sugar toast",
+    "sweet cinnamon toast",
+    "cinnamon swirl toast"
+  ],
+  "usda_2707622": [
+    "cornmeal molasses bread",
+    "dark cornbread",
+    "molasses corn bread",
+    "brown corn bread",
+    "sweet cornmeal bread",
+    "molasses bread",
+    "corn molasses loaf"
+  ],
+  "usda_2707623": [
+    "toasted cornmeal molasses bread",
+    "toasted molasses bread",
+    "cornmeal molasses toast",
+    "dark corn bread toast",
+    "molasses corn toast"
+  ],
+  "usda_2707624": [
+    "challah",
+    "egg bread",
+    "jewish bread",
+    "braided egg bread",
+    "challah loaf",
+    "jewish egg bread",
+    "braided challah",
+    "shabbat bread",
+    "hallah"
+  ],
+  "usda_2707625": [
+    "toasted challah",
+    "challah toast",
+    "toasted egg bread",
+    "toasted jewish bread",
+    "grilled challah",
+    "challah bread toast",
+    "toasted braided bread"
+  ],
+  "usda_2707626": [
+    "garlic bread",
+    "garlic toast",
+    "buttery garlic bread",
+    "toasted garlic bread",
+    "garlic loaf",
+    "garlic butter bread",
+    "pan de ajo",
+    "garlic slice"
+  ],
+  "usda_2707627": [
+    "restaurant garlic bread",
+    "garlic bread restaurant",
+    "garlic toast restaurant",
+    "dining garlic bread",
+    "garlic bread side dish",
+    "garlic bread from resto",
+    "fast food garlic bread"
+  ],
+  "usda_2707628": [
+    "frozen garlic bread",
+    "store bought garlic bread",
+    "packaged garlic bread",
+    "garlic bread from freezer",
+    "microwaved garlic bread",
+    "oven garlic bread frozen"
+  ],
+  "usda_2707629": [
+    "parmesan garlic bread restaurant",
+    "garlic parmesan toast",
+    "cheesy garlic bread restaurant",
+    "parmesan garlic toast",
+    "garlic bread with parmesan dining",
+    "restaurant parmesan garlic bread"
+  ],
+  "usda_2707630": [
+    "parmesan garlic bread frozen",
+    "frozen cheesy garlic bread",
+    "garlic parmesan bread frozen",
+    "store bought parmesan garlic bread",
+    "frozen parmesan toast",
+    "cheesy garlic frozen bread"
+  ],
+  "usda_2707631": [
+    "cheesy garlic bread restaurant",
+    "melted cheese garlic bread dining",
+    "garlic bread with melted cheese resto",
+    "cheesy garlic toast restaurant",
+    "restaurant cheesy garlic loaf"
+  ],
+  "usda_2707632": [
+    "cheesy garlic bread frozen",
+    "frozen melted cheese garlic bread",
+    "garlic cheese bread frozen",
+    "store bought cheesy garlic bread",
+    "frozen cheesy garlic toast"
+  ],
+  "usda_2707633": [
+    "onion bread",
+    "onion loaf",
+    "caramelized onion bread",
+    "onion flavored bread",
+    "onion roll bread",
+    "savory onion bread",
+    "onion sandwich bread"
+  ],
+  "usda_2707634": [
+    "toasted onion bread",
+    "onion bread toast",
+    "toasted onion loaf",
+    "grilled onion bread",
+    "onion toast",
+    "toasted savory onion bread"
+  ],
+  "usda_2707635": [
+    "light bread",
+    "low calorie bread",
+    "diet bread",
+    "high fiber white bread",
+    "light white bread",
+    "slimming bread",
+    "reduced calorie loaf",
+    "low cal bread"
+  ],
+  "usda_2707636": [
+    "toasted light bread",
+    "toasted diet bread",
+    "low calorie toast",
+    "light bread toast",
+    "diet toast",
+    "high fiber toast",
+    "toasted low cal bread"
+  ],
+  "usda_2707637": [
+    "light bread with fruit",
+    "diet bread with nuts",
+    "high fiber bread with fruit",
+    "low calorie fruit bread",
+    "reduced calorie nut bread",
+    "light fruit and nut loaf"
+  ],
+  "usda_2707638": [
+    "toasted light fruit bread",
+    "toasted diet fruit nut bread",
+    "high fiber fruit bread toast",
+    "low calorie fruit toast",
+    "light fruit bread toasted"
+  ],
+  "usda_2707639": [
+    "added fiber white bread",
+    "fiber enriched white bread",
+    "high fiber white sandwich bread",
+    "fortified fiber bread",
+    "white bread with extra fiber",
+    "enriched fiber loaf"
+  ],
+  "usda_2707640": [
+    "toasted fiber enriched white bread",
+    "high fiber white toast",
+    "added fiber toast",
+    "fortified fiber bread toast",
+    "toasted enriched fiber bread"
+  ],
+  "usda_2707641": [
+    "high protein toast",
+    "protein bread toast",
+    "toasted protein bread",
+    "protein enriched toast",
+    "high protein bread toasted",
+    "bodybuilder bread toast"
+  ],
+  "usda_2707643": [
+    "toasted potato bread",
+    "potato bread toast",
+    "toasted potato loaf",
+    "grilled potato bread",
+    "potato toast",
+    "soft potato bread toasted"
+  ],
+  "usda_2707644": [
+    "raisin bread",
+    "raisin loaf",
+    "fruit bread",
+    "sweet raisin bread",
+    "bread with raisins",
+    "raisin sandwich bread",
+    "cinnamon raisin bread",
+    "sultana bread"
+  ],
+  "usda_2707645": [
+    "toasted raisin bread",
+    "raisin toast",
+    "cinnamon raisin toast",
+    "raisin bread toast",
+    "toasted fruit bread",
+    "toasted raisin loaf",
+    "sweet raisin toast"
+  ],
+  "usda_2707646": [
+    "sourdough bread",
+    "sourdough loaf",
+    "sour bread",
+    "artisan sourdough",
+    "tangy bread",
+    "sourdough sandwich bread",
+    "sourdough white bread",
+    "sourdo bread"
+  ],
+  "usda_2707647": [
+    "sourdough toast",
+    "toasted sourdough",
+    "sourdough bread toast",
+    "grilled sourdough",
+    "toasted sour bread",
+    "sourdough toasted slice",
+    "crispy sourdough toast"
+  ],
+  "usda_2707648": [
+    "sweet potato bread",
+    "camote bread",
+    "sweet potato loaf",
+    "yam bread",
+    "orange bread loaf",
+    "camote loaf",
+    "sweet potato sandwich bread"
+  ],
+  "usda_2707649": [
+    "toasted sweet potato bread",
+    "sweet potato toast",
+    "camote bread toast",
+    "toasted sweet potato loaf",
+    "sweet potato bread toasted",
+    "camote toast"
+  ],
+  "usda_2707650": [
+    "veggie bread",
+    "vegetable loaf",
+    "zucchini bread",
+    "spinach bread",
+    "veggie loaf",
+    "garden bread",
+    "mixed vegetable bread",
+    "vegetable sandwich bread"
+  ],
+  "usda_2707651": [
+    "toasted veggie bread",
+    "toasted vegetable bread",
+    "veggie bread toast",
+    "vegetable loaf toast",
+    "toasted zucchini bread",
+    "grilled vegetable bread"
+  ],
+  "usda_2707652": [
+    "bruschetta toast",
+    "tomato bruschetta",
+    "italian tomato toast",
+    "grilled bread with tomato",
+    "tomato topped crostini",
+    "garlic tomato toast",
+    "bruschetta appetizer",
+    "toasted bread with tomato topping",
+    "italian appetizer bread"
+  ],
+  "usda_2707653": [
+    "fried dough",
+    "fry bread",
+    "fried bread dough",
+    "deep fried dough",
+    "fry dough",
+    "indian fry bread",
+    "dough fritter",
+    "fried bread piece",
+    "buñuelo dough"
+  ],
+  "usda_2707654": [
+    "soft white roll",
+    "soft dinner roll",
+    "white soft bun",
+    "soft bread roll",
+    "white dinner roll",
+    "fluffy white roll",
+    "soft table roll",
+    "soft bun white"
+  ],
+  "usda_2707655": [
+    "hard white roll",
+    "crusty white roll",
+    "hard dinner roll",
+    "crusty white bun",
+    "hard bread roll white",
+    "firm white roll",
+    "crusty dinner bun"
+  ],
+  "usda_2707656": [
+    "hot dog bun",
+    "frankfurter bun",
+    "sausage bun",
+    "wiener bun",
+    "hot dog roll",
+    "hotdog bread",
+    "hot dog bread bun",
+    "white hot dog roll"
+  ],
+  "usda_2707657": [
+    "hamburger bun",
+    "burger bun",
+    "white burger bun",
+    "sandwich bun",
+    "burger bread",
+    "hamburger roll",
+    "white hamburger roll",
+    "plain burger bun"
+  ],
+  "usda_2707658": [
+    "diet roll",
+    "low calorie roll",
+    "light dinner roll",
+    "reduced calorie roll",
+    "slimming roll",
+    "low cal bread roll"
+  ],
+  "usda_2707659": [
+    "egg roll bread",
+    "egg bread roll",
+    "brioche roll",
+    "rich egg roll",
+    "enriched egg dinner roll",
+    "egg based roll",
+    "soft egg roll bun"
+  ],
+  "usda_2707660": [
+    "cheese roll",
+    "cheesy bread roll",
+    "cheese filled roll",
+    "cheesy dinner roll",
+    "cheese stuffed roll",
+    "cheese bun",
+    "cheesy bun",
+    "queso roll"
+  ],
+  "usda_2707661": [
+    "french roll",
+    "vienna roll",
+    "french bread roll",
+    "crusty french roll",
+    "baguette roll",
+    "petit pain",
+    "french style dinner roll",
+    "vienna style roll"
+  ],
+  "usda_2707662": [
+    "garlic roll",
+    "garlic butter roll",
+    "garlic bread roll",
+    "pan de ajo roll",
+    "garlic dinner roll",
+    "garlic bun",
+    "buttery garlic roll",
+    "garlic herb roll"
+  ],
+  "usda_2707663": [
+    "sub roll",
+    "hoagie roll",
+    "submarine roll",
+    "hero roll",
+    "italian sub bread",
+    "sandwich sub roll",
+    "long white roll",
+    "hoagie bun",
+    "sub bun"
+  ],
+  "usda_2707664": [
+    "bolillo",
+    "mexican bread roll",
+    "pan bolillo",
+    "mexican white roll",
+    "torta bread",
+    "bolillo roll",
+    "crusty mexican roll",
+    "pan frances mexico"
+  ],
+  "usda_2707665": [
+    "sourdough roll",
+    "sourdough dinner roll",
+    "tangy bread roll",
+    "artisan sourdough roll",
+    "sour roll",
+    "sourdough bun",
+    "crusty sourdough roll"
+  ],
+  "usda_2707666": [
+    "sweet roll",
+    "plain sweet roll",
+    "unfrosted sweet roll",
+    "sweet bread roll",
+    "sweet bun",
+    "sweet dinner roll no icing",
+    "soft sweet roll",
+    "sweet roll no frosting"
+  ],
+  "usda_2707667": [
+    "cinnamon roll no frosting",
+    "plain cinnamon roll",
+    "unfrosted cinnamon bun",
+    "cinnamon bun no icing",
+    "cinnamon swirl roll",
+    "cinnamon roll plain",
+    "sweet cinnamon roll unfrosted"
+  ],
+  "usda_2707668": [
+    "cinnamon roll",
+    "frosted cinnamon roll",
+    "cinnamon bun with icing",
+    "glazed cinnamon roll",
+    "iced cinnamon bun",
+    "cinnabon",
+    "cinnamon roll with frosting",
+    "sweet iced cinnamon roll",
+    "sticky cinnamon bun"
+  ],
+  "usda_2707669": [
+    "pan dulce",
+    "mexican sweet bread",
+    "sweet mexican pastry",
+    "pan de dulce",
+    "mexican bakery bread",
+    "conchas",
+    "sweet mexican roll",
+    "panaderia bread",
+    "mexican sweet bun"
+  ],
+  "usda_2707670": [
+    "pan dulce with fruit",
+    "mexican sweet fruit bread",
+    "fruity pan dulce",
+    "sweet mexican fruit roll",
+    "pan dulce relleno de fruta",
+    "mexican pastry with fruit",
+    "fruit sweet bread mexican"
+  ],
+  "usda_2707671": [
+    "frosted fruit sweet roll",
+    "iced fruit roll",
+    "glazed fruit bun",
+    "sweet fruit roll with frosting",
+    "fruit roll with icing",
+    "sweet fruity bun frosted"
+  ],
+  "usda_2707672": [
+    "diet fruit roll",
+    "low calorie fruit sweet roll",
+    "light frosted fruit roll",
+    "diet sweet roll with fruit",
+    "reduced calorie fruit bun"
+  ],
+  "usda_2707673": [
+    "frosted sweet roll",
+    "glazed sweet roll",
+    "iced sweet bun",
+    "sweet roll with frosting",
+    "sweet roll with icing",
+    "glazed bun",
+    "frosted bun",
+    "iced sweet roll"
+  ],
+  "usda_2707674": [
+    "plain pan dulce",
+    "pan dulce no topping",
+    "mexican sweet bread plain",
+    "plain conchas",
+    "sweet mexican roll plain",
+    "panaderia plain roll",
+    "simple pan dulce"
+  ],
+  "usda_2707675": [
+    "sugar topped pan dulce",
+    "conchas",
+    "pan dulce con azucar",
+    "mexican sugar bread",
+    "sweet bread with sugar crust",
+    "sugar coated pan dulce",
+    "concha sweet bread",
+    "mexican sugar roll",
+    "pan dulce sugar crust"
+  ]
+}

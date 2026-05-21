@@ -1,0 +1,488 @@
+{
+  "usda_168725": [
+    "tenderloin steak",
+    "beef tenderloin",
+    "broiled tenderloin",
+    "filet steak",
+    "lean beef steak",
+    "grilled tenderloin",
+    "select tenderloin",
+    "beef fillet steak",
+    "tender beef steak"
+  ],
+  "usda_168726": [
+    "top sirloin raw",
+    "sirloin steak raw",
+    "beef sirloin",
+    "raw sirloin",
+    "uncooked sirloin steak",
+    "sirloin beef raw",
+    "top sirloin cut",
+    "raw beef sirloin steak"
+  ],
+  "usda_168727": [
+    "sirloin steak",
+    "broiled sirloin",
+    "grilled sirloin",
+    "top sirloin cooked",
+    "beef sirloin steak",
+    "sirloin beef cooked",
+    "bbq sirloin",
+    "sirloin grilled steak"
+  ],
+  "usda_168728": [
+    "choice sirloin raw",
+    "top sirloin choice",
+    "raw choice beef",
+    "sirloin choice cut",
+    "uncooked choice sirloin",
+    "beef sirloin choice raw",
+    "choice grade sirloin",
+    "raw sirloin choice"
+  ],
+  "usda_168729": [
+    "choice sirloin steak",
+    "broiled choice sirloin",
+    "grilled choice sirloin",
+    "top sirloin choice cooked",
+    "choice beef sirloin",
+    "bbq choice sirloin",
+    "sirloin choice grilled",
+    "cooked choice sirloin steak"
+  ],
+  "usda_168730": [
+    "chuck roast",
+    "clod roast",
+    "beef chuck roast",
+    "roasted chuck beef",
+    "lean chuck roast",
+    "oven roast beef chuck",
+    "pot roast chuck",
+    "braised chuck roast",
+    "beef shoulder roast"
+  ],
+  "usda_168731": [
+    "shoulder steak",
+    "beef shoulder steak",
+    "grilled shoulder steak",
+    "boneless shoulder steak",
+    "lean shoulder steak",
+    "choice shoulder beef",
+    "grilled beef shoulder",
+    "bbq shoulder steak"
+  ],
+  "usda_168732": [
+    "select shoulder steak",
+    "grilled shoulder beef",
+    "lean beef shoulder grilled",
+    "boneless select shoulder",
+    "shoulder steak grilled",
+    "beef shoulder select",
+    "bbq beef shoulder",
+    "select grade shoulder steak"
+  ],
+  "usda_168733": [
+    "flank steak",
+    "beef flank",
+    "broiled flank steak",
+    "grilled flank steak",
+    "flank beef steak",
+    "bbq flank steak",
+    "lean flank steak",
+    "skirt-style flank",
+    "flank steak cooked"
+  ],
+  "usda_168734": [
+    "tri tip roast raw",
+    "tri-tip beef",
+    "bottom sirloin roast",
+    "tri tip raw",
+    "beef tri tip",
+    "raw tri-tip roast",
+    "sirloin tri tip uncooked",
+    "bottom sirloin tri tip"
+  ],
+  "usda_168735": [
+    "tri tip roast",
+    "roasted tri tip",
+    "choice tri-tip",
+    "beef tri tip cooked",
+    "bottom sirloin roasted",
+    "oven roasted tri tip",
+    "tri-tip beef roast",
+    "cooked tri tip roast"
+  ],
+  "usda_168736": [
+    "choice tri tip raw",
+    "raw choice tri-tip",
+    "beef tri tip choice uncooked",
+    "bottom sirloin choice raw",
+    "tri tip choice cut",
+    "uncooked tri-tip choice",
+    "choice grade tri tip raw",
+    "raw tri tip choice beef"
+  ],
+  "usda_168737": [
+    "select tri tip roast",
+    "roasted select tri tip",
+    "tri-tip select cooked",
+    "beef tri tip select",
+    "bottom sirloin select roasted",
+    "oven roasted select tri tip",
+    "cooked select tri-tip",
+    "select grade tri tip roast"
+  ],
+  "usda_168738": [
+    "top blade steak",
+    "chuck blade steak",
+    "flat iron steak",
+    "beef blade steak",
+    "broiled blade steak",
+    "choice flat iron",
+    "chuck top blade cooked",
+    "lean blade steak broiled"
+  ],
+  "usda_168739": [
+    "select blade steak",
+    "chuck blade broiled",
+    "flat iron select",
+    "beef top blade select",
+    "broiled select blade",
+    "lean chuck blade steak",
+    "select grade blade steak",
+    "top blade beef cooked"
+  ],
+  "usda_168740": [
+    "top round steak",
+    "round steak grilled",
+    "beef top round",
+    "grilled round steak",
+    "choice top round",
+    "boneless round steak",
+    "lean round steak cooked",
+    "bbq top round steak"
+  ],
+  "usda_168741": [
+    "select top round steak",
+    "grilled round steak select",
+    "beef round select",
+    "boneless select round steak",
+    "lean select round",
+    "top round select grilled",
+    "bbq select round steak",
+    "cooked select top round"
+  ],
+  "usda_168742": [
+    "chuck eye roast",
+    "beef chuck eye",
+    "americas beef roast",
+    "lean chuck eye raw",
+    "boneless chuck roast raw",
+    "select chuck eye",
+    "raw chuck eye roast",
+    "chuck roast raw lean"
+  ],
+  "usda_168743": [
+    "brisket",
+    "beef brisket",
+    "flat brisket raw",
+    "raw brisket",
+    "brisket flat half",
+    "uncooked brisket",
+    "choice brisket raw",
+    "bbq brisket uncooked",
+    "beef brisket flat"
+  ],
+  "usda_168744": [
+    "inside skirt steak",
+    "skirt steak",
+    "beef skirt",
+    "broiled skirt steak",
+    "fajita meat",
+    "inside skirt broiled",
+    "lean skirt steak",
+    "fajita steak cooked"
+  ],
+  "usda_168745": [
+    "outside skirt steak",
+    "skirt steak outside",
+    "beef outside skirt",
+    "broiled outside skirt",
+    "fajita outside cut",
+    "grilled skirt steak outside",
+    "lean outside skirt",
+    "skirt beef broiled"
+  ],
+  "usda_168746": [
+    "beer",
+    "regular beer",
+    "draft beer",
+    "cold beer",
+    "bottle of beer",
+    "can of beer",
+    "cerveza",
+    "inumin na beer",
+    "bote ng beer"
+  ],
+  "usda_168747": [
+    "budweiser",
+    "bud beer",
+    "bud regular",
+    "budweiser regular",
+    "red label beer",
+    "bud can",
+    "budweiser bottle",
+    "bud bottle"
+  ],
+  "usda_168748": [
+    "bud select",
+    "budweiser select light",
+    "bud select beer",
+    "budweiser light select",
+    "light bud select",
+    "select light beer"
+  ],
+  "usda_168749": [
+    "light beer",
+    "lite beer",
+    "low cal beer",
+    "low calorie beer",
+    "diet beer",
+    "light cerveza",
+    "liit na beer"
+  ],
+  "usda_168750": [
+    "pina colada canned",
+    "canned pina colada",
+    "coconut pineapple drink",
+    "pina colada can",
+    "tropical cocktail can",
+    "pineapple coconut cocktail canned"
+  ],
+  "usda_168751": [
+    "vanilla almond milk",
+    "sweetened almond milk",
+    "almond milk vanilla",
+    "vanilla flavored almond milk",
+    "plant milk vanilla",
+    "almond milk sweet",
+    "non-dairy vanilla milk",
+    "almond beverage vanilla"
+  ],
+  "usda_168752": [
+    "pina colada",
+    "homemade pina colada",
+    "pineapple coconut cocktail",
+    "coconut rum drink",
+    "tropical cocktail",
+    "fresh pina colada",
+    "pineapple rum drink"
+  ],
+  "usda_168753": [
+    "tequila sunrise canned",
+    "canned tequila sunrise",
+    "tequila sunrise can",
+    "orange tequila cocktail canned",
+    "tequila oj can",
+    "sunrise cocktail canned"
+  ],
+  "usda_168754": [
+    "milk chocolate with almonds",
+    "almond chocolate bar",
+    "chocolate almonds candy",
+    "almond milk choco bar",
+    "nutty chocolate bar",
+    "choco almond candy",
+    "milk choc almond",
+    "almond candy bar"
+  ],
+  "usda_168755": [
+    "crisped rice chocolate",
+    "rice cereal chocolate bar",
+    "milk choc rice crispy",
+    "crispy chocolate bar",
+    "chocolate with rice puffs",
+    "rice crunch chocolate",
+    "milk choc crispy bar",
+    "chocolatey rice candy"
+  ],
+  "usda_168756": [
+    "milky way",
+    "milky way bar",
+    "caramel nougat bar",
+    "milky way candy",
+    "chocolate caramel nougat",
+    "milky way chocolate",
+    "mw bar"
+  ],
+  "usda_168757": [
+    "skor bar",
+    "toffee bar",
+    "hershey toffee",
+    "heath-style bar",
+    "chocolate toffee bar",
+    "skor toffee candy",
+    "buttery toffee chocolate",
+    "crunchy toffee bar"
+  ],
+  "usda_168758": [
+    "strawberry topping",
+    "strawberry sauce",
+    "strawberry syrup",
+    "strawberry sundae topping",
+    "strawberry dessert sauce",
+    "strawberry ice cream topping",
+    "strawberry compote topping"
+  ],
+  "usda_168759": [
+    "mounds bar",
+    "coconut chocolate bar",
+    "dark choc coconut candy",
+    "mounds candy",
+    "coconut candy bar",
+    "chocolate coconut bar",
+    "mounds dark chocolate"
+  ],
+  "usda_168760": [
+    "mr goodbar",
+    "peanut chocolate bar",
+    "chocolate peanut candy bar",
+    "hershey peanut bar",
+    "milk choc with peanuts",
+    "peanut candy bar",
+    "goodbar chocolate"
+  ],
+  "usda_168761": [
+    "100 grand bar",
+    "100 grand candy",
+    "caramel crispy chocolate bar",
+    "nestle 100 grand",
+    "hundred grand bar",
+    "caramel rice choc bar",
+    "100grand candy"
+  ],
+  "usda_168762": [
+    "crunch bar",
+    "nestle crunch",
+    "crispy chocolate bar",
+    "rice crunch bar",
+    "chocolate crunch candy",
+    "nestle crispy bar",
+    "crunch chocolate",
+    "choco crunch bar"
+  ],
+  "usda_168763": [
+    "reeses peanut butter cups",
+    "peanut butter cups",
+    "reeses cups",
+    "pb cups candy",
+    "peanut butter chocolate cups",
+    "reeses candy",
+    "peanut butter choco cup",
+    "reeses pb cups"
+  ],
+  "usda_168764": [
+    "reeses pieces",
+    "peanut butter candies",
+    "reeses candy pieces",
+    "pb candy pieces",
+    "peanut butter m&m-style candy",
+    "reeses pieces candy",
+    "orange yellow brown candy"
+  ],
+  "usda_168765": [
+    "rolo",
+    "caramel chocolate candy",
+    "rolo caramels",
+    "caramel in chocolate",
+    "chocolate caramel rolls",
+    "rolo candy",
+    "milk choc caramel drops"
+  ],
+  "usda_168766": [
+    "after eight",
+    "mint chocolate",
+    "thin mint chocolates",
+    "peppermint chocolate wafers",
+    "after dinner mints",
+    "nestle after eight",
+    "mint choc wafers",
+    "after eight mints candy"
+  ],
+  "usda_168767": [
+    "3 musketeers",
+    "three musketeers bar",
+    "fluffy nougat bar",
+    "chocolate nougat candy",
+    "3 musketeers candy",
+    "light nougat chocolate bar",
+    "3musketeers bar"
+  ],
+  "usda_168768": [
+    "twix",
+    "twix caramel",
+    "caramel cookie bar",
+    "twix candy bar",
+    "cookie caramel chocolate bar",
+    "twix chocolate",
+    "caramel twix bar",
+    "twix biscuit bar"
+  ],
+  "usda_168769": [
+    "twix peanut butter",
+    "peanut butter twix",
+    "pb twix bar",
+    "peanut butter cookie chocolate bar",
+    "twix pb",
+    "peanut twix candy",
+    "twix peanut bar"
+  ],
+  "usda_168770": [
+    "whatchamacallit",
+    "whatchamacallit bar",
+    "caramel peanut chocolate bar",
+    "hershey whatchamacallit",
+    "peanut caramel candy bar",
+    "crispy peanut choc bar",
+    "whatchamacallit candy"
+  ],
+  "usda_168771": [
+    "gum",
+    "chewing gum",
+    "stick of gum",
+    "bubble gum",
+    "mint gum",
+    "sugarless gum",
+    "chiclets",
+    "chew gum"
+  ],
+  "usda_168772": [
+    "custard powder",
+    "egg custard mix",
+    "dry custard mix",
+    "custard dry mix",
+    "instant custard powder",
+    "egg custard dry",
+    "custard dessert mix"
+  ],
+  "usda_168773": [
+    "egg custard",
+    "custard pudding",
+    "milk custard",
+    "egg custard with milk",
+    "prepared custard",
+    "creamy custard dessert",
+    "custard with whole milk",
+    "cooked custard"
+  ],
+  "usda_168774": [
+    "hershey cocoa powder",
+    "european cocoa",
+    "dutch process cocoa",
+    "dark cocoa powder",
+    "unsweetened cocoa",
+    "baking cocoa hershey",
+    "hershey european style cocoa",
+    "dark baking cocoa powder"
+  ]
+}

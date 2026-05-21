@@ -1,0 +1,869 @@
+{
+  "usda_172380": [
+    "roasted chicken leg",
+    "baked chicken leg",
+    "chicken drumstick roasted",
+    "chicken leg quarter roasted",
+    "oven roasted chicken leg",
+    "skinless chicken leg",
+    "chicken leg no skin",
+    "roast chicken drumstick",
+    "chicken thigh and drumstick roasted"
+  ],
+  "usda_172381": [
+    "stewed chicken leg",
+    "braised chicken leg",
+    "chicken leg simmered",
+    "slow cooked chicken leg",
+    "chicken leg broth",
+    "chicken leg adobo",
+    "tinolang manok binti",
+    "chicken leg soup",
+    "boiled chicken leg"
+  ],
+  "usda_172382": [
+    "raw chicken neck",
+    "chicken neck with skin",
+    "uncooked chicken neck",
+    "chicken neck meat",
+    "chicken neck piece",
+    "manok leeg",
+    "chicken neck for soup",
+    "fresh chicken neck"
+  ],
+  "usda_172383": [
+    "fried chicken neck",
+    "pan fried chicken neck",
+    "crispy chicken neck",
+    "deep fried chicken neck",
+    "chicken neck fried",
+    "pritong chicken neck",
+    "chicken neck chicharon style"
+  ],
+  "usda_172384": [
+    "simmered chicken neck",
+    "boiled chicken neck",
+    "chicken neck broth",
+    "stewed chicken neck",
+    "chicken neck soup meat",
+    "slow cooked chicken neck",
+    "chicken neck tinola style"
+  ],
+  "usda_172385": [
+    "raw chicken thigh",
+    "uncooked chicken thigh",
+    "chicken thigh with skin",
+    "fresh chicken thigh",
+    "chicken thigh raw",
+    "chicken dark meat raw",
+    "chicken upper thigh raw"
+  ],
+  "usda_172386": [
+    "batter fried chicken thigh",
+    "kfc style chicken thigh",
+    "breaded chicken thigh",
+    "battered chicken thigh",
+    "crispy fried chicken thigh",
+    "deep fried chicken thigh with skin",
+    "chicken thigh tempura style",
+    "fried chicken thigh battered"
+  ],
+  "usda_172387": [
+    "fried chicken thigh",
+    "pan fried chicken thigh",
+    "skinless fried chicken thigh",
+    "pritong hita ng manok",
+    "chicken thigh fried no skin",
+    "stir fried chicken thigh",
+    "grilled fried chicken thigh"
+  ],
+  "usda_172388": [
+    "roasted chicken thigh",
+    "baked chicken thigh",
+    "oven roasted chicken thigh",
+    "hita ng manok na inihurno",
+    "chicken thigh baked",
+    "roast chicken thigh skinless",
+    "oven baked chicken thigh no skin"
+  ],
+  "usda_172389": [
+    "stewed chicken thigh",
+    "braised chicken thigh",
+    "chicken thigh adobo",
+    "chicken thigh tinola",
+    "slow cooked chicken thigh",
+    "simmered chicken thigh",
+    "chicken thigh broth",
+    "boiled chicken thigh"
+  ],
+  "usda_172390": [
+    "raw chicken wing",
+    "uncooked chicken wing",
+    "chicken wing with skin",
+    "fresh chicken wing",
+    "chicken wing piece raw",
+    "chicken wingette raw",
+    "chicken wing tip raw"
+  ],
+  "usda_172391": [
+    "fried chicken wing",
+    "deep fried chicken wing",
+    "pan fried chicken wing",
+    "crispy chicken wing",
+    "skinless fried wing",
+    "chicken wing no skin fried",
+    "pritong pakpak ng manok"
+  ],
+  "usda_172392": [
+    "roasted chicken wing",
+    "baked chicken wing",
+    "oven roasted chicken wing",
+    "pakpak ng manok inihurno",
+    "roast chicken wing no skin",
+    "baked wing skinless",
+    "oven baked chicken wing"
+  ],
+  "usda_172393": [
+    "stewed chicken wing",
+    "braised chicken wing",
+    "chicken wing soup",
+    "boiled chicken wing",
+    "simmered chicken wing",
+    "chicken wing adobo",
+    "slow cooked chicken wing",
+    "pakpak ng manok nilaga"
+  ],
+  "usda_172394": [
+    "whole raw chicken",
+    "raw roasting chicken",
+    "uncooked whole chicken",
+    "fresh whole chicken with giblets",
+    "whole chicken raw",
+    "manok na buo hilaw",
+    "raw chicken whole bird"
+  ],
+  "usda_172395": [
+    "roasted whole chicken",
+    "oven roasted chicken",
+    "roast chicken",
+    "whole roasted chicken",
+    "baked whole chicken",
+    "inihurnong manok",
+    "roast chicken meat only",
+    "rotisserie style chicken"
+  ],
+  "usda_172396": [
+    "raw chicken giblets",
+    "uncooked chicken giblets",
+    "chicken organ meat raw",
+    "chicken liver gizzard heart raw",
+    "fresh chicken giblets",
+    "chicken innards raw"
+  ],
+  "usda_172397": [
+    "cooked chicken giblets",
+    "simmered chicken giblets",
+    "chicken liver gizzard cooked",
+    "chicken organ meat cooked",
+    "chicken innards cooked",
+    "boiled chicken giblets",
+    "chicken giblets broth"
+  ],
+  "usda_172398": [
+    "raw chicken breast meat",
+    "uncooked chicken white meat",
+    "fresh chicken breast",
+    "raw chicken light meat",
+    "skinless raw chicken breast",
+    "chicken white meat raw",
+    "boneless chicken breast raw"
+  ],
+  "usda_172399": [
+    "stewed whole chicken",
+    "chicken stew with skin",
+    "whole chicken braised",
+    "slow cooked chicken with giblets",
+    "chicken nilaga whole",
+    "boiled whole chicken",
+    "stewing chicken cooked"
+  ],
+  "usda_172400": [
+    "raw stewing chicken",
+    "uncooked stewing chicken",
+    "old hen raw",
+    "laying hen raw",
+    "boiling chicken raw",
+    "mature chicken raw",
+    "hen with skin raw"
+  ],
+  "usda_172401": [
+    "stewed chicken with skin",
+    "braised chicken with skin",
+    "slow cooked chicken",
+    "boiled chicken with skin",
+    "hen stew",
+    "chicken nilaga with skin",
+    "simmered whole chicken"
+  ],
+  "usda_172402": [
+    "raw stewing chicken no skin",
+    "uncooked hen meat",
+    "mature chicken meat raw",
+    "boiling chicken skinless raw",
+    "old hen skinless raw",
+    "lean stewing chicken raw"
+  ],
+  "usda_172403": [
+    "stewed chicken no skin",
+    "boiled chicken no skin",
+    "chicken nilaga skinless",
+    "simmered chicken meat",
+    "slow cooked chicken no skin",
+    "braised chicken skinless",
+    "hen meat stewed"
+  ],
+  "usda_172404": [
+    "raw dark meat chicken",
+    "uncooked chicken dark meat",
+    "chicken thigh drumstick raw",
+    "stewing chicken dark meat raw",
+    "dark chicken meat raw",
+    "raw hen dark meat"
+  ],
+  "usda_172405": [
+    "stewed dark chicken meat",
+    "boiled dark chicken meat",
+    "chicken dark meat stew",
+    "slow cooked dark chicken",
+    "simmered chicken dark meat",
+    "hen dark meat cooked",
+    "braised dark chicken"
+  ],
+  "usda_172406": [
+    "raw capon chicken",
+    "whole capon raw",
+    "uncooked capon",
+    "large roasting chicken raw",
+    "capon with giblets raw",
+    "fresh capon whole"
+  ],
+  "usda_172407": [
+    "roasted capon",
+    "baked capon",
+    "whole roasted capon",
+    "oven roasted capon",
+    "roast capon chicken",
+    "capon cooked",
+    "holiday roast capon"
+  ],
+  "usda_172408": [
+    "raw duck",
+    "uncooked duck",
+    "fresh duck with skin",
+    "duck meat raw",
+    "whole duck raw",
+    "domestic duck raw",
+    "pato hilaw"
+  ],
+  "usda_172409": [
+    "roasted duck",
+    "roast duck",
+    "oven roasted duck",
+    "peking duck style",
+    "baked duck",
+    "crispy roast duck",
+    "pato inihurnno",
+    "duck confit style",
+    "roast whole duck"
+  ],
+  "usda_172410": [
+    "raw duck meat",
+    "skinless duck raw",
+    "uncooked duck no skin",
+    "fresh duck skinless",
+    "lean duck meat raw",
+    "duck breast raw"
+  ],
+  "usda_172411": [
+    "roasted duck no skin",
+    "baked duck skinless",
+    "lean roasted duck",
+    "duck meat roasted",
+    "oven roasted duck no skin",
+    "cooked duck breast"
+  ],
+  "usda_172412": [
+    "roasted goose",
+    "roast goose",
+    "oven roasted goose",
+    "baked goose with skin",
+    "whole roasted goose",
+    "christmas goose",
+    "holiday roast goose"
+  ],
+  "usda_172413": [
+    "raw goose meat",
+    "uncooked goose",
+    "fresh goose skinless",
+    "goose breast raw",
+    "lean goose meat raw",
+    "goose no skin raw"
+  ],
+  "usda_172414": [
+    "roasted goose no skin",
+    "baked goose skinless",
+    "lean roasted goose",
+    "goose meat cooked",
+    "oven roasted goose no skin",
+    "goose breast roasted"
+  ],
+  "usda_172415": [
+    "goose liver raw",
+    "raw goose liver",
+    "foie gras raw",
+    "goose foie gras",
+    "uncooked goose liver",
+    "fresh goose liver",
+    "goose organ meat"
+  ],
+  "usda_172416": [
+    "guinea fowl raw",
+    "guinea hen meat raw",
+    "uncooked guinea fowl",
+    "fresh guinea hen",
+    "wild guinea fowl",
+    "guinea bird raw",
+    "pintade raw"
+  ],
+  "usda_172417": [
+    "pheasant leg raw",
+    "raw pheasant leg",
+    "wild pheasant leg",
+    "game bird leg raw",
+    "pheasant drumstick raw",
+    "uncooked pheasant leg"
+  ],
+  "usda_172418": [
+    "raw quail",
+    "uncooked quail",
+    "fresh quail with skin",
+    "whole quail raw",
+    "pugo hilaw",
+    "quail bird raw",
+    "game bird quail raw"
+  ],
+  "usda_172419": [
+    "raw quail meat",
+    "skinless quail raw",
+    "quail breast raw",
+    "lean quail meat raw",
+    "pugo karne hilaw",
+    "uncooked quail no skin",
+    "fresh quail meat"
+  ],
+  "usda_172420": [
+    "raw lentils",
+    "dry lentils",
+    "uncooked lentils",
+    "dried lentil seeds",
+    "brown lentils dry",
+    "red lentils dry",
+    "green lentils dry",
+    "lentil seeds raw"
+  ],
+  "usda_172421": [
+    "cooked lentils",
+    "boiled lentils",
+    "lentil soup base",
+    "plain cooked lentils",
+    "dal lentils",
+    "steamed lentils",
+    "lentils no salt",
+    "lentil stew base"
+  ],
+  "usda_172422": [
+    "baby lima beans cooked",
+    "small lima beans boiled",
+    "butter beans small cooked",
+    "thin lima beans",
+    "baby butter beans",
+    "cooked baby limas",
+    "small white lima beans cooked"
+  ],
+  "usda_172423": [
+    "lupin beans raw",
+    "lupini beans dry",
+    "raw lupini beans",
+    "lupin seeds raw",
+    "dried lupin beans",
+    "lupine beans uncooked"
+  ],
+  "usda_172424": [
+    "cooked lupin beans",
+    "boiled lupini beans",
+    "lupini beans cooked",
+    "lupin beans boiled",
+    "cooked lupine seeds",
+    "soft lupin beans"
+  ],
+  "usda_172425": [
+    "moth beans raw",
+    "mat beans raw",
+    "dew beans raw",
+    "mothbean seeds raw",
+    "dried moth beans",
+    "raw mat beans"
+  ],
+  "usda_172426": [
+    "cooked moth beans",
+    "boiled moth beans",
+    "mat beans cooked",
+    "moth beans boiled",
+    "cooked mat beans",
+    "simmered moth beans"
+  ],
+  "usda_172427": [
+    "cooked mungo beans",
+    "boiled black gram",
+    "urad dal cooked",
+    "black mung beans cooked",
+    "ginisang mungo",
+    "monggo beans cooked",
+    "boiled black mungo"
+  ],
+  "usda_172428": [
+    "split peas raw",
+    "dry split peas",
+    "green split peas",
+    "dried peas split",
+    "raw split green peas",
+    "split pea seeds dry"
+  ],
+  "usda_172429": [
+    "split pea soup base",
+    "cooked split peas",
+    "boiled split peas",
+    "split peas no salt",
+    "yellow split peas cooked",
+    "green split peas cooked",
+    "split pea puree"
+  ],
+  "usda_172430": [
+    "raw peanuts",
+    "unroasted peanuts",
+    "fresh peanuts",
+    "dry peanuts",
+    "groundnuts raw",
+    "plain peanuts",
+    "peanuts in shell raw",
+    "mani hilaw"
+  ],
+  "usda_172431": [
+    "oil roasted peanuts salted",
+    "salted peanuts",
+    "roasted salted peanuts",
+    "fried peanuts salted",
+    "spanish peanuts roasted",
+    "cocktail peanuts",
+    "mani prito"
+  ],
+  "usda_172432": [
+    "valencia peanuts raw",
+    "raw valencia peanuts",
+    "fresh valencia peanuts",
+    "sweet valencia peanuts raw",
+    "valencia groundnuts"
+  ],
+  "usda_172433": [
+    "valencia peanuts roasted salted",
+    "salted valencia peanuts",
+    "roasted valencia peanuts",
+    "oil roasted valencia nuts"
+  ],
+  "usda_172434": [
+    "virginia peanuts raw",
+    "raw virginia peanuts",
+    "large peanuts raw",
+    "virginia groundnuts raw",
+    "unroasted virginia peanuts"
+  ],
+  "usda_172435": [
+    "peanut flour low fat",
+    "defatted peanut flour",
+    "peanut powder low fat",
+    "lean peanut flour",
+    "low fat groundnut flour",
+    "peanut meal flour"
+  ],
+  "usda_172436": [
+    "pigeon peas raw",
+    "red gram dry",
+    "toor dal raw",
+    "gandules raw",
+    "arhar dal raw",
+    "dried pigeon peas",
+    "kadios raw"
+  ],
+  "usda_172437": [
+    "cooked pigeon peas",
+    "boiled pigeon peas",
+    "toor dal cooked",
+    "gandules cooked",
+    "arhar dal cooked",
+    "kadios cooked",
+    "red gram boiled",
+    "pigeon peas no salt"
+  ],
+  "usda_172438": [
+    "refried beans",
+    "canned refried beans",
+    "frijoles refritos",
+    "mexican beans canned",
+    "mashed pinto beans",
+    "bean dip",
+    "traditional refried beans"
+  ],
+  "usda_172439": [
+    "veggie bacon",
+    "meatless bacon strips",
+    "vegetarian bacon",
+    "plant based bacon",
+    "fake bacon",
+    "soy bacon",
+    "vegan bacon strips"
+  ],
+  "usda_172440": [
+    "roasted soybeans salted",
+    "salted soy nuts",
+    "roasted soy nuts",
+    "crunchy soybeans salted",
+    "soy snack salted",
+    "toasted soybeans salted"
+  ],
+  "usda_172441": [
+    "dry roasted soybeans",
+    "soy nuts unsalted",
+    "roasted soy nuts dry",
+    "crunchy roasted soybeans",
+    "dry roasted soy snack",
+    "toasted soy beans"
+  ],
+  "usda_172442": [
+    "miso paste",
+    "japanese miso",
+    "soybean paste",
+    "miso soup base",
+    "fermented soy paste",
+    "white miso",
+    "red miso",
+    "shiro miso"
+  ],
+  "usda_172443": [
+    "fermented soybeans",
+    "japanese natto",
+    "sticky soybeans",
+    "natto beans",
+    "fermented soy beans",
+    "stringy soybeans"
+  ],
+  "usda_172444": [
+    "soy flour low fat",
+    "low fat soybean flour",
+    "light soy flour",
+    "lean soy flour",
+    "defatted soy flour",
+    "soy baking flour"
+  ],
+  "usda_172445": [
+    "soy meal",
+    "defatted soy meal",
+    "soybean meal raw",
+    "ground soy meal",
+    "raw soy meal",
+    "soybean powder meal"
+  ],
+  "usda_172446": [
+    "soy milk",
+    "soymilk plain",
+    "vanilla soy milk",
+    "soy drink",
+    "plant milk soy",
+    "dairy free soy milk",
+    "soya milk unfortified",
+    "soy beverage plain"
+  ],
+  "usda_172447": [
+    "soy protein concentrate",
+    "isolated soy protein",
+    "soy protein powder",
+    "soy concentrate supplement",
+    "textured soy protein base"
+  ],
+  "usda_172448": [
+    "firm tofu",
+    "hard tofu",
+    "firm bean curd",
+    "tokwa firm",
+    "pressed tofu",
+    "extra firm tofu cooked",
+    "tofu firm block",
+    "calcium tofu firm"
+  ],
+  "usda_172449": [
+    "soft tofu",
+    "silken soft tofu",
+    "smooth tofu",
+    "soft bean curd",
+    "tokwa soft",
+    "silky tofu",
+    "soft white tofu",
+    "japanese soft tofu"
+  ],
+  "usda_172450": [
+    "freeze dried tofu",
+    "koyadofu",
+    "dried frozen tofu",
+    "koya tofu",
+    "dried tofu block",
+    "dehydrated tofu",
+    "japanese dried tofu"
+  ],
+  "usda_172451": [
+    "fried tofu",
+    "agedashi tofu",
+    "deep fried tofu",
+    "fried bean curd",
+    "tokwa fried",
+    "crispy tofu",
+    "inari tofu",
+    "pritong tokwa"
+  ],
+  "usda_172452": [
+    "okara",
+    "soy pulp",
+    "tofu lees",
+    "soy fiber pulp",
+    "bean curd pulp",
+    "soybean pulp",
+    "tofu byproduct"
+  ],
+  "usda_172453": [
+    "winged beans cooked",
+    "boiled winged beans",
+    "four angled beans cooked",
+    "princess beans cooked",
+    "asparagus pea cooked",
+    "winged bean no salt cooked"
+  ],
+  "usda_172454": [
+    "homemade hummus",
+    "chickpea dip",
+    "hummus dip",
+    "tahini chickpea spread",
+    "garbanzo dip",
+    "hummus from scratch",
+    "homemade chickpea paste",
+    "hummus spread"
+  ],
+  "usda_172455": [
+    "falafel",
+    "fried chickpea balls",
+    "homemade falafel",
+    "falafel patties",
+    "fried falafel",
+    "chickpea falafel",
+    "falafel from scratch",
+    "crispy falafel balls"
+  ],
+  "usda_172456": [
+    "fortified soy milk",
+    "enriched soy milk",
+    "calcium soy milk",
+    "vitamin d soy milk",
+    "soy milk with calcium",
+    "fortified soya milk",
+    "soy milk fortified vanilla"
+  ],
+  "usda_172457": [
+    "reduced sugar peanut butter",
+    "low sugar peanut spread",
+    "peanut spread less sugar",
+    "light sugar pb",
+    "sugar free peanut butter",
+    "reduced sugar pb spread"
+  ],
+  "usda_172458": [
+    "reduced fat peanut butter",
+    "low fat peanut butter",
+    "light peanut butter smooth",
+    "less fat pb",
+    "smooth reduced fat pb",
+    "lite peanut butter"
+  ],
+  "usda_172459": [
+    "fortified peanut butter smooth",
+    "enriched peanut butter",
+    "smooth peanut butter vitamins",
+    "vitamin peanut butter",
+    "mineral fortified pb smooth"
+  ],
+  "usda_172460": [
+    "chunky peanut butter fortified",
+    "crunchy peanut butter vitamins",
+    "vitamin enriched chunky pb",
+    "mineral fortified chunky peanut butter",
+    "crunchy pb fortified"
+  ],
+  "usda_172461": [
+    "silken firm tofu",
+    "smooth firm tofu",
+    "japanese silken tofu firm",
+    "silk tofu firm",
+    "tofu silken firm block",
+    "silky firm bean curd"
+  ],
+  "usda_172462": [
+    "silken extra firm tofu",
+    "japanese silken tofu extra firm",
+    "silk tofu extra firm",
+    "extra firm smooth tofu",
+    "silky extra firm bean curd"
+  ],
+  "usda_172463": [
+    "lite silken firm tofu",
+    "light silken tofu firm",
+    "low calorie silken tofu",
+    "reduced calorie tofu silken",
+    "silken lite firm tofu"
+  ],
+  "usda_172464": [
+    "lite silken extra firm tofu",
+    "light silken tofu extra firm",
+    "low calorie extra firm silken tofu",
+    "silken lite extra firm",
+    "reduced calorie extra firm tofu"
+  ],
+  "usda_172465": [
+    "fat free refried beans",
+    "nonfat refried beans",
+    "low fat canned refried beans",
+    "frijoles refritos fat free",
+    "fat free mexican beans",
+    "light refried beans canned"
+  ],
+  "usda_172466": [
+    "red refried beans canned",
+    "frijoles rojos refritos",
+    "canned red refried beans",
+    "mexican red beans mashed",
+    "refried red beans",
+    "latin red bean puree canned"
+  ],
+  "usda_172467": [
+    "cooked tempeh",
+    "tempeh",
+    "fermented soy cake cooked",
+    "soy tempeh cooked",
+    "tempe cooked",
+    "grilled tempeh",
+    "fried tempeh cooked",
+    "sauteed tempeh"
+  ],
+  "usda_172468": [
+    "lite firm tofu",
+    "low calorie firm tofu",
+    "light firm tofu",
+    "reduced calorie firm tofu",
+    "lean firm tofu",
+    "light bean curd firm"
+  ],
+  "usda_172469": [
+    "chunky peanut butter no salt",
+    "crunchy peanut butter unsalted",
+    "natural chunky peanut butter",
+    "chunk pb no salt",
+    "unsalted crunchy pb",
+    "salt free chunky peanut butter"
+  ],
+  "usda_172470": [
+    "smooth peanut butter no salt",
+    "creamy peanut butter unsalted",
+    "natural smooth peanut butter",
+    "salt free peanut butter smooth",
+    "unsalted creamy pb",
+    "plain smooth pb"
+  ],
+  "usda_172471": [
+    "omega 3 peanut butter",
+    "healthy peanut butter creamy",
+    "peanut butter with omega 3",
+    "creamy pb omega 3",
+    "heart healthy peanut butter",
+    "peanut butter enriched omega"
+  ],
+  "usda_172472": [
+    "cooked pigeon peas salted",
+    "boiled pigeon peas salted",
+    "toor dal cooked salted",
+    "gandules cooked salted",
+    "red gram boiled salted",
+    "kadios cooked salted"
+  ],
+  "usda_172473": [
+    "low sodium soy sauce",
+    "light soy sauce",
+    "reduced sodium shoyu",
+    "low salt soy sauce",
+    "less sodium soy sauce",
+    "shoyu low sodium",
+    "lite soy sauce"
+  ],
+  "usda_172474": [
+    "reduced sodium soy sauce",
+    "low sodium hvp soy sauce",
+    "low salt soy seasoning",
+    "hydrolyzed soy sauce light",
+    "less sodium soy condiment"
+  ],
+  "usda_172475": [
+    "firm tofu raw",
+    "raw firm tofu",
+    "uncooked firm bean curd",
+    "fresh firm tofu",
+    "raw tokwa firm",
+    "firm tofu block calcium"
+  ],
+  "usda_172476": [
+    "regular tofu raw",
+    "raw regular tofu",
+    "standard tofu uncooked",
+    "fresh regular tofu",
+    "plain tofu raw",
+    "medium tofu raw"
+  ],
+  "usda_172477": [
+    "cooked winged beans salted",
+    "boiled winged beans salted",
+    "four angled beans cooked salted",
+    "winged beans with salt boiled"
+  ],
+  "usda_172478": [
+    "veal rib roast raw",
+    "raw veal rib",
+    "veal rack raw",
+    "lean veal rib raw",
+    "australian veal rib raw",
+    "uncooked veal ribs",
+    "veal rib cut raw"
+  ],
+  "usda_172479": [
+    "raw lamb",
+    "uncooked lamb",
+    "fresh lamb meat",
+    "lamb cuts raw",
+    "lamb lean and fat raw",
+    "whole lamb raw cuts",
+    "lamb chop raw",
+    "lamb meat choice raw"
+  ]
+}

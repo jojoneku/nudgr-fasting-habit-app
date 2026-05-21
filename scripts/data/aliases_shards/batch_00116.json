@@ -1,0 +1,1009 @@
+{
+  "usda_174002": [
+    "strip steak",
+    "ny strip raw",
+    "new york strip",
+    "top loin steak",
+    "boneless strip steak",
+    "lean strip steak",
+    "sirloin strip raw",
+    "club steak",
+    "shell steak raw",
+    "trimmed strip steak"
+  ],
+  "usda_174003": [
+    "ny strip choice",
+    "new york strip choice grade",
+    "strip steak choice",
+    "top loin choice raw",
+    "boneless strip choice",
+    "choice strip steak raw",
+    "sirloin strip choice",
+    "lean ny strip",
+    "shell steak choice"
+  ],
+  "usda_174004": [
+    "beef tenderloin roast",
+    "roasted tenderloin",
+    "lean beef tenderloin",
+    "tenderloin roast cooked",
+    "filet roast",
+    "beef fillet roast",
+    "whole tenderloin roast",
+    "roast tenderloin beef",
+    "cooked beef tenderloin"
+  ],
+  "usda_174005": [
+    "choice tenderloin roast",
+    "beef tenderloin roast choice",
+    "roasted beef fillet",
+    "choice filet roast",
+    "lean tenderloin cooked",
+    "beef fillet roast cooked",
+    "tenderloin roast choice grade",
+    "roasted whole tenderloin"
+  ],
+  "usda_174007": [
+    "top round roast",
+    "beef top round",
+    "roasted top round",
+    "lean round roast",
+    "beef round roast cooked",
+    "pot roast top round",
+    "cooked round roast beef",
+    "top round beef roasted",
+    "lean beef round cooked"
+  ],
+  "usda_174008": [
+    "eye of round steak",
+    "eye round steak grilled",
+    "grilled round steak",
+    "lean eye round",
+    "beef eye of round grilled",
+    "round steak grilled",
+    "eye round grilled cooked",
+    "lean grilled beef steak",
+    "beef eye round cooked"
+  ],
+  "usda_174009": [
+    "strip steak select",
+    "ny strip select raw",
+    "new york strip select",
+    "top loin select raw",
+    "boneless strip select",
+    "lean strip steak select",
+    "sirloin strip select raw",
+    "shell steak select"
+  ],
+  "usda_174011": [
+    "strip steak raw",
+    "ny strip all grades",
+    "new york strip raw",
+    "top loin steak raw",
+    "boneless strip steak raw",
+    "lean strip steak raw",
+    "sirloin strip all grades",
+    "shell steak raw all grades",
+    "lip-on strip steak"
+  ],
+  "usda_174012": [
+    "lean beef mix raw",
+    "trimmed retail beef",
+    "choice lean beef raw",
+    "mixed lean beef cuts",
+    "composite lean beef",
+    "lean beef cuts choice",
+    "assorted lean beef raw",
+    "lean beef blend raw"
+  ],
+  "usda_174013": [
+    "lean beef cooked",
+    "cooked lean beef",
+    "mixed lean beef cooked",
+    "choice lean beef cooked",
+    "lean beef composite cooked",
+    "trimmed beef cooked",
+    "assorted lean beef cooked",
+    "lean beef blend cooked"
+  ],
+  "usda_174014": [
+    "beef cuts with fat raw",
+    "lean and fat beef",
+    "choice beef raw",
+    "trimmed beef with fat",
+    "mixed beef cuts raw",
+    "retail beef with fat",
+    "composite beef lean fat",
+    "beef blend with fat raw"
+  ],
+  "usda_174015": [
+    "lean beef raw choice",
+    "trimmed lean beef",
+    "lean only beef choice",
+    "choice lean beef cuts",
+    "mixed lean beef choice raw",
+    "lean retail beef",
+    "fat-trimmed beef raw",
+    "pure lean beef raw"
+  ],
+  "usda_174016": [
+    "mock tender steak",
+    "chuck mock tender",
+    "beef chuck tender",
+    "broiled chuck steak",
+    "shoulder tender steak",
+    "petite tender steak",
+    "lean chuck steak broiled",
+    "cooked mock tender",
+    "chuck faux tender"
+  ],
+  "usda_174017": [
+    "top blade steak",
+    "flat iron steak",
+    "chuck top blade broiled",
+    "beef flat iron broiled",
+    "blade steak cooked",
+    "broiled flat iron",
+    "top blade beef cooked",
+    "chuck blade steak broiled",
+    "flat iron beef lean"
+  ],
+  "usda_174018": [
+    "chuck clod roast raw",
+    "beef clod raw",
+    "shoulder clod roast",
+    "chuck shoulder roast raw",
+    "beef chuck shoulder raw",
+    "clod roast uncooked",
+    "chuck roast raw lean",
+    "beef shoulder clod raw"
+  ],
+  "usda_174019": [
+    "chuck clod roast cooked",
+    "roasted clod beef",
+    "beef shoulder roast cooked",
+    "chuck shoulder roast cooked",
+    "clod roast cooked lean",
+    "beef chuck roast cooked",
+    "roasted beef clod",
+    "shoulder clod roasted"
+  ],
+  "usda_174020": [
+    "mock tender steak with fat",
+    "broiled chuck tender select",
+    "chuck mock tender select",
+    "shoulder tender select cooked",
+    "petite tender select broiled",
+    "beef mock tender cooked fat",
+    "chuck tender select broiled"
+  ],
+  "usda_174021": [
+    "flat iron steak choice",
+    "top blade choice broiled",
+    "chuck blade choice cooked",
+    "flat iron choice beef",
+    "broiled top blade choice",
+    "beef flat iron choice cooked",
+    "blade steak choice broiled"
+  ],
+  "usda_174022": [
+    "flat iron steak select",
+    "top blade select broiled",
+    "chuck blade select cooked",
+    "flat iron select beef",
+    "broiled top blade select",
+    "blade steak select broiled",
+    "beef flat iron select cooked"
+  ],
+  "usda_174023": [
+    "chuck clod roast choice cooked",
+    "roasted clod choice beef",
+    "beef shoulder roast choice",
+    "chuck shoulder choice roasted",
+    "clod roast choice cooked",
+    "choice beef clod roasted",
+    "shoulder clod choice roast"
+  ],
+  "usda_174024": [
+    "tri tip steak",
+    "tri-tip steak cooked",
+    "bottom sirloin tri tip",
+    "grilled tri tip",
+    "broiled tri tip",
+    "sirloin tri tip steak",
+    "beef tri tip cooked",
+    "triangle steak beef",
+    "tri tip broiled"
+  ],
+  "usda_174025": [
+    "mock tender steak cooked",
+    "chuck mock tender broiled",
+    "beef chuck tender cooked",
+    "shoulder tender cooked",
+    "petite tender broiled all grades",
+    "lean mock tender cooked fat",
+    "chuck tender broiled all grades"
+  ],
+  "usda_174026": [
+    "flat iron steak cooked",
+    "top blade broiled all grades",
+    "chuck blade cooked",
+    "beef flat iron broiled all",
+    "blade steak cooked all grades",
+    "flat iron all grades cooked",
+    "top blade all grades broiled"
+  ],
+  "usda_174027": [
+    "chuck roast cooked",
+    "clod roast all grades cooked",
+    "beef shoulder roast all grades",
+    "roasted chuck clod",
+    "beef chuck roasted all grades",
+    "shoulder clod roast cooked",
+    "chuck clod cooked all grades"
+  ],
+  "usda_174028": [
+    "extra lean ground beef",
+    "95 5 ground beef",
+    "95 percent lean ground beef",
+    "lean ground beef crumbles",
+    "browned ground beef lean",
+    "very lean beef crumbles",
+    "pan browned beef 95 lean",
+    "lean beef crumbles cooked"
+  ],
+  "usda_174029": [
+    "lean meatloaf",
+    "95 lean meatloaf",
+    "baked lean beef loaf",
+    "extra lean beef loaf",
+    "ground beef loaf baked",
+    "lean beef meatloaf baked",
+    "very lean meatloaf",
+    "low fat meatloaf beef"
+  ],
+  "usda_174030": [
+    "90 10 ground beef raw",
+    "lean ground beef raw",
+    "90 percent lean beef",
+    "ground beef 90 lean",
+    "lean hamburger meat raw",
+    "90 lean beef raw",
+    "ground beef lean raw",
+    "giniling na baka lean"
+  ],
+  "usda_174031": [
+    "90 lean beef patty",
+    "lean burger patty",
+    "90 10 beef patty cooked",
+    "grilled lean beef patty",
+    "broiled lean burger",
+    "lean hamburger patty cooked",
+    "90 percent lean patty",
+    "lean beef burger cooked"
+  ],
+  "usda_174032": [
+    "85 15 beef patty broiled",
+    "beef patty 85 lean",
+    "hamburger patty 85 lean",
+    "broiled burger patty",
+    "85 percent lean beef patty",
+    "medium lean beef patty",
+    "grilled hamburger patty",
+    "beef burger patty broiled"
+  ],
+  "usda_174033": [
+    "pan cooked beef patty",
+    "pan broiled burger",
+    "85 lean pan burger",
+    "skillet beef patty",
+    "pan fried hamburger patty",
+    "85 15 patty pan cooked",
+    "stovetop beef patty",
+    "pan grilled burger patty"
+  ],
+  "usda_174034": [
+    "85 lean beef crumbles",
+    "browned ground beef",
+    "taco beef cooked",
+    "sauteed ground beef",
+    "pan browned ground beef",
+    "cooked beef crumbles 85",
+    "stir fried ground beef",
+    "giniling na baka cooked"
+  ],
+  "usda_174035": [
+    "85 lean meatloaf",
+    "baked ground beef loaf",
+    "meatloaf 85 lean",
+    "beef meatloaf baked",
+    "ground beef loaf cooked",
+    "homemade meatloaf beef",
+    "classic meatloaf baked",
+    "baked beef loaf 85"
+  ],
+  "usda_174036": [
+    "80 20 ground beef raw",
+    "regular ground beef raw",
+    "80 percent lean beef",
+    "ground beef 80 lean",
+    "hamburger meat 80 20",
+    "standard ground beef raw",
+    "giniling na baka 80 20",
+    "chuck ground beef raw"
+  ],
+  "usda_174037": [
+    "75 25 ground beef raw",
+    "fatty ground beef raw",
+    "75 percent lean beef",
+    "ground beef 75 lean",
+    "high fat ground beef raw",
+    "regular grind beef raw",
+    "hamburger meat 75 25",
+    "ground beef fatty raw"
+  ],
+  "usda_174038": [
+    "75 lean beef patty broiled",
+    "fatty burger patty cooked",
+    "75 25 beef patty grilled",
+    "grilled burger 75 lean",
+    "broiled hamburger patty fatty",
+    "beef patty 75 lean cooked",
+    "high fat beef patty grilled"
+  ],
+  "usda_174039": [
+    "75 lean pan burger",
+    "pan broiled fatty patty",
+    "75 25 patty pan cooked",
+    "skillet hamburger patty",
+    "stovetop burger 75 lean",
+    "pan cooked fatty beef patty",
+    "pan fried burger 75 lean"
+  ],
+  "usda_174040": [
+    "75 lean beef crumbles",
+    "fatty ground beef cooked",
+    "browned beef 75 lean",
+    "cooked beef crumbles 75",
+    "pan browned fatty beef",
+    "taco beef 75 lean",
+    "sauteed ground beef 75",
+    "cooked ground beef crumbles fatty"
+  ],
+  "usda_174041": [
+    "ny strip raw select",
+    "new york strip select raw",
+    "top loin select raw short loin",
+    "strip steak select raw",
+    "short loin steak select",
+    "lean strip select",
+    "sirloin strip select",
+    "shell steak select raw"
+  ],
+  "usda_174042": [
+    "beef rib steak broiled",
+    "small end rib broiled",
+    "ribeye area steak cooked",
+    "beef rib broiled lean",
+    "rib steak small end",
+    "cooked rib steak lean",
+    "broiled rib steak select",
+    "lean rib steak cooked"
+  ],
+  "usda_174043": [
+    "filet mignon broiled",
+    "beef tenderloin steak cooked",
+    "filet steak broiled",
+    "tenderloin steak select cooked",
+    "cooked beef filet",
+    "broiled tenderloin steak",
+    "beef fillet steak broiled",
+    "lean filet mignon cooked"
+  ],
+  "usda_174044": [
+    "top sirloin steak broiled",
+    "sirloin steak cooked select",
+    "broiled sirloin steak",
+    "lean sirloin steak cooked",
+    "top sirloin select broiled",
+    "grilled sirloin steak",
+    "cooked top sirloin",
+    "sirloin steak lean cooked"
+  ],
+  "usda_174045": [
+    "bottom round steak braised",
+    "beef round steak braised",
+    "braised round steak",
+    "bottom round braised lean",
+    "cooked bottom round steak",
+    "slow cooked round steak",
+    "beef round braised",
+    "lean round steak cooked"
+  ],
+  "usda_174046": [
+    "bottom round roast raw",
+    "beef bottom round raw",
+    "round roast uncooked",
+    "bottom round raw lean",
+    "beef round roast raw",
+    "rump roast raw",
+    "lean bottom round raw",
+    "raw bottom round beef"
+  ],
+  "usda_174047": [
+    "beef brisket cooked",
+    "braised brisket",
+    "flat brisket cooked",
+    "brisket flat half braised",
+    "cooked lean brisket",
+    "slow cooked brisket",
+    "bbq brisket lean",
+    "beef brisket braised lean"
+  ],
+  "usda_174048": [
+    "beef brisket raw",
+    "flat brisket raw",
+    "brisket flat raw",
+    "uncooked beef brisket",
+    "raw brisket lean",
+    "beef brisket uncooked",
+    "brisket flat half raw",
+    "lean brisket raw"
+  ],
+  "usda_174049": [
+    "eye of round roast raw",
+    "eye round roast raw",
+    "beef eye round raw",
+    "raw eye of round",
+    "lean eye of round raw",
+    "eye round raw uncooked",
+    "beef round eye raw",
+    "uncooked eye round roast"
+  ],
+  "usda_174050": [
+    "chuck arm pot roast",
+    "arm roast braised",
+    "pot roast chuck arm",
+    "braised arm roast",
+    "chuck arm roast cooked",
+    "beef arm roast braised",
+    "slow cooked arm roast",
+    "chuck pot roast braised"
+  ],
+  "usda_174051": [
+    "chuck arm roast raw",
+    "arm pot roast raw",
+    "beef chuck arm raw",
+    "raw arm roast",
+    "chuck arm uncooked",
+    "lean arm roast raw",
+    "beef pot roast raw",
+    "raw chuck arm pot roast"
+  ],
+  "usda_174052": [
+    "bottom round roast cooked",
+    "cooked bottom round",
+    "beef round roast cooked",
+    "roasted bottom round",
+    "lean round roast cooked",
+    "bottom round cooked beef",
+    "cooked round roast lean",
+    "rump roast cooked"
+  ],
+  "usda_174053": [
+    "bottom round steak braised all grades",
+    "braised bottom round",
+    "beef round steak braised lean",
+    "cooked round steak lean",
+    "bottom round braised all grades",
+    "slow braised round steak",
+    "lean braised beef round"
+  ],
+  "usda_174054": [
+    "top sirloin broiled all grades",
+    "sirloin steak cooked",
+    "broiled top sirloin",
+    "lean sirloin broiled",
+    "grilled sirloin all grades",
+    "cooked sirloin steak lean",
+    "top sirloin all grades cooked",
+    "sirloin steak broiled lean"
+  ],
+  "usda_174055": [
+    "top sirloin steak raw",
+    "raw sirloin steak",
+    "lean sirloin raw",
+    "uncooked top sirloin",
+    "top sirloin raw all grades",
+    "sirloin steak uncooked",
+    "beef sirloin raw lean",
+    "raw top sirloin beef"
+  ],
+  "usda_174056": [
+    "chuck arm roast choice raw",
+    "arm roast choice raw",
+    "choice arm pot roast raw",
+    "beef chuck arm choice raw",
+    "raw choice arm roast",
+    "chuck arm choice uncooked",
+    "pot roast choice raw",
+    "raw beef arm choice"
+  ],
+  "usda_174057": [
+    "brisket flat choice raw",
+    "choice brisket raw",
+    "beef brisket choice raw",
+    "raw choice brisket",
+    "flat brisket choice raw",
+    "uncooked choice brisket",
+    "brisket lean choice raw",
+    "beef flat choice raw"
+  ],
+  "usda_174058": [
+    "bottom round roast choice raw",
+    "choice round roast raw",
+    "beef bottom round choice raw",
+    "raw choice round roast",
+    "lean round roast choice raw",
+    "bottom round choice uncooked",
+    "choice beef round raw"
+  ],
+  "usda_174059": [
+    "bottom round roast choice cooked",
+    "roasted choice round",
+    "beef round roast choice cooked",
+    "cooked choice bottom round",
+    "choice round roast cooked",
+    "roasted bottom round choice",
+    "lean choice round roast cooked"
+  ],
+  "usda_174060": [
+    "eye of round roast cooked",
+    "roasted eye round",
+    "beef eye round roast cooked",
+    "eye round roast choice",
+    "cooked eye of round",
+    "lean eye round roasted",
+    "choice eye round cooked",
+    "roasted beef eye of round"
+  ],
+  "usda_174061": [
+    "top round steak broiled",
+    "broiled top round",
+    "choice top round steak cooked",
+    "grilled top round steak",
+    "lean top round broiled",
+    "beef top round steak cooked",
+    "top round broiled choice",
+    "cooked top round steak"
+  ],
+  "usda_174062": [
+    "clam chowder",
+    "new england clam chowder",
+    "white clam chowder",
+    "creamy clam soup",
+    "canned clam chowder",
+    "clam chowder canned",
+    "new england chowder",
+    "creamy seafood chowder",
+    "ne clam chowder"
+  ],
+  "usda_174063": [
+    "low sodium clam chowder",
+    "reduced sodium new england chowder",
+    "low salt clam chowder",
+    "healthy clam chowder",
+    "light clam chowder canned",
+    "low sodium white chowder",
+    "creamy clam soup low sodium",
+    "ne chowder low salt"
+  ],
+  "usda_174064": [
+    "chicken noodle soup low sodium",
+    "reduced sodium chicken soup",
+    "low salt chicken noodle soup",
+    "healthy chicken noodle soup",
+    "canned chicken noodle light",
+    "chicken soup reduced sodium",
+    "low sodium chicken broth noodles",
+    "light chicken soup canned"
+  ],
+  "usda_174065": [
+    "beef vegetable soup low sodium",
+    "reduced sodium beef veggie soup",
+    "low salt beef and vegetable soup",
+    "canned beef veggie soup",
+    "healthy beef soup",
+    "beef soup with vegetables light",
+    "low sodium beef soup canned",
+    "veggie beef soup reduced salt"
+  ],
+  "usda_174066": [
+    "sweet and sour sauce",
+    "sweet sour dipping sauce",
+    "chinese sweet sour sauce",
+    "dipping sauce sweet sour",
+    "sweet n sour sauce",
+    "stir fry sweet sour sauce",
+    "duck sauce",
+    "sweet and sour dip"
+  ],
+  "usda_174067": [
+    "cocktail sauce",
+    "shrimp cocktail sauce",
+    "seafood sauce",
+    "ketchup horseradish sauce",
+    "shrimp dipping sauce",
+    "crab cocktail sauce",
+    "red seafood dip",
+    "horseradish tomato sauce"
+  ],
+  "usda_174068": [
+    "queso dip",
+    "cheese salsa dip",
+    "salsa con queso",
+    "nacho cheese dip",
+    "cheesy salsa dip",
+    "queso sauce medium",
+    "nacho dip cheese salsa",
+    "cheese and salsa dip",
+    "mexican cheese dip"
+  ],
+  "usda_174069": [
+    "tostitos queso dip",
+    "nacho cheese dip tostitos",
+    "salsa con queso medium",
+    "chip dip cheese salsa",
+    "queso medium dip",
+    "nacho dip medium",
+    "cheese salsa medium",
+    "tostitos cheese dip",
+    "queso dip tostitos"
+  ],
+  "usda_174070": [
+    "peanut sauce",
+    "satay sauce",
+    "peanut butter sauce",
+    "thai peanut sauce",
+    "peanut dipping sauce",
+    "satay dip",
+    "noodle peanut sauce",
+    "peanut soy sauce",
+    "gado gado sauce"
+  ],
+  "usda_174071": [
+    "chunky vegetable soup low sodium",
+    "veggie soup low salt",
+    "reduced sodium vegetable soup",
+    "chunky veggie soup canned",
+    "healthy vegetable soup",
+    "low sodium veggie soup canned",
+    "mixed vegetable soup light",
+    "thick veggie soup low salt"
+  ],
+  "usda_174072": [
+    "chicken gravy",
+    "classic chicken gravy",
+    "heinz chicken gravy",
+    "jarred chicken gravy",
+    "poultry gravy",
+    "ready made chicken gravy",
+    "homestyle chicken gravy",
+    "chicken pan gravy"
+  ],
+  "usda_174073": [
+    "beef barley soup",
+    "barley beef soup",
+    "beef and barley soup",
+    "hearty beef barley",
+    "canned beef barley soup",
+    "barley soup with beef",
+    "beef barley stew",
+    "thick beef barley soup"
+  ],
+  "usda_174074": [
+    "red enchilada sauce",
+    "mild enchilada sauce",
+    "enchilada red sauce",
+    "mexican enchilada sauce mild",
+    "canned enchilada sauce red",
+    "mild red sauce enchilada",
+    "enchilada sauce ready to use",
+    "taco red sauce mild"
+  ],
+  "usda_174075": [
+    "chapati",
+    "roti",
+    "whole wheat chapati",
+    "indian flatbread",
+    "whole wheat roti",
+    "frozen chapati",
+    "indian bread roti",
+    "thin wheat flatbread",
+    "chapatti",
+    "whole grain roti"
+  ],
+  "usda_174076": [
+    "paratha",
+    "whole wheat paratha",
+    "indian flatbread paratha",
+    "frozen paratha",
+    "layered wheat bread",
+    "paratha frozen",
+    "stuffed flatbread dough",
+    "wheat paratha",
+    "indian paratha bread"
+  ],
+  "usda_174077": [
+    "naan",
+    "whole wheat naan",
+    "naan bread",
+    "indian naan",
+    "wheat naan bread",
+    "naan flatbread",
+    "garlic naan whole wheat",
+    "refrigerated naan",
+    "indian flatbread naan"
+  ],
+  "usda_174078": [
+    "bolillo",
+    "mexican bread roll",
+    "pan blanco mexicano",
+    "bollilo roll",
+    "mexican white roll",
+    "birote roll",
+    "mexican crusty roll",
+    "torta bread roll",
+    "bolillo roll"
+  ],
+  "usda_174079": [
+    "butter cookie with chocolate",
+    "sugar cookie chocolate iced",
+    "chocolate frosted butter cookie",
+    "chocolate filled sugar cookie",
+    "iced butter cookie",
+    "chocolate topped shortbread cookie",
+    "decorated butter cookie",
+    "chocolate icing cookie"
+  ],
+  "usda_174080": [
+    "chocolate cookie with icing",
+    "frosted chocolate cookie",
+    "chocolate coated cookie",
+    "dipped chocolate cookie",
+    "chocolate glazed cookie",
+    "iced chocolate biscuit",
+    "coated chocolate cookie",
+    "chocolate covered cookie"
+  ],
+  "usda_174081": [
+    "whole wheat tortilla",
+    "wheat tortilla",
+    "whole grain wrap",
+    "wheat flour tortilla",
+    "healthy tortilla",
+    "whole wheat wrap",
+    "multigrain tortilla",
+    "wheat wrap tortilla"
+  ],
+  "usda_174082": [
+    "low fat chocolate snack cake",
+    "creme filled choco cake low fat",
+    "chocolate snack cake low fat",
+    "low fat choco cupcake",
+    "lite chocolate cream cake",
+    "diet chocolate snack cake",
+    "low fat chocolate ho ho type",
+    "creme filled chocolate cake light"
+  ],
+  "usda_174083": [
+    "low fat graham crackers",
+    "honey graham crackers lowfat",
+    "plain graham crackers light",
+    "reduced fat grahams",
+    "light graham crackers",
+    "lowfat honey grahams",
+    "plain grahams low fat",
+    "graham wafers lowfat"
+  ],
+  "usda_174084": [
+    "whole grain cheese crackers",
+    "cheesy whole grain crackers",
+    "cheddar whole grain crackers",
+    "whole wheat cheese crackers",
+    "multigrain cheese crackers",
+    "healthy cheese crackers",
+    "cheese whole grain snack crackers",
+    "cheddar multigrain crackers"
+  ],
+  "usda_174085": [
+    "whole wheat waffles",
+    "frozen whole wheat waffles",
+    "lowfat wheat waffles",
+    "healthy frozen waffles",
+    "whole grain waffles frozen",
+    "light wheat waffles",
+    "whole wheat toaster waffles",
+    "low fat frozen waffles wheat"
+  ],
+  "usda_174086": [
+    "reduced fat pancakes",
+    "light pancakes",
+    "low fat pancakes",
+    "plain pancakes reduced fat",
+    "healthy pancakes",
+    "diet pancakes",
+    "low calorie pancakes",
+    "lite pancakes plain"
+  ],
+  "usda_174087": [
+    "shortbread cookies reduced fat",
+    "light shortbread",
+    "reduced fat shortbread biscuits",
+    "low fat shortbread cookies",
+    "lighter shortbread",
+    "diet shortbread",
+    "reduced fat butter cookies",
+    "light butter shortbread"
+  ],
+  "usda_174088": [
+    "chocolate covered sugar wafers",
+    "chocolate sugar wafer cookies",
+    "choco wafer cookies",
+    "chocolate wafer sandwich",
+    "chocolate dipped wafer",
+    "cocoa wafer cookie",
+    "chocolate coated wafer",
+    "sugar wafer chocolate"
+  ],
+  "usda_174089": [
+    "wheat hamburger bun",
+    "whole wheat hot dog bun",
+    "cracked wheat bun",
+    "wheat bun for burger",
+    "wheat hot dog roll",
+    "cracked wheat roll",
+    "burger bun wheat",
+    "whole grain hamburger bun"
+  ],
+  "usda_174090": [
+    "whole wheat hamburger bun",
+    "whole wheat burger bun",
+    "whole wheat hot dog roll",
+    "whole grain bun",
+    "100 whole wheat bun",
+    "whole wheat sandwich roll",
+    "wheat burger roll",
+    "whole wheat bread roll"
+  ],
+  "usda_174091": [
+    "whole wheat french bread",
+    "wheat french loaf",
+    "whole wheat baguette",
+    "vienna bread whole wheat",
+    "wheat crusty bread",
+    "whole wheat vienna loaf",
+    "french bread whole wheat",
+    "whole grain french bread"
+  ],
+  "usda_174092": [
+    "whole grain bagel",
+    "whole grain white bagel",
+    "white whole grain bagel",
+    "healthy bagel",
+    "whole wheat bagel white",
+    "multigrain white bagel",
+    "light bagel whole grain",
+    "whole grain bread bagel"
+  ],
+  "usda_174093": [
+    "whole grain english muffin",
+    "whole grain white muffin",
+    "white whole grain english muffin",
+    "healthy english muffin",
+    "light english muffin",
+    "whole wheat english muffin white",
+    "whole grain breakfast muffin",
+    "multigrain english muffin"
+  ],
+  "usda_174094": [
+    "whole grain hamburger roll",
+    "whole grain white bun",
+    "fortified whole grain bun",
+    "calcium fortified burger bun",
+    "whole grain white burger bun",
+    "healthy hamburger roll",
+    "enriched whole grain bun",
+    "white whole grain hamburger roll"
+  ],
+  "usda_174095": [
+    "chocolate chip sandwich cookies",
+    "creme filled choco chip cookies",
+    "oreo type chocolate chip",
+    "chocolate chip cream cookie",
+    "choco chip sandwich cookie",
+    "creme filled chocolate chip cookie",
+    "chocolate cookie sandwich cream",
+    "chocolate chip oreo style"
+  ],
+  "usda_174096": [
+    "chocolate rice crispy cookie",
+    "chocolate rice cereal cookie",
+    "rice crispie chocolate cookie",
+    "choco crispy cookie",
+    "chocolate rice cookie",
+    "crispy chocolate cookie",
+    "rice puff chocolate cookie",
+    "chocolate krispie treat cookie"
+  ],
+  "usda_174097": [
+    "rice crispy chocolate marshmallow cookie",
+    "marshmallow chocolate chip bar",
+    "chocolate chip rice bar",
+    "crispy marshmallow cookie",
+    "rice cereal marshmallow chocolate cookie",
+    "choco marshmallow rice cookie",
+    "chocolate marshmallow crispy treat",
+    "rice bar with marshmallow chocolate"
+  ],
+  "usda_174098": [
+    "goldfish crackers",
+    "fish shaped crackers",
+    "fish crackers",
+    "fishie crackers",
+    "cheddar fish crackers",
+    "snack fish crackers",
+    "flavored fish crackers",
+    "goldfish snack crackers"
+  ],
+  "usda_174099": [
+    "gluten free white bread",
+    "gf white bread",
+    "gluten free potato rice bread",
+    "celiac white bread",
+    "gluten free sandwich bread white",
+    "gf bread white potato",
+    "gluten-free loaf white",
+    "gluten free rice potato bread"
+  ],
+  "usda_174100": [
+    "gluten free white bread rice",
+    "gf white bread corn starch",
+    "gluten free rice flour bread",
+    "celiac friendly white bread",
+    "gf bread tapioca rice",
+    "gluten free loaf rice corn",
+    "gluten free sandwich bread tapioca",
+    "gf rice starch bread white"
+  ],
+  "usda_174101": [
+    "gluten free tapioca bread",
+    "gf brown rice bread",
+    "gluten free white bread tapioca",
+    "celiac bread tapioca brown rice",
+    "gf loaf tapioca rice",
+    "gluten free brown rice white bread",
+    "tapioca bread gluten free",
+    "gf bread tapioca starch"
+  ],
+  "usda_174102": [
+    "gluten free whole grain bread",
+    "gf whole grain loaf",
+    "gluten free brown rice bread whole grain",
+    "celiac whole grain bread",
+    "gf multigrain bread tapioca",
+    "gluten free fiber bread",
+    "whole grain gf bread",
+    "gluten free hearty bread brown rice"
+  ],
+  "usda_174103": [
+    "gluten free crackers",
+    "gf multigrain crackers",
+    "gluten free vegetable crackers",
+    "celiac crackers",
+    "gf corn starch crackers",
+    "gluten free rice flour crackers",
+    "gf snack crackers veggie",
+    "gluten free multigrain snack crackers"
+  ]
+}

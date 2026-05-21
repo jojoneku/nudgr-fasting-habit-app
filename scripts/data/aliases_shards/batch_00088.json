@@ -1,0 +1,806 @@
+{
+  "usda_171153": [
+    "minestrone soup",
+    "canned minestrone",
+    "vegetable minestrone",
+    "italian vegetable soup",
+    "condensed minestrone",
+    "minestrone can",
+    "campbell's minestrone",
+    "hearty vegetable soup",
+    "minestrone with pasta"
+  ],
+  "usda_171154": [
+    "mushroom barley soup",
+    "barley mushroom soup",
+    "canned mushroom barley",
+    "condensed mushroom barley soup",
+    "mushroom and barley soup",
+    "barley soup with mushrooms",
+    "hearty mushroom soup"
+  ],
+  "usda_171155": [
+    "cream of mushroom soup",
+    "cream of mushroom can",
+    "condensed mushroom soup",
+    "creamy mushroom soup",
+    "canned cream of mushroom",
+    "mushroom cream soup",
+    "campbell's cream of mushroom",
+    "cream mushroom condensed"
+  ],
+  "usda_171156": [
+    "mushroom beef soup",
+    "mushroom with beef broth soup",
+    "canned mushroom beef soup",
+    "beef and mushroom soup",
+    "condensed mushroom beef soup",
+    "mushroom soup with beef stock"
+  ],
+  "usda_171157": [
+    "split pea soup with ham",
+    "pea and ham soup",
+    "split pea ham soup",
+    "green pea soup with ham",
+    "canned split pea soup",
+    "condensed pea soup",
+    "ham and pea soup",
+    "split pea condensed"
+  ],
+  "usda_171158": [
+    "cream of potato soup",
+    "creamy potato soup",
+    "condensed potato soup",
+    "canned cream of potato",
+    "potato cream soup",
+    "cream potato condensed",
+    "campbell's cream of potato"
+  ],
+  "usda_171159": [
+    "cream of shrimp soup",
+    "creamy shrimp soup",
+    "condensed shrimp soup",
+    "canned cream of shrimp",
+    "shrimp cream soup",
+    "cream shrimp condensed"
+  ],
+  "usda_171160": [
+    "tomato beef noodle soup",
+    "beef noodle tomato soup",
+    "tomato beef soup with noodles",
+    "canned tomato beef noodle",
+    "condensed tomato beef noodle soup",
+    "beefy tomato noodle soup"
+  ],
+  "usda_171161": [
+    "vegetarian vegetable soup",
+    "veggie soup canned",
+    "condensed vegetable soup",
+    "meatless vegetable soup",
+    "canned veggie soup",
+    "vegan vegetable soup",
+    "vegetarian veggie soup",
+    "plain vegetable soup"
+  ],
+  "usda_171162": [
+    "chunky beef soup",
+    "ready to serve beef soup",
+    "canned chunky beef",
+    "hearty beef soup",
+    "beef stew soup",
+    "thick beef soup",
+    "campbell's chunky beef",
+    "ready to eat beef soup"
+  ],
+  "usda_171163": [
+    "vegetable beef soup",
+    "beef and veggie soup",
+    "canned vegetable beef soup",
+    "condensed veggie beef soup",
+    "beef vegetable condensed",
+    "veggies and beef soup"
+  ],
+  "usda_171164": [
+    "vegetable with beef broth soup",
+    "veggies in beef broth",
+    "beef broth vegetable soup",
+    "condensed veggie beef broth soup",
+    "canned veggie beef broth",
+    "vegetables in beef stock"
+  ],
+  "usda_171165": [
+    "dry onion soup mix",
+    "onion soup packet",
+    "french onion soup mix",
+    "onion soup powder",
+    "lipton onion soup mix",
+    "dehydrated onion soup",
+    "onion dip mix",
+    "dry onion mix packet"
+  ],
+  "usda_171166": [
+    "cream of vegetable soup powder",
+    "dry cream of vegetable soup",
+    "vegetable cream soup mix",
+    "powdered veggie cream soup",
+    "dehydrated cream vegetable soup",
+    "instant cream of vegetable"
+  ],
+  "usda_171167": [
+    "teriyaki sauce",
+    "teriyaki marinade",
+    "japanese teriyaki sauce",
+    "teriyaki glaze",
+    "ready to serve teriyaki",
+    "bottled teriyaki sauce",
+    "teriyaki dipping sauce",
+    "tare sauce"
+  ],
+  "usda_171168": [
+    "au jus sauce",
+    "canned au jus",
+    "beef au jus",
+    "roast beef drippings",
+    "au jus gravy",
+    "canned roast drippings",
+    "beef jus",
+    "prime rib sauce"
+  ],
+  "usda_171169": [
+    "au jus mix",
+    "dry au jus",
+    "au jus powder",
+    "au jus packet",
+    "powdered au jus",
+    "instant au jus",
+    "au jus gravy mix"
+  ],
+  "usda_171170": [
+    "mushroom gravy",
+    "canned mushroom gravy",
+    "mushroom sauce",
+    "jarred mushroom gravy",
+    "savory mushroom gravy",
+    "brown mushroom gravy",
+    "mushroom gravy can"
+  ],
+  "usda_171171": [
+    "mushroom gravy powder",
+    "dry mushroom gravy",
+    "mushroom gravy mix",
+    "instant mushroom gravy",
+    "powdered mushroom gravy",
+    "mushroom gravy packet"
+  ],
+  "usda_171172": [
+    "onion gravy mix",
+    "dry onion gravy",
+    "onion gravy powder",
+    "instant onion gravy",
+    "onion gravy packet",
+    "powdered onion gravy",
+    "dehydrated onion gravy"
+  ],
+  "usda_171173": [
+    "pork gravy powder",
+    "dry pork gravy",
+    "pork gravy mix",
+    "instant pork gravy",
+    "powdered pork gravy",
+    "pork gravy packet"
+  ],
+  "usda_171174": [
+    "sofrito sauce",
+    "sofrito base",
+    "homemade sofrito",
+    "latin cooking sauce",
+    "sofrito recaito",
+    "tomato herb cooking base",
+    "sofrito from scratch",
+    "spanish sofrito"
+  ],
+  "usda_171175": [
+    "beef mushroom soup",
+    "canned beef mushroom soup",
+    "condensed beef and mushroom",
+    "beef and mushroom condensed soup",
+    "mushroom beef broth soup",
+    "beefy mushroom soup"
+  ],
+  "usda_171176": [
+    "tomato soup",
+    "canned tomato soup",
+    "prepared tomato soup",
+    "diluted tomato soup",
+    "campbell's tomato soup",
+    "classic tomato soup",
+    "ready tomato soup",
+    "tomato soup with water"
+  ],
+  "usda_171177": [
+    "ramen noodles",
+    "instant ramen",
+    "dry ramen",
+    "ramen packet",
+    "instant noodle soup",
+    "cup noodles dry",
+    "ramen brick",
+    "maruchan ramen",
+    "nissin ramen",
+    "instant noodles"
+  ],
+  "usda_171178": [
+    "broccoli cheese soup",
+    "cheddar broccoli soup",
+    "broccoli cheddar condensed",
+    "canned broccoli cheese soup",
+    "broccoli and cheese soup",
+    "condensed broccoli cheddar",
+    "creamy broccoli soup"
+  ],
+  "usda_171179": [
+    "beef broth low sodium",
+    "low sodium beef broth",
+    "swanson beef broth",
+    "reduced sodium beef stock",
+    "beef stock low sodium",
+    "canned beef broth",
+    "lower sodium beef stock"
+  ],
+  "usda_171180": [
+    "vegetable broth",
+    "veggie broth",
+    "swanson veggie broth",
+    "canned vegetable broth",
+    "vegetable stock",
+    "plant based broth",
+    "meatless broth",
+    "vegetarian broth"
+  ],
+  "usda_171181": [
+    "indian bean soup",
+    "masala bean soup",
+    "spiced bean soup",
+    "indian spiced soup",
+    "bean masala soup",
+    "curry bean soup",
+    "lentil masala soup",
+    "spicy indian bean soup"
+  ],
+  "usda_171182": [
+    "moroccan chickpea soup",
+    "chickpea soup",
+    "north african chickpea",
+    "spiced chickpea soup",
+    "garbanzo bean soup",
+    "moroccan spiced soup",
+    "chickpea stew",
+    "moroccan veggie soup"
+  ],
+  "usda_171183": [
+    "thai coconut curry soup",
+    "coconut curry soup",
+    "thai curry soup",
+    "coconut milk curry soup",
+    "thai style soup",
+    "asian coconut soup",
+    "curry coconut broth",
+    "thai veggie curry soup"
+  ],
+  "usda_171184": [
+    "vietnamese carrot soup",
+    "lemongrass carrot soup",
+    "vietnamese style soup",
+    "carrot lemongrass broth",
+    "asian carrot soup",
+    "lemongrass soup",
+    "vietnamese veggie soup"
+  ],
+  "usda_171185": [
+    "basil pesto sauce",
+    "pesto sauce",
+    "green pesto",
+    "pasta pesto",
+    "basil pesto jar",
+    "italian pesto sauce",
+    "ready to serve pesto",
+    "jarred pesto"
+  ],
+  "usda_171186": [
+    "sriracha",
+    "hot sauce sriracha",
+    "sriracha chili sauce",
+    "red rooster sauce",
+    "thai hot sauce",
+    "sriracha hot sauce",
+    "chili garlic hot sauce",
+    "rooster sauce"
+  ],
+  "usda_171187": [
+    "sriracha hot sauce",
+    "texas pete sriracha",
+    "cha sriracha",
+    "spicy red chili sauce",
+    "sriracha style sauce",
+    "chili hot sauce sriracha"
+  ],
+  "usda_171188": [
+    "huy fong sriracha",
+    "rooster brand sriracha",
+    "tuong ot sriracha",
+    "original sriracha",
+    "green cap sriracha",
+    "vietnamese sriracha",
+    "classic sriracha bottle"
+  ],
+  "usda_171189": [
+    "microwavable vegetable beef soup",
+    "microwave beef veggie soup",
+    "ready to serve veggie beef",
+    "single serve beef vegetable soup",
+    "cup of beef veggie soup",
+    "instant beef vegetable soup"
+  ],
+  "usda_171190": [
+    "beef and vegetable soup",
+    "chunky beef vegetable",
+    "ready to serve beef veg soup",
+    "canned beef veg soup",
+    "beef and veggies soup",
+    "hearty beef vegetable soup",
+    "beef stew soup canned"
+  ],
+  "usda_171191": [
+    "cheese sauce",
+    "canned cheese sauce",
+    "nacho cheese sauce",
+    "ready to pour cheese sauce",
+    "processed cheese sauce",
+    "cheez sauce",
+    "liquid cheese",
+    "cheese dipping sauce"
+  ],
+  "usda_171193": [
+    "beef short ribs boneless",
+    "boneless beef short ribs",
+    "chuck short ribs",
+    "beef short rib meat",
+    "braising ribs beef",
+    "boneless short rib",
+    "short rib beef raw",
+    "beef ribs boneless"
+  ],
+  "usda_171194": [
+    "chuck eye country ribs",
+    "beef country style ribs",
+    "boneless beef country ribs",
+    "chuck country ribs",
+    "beef rib strips",
+    "country style beef ribs boneless",
+    "chuck style ribs"
+  ],
+  "usda_171195": [
+    "beef country style ribs",
+    "chuck eye ribs boneless",
+    "country beef ribs",
+    "boneless country ribs beef",
+    "chuck country style ribs raw",
+    "beef ribs country cut"
+  ],
+  "usda_171196": [
+    "chuck eye steak grilled",
+    "grilled chuck eye steak",
+    "chuck steak grilled",
+    "boneless chuck eye grilled",
+    "chuck eye beef grilled",
+    "grilled chuck steak",
+    "lean chuck eye steak"
+  ],
+  "usda_171197": [
+    "chuck eye steak select",
+    "grilled chuck eye select",
+    "chuck steak lean grilled",
+    "select chuck eye grilled",
+    "lean grilled chuck steak"
+  ],
+  "usda_171198": [
+    "shoulder pot roast",
+    "beef pot roast braised",
+    "braised shoulder roast",
+    "pot roast beef lean",
+    "slow cooked shoulder roast",
+    "beef shoulder roast cooked",
+    "pot roast lean braised"
+  ],
+  "usda_171199": [
+    "shoulder pot roast select",
+    "lean pot roast braised",
+    "beef shoulder braised",
+    "slow cooked beef roast",
+    "select pot roast braised"
+  ],
+  "usda_171200": [
+    "beef shoulder roast",
+    "braised pot roast",
+    "slow cooked beef shoulder",
+    "pot roast cooked lean",
+    "beef shoulder pot roast cooked",
+    "tender pot roast beef"
+  ],
+  "usda_171201": [
+    "mock tender steak braised",
+    "beef mock tender",
+    "chuck mock tender cooked",
+    "braised mock tender steak",
+    "beef petite tender braised",
+    "mock tender beef steak"
+  ],
+  "usda_171202": [
+    "mock tender steak raw",
+    "beef mock tender raw",
+    "chuck mock tender uncooked",
+    "petite tender beef raw",
+    "raw mock tender steak"
+  ],
+  "usda_171203": [
+    "beef stew meat braised",
+    "chuck stew beef cooked",
+    "braised stew beef",
+    "beef for stew cooked",
+    "stew beef braised",
+    "chuck beef stew cooked",
+    "slow cooked stew beef"
+  ],
+  "usda_171204": [
+    "stew beef select",
+    "select beef stew braised",
+    "beef stew meat cooked select",
+    "braised stew beef select"
+  ],
+  "usda_171205": [
+    "stew beef choice",
+    "choice beef stew braised",
+    "beef stew meat choice cooked",
+    "braised stew beef choice",
+    "choice chuck stew"
+  ],
+  "usda_171206": [
+    "beef stew meat raw",
+    "chuck stew beef raw",
+    "raw stew beef",
+    "uncooked beef stew chunks",
+    "raw beef for stew",
+    "stewing beef raw"
+  ],
+  "usda_171207": [
+    "under blade steak braised",
+    "chuck under blade lean",
+    "braised under blade steak",
+    "beef under blade cooked",
+    "chuck underblade steak"
+  ],
+  "usda_171208": [
+    "under blade pot roast",
+    "chuck under blade roast",
+    "braised underblade roast",
+    "beef underblade pot roast",
+    "chuck pot roast underblade"
+  ],
+  "usda_171209": [
+    "ribeye steak grilled",
+    "boneless ribeye grilled",
+    "rib eye steak cooked",
+    "grilled ribeye lean",
+    "boneless rib eye grilled",
+    "ribeye lip on grilled"
+  ],
+  "usda_171210": [
+    "ribeye roast bone in",
+    "prime rib roast",
+    "rib eye roast cooked",
+    "roasted ribeye bone in",
+    "bone in rib roast",
+    "standing rib roast lean",
+    "prime rib cooked"
+  ],
+  "usda_171211": [
+    "denver steak grilled",
+    "denver cut steak",
+    "chuck denver steak",
+    "grilled denver cut",
+    "under blade denver grilled",
+    "denver beef steak"
+  ],
+  "usda_171212": [
+    "denver steak select",
+    "select denver cut grilled",
+    "grilled denver steak select",
+    "lean denver cut beef"
+  ],
+  "usda_171213": [
+    "denver cut raw",
+    "raw denver steak",
+    "denver steak uncooked",
+    "under blade center steak raw",
+    "denver beef raw"
+  ],
+  "usda_171214": [
+    "denver steak choice raw",
+    "choice denver cut raw",
+    "raw choice denver steak",
+    "uncooked denver beef choice"
+  ],
+  "usda_171215": [
+    "chuck eye roast choice",
+    "americas beef roast choice",
+    "boneless chuck roast cooked",
+    "chuck eye roast cooked",
+    "roasted chuck eye choice",
+    "beef chuck roast baked"
+  ],
+  "usda_171216": [
+    "chuck eye roast select",
+    "boneless chuck roast select",
+    "chuck roast cooked select",
+    "roasted chuck eye select"
+  ],
+  "usda_171217": [
+    "under blade steak braised all grades",
+    "chuck under blade cooked",
+    "braised underblade steak",
+    "beef under blade steak cooked"
+  ],
+  "usda_171218": [
+    "under blade steak choice braised",
+    "choice under blade braised",
+    "chuck underblade choice cooked"
+  ],
+  "usda_171219": [
+    "under blade steak select braised",
+    "select under blade braised",
+    "chuck underblade select cooked"
+  ],
+  "usda_171220": [
+    "mock tender steak raw choice",
+    "choice mock tender raw",
+    "beef petite tender choice raw",
+    "chuck mock tender choice uncooked"
+  ],
+  "usda_171221": [
+    "mock tender steak select raw",
+    "select mock tender raw",
+    "beef petite tender select raw",
+    "chuck mock tender select uncooked"
+  ],
+  "usda_171222": [
+    "beef short ribs braised",
+    "boneless short ribs cooked",
+    "braised chuck short ribs",
+    "slow cooked beef short ribs",
+    "tender beef short ribs"
+  ],
+  "usda_171223": [
+    "choice beef short ribs braised",
+    "braised choice short ribs",
+    "chuck short ribs choice cooked",
+    "slow cooked choice beef ribs"
+  ],
+  "usda_171224": [
+    "shoulder pot roast all grades",
+    "braised beef shoulder roast",
+    "tender pot roast cooked",
+    "slow cooked pot roast beef",
+    "beef chuck shoulder roast"
+  ],
+  "usda_171225": [
+    "choice shoulder pot roast",
+    "braised choice pot roast",
+    "slow cooked beef pot roast choice",
+    "tender beef roast choice"
+  ],
+  "usda_171226": [
+    "select shoulder pot roast",
+    "braised select pot roast",
+    "slow cooked beef pot roast select",
+    "lean pot roast select"
+  ],
+  "usda_171227": [
+    "chuck country ribs braised",
+    "braised country style ribs beef",
+    "slow cooked chuck country ribs",
+    "beef country ribs cooked"
+  ],
+  "usda_171228": [
+    "chuck eye steak grilled all grades",
+    "grilled boneless chuck steak",
+    "chuck eye grilled lean and fat",
+    "beef chuck steak grilled"
+  ],
+  "usda_171229": [
+    "choice chuck eye steak grilled",
+    "grilled choice chuck eye",
+    "choice beef chuck steak grilled"
+  ],
+  "usda_171230": [
+    "select chuck eye steak grilled",
+    "grilled select chuck eye",
+    "select beef chuck steak grilled"
+  ],
+  "usda_171231": [
+    "chuck eye steak raw",
+    "raw boneless chuck eye",
+    "uncooked chuck eye steak",
+    "raw beef chuck eye steak"
+  ],
+  "usda_171232": [
+    "ribeye steak lean grilled choice",
+    "choice boneless ribeye grilled",
+    "grilled choice rib eye lean",
+    "lean ribeye steak choice"
+  ],
+  "usda_171233": [
+    "select ribeye steak grilled lean",
+    "grilled select boneless ribeye",
+    "lean select rib eye grilled"
+  ],
+  "usda_171234": [
+    "bone in ribeye raw",
+    "raw ribeye steak bone in",
+    "rib eye roast raw bone in",
+    "uncooked bone in rib eye"
+  ],
+  "usda_171235": [
+    "choice bone in ribeye raw",
+    "raw choice rib eye bone in",
+    "uncooked choice ribeye bone in"
+  ],
+  "usda_171236": [
+    "bone in ribeye grilled",
+    "grilled bone in rib eye steak",
+    "ribeye steak on bone grilled",
+    "bone in rib eye cooked"
+  ],
+  "usda_171237": [
+    "choice bone in ribeye grilled",
+    "grilled choice bone in ribeye",
+    "rib eye on bone choice grilled"
+  ],
+  "usda_171238": [
+    "select bone in ribeye grilled",
+    "grilled select bone in ribeye",
+    "rib eye on bone select grilled"
+  ],
+  "usda_171239": [
+    "boneless ribeye roast cooked",
+    "roasted rib eye boneless",
+    "ribeye roast lean cooked",
+    "rib eye roast boneless baked"
+  ],
+  "usda_171240": [
+    "gjetost cheese",
+    "brunost",
+    "norwegian brown cheese",
+    "brown cheese",
+    "caramel cheese norwegian",
+    "gjeitost",
+    "sweet brown cheese",
+    "norwegian goat cheese"
+  ],
+  "usda_171241": [
+    "gouda cheese",
+    "smoked gouda",
+    "dutch cheese",
+    "gouda slice",
+    "mild gouda",
+    "gouda block",
+    "aged gouda",
+    "holland cheese"
+  ],
+  "usda_171242": [
+    "gruyere cheese",
+    "swiss gruyere",
+    "gruyere slice",
+    "french swiss cheese",
+    "gruyère",
+    "fondue cheese",
+    "nutty swiss cheese",
+    "emmental style cheese"
+  ],
+  "usda_171243": [
+    "limburger cheese",
+    "pungent soft cheese",
+    "smelly cheese",
+    "german limburger",
+    "limburger spread",
+    "strong cheese soft"
+  ],
+  "usda_171245": [
+    "muenster cheese",
+    "munster cheese",
+    "semi soft cheese",
+    "muenster slice",
+    "mild orange rind cheese",
+    "american muenster",
+    "munster american cheese"
+  ],
+  "usda_171246": [
+    "neufchatel cheese",
+    "light cream cheese",
+    "reduced fat cream cheese",
+    "neufchatel soft cheese",
+    "low fat cream cheese",
+    "neufchâtel",
+    "creamy spreadable cheese light"
+  ],
+  "usda_171248": [
+    "part skim ricotta",
+    "low fat ricotta",
+    "light ricotta cheese",
+    "skim milk ricotta",
+    "part skim ricotta cheese",
+    "reduced fat ricotta",
+    "ricotta lite"
+  ],
+  "usda_171249": [
+    "romano cheese",
+    "romano grated",
+    "pecorino romano",
+    "italian romano cheese",
+    "sharp romano",
+    "romano shredded",
+    "hard italian cheese romano"
+  ],
+  "usda_171250": [
+    "roquefort cheese",
+    "french blue cheese",
+    "sheep milk blue cheese",
+    "roquefort bleu",
+    "blue cheese roquefort",
+    "cave aged blue cheese",
+    "pungent blue cheese french"
+  ],
+  "usda_171252": [
+    "american cheese food",
+    "processed american cheese",
+    "pasteurized american cheese",
+    "velveeta style american",
+    "american cheese product",
+    "singles american cheese",
+    "processed cheese slices american"
+  ],
+  "usda_171253": [
+    "processed swiss cheese",
+    "pasteurized swiss cheese food",
+    "swiss cheese food",
+    "processed swiss slices",
+    "american swiss cheese product"
+  ],
+  "usda_171254": [
+    "american cheese spread",
+    "processed cheese spread",
+    "velveeta spread",
+    "creamy american cheese spread",
+    "pasteurized cheese spread",
+    "cheese whiz style",
+    "spreadable american cheese"
+  ],
+  "usda_171255": [
+    "half and half",
+    "half n half",
+    "coffee creamer half and half",
+    "half and half cream",
+    "light cream half and half",
+    "half half dairy",
+    "creamer half and half",
+    "half cream half milk"
+  ],
+  "usda_171256": [
+    "reduced fat sour cream",
+    "light sour cream",
+    "low fat sour cream",
+    "lite sour cream",
+    "reduced fat cultured cream",
+    "low cal sour cream",
+    "light cultured sour cream"
+  ]
+}

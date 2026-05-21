@@ -1,0 +1,1002 @@
+{
+  "usda_174716": [
+    "bolar blade beef",
+    "nz beef shoulder",
+    "blade roast beef",
+    "beef blade raw",
+    "lean blade beef",
+    "nz grass fed beef",
+    "imported nz beef",
+    "beef shoulder blade"
+  ],
+  "usda_174717": [
+    "braised beef brisket",
+    "nz brisket cooked",
+    "slow cooked brisket",
+    "beef navel brisket braised",
+    "braised navel brisket",
+    "stewed brisket",
+    "lean braised brisket",
+    "nz imported brisket"
+  ],
+  "usda_174718": [
+    "raw beef brisket",
+    "navel brisket raw",
+    "nz brisket raw",
+    "lean brisket uncooked",
+    "grass fed brisket",
+    "beef navel cut raw",
+    "nz beef brisket",
+    "imported brisket raw"
+  ],
+  "usda_174719": [
+    "cube roll beef roasted",
+    "nz beef cube roll",
+    "roast beef cube roll",
+    "beef scotch fillet roasted",
+    "fast roasted cube roll",
+    "nz roast beef",
+    "cube roll cooked",
+    "scotch fillet roast"
+  ],
+  "usda_174720": [
+    "cube roll beef raw",
+    "beef scotch fillet raw",
+    "nz cube roll",
+    "grass fed cube roll",
+    "beef rib eye roll raw",
+    "imported cube roll",
+    "scotch fillet uncooked",
+    "beef cube roll nz"
+  ],
+  "usda_174721": [
+    "eye round roast beef",
+    "slow roasted eye round",
+    "beef eye round cooked",
+    "nz eye round",
+    "lean roast beef",
+    "round roast beef",
+    "slow cooked eye round",
+    "beef round roast"
+  ],
+  "usda_174722": [
+    "eye round beef raw",
+    "beef round raw",
+    "nz eye round raw",
+    "lean eye round uncooked",
+    "grass fed eye round",
+    "beef round cut raw",
+    "imported eye round",
+    "eye of round raw"
+  ],
+  "usda_174723": [
+    "beef heart raw",
+    "nz beef heart",
+    "raw cow heart",
+    "puso ng baka",
+    "beef offal heart",
+    "grass fed beef heart",
+    "imported beef heart",
+    "whole beef heart raw"
+  ],
+  "usda_174724": [
+    "beef shin braised",
+    "hind shin cooked",
+    "nz beef shin",
+    "braised beef shank",
+    "beef leg cooked",
+    "stewed beef shin",
+    "slow cooked beef shin",
+    "beef shank braised"
+  ],
+  "usda_174725": [
+    "beef shin raw",
+    "hind shin beef",
+    "nz beef shank raw",
+    "beef leg cut raw",
+    "grass fed beef shin",
+    "imported beef shin",
+    "raw beef shank",
+    "beef lower leg raw"
+  ],
+  "usda_174726": [
+    "beef inside round raw",
+    "nz inside cut beef",
+    "beef topside raw",
+    "inside round beef",
+    "nz beef inside",
+    "topside beef raw",
+    "grass fed inside round",
+    "beef inside nz"
+  ],
+  "usda_174727": [
+    "beef kidney raw",
+    "nz beef kidney",
+    "raw cow kidney",
+    "bato ng baka",
+    "beef offal kidney",
+    "grass fed beef kidney",
+    "imported beef kidney",
+    "beef kidney uncooked"
+  ],
+  "usda_174728": [
+    "beef liver boiled",
+    "nz beef liver cooked",
+    "boiled cow liver",
+    "atay ng baka cooked",
+    "cooked beef liver",
+    "beef liver stewed",
+    "simmered beef liver",
+    "imported beef liver cooked"
+  ],
+  "usda_174729": [
+    "beef liver raw",
+    "nz beef liver",
+    "raw cow liver",
+    "atay ng baka",
+    "beef offal liver",
+    "grass fed beef liver",
+    "imported beef liver",
+    "uncooked beef liver"
+  ],
+  "usda_174730": [
+    "nz ground beef boiled",
+    "manufacturing beef cooked",
+    "boiled ground beef nz",
+    "lean beef boiled",
+    "nz lean beef cooked",
+    "stewed ground beef",
+    "beef mince boiled",
+    "imported beef cooked"
+  ],
+  "usda_174731": [
+    "nz beef ribs raw",
+    "prepared beef ribs",
+    "grass fed beef ribs",
+    "raw beef ribs nz",
+    "imported beef ribs",
+    "beef short ribs raw",
+    "nz rib cut raw",
+    "beef ribs uncooked"
+  ],
+  "usda_174732": [
+    "rump steak fried",
+    "nz rump centre cooked",
+    "pan fried rump steak",
+    "beef rump fried",
+    "rump steak fast fried",
+    "fried rump cut",
+    "nz rump steak",
+    "seared rump steak"
+  ],
+  "usda_174733": [
+    "striploin steak fried",
+    "nz strip steak cooked",
+    "pan fried striploin",
+    "ny strip fried",
+    "beef striploin fast fried",
+    "fried strip steak",
+    "nz striploin cooked",
+    "seared striploin"
+  ],
+  "usda_174734": [
+    "striploin steak raw",
+    "nz strip steak raw",
+    "beef striploin uncooked",
+    "ny strip raw",
+    "grass fed striploin",
+    "imported striploin raw",
+    "lean strip steak raw",
+    "nz striploin raw"
+  ],
+  "usda_174735": [
+    "oyster blade beef raw",
+    "nz oyster blade",
+    "blade steak raw",
+    "beef oyster cut",
+    "flat iron beef raw",
+    "grass fed oyster blade",
+    "imported oyster blade",
+    "beef shoulder flat raw"
+  ],
+  "usda_174736": [
+    "beef tenderloin raw",
+    "nz beef fillet raw",
+    "beef fillet raw",
+    "beef filet raw",
+    "grass fed tenderloin",
+    "nz tenderloin",
+    "imported beef tenderloin",
+    "lean tenderloin raw"
+  ],
+  "usda_174737": [
+    "beef tongue boiled",
+    "nz beef tongue cooked",
+    "boiled cow tongue",
+    "lengua cooked",
+    "beef lengua boiled",
+    "cooked beef tongue",
+    "ox tongue boiled",
+    "stewed beef tongue"
+  ],
+  "usda_174738": [
+    "beef tongue raw",
+    "nz beef tongue",
+    "raw cow tongue",
+    "lengua raw",
+    "ox tongue raw",
+    "beef lengua uncooked",
+    "imported beef tongue",
+    "whole beef tongue"
+  ],
+  "usda_174739": [
+    "braised beef brisket with fat",
+    "nz brisket braised",
+    "slow cooked brisket with fat",
+    "beef navel brisket cooked",
+    "fatty brisket braised",
+    "brisket navel braised",
+    "nz beef brisket cooked",
+    "braised navel cut"
+  ],
+  "usda_174740": [
+    "fatty beef brisket raw",
+    "brisket navel with fat raw",
+    "nz brisket raw untrimmed",
+    "beef navel brisket uncooked",
+    "marbled brisket raw",
+    "nz brisket untrimmed",
+    "beef brisket navel raw",
+    "imported brisket with fat"
+  ],
+  "usda_174741": [
+    "brisket point braised",
+    "nz point brisket cooked",
+    "beef brisket point cooked",
+    "fatty brisket point braised",
+    "braised beef brisket point",
+    "slow cooked brisket point",
+    "nz brisket point",
+    "brisket point end cooked"
+  ],
+  "usda_174742": [
+    "brisket point end raw",
+    "nz brisket point raw",
+    "beef brisket point uncooked",
+    "fatty brisket point raw",
+    "imported brisket point",
+    "grass fed brisket point",
+    "beef point cut raw",
+    "nz beef point brisket"
+  ],
+  "usda_174743": [
+    "eye round roast with fat",
+    "nz eye round cooked",
+    "slow roasted eye round with fat",
+    "beef round roast cooked",
+    "roast beef eye round",
+    "nz round roast cooked",
+    "slow roasted round",
+    "beef eye round slow roast"
+  ],
+  "usda_174744": [
+    "eye round with fat raw",
+    "nz eye round untrimmed",
+    "beef round with fat raw",
+    "marbled eye round raw",
+    "imported eye round with fat",
+    "beef eye round raw untrimmed",
+    "nz eye of round raw",
+    "round beef raw"
+  ],
+  "usda_174745": [
+    "braised beef flank",
+    "nz flank steak cooked",
+    "beef flank braised",
+    "flank steak stewed",
+    "nz beef flank cooked",
+    "braised flank cut",
+    "slow cooked flank beef",
+    "imported flank beef cooked"
+  ],
+  "usda_174746": [
+    "flank steak raw",
+    "nz flank beef raw",
+    "beef flank raw",
+    "flank cut uncooked",
+    "nz flank raw",
+    "grass fed flank steak",
+    "imported flank steak",
+    "raw flank beef"
+  ],
+  "usda_174747": [
+    "braised flat beef",
+    "nz flat cut cooked",
+    "beef flat braised",
+    "flat beef stewed",
+    "slow cooked flat cut",
+    "nz beef flat cooked",
+    "imported flat beef braised",
+    "flat braised beef"
+  ],
+  "usda_174748": [
+    "rump steak fried with fat",
+    "nz rump pan fried",
+    "fried rump steak nz",
+    "rump centre fast fried",
+    "beef rump cooked with fat",
+    "pan seared rump nz",
+    "rump steak seared nz",
+    "nz rump cooked"
+  ],
+  "usda_174749": [
+    "rump steak raw lean",
+    "nz rump centre raw",
+    "lean rump beef raw",
+    "beef rump raw",
+    "nz lean rump",
+    "grass fed rump steak",
+    "imported rump raw",
+    "rump cut lean raw"
+  ],
+  "usda_174750": [
+    "rump steak raw",
+    "nz rump with fat raw",
+    "beef rump raw marbled",
+    "nz rump untrimmed",
+    "rump centre raw nz",
+    "imported rump beef raw",
+    "grass fed rump raw",
+    "beef rump cut raw"
+  ],
+  "usda_174751": [
+    "striploin with fat fried",
+    "nz striploin pan fried",
+    "strip steak cooked nz",
+    "fatty striploin fast fried",
+    "nz strip cooked with fat",
+    "pan seared striploin nz",
+    "beef striploin cooked nz",
+    "striploin nz fried"
+  ],
+  "usda_174752": [
+    "lean beef patty grilled",
+    "93 lean burger patty",
+    "lean hamburger patty broiled",
+    "93 7 beef patty cooked",
+    "grilled lean ground beef patty",
+    "low fat burger patty cooked",
+    "lean beef burger grilled",
+    "extra lean burger"
+  ],
+  "usda_174753": [
+    "lean beef patty pan cooked",
+    "93 lean burger pan broiled",
+    "pan cooked beef patty",
+    "lean hamburger pan fried",
+    "93 7 patty pan cooked",
+    "low fat beef patty pan",
+    "skillet beef patty lean",
+    "lean pan burger"
+  ],
+  "usda_174754": [
+    "lean meatloaf baked",
+    "93 lean beef meatloaf",
+    "baked meatloaf low fat",
+    "ground beef loaf baked",
+    "low fat meatloaf",
+    "lean beef loaf cooked",
+    "93 percent lean meatloaf",
+    "extra lean meatloaf"
+  ],
+  "usda_174755": [
+    "lean ground beef crumbles",
+    "93 lean cooked ground beef",
+    "browned lean beef",
+    "pan browned ground beef lean",
+    "cooked lean beef mince",
+    "93 7 beef crumbles",
+    "low fat ground beef cooked",
+    "lean taco meat"
+  ],
+  "usda_174756": [
+    "extra lean ground beef crumbles",
+    "97 lean cooked beef",
+    "97 3 ground beef browned",
+    "very lean ground beef cooked",
+    "extra lean taco meat",
+    "97 percent lean beef",
+    "fat free ground beef cooked",
+    "ultra lean beef crumbles"
+  ],
+  "usda_174757": [
+    "raw lean beef",
+    "trimmed beef cuts raw",
+    "mixed lean beef raw",
+    "assorted beef cuts",
+    "lean beef all cuts raw",
+    "raw beef lean trimmed",
+    "mixed beef raw",
+    "lean beef composite raw"
+  ],
+  "usda_174758": [
+    "lean beef cuts raw",
+    "trimmed beef raw",
+    "lean mixed beef",
+    "assorted lean beef raw",
+    "beef cuts lean 1/8 fat",
+    "raw lean beef cuts",
+    "mixed lean beef trimmed",
+    "lean beef raw mixed"
+  ],
+  "usda_174759": [
+    "cooked lean beef",
+    "lean beef cuts cooked",
+    "mixed beef cooked lean",
+    "trimmed beef cooked",
+    "lean beef all cuts cooked",
+    "assorted lean beef cooked",
+    "cooked beef lean",
+    "mixed cooked lean beef"
+  ],
+  "usda_174760": [
+    "zero fat beef raw",
+    "lean beef no fat raw",
+    "trimmed beef no fat",
+    "lean beef raw trimmed",
+    "beef cuts zero fat raw",
+    "all lean raw beef",
+    "beef raw fat removed",
+    "lean beef composite zero fat"
+  ],
+  "usda_174761": [
+    "beef short ribs raw",
+    "small end rib raw",
+    "beef rib 10-12 raw",
+    "rib steak raw choice",
+    "lean beef rib raw",
+    "beef back ribs raw",
+    "prime rib raw lean",
+    "beef rib cut raw choice"
+  ],
+  "usda_174762": [
+    "filet mignon raw",
+    "beef tenderloin steak raw",
+    "beef fillet steak raw",
+    "tender steak raw",
+    "filet steak raw",
+    "beef filet mignon",
+    "tenderloin raw choice",
+    "lean tenderloin steak"
+  ],
+  "usda_174763": [
+    "top sirloin steak raw",
+    "sirloin steak raw",
+    "beef sirloin raw",
+    "top sirloin raw choice",
+    "sirloin cut raw",
+    "lean sirloin steak",
+    "beef sirloin steak uncooked",
+    "sirloin raw lean"
+  ],
+  "usda_174764": [
+    "beef ribs broiled",
+    "small end ribs cooked",
+    "beef back ribs grilled",
+    "broiled beef ribs",
+    "grilled beef short ribs",
+    "rib steak broiled",
+    "cooked beef ribs",
+    "beef rib broiled choice"
+  ],
+  "usda_174765": [
+    "chuck arm roast raw",
+    "arm pot roast beef",
+    "beef chuck arm raw",
+    "beef arm roast uncooked",
+    "chuck roast raw select",
+    "lean chuck arm raw",
+    "beef shoulder arm raw",
+    "arm roast beef raw"
+  ],
+  "usda_174766": [
+    "beef brisket flat raw",
+    "brisket flat half raw",
+    "lean brisket flat",
+    "flat cut brisket raw",
+    "beef brisket flat select",
+    "brisket flat uncooked lean",
+    "lean flat brisket",
+    "brisket lean flat raw"
+  ],
+  "usda_174767": [
+    "beef chuck arm roast cooked",
+    "braised arm pot roast",
+    "chuck arm roast braised",
+    "slow cooked chuck arm",
+    "beef arm roast braised",
+    "pot roast braised lean",
+    "cooked chuck arm roast",
+    "chuck pot roast braised"
+  ],
+  "usda_174768": [
+    "beef brisket flat cooked",
+    "braised brisket flat",
+    "brisket flat braised",
+    "slow cooked brisket flat",
+    "cooked flat brisket",
+    "lean brisket braised",
+    "brisket flat half cooked",
+    "slow braised flat brisket"
+  ],
+  "usda_174769": [
+    "beef tripe cooked",
+    "simmered tripe",
+    "cooked cow stomach",
+    "goto meat",
+    "cow tripe",
+    "callos tripe",
+    "boiled tripe",
+    "beef stomach cooked"
+  ],
+  "usda_174770": [
+    "tri tip roast raw",
+    "bottom sirloin tri tip",
+    "tri tip beef raw",
+    "sirloin tri tip raw",
+    "lean tri tip",
+    "beef tri tip uncooked",
+    "tri tip cut raw",
+    "bottom sirloin roast raw"
+  ],
+  "usda_174771": [
+    "tri tip roast cooked",
+    "roasted tri tip",
+    "beef tri tip roasted",
+    "tri tip oven roasted",
+    "cooked tri tip choice",
+    "baked tri tip",
+    "tri tip roast done",
+    "roast tri tip beef"
+  ],
+  "usda_174772": [
+    "tri tip choice raw",
+    "beef tri tip raw choice",
+    "bottom sirloin raw choice",
+    "tri tip uncooked choice",
+    "lean tri tip raw",
+    "choice tri tip beef",
+    "raw choice tri tip",
+    "tri tip beef choice"
+  ],
+  "usda_174773": [
+    "tri tip select roasted",
+    "lean tri tip cooked select",
+    "roasted tri tip select",
+    "tri tip select done",
+    "cooked tri tip select",
+    "bottom sirloin select cooked",
+    "tri tip roast select",
+    "select tri tip roasted"
+  ],
+  "usda_174774": [
+    "grilled flank steak",
+    "broiled flank steak",
+    "lean flank steak cooked",
+    "flank steak grilled lean",
+    "beef flank grilled",
+    "flank steak broiled lean",
+    "cooked flank steak",
+    "grilled beef flank"
+  ],
+  "usda_174775": [
+    "select flank steak grilled",
+    "broiled flank steak select",
+    "lean flank steak select cooked",
+    "flank steak select broiled",
+    "grilled select flank",
+    "beef flank select cooked",
+    "cooked select flank steak",
+    "select beef flank broiled"
+  ],
+  "usda_174776": [
+    "flank steak raw lean",
+    "beef flank raw all grades",
+    "lean flank steak raw",
+    "raw flank cut lean",
+    "flank steak uncooked",
+    "beef flank raw lean",
+    "raw lean flank beef",
+    "flank steak all grades raw"
+  ],
+  "usda_174777": [
+    "select flank steak raw",
+    "beef flank raw select",
+    "lean flank select raw",
+    "raw select flank",
+    "flank steak select uncooked",
+    "lean select flank raw",
+    "select beef flank raw",
+    "raw flank lean select"
+  ],
+  "usda_174778": [
+    "low fat microwave popcorn",
+    "light microwave popcorn",
+    "reduced fat popcorn microwave",
+    "microwave popcorn light",
+    "low calorie microwave popcorn",
+    "diet popcorn microwave",
+    "light popcorn bag",
+    "low fat popped corn"
+  ],
+  "usda_174779": [
+    "yogurt covered candy rolls",
+    "fruit yogurt candy",
+    "yogurt candy rolls vitamin c",
+    "fruit flavored yogurt candy",
+    "yogurt rolls candy",
+    "vitamin c yogurt candy",
+    "yogurt coated fruit candy",
+    "fruity yogurt candy rolls"
+  ],
+  "usda_174780": [
+    "snickers marathon bar",
+    "marathon chewy chocolate peanut bar",
+    "snickers energy bar",
+    "marathon protein bar chocolate peanut",
+    "chocolate peanut energy bar",
+    "snickers marathon chewy",
+    "marathon bar chocolate",
+    "snickers sport bar"
+  ],
+  "usda_174781": [
+    "snickers marathon multigrain bar",
+    "marathon crunch bar multigrain",
+    "snickers marathon bar crunchy",
+    "multigrain crunch energy bar",
+    "marathon multigrain snack bar",
+    "snickers crunch bar",
+    "marathon bar multigrain",
+    "multigrain marathon bar"
+  ],
+  "usda_174782": [
+    "cocoavia chocolate almond bar",
+    "mars chocolate almond snack bar",
+    "chocolate almond energy bar",
+    "cocoa snack bar almond",
+    "cocoavia bar",
+    "chocolate heart healthy bar",
+    "almond chocolate snack bar",
+    "cocoavia chocolate bar"
+  ],
+  "usda_174783": [
+    "sweet potato chips unsalted",
+    "no salt sweet potato chips",
+    "sweet potato crisps unsalted",
+    "baked sweet potato chips",
+    "unsalted sweet potato crisps",
+    "sweet potato snack chips",
+    "camote chips",
+    "plain sweet potato chips"
+  ],
+  "usda_174784": [
+    "sunchips original",
+    "sun chips original flavor",
+    "multigrain sunchips",
+    "sunchips snack",
+    "frito lay sun chips",
+    "multigrain snack chips",
+    "sun chips plain",
+    "original sunchips multigrain"
+  ],
+  "usda_174785": [
+    "butter microwave popcorn",
+    "regular microwave popcorn",
+    "buttered microwave popcorn",
+    "microwave butter popcorn",
+    "movie style microwave popcorn",
+    "classic butter popcorn bag",
+    "hydrogenated oil popcorn",
+    "standard microwave popcorn"
+  ],
+  "usda_174786": [
+    "snickers marathon protein bar",
+    "marathon caramel nut bar",
+    "caramel nut rush bar",
+    "marathon performance bar caramel",
+    "snickers protein bar caramel",
+    "marathon caramel protein bar",
+    "caramel nut energy bar",
+    "snickers marathon caramel"
+  ],
+  "usda_174787": [
+    "luna bar chocolate",
+    "luna nutz over chocolate",
+    "luna bar nutty chocolate",
+    "luna bar snack",
+    "womens energy bar chocolate",
+    "luna chocolate nut bar",
+    "luna bar chocolate peanut",
+    "nutz over chocolate bar"
+  ],
+  "usda_174788": [
+    "sunchips french onion",
+    "sun chips onion flavor",
+    "french onion multigrain chips",
+    "sunchips onion",
+    "frito lay sunchips onion",
+    "french onion sun chips",
+    "multigrain french onion snack",
+    "onion flavor sun chips"
+  ],
+  "usda_174789": [
+    "sunchips cheddar",
+    "harvest cheddar sun chips",
+    "cheddar multigrain chips",
+    "sunchips cheese",
+    "frito lay sunchips cheddar",
+    "sun chips harvest cheddar",
+    "multigrain cheddar snack",
+    "cheddar sunchips"
+  ],
+  "usda_174790": [
+    "soft pretzel unsalted",
+    "plain soft pretzel",
+    "soft baked pretzel no salt",
+    "unsalted pretzel bread",
+    "soft pretzel no salt",
+    "auntie anne style pretzel",
+    "plain baked pretzel",
+    "mall pretzel unsalted"
+  ],
+  "usda_174791": [
+    "terra chips",
+    "vegetable chips terra",
+    "mixed veggie chips",
+    "terra vegetable crisps",
+    "hain terra chips",
+    "exotic vegetable chips",
+    "root vegetable chips",
+    "terra veggie snack"
+  ],
+  "usda_174792": [
+    "zone perfect bar",
+    "zone bar classic crunch",
+    "zone crunch protein bar",
+    "zone perfect classic bar",
+    "zone bar snack",
+    "zone crunch bar mixed",
+    "zone protein bar",
+    "zone perfect snack bar"
+  ],
+  "usda_174793": [
+    "kashi golean bar",
+    "kashi chewy granola bar",
+    "kashi protein granola bar",
+    "golean granola bar",
+    "kashi chewy bar",
+    "high protein granola bar kashi",
+    "kashi bar chewy",
+    "golean chewy bar"
+  ],
+  "usda_174794": [
+    "kashi tlc chewy bar",
+    "kashi tlc granola bar",
+    "kashi tlc bar",
+    "kashi trail mix bar",
+    "kashi chewy tlc",
+    "tlc granola bar kashi",
+    "kashi nature bar chewy",
+    "kashi healthy granola bar"
+  ],
+  "usda_174795": [
+    "quaker oatmeal to go bar",
+    "quaker breakfast bar",
+    "oatmeal bar quaker",
+    "quaker on the go bar",
+    "oatmeal to go snack",
+    "quaker granola bar oatmeal",
+    "breakfast granola bar quaker",
+    "portable oatmeal bar"
+  ],
+  "usda_174796": [
+    "veggie chips",
+    "vegetable chips snack",
+    "garden vegetable crisps",
+    "mixed vegetable chips",
+    "veggie crisps snack",
+    "baked veggie chips",
+    "garden veggie chips",
+    "vegetable snack chips"
+  ],
+  "usda_174797": [
+    "kashi tlc crunchy bar",
+    "kashi crunchy granola bar",
+    "kashi bar crunchy",
+    "tlc crunchy kashi",
+    "kashi crispy bar",
+    "kashi crunchy tlc bar",
+    "crunchy kashi granola bar",
+    "kashi snack bar crunchy"
+  ],
+  "usda_174798": [
+    "yogurt candy bits",
+    "yogurt covered candy pieces",
+    "vitamin c yogurt candy",
+    "yogurt bits candy",
+    "yogurt coated candy",
+    "fruit yogurt candy bits",
+    "yogurt candy snack",
+    "yogurt vitamin c candy pieces"
+  ],
+  "usda_174799": [
+    "clif bar",
+    "cliff bar",
+    "clif energy bar",
+    "clif snack bar",
+    "clif bar mixed",
+    "cliff energy bar",
+    "clif bar workout snack",
+    "clif bar oatmeal"
+  ],
+  "usda_174800": [
+    "quaker 90 calorie bar",
+    "quaker chewy low calorie bar",
+    "90 cal granola bar",
+    "light granola bar quaker",
+    "quaker diet granola bar",
+    "low calorie chewy bar",
+    "quaker mini granola bar",
+    "90 calorie chewy bar"
+  ],
+  "usda_174801": [
+    "nature valley sweet salty peanut",
+    "sweet and salty nut bar",
+    "nature valley peanut bar",
+    "sweet salty granola bar peanut",
+    "nv peanut granola bar",
+    "sweet salty peanut bar",
+    "nature valley sweet salty",
+    "peanut sweet salty bar"
+  ],
+  "usda_174802": [
+    "nature valley yogurt bar",
+    "nature valley granola yogurt",
+    "yogurt coated granola bar nv",
+    "nature valley yogurt coated",
+    "nv yogurt bar",
+    "yogurt dipped granola bar",
+    "nature valley bar with yogurt",
+    "yogurt nature valley bar"
+  ],
+  "usda_174803": [
+    "mixed berry bar",
+    "berry snack bar",
+    "fruit bar mixed berry",
+    "berry granola bar",
+    "mixed berry fruit bar",
+    "berry energy bar",
+    "berry cereal bar",
+    "mixed berry snack bar"
+  ],
+  "usda_174804": [
+    "multigrain potato chips",
+    "pringles multigrain",
+    "formed multigrain chips",
+    "stacked multigrain crisps",
+    "multigrain potato crisps",
+    "multigrain chip snack",
+    "dried potato multigrain chips",
+    "preformed multigrain chips"
+  ],
+  "usda_174805": [
+    "lightly salted potato chips",
+    "low sodium potato chips",
+    "light salt chips",
+    "barely salted chips",
+    "reduced salt potato chips",
+    "lightly salted crisps",
+    "light sodium chips",
+    "potato chips low salt"
+  ],
+  "usda_174806": [
+    "gluten free pretzels",
+    "gf pretzels",
+    "gluten free pretzel snack",
+    "corn potato pretzel gf",
+    "celiac pretzels",
+    "gluten free hard pretzels",
+    "gf crunchy pretzels",
+    "corn starch pretzel"
+  ],
+  "usda_174807": [
+    "egg drop soup",
+    "chinese egg drop soup",
+    "restaurant egg drop soup",
+    "chinese egg soup",
+    "egg flower soup",
+    "egg drop broth",
+    "silky egg soup chinese",
+    "egg ribbon soup"
+  ],
+  "usda_174808": [
+    "hot and sour soup",
+    "chinese hot sour soup",
+    "restaurant hot and sour",
+    "spicy sour chinese soup",
+    "tofu hot sour soup",
+    "chinese spicy soup",
+    "hot sour broth",
+    "hot n sour soup"
+  ],
+  "usda_174809": [
+    "nos zero energy drink",
+    "sugar free nos drink",
+    "nos zero sugar",
+    "zero calorie energy drink nos",
+    "nos sugar free",
+    "nos zero guarana",
+    "nos diet energy drink",
+    "nos zero can"
+  ],
+  "usda_174810": [
+    "canned whiskey sour",
+    "pre mixed whiskey sour",
+    "ready to drink whiskey sour",
+    "bottled whiskey sour cocktail",
+    "whiskey sour canned drink",
+    "premade whiskey sour",
+    "whiskey sour rtd",
+    "canned sour cocktail"
+  ],
+  "usda_174811": [
+    "whiskey sour mix",
+    "sour mix whiskey",
+    "whiskey cocktail mix",
+    "sweet and sour mix",
+    "whiskey sour syrup",
+    "bar sour mix",
+    "sour cocktail mix",
+    "whiskey sour bottled mix"
+  ],
+  "usda_174812": [
+    "whiskey sour cocktail",
+    "homemade whiskey sour",
+    "whiskey sour drink",
+    "whiskey lemon cocktail",
+    "sour whiskey drink",
+    "whiskey sour prepared",
+    "classic whiskey sour",
+    "whiskey and sour mix"
+  ],
+  "usda_174813": [
+    "eas soy protein powder",
+    "soy protein shake powder",
+    "abbott soy protein",
+    "eas soy shake",
+    "soy protein supplement powder",
+    "soy protein drink mix",
+    "eas protein powder soy",
+    "soy protein supplement eas"
+  ],
+  "usda_174814": [
+    "muscle milk ready to drink",
+    "muscle milk rtd",
+    "protein shake muscle milk",
+    "cytosport muscle milk",
+    "ready made muscle milk",
+    "muscle milk shake",
+    "muscle milk protein drink",
+    "chocolate protein shake rtd"
+  ],
+  "usda_174815": [
+    "hard liquor 80 proof",
+    "spirits 80 proof",
+    "distilled spirits",
+    "hard alcohol",
+    "liquor shot",
+    "gin rum vodka whiskey",
+    "80 proof alcohol",
+    "straight spirits"
+  ]
+}

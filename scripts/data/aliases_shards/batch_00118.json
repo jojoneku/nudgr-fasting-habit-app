@@ -1,0 +1,914 @@
+{
+  "usda_174207": [
+    "cooked crayfish",
+    "boiled crayfish",
+    "crawfish",
+    "crawdads",
+    "mudbugs",
+    "steamed crawfish",
+    "boiled crawdads",
+    "freshwater lobster",
+    "crayfish tails",
+    "cajun crawfish"
+  ],
+  "usda_174208": [
+    "raw lobster",
+    "fresh lobster",
+    "whole lobster",
+    "live lobster",
+    "uncooked lobster",
+    "maine lobster raw",
+    "atlantic lobster",
+    "lobster tail raw",
+    "fresh maine lobster"
+  ],
+  "usda_174209": [
+    "cooked lobster",
+    "boiled lobster",
+    "steamed lobster",
+    "lobster tail cooked",
+    "maine lobster cooked",
+    "atlantic lobster cooked",
+    "steamed maine lobster",
+    "lobster meat cooked",
+    "boiled maine lobster"
+  ],
+  "usda_174210": [
+    "raw shrimp",
+    "fresh shrimp",
+    "uncooked shrimp",
+    "hipon raw",
+    "green shrimp",
+    "shell-on shrimp",
+    "fresh prawns",
+    "raw prawns",
+    "unpeeled shrimp",
+    "shrimp with additives"
+  ],
+  "usda_174211": [
+    "spiny lobster",
+    "rock lobster raw",
+    "caribbean lobster",
+    "langouste",
+    "lobster tail spiny",
+    "raw rock lobster",
+    "florida lobster",
+    "raw spiny lobster",
+    "lobster tail uncooked"
+  ],
+  "usda_174212": [
+    "raw abalone",
+    "abalone shellfish",
+    "fresh abalone",
+    "sea snail abalone",
+    "uncooked abalone",
+    "abalone meat raw",
+    "paua raw",
+    "awabi raw"
+  ],
+  "usda_174213": [
+    "fried abalone",
+    "pan fried abalone",
+    "abalone steak fried",
+    "abalone fritter",
+    "crispy abalone",
+    "abalone cooked fried",
+    "sauteed abalone",
+    "abalone cutlet"
+  ],
+  "usda_174214": [
+    "raw clams",
+    "fresh clams",
+    "clam meat raw",
+    "littleneck clams",
+    "hard shell clams",
+    "cherrystone clams",
+    "uncooked clams",
+    "clams on the half shell",
+    "fresh shellfish clams"
+  ],
+  "usda_174215": [
+    "cuttlefish",
+    "raw cuttlefish",
+    "fresh cuttlefish",
+    "inkfish",
+    "sepia raw",
+    "uncooked cuttlefish",
+    "cuttlefish meat",
+    "baby cuttlefish raw"
+  ],
+  "usda_174216": [
+    "raw mussels",
+    "fresh mussels",
+    "blue mussels raw",
+    "uncooked mussels",
+    "fresh blue mussels",
+    "shell mussels raw",
+    "tahong raw",
+    "live mussels"
+  ],
+  "usda_174217": [
+    "cooked mussels",
+    "steamed mussels",
+    "boiled mussels",
+    "tahong cooked",
+    "mussels in shell cooked",
+    "steamed blue mussels",
+    "mussels mariniere",
+    "cooked blue mussels",
+    "tahong nilaga"
+  ],
+  "usda_174218": [
+    "raw octopus",
+    "fresh octopus",
+    "uncooked octopus",
+    "pulpo raw",
+    "tako raw",
+    "fresh pulpo",
+    "whole octopus raw",
+    "octopus tentacles raw",
+    "baby octopus raw"
+  ],
+  "usda_174219": [
+    "raw pacific oysters",
+    "fresh oysters",
+    "oysters on the half shell",
+    "raw oysters",
+    "pacific oysters fresh",
+    "uncooked oysters",
+    "live oysters",
+    "fresh pacific oysters",
+    "oysters raw"
+  ],
+  "usda_174220": [
+    "raw scallops",
+    "fresh scallops",
+    "sea scallops raw",
+    "bay scallops raw",
+    "uncooked scallops",
+    "scallop meat raw",
+    "fresh sea scallops",
+    "scallop crudo"
+  ],
+  "usda_174221": [
+    "fried scallops",
+    "breaded scallops",
+    "scallop fritters",
+    "battered scallops",
+    "deep fried scallops",
+    "crispy scallops",
+    "breaded fried scallops",
+    "scallops fried"
+  ],
+  "usda_174222": [
+    "imitation scallops",
+    "fake scallops",
+    "surimi scallops",
+    "artificial scallops",
+    "scallop substitute",
+    "processed scallops",
+    "surimi seafood scallop"
+  ],
+  "usda_174223": [
+    "raw squid",
+    "fresh squid",
+    "calamari raw",
+    "pusit raw",
+    "uncooked squid",
+    "squid rings raw",
+    "fresh calamari",
+    "whole squid raw",
+    "pusit sariwa"
+  ],
+  "usda_174224": [
+    "canned chum salmon",
+    "canned salmon no salt",
+    "chum salmon tin",
+    "canned pink salmon chum",
+    "tinned salmon with bone",
+    "salmon in can drained",
+    "canned wild salmon",
+    "chum salmon canned drained"
+  ],
+  "usda_174225": [
+    "canned pink salmon",
+    "tinned salmon",
+    "pink salmon can",
+    "canned salmon with liquid",
+    "salmon tin no salt",
+    "pink salmon in can",
+    "canned wild pink salmon",
+    "tinned pink salmon with bone"
+  ],
+  "usda_174226": [
+    "canned sockeye salmon",
+    "red salmon canned",
+    "sockeye salmon tin",
+    "canned red salmon",
+    "tinned sockeye",
+    "wild sockeye canned",
+    "sockeye can no salt",
+    "canned alaska salmon"
+  ],
+  "usda_174227": [
+    "tuna in oil canned",
+    "light tuna oil packed",
+    "canned tuna oil no salt",
+    "tinned tuna in oil",
+    "chunk light tuna oil",
+    "tuna oil can drained",
+    "canned light tuna",
+    "oil packed tuna drained"
+  ],
+  "usda_174228": [
+    "striped bass cooked",
+    "striper fish cooked",
+    "grilled striped bass",
+    "baked striped bass",
+    "rockfish cooked",
+    "striped bass fillet cooked",
+    "cooked striper",
+    "pan fried striped bass"
+  ],
+  "usda_174229": [
+    "bluefish cooked",
+    "grilled bluefish",
+    "baked bluefish",
+    "pan fried bluefish",
+    "cooked bluefish fillet",
+    "bluefish grilled",
+    "bluefish baked"
+  ],
+  "usda_174230": [
+    "burbot cooked",
+    "lawyer fish cooked",
+    "freshwater cod cooked",
+    "grilled burbot",
+    "baked burbot",
+    "eelpout cooked",
+    "cooked burbot fillet"
+  ],
+  "usda_174231": [
+    "butterfish cooked",
+    "grilled butterfish",
+    "baked butterfish",
+    "pan fried butterfish",
+    "cooked butterfish fillet",
+    "pompano butterfish cooked"
+  ],
+  "usda_174232": [
+    "greenland halibut cooked",
+    "greenland turbot cooked",
+    "grilled greenland halibut",
+    "baked greenland halibut",
+    "cooked halibut greenland",
+    "grilled turbot halibut"
+  ],
+  "usda_174233": [
+    "pacific herring cooked",
+    "grilled pacific herring",
+    "baked herring pacific",
+    "cooked herring fillet",
+    "grilled herring",
+    "pan fried pacific herring",
+    "cooked pacific herring"
+  ],
+  "usda_174234": [
+    "ling fish cooked",
+    "grilled ling",
+    "baked ling fish",
+    "cooked ling fillet",
+    "pan fried ling",
+    "ling cod cooked"
+  ],
+  "usda_174235": [
+    "lingcod cooked",
+    "grilled lingcod",
+    "baked lingcod",
+    "pan fried lingcod",
+    "cooked lingcod fillet",
+    "ling cod fillet cooked",
+    "grilled ling cod"
+  ],
+  "usda_174236": [
+    "king mackerel cooked",
+    "grilled king mackerel",
+    "baked king mackerel",
+    "kingfish cooked",
+    "cooked king mackerel fillet",
+    "grilled kingfish",
+    "pan seared king mackerel"
+  ],
+  "usda_174237": [
+    "atlantic pollock cooked",
+    "grilled pollock",
+    "baked pollock",
+    "cooked pollock fillet",
+    "pan fried pollock",
+    "pollock fish cooked",
+    "atlantic pollock fillet"
+  ],
+  "usda_174238": [
+    "ocean pout cooked",
+    "grilled ocean pout",
+    "baked ocean pout",
+    "eel pout cooked",
+    "cooked ocean pout fillet",
+    "mutton fish cooked"
+  ],
+  "usda_174239": [
+    "fish roe cooked",
+    "cooked fish eggs",
+    "fish caviar cooked",
+    "roe cooked dry heat",
+    "grilled fish roe",
+    "baked fish roe",
+    "cooked roe",
+    "pan fried fish eggs"
+  ],
+  "usda_174240": [
+    "sablefish cooked",
+    "black cod cooked",
+    "grilled sablefish",
+    "baked black cod",
+    "smoked sablefish cooked",
+    "cooked sablefish fillet",
+    "butterfish black cod",
+    "grilled black cod"
+  ],
+  "usda_174241": [
+    "scup fish cooked",
+    "porgy fish cooked",
+    "grilled scup",
+    "baked porgy",
+    "cooked scup fillet",
+    "pan fried scup",
+    "sea bream scup cooked"
+  ],
+  "usda_174242": [
+    "seatrout cooked",
+    "grilled sea trout",
+    "baked seatrout",
+    "weakfish cooked",
+    "cooked seatrout fillet",
+    "pan fried sea trout",
+    "grilled weakfish"
+  ],
+  "usda_174243": [
+    "american shad cooked",
+    "grilled shad",
+    "baked shad fish",
+    "cooked shad fillet",
+    "pan fried shad",
+    "shad fish cooked"
+  ],
+  "usda_174244": [
+    "spot fish cooked",
+    "grilled spot fish",
+    "baked spot fish",
+    "cooked spot croaker",
+    "pan fried spot",
+    "spot croaker cooked"
+  ],
+  "usda_174245": [
+    "european turbot cooked",
+    "grilled turbot",
+    "baked turbot",
+    "cooked turbot fillet",
+    "pan seared turbot",
+    "turbot fish cooked",
+    "grilled european turbot"
+  ],
+  "usda_174246": [
+    "whitefish cooked",
+    "grilled whitefish",
+    "baked whitefish",
+    "cooked lake whitefish",
+    "smoked whitefish cooked",
+    "pan fried whitefish",
+    "lake whitefish cooked"
+  ],
+  "usda_174247": [
+    "atlantic wolffish cooked",
+    "ocean catfish cooked",
+    "grilled wolffish",
+    "baked wolffish",
+    "cooked wolffish fillet",
+    "sea wolf fish cooked",
+    "pan fried wolffish"
+  ],
+  "usda_174248": [
+    "yellowtail cooked",
+    "grilled yellowtail",
+    "baked yellowtail",
+    "cooked yellowtail fillet",
+    "hamachi cooked",
+    "pan seared yellowtail",
+    "yellowtail amberjack cooked"
+  ],
+  "usda_174249": [
+    "cooked octopus",
+    "boiled octopus",
+    "steamed octopus",
+    "pulpo cooked",
+    "tako cooked",
+    "braised octopus",
+    "octopus tentacles cooked",
+    "grilled octopus",
+    "nilaga na pugita"
+  ],
+  "usda_174250": [
+    "cooked pacific oysters",
+    "steamed oysters",
+    "boiled oysters",
+    "cooked oysters",
+    "pacific oysters cooked",
+    "steamed pacific oysters",
+    "poached oysters",
+    "cooked shellfish oysters"
+  ],
+  "usda_174251": [
+    "orange roughy cooked",
+    "grilled orange roughy",
+    "baked orange roughy",
+    "deep sea perch cooked",
+    "cooked roughy fillet",
+    "pan fried orange roughy",
+    "orange roughy fish"
+  ],
+  "usda_174252": [
+    "large lima beans raw",
+    "dried lima beans",
+    "butter beans raw",
+    "dry lima beans",
+    "uncooked lima beans",
+    "raw butter beans",
+    "large white beans lima"
+  ],
+  "usda_174253": [
+    "cooked lima beans",
+    "boiled lima beans",
+    "butter beans cooked",
+    "cooked butter beans",
+    "boiled butter beans",
+    "stewed lima beans",
+    "lima beans no salt",
+    "cooked large limas"
+  ],
+  "usda_174254": [
+    "canned lima beans",
+    "tinned lima beans",
+    "canned butter beans",
+    "lima beans in can",
+    "tinned butter beans",
+    "canned limas",
+    "lima beans canned"
+  ],
+  "usda_174255": [
+    "baby lima beans raw",
+    "small lima beans dry",
+    "baby butter beans raw",
+    "thin lima beans dried",
+    "sieva beans raw",
+    "raw baby limas",
+    "small dried lima beans"
+  ],
+  "usda_174256": [
+    "mung beans raw",
+    "monggo raw",
+    "dried mung beans",
+    "green gram raw",
+    "dry monggo",
+    "uncooked mung beans",
+    "whole mung beans dry",
+    "balatong raw"
+  ],
+  "usda_174257": [
+    "cooked mung beans",
+    "boiled mung beans",
+    "monggo cooked",
+    "ginisang monggo base",
+    "boiled monggo",
+    "cooked green gram",
+    "mung bean stew base",
+    "nilaga monggo"
+  ],
+  "usda_174258": [
+    "glass noodles",
+    "cellophane noodles",
+    "bean thread noodles",
+    "sotanghon",
+    "long rice noodles",
+    "transparent noodles",
+    "mung bean noodles",
+    "vermicelli glass",
+    "bihon sotanghon",
+    "dried glass noodles"
+  ],
+  "usda_174259": [
+    "black gram raw",
+    "mungo beans raw",
+    "urad dal raw",
+    "black urad beans dry",
+    "black lentils raw",
+    "matpe beans raw",
+    "raw black gram"
+  ],
+  "usda_174260": [
+    "boiled peanuts",
+    "salted boiled peanuts",
+    "wet boiled peanuts",
+    "soft boiled peanuts",
+    "cooked peanuts salted",
+    "southern boiled peanuts",
+    "mani nilaga"
+  ],
+  "usda_174261": [
+    "oil roasted peanuts salted",
+    "roasted salted peanuts",
+    "salted peanuts oil roasted",
+    "cocktail peanuts",
+    "oily roasted peanuts",
+    "salted roasted peanuts",
+    "peanuts oily salted"
+  ],
+  "usda_174262": [
+    "dry roasted peanuts salted",
+    "salted dry roasted peanuts",
+    "roasted peanuts dry",
+    "salted peanuts dry roasted",
+    "crunchy salted peanuts",
+    "dry salted peanuts"
+  ],
+  "usda_174263": [
+    "spanish peanuts",
+    "small raw peanuts",
+    "raw spanish peanuts",
+    "red skin peanuts raw",
+    "raw groundnuts spanish",
+    "unroasted spanish peanuts"
+  ],
+  "usda_174264": [
+    "virginia peanuts oil roasted salted",
+    "large peanuts oil roasted",
+    "salted virginia peanuts",
+    "roasted virginia peanuts",
+    "cocktail virginia peanuts",
+    "oil roasted large peanuts"
+  ],
+  "usda_174265": [
+    "crunchy peanut butter",
+    "chunky peanut butter",
+    "peanut butter crunchy salted",
+    "nutty peanut butter",
+    "chunk style peanut butter",
+    "pb crunchy",
+    "peanut butter with chunks salted"
+  ],
+  "usda_174266": [
+    "smooth peanut butter",
+    "creamy peanut butter salted",
+    "peanut butter smooth salted",
+    "regular peanut butter",
+    "pb smooth",
+    "plain peanut butter creamy",
+    "peanut spread smooth"
+  ],
+  "usda_174267": [
+    "peanut flour low fat",
+    "defatted peanut flour",
+    "ground peanut powder defatted",
+    "peanut powder flour",
+    "low fat peanut flour",
+    "peanut meal defatted"
+  ],
+  "usda_174268": [
+    "meat extender",
+    "soy meat extender",
+    "textured soy protein extender",
+    "tvp extender",
+    "soy protein filler",
+    "meat bulker soy"
+  ],
+  "usda_174269": [
+    "vegetarian sausage",
+    "vegan sausage",
+    "meatless links",
+    "veggie sausage",
+    "plant based sausage",
+    "soy sausage",
+    "tofu sausage",
+    "fake sausage"
+  ],
+  "usda_174270": [
+    "raw soybeans",
+    "dried soybeans",
+    "dry soy beans",
+    "uncooked soybeans",
+    "whole soybeans raw",
+    "raw soy beans dry",
+    "soybeans uncooked"
+  ],
+  "usda_174271": [
+    "cooked soybeans",
+    "boiled soybeans",
+    "cooked soy beans",
+    "plain boiled soybeans",
+    "soybeans boiled no salt",
+    "cooked whole soybeans"
+  ],
+  "usda_174273": [
+    "soy flour full fat",
+    "whole soy flour",
+    "raw soy flour",
+    "full fat soya flour",
+    "untoasted soy flour",
+    "soybean flour full fat"
+  ],
+  "usda_174274": [
+    "roasted soy flour",
+    "toasted soy flour",
+    "full fat soy flour roasted",
+    "baked soy flour",
+    "roasted soya flour"
+  ],
+  "usda_174275": [
+    "defatted soy flour",
+    "low fat soy flour",
+    "soya flour defatted",
+    "fat free soy flour",
+    "soy flour low fat"
+  ],
+  "usda_174277": [
+    "soy sauce shoyu",
+    "shoyu sauce",
+    "japanese soy sauce",
+    "regular soy sauce",
+    "soy and wheat sauce",
+    "toyo shoyu",
+    "light soy sauce shoyu",
+    "shoyu"
+  ],
+  "usda_174278": [
+    "tamari soy sauce",
+    "tamari sauce",
+    "gluten free soy sauce",
+    "wheat free soy sauce",
+    "tamari shoyu",
+    "pure soy sauce tamari",
+    "dark soy sauce tamari"
+  ],
+  "usda_174279": [
+    "hvp soy sauce",
+    "hydrolyzed soy sauce",
+    "artificial soy sauce",
+    "chemical soy sauce",
+    "non brewed soy sauce",
+    "vegetable protein soy sauce"
+  ],
+  "usda_174280": [
+    "fermented tofu",
+    "fuyu tofu",
+    "salted tofu",
+    "chinese fermented tofu",
+    "preserved tofu",
+    "red fermented tofu",
+    "tofu cheese fermented",
+    "nam yu"
+  ],
+  "usda_174281": [
+    "yardlong beans raw",
+    "long beans raw",
+    "sitaw raw",
+    "snake beans raw",
+    "asparagus beans raw",
+    "dried yardlong beans",
+    "raw long beans"
+  ],
+  "usda_174282": [
+    "cooked yardlong beans",
+    "boiled long beans",
+    "sitaw cooked",
+    "boiled snake beans",
+    "cooked asparagus beans",
+    "boiled yardlong beans no salt"
+  ],
+  "usda_174283": [
+    "winged beans raw",
+    "four-angled beans",
+    "sigarilyas raw",
+    "goa bean raw",
+    "princess bean raw",
+    "raw winged beans",
+    "asparagus pea raw"
+  ],
+  "usda_174284": [
+    "red lentils raw",
+    "pink lentils raw",
+    "masoor dal raw",
+    "dried red lentils",
+    "split red lentils",
+    "red dal raw",
+    "raw masoor",
+    "pink dal"
+  ],
+  "usda_174285": [
+    "canned red kidney beans",
+    "kidney beans canned drained",
+    "red beans can drained",
+    "canned kidney beans drained",
+    "red kidney beans tin",
+    "drained kidney beans",
+    "kidney beans in can"
+  ],
+  "usda_174286": [
+    "canned pinto beans",
+    "pinto beans can drained",
+    "tinned pinto beans",
+    "drained pinto beans",
+    "pinto beans tin",
+    "canned pintos drained"
+  ],
+  "usda_174287": [
+    "veggie burger patty",
+    "soy burger",
+    "vegetarian burger",
+    "plant based burger uncooked",
+    "meatless burger patty",
+    "vegan burger patty",
+    "veggie patty raw",
+    "tofu burger"
+  ],
+  "usda_174288": [
+    "chickpea flour",
+    "besan",
+    "gram flour",
+    "garbanzo flour",
+    "chana flour",
+    "indian chickpea flour",
+    "bengal gram flour",
+    "chick pea flour"
+  ],
+  "usda_174290": [
+    "extra firm tofu",
+    "firm tofu nigari",
+    "hard pressed tofu",
+    "extra firm bean curd",
+    "tofu extra firm block",
+    "pressed tofu firm",
+    "solid tofu extra firm"
+  ],
+  "usda_174291": [
+    "hard tofu",
+    "firm tofu hard",
+    "dense tofu nigari",
+    "hard bean curd",
+    "tofu firm hard block",
+    "extra dense tofu"
+  ],
+  "usda_174292": [
+    "silken tofu soft",
+    "soft silken tofu",
+    "smooth soft tofu",
+    "japanese soft tofu",
+    "silken bean curd soft",
+    "tofu silken soft block",
+    "smooth tofu silken"
+  ],
+  "usda_174293": [
+    "chocolate soy milk",
+    "choco soymilk",
+    "soy chocolate milk",
+    "chocolate plant milk soy",
+    "chocolate soya milk",
+    "cocoa soy milk unfortified"
+  ],
+  "usda_174294": [
+    "smooth peanut butter unsalted",
+    "creamy peanut butter plain",
+    "peanut butter no salt smooth",
+    "natural creamy peanut butter",
+    "pb creamy plain",
+    "smooth peanut spread"
+  ],
+  "usda_174295": [
+    "fortified chocolate soy milk",
+    "chocolate soy milk with calcium",
+    "vitamin d chocolate soymilk",
+    "choco soy milk fortified",
+    "calcium chocolate soya milk"
+  ],
+  "usda_174296": [
+    "vegetarian refried beans",
+    "vegan refried beans",
+    "canned refried beans vegetarian",
+    "bean dip refried veg",
+    "fat free refried beans",
+    "meatless refried beans canned"
+  ],
+  "usda_174297": [
+    "super firm tofu cubed",
+    "organic firm tofu cubes",
+    "pre cubed tofu firm",
+    "extra firm tofu cubes",
+    "nasoya firm tofu",
+    "diced firm tofu organic"
+  ],
+  "usda_174298": [
+    "low sodium refried beans",
+    "reduced salt refried beans",
+    "traditional refried beans low sodium",
+    "canned refried beans less salt",
+    "refried beans reduced sodium"
+  ],
+  "usda_174299": [
+    "cooked soybeans salted",
+    "boiled soybeans salted",
+    "soybeans boiled with salt",
+    "salted cooked soybeans"
+  ],
+  "usda_174300": [
+    "roasted soybeans",
+    "soy nuts",
+    "roasted soy nuts",
+    "dry roasted soybeans",
+    "crunchy soybeans",
+    "roasted whole soybeans",
+    "soy snack roasted"
+  ],
+  "usda_174301": [
+    "soy protein concentrate",
+    "isolated soy protein powder",
+    "acid washed soy protein",
+    "soy protein supplement",
+    "textured soy concentrate",
+    "soy protein powder concentrate"
+  ],
+  "usda_174302": [
+    "soy protein isolate",
+    "soy isolate powder",
+    "soy protein powder isolate",
+    "pure soy protein",
+    "soy isolate supplement",
+    "soy protein shake powder"
+  ],
+  "usda_174303": [
+    "freeze dried tofu",
+    "koya tofu",
+    "koyadofu",
+    "dried frozen tofu",
+    "lyophilized tofu",
+    "dried tofu block",
+    "shelf stable tofu"
+  ],
+  "usda_174304": [
+    "fried tofu",
+    "deep fried tofu",
+    "aburage",
+    "age tofu",
+    "tofu puffs fried",
+    "crispy fried tofu",
+    "fried bean curd",
+    "tokwa fried"
+  ],
+  "usda_174305": [
+    "fermented tofu with calcium",
+    "fuyu tofu salted",
+    "preserved tofu calcium",
+    "salted fermented bean curd",
+    "chinese tofu fermented"
+  ],
+  "usda_174306": [
+    "cooked long beans salted",
+    "boiled yardlong beans salted",
+    "sitaw nilaga salted",
+    "cooked snake beans with salt",
+    "boiled long beans with salt"
+  ],
+  "usda_174307": [
+    "lean lamb raw",
+    "raw lean lamb",
+    "trimmed lamb raw",
+    "lamb meat raw lean",
+    "fresh lamb lean",
+    "uncooked lean lamb",
+    "lamb cuts lean raw"
+  ],
+  "usda_174308": [
+    "cooked lean lamb",
+    "grilled lean lamb",
+    "roasted lean lamb",
+    "cooked trimmed lamb",
+    "baked lamb lean",
+    "lamb meat cooked lean",
+    "broiled lean lamb"
+  ],
+  "usda_174309": [
+    "lamb fat raw",
+    "lamb fat trimming",
+    "raw lamb fat",
+    "lamb fatty trim",
+    "lamb separable fat",
+    "lamb fat cap raw"
+  ]
+}

@@ -1,0 +1,667 @@
+{
+  "usda_2705944": [
+    "grilled chicken with sauce",
+    "bbq chicken",
+    "barbecue chicken",
+    "sauced grilled chicken",
+    "chicken bbq",
+    "grilled bbq chicken",
+    "chicken inasal",
+    "grilled chicken barbecue",
+    "chargrilled chicken with sauce"
+  ],
+  "usda_2705945": [
+    "grilled chicken with skin and sauce",
+    "bbq chicken with skin",
+    "barbecue chicken skin on",
+    "sauced grilled chicken with skin",
+    "chicken bbq skin eaten",
+    "grilled bbq chicken with skin",
+    "chargrilled chicken skin on"
+  ],
+  "usda_2705946": [
+    "grilled chicken no skin with sauce",
+    "bbq chicken no skin",
+    "barbecue chicken skinless",
+    "sauced grilled chicken no skin",
+    "grilled bbq chicken skinless",
+    "chargrilled chicken no skin",
+    "chicken bbq without skin"
+  ],
+  "usda_2705947": [
+    "sauteed chicken with skin",
+    "pan fried chicken with skin",
+    "chicken sauteed skin on",
+    "stir fried chicken with skin",
+    "pan cooked chicken skin eaten",
+    "skillet chicken with skin",
+    "chicken saute with skin"
+  ],
+  "usda_2705948": [
+    "sauteed chicken no skin",
+    "pan fried chicken skinless",
+    "chicken sauteed skinless",
+    "stir fried chicken no skin",
+    "skillet chicken no skin",
+    "pan cooked chicken no skin",
+    "chicken saute without skin"
+  ],
+  "usda_2705949": [
+    "fried coated chicken",
+    "breaded fried chicken",
+    "crispy fried chicken",
+    "fried chicken with coating",
+    "battered fried chicken",
+    "chicken with breading",
+    "crispy chicken",
+    "fried chicken with skin and coating",
+    "deep fried breaded chicken"
+  ],
+  "usda_2705950": [
+    "fried chicken no coating eaten",
+    "breaded fried chicken no crust",
+    "fried chicken remove coating",
+    "battered chicken no breading eaten",
+    "fried chicken skin removed",
+    "deep fried chicken no coating"
+  ],
+  "usda_2705951": [
+    "baked breaded chicken",
+    "baked coated chicken with skin",
+    "oven baked crispy chicken",
+    "baked chicken with breading",
+    "oven fried chicken with coating",
+    "crispy baked chicken",
+    "baked battered chicken"
+  ],
+  "usda_2705952": [
+    "baked breaded chicken no coating eaten",
+    "oven baked chicken no crust",
+    "baked coated chicken without skin",
+    "oven chicken remove breading",
+    "baked crispy chicken no coating"
+  ],
+  "usda_2705953": [
+    "chicken breast with skin",
+    "chicken breast skin on",
+    "cooked chicken breast with skin",
+    "boneless chicken breast skin eaten",
+    "chicken pecho with skin",
+    "chicken breast any style with skin"
+  ],
+  "usda_2705954": [
+    "chicken breast no skin",
+    "skinless chicken breast",
+    "cooked chicken breast no skin",
+    "boneless skinless chicken breast",
+    "chicken pecho walang balat",
+    "chicken breast any style skinless",
+    "plain chicken breast"
+  ],
+  "usda_2705955": [
+    "baked chicken breast with skin",
+    "roasted chicken breast skin on",
+    "broiled chicken breast with skin",
+    "oven roasted chicken breast skin eaten",
+    "roast chicken breast with skin",
+    "baked chicken pecho with skin"
+  ],
+  "usda_2705956": [
+    "baked chicken breast no skin",
+    "roasted chicken breast skinless",
+    "broiled chicken breast no skin",
+    "oven roasted skinless chicken breast",
+    "roast chicken breast no skin",
+    "baked chicken pecho skinless"
+  ],
+  "usda_2705957": [
+    "reheated baked chicken breast with skin",
+    "pre-cooked baked chicken breast skin on",
+    "baked chicken breast from leftovers with skin",
+    "broiled precooked chicken breast skin eaten"
+  ],
+  "usda_2705958": [
+    "reheated baked chicken breast no skin",
+    "pre-cooked baked chicken breast skinless",
+    "baked chicken breast from leftovers no skin",
+    "broiled precooked chicken breast no skin"
+  ],
+  "usda_2705959": [
+    "restaurant baked chicken breast with skin",
+    "fast food broiled chicken breast skin on",
+    "restaurant roasted chicken breast with skin",
+    "dine out baked chicken breast skin eaten"
+  ],
+  "usda_2705960": [
+    "restaurant baked chicken breast no skin",
+    "fast food broiled chicken breast skinless",
+    "restaurant roasted chicken breast no skin",
+    "dine out baked chicken breast no skin"
+  ],
+  "usda_2705961": [
+    "marinated baked chicken breast with skin",
+    "roasted chicken breast with marinade skin on",
+    "baked marinated chicken breast skin eaten",
+    "broiled chicken breast with marinade skin on"
+  ],
+  "usda_2705962": [
+    "marinated baked chicken breast no skin",
+    "roasted chicken breast with marinade skinless",
+    "baked marinated chicken breast no skin",
+    "broiled chicken breast with marinade no skin"
+  ],
+  "usda_2705963": [
+    "rotisserie chicken breast with skin",
+    "rotisserie breast skin on",
+    "roaster chicken breast with skin",
+    "grocery rotisserie chicken breast skin eaten",
+    "spin roasted chicken breast with skin"
+  ],
+  "usda_2705964": [
+    "rotisserie chicken breast no skin",
+    "rotisserie breast skinless",
+    "grocery rotisserie chicken breast no skin",
+    "spin roasted chicken breast no skin"
+  ],
+  "usda_2705965": [
+    "stewed chicken breast with skin",
+    "braised chicken breast skin on",
+    "simmered chicken breast with skin",
+    "chicken breast in stew with skin",
+    "chicken tinola breast with skin"
+  ],
+  "usda_2705966": [
+    "stewed chicken breast no skin",
+    "braised chicken breast no skin",
+    "simmered chicken breast skinless",
+    "chicken tinola breast no skin",
+    "chicken breast in stew no skin"
+  ],
+  "usda_2705967": [
+    "grilled chicken breast no sauce with skin",
+    "plain grilled chicken breast skin on",
+    "chargrilled chicken breast with skin",
+    "bbq chicken breast no sauce skin eaten",
+    "grilled chicken pecho with skin"
+  ],
+  "usda_2705968": [
+    "grilled chicken breast no sauce no skin",
+    "plain grilled chicken breast skinless",
+    "chargrilled chicken breast no skin",
+    "grilled chicken pecho no skin",
+    "plain grilled chicken breast"
+  ],
+  "usda_2705969": [
+    "grilled chicken breast with sauce skin on",
+    "bbq chicken breast with skin",
+    "sauced grilled chicken breast skin eaten",
+    "chicken breast bbq with skin",
+    "inasal chicken breast with skin"
+  ],
+  "usda_2705970": [
+    "grilled chicken breast with sauce no skin",
+    "bbq chicken breast no skin",
+    "sauced grilled chicken breast skinless",
+    "chicken breast bbq no skin",
+    "inasal chicken breast no skin"
+  ],
+  "usda_2705971": [
+    "sauteed chicken breast with skin",
+    "pan fried chicken breast skin on",
+    "skillet chicken breast with skin",
+    "stir fried chicken breast skin eaten",
+    "pan cooked chicken breast with skin"
+  ],
+  "usda_2705972": [
+    "sauteed chicken breast no skin",
+    "pan fried chicken breast skinless",
+    "skillet chicken breast no skin",
+    "stir fried chicken breast no skin",
+    "pan cooked chicken breast skinless"
+  ],
+  "usda_2705973": [
+    "fried breaded chicken breast with skin",
+    "crispy fried chicken breast skin on",
+    "breaded chicken breast fried skin eaten",
+    "deep fried chicken breast with coating",
+    "battered chicken breast with skin"
+  ],
+  "usda_2705974": [
+    "fried breaded chicken breast no skin",
+    "crispy fried chicken breast no coating eaten",
+    "breaded chicken breast fried no skin",
+    "deep fried chicken breast remove coating"
+  ],
+  "usda_2705975": [
+    "fried breaded skinless chicken breast",
+    "crispy skinless fried chicken breast",
+    "breaded chicken breast no skin fried",
+    "deep fried chicken breast patty",
+    "chicken breast fried with breading no skin"
+  ],
+  "usda_2705976": [
+    "reheated fried chicken breast with skin",
+    "precooked fried chicken breast skin on",
+    "fried chicken breast from leftovers skin eaten",
+    "crispy chicken breast reheated with skin"
+  ],
+  "usda_2705977": [
+    "reheated fried chicken breast no skin",
+    "precooked fried chicken breast no skin",
+    "fried chicken breast from leftovers no coating",
+    "crispy chicken breast reheated no skin"
+  ],
+  "usda_2705978": [
+    "fast food fried chicken breast with skin",
+    "restaurant crispy chicken breast skin on",
+    "fried chicken breast takeout with coating",
+    "chicken sandwich breast fried skin on"
+  ],
+  "usda_2705979": [
+    "fast food fried chicken breast no skin",
+    "restaurant crispy chicken breast no coating",
+    "fried chicken breast takeout no skin",
+    "chicken sandwich breast fried no coating"
+  ],
+  "usda_2705980": [
+    "baked breaded chicken breast with skin",
+    "oven fried chicken breast skin on",
+    "baked crispy chicken breast with coating",
+    "oven baked coated chicken breast skin eaten"
+  ],
+  "usda_2705981": [
+    "baked breaded chicken breast no skin",
+    "oven fried chicken breast no coating",
+    "baked crispy chicken breast no skin",
+    "oven baked coated chicken breast no skin"
+  ],
+  "usda_2705982": [
+    "chicken leg with skin",
+    "drumstick and thigh with skin",
+    "chicken quarter with skin",
+    "whole chicken leg skin on",
+    "chicken leg piece skin eaten",
+    "pata ng manok with skin"
+  ],
+  "usda_2705983": [
+    "chicken leg no skin",
+    "drumstick and thigh no skin",
+    "chicken quarter no skin",
+    "whole chicken leg skinless",
+    "pata ng manok no skin"
+  ],
+  "usda_2705984": [
+    "baked chicken leg with skin",
+    "broiled chicken leg skin on",
+    "oven baked drumstick and thigh with skin",
+    "roasted chicken leg with skin",
+    "baked chicken quarter skin eaten"
+  ],
+  "usda_2705985": [
+    "baked chicken leg no skin",
+    "broiled chicken leg no skin",
+    "oven baked drumstick and thigh skinless",
+    "roasted chicken leg no skin",
+    "baked chicken quarter skinless"
+  ],
+  "usda_2705986": [
+    "rotisserie chicken leg with skin",
+    "rotisserie drumstick and thigh skin on",
+    "spin roasted chicken leg with skin",
+    "grocery rotisserie chicken leg skin eaten"
+  ],
+  "usda_2705987": [
+    "rotisserie chicken leg no skin",
+    "rotisserie drumstick and thigh no skin",
+    "spin roasted chicken leg skinless",
+    "grocery rotisserie chicken leg no skin"
+  ],
+  "usda_2705988": [
+    "stewed chicken leg with skin",
+    "braised chicken leg skin on",
+    "simmered drumstick and thigh with skin",
+    "chicken leg in stew with skin",
+    "chicken tinola leg with skin"
+  ],
+  "usda_2705989": [
+    "stewed chicken leg no skin",
+    "braised chicken leg no skin",
+    "simmered drumstick and thigh skinless",
+    "chicken tinola leg no skin",
+    "chicken leg stew no skin"
+  ],
+  "usda_2705990": [
+    "grilled chicken leg no sauce with skin",
+    "plain grilled chicken leg skin on",
+    "chargrilled drumstick and thigh with skin",
+    "grilled chicken quarter with skin"
+  ],
+  "usda_2705991": [
+    "grilled chicken leg no sauce no skin",
+    "plain grilled chicken leg no skin",
+    "chargrilled drumstick and thigh skinless",
+    "grilled chicken quarter no skin"
+  ],
+  "usda_2705992": [
+    "grilled chicken leg with sauce and skin",
+    "bbq chicken leg skin on",
+    "sauced grilled drumstick and thigh with skin",
+    "chicken leg bbq skin eaten",
+    "inasal chicken leg with skin"
+  ],
+  "usda_2705993": [
+    "grilled chicken leg with sauce no skin",
+    "bbq chicken leg no skin",
+    "sauced grilled drumstick and thigh skinless",
+    "chicken leg bbq no skin",
+    "inasal chicken leg no skin"
+  ],
+  "usda_2705994": [
+    "sauteed chicken leg with skin",
+    "pan fried chicken leg skin on",
+    "stir fried drumstick and thigh with skin",
+    "skillet chicken leg with skin"
+  ],
+  "usda_2705995": [
+    "sauteed chicken leg no skin",
+    "pan fried chicken leg no skin",
+    "stir fried drumstick and thigh no skin",
+    "skillet chicken leg no skin"
+  ],
+  "usda_2705996": [
+    "fried coated chicken leg with skin",
+    "breaded fried chicken leg skin on",
+    "crispy fried drumstick and thigh with coating",
+    "deep fried chicken leg with skin"
+  ],
+  "usda_2705997": [
+    "fried coated chicken leg no skin",
+    "breaded fried chicken leg no coating eaten",
+    "crispy fried drumstick and thigh no skin",
+    "deep fried chicken leg remove coating"
+  ],
+  "usda_2705998": [
+    "baked coated chicken leg with skin",
+    "oven fried chicken leg with coating skin on",
+    "baked crispy chicken leg with skin",
+    "oven baked breaded chicken leg skin eaten"
+  ],
+  "usda_2705999": [
+    "baked coated chicken leg no skin",
+    "oven fried chicken leg no coating",
+    "baked crispy chicken leg no skin",
+    "oven baked breaded chicken leg no skin"
+  ],
+  "usda_2706000": [
+    "chicken drumstick with skin",
+    "chicken leg lower with skin",
+    "drumstick skin on",
+    "chicken pata lower with skin",
+    "cooked drumstick with skin",
+    "chicken stick with skin"
+  ],
+  "usda_2706001": [
+    "chicken drumstick no skin",
+    "skinless drumstick",
+    "chicken leg lower no skin",
+    "drumstick without skin",
+    "chicken pata lower no skin",
+    "cooked drumstick no skin"
+  ],
+  "usda_2706002": [
+    "baked chicken drumstick with skin",
+    "roasted drumstick skin on",
+    "broiled chicken drumstick with skin",
+    "oven baked drumstick with skin",
+    "roast drumstick skin eaten"
+  ],
+  "usda_2706003": [
+    "baked chicken drumstick no skin",
+    "roasted drumstick no skin",
+    "broiled chicken drumstick skinless",
+    "oven baked drumstick no skin",
+    "roast drumstick skinless"
+  ],
+  "usda_2706004": [
+    "reheated baked drumstick with skin",
+    "precooked broiled drumstick skin on",
+    "baked drumstick from leftovers with skin"
+  ],
+  "usda_2706005": [
+    "reheated baked drumstick no skin",
+    "precooked broiled drumstick no skin",
+    "baked drumstick from leftovers no skin"
+  ],
+  "usda_2706006": [
+    "restaurant baked drumstick with skin",
+    "fast food broiled drumstick skin on",
+    "dine out baked drumstick with skin"
+  ],
+  "usda_2706007": [
+    "restaurant baked drumstick no skin",
+    "fast food broiled drumstick no skin",
+    "dine out baked drumstick no skin"
+  ],
+  "usda_2706008": [
+    "rotisserie chicken drumstick with skin",
+    "rotisserie drumstick skin on",
+    "spin roasted drumstick with skin",
+    "grocery rotisserie drumstick skin eaten"
+  ],
+  "usda_2706009": [
+    "rotisserie chicken drumstick no skin",
+    "rotisserie drumstick no skin",
+    "spin roasted drumstick no skin",
+    "grocery rotisserie drumstick no skin"
+  ],
+  "usda_2706010": [
+    "grilled chicken drumstick no sauce with skin",
+    "plain grilled drumstick skin on",
+    "chargrilled chicken leg stick with skin",
+    "grilled drumstick no sauce skin eaten"
+  ],
+  "usda_2706011": [
+    "grilled chicken drumstick no sauce no skin",
+    "plain grilled drumstick no skin",
+    "chargrilled chicken leg stick no skin",
+    "grilled drumstick skinless"
+  ],
+  "usda_2706012": [
+    "grilled chicken drumstick with sauce and skin",
+    "bbq drumstick with skin",
+    "sauced grilled drumstick skin eaten",
+    "chicken drumstick bbq with skin",
+    "inasal drumstick with skin"
+  ],
+  "usda_2706013": [
+    "grilled chicken drumstick with sauce no skin",
+    "bbq drumstick no skin",
+    "sauced grilled drumstick no skin",
+    "chicken drumstick bbq no skin"
+  ],
+  "usda_2706014": [
+    "stewed chicken drumstick with skin",
+    "braised drumstick skin on",
+    "simmered chicken drumstick with skin",
+    "chicken drumstick in stew with skin",
+    "chicken tinola drumstick with skin"
+  ],
+  "usda_2706015": [
+    "stewed chicken drumstick no skin",
+    "braised drumstick no skin",
+    "simmered chicken drumstick no skin",
+    "chicken tinola drumstick no skin"
+  ],
+  "usda_2706016": [
+    "sauteed chicken drumstick with skin",
+    "pan fried drumstick skin on",
+    "skillet chicken drumstick with skin",
+    "stir fried drumstick with skin"
+  ],
+  "usda_2706017": [
+    "sauteed chicken drumstick no skin",
+    "pan fried drumstick no skin",
+    "skillet chicken drumstick no skin",
+    "stir fried drumstick no skin"
+  ],
+  "usda_2706018": [
+    "fried breaded chicken drumstick with skin",
+    "crispy fried drumstick skin on",
+    "deep fried coated drumstick with skin",
+    "breaded drumstick fried skin eaten",
+    "fried chicken leg stick with coating"
+  ],
+  "usda_2706019": [
+    "fried breaded chicken drumstick no skin",
+    "crispy fried drumstick no coating eaten",
+    "deep fried coated drumstick no skin",
+    "breaded drumstick fried no skin"
+  ],
+  "usda_2706020": [
+    "fried breaded skinless drumstick",
+    "crispy skinless fried drumstick",
+    "breaded drumstick no skin fried with coating",
+    "deep fried drumstick patty no skin"
+  ],
+  "usda_2706021": [
+    "reheated fried drumstick with skin",
+    "precooked fried drumstick skin on",
+    "crispy drumstick reheated with skin",
+    "fried drumstick from leftovers skin eaten"
+  ],
+  "usda_2706022": [
+    "reheated fried drumstick no skin",
+    "precooked fried drumstick no skin",
+    "crispy drumstick reheated no skin",
+    "fried drumstick from leftovers no coating"
+  ],
+  "usda_2706023": [
+    "fast food fried chicken drumstick with skin",
+    "restaurant crispy drumstick skin on",
+    "takeout fried drumstick with coating",
+    "kfc style drumstick with skin"
+  ],
+  "usda_2706024": [
+    "fast food fried chicken drumstick no skin",
+    "restaurant crispy drumstick no coating",
+    "takeout fried drumstick no skin"
+  ],
+  "usda_2706025": [
+    "baked breaded chicken drumstick with skin",
+    "oven fried drumstick skin on",
+    "baked crispy drumstick with coating skin eaten",
+    "oven baked coated drumstick with skin"
+  ],
+  "usda_2706026": [
+    "baked breaded chicken drumstick no skin",
+    "oven fried drumstick no coating",
+    "baked crispy drumstick no skin",
+    "oven baked coated drumstick no skin"
+  ],
+  "usda_2706027": [
+    "chicken thigh with skin",
+    "chicken thigh skin on",
+    "cooked chicken thigh with skin",
+    "dark meat thigh with skin",
+    "chicken hita with skin"
+  ],
+  "usda_2706028": [
+    "chicken thigh no skin",
+    "skinless chicken thigh",
+    "cooked chicken thigh no skin",
+    "dark meat thigh no skin",
+    "chicken hita no skin"
+  ],
+  "usda_2706029": [
+    "baked chicken thigh with skin",
+    "roasted chicken thigh skin on",
+    "broiled chicken thigh with skin",
+    "oven baked thigh with skin",
+    "roast chicken thigh skin eaten"
+  ],
+  "usda_2706030": [
+    "baked chicken thigh no skin",
+    "roasted chicken thigh skinless",
+    "broiled chicken thigh no skin",
+    "oven baked thigh no skin",
+    "roast chicken thigh skinless"
+  ],
+  "usda_2706031": [
+    "reheated baked chicken thigh with skin",
+    "precooked broiled thigh skin on",
+    "baked thigh from leftovers with skin"
+  ],
+  "usda_2706032": [
+    "reheated baked chicken thigh no skin",
+    "precooked broiled thigh no skin",
+    "baked thigh from leftovers no skin"
+  ],
+  "usda_2706033": [
+    "restaurant baked chicken thigh with skin",
+    "fast food broiled thigh skin on",
+    "dine out roasted thigh with skin"
+  ],
+  "usda_2706034": [
+    "restaurant baked chicken thigh no skin",
+    "fast food broiled thigh no skin",
+    "dine out roasted thigh no skin"
+  ],
+  "usda_2706035": [
+    "rotisserie chicken thigh with skin",
+    "rotisserie thigh skin on",
+    "spin roasted thigh with skin",
+    "grocery rotisserie thigh skin eaten"
+  ],
+  "usda_2706036": [
+    "rotisserie chicken thigh no skin",
+    "rotisserie thigh no skin",
+    "spin roasted thigh no skin",
+    "grocery rotisserie thigh no skin"
+  ],
+  "usda_2706037": [
+    "stewed chicken thigh with skin",
+    "braised chicken thigh skin on",
+    "simmered chicken thigh with skin",
+    "chicken thigh in stew with skin",
+    "chicken tinola thigh with skin"
+  ],
+  "usda_2706038": [
+    "stewed chicken thigh no skin",
+    "braised chicken thigh no skin",
+    "simmered chicken thigh no skin",
+    "chicken tinola thigh no skin"
+  ],
+  "usda_2706039": [
+    "grilled chicken thigh no sauce with skin",
+    "plain grilled thigh skin on",
+    "chargrilled chicken thigh with skin",
+    "grilled thigh no sauce skin eaten"
+  ],
+  "usda_2706040": [
+    "grilled chicken thigh no sauce no skin",
+    "plain grilled thigh no skin",
+    "chargrilled chicken thigh skinless",
+    "grilled thigh skinless"
+  ],
+  "usda_2706041": [
+    "grilled chicken thigh with sauce and skin",
+    "bbq chicken thigh with skin",
+    "sauced grilled thigh skin eaten",
+    "chicken thigh bbq with skin",
+    "inasal chicken thigh with skin"
+  ],
+  "usda_2706042": [
+    "grilled chicken thigh with sauce no skin",
+    "bbq chicken thigh no skin",
+    "sauced grilled thigh no skin",
+    "chicken thigh bbq no skin",
+    "inasal chicken thigh no skin"
+  ],
+  "usda_2706043": [
+    "sauteed chicken thigh with skin",
+    "pan fried chicken thigh skin on",
+    "skillet chicken thigh with skin",
+    "stir fried thigh with skin",
+    "pan cooked thigh skin eaten"
+  ]
+}

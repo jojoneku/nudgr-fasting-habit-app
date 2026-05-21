@@ -1,6 +1,6 @@
 # Plan 007 — Calorie Counting v2 (Revised)
 
-**Status:** Awaiting Approval
+**Status:** IMPLEMENTED (further evolved by plans 018, 020, 022)
 **Branch:** `feat/calorie-counting-v2`
 **Updated:** 2026-04-20 — reassessed against current implementation; pivoted to UI modernization
 

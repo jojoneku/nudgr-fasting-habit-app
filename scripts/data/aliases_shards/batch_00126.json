@@ -1,0 +1,930 @@
+{
+  "usda_175020": [
+    "peach pie slice",
+    "homemade peach pie",
+    "fresh peach pie",
+    "baked peach pie",
+    "peach filled pie",
+    "peach dessert pie",
+    "fruit pie peach",
+    "peach cobbler pie",
+    "peach pastry"
+  ],
+  "usda_175021": [
+    "pecan pie slice",
+    "store bought pecan pie",
+    "pecan pie commercial",
+    "southern pecan pie",
+    "nut pie",
+    "pecan dessert",
+    "sweet pecan pie",
+    "pecan tart"
+  ],
+  "usda_175022": [
+    "pie crust mix",
+    "pie shell mix dry",
+    "pastry crust dry mix",
+    "pie dough mix",
+    "pie pastry mix",
+    "crust powder mix",
+    "dry pie pastry",
+    "baking pie crust mix"
+  ],
+  "usda_175023": [
+    "baked pie crust from mix",
+    "pie shell baked",
+    "prepared pie crust baked",
+    "pastry shell cooked",
+    "pie base baked",
+    "baked pastry crust",
+    "cooked pie shell",
+    "pie crust baked from mix"
+  ],
+  "usda_175024": [
+    "frozen pie crust",
+    "frozen pie shell",
+    "ready to bake pie crust",
+    "store bought frozen pie crust",
+    "refrigerated pie shell",
+    "frozen pastry shell",
+    "unbaked frozen pie crust",
+    "pie crust frozen enriched"
+  ],
+  "usda_175025": [
+    "baked frozen pie crust",
+    "cooked frozen pie shell",
+    "frozen pie crust baked",
+    "store bought pie shell baked",
+    "pre-made pie crust baked",
+    "frozen pastry shell baked",
+    "pie shell cooked from frozen"
+  ],
+  "usda_175026": [
+    "homemade pie crust",
+    "scratch pie crust",
+    "homemade pastry shell",
+    "from scratch pie shell",
+    "baked pastry crust homemade",
+    "hand made pie crust",
+    "pie crust from recipe",
+    "buttery pie crust"
+  ],
+  "usda_175027": [
+    "egg dinner roll",
+    "soft egg roll",
+    "egg bread roll",
+    "small egg roll",
+    "dinner roll egg",
+    "eggy bread roll",
+    "soft bread roll egg",
+    "egg enriched roll"
+  ],
+  "usda_175028": [
+    "oat bran roll",
+    "healthy dinner roll",
+    "oat bran dinner roll",
+    "high fiber roll",
+    "oat roll",
+    "bran roll",
+    "oat bran bread roll",
+    "fiber dinner roll"
+  ],
+  "usda_175029": [
+    "rye dinner roll",
+    "rye bread roll",
+    "dark dinner roll",
+    "rye small roll",
+    "rye roll",
+    "rye flour roll",
+    "dark rye roll",
+    "soft rye roll"
+  ],
+  "usda_175030": [
+    "wheat dinner roll",
+    "whole wheat roll",
+    "wheat bread roll",
+    "brown dinner roll",
+    "soft wheat roll",
+    "wheat flour roll",
+    "dinner roll wheat",
+    "whole wheat dinner bun"
+  ],
+  "usda_175031": [
+    "hard roll",
+    "kaiser roll",
+    "crusty roll",
+    "kaiser bun",
+    "hard bread roll",
+    "crusty bread roll",
+    "sandwich roll hard",
+    "hard white roll"
+  ],
+  "usda_175032": [
+    "apple strudel",
+    "strudel pastry",
+    "apple pastry roll",
+    "baked apple strudel",
+    "flaky apple pastry",
+    "apple filled pastry",
+    "german apple strudel",
+    "apple strudel dessert"
+  ],
+  "usda_175033": [
+    "cheese sweet roll",
+    "cheese danish roll",
+    "cream cheese roll",
+    "sweet cheese bun",
+    "cheese filled sweet roll",
+    "cheese pastry roll",
+    "soft cheese roll",
+    "sweet roll with cheese"
+  ],
+  "usda_175034": [
+    "cinnamon raisin roll",
+    "cinnamon roll with raisins",
+    "sweet cinnamon bun",
+    "store bought cinnamon roll",
+    "raisin cinnamon bun",
+    "glazed cinnamon roll",
+    "commercial cinnamon roll",
+    "sticky bun raisin"
+  ],
+  "usda_175035": [
+    "pop tart",
+    "toaster pastry",
+    "fruit pop tart",
+    "breakfast pastry",
+    "toaster strudel pastry",
+    "pop-tart fruit",
+    "fruit filled toaster pastry",
+    "frosted pop tart"
+  ],
+  "usda_175036": [
+    "corn tortilla",
+    "small corn tortilla",
+    "masa tortilla",
+    "soft corn tortilla",
+    "corn wrap",
+    "taco tortilla corn",
+    "mexican corn tortilla",
+    "flat corn bread"
+  ],
+  "usda_175037": [
+    "flour tortilla",
+    "soft flour tortilla",
+    "refrigerated tortilla",
+    "burrito wrap",
+    "flour wrap",
+    "white tortilla",
+    "soft taco wrap flour",
+    "flour tortilla refrigerated"
+  ],
+  "usda_175038": [
+    "frozen waffle",
+    "toaster waffle",
+    "eggo waffle",
+    "frozen toaster waffle",
+    "plain frozen waffle",
+    "heat and eat waffle",
+    "microwave waffle",
+    "frozen breakfast waffle"
+  ],
+  "usda_175039": [
+    "homemade waffle",
+    "from scratch waffle",
+    "plain waffle",
+    "classic waffle",
+    "waffle from batter",
+    "fresh waffle",
+    "made from scratch waffle",
+    "breakfast waffle homemade"
+  ],
+  "usda_175041": [
+    "cream of tartar",
+    "potassium bitartrate",
+    "baking cream of tartar",
+    "tartaric acid powder",
+    "white baking powder stabilizer",
+    "tartar powder",
+    "baking stabilizer cream of tartar"
+  ],
+  "usda_175042": [
+    "compressed yeast",
+    "fresh yeast",
+    "baker's yeast fresh",
+    "wet yeast",
+    "live yeast cake",
+    "fresh compressed yeast",
+    "yeast cake",
+    "bread yeast fresh"
+  ],
+  "usda_175043": [
+    "active dry yeast",
+    "dry yeast",
+    "bread yeast",
+    "baking yeast dry",
+    "yeast packet",
+    "instant yeast dry",
+    "dry active yeast",
+    "packet yeast"
+  ],
+  "usda_175044": [
+    "rice bran bread toasted",
+    "toasted rice bran bread",
+    "rice bran toast",
+    "rice bran loaf toasted",
+    "toasted rice bread",
+    "rice bran bread slice toasted"
+  ],
+  "usda_175045": [
+    "toasted blueberry muffin",
+    "blueberry toaster muffin",
+    "mini blueberry muffin toasted",
+    "toaster style blueberry muffin",
+    "blueberry muffin toasted",
+    "heated blueberry muffin",
+    "small blueberry muffin toasted"
+  ],
+  "usda_175046": [
+    "bran raisin muffin toasted",
+    "wheat bran muffin with raisins toasted",
+    "toasted bran raisin muffin",
+    "high fiber muffin toasted",
+    "raisin bran toaster muffin",
+    "bran muffin raisin toasted"
+  ],
+  "usda_175047": [
+    "buttermilk pancake",
+    "homemade buttermilk pancake",
+    "fluffy buttermilk pancake",
+    "from scratch pancake",
+    "buttermilk flapjack",
+    "classic buttermilk hotcake",
+    "scratch pancake buttermilk",
+    "hotcakes buttermilk"
+  ],
+  "usda_175048": [
+    "toasted frozen waffle",
+    "eggo toasted",
+    "crispy frozen waffle",
+    "toaster waffle toasted",
+    "frozen waffle toasted",
+    "browned frozen waffle",
+    "crispy toaster waffle"
+  ],
+  "usda_175049": [
+    "plain bagel",
+    "plain enriched bagel",
+    "sesame bagel",
+    "onion bagel",
+    "poppy seed bagel",
+    "bagel plain",
+    "new york style bagel",
+    "plain bread bagel"
+  ],
+  "usda_175050": [
+    "plain bagel unenriched",
+    "bagel with calcium propionate",
+    "plain sesame bagel",
+    "plain onion bagel",
+    "poppy bagel",
+    "white bagel",
+    "store bagel plain"
+  ],
+  "usda_175051": [
+    "plain bagel no calcium",
+    "simple bagel",
+    "unenriched bagel",
+    "basic plain bagel",
+    "sesame seed bagel plain",
+    "onion bagel plain",
+    "poppy bagel plain",
+    "white flour bagel"
+  ],
+  "usda_175052": [
+    "cinnamon coffee cake",
+    "crumb top coffee cake",
+    "streusel coffee cake",
+    "cinnamon crumb cake",
+    "store bought coffee cake",
+    "bakery coffee cake cinnamon",
+    "coffee cake with streusel topping",
+    "cinnamon cake crumb topping"
+  ],
+  "usda_175053": [
+    "pound cake",
+    "store bought pound cake",
+    "plain pound cake",
+    "bakery pound cake",
+    "dense butter cake",
+    "loaf cake",
+    "classic pound cake",
+    "yellow pound cake"
+  ],
+  "usda_175054": [
+    "white cake mix dry",
+    "vanilla cake mix dry",
+    "white pudding cake mix",
+    "box cake mix white",
+    "dry cake mix white",
+    "plain white cake mix powder"
+  ],
+  "usda_175055": [
+    "yellow cake mix dry",
+    "box yellow cake mix",
+    "dry yellow cake mix",
+    "yellow cake powder mix",
+    "yellow baking mix",
+    "vanilla yellow cake mix dry",
+    "cake mix yellow powder"
+  ],
+  "usda_175056": [
+    "low salt saltine crackers",
+    "low sodium saltines",
+    "unsalted saltine crackers",
+    "light salt crackers",
+    "reduced salt soda crackers",
+    "low salt soda crackers",
+    "oyster crackers low salt",
+    "soup crackers low salt"
+  ],
+  "usda_175057": [
+    "unsalted top saltines",
+    "no salt top crackers",
+    "saltine unsalted",
+    "soda cracker unsalted tops",
+    "plain top saltine cracker",
+    "crackers unsalted tops",
+    "soup crackers unsalted"
+  ],
+  "usda_175058": [
+    "low salt snack crackers",
+    "reduced salt crackers",
+    "light salt snack crackers",
+    "low sodium snack crackers",
+    "standard crackers low salt",
+    "buttery crackers low salt",
+    "ritz style low salt"
+  ],
+  "usda_175059": [
+    "low salt wheat crackers",
+    "reduced sodium wheat crackers",
+    "wheat thin low salt",
+    "wheat cracker unsalted",
+    "whole wheat cracker low sodium",
+    "low sodium wheat snack cracker"
+  ],
+  "usda_175060": [
+    "low sodium cheese crackers",
+    "cheese cracker no salt",
+    "cheesy cracker low sodium",
+    "reduced salt cheese cracker",
+    "low sodium cheez cracker",
+    "cheese snack cracker low salt"
+  ],
+  "usda_175061": [
+    "raspberry danish",
+    "danish pastry raspberry",
+    "raspberry filled danish",
+    "sweet raspberry pastry",
+    "raspberry cream pastry",
+    "danish roll raspberry",
+    "flaky raspberry pastry",
+    "fruit danish raspberry"
+  ],
+  "usda_175062": [
+    "glazed donut",
+    "yeast donut glazed",
+    "honey bun",
+    "glazed yeast doughnut",
+    "plain glazed donut",
+    "classic glazed donut",
+    "fried glazed donut",
+    "donut glazed"
+  ],
+  "usda_175063": [
+    "english muffin plain",
+    "toasting muffin",
+    "sourdough english muffin",
+    "plain english muffin",
+    "english muffin toasted",
+    "nooks and crannies muffin",
+    "round breakfast muffin plain",
+    "white english muffin"
+  ],
+  "usda_175064": [
+    "fried lemon pie",
+    "lemon fried pie",
+    "lemon hand pie",
+    "fried lemon pastry",
+    "lemon turnovers",
+    "fried fruit pie lemon",
+    "fast food lemon pie",
+    "lemon filled fried pie"
+  ],
+  "usda_175065": [
+    "frozen pie crust unenriched",
+    "frozen pie shell plain",
+    "ready to bake pie shell",
+    "unfilled frozen pie crust",
+    "store pie crust frozen",
+    "pie base frozen",
+    "frozen pastry shell unenriched"
+  ],
+  "usda_175066": [
+    "popover mix",
+    "dry popover mix",
+    "popover batter mix",
+    "popover powder",
+    "popover dough mix dry",
+    "baking popover mix",
+    "light roll mix popover"
+  ],
+  "usda_175067": [
+    "taco shell",
+    "baked taco shell",
+    "hard taco shell",
+    "crispy taco shell",
+    "corn taco shell",
+    "hard shell taco",
+    "crunchy taco shell",
+    "taco shell no salt"
+  ],
+  "usda_175068": [
+    "fat free saltines",
+    "fat free low sodium crackers",
+    "fat free soda crackers",
+    "plain fat free crackers",
+    "no fat no salt saltine",
+    "light crackers fat free low sodium",
+    "diet saltine crackers"
+  ],
+  "usda_175069": [
+    "low fat breakfast tart",
+    "diet pop tart",
+    "low fat toaster pastry",
+    "light breakfast tart",
+    "low fat fruit tart breakfast",
+    "reduced fat breakfast pastry",
+    "healthy toaster tart"
+  ],
+  "usda_175070": [
+    "sugar free oatmeal cookie",
+    "diabetic oatmeal cookie",
+    "no sugar oatmeal cookie",
+    "archway oatmeal sugar free",
+    "sugar-free oat cookie",
+    "low sugar oatmeal cookie"
+  ],
+  "usda_175071": [
+    "chocolate chip icebox cookie",
+    "choc chip cookie archway",
+    "chocolate chip refrigerator cookie",
+    "icebox chocolate chip cookie",
+    "classic chocolate chip cookie",
+    "choco chip cookie"
+  ],
+  "usda_175072": [
+    "iced oatmeal cookie",
+    "oatmeal cookie with icing",
+    "white glazed oatmeal cookie",
+    "frosted oatmeal cookie",
+    "iced oat cookie",
+    "glazed oatmeal cookie"
+  ],
+  "usda_175073": [
+    "molasses cookie",
+    "soft molasses cookie",
+    "ginger molasses cookie",
+    "old fashioned molasses cookie",
+    "dark spice cookie",
+    "molasses spice cookie",
+    "chewy molasses cookie"
+  ],
+  "usda_175074": [
+    "oatmeal cookie",
+    "plain oatmeal cookie",
+    "classic oat cookie",
+    "chewy oatmeal cookie",
+    "homestyle oatmeal cookie",
+    "oat cookie",
+    "soft oatmeal cookie"
+  ],
+  "usda_175075": [
+    "oatmeal raisin cookie",
+    "raisin oat cookie",
+    "chewy oatmeal raisin cookie",
+    "classic oatmeal raisin",
+    "oat raisin cookie",
+    "raisin cookie oatmeal",
+    "soft oatmeal raisin cookie"
+  ],
+  "usda_175076": [
+    "strawberry filled cookie",
+    "strawberry jam cookie",
+    "strawberry sandwich cookie",
+    "fruit filled cookie strawberry",
+    "strawberry center cookie",
+    "jam cookie strawberry"
+  ],
+  "usda_175077": [
+    "reduced fat ginger snap",
+    "light ginger snap cookie",
+    "low fat ginger snap",
+    "ginger biscuit reduced fat",
+    "ginger cookie light",
+    "thin ginger snap low fat"
+  ],
+  "usda_175078": [
+    "blueberry muffin mix dry",
+    "artificial blueberry muffin mix",
+    "blueberry muffin baking mix",
+    "box blueberry muffin mix",
+    "dry mix blueberry muffin",
+    "blueberry muffin powder mix"
+  ],
+  "usda_175079": [
+    "stove top stuffing chicken",
+    "chicken stuffing mix",
+    "boxed stuffing chicken flavor",
+    "instant stuffing chicken",
+    "chicken flavored stuffing",
+    "bread stuffing mix chicken",
+    "dry stuffing mix chicken"
+  ],
+  "usda_175080": [
+    "chewy fudge brownie mix",
+    "brownie mix dry",
+    "fudge brownie mix powder",
+    "box brownie mix",
+    "chocolate brownie mix dry",
+    "fudgy brownie mix"
+  ],
+  "usda_175081": [
+    "buttermilk biscuit mix",
+    "dry biscuit mix",
+    "biscuit mix powder",
+    "baking mix biscuit",
+    "box biscuit mix",
+    "buttermilk baking mix",
+    "southern biscuit mix dry"
+  ],
+  "usda_175082": [
+    "flour tortilla soft taco size",
+    "8 inch flour tortilla",
+    "soft taco flour wrap",
+    "medium flour tortilla",
+    "flour soft taco shell",
+    "white flour tortilla wrap",
+    "burrito tortilla flour medium"
+  ],
+  "usda_175083": [
+    "graham crackers",
+    "honey graham crackers",
+    "graham cracker sheet",
+    "cinnamon graham crackers",
+    "nabisco grahams",
+    "plain graham crackers",
+    "sweet graham crackers"
+  ],
+  "usda_175084": [
+    "oreo crumbs",
+    "cookie crumb topping oreo",
+    "crushed oreo",
+    "oreo cookie crumble",
+    "chocolate cookie crumbs",
+    "crushed chocolate cookies",
+    "oreo crust crumbles"
+  ],
+  "usda_175085": [
+    "venison roasted",
+    "roast deer meat",
+    "cooked venison",
+    "deer roast",
+    "wild game deer",
+    "baked venison",
+    "game meat deer cooked",
+    "venison meat roasted"
+  ],
+  "usda_175086": [
+    "horse meat raw",
+    "raw horse meat",
+    "equine meat raw",
+    "horsemeat uncooked",
+    "raw equine meat",
+    "horse flesh raw"
+  ],
+  "usda_175087": [
+    "horse meat cooked",
+    "roasted horse meat",
+    "cooked horse meat",
+    "horsemeat roasted",
+    "equine meat cooked",
+    "horse roast"
+  ],
+  "usda_175088": [
+    "unsweetened lemon iced tea",
+    "lemon instant tea unsweetened",
+    "lemon tea powder unsweetened",
+    "unsweetened lemon tea drink",
+    "diet lemon tea instant",
+    "lemon flavored tea unsweetened",
+    "sugar free lemon tea"
+  ],
+  "usda_175089": [
+    "sweet lemon iced tea powder",
+    "lemon tea powder sweetened",
+    "instant lemon tea sweet",
+    "sweet lemon tea mix",
+    "lemon tea drink mix",
+    "powdered lemon sweet tea",
+    "iced tea lemon sweetened powder"
+  ],
+  "usda_175090": [
+    "lemon iced tea",
+    "sweet lemon tea",
+    "prepared lemon iced tea",
+    "lemon tea drink",
+    "sweetened lemon tea",
+    "instant lemon tea prepared",
+    "iced tea lemon"
+  ],
+  "usda_175091": [
+    "diet lemon tea powder",
+    "saccharin lemon tea",
+    "sugar free lemon tea powder",
+    "lemon tea no sugar",
+    "low calorie lemon tea mix",
+    "artificial sweetener lemon tea powder"
+  ],
+  "usda_175092": [
+    "diet hot cocoa",
+    "sugar free hot chocolate",
+    "aspartame cocoa mix",
+    "light hot chocolate",
+    "low calorie hot cocoa",
+    "diet cocoa powder drink",
+    "no sugar hot cocoa prepared"
+  ],
+  "usda_175093": [
+    "fast food cola",
+    "fountain coke",
+    "fast food soda",
+    "restaurant cola",
+    "fountain soda cola",
+    "takeout cola drink",
+    "fast food coke",
+    "drive thru cola"
+  ],
+  "usda_175094": [
+    "fruit punch concentrate",
+    "frozen fruit punch",
+    "fruit punch frozen mix",
+    "punch juice concentrate frozen",
+    "frozen punch concentrate",
+    "fruit drink frozen concentrate",
+    "hawaiian punch concentrate"
+  ],
+  "usda_175095": [
+    "fruit punch drink",
+    "fruit punch prepared",
+    "mixed fruit punch",
+    "fruit punch juice drink",
+    "punch drink prepared",
+    "fruit juice punch",
+    "red fruit punch",
+    "kids fruit punch"
+  ],
+  "usda_175097": [
+    "coffee liqueur",
+    "kahlua",
+    "coffee flavored liqueur",
+    "coffee liquor",
+    "dark coffee liqueur",
+    "sweet coffee alcohol",
+    "mocha liqueur",
+    "kahlua style drink"
+  ],
+  "usda_175098": [
+    "coffee cream liqueur",
+    "baileys style drink",
+    "cream coffee liqueur",
+    "irish cream style liqueur",
+    "coffee and cream alcohol",
+    "creamy coffee liquor",
+    "sweet cream liqueur coffee"
+  ],
+  "usda_175099": [
+    "diet cola",
+    "diet coke",
+    "diet pepsi",
+    "zero calorie cola",
+    "aspartame soda",
+    "light cola",
+    "sugar free cola caffeinated",
+    "diet pepper soda"
+  ],
+  "usda_175100": [
+    "orange drink concentrate frozen",
+    "oj with pulp frozen concentrate",
+    "orange breakfast drink frozen",
+    "frozen orange juice concentrate with pulp",
+    "orange juice frozen concentrate pulp",
+    "orange drink frozen mix"
+  ],
+  "usda_175101": [
+    "orange breakfast drink",
+    "orange drink prepared",
+    "pulpy orange drink",
+    "orange juice drink with pulp",
+    "morning orange drink",
+    "oj drink prepared",
+    "orange breakfast juice drink"
+  ],
+  "usda_175102": [
+    "strawberry milkshake",
+    "fast food strawberry shake",
+    "strawberry shake",
+    "pink milkshake",
+    "strawberry soft serve shake",
+    "restaurant strawberry milkshake",
+    "strawberry thick shake",
+    "drive thru strawberry shake"
+  ],
+  "usda_175105": [
+    "fortified orange drink",
+    "vitamin enriched oj",
+    "ready to drink orange breakfast drink",
+    "enhanced orange drink",
+    "morning orange juice drink fortified",
+    "orange morning drink vitamins",
+    "breakfast oj drink"
+  ],
+  "usda_175108": [
+    "powerade lemon lime",
+    "lemon lime sports drink",
+    "electrolyte drink lemon lime",
+    "sports drink lemon lime",
+    "lemon lime powerade",
+    "energy sports drink lemon lime",
+    "workout drink lemon lime"
+  ],
+  "usda_175109": [
+    "propel zero",
+    "fruit flavored water",
+    "zero calorie flavored water",
+    "propel flavored water",
+    "non carbonated fruit water",
+    "light flavored water drink",
+    "electrolyte water propel"
+  ],
+  "usda_175110": [
+    "arizona iced tea lemon",
+    "arizona lemon tea",
+    "big can iced tea",
+    "arizona tea drink",
+    "lemon iced tea can",
+    "tall can lemon tea",
+    "arizona lemon flavored tea"
+  ],
+  "usda_175111": [
+    "lipton brisk lemon tea",
+    "brisk iced tea",
+    "lipton lemon tea",
+    "brisk tea lemon",
+    "canned lemon iced tea lipton",
+    "lipton brisk black tea",
+    "bottled lemon iced tea lipton"
+  ],
+  "usda_175112": [
+    "dry dessert wine",
+    "sherry",
+    "dry sherry",
+    "port style wine dry",
+    "dessert wine dry",
+    "fortified wine dry",
+    "dry port wine",
+    "aperitif wine dry"
+  ],
+  "usda_175114": [
+    "low calorie hot cocoa powder",
+    "diet cocoa mix",
+    "sugar free cocoa powder",
+    "light chocolate drink mix",
+    "low cal cocoa mix calcium",
+    "diet hot chocolate powder",
+    "aspartame cocoa powder"
+  ],
+  "usda_175115": [
+    "fruit punch powder drink",
+    "kool aid fruit punch",
+    "punch flavor drink mix",
+    "fruit punch prepared from powder",
+    "mixed fruit punch drink",
+    "fruit punch water mix",
+    "red punch drink powder"
+  ],
+  "usda_175116": [
+    "raw herring",
+    "fresh atlantic herring",
+    "uncooked herring fish",
+    "raw herring fillet",
+    "fresh herring",
+    "atlantic herring raw",
+    "herring fish raw"
+  ],
+  "usda_175117": [
+    "cooked herring",
+    "baked herring",
+    "grilled herring",
+    "atlantic herring cooked",
+    "herring fillet cooked",
+    "dry heat herring",
+    "broiled herring"
+  ],
+  "usda_175118": [
+    "pickled herring",
+    "marinated herring",
+    "herring in brine",
+    "pickled fish herring",
+    "pickled atlantic herring",
+    "brined herring",
+    "herring in vinegar",
+    "rollmops"
+  ],
+  "usda_175119": [
+    "raw mackerel",
+    "fresh mackerel",
+    "atlantic mackerel raw",
+    "uncooked mackerel",
+    "raw mackerel fillet",
+    "fresh atlantic mackerel",
+    "mackerel fish raw"
+  ],
+  "usda_175120": [
+    "cooked mackerel",
+    "grilled mackerel",
+    "baked mackerel",
+    "broiled mackerel",
+    "mackerel fillet cooked",
+    "dry heat mackerel",
+    "pan fried mackerel",
+    "inihaw na mackerel"
+  ],
+  "usda_175121": [
+    "canned mackerel",
+    "jack mackerel canned",
+    "tinned mackerel",
+    "mackerel in can drained",
+    "canned jack mackerel",
+    "mackerel tin",
+    "mackerel from can"
+  ],
+  "usda_175122": [
+    "king mackerel raw",
+    "raw king mackerel",
+    "large mackerel raw",
+    "king mackerel fish",
+    "uncooked king mackerel",
+    "fresh king mackerel",
+    "giant mackerel raw"
+  ],
+  "usda_175123": [
+    "striped mullet raw",
+    "fresh mullet",
+    "raw mullet fish",
+    "uncooked mullet",
+    "mullet fish raw",
+    "fresh striped mullet",
+    "raw grey mullet"
+  ],
+  "usda_175124": [
+    "cooked mullet",
+    "grilled mullet",
+    "baked mullet fish",
+    "broiled mullet",
+    "mullet fillet cooked",
+    "fried mullet fish",
+    "striped mullet cooked",
+    "pan fried mullet"
+  ],
+  "usda_175125": [
+    "ocean perch raw",
+    "atlantic perch raw",
+    "raw perch fillet",
+    "fresh ocean perch",
+    "sea perch raw",
+    "uncooked ocean perch",
+    "raw redfish perch"
+  ],
+  "usda_175126": [
+    "cooked ocean perch",
+    "baked ocean perch",
+    "grilled ocean perch",
+    "perch fillet cooked",
+    "atlantic perch cooked",
+    "broiled sea perch",
+    "pan fried ocean perch",
+    "dry heat perch"
+  ]
+}

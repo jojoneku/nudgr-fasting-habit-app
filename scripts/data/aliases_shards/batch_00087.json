@@ -1,0 +1,863 @@
+{
+  "usda_171052": [
+    "raw chicken",
+    "uncooked chicken",
+    "fresh chicken meat",
+    "chicken meat raw",
+    "boneless chicken raw",
+    "whole chicken meat",
+    "chicken fillet raw",
+    "chicken breast raw",
+    "chicken thigh raw",
+    "skinless chicken raw"
+  ],
+  "usda_171053": [
+    "fried chicken meat",
+    "pan fried chicken",
+    "cooked fried chicken",
+    "chicken fried no skin",
+    "fried chicken breast meat",
+    "sauteed chicken",
+    "skillet chicken",
+    "chicken cooked fried"
+  ],
+  "usda_171054": [
+    "roasted chicken",
+    "baked chicken",
+    "oven roasted chicken",
+    "roast chicken meat",
+    "baked chicken meat",
+    "chicken oven baked",
+    "roasted whole chicken",
+    "chicken roast no skin"
+  ],
+  "usda_171055": [
+    "chicken skin roasted",
+    "roasted chicken skin",
+    "crispy chicken skin",
+    "baked chicken skin",
+    "chicken skin cooked",
+    "roast chicken skin",
+    "chicken crackling",
+    "crispy poultry skin"
+  ],
+  "usda_171056": [
+    "stewed chicken skin",
+    "boiled chicken skin",
+    "chicken skin stewed",
+    "braised chicken skin",
+    "slow cooked chicken skin",
+    "chicken skin cooked soft",
+    "simmered chicken skin"
+  ],
+  "usda_171057": [
+    "chicken giblets raw",
+    "raw chicken innards",
+    "chicken organs raw",
+    "chicken gizzard liver heart raw",
+    "poultry giblets raw",
+    "chicken offal raw",
+    "raw giblets"
+  ],
+  "usda_171058": [
+    "fried chicken giblets",
+    "chicken giblets fried",
+    "crispy giblets",
+    "pan fried chicken organs",
+    "fried chicken innards",
+    "fried chicken offal",
+    "sauteed chicken giblets",
+    "chicken gizzard and liver fried"
+  ],
+  "usda_171059": [
+    "chicken heart cooked",
+    "boiled chicken heart",
+    "simmered chicken heart",
+    "cooked poultry heart",
+    "chicken puso",
+    "isaw manok heart",
+    "chicken heart stewed",
+    "braised chicken heart"
+  ],
+  "usda_171060": [
+    "chicken liver raw",
+    "raw chicken liver",
+    "fresh chicken liver",
+    "atay ng manok raw",
+    "uncooked chicken liver",
+    "chicken liver uncooked",
+    "poultry liver raw"
+  ],
+  "usda_171061": [
+    "chicken liver cooked",
+    "boiled chicken liver",
+    "simmered chicken liver",
+    "atay manok cooked",
+    "cooked poultry liver",
+    "chicken liver simmered",
+    "stewed chicken liver",
+    "braised chicken liver"
+  ],
+  "usda_171062": [
+    "chicken breast with skin raw",
+    "raw chicken white meat",
+    "chicken white meat raw",
+    "uncooked chicken breast skin on",
+    "chicken breast and skin raw",
+    "raw light meat chicken",
+    "chicken breast skin on uncooked"
+  ],
+  "usda_171063": [
+    "battered fried chicken dark meat",
+    "fried chicken leg batter",
+    "crispy battered chicken",
+    "kfc style fried chicken",
+    "deep fried chicken dark meat",
+    "batter dipped fried chicken",
+    "chicken thigh drumstick battered fried",
+    "fried chicken with batter"
+  ],
+  "usda_171064": [
+    "flour fried chicken dark meat",
+    "southern fried chicken",
+    "pan fried dark meat chicken",
+    "flour coated fried chicken",
+    "chicken thigh drumstick flour fried",
+    "crispy flour chicken",
+    "fried dark meat flour dredged",
+    "classic fried chicken dark"
+  ],
+  "usda_171065": [
+    "roasted chicken dark meat",
+    "baked dark meat chicken",
+    "oven roasted chicken thigh drumstick",
+    "roast chicken leg quarter",
+    "baked chicken leg",
+    "dark meat roasted",
+    "chicken thigh roasted with skin"
+  ],
+  "usda_171066": [
+    "stewed chicken dark meat",
+    "braised dark meat chicken",
+    "chicken stew meat",
+    "slow cooked chicken thigh",
+    "chicken dark meat stewed",
+    "adobo chicken dark",
+    "tinola dark meat",
+    "chicken thigh braised with skin"
+  ],
+  "usda_171067": [
+    "raw dark meat chicken",
+    "uncooked chicken thigh",
+    "raw chicken leg",
+    "chicken thigh raw no skin",
+    "chicken drumstick raw",
+    "dark meat chicken raw",
+    "chicken leg raw skinless"
+  ],
+  "usda_171068": [
+    "fried dark meat chicken skinless",
+    "pan fried chicken thigh no skin",
+    "fried chicken drumstick meat only",
+    "sauteed dark meat chicken",
+    "chicken thigh fried skinless",
+    "dark meat fried no skin"
+  ],
+  "usda_171069": [
+    "roasted dark meat chicken skinless",
+    "baked chicken thigh no skin",
+    "roasted chicken leg meat only",
+    "chicken drumstick roasted skinless",
+    "dark meat roasted no skin",
+    "baked dark meat no skin"
+  ],
+  "usda_171070": [
+    "stewed dark meat chicken skinless",
+    "chicken thigh stewed no skin",
+    "braised dark meat no skin",
+    "slow cooked chicken leg meat",
+    "dark meat chicken simmered",
+    "chicken drumstick stewed skinless"
+  ],
+  "usda_171071": [
+    "roasted chicken back with skin",
+    "chicken back roasted",
+    "baked chicken back",
+    "chicken carcass roasted",
+    "chicken back piece roasted skin on",
+    "roast chicken back portion"
+  ],
+  "usda_171072": [
+    "stewed chicken back",
+    "chicken back stewed",
+    "braised chicken back",
+    "slow cooked chicken back",
+    "chicken back simmered",
+    "chicken back with skin stewed"
+  ],
+  "usda_171073": [
+    "raw chicken back",
+    "uncooked chicken back",
+    "chicken back raw",
+    "chicken back piece raw",
+    "chicken backbone raw",
+    "raw chicken carcass meat"
+  ],
+  "usda_171074": [
+    "fried chicken back",
+    "chicken back fried",
+    "pan fried chicken back",
+    "crispy chicken back",
+    "chicken back piece fried",
+    "deep fried chicken back"
+  ],
+  "usda_171075": [
+    "roasted chicken breast with skin",
+    "baked chicken breast skin on",
+    "oven roasted chicken breast",
+    "chicken breast roasted skin on",
+    "roast chicken breast with skin",
+    "baked chicken breast with skin",
+    "grilled chicken breast skin on"
+  ],
+  "usda_171076": [
+    "stewed chicken breast with skin",
+    "braised chicken breast",
+    "chicken breast stewed skin on",
+    "slow cooked chicken breast",
+    "chicken breast simmered skin on",
+    "poached chicken breast with skin"
+  ],
+  "usda_171077": [
+    "skinless boneless chicken breast raw",
+    "chicken breast raw",
+    "raw chicken breast",
+    "uncooked chicken fillet",
+    "chicken fillet raw",
+    "boneless skinless chicken breast",
+    "raw chicken breast fillet",
+    "chicken breast skinless raw",
+    "chicken pecho raw"
+  ],
+  "usda_171078": [
+    "fried chicken breast skinless",
+    "pan fried chicken breast",
+    "chicken breast fried no skin",
+    "sauteed chicken breast",
+    "skillet chicken breast",
+    "chicken breast cooked fried",
+    "fried chicken breast meat only"
+  ],
+  "usda_171079": [
+    "squab raw",
+    "pigeon meat raw",
+    "raw pigeon",
+    "uncooked squab",
+    "squab pigeon raw",
+    "game bird raw",
+    "pigeon bird meat raw"
+  ],
+  "usda_171080": [
+    "squab breast raw",
+    "pigeon light meat raw",
+    "pigeon breast meat raw",
+    "squab white meat",
+    "pigeon breast skinless raw",
+    "raw squab light meat"
+  ],
+  "usda_171081": [
+    "raw whole turkey",
+    "uncooked turkey",
+    "fresh turkey",
+    "whole turkey raw",
+    "raw turkey with skin",
+    "turkey bird raw",
+    "uncooked whole turkey"
+  ],
+  "usda_171082": [
+    "roasted turkey skin",
+    "turkey skin cooked",
+    "crispy turkey skin",
+    "thanksgiving turkey skin",
+    "baked turkey skin",
+    "turkey crackling skin",
+    "turkey skin roasted"
+  ],
+  "usda_171083": [
+    "turkey giblets raw",
+    "raw turkey organs",
+    "turkey offal raw",
+    "turkey innards raw",
+    "turkey gizzard liver heart raw",
+    "uncooked turkey giblets"
+  ],
+  "usda_171084": [
+    "cooked turkey giblets",
+    "turkey giblets simmered",
+    "boiled turkey giblets",
+    "turkey organs cooked",
+    "turkey innards cooked",
+    "turkey giblet gravy base",
+    "thanksgiving giblets cooked"
+  ],
+  "usda_171085": [
+    "turkey gizzard raw",
+    "raw turkey gizzard",
+    "uncooked turkey gizzard",
+    "turkey stomach raw",
+    "poultry gizzard raw",
+    "turkey gizzard uncooked"
+  ],
+  "usda_171086": [
+    "turkey neck raw",
+    "raw turkey neck",
+    "uncooked turkey neck",
+    "turkey neck meat raw",
+    "turkey neck bone raw",
+    "fresh turkey neck"
+  ],
+  "usda_171087": [
+    "turkey neck cooked",
+    "boiled turkey neck",
+    "simmered turkey neck",
+    "turkey neck meat cooked",
+    "turkey neck stewed",
+    "cooked turkey neck"
+  ],
+  "usda_171088": [
+    "raw turkey breast with skin",
+    "turkey white meat raw",
+    "turkey breast skin on raw",
+    "uncooked turkey breast",
+    "fresh turkey breast skin on",
+    "turkey light meat raw skin on"
+  ],
+  "usda_171089": [
+    "roasted turkey breast with skin",
+    "baked turkey breast",
+    "oven roasted turkey breast",
+    "thanksgiving turkey breast",
+    "turkey breast roasted skin on",
+    "cooked turkey white meat",
+    "turkey breast baked with skin"
+  ],
+  "usda_171090": [
+    "raw turkey dark meat",
+    "uncooked turkey leg meat",
+    "turkey dark meat raw",
+    "turkey thigh raw skinless",
+    "raw turkey drumstick meat",
+    "turkey dark meat skinless raw"
+  ],
+  "usda_171091": [
+    "roasted turkey dark meat",
+    "baked turkey leg",
+    "turkey dark meat cooked",
+    "thanksgiving turkey leg",
+    "roasted turkey drumstick thigh",
+    "turkey dark meat roasted skinless"
+  ],
+  "usda_171092": [
+    "roasted turkey back",
+    "turkey back cooked",
+    "baked turkey back",
+    "turkey back piece roasted",
+    "turkey back with skin roasted",
+    "oven turkey back"
+  ],
+  "usda_171093": [
+    "raw turkey breast",
+    "uncooked turkey breast with skin",
+    "fresh turkey breast",
+    "turkey breast skin on raw",
+    "whole turkey breast raw",
+    "turkey breast meat raw"
+  ],
+  "usda_171094": [
+    "roasted turkey wing",
+    "baked turkey wing",
+    "turkey wing cooked",
+    "oven roasted turkey wing",
+    "thanksgiving turkey wing",
+    "turkey wing with skin roasted"
+  ],
+  "usda_171095": [
+    "roasted turkey fryer",
+    "small turkey roasted",
+    "young turkey cooked",
+    "fryer turkey roasted",
+    "turkey fryer roaster cooked",
+    "mini turkey roasted",
+    "oven roasted fryer turkey"
+  ],
+  "usda_171096": [
+    "raw turkey back",
+    "uncooked turkey back",
+    "turkey back meat raw",
+    "fresh turkey back",
+    "turkey backbone raw",
+    "turkey back skinless raw"
+  ],
+  "usda_171097": [
+    "roasted turkey back skinless",
+    "baked turkey back meat only",
+    "turkey back roasted no skin",
+    "cooked turkey back meat",
+    "turkey back meat roasted"
+  ],
+  "usda_171098": [
+    "raw turkey breast meat",
+    "uncooked turkey breast skinless",
+    "turkey breast meat raw",
+    "fresh turkey breast no skin",
+    "turkey breast meat only raw",
+    "skinless turkey breast raw"
+  ],
+  "usda_171099": [
+    "canned chicken",
+    "canned chicken with broth",
+    "chicken in a can",
+    "tinned chicken",
+    "ready to eat chicken",
+    "canned cooked chicken",
+    "chicken broth can",
+    "pantry chicken"
+  ],
+  "usda_171100": [
+    "foie gras pate",
+    "goose liver pate",
+    "smoked foie gras",
+    "goose pate",
+    "duck liver pate",
+    "foie gras spread",
+    "liver pate smoked",
+    "gourmet liver spread",
+    "canned foie gras"
+  ],
+  "usda_171101": [
+    "canned turkey",
+    "tinned turkey",
+    "turkey in a can",
+    "canned turkey meat",
+    "ready to eat turkey",
+    "turkey with broth canned",
+    "pantry turkey meat"
+  ],
+  "usda_171102": [
+    "diced turkey",
+    "seasoned turkey chunks",
+    "turkey chunks light dark meat",
+    "precooked diced turkey",
+    "turkey cubes seasoned",
+    "chopped turkey meat",
+    "turkey deli meat diced"
+  ],
+  "usda_171103": [
+    "turkey sticks",
+    "breaded turkey sticks",
+    "fried turkey sticks",
+    "turkey snack sticks",
+    "battered turkey strips",
+    "turkey finger food",
+    "turkey nugget sticks",
+    "turkey strips breaded"
+  ],
+  "usda_171104": [
+    "mechanically deboned chicken",
+    "mdm chicken with skin",
+    "chicken paste raw",
+    "processed chicken meat",
+    "chicken meat paste",
+    "deboned chicken backs necks",
+    "chicken slurry raw"
+  ],
+  "usda_171105": [
+    "mechanically deboned chicken skinless",
+    "mdm chicken no skin",
+    "processed chicken skinless",
+    "chicken paste skinless raw",
+    "deboned chicken backs necks no skin"
+  ],
+  "usda_171106": [
+    "mechanically deboned hen",
+    "old hen chicken paste",
+    "processed mature chicken",
+    "mdm hen raw",
+    "laying hen deboned",
+    "chicken paste from hens"
+  ],
+  "usda_171107": [
+    "cornish game hen roasted",
+    "cornish hen cooked",
+    "roasted game hen",
+    "small roasted chicken",
+    "cornish hen with skin",
+    "mini chicken roasted",
+    "game hen baked",
+    "baby chicken roasted"
+  ],
+  "usda_171108": [
+    "cornish game hen raw",
+    "raw cornish hen",
+    "uncooked game hen",
+    "fresh cornish hen",
+    "cornish hen skinless raw",
+    "mini chicken raw",
+    "small game bird raw"
+  ],
+  "usda_171109": [
+    "cornish hen roasted skinless",
+    "roasted game hen no skin",
+    "cornish hen meat only cooked",
+    "baked cornish hen skinless",
+    "game hen roasted meat only",
+    "small chicken roasted skinless"
+  ],
+  "usda_171110": [
+    "canned chicken no broth",
+    "dry canned chicken",
+    "chicken in a can drained",
+    "tinned chicken drained",
+    "canned chicken meat only",
+    "ready to eat chicken drained",
+    "pantry chicken no liquid"
+  ],
+  "usda_171111": [
+    "frozen bbq wings",
+    "glazed chicken wings frozen",
+    "barbecue chicken wings",
+    "frozen chicken wings bbq",
+    "sweet bbq wings",
+    "frozen glazed wings",
+    "bbq glazed chicken wings"
+  ],
+  "usda_171112": [
+    "duck leg roasted",
+    "roasted duck leg",
+    "pekin duck leg",
+    "duck drumstick roasted",
+    "duck leg with skin",
+    "roast duck leg",
+    "duckling leg cooked"
+  ],
+  "usda_171113": [
+    "braised duck leg skinless",
+    "duck leg braised no skin",
+    "stewed duck leg",
+    "pekin duck leg braised",
+    "duck leg meat cooked",
+    "duck leg without skin cooked",
+    "duck drumstick braised"
+  ],
+  "usda_171114": [
+    "rotisserie chicken drumstick",
+    "bbq rotisserie drumstick",
+    "rotisserie chicken leg meat",
+    "roast chicken drumstick meat",
+    "store bought rotisserie drumstick",
+    "bbq chicken drumstick meat only",
+    "spinning chicken leg"
+  ],
+  "usda_171115": [
+    "bbq chicken wings baked",
+    "oven heated frozen wings",
+    "bbq frozen wings heated",
+    "glazed wings oven baked",
+    "frozen bbq wings cooked",
+    "baked glazed chicken wings"
+  ],
+  "usda_171116": [
+    "ground chicken raw",
+    "minced chicken raw",
+    "raw ground chicken",
+    "chicken mince raw",
+    "uncooked ground chicken",
+    "chicken burger meat raw",
+    "minced chicken meat raw"
+  ],
+  "usda_171117": [
+    "cooked ground chicken",
+    "pan browned chicken mince",
+    "cooked minced chicken",
+    "ground chicken cooked",
+    "browned chicken crumbles",
+    "chicken mince cooked",
+    "ground chicken pan cooked"
+  ],
+  "usda_171118": [
+    "rotisserie chicken thigh",
+    "bbq rotisserie thigh meat",
+    "roast chicken thigh meat only",
+    "store bought rotisserie thigh",
+    "rotisserie thigh no skin",
+    "bbq chicken thigh skinless",
+    "spinning chicken thigh"
+  ],
+  "usda_171119": [
+    "chicken feet boiled",
+    "boiled chicken paws",
+    "adidas chicken",
+    "chicken paa boiled",
+    "chicken feet cooked",
+    "boiled chicken claws",
+    "chicken feet stewed",
+    "paa ng manok"
+  ],
+  "usda_171120": [
+    "rotisserie chicken thigh original",
+    "seasoned rotisserie thigh",
+    "classic rotisserie thigh meat",
+    "original rotisserie chicken thigh",
+    "store rotisserie thigh skinless",
+    "rotisserie thigh meat cooked"
+  ],
+  "usda_171121": [
+    "rotisserie chicken wing meat",
+    "original seasoning rotisserie wing",
+    "store rotisserie wing skinless",
+    "rotisserie wing meat only",
+    "chicken wing rotisserie meat",
+    "cooked rotisserie wing no skin"
+  ],
+  "usda_171122": [
+    "rotisserie chicken back",
+    "original seasoning rotisserie back",
+    "store rotisserie chicken back",
+    "rotisserie back with skin",
+    "spinning chicken back cooked",
+    "rotisserie back meat and skin"
+  ],
+  "usda_171123": [
+    "rotisserie chicken breast with skin",
+    "original seasoning rotisserie breast",
+    "store rotisserie breast",
+    "rotisserie chicken breast skin on",
+    "spinning chicken breast cooked",
+    "rotisserie breast meat and skin"
+  ],
+  "usda_171124": [
+    "bbq rotisserie chicken back",
+    "rotisserie bbq back with skin",
+    "bbq back chicken rotisserie",
+    "spinning chicken back bbq",
+    "rotisserie back bbq skin on",
+    "store bought rotisserie back"
+  ],
+  "usda_171125": [
+    "bbq rotisserie chicken breast",
+    "rotisserie bbq breast with skin",
+    "bbq chicken breast rotisserie",
+    "spinning chicken breast bbq",
+    "store bought rotisserie breast skin on",
+    "rotisserie breast bbq"
+  ],
+  "usda_171126": [
+    "bbq rotisserie drumstick with skin",
+    "rotisserie chicken leg with skin",
+    "spinning chicken drumstick bbq",
+    "rotisserie drumstick skin on",
+    "store rotisserie drumstick bbq",
+    "bbq chicken leg rotisserie"
+  ],
+  "usda_171127": [
+    "bbq rotisserie thigh with skin",
+    "rotisserie chicken thigh skin on",
+    "spinning chicken thigh bbq",
+    "bbq rotisserie thigh skin on",
+    "store rotisserie thigh with skin",
+    "rotisserie dark meat thigh bbq"
+  ],
+  "usda_171128": [
+    "roasted turkey drumstick",
+    "cooked turkey leg",
+    "turkey drumstick roasted",
+    "baked turkey drumstick",
+    "thanksgiving turkey leg roasted",
+    "turkey drumstick meat cooked",
+    "turkey leg fair style"
+  ],
+  "usda_171129": [
+    "raw turkey thigh",
+    "uncooked turkey thigh",
+    "turkey thigh meat raw",
+    "fresh turkey thigh",
+    "turkey thigh skinless raw",
+    "turkey thigh meat only raw"
+  ],
+  "usda_171130": [
+    "raw turkey breast with solution",
+    "enhanced turkey breast raw",
+    "injected turkey breast raw",
+    "fresh turkey breast skin on enhanced",
+    "turkey breast basted raw",
+    "turkey breast with broth raw"
+  ],
+  "usda_171131": [
+    "roasted turkey thigh",
+    "cooked turkey thigh",
+    "baked turkey thigh",
+    "turkey thigh roasted skinless",
+    "thanksgiving turkey thigh",
+    "turkey thigh meat cooked"
+  ],
+  "usda_171132": [
+    "raw turkey wing",
+    "uncooked turkey wing",
+    "fresh turkey wing",
+    "turkey wing meat raw",
+    "turkey wing skin on raw",
+    "turkey flap raw"
+  ],
+  "usda_171133": [
+    "roasted turkey wing",
+    "baked turkey wing",
+    "cooked turkey wing",
+    "turkey wing with skin cooked",
+    "oven baked turkey wing retail",
+    "thanksgiving turkey wing roasted"
+  ],
+  "usda_171134": [
+    "raw turkey drumstick",
+    "uncooked turkey leg",
+    "fresh turkey drumstick",
+    "turkey leg raw",
+    "turkey drumstick raw skin on",
+    "turkey leg piece raw"
+  ],
+  "usda_171135": [
+    "roasted turkey drumstick",
+    "baked turkey leg",
+    "cooked turkey drumstick",
+    "turkey leg cooked skin on",
+    "oven roasted turkey leg",
+    "turkey drumstick retail cooked"
+  ],
+  "usda_171136": [
+    "raw turkey drumstick skinless",
+    "turkey leg meat raw",
+    "uncooked turkey drumstick meat",
+    "turkey drumstick meat only raw",
+    "turkey leg skinless raw",
+    "fresh turkey drumstick no skin"
+  ],
+  "usda_171137": [
+    "roasted turkey thigh with skin",
+    "baked turkey thigh skin on",
+    "turkey thigh retail cooked",
+    "cooked turkey thigh skin on",
+    "oven turkey thigh",
+    "thanksgiving turkey thigh with skin"
+  ],
+  "usda_171138": [
+    "raw turkey back enhanced",
+    "turkey back with solution raw",
+    "fresh turkey back injected",
+    "turkey backbone raw enhanced",
+    "turkey back broth injected raw"
+  ],
+  "usda_171139": [
+    "roasted turkey back enhanced",
+    "turkey back with solution cooked",
+    "oven turkey back injected",
+    "turkey back basted roasted",
+    "cooked turkey back with broth",
+    "turkey back enhanced roasted"
+  ],
+  "usda_171141": [
+    "black bean soup canned",
+    "canned black bean soup",
+    "condensed black bean soup",
+    "black bean chowder",
+    "tinned black bean soup",
+    "bean soup black canned"
+  ],
+  "usda_171142": [
+    "bean and pork soup",
+    "canned pork and bean soup",
+    "bean soup with pork",
+    "condensed bean pork soup",
+    "tinned bean with pork soup",
+    "pork bean chowder canned"
+  ],
+  "usda_171143": [
+    "bean and hot dog soup",
+    "frankfurter bean soup",
+    "bean soup with wieners",
+    "canned bean frank soup",
+    "hot dog bean soup condensed",
+    "bean sausage soup canned"
+  ],
+  "usda_171144": [
+    "ham and bean soup",
+    "bean soup with ham",
+    "chunky ham bean soup",
+    "canned ham bean chowder",
+    "ready to serve bean ham soup",
+    "navy bean ham soup canned"
+  ],
+  "usda_171145": [
+    "chunky chicken soup",
+    "canned chicken soup",
+    "ready to eat chicken soup",
+    "hearty chicken soup can",
+    "chicken soup chunky canned",
+    "chicken stew canned",
+    "chicken soup ready to serve"
+  ],
+  "usda_171146": [
+    "cream of chicken soup",
+    "creamy chicken soup condensed",
+    "cream chicken condensed soup",
+    "chicken cream soup canned",
+    "white chicken soup condensed",
+    "creamy canned chicken soup"
+  ],
+  "usda_171147": [
+    "chicken gumbo soup",
+    "gumbo soup canned",
+    "canned chicken gumbo",
+    "okra chicken soup canned",
+    "southern gumbo soup condensed",
+    "chicken gumbo condensed"
+  ],
+  "usda_171148": [
+    "chunky chicken noodle soup",
+    "chicken noodle soup ready to serve",
+    "canned chicken noodle chunky",
+    "hearty chicken noodle soup",
+    "chicken noodle soup can",
+    "big chicken noodle soup canned"
+  ],
+  "usda_171149": [
+    "chicken vegetable soup",
+    "canned chicken veg soup",
+    "chicken and vegetable soup condensed",
+    "tinned chicken vegetable soup",
+    "chicken veggie soup can",
+    "chicken soup with vegetables"
+  ],
+  "usda_171150": [
+    "chili beef soup",
+    "canned chili beef soup",
+    "beef chili soup condensed",
+    "chili con carne soup canned",
+    "spicy beef soup condensed",
+    "beef chili condensed soup"
+  ],
+  "usda_171151": [
+    "manhattan clam chowder chunky",
+    "red clam chowder",
+    "tomato clam chowder",
+    "manhattan style clam soup",
+    "canned manhattan clam chowder",
+    "chunky clam chowder red"
+  ],
+  "usda_171152": [
+    "manhattan clam chowder",
+    "red clam chowder condensed",
+    "tomato based clam chowder",
+    "canned clam chowder manhattan",
+    "condensed manhattan clam soup",
+    "clam tomato chowder canned"
+  ]
+}

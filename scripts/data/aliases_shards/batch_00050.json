@@ -1,0 +1,430 @@
+{
+  "usda_168471": [
+    "canned zucchini",
+    "italian zucchini",
+    "zucchini italiano",
+    "zucchini in tomato sauce",
+    "marinated zucchini",
+    "canned summer squash",
+    "zucchini with herbs",
+    "italian style zucchini",
+    "zucchini in sauce"
+  ],
+  "usda_168472": [
+    "acorn squash",
+    "pepper squash",
+    "table queen squash",
+    "des moines squash",
+    "raw acorn squash",
+    "uncooked acorn squash",
+    "acorn gourd",
+    "raw winter squash"
+  ],
+  "usda_168473": [
+    "frozen butternut squash",
+    "butternut squash frozen",
+    "frozen winter squash",
+    "uncooked frozen butternut",
+    "butternut squash raw frozen",
+    "raw frozen squash"
+  ],
+  "usda_168474": [
+    "boiled butternut squash",
+    "cooked butternut squash",
+    "butternut squash boiled",
+    "frozen cooked butternut",
+    "steamed butternut squash",
+    "butternut no salt",
+    "boiled winter squash"
+  ],
+  "usda_168475": [
+    "hubbard squash",
+    "raw hubbard squash",
+    "blue hubbard squash",
+    "green hubbard squash",
+    "large winter squash raw",
+    "uncooked hubbard squash",
+    "hubbard gourd raw"
+  ],
+  "usda_168476": [
+    "baked hubbard squash",
+    "roasted hubbard squash",
+    "cooked hubbard squash",
+    "baked winter squash",
+    "oven roasted hubbard",
+    "hubbard squash no salt"
+  ],
+  "usda_168477": [
+    "corn and lima beans",
+    "succotash cooked",
+    "boiled succotash",
+    "corn lima mix",
+    "mixed beans and corn",
+    "cooked corn and limas",
+    "vegetable succotash",
+    "lima bean corn mix"
+  ],
+  "usda_168478": [
+    "creamed corn succotash",
+    "succotash cream corn",
+    "creamy corn and lima beans",
+    "corn lima cream style",
+    "canned succotash creamed",
+    "succotash with creamed corn"
+  ],
+  "usda_168479": [
+    "canned succotash whole corn",
+    "corn and lima canned",
+    "succotash whole kernel",
+    "canned corn lima beans",
+    "succotash in brine",
+    "whole kernel corn succotash canned"
+  ],
+  "usda_168480": [
+    "frozen succotash",
+    "frozen corn and lima",
+    "succotash frozen raw",
+    "uncooked frozen succotash",
+    "frozen corn lima mix",
+    "corn lima frozen"
+  ],
+  "usda_168481": [
+    "cooked frozen succotash",
+    "boiled frozen succotash",
+    "frozen succotash cooked",
+    "corn and lima boiled",
+    "succotash boiled no salt",
+    "frozen succotash drained"
+  ],
+  "usda_168482": [
+    "camote",
+    "kamote",
+    "raw camote",
+    "raw sweet potato",
+    "uncooked sweet potato",
+    "yam raw",
+    "orange potato raw",
+    "sweet potato uncooked"
+  ],
+  "usda_168483": [
+    "baked sweet potato",
+    "sweet potato baked in skin",
+    "oven baked sweet potato",
+    "roasted sweet potato",
+    "baked camote",
+    "sweet potato skin on",
+    "baked yam",
+    "sweet potato no salt baked"
+  ],
+  "usda_168484": [
+    "boiled sweet potato",
+    "sweet potato boiled",
+    "boiled camote",
+    "boiled kamote",
+    "peeled sweet potato cooked",
+    "sweet potato no skin boiled",
+    "cooked camote"
+  ],
+  "usda_168485": [
+    "canned sweet potato",
+    "sweet potato in can",
+    "vacuum packed sweet potato",
+    "tinned sweet potato",
+    "canned yam",
+    "canned camote"
+  ],
+  "usda_168486": [
+    "cooked taro",
+    "boiled taro",
+    "gabi",
+    "gabi na luto",
+    "taro root cooked",
+    "dasheen cooked",
+    "eddo cooked",
+    "cooked gabi",
+    "taro no salt"
+  ],
+  "usda_168487": [
+    "taro leaves",
+    "gabi leaves",
+    "dahon ng gabi",
+    "raw gabi leaves",
+    "raw taro greens",
+    "elephant ear leaves raw",
+    "taro leaf uncooked"
+  ],
+  "usda_168488": [
+    "steamed taro leaves",
+    "cooked taro leaves",
+    "dahon ng gabi na luto",
+    "gabi leaves steamed",
+    "taro greens cooked",
+    "steamed gabi leaves",
+    "laing base leaves"
+  ],
+  "usda_168489": [
+    "taro shoots",
+    "gabi shoots",
+    "taro stem raw",
+    "taro stalk raw",
+    "raw taro sprouts",
+    "taro shoot uncooked"
+  ],
+  "usda_168490": [
+    "arrowroot",
+    "arrowroot root",
+    "raw arrowroot root",
+    "arrowroot starch plant",
+    "arrowroot vegetable",
+    "arrowroot rhizome"
+  ],
+  "usda_168491": [
+    "chrysanthemum greens",
+    "garland chrysanthemum",
+    "shungiku",
+    "tong hao",
+    "tong ho",
+    "crown daisy greens",
+    "edible chrysanthemum leaves",
+    "chop suey greens"
+  ],
+  "usda_168492": [
+    "cooked amaranth leaves",
+    "boiled amaranth",
+    "kulitis",
+    "amaranth greens cooked",
+    "chinese spinach cooked",
+    "pigweed cooked",
+    "amaranth vegetable boiled"
+  ],
+  "usda_168493": [
+    "boiled arrowhead",
+    "cooked arrowhead vegetable",
+    "duck potato cooked",
+    "wapato boiled",
+    "arrowhead bulb cooked",
+    "tule potato cooked"
+  ],
+  "usda_168494": [
+    "cooked frozen asparagus",
+    "boiled frozen asparagus",
+    "frozen asparagus boiled",
+    "asparagus salted boiled",
+    "frozen asparagus cooked drained",
+    "cooked asparagus spears frozen"
+  ],
+  "usda_168495": [
+    "ampalaya tops",
+    "ampalaya dahon",
+    "bitter melon leaves cooked",
+    "bitter gourd tips cooked",
+    "bitter melon greens boiled",
+    "ampalaya leaves boiled",
+    "bitter gourd leaves"
+  ],
+  "usda_168496": [
+    "ampalaya",
+    "bitter melon",
+    "ampalaya na luto",
+    "bitter gourd cooked",
+    "boiled bitter melon",
+    "cooked ampalaya",
+    "karela cooked",
+    "bitter squash boiled"
+  ],
+  "usda_168497": [
+    "labong",
+    "cooked bamboo shoots",
+    "boiled bamboo shoots",
+    "labong na luto",
+    "bamboo vegetable cooked",
+    "boiled labong",
+    "bamboo shoots salted"
+  ],
+  "usda_168498": [
+    "cooked lima beans",
+    "boiled lima beans",
+    "fordhook lima beans",
+    "butter beans cooked",
+    "large lima beans boiled",
+    "frozen lima beans cooked",
+    "boiled butter beans"
+  ],
+  "usda_168499": [
+    "cooked mung bean sprouts",
+    "boiled bean sprouts",
+    "toge cooked",
+    "togue boiled",
+    "mongo sprouts cooked",
+    "munggo sprouts boiled",
+    "bean sprouts boiled salted"
+  ],
+  "usda_168500": [
+    "cooked navy bean sprouts",
+    "boiled navy bean sprouts",
+    "sprouted navy beans cooked",
+    "white bean sprouts boiled",
+    "navy beans sprouted cooked"
+  ],
+  "usda_168501": [
+    "cooked pinto beans",
+    "frozen pinto beans cooked",
+    "boiled pinto beans",
+    "mottled beans cooked",
+    "speckled beans boiled",
+    "pinto beans salted boiled"
+  ],
+  "usda_168502": [
+    "canned green beans",
+    "canned snap beans",
+    "string beans canned",
+    "green beans in can no salt",
+    "baguio beans canned",
+    "canned french beans",
+    "green beans in liquid"
+  ],
+  "usda_168503": [
+    "canned yellow beans",
+    "wax beans canned",
+    "yellow snap beans",
+    "yellow string beans canned",
+    "canned wax beans regular",
+    "butter beans yellow canned"
+  ],
+  "usda_168504": [
+    "canned yellow beans no salt",
+    "wax beans no salt canned",
+    "yellow snap beans unsalted",
+    "yellow green beans canned",
+    "unsalted yellow beans"
+  ],
+  "usda_168505": [
+    "drained green beans canned",
+    "canned green beans drained",
+    "snap beans drained no salt",
+    "string beans canned drained",
+    "green beans solids no salt"
+  ],
+  "usda_168506": [
+    "boiled beets",
+    "cooked beets",
+    "beetroot boiled",
+    "steamed beets",
+    "cooked beetroot",
+    "red beets cooked",
+    "beets salted boiled"
+  ],
+  "usda_168507": [
+    "canned beets",
+    "tinned beets",
+    "canned beetroot",
+    "beets in liquid no salt",
+    "unsalted canned beets",
+    "beetroot in can"
+  ],
+  "usda_168508": [
+    "cooked beet greens",
+    "boiled beet greens",
+    "beet tops cooked",
+    "beet leaves boiled",
+    "beetroot leaves cooked",
+    "beet greens salted"
+  ],
+  "usda_168509": [
+    "boiled borage",
+    "cooked borage",
+    "borage greens cooked",
+    "starflower herb cooked",
+    "borage herb boiled",
+    "cooked borage herb"
+  ],
+  "usda_168510": [
+    "boiled broccoli",
+    "cooked broccoli",
+    "steamed broccoli",
+    "broccoli with salt boiled",
+    "cooked broccoli florets",
+    "broccoli salted cooked"
+  ],
+  "usda_168511": [
+    "frozen chopped broccoli cooked",
+    "boiled frozen broccoli",
+    "chopped broccoli boiled",
+    "frozen broccoli pieces cooked",
+    "cooked chopped broccoli salted"
+  ],
+  "usda_168512": [
+    "frozen broccoli spears cooked",
+    "broccoli spears boiled",
+    "cooked broccoli spears",
+    "frozen spear broccoli",
+    "broccoli stalks frozen boiled"
+  ],
+  "usda_168513": [
+    "boiled brussels sprouts",
+    "cooked brussels sprouts",
+    "steamed brussels sprouts",
+    "little cabbages cooked",
+    "baby cabbage boiled",
+    "brussels sprouts salted"
+  ],
+  "usda_168514": [
+    "boiled cabbage",
+    "cooked cabbage",
+    "repolyo na luto",
+    "cooked repolyo",
+    "steamed white cabbage",
+    "cabbage boiled salted",
+    "boiled green cabbage"
+  ],
+  "usda_168515": [
+    "boiled red cabbage",
+    "cooked red cabbage",
+    "purple cabbage cooked",
+    "red cabbage boiled",
+    "steamed purple cabbage",
+    "cooked red repolyo"
+  ],
+  "usda_168516": [
+    "boiled savoy cabbage",
+    "cooked savoy cabbage",
+    "savoy cabbage boiled",
+    "steamed savoy cabbage",
+    "curly cabbage cooked",
+    "crinkle leaf cabbage cooked"
+  ],
+  "usda_168517": [
+    "bok choy cooked",
+    "pak choi cooked",
+    "pechay cooked",
+    "boiled bok choy",
+    "cooked pechay",
+    "chinese cabbage boiled",
+    "pechay na luto",
+    "bok choy salted boiled"
+  ],
+  "usda_168518": [
+    "canned carrots drained",
+    "carrots in can",
+    "drained canned carrots no salt",
+    "tinned carrots",
+    "canned carrot solids",
+    "carrots canned no salt"
+  ],
+  "usda_168519": [
+    "frozen carrots cooked",
+    "boiled frozen carrots",
+    "cooked frozen carrots",
+    "carrots boiled from frozen",
+    "frozen carrots boiled salted",
+    "cooked carrots frozen"
+  ],
+  "usda_168520": [
+    "boiled cauliflower",
+    "cooked cauliflower",
+    "steamed cauliflower",
+    "cauliflower florets boiled",
+    "cooked cauliflower salted",
+    "cauliflower boiled drained"
+  ]
+}

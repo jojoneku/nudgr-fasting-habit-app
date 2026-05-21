@@ -1,0 +1,893 @@
+{
+  "fnri_F230": [
+    "deviled ham spread",
+    "ham spread canned",
+    "spiced ham spread",
+    "deviled ham tin",
+    "ham paste",
+    "sandwich spread ham",
+    "spicy ham spread",
+    "canned ham spread",
+    "deviled meat spread"
+  ],
+  "fnri_F231": [
+    "sweet ham chopped",
+    "canned sweet ham",
+    "chopped ham pork",
+    "sliced sweet ham",
+    "honey ham canned",
+    "sweet pork ham",
+    "luncheon ham sweet",
+    "chopped pork ham",
+    "sweet cured ham"
+  ],
+  "fnri_F232": [
+    "burger patty",
+    "beef patty",
+    "ground beef patty",
+    "grilled patty",
+    "fried burger patty",
+    "meat patty",
+    "hamburger meat",
+    "beef burger patty",
+    "pan fried patty",
+    "ground meat patty"
+  ],
+  "fnri_F233": [
+    "canned liver pate",
+    "liver pate tin",
+    "duck pate",
+    "chicken liver pate",
+    "pork liver pate",
+    "pate de foie",
+    "liver mousse",
+    "canned pate",
+    "foie pate"
+  ],
+  "fnri_F234": [
+    "liver spread canned",
+    "chicken liver spread",
+    "pork liver spread",
+    "liver paste",
+    "spread ng atay",
+    "atay spread",
+    "liver sandwich spread",
+    "canned liver paste",
+    "liver spread sandwich"
+  ],
+  "fnri_F235": [
+    "canned luncheon meat",
+    "spam",
+    "luncheon meat tin",
+    "canned meat sliced",
+    "fried luncheon meat",
+    "spam fried",
+    "canned spam",
+    "luncheon meat can",
+    "tinned meat"
+  ],
+  "fnri_F236": [
+    "deviled luncheon meat spread",
+    "spiced meat spread",
+    "deviled meat paste",
+    "luncheon spread spicy",
+    "canned deviled spread",
+    "potted deviled meat",
+    "deviled spam spread",
+    "spicy luncheon spread"
+  ],
+  "fnri_F237": [
+    "pork and ham luncheon meat",
+    "ham luncheon meat",
+    "spam pork ham",
+    "canned pork ham meat",
+    "luncheon meat pork ham",
+    "ham spam",
+    "pork ham can",
+    "canned ham meat",
+    "luncheon pork ham slice"
+  ],
+  "fnri_F238": [
+    "chinese style luncheon meat",
+    "chinese canned meat",
+    "pork luncheon meat chinese",
+    "asado luncheon meat",
+    "chinese spam",
+    "asian style canned meat",
+    "oriental luncheon meat",
+    "chinese pork can"
+  ],
+  "fnri_F240": [
+    "meatloaf",
+    "meat loaf baked",
+    "baked meatloaf",
+    "ground beef loaf",
+    "meatloaf slice",
+    "homemade meatloaf",
+    "pork meatloaf",
+    "sliced meat loaf",
+    "beef meatloaf",
+    "loaf ng karne"
+  ],
+  "fnri_F241": [
+    "chicharon laman loob",
+    "internal organ crackling",
+    "offal crackling",
+    "chicharon bituka",
+    "pork organ chicharon",
+    "fried pork organs",
+    "crispy pork innards",
+    "chicharon ng lamang loob"
+  ],
+  "fnri_F242": [
+    "chicharon",
+    "pork skin crackling",
+    "fried pork skin",
+    "crispy pork skin",
+    "chicharon baboy",
+    "pork rind",
+    "chicharron",
+    "cracklings",
+    "crispy pork rind",
+    "fried pork rinds"
+  ],
+  "fnri_F243": [
+    "dried pork",
+    "pork jerky strips",
+    "cured dried pork",
+    "pork tapa dried",
+    "dried cured pork meat",
+    "pork biltong",
+    "chewy pork snack",
+    "pork dry meat",
+    "jerky baboy"
+  ],
+  "fnri_F245": [
+    "sweet cured pork",
+    "tocino",
+    "sweet pork cured",
+    "cured pork sweet",
+    "marinated sweet pork",
+    "tocino baboy",
+    "filipino sweet pork",
+    "pan fried tocino",
+    "sweet pork breakfast"
+  ],
+  "fnri_F246": [
+    "pampanga tocino",
+    "sweet cured pork pampanga",
+    "kapampangan tocino",
+    "tocino pampanga style",
+    "pampanga sweet pork",
+    "sweet pork from pampanga",
+    "kapampangan sweet pork",
+    "pampanga cured pork"
+  ],
+  "fnri_F247": [
+    "potted meat spread",
+    "canned meat spread with cereal",
+    "potted meat tin",
+    "canned potted meat",
+    "meat paste cereal",
+    "deviled potted meat",
+    "tinned meat paste",
+    "potted meat sandwich",
+    "canned meat paste"
+  ],
+  "fnri_F248": [
+    "bologna sausage",
+    "boloney",
+    "baloney sausage",
+    "bologna slice",
+    "bologna cold cut",
+    "sliced bologna",
+    "fried bologna",
+    "bologna deli meat",
+    "baloney cold cut",
+    "luncheon bologna"
+  ],
+  "fnri_F249": [
+    "chorizo sausage",
+    "spanish chorizo",
+    "pork chorizo",
+    "chorizo de bilbao",
+    "spicy sausage",
+    "chorizo fried",
+    "filipino chorizo",
+    "red sausage",
+    "longanisa chorizo"
+  ],
+  "fnri_F250": [
+    "chorizo bilbao",
+    "bilbao sausage",
+    "chorizo de bilbao",
+    "spanish bilbao sausage",
+    "red spanish sausage",
+    "bilbao style chorizo",
+    "de bilbao sausage",
+    "cured red sausage bilbao"
+  ],
+  "fnri_F251": [
+    "frankfurter sausage",
+    "frank sausage",
+    "franks",
+    "grilled frankfurter",
+    "boiled frankfurter",
+    "frank hotdog",
+    "wienerwurst",
+    "beef frank sausage",
+    "fried frankfurter",
+    "pork frank"
+  ],
+  "fnri_F252": [
+    "ham sausage",
+    "sliced ham sausage",
+    "cured ham sausage",
+    "pork ham sausage link",
+    "breakfast ham sausage",
+    "ham link",
+    "smoked ham sausage",
+    "ham sausage slice"
+  ],
+  "fnri_F253": [
+    "hotdog",
+    "hot dog",
+    "hotdog sausage",
+    "fried hotdog",
+    "boiled hotdog",
+    "hotdog sandwich",
+    "pork hotdog",
+    "hotdog ulam",
+    "hotdog meal",
+    "hot dog sausage"
+  ],
+  "fnri_F254": [
+    "smoked hotdog",
+    "smoked hot dog",
+    "smoked sausage hotdog",
+    "smoky hotdog",
+    "grilled smoked hotdog",
+    "smoked frankfurter",
+    "smoked wiener",
+    "hickory smoked hotdog"
+  ],
+  "fnri_F255": [
+    "cheese hotdog",
+    "hotdog with cheese",
+    "cheesy hotdog",
+    "cheese filled hotdog",
+    "cheese frank",
+    "cheese stuffed hotdog",
+    "cheese dog",
+    "hotdog cheese filled"
+  ],
+  "fnri_F256": [
+    "mortadella sausage",
+    "mortadella slice",
+    "italian sausage mortadella",
+    "bologna mortadella",
+    "mortadella cold cut",
+    "sliced mortadella",
+    "pork mortadella",
+    "mortadella deli meat"
+  ],
+  "fnri_F257": [
+    "pork sausage link",
+    "breakfast sausage",
+    "fried pork sausage",
+    "grilled pork sausage",
+    "pork link",
+    "longanisa",
+    "pork sausage patty",
+    "pork banger",
+    "breakfast pork link"
+  ],
+  "fnri_F258": [
+    "pork and beef sausage",
+    "mixed sausage",
+    "pork beef link",
+    "beef pork sausage link",
+    "mixed meat sausage",
+    "grilled pork beef sausage",
+    "pork beef frank",
+    "combined meat sausage"
+  ],
+  "fnri_F259": [
+    "chinese pork sausage",
+    "lap cheong",
+    "lap chong",
+    "chinese sausage",
+    "sweet chinese sausage",
+    "dried chinese sausage",
+    "steamed chinese sausage",
+    "longganisa chinese style",
+    "lapchong"
+  ],
+  "fnri_F260": [
+    "salami slice",
+    "salami cold cut",
+    "hard salami",
+    "dry salami",
+    "sliced salami",
+    "italian salami",
+    "salami deli meat",
+    "salami sausage slice",
+    "cured salami"
+  ],
+  "fnri_F261": [
+    "vienna sausage",
+    "vienna sausage canned",
+    "canned vienna",
+    "cocktail sausage",
+    "mini sausage",
+    "baby sausage",
+    "small canned sausage",
+    "vienna canned meat",
+    "viena sausage"
+  ],
+  "fnri_F262": [
+    "vienna sausage tidbits",
+    "cocktail sausage bites",
+    "mini vienna bites",
+    "vienna sausage pieces",
+    "canned sausage tidbits",
+    "bite size vienna",
+    "small vienna sausage pieces",
+    "cocktail wiener bites"
+  ],
+  "fnri_F263": [
+    "deer jerky",
+    "venison dried meat",
+    "dried deer meat",
+    "wild game jerky",
+    "deer meat jerky",
+    "venison strips",
+    "dried venison",
+    "wild venison jerky"
+  ],
+  "fnri_F264": [
+    "chicken blood barbecue",
+    "chicken blood skewer",
+    "isaw manok dugo",
+    "bbq chicken blood",
+    "chicken blood stick",
+    "grilled chicken blood",
+    "dugo ng manok bbq",
+    "chicken blood on stick",
+    "betamax manok"
+  ],
+  "fnri_F265": [
+    "roasted chicken",
+    "whole roasted chicken",
+    "lechon manok",
+    "rotisserie chicken",
+    "seasoned roast chicken",
+    "whole chicken roasted",
+    "inasal manok",
+    "oven roasted chicken",
+    "grilled whole chicken",
+    "roast chicken whole"
+  ],
+  "fnri_F266": [
+    "roasted chicken no skin",
+    "skinless roasted chicken",
+    "lean roast chicken",
+    "roast chicken skinless",
+    "lechon manok no skin",
+    "rotisserie chicken skinless",
+    "roasted chicken without skin",
+    "skinless whole roasted chicken"
+  ],
+  "fnri_F267": [
+    "pork bbq",
+    "pork barbecue",
+    "grilled pork",
+    "pork skewer",
+    "bbq pork stick",
+    "inihaw na baboy",
+    "pork bbq stick",
+    "grilled pork skewer",
+    "filipino pork bbq",
+    "pork inasal"
+  ],
+  "fnri_F268": [
+    "roasted pork back skinless",
+    "pork back roasted no skin",
+    "lean roasted pork back",
+    "pork loin roasted skinless",
+    "roast pork back no fat",
+    "skinless roasted pork back",
+    "pork back lean roasted"
+  ],
+  "fnri_F269": [
+    "roasted pork belly",
+    "lechon liempo",
+    "baked pork belly",
+    "seasoned pork belly roasted",
+    "inihaw na liempo",
+    "liempo roasted",
+    "slow roasted pork belly",
+    "oven roasted liempo",
+    "pork belly baked"
+  ],
+  "fnri_F270": [
+    "roasted pork belly no skin",
+    "skinless pork belly roasted",
+    "lean roasted liempo",
+    "pork belly roasted no fat",
+    "liempo no skin roasted",
+    "skinless roasted pork belly",
+    "pork belly lean roasted"
+  ],
+  "fnri_F271": [
+    "roasted pork skin",
+    "lechon skin",
+    "crispy pork skin roasted",
+    "pork skin baked",
+    "roasted pork rind",
+    "seasoned pork skin roasted",
+    "crispy lechon skin",
+    "inihaw na balat ng baboy"
+  ],
+  "fnri_F272": [
+    "raw beef franks",
+    "uncooked beef frankfurter",
+    "beef hotdog raw",
+    "raw beef sausage",
+    "uncooked beef frank",
+    "raw beef wiener",
+    "beef frank uncooked"
+  ],
+  "fnri_F273": [
+    "pepperoni sausage",
+    "raw pepperoni",
+    "pizza pepperoni",
+    "pepperoni slice raw",
+    "uncooked pepperoni",
+    "cured pepperoni sausage",
+    "pepperoni meat raw",
+    "fresh pepperoni"
+  ],
+  "fnri_G001": [
+    "abalones",
+    "sea snail abalone",
+    "haliotis",
+    "abalone shellfish",
+    "abalone meat",
+    "giant sea snail",
+    "abalone shell meat"
+  ],
+  "fnri_G002": [
+    "abalone broth",
+    "abalone liquid",
+    "abalone extract juice",
+    "juice from abalone",
+    "abalone soup base",
+    "canned abalone juice",
+    "abalone water"
+  ],
+  "fnri_G003": [
+    "amber jack fish",
+    "amberjack",
+    "yellowtail amberjack",
+    "amber fish fillet",
+    "tanigue amber",
+    "fried amber fish",
+    "amberfish"
+  ],
+  "fnri_G004": [
+    "sinarapan fish",
+    "smallest fish",
+    "tabios",
+    "tiny freshwater fish",
+    "lake buhi fish",
+    "dwarf goby",
+    "sinarapan freshwater"
+  ],
+  "fnri_G005": [
+    "indian anchovy",
+    "dilis indian",
+    "big anchovy",
+    "adult anchovy",
+    "dilis isda",
+    "fried anchovy",
+    "dried anchovy adult"
+  ],
+  "fnri_G006": [
+    "long jaw anchovy headless",
+    "dilis without head",
+    "anchovy cleaned",
+    "long jawed dilis",
+    "anchovy fillet",
+    "headless anchovy"
+  ],
+  "fnri_G007": [
+    "whole anchovy",
+    "dilis buong",
+    "whole dilis",
+    "long jaw anchovy whole",
+    "fresh whole anchovy",
+    "raw whole dilis"
+  ],
+  "fnri_G008": [
+    "striped barracuda",
+    "sea pike",
+    "barakuda",
+    "barracuda fish",
+    "fried barracuda",
+    "grilled barracuda",
+    "barracuda fillet"
+  ],
+  "fnri_G009": [
+    "threadfin butterfly fish",
+    "threadfin fish",
+    "banjo fish",
+    "buwan buwan",
+    "butterfly fish fillet",
+    "threadfin bream"
+  ],
+  "fnri_G010": [
+    "goldband fusilier",
+    "dalagang bukid",
+    "fusilier fish",
+    "yellow fusilier",
+    "dalaga sa bukid",
+    "fried fusilier",
+    "goldband fish"
+  ],
+  "fnri_G011": [
+    "cardinal fish",
+    "small red fish",
+    "cardinalis fish",
+    "bunsog",
+    "night fish",
+    "cardinal sea fish"
+  ],
+  "fnri_G012": [
+    "carp fish",
+    "karpa",
+    "freshwater carp",
+    "common carp",
+    "fried carp",
+    "river carp",
+    "koi carp edible"
+  ],
+  "fnri_G013": [
+    "freshwater catfish",
+    "hito",
+    "mudfish catfish",
+    "hito sa ilog",
+    "river catfish",
+    "fried hito",
+    "grilled catfish fresh"
+  ],
+  "fnri_G014": [
+    "saltwater catfish",
+    "sea catfish",
+    "kanduli",
+    "marine catfish",
+    "ocean catfish",
+    "fried kanduli"
+  ],
+  "fnri_G015": [
+    "banded cavalla",
+    "talakitok",
+    "banded trevally",
+    "talakitok fish",
+    "cavalla fish",
+    "jack fish banded"
+  ],
+  "fnri_G016": [
+    "fried banded cavalla",
+    "fried talakitok",
+    "pritong talakitok",
+    "fried trevally",
+    "talakitok fried",
+    "fried cavalla fish"
+  ],
+  "fnri_G017": [
+    "steamed banded cavalla",
+    "steamed talakitok",
+    "talakitok steamed",
+    "steamed trevally",
+    "cavalla steamed"
+  ],
+  "fnri_G018": [
+    "bilakong clam",
+    "bilakong shell",
+    "bilakong shellfish",
+    "bilakong filipino clam",
+    "bilakong tahong"
+  ],
+  "fnri_G019": [
+    "freshwater clam",
+    "tulya",
+    "river clam",
+    "small freshwater clam",
+    "tulya shell",
+    "tulya shellfish"
+  ],
+  "fnri_G020": [
+    "boiled tulya",
+    "boiled freshwater clam",
+    "tulya nilaga",
+    "cooked tulya",
+    "steamed tulya",
+    "tulya boiled"
+  ],
+  "fnri_G021": [
+    "halaan",
+    "saltwater clam",
+    "halaan shell",
+    "manila clam",
+    "halaan shellfish",
+    "sea clam halaan"
+  ],
+  "fnri_G022": [
+    "boiled halaan",
+    "halaan nilaga",
+    "cooked halaan clam",
+    "steamed halaan",
+    "halaan soup clam",
+    "boiled manila clam"
+  ],
+  "fnri_G023": [
+    "imbao clam",
+    "imbao shell",
+    "imbao shellfish",
+    "visayan clam imbao",
+    "large river clam"
+  ],
+  "fnri_G024": [
+    "boiled imbao",
+    "cooked imbao clam",
+    "imbao nilaga",
+    "steamed imbao",
+    "imbao boiled"
+  ],
+  "fnri_G025": [
+    "kabibi clam",
+    "kabibi shell",
+    "kabibi shellfish",
+    "small clam kabibi",
+    "kabibi filipino"
+  ],
+  "fnri_G026": [
+    "kanturi clam",
+    "kanturi shell",
+    "kanturi shellfish",
+    "filipino kanturi",
+    "spiny clam"
+  ],
+  "fnri_G027": [
+    "lukan clam",
+    "lukan shell",
+    "lukan shellfish",
+    "filipino lukan clam"
+  ],
+  "fnri_G028": [
+    "rayed shell clam",
+    "rayed clam",
+    "rayed shell shellfish",
+    "striped clam shell"
+  ],
+  "fnri_G029": [
+    "razor clam",
+    "razor shell",
+    "razor shell clam",
+    "elongated clam",
+    "razor shellfish",
+    "sword clam"
+  ],
+  "fnri_G030": [
+    "tongue clam",
+    "shell tongue clam",
+    "tongue shell",
+    "tongue shellfish"
+  ],
+  "fnri_G031": [
+    "tongue clam blanched",
+    "blanched tongue clam head",
+    "cooked tongue clam head",
+    "tongue shell blanched"
+  ],
+  "fnri_G032": [
+    "tongue clam tail",
+    "tail of tongue shell",
+    "tongue clam rear",
+    "tongue shell tail portion"
+  ],
+  "fnri_G033": [
+    "venus clam",
+    "venus shell",
+    "venus shellfish",
+    "sea venus clam",
+    "smooth shell clam"
+  ],
+  "fnri_G034": [
+    "wedge clam",
+    "bean clam",
+    "wedge shell",
+    "small wedge clam",
+    "bean shell clam"
+  ],
+  "fnri_G035": [
+    "climbing perch",
+    "martiniko",
+    "common climbing perch",
+    "river perch climbing",
+    "walking fish",
+    "anabas"
+  ],
+  "fnri_G036": [
+    "alimasag with fat",
+    "blue crab with fat",
+    "swimming crab fat",
+    "alimasag aligue",
+    "blue swimming crab aligue",
+    "crab with roe fat"
+  ],
+  "fnri_G037": [
+    "alimasag without fat",
+    "blue crab no fat",
+    "swimming crab lean",
+    "alimasag walang taba",
+    "blue crab meat only"
+  ],
+  "fnri_G038": [
+    "boiled blue crab",
+    "boiled alimasag",
+    "blue swimming crab boiled",
+    "alimasag nilaga",
+    "cooked blue crab",
+    "steamed alimasag"
+  ],
+  "fnri_G039": [
+    "alimango with fat",
+    "mud crab with fat",
+    "mangrove crab fat",
+    "alimango aligue",
+    "mud crab roe",
+    "alimango may taba"
+  ],
+  "fnri_G040": [
+    "alimango without fat",
+    "mud crab no fat",
+    "mangrove crab lean",
+    "alimango walang taba",
+    "mud crab meat only"
+  ],
+  "fnri_G041": [
+    "boiled alimango",
+    "boiled mud crab",
+    "alimango nilaga",
+    "cooked mud crab",
+    "steamed mud crab",
+    "alimango boiled"
+  ],
+  "fnri_G042": [
+    "shore crab",
+    "small sea crab",
+    "rock crab",
+    "coastal crab",
+    "shore crab small"
+  ],
+  "fnri_G043": [
+    "deep bellied crevalle",
+    "deep belly jack fish",
+    "crevalle jack",
+    "talakitok deep belly",
+    "deep bellied jack"
+  ],
+  "fnri_G044": [
+    "even bellied crevalle",
+    "even belly jack fish",
+    "flat belly crevalle",
+    "even belly trevally"
+  ],
+  "fnri_G045": [
+    "tigertooth croaker",
+    "tiger croaker fish",
+    "croaker fish tiger",
+    "tigertooth fish",
+    "croaker sea fish"
+  ],
+  "fnri_G046": [
+    "plain croaker",
+    "croaker fish",
+    "sea croaker",
+    "white croaker",
+    "plain sea croaker"
+  ],
+  "fnri_G047": [
+    "whiskered croaker",
+    "smooth scaled croaker",
+    "whiskered fish croaker",
+    "croaker whiskered sea"
+  ],
+  "fnri_G048": [
+    "speckled drepane",
+    "spade fish",
+    "concertina fish",
+    "spotted drepane",
+    "drepane fish speckled"
+  ],
+  "fnri_G049": [
+    "silver pike eel",
+    "pike eel",
+    "silver eel",
+    "silver pike fish",
+    "long silver eel"
+  ],
+  "fnri_G050": [
+    "swamp eel",
+    "freshwater eel",
+    "kasili",
+    "muddy eel",
+    "river eel",
+    "kasili swamp"
+  ],
+  "fnri_G051": [
+    "fish eggs",
+    "fish roe",
+    "tobiko",
+    "fish caviar",
+    "isda itlog",
+    "fish egg roe",
+    "roe eggs fish",
+    "fish spawn"
+  ],
+  "fnri_G052": [
+    "rough scaled flatfish",
+    "rough flatfish",
+    "brill fish rough",
+    "roughscale flounder",
+    "flatfish rough"
+  ],
+  "fnri_G053": [
+    "smooth scaled flatfish",
+    "smooth brill",
+    "flatfish smooth",
+    "smooth flounder",
+    "smooth scale brill"
+  ],
+  "fnri_G054": [
+    "indian turbot",
+    "indian flatfish",
+    "turbot indian",
+    "flatfish turbot",
+    "indian flounder"
+  ],
+  "fnri_G055": [
+    "indian flathead fish",
+    "flathead fish",
+    "papakol",
+    "flathead sea fish",
+    "indian flathead fillet"
+  ],
+  "fnri_G056": [
+    "flying fish",
+    "bangsi",
+    "winged fish",
+    "flying fish fillet",
+    "bangsi isda",
+    "fried flying fish"
+  ],
+  "fnri_G057": [
+    "garfish",
+    "common garfish",
+    "needlefish",
+    "bill fish small",
+    "sea needle fish",
+    "long nose fish"
+  ],
+  "fnri_G058": [
+    "gizzard shad",
+    "tunsoy",
+    "short finned shad",
+    "gizzard fish",
+    "tunsoy isda",
+    "fried tunsoy",
+    "shad fish"
+  ]
+}

@@ -1634,11 +1634,95 @@ class _ChatInputBarState extends State<_ChatInputBar> {
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
 
+  static final _qtyPrefixRe = RegExp(r'^\d');
+  static final _leftWordRe = RegExp(r'\S+$');
+  static final _rightWordRe = RegExp(r'^\S+');
+
+  Timer? _suggestTimer;
+  String? _suggestQuery;
+  List<String> _suggestions = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl.addListener(_onInputChanged);
+    _focus.addListener(_onInputChanged);
+  }
+
   @override
   void dispose() {
+    _suggestTimer?.cancel();
+    _ctrl.removeListener(_onInputChanged);
+    _focus.removeListener(_onInputChanged);
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  void _onInputChanged() {
+    if (!_focus.hasFocus) {
+      _clearSuggestions();
+      return;
+    }
+    final prefix = _caretLeftToken();
+    if (prefix == null) {
+      _clearSuggestions();
+      return;
+    }
+    if (prefix == _suggestQuery) return;
+    _suggestQuery = prefix;
+    _suggestTimer?.cancel();
+    _suggestTimer = Timer(const Duration(milliseconds: 120), () async {
+      if (!mounted) return;
+      final results = await widget.presenter.suggestFoodNames(prefix);
+      if (!mounted || _suggestQuery != prefix) return;
+      setState(() => _suggestions = results);
+    });
+  }
+
+  void _clearSuggestions() {
+    _suggestTimer?.cancel();
+    if (_suggestQuery == null && _suggestions.isEmpty) return;
+    _suggestQuery = null;
+    if (mounted) setState(() => _suggestions = const []);
+  }
+
+  /// The whitespace-bounded token to the left of the caret — what the user
+  /// is currently typing. Returns null if too short or starts with a digit
+  /// (avoids suggesting on quantities like "100", "100g", "2").
+  String? _caretLeftToken() {
+    final text = _ctrl.text;
+    final sel = _ctrl.selection;
+    if (!sel.isValid || !sel.isCollapsed) return null;
+    final caret = sel.baseOffset.clamp(0, text.length);
+    final left = text.substring(0, caret);
+    final match = _leftWordRe.firstMatch(left);
+    if (match == null) return null;
+    final token = match.group(0)!;
+    if (token.length < 2) return null;
+    if (_qtyPrefixRe.hasMatch(token)) return null;
+    return token;
+  }
+
+  void _onSuggestionTap(String name) {
+    final text = _ctrl.text;
+    final caret = _ctrl.selection.baseOffset.clamp(0, text.length);
+    final left = text.substring(0, caret);
+    final right = text.substring(caret);
+    final leftToken = _leftWordRe.firstMatch(left)?.group(0) ?? '';
+    final rightToken = _rightWordRe.firstMatch(right)?.group(0) ?? '';
+    final wordStart = caret - leftToken.length;
+    final wordEnd = caret + rightToken.length;
+    final replacement = '$name ';
+    final newText =
+        text.substring(0, wordStart) + replacement + text.substring(wordEnd);
+    final newCaret = wordStart + replacement.length;
+    _ctrl.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newCaret),
+    );
+    _focus.requestFocus();
+    _clearSuggestions();
   }
 
   void _send() {
@@ -1679,83 +1763,137 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     final isToday = widget.presenter.isSelectedDateToday;
 
     final cs = Theme.of(context).colorScheme;
+    final showSuggestions =
+        isToday && !locked && _suggestions.isNotEmpty && _focus.hasFocus;
     return Container(
       color: cs.surface,
       padding: EdgeInsets.fromLTRB(
           12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          IconButton(
-            icon: Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
-            onPressed: isToday ? () => _showTemplates(context) : null,
-            tooltip: 'Templates',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-          IconButton(
-            icon: Icon(Icons.qr_code_scanner, color: cs.onSurfaceVariant),
-            onPressed: isToday && !locked
-                ? () =>
-                    showBarcodeScanFlow(context, presenter: widget.presenter)
-                : null,
-            tooltip: 'Scan barcode',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-          IconButton(
-            icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
-            onPressed:
-                isToday && !locked ? () => _showManualAdd(context) : null,
-            tooltip: 'Add manually',
-            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          ),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(24),
+          if (showSuggestions) _buildSuggestionStrip(cs),
+          Row(
+            children: [
+              IconButton(
+                icon:
+                    Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
+                onPressed: isToday ? () => _showTemplates(context) : null,
+                tooltip: 'Templates',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
-              child: TextField(
-                controller: _ctrl,
-                focusNode: _focus,
-                enabled: isToday && !locked,
-                style: TextStyle(color: cs.onSurface, fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: locked
-                      ? 'Fasting — logging paused'
-                      : !isToday
-                          ? 'View only — select today to log'
-                          : 'Log food or exercise…',
-                  hintStyle:
-                      TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8),
+              IconButton(
+                icon: Icon(Icons.qr_code_scanner, color: cs.onSurfaceVariant),
+                onPressed: isToday && !locked
+                    ? () => showBarcodeScanFlow(context,
+                        presenter: widget.presenter)
+                    : null,
+                tooltip: 'Scan barcode',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+              IconButton(
+                icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
+                onPressed:
+                    isToday && !locked ? () => _showManualAdd(context) : null,
+                tooltip: 'Add manually',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+              Expanded(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: TextField(
+                    controller: _ctrl,
+                    focusNode: _focus,
+                    enabled: isToday && !locked,
+                    style: TextStyle(color: cs.onSurface, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: locked
+                          ? 'Fasting — logging paused'
+                          : !isToday
+                              ? 'View only — select today to log'
+                              : 'Log food or exercise…',
+                      hintStyle:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _send(),
+                  ),
                 ),
-                textInputAction: TextInputAction.send,
-                onSubmitted: (_) => _send(),
               ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          GestureDetector(
-            onTap: isToday && !locked ? _send : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color:
-                    isToday && !locked ? cs.primary : cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(22),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: isToday && !locked ? _send : null,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: isToday && !locked
+                        ? cs.primary
+                        : cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: Icon(
+                    Icons.arrow_upward,
+                    color:
+                        isToday && !locked ? cs.onPrimary : cs.onSurfaceVariant,
+                    size: 20,
+                  ),
+                ),
               ),
-              child: Icon(
-                Icons.arrow_upward,
-                color: isToday && !locked ? cs.onPrimary : cs.onSurfaceVariant,
-                size: 20,
-              ),
-            ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestionStrip(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SizedBox(
+        height: 36,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          itemCount: _suggestions.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 6),
+          itemBuilder: (_, i) {
+            final name = _suggestions[i];
+            return InkWell(
+              onTap: () => _onSuggestionTap(name),
+              borderRadius: BorderRadius.circular(18),
+              child: Container(
+                alignment: Alignment.center,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Text(
+                  name,
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }

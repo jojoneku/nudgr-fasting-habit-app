@@ -1,0 +1,1002 @@
+{
+  "usda_2708095": [
+    "chewy granola bar",
+    "quaker chewy bar",
+    "oat granola bar",
+    "chewy oat bar",
+    "soft granola bar",
+    "quaker bar",
+    "granola snack bar",
+    "chewy oats bar"
+  ],
+  "usda_2708096": [
+    "low calorie granola bar",
+    "90 cal granola bar",
+    "light granola bar",
+    "quaker low cal bar",
+    "diet granola bar",
+    "quaker 90 calorie bar",
+    "low cal chewy bar",
+    "skinny granola bar"
+  ],
+  "usda_2708097": [
+    "less sugar granola bar",
+    "reduced sugar chewy bar",
+    "low sugar granola bar",
+    "quaker low sugar bar",
+    "less sweet granola bar",
+    "sugar reduced oat bar",
+    "quaker reduced sugar bar",
+    "light sugar granola bar"
+  ],
+  "usda_2708098": [
+    "chocolate dipped granola bar",
+    "dipps granola bar",
+    "chocolate covered chewy bar",
+    "quaker dipps bar",
+    "chocolate granola bar",
+    "dipped oat bar",
+    "choco granola bar",
+    "quaker choco dipped bar"
+  ],
+  "usda_2708099": [
+    "granola bites",
+    "quaker granola bites",
+    "bite size granola",
+    "mini granola snacks",
+    "granola snack bites",
+    "oat bites snack",
+    "quaker oat bites",
+    "small granola pieces"
+  ],
+  "usda_2708100": [
+    "oatmeal snack bar",
+    "oat bar",
+    "oatmeal bar",
+    "oat snack bar",
+    "baked oatmeal bar",
+    "oat breakfast bar",
+    "soft oat bar",
+    "oatmeal energy bar"
+  ],
+  "usda_2708101": [
+    "granola bar",
+    "cereal bar",
+    "oat bar snack",
+    "snack bar",
+    "grain bar",
+    "crunchy granola bar",
+    "basic granola bar",
+    "generic granola bar"
+  ],
+  "usda_2708102": [
+    "low fat granola bar",
+    "lowfat cereal bar",
+    "light cereal bar",
+    "reduced fat granola bar",
+    "low fat oat bar",
+    "lean granola bar",
+    "light oat snack bar",
+    "low fat snack bar"
+  ],
+  "usda_2708103": [
+    "fat free granola bar",
+    "nonfat cereal bar",
+    "zero fat granola bar",
+    "fat free oat bar",
+    "no fat granola bar",
+    "nonfat snack bar",
+    "fat free cereal bar",
+    "nonfat oat bar"
+  ],
+  "usda_2708104": [
+    "reduced sugar cereal bar",
+    "low sugar cereal bar",
+    "less sugar snack bar",
+    "sugar free granola bar",
+    "low sugar oat bar",
+    "diet cereal bar",
+    "light sugar snack bar",
+    "reduced sugar oat bar"
+  ],
+  "usda_2708105": [
+    "fruit and nut bar",
+    "fruit nut granola bar",
+    "trail mix bar",
+    "fruit nut cereal bar",
+    "dried fruit nut bar",
+    "fruit grain bar",
+    "nut and fruit snack bar",
+    "fruity granola bar"
+  ],
+  "usda_2708106": [
+    "peanut granola bar",
+    "peanut oat bar",
+    "wheat germ granola bar",
+    "peanut wheat bar",
+    "oat peanut snack bar",
+    "peanut oats cereal bar",
+    "nutty grain bar",
+    "peanut oat granola bar"
+  ],
+  "usda_2708107": [
+    "chocolate covered granola bar",
+    "choco coated granola bar",
+    "chocolate granola bar",
+    "chocolate cereal bar",
+    "choco dipped granola bar",
+    "chocolate oat bar",
+    "candy coated granola bar",
+    "chocolate snack bar"
+  ],
+  "usda_2708108": [
+    "coconut chocolate granola bar",
+    "coconut choco bar",
+    "chocolate coconut cereal bar",
+    "coconut oat bar chocolate",
+    "choco coconut bar",
+    "tropical chocolate granola bar",
+    "coconut coated choco bar",
+    "coconut chocolate oat bar"
+  ],
+  "usda_2708109": [
+    "chocolate nut granola bar",
+    "nut chocolate bar",
+    "choco almond granola bar",
+    "nutty chocolate cereal bar",
+    "chocolate peanut granola bar",
+    "nut coated chocolate bar",
+    "choco walnut bar",
+    "nuts and chocolate snack bar"
+  ],
+  "usda_2708110": [
+    "yogurt coated nut bar",
+    "oat nut coated bar",
+    "non-chocolate coated granola bar",
+    "vanilla coated granola bar",
+    "white coated oat bar",
+    "coated nuts granola bar",
+    "oat nut snack bar coated",
+    "white coating cereal bar"
+  ],
+  "usda_2708111": [
+    "coated granola bar",
+    "non-chocolate coated bar",
+    "yogurt coated granola bar",
+    "white coated cereal bar",
+    "vanilla coated cereal bar",
+    "coated oat bar",
+    "frosted granola bar",
+    "glazed granola bar"
+  ],
+  "usda_2708112": [
+    "high fiber yogurt granola bar",
+    "fiber granola bar yogurt",
+    "yogurt coated fiber bar",
+    "high fiber cereal bar",
+    "probiotic granola bar",
+    "fiber oat yogurt bar",
+    "healthy fiber bar",
+    "yogurt dipped fiber bar"
+  ],
+  "usda_2708113": [
+    "rice cereal granola bar",
+    "crispy rice bar",
+    "rice granola bar",
+    "rice grain snack bar",
+    "puffed rice granola bar",
+    "crispy oat rice bar",
+    "rice crunch bar",
+    "granola rice crispy bar"
+  ],
+  "usda_2708114": [
+    "breakfast bar",
+    "morning snack bar",
+    "cereal breakfast bar",
+    "morning bar",
+    "on the go breakfast bar",
+    "quick breakfast bar",
+    "grab and go bar",
+    "snack breakfast bar"
+  ],
+  "usda_2708115": [
+    "date bar",
+    "date yogurt bar",
+    "date snack bar",
+    "yogurt coated date bar",
+    "fruit date bar",
+    "dried date breakfast bar",
+    "date morning bar",
+    "yogurt date snack"
+  ],
+  "usda_2708116": [
+    "fruit filled breakfast bar",
+    "cereal bar with fruit",
+    "low fat fruit bar",
+    "pastry breakfast bar",
+    "fruit cereal bar",
+    "morning fruit bar",
+    "jam filled cereal bar",
+    "fruit crust bar"
+  ],
+  "usda_2708117": [
+    "balance bar",
+    "protein snack bar",
+    "balanced nutrition bar",
+    "meal replacement bar",
+    "energy snack bar",
+    "balanced energy bar",
+    "protein energy bar",
+    "balance nutrition bar"
+  ],
+  "usda_2708118": [
+    "clif bar",
+    "clif energy bar",
+    "athlete energy bar",
+    "oat energy bar",
+    "sports snack bar",
+    "outdoor energy bar",
+    "cycling snack bar",
+    "endurance bar"
+  ],
+  "usda_2708119": [
+    "kids energy bar",
+    "clif kids bar",
+    "zbar",
+    "organic kids snack bar",
+    "kids granola bar",
+    "childrens energy bar",
+    "organic snack bar kids",
+    "clif kids snack"
+  ],
+  "usda_2708120": [
+    "power bar",
+    "sports energy bar",
+    "athlete bar",
+    "workout bar",
+    "endurance energy bar",
+    "pre workout bar",
+    "training bar",
+    "sports nutrition bar"
+  ],
+  "usda_2708121": [
+    "slim fast bar",
+    "meal replacement bar diet",
+    "diet meal bar",
+    "weight loss bar",
+    "slimming bar",
+    "diet snack bar",
+    "low calorie meal bar",
+    "slim fast meal bar"
+  ],
+  "usda_2708122": [
+    "snickers protein bar",
+    "marathon protein bar",
+    "snickers energy bar",
+    "chocolate protein bar",
+    "candy protein bar",
+    "snickers bar protein",
+    "marathon bar",
+    "protein chocolate bar"
+  ],
+  "usda_2708123": [
+    "south beach bar",
+    "low carb meal bar",
+    "diet meal replacement bar",
+    "south beach meal bar",
+    "low carb snack bar",
+    "healthy meal bar",
+    "south beach snack",
+    "low carb diet bar"
+  ],
+  "usda_2708124": [
+    "high protein bar",
+    "south beach protein bar",
+    "low carb protein bar",
+    "lean protein snack bar",
+    "south beach high protein",
+    "protein diet bar",
+    "low carb high protein bar",
+    "muscle snack bar"
+  ],
+  "usda_2708125": [
+    "tigers milk bar",
+    "peanut butter protein bar",
+    "classic protein bar",
+    "milk protein bar",
+    "peanut protein snack bar",
+    "tigers milk snack",
+    "peanut butter nutrition bar",
+    "classic nutrition bar"
+  ],
+  "usda_2708126": [
+    "zone bar",
+    "zone perfect bar",
+    "balanced protein bar",
+    "zone crunch bar",
+    "protein crunch bar",
+    "zone nutrition bar",
+    "zone snack bar",
+    "perfect zone bar"
+  ],
+  "usda_2708127": [
+    "nutrition bar",
+    "meal replacement bar",
+    "energy bar",
+    "protein bar",
+    "health bar",
+    "diet bar",
+    "supplement bar",
+    "meal bar"
+  ],
+  "usda_2708128": [
+    "baby snack",
+    "toddler snack",
+    "baby finger food",
+    "toddler finger food",
+    "infant snack",
+    "baby treat",
+    "toddler treat",
+    "baby food snack"
+  ],
+  "usda_2708129": [
+    "toddler bar",
+    "baby snack bar",
+    "infant bar",
+    "kids snack bar",
+    "baby oat bar",
+    "toddler snack bar",
+    "baby grain bar",
+    "infant snack bar"
+  ],
+  "usda_2708130": [
+    "toddler cookie",
+    "baby cookie",
+    "infant cookie",
+    "soft baby cookie",
+    "toddler sweet snack",
+    "baby biscuit cookie",
+    "kids cookie snack",
+    "baby soft cookie"
+  ],
+  "usda_2708131": [
+    "baby biscuit",
+    "teething biscuit",
+    "infant biscuit",
+    "toddler biscuit",
+    "teething cracker",
+    "baby teething snack",
+    "soft baby biscuit",
+    "infant teether biscuit"
+  ],
+  "usda_2708132": [
+    "crackers",
+    "snack crackers",
+    "plain crackers",
+    "savory crackers",
+    "salted crackers",
+    "crunchy crackers",
+    "dry crackers",
+    "snack time crackers"
+  ],
+  "usda_2708133": [
+    "graham crackers",
+    "honey graham crackers",
+    "graham wafers",
+    "honey grahams",
+    "graham snack crackers",
+    "graham squares",
+    "honey wheat crackers",
+    "graham snacks"
+  ],
+  "usda_2708134": [
+    "teddy grahams",
+    "bear crackers",
+    "honey bear crackers",
+    "teddy bear cookies",
+    "mini bear snacks",
+    "bite size graham crackers",
+    "honey teddy snacks",
+    "bear shaped crackers"
+  ],
+  "usda_2708135": [
+    "chocolate graham crackers",
+    "choco covered grahams",
+    "chocolate dipped graham crackers",
+    "choco grahams",
+    "smores crackers",
+    "chocolate honey grahams",
+    "dark chocolate grahams",
+    "chocolate wafer crackers"
+  ],
+  "usda_2708136": [
+    "oatmeal crackers",
+    "oat crackers",
+    "oat snack crackers",
+    "oaty crackers",
+    "oatmeal crisps",
+    "oat crunchy crackers",
+    "rolled oat crackers",
+    "oatmeal biscuit crackers"
+  ],
+  "usda_2708137": [
+    "cuban crackers",
+    "latin crackers",
+    "galletas cubanas",
+    "cuban biscuits",
+    "cuban style crackers",
+    "hispanic crackers",
+    "galletas",
+    "cuban snack crackers"
+  ],
+  "usda_2708138": [
+    "low fat graham crackers",
+    "reduced fat grahams",
+    "light graham crackers",
+    "diet graham crackers",
+    "lite grahams",
+    "lower fat honey grahams",
+    "reduced fat graham wafers",
+    "light honey grahams"
+  ],
+  "usda_2708139": [
+    "graham cracker sandwich",
+    "filled graham crackers",
+    "graham sandwich cookies",
+    "cream filled grahams",
+    "graham cracker with filling",
+    "stuffed graham crackers",
+    "sandwich grahams",
+    "graham cracker cream sandwich"
+  ],
+  "usda_2708140": [
+    "breakfast crackers",
+    "morning crackers",
+    "belvita style crackers",
+    "cereal crackers",
+    "whole grain breakfast crackers",
+    "biscuit crackers",
+    "on the go breakfast crackers",
+    "morning biscuit crackers"
+  ],
+  "usda_2708141": [
+    "low sodium butter crackers",
+    "reduced salt butter crackers",
+    "low salt butter crackers",
+    "unsalted butter crackers",
+    "lightly salted butter crackers",
+    "low sodium ritz style",
+    "low salt savory crackers",
+    "less sodium butter snack"
+  ],
+  "usda_2708142": [
+    "low sodium matzo",
+    "unsalted matzo",
+    "reduced salt matzah",
+    "lightly salted matzo",
+    "low sodium matzah crackers",
+    "less salt matzo",
+    "plain low salt matzo",
+    "low sodium jewish cracker"
+  ],
+  "usda_2708143": [
+    "low sodium saltines",
+    "reduced salt saltine crackers",
+    "lightly salted saltines",
+    "unsalted saltines",
+    "low salt soda crackers",
+    "less sodium soda crackers",
+    "low salt saltines",
+    "reduced sodium soda crackers"
+  ],
+  "usda_2708144": [
+    "low sodium wheat crackers",
+    "reduced salt wheat crackers",
+    "less salt wheat thins",
+    "lightly salted wheat crackers",
+    "low salt whole wheat crackers",
+    "low sodium grain crackers",
+    "unsalted wheat crackers",
+    "reduced sodium wheat snacks"
+  ],
+  "usda_2708145": [
+    "low sodium woven wheat crackers",
+    "reduced salt triscuit style",
+    "lightly salted woven crackers",
+    "low salt whole wheat woven",
+    "less sodium woven wheat",
+    "reduced sodium wheat woven",
+    "low salt woven crackers",
+    "unsalted woven wheat"
+  ],
+  "usda_2708146": [
+    "butter crackers",
+    "plain butter crackers",
+    "savory butter biscuits",
+    "rich buttery crackers",
+    "plain round crackers",
+    "buttery snack crackers",
+    "salted butter crackers",
+    "round butter crackers"
+  ],
+  "usda_2708147": [
+    "flavored butter crackers",
+    "seasoned butter crackers",
+    "herb butter crackers",
+    "butter crackers with seasoning",
+    "flavored round crackers",
+    "garlic butter crackers",
+    "spiced butter crackers",
+    "zesty butter crackers"
+  ],
+  "usda_2708148": [
+    "ritz crackers",
+    "ritz butter crackers",
+    "round buttery crackers",
+    "ritz snack crackers",
+    "buttery round crackers",
+    "ritz biscuits",
+    "classic round crackers",
+    "ritz style crackers"
+  ],
+  "usda_2708149": [
+    "reduced fat butter crackers",
+    "light butter crackers",
+    "low fat ritz style",
+    "less fat buttery crackers",
+    "diet butter crackers",
+    "lite round crackers",
+    "reduced fat round crackers",
+    "low fat savory crackers"
+  ],
+  "usda_2708150": [
+    "cheese crackers",
+    "cheddar crackers",
+    "cheesy crackers",
+    "cheese snack crackers",
+    "cheese flavored crackers",
+    "cheddar snack crackers",
+    "baked cheese crackers",
+    "cheesy biscuit crackers"
+  ],
+  "usda_2708151": [
+    "cheez it crackers",
+    "cheez-it snacks",
+    "square cheese crackers",
+    "cheez it bites",
+    "baked cheddar crackers",
+    "cheez crackers",
+    "cheddar square crackers",
+    "cheese square snacks"
+  ],
+  "usda_2708152": [
+    "goldfish crackers",
+    "goldfish snacks",
+    "fish shaped crackers",
+    "goldfish cheese crackers",
+    "pepperidge farm goldfish",
+    "fish crackers",
+    "cheddar fish crackers",
+    "goldfish baked snacks"
+  ],
+  "usda_2708154": [
+    "low sodium cheese crackers",
+    "reduced salt cheese crackers",
+    "lightly salted cheez it",
+    "low salt cheese snacks",
+    "less sodium cheddar crackers",
+    "unsalted cheese crackers",
+    "low sodium cheesy crackers",
+    "reduced sodium cheddar snacks"
+  ],
+  "usda_2708156": [
+    "crispbread",
+    "rye crispbread",
+    "swedish crispbread",
+    "finn crisp",
+    "ryecrisp",
+    "scandinavian crackers",
+    "rye crackers",
+    "thin crispy rye bread"
+  ],
+  "usda_2708157": [
+    "flatbread crackers",
+    "thin flatbread",
+    "flatbread snack",
+    "crispy flatbread",
+    "artisan flatbread cracker",
+    "lavash crackers",
+    "thin baked flatbread",
+    "flat cracker bread"
+  ],
+  "usda_2708158": [
+    "matzo",
+    "matzah",
+    "jewish crackers",
+    "passover crackers",
+    "matzo crackers",
+    "unleavened crackers",
+    "passover matzo",
+    "plain matzo board"
+  ],
+  "usda_2708160": [
+    "oyster crackers",
+    "soup crackers",
+    "small round crackers",
+    "chowder crackers",
+    "mini saltine crackers",
+    "tiny soup crackers",
+    "oyster snack crackers",
+    "clam chowder crackers"
+  ],
+  "usda_2708161": [
+    "rice chips",
+    "rice crisps",
+    "rice snack chips",
+    "puffed rice chips",
+    "baked rice chips",
+    "rice wafer chips",
+    "thin rice chips",
+    "rice cracker chips"
+  ],
+  "usda_2708162": [
+    "rice cake",
+    "puffed rice cake",
+    "plain rice cake",
+    "diet rice cake",
+    "rice wafer",
+    "low calorie rice snack",
+    "puffed grain cake",
+    "rice crisp cake"
+  ],
+  "usda_2708163": [
+    "rice crackers",
+    "asian rice crackers",
+    "baked rice crackers",
+    "crispy rice crackers",
+    "japanese rice crackers",
+    "rice snack crackers",
+    "senbei",
+    "rice wafer crackers"
+  ],
+  "usda_2708164": [
+    "rice nut crackers",
+    "rice and nut mix crackers",
+    "nutty rice crackers",
+    "mixed nut rice crackers",
+    "rice almond crackers",
+    "grain nut cracker",
+    "mixed rice crackers",
+    "nut rice snack"
+  ],
+  "usda_2708165": [
+    "popcorn cake",
+    "puffed popcorn cake",
+    "popcorn rice cake",
+    "light popcorn cake",
+    "popcorn snack cake",
+    "popped corn cake",
+    "popcorn wafer",
+    "popcorn puff cake"
+  ],
+  "usda_2708166": [
+    "rice paper",
+    "spring roll wrapper",
+    "rice paper wrapper",
+    "vietnamese rice paper",
+    "banh trang",
+    "spring roll skin",
+    "clear rice wrapper",
+    "rice flour wrapper"
+  ],
+  "usda_2708168": [
+    "low fat saltines",
+    "reduced fat soda crackers",
+    "light saltine crackers",
+    "diet saltines",
+    "less fat saltines",
+    "lite soda crackers",
+    "reduced fat crackers saltine",
+    "low fat salted crackers"
+  ],
+  "usda_2708169": [
+    "multigrain saltines",
+    "multi grain soda crackers",
+    "whole grain saltines",
+    "mixed grain crackers",
+    "multigrain salted crackers",
+    "seeded saltine crackers",
+    "multigrain snack crackers",
+    "mixed seed saltines"
+  ],
+  "usda_2708171": [
+    "sandwich crackers",
+    "cracker sandwiches",
+    "filled crackers",
+    "cracker snack pack",
+    "double cracker snack",
+    "stuffed crackers",
+    "cracker bites sandwich",
+    "two cracker snack"
+  ],
+  "usda_2708172": [
+    "peanut butter crackers",
+    "pb filled crackers",
+    "peanut butter sandwich crackers",
+    "crackers with peanut butter",
+    "peanut butter cracker snack",
+    "pb cracker sandwich",
+    "peanut butter cracker pack",
+    "pb cracker bites"
+  ],
+  "usda_2708173": [
+    "ritz peanut butter crackers",
+    "ritz pb sandwich",
+    "ritz with peanut butter",
+    "peanut butter ritz",
+    "ritz cracker pb pack",
+    "buttery pb crackers",
+    "ritz peanut butter snack",
+    "ritz pb bites"
+  ],
+  "usda_2708174": [
+    "reduced fat pb crackers",
+    "light peanut butter crackers",
+    "low fat peanut butter cracker sandwich",
+    "diet pb cracker",
+    "less fat pb crackers",
+    "reduced fat peanut butter sandwich",
+    "light pb filled crackers",
+    "low fat pb snack crackers"
+  ],
+  "usda_2708175": [
+    "whole grain pb crackers",
+    "whole wheat peanut butter crackers",
+    "multigrain peanut butter sandwich",
+    "whole grain pb sandwich crackers",
+    "healthy pb crackers",
+    "wheat pb cracker snack",
+    "whole grain peanut butter snack",
+    "whole wheat pb filled crackers"
+  ],
+  "usda_2708176": [
+    "cheese filled crackers",
+    "crackers with cheese",
+    "cheese cracker sandwich",
+    "cheddar filled crackers",
+    "cheese stuffed crackers",
+    "cheese cracker snack pack",
+    "cheesy cracker sandwich",
+    "cheese cracker bites"
+  ],
+  "usda_2708177": [
+    "ritz cheese crackers",
+    "ritz with cheese filling",
+    "ritz cheese sandwich",
+    "ritz cheddar crackers",
+    "ritz cheese snack",
+    "buttery cheese cracker pack",
+    "ritz cheese bites",
+    "ritz cheese filled crackers"
+  ],
+  "usda_2708178": [
+    "water crackers",
+    "plain water crackers",
+    "thin water crackers",
+    "bland crackers",
+    "neutral crackers",
+    "water biscuits",
+    "crispy water crackers",
+    "light plain crackers"
+  ],
+  "usda_2708179": [
+    "wonton crackers",
+    "wonton chips",
+    "crispy wonton",
+    "fried wonton strips",
+    "wonton skin chips",
+    "wonton snack crackers",
+    "asian wonton crackers",
+    "crispy wonton skins"
+  ],
+  "usda_2708180": [
+    "woven wheat crackers",
+    "whole wheat woven crackers",
+    "wheat woven snack",
+    "woven grain crackers",
+    "whole grain woven crackers",
+    "hearty wheat crackers",
+    "woven wheat snack",
+    "thick wheat crackers"
+  ],
+  "usda_2708181": [
+    "triscuit crackers",
+    "plain triscuits",
+    "original triscuit",
+    "wheat triscuit",
+    "woven wheat triscuit",
+    "shredded wheat cracker",
+    "triscuit snacks",
+    "plain woven wheat cracker"
+  ],
+  "usda_2708182": [
+    "flavored triscuit",
+    "triscuit seasoned",
+    "herb triscuit",
+    "rosemary triscuit",
+    "seasoned woven crackers",
+    "flavored wheat triscuit",
+    "triscuit herb crackers",
+    "roasted garlic triscuit"
+  ],
+  "usda_2708183": [
+    "reduced fat triscuit",
+    "light triscuit",
+    "low fat woven wheat crackers",
+    "diet triscuit",
+    "less fat triscuit",
+    "reduced fat whole wheat crackers",
+    "lighter triscuit",
+    "low fat wheat woven snack"
+  ],
+  "usda_2708184": [
+    "wheat crackers",
+    "whole wheat crackers",
+    "wheat snack crackers",
+    "hearty wheat crackers",
+    "plain wheat crackers",
+    "wheat biscuit crackers",
+    "whole grain wheat crackers",
+    "crunchy wheat crackers"
+  ],
+  "usda_2708185": [
+    "wheat thins",
+    "plain wheat thins",
+    "original wheat thins",
+    "thin wheat crackers",
+    "whole wheat thin crackers",
+    "wheat thin snack",
+    "baked wheat thins",
+    "wheat thins original"
+  ],
+  "usda_2708186": [
+    "flavored wheat thins",
+    "seasoned wheat thins",
+    "wheat thins ranch",
+    "wheat thins buffalo",
+    "spiced wheat thins",
+    "flavored thin wheat crackers",
+    "wheat thins variety",
+    "seasoned thin crackers"
+  ],
+  "usda_2708188": [
+    "gluten free crackers",
+    "gf crackers",
+    "gluten free snack crackers",
+    "celiac crackers",
+    "wheat free crackers",
+    "gluten free plain crackers",
+    "gf plain snack",
+    "gluten free crunchy crackers"
+  ],
+  "usda_2708189": [
+    "gluten free flavored crackers",
+    "gf seasoned crackers",
+    "gluten free herb crackers",
+    "flavored gf crackers",
+    "wheat free seasoned crackers",
+    "gluten free spiced snack",
+    "celiac flavored crackers",
+    "gf flavored snack crackers"
+  ],
+  "usda_2708190": [
+    "baby crackers",
+    "toddler crackers",
+    "infant crackers",
+    "teething crackers",
+    "soft baby crackers",
+    "baby snack crackers",
+    "toddler snack crackers",
+    "kids crackers"
+  ],
+  "usda_2708191": [
+    "baby fruit puffs",
+    "toddler fruit puffs",
+    "fruit puffs snack",
+    "baby puffs fruit",
+    "infant fruit puffs",
+    "sweet baby puffs",
+    "toddler fruity puffs",
+    "fruit flavored baby puffs"
+  ],
+  "usda_2708192": [
+    "baby veggie puffs",
+    "toddler vegetable puffs",
+    "veggie puffs snack",
+    "baby puffs vegetable",
+    "infant veggie puffs",
+    "vegetable flavored baby puffs",
+    "toddler veggie snack puffs",
+    "green puffs baby snack"
+  ],
+  "usda_2708193": [
+    "baby crunchies",
+    "toddler crunchies",
+    "baby crunchy snack",
+    "infant crunchies",
+    "toddler crunchy snacks",
+    "baby crunchy puffs",
+    "kids crunchies snack",
+    "little crunchies baby"
+  ],
+  "usda_2708194": [
+    "baby wheels",
+    "toddler wheels snack",
+    "baby pasta wheels",
+    "toddler veggie wheels",
+    "infant wheel snacks",
+    "baby shaped snack wheels",
+    "little wheels baby snack",
+    "toddler wheel crackers"
+  ],
+  "usda_2708195": [
+    "corn nuts",
+    "roasted corn",
+    "crunchy corn snack",
+    "toasted corn kernels",
+    "hard corn snack",
+    "corn snack nuts",
+    "fried corn kernels",
+    "crunchy corn kernels"
+  ],
+  "usda_2708196": [
+    "corn chips",
+    "plain corn chips",
+    "salted corn chips",
+    "tortilla style corn chips",
+    "original corn chips",
+    "basic corn chips",
+    "crunchy corn chips",
+    "classic corn chips"
+  ],
+  "usda_2708197": [
+    "flavored corn chips",
+    "seasoned corn chips",
+    "spicy corn chips",
+    "bbq corn chips",
+    "chili corn chips",
+    "nacho corn chips",
+    "ranch corn chips",
+    "zesty corn chips"
+  ],
+  "usda_2708198": [
+    "fritos corn chips",
+    "fritos original",
+    "original fritos",
+    "fritos snack",
+    "fritos plain",
+    "classic fritos",
+    "scoops fritos",
+    "fritos chip"
+  ],
+  "usda_2708199": [
+    "flavored fritos",
+    "fritos chili cheese",
+    "fritos bbq",
+    "spicy fritos",
+    "fritos variety",
+    "fritos seasoned",
+    "fritos flavor twists",
+    "chili fritos"
+  ],
+  "usda_2708200": [
+    "cheese puffs",
+    "cheesy corn snack",
+    "cheddar corn puffs",
+    "cheese doodles",
+    "cheetos style",
+    "baked cheese puffs",
+    "corn cheese snack",
+    "cheesy poofs"
+  ]
+}

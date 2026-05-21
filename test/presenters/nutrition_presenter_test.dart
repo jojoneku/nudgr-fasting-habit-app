@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
@@ -29,6 +30,8 @@ void main() {
 
   setUp(() async {
     mockStorage = MockStorageService();
+    when(mockStorage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     mockStats = MockStatsPresenter();
     mockFasting = MockFastingPresenter();
     mockAi = MockAiCoachService();

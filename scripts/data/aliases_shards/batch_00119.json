@@ -1,0 +1,773 @@
+{
+  "usda_174310": [
+    "cooked lamb fat",
+    "lamb fat trimmed",
+    "lamb fat cuts cooked",
+    "lamb fatty pieces",
+    "lamb composite cooked",
+    "lamb retail cuts fat",
+    "lamb with fat cooked",
+    "lamb fat portion"
+  ],
+  "usda_174311": [
+    "raw lamb leg",
+    "whole lamb leg raw",
+    "lamb leg uncooked",
+    "lamb shank and sirloin raw",
+    "lamb leg joint raw",
+    "fresh lamb leg",
+    "lamb gigot raw",
+    "uncooked lamb leg"
+  ],
+  "usda_174312": [
+    "roast lamb leg",
+    "roasted lamb leg",
+    "lamb leg roasted",
+    "whole lamb leg roast",
+    "baked lamb leg",
+    "lamb gigot roasted",
+    "lamb leg dinner",
+    "oven roasted lamb leg",
+    "lamb leg joint cooked"
+  ],
+  "usda_174313": [
+    "raw lean lamb leg",
+    "lamb leg lean raw",
+    "lean lamb leg uncooked",
+    "lamb leg no fat raw",
+    "trimmed lamb leg raw",
+    "lean lamb leg meat raw",
+    "fresh lean lamb leg"
+  ],
+  "usda_174314": [
+    "lean roasted lamb leg",
+    "lamb leg lean roasted",
+    "roast lamb leg lean",
+    "lean lamb leg cooked",
+    "trimmed lamb leg roasted",
+    "baked lean lamb leg",
+    "lamb leg no fat roasted"
+  ],
+  "usda_174315": [
+    "lamb shank half raw",
+    "raw lamb shank",
+    "lamb leg shank raw",
+    "lamb shank uncooked",
+    "fresh lamb shank",
+    "lamb lower leg raw",
+    "lamb shank cut raw"
+  ],
+  "usda_174316": [
+    "roasted lamb sirloin",
+    "lamb sirloin half roasted",
+    "lamb leg sirloin roasted",
+    "baked lamb sirloin",
+    "lamb sirloin cooked",
+    "lamb upper leg roasted",
+    "roast lamb sirloin half"
+  ],
+  "usda_174317": [
+    "lean lamb sirloin raw",
+    "lamb sirloin lean raw",
+    "raw lean lamb sirloin",
+    "lamb sirloin half lean uncooked",
+    "trimmed lamb sirloin raw",
+    "fresh lean lamb sirloin"
+  ],
+  "usda_174318": [
+    "lean roasted lamb sirloin",
+    "lamb sirloin lean roasted",
+    "roast lean lamb sirloin",
+    "baked lean lamb sirloin",
+    "lamb sirloin no fat cooked",
+    "trimmed lamb sirloin roasted"
+  ],
+  "usda_174319": [
+    "raw lamb loin",
+    "lamb loin chop raw",
+    "lamb loin cut raw",
+    "uncooked lamb loin",
+    "fresh lamb loin",
+    "lamb loin steak raw",
+    "lamb saddle raw"
+  ],
+  "usda_174320": [
+    "roasted lean lamb loin",
+    "lamb loin lean cooked",
+    "lean lamb loin roasted",
+    "baked lean lamb loin",
+    "lamb loin no fat cooked",
+    "trimmed lamb loin roasted"
+  ],
+  "usda_174321": [
+    "raw lamb rib",
+    "lamb rib chop raw",
+    "lamb rack raw",
+    "uncooked lamb rib",
+    "fresh lamb rib",
+    "lamb rib cut raw",
+    "rack of lamb raw"
+  ],
+  "usda_174322": [
+    "broiled lamb rib",
+    "lamb rib chop broiled",
+    "grilled lamb rib",
+    "lamb rack broiled",
+    "lamb rib grilled",
+    "broiled rack of lamb",
+    "lamb rib cooked broiled"
+  ],
+  "usda_174323": [
+    "roasted lamb rib",
+    "lamb rib roasted",
+    "rack of lamb roasted",
+    "baked lamb rib",
+    "lamb rib cooked roasted",
+    "oven lamb rib",
+    "lamb rack roasted"
+  ],
+  "usda_174324": [
+    "broiled lamb shoulder",
+    "lamb shoulder broiled",
+    "grilled lamb shoulder",
+    "lamb shoulder cooked broiled",
+    "lamb shoulder chop grilled",
+    "broiled lamb shoulder whole"
+  ],
+  "usda_174325": [
+    "roasted lamb shoulder",
+    "lamb shoulder roasted",
+    "baked lamb shoulder",
+    "lamb shoulder joint roasted",
+    "oven lamb shoulder",
+    "roast lamb shoulder whole"
+  ],
+  "usda_174326": [
+    "raw lean lamb shoulder",
+    "lamb shoulder lean raw",
+    "trimmed lamb shoulder raw",
+    "lean lamb shoulder uncooked",
+    "fresh lean lamb shoulder",
+    "lamb shoulder no fat raw"
+  ],
+  "usda_174327": [
+    "braised lean lamb shoulder",
+    "lamb shoulder lean braised",
+    "slow cooked lean lamb shoulder",
+    "stewed lamb shoulder lean",
+    "lamb shoulder braised no fat",
+    "pot roast lean lamb shoulder"
+  ],
+  "usda_174328": [
+    "broiled lamb arm",
+    "lamb arm chop broiled",
+    "grilled lamb arm chop",
+    "lamb shoulder arm broiled",
+    "lamb arm cooked grilled"
+  ],
+  "usda_174329": [
+    "roasted lamb arm",
+    "lamb arm roasted",
+    "baked lamb arm chop",
+    "lamb shoulder arm roasted",
+    "lamb arm cut cooked"
+  ],
+  "usda_174330": [
+    "raw lean lamb arm",
+    "lamb arm lean raw",
+    "trimmed lamb arm raw",
+    "lean lamb arm chop raw",
+    "fresh lean lamb arm cut"
+  ],
+  "usda_174331": [
+    "braised lean lamb arm",
+    "lamb arm lean braised",
+    "slow cooked lamb arm",
+    "stewed lamb arm chop",
+    "lamb arm braised no fat"
+  ],
+  "usda_174332": [
+    "broiled lamb blade",
+    "lamb blade chop broiled",
+    "grilled lamb blade",
+    "lamb shoulder blade broiled",
+    "lamb blade cooked grilled"
+  ],
+  "usda_174333": [
+    "roasted lamb blade",
+    "lamb blade roasted",
+    "baked lamb blade chop",
+    "lamb shoulder blade roasted",
+    "lamb blade cut cooked"
+  ],
+  "usda_174334": [
+    "raw lean lamb blade",
+    "lamb blade lean raw",
+    "trimmed lamb blade raw",
+    "lean lamb blade chop raw",
+    "fresh lean lamb blade cut"
+  ],
+  "usda_174335": [
+    "braised lean lamb blade",
+    "lamb blade lean braised",
+    "slow cooked lamb blade",
+    "stewed lamb blade chop",
+    "lamb blade braised no fat"
+  ],
+  "usda_174336": [
+    "nz lamb raw",
+    "new zealand lamb raw",
+    "imported lamb raw",
+    "frozen nz lamb",
+    "nz lamb frozen raw",
+    "imported frozen lamb raw",
+    "new zealand frozen lamb raw"
+  ],
+  "usda_174337": [
+    "nz lamb cooked",
+    "new zealand lamb cooked",
+    "imported lamb cooked",
+    "frozen nz lamb cooked",
+    "cooked nz lamb",
+    "new zealand lamb prepared"
+  ],
+  "usda_174338": [
+    "lean nz lamb raw",
+    "new zealand lean lamb raw",
+    "imported lean lamb raw",
+    "nz lamb lean frozen raw",
+    "lean frozen nz lamb"
+  ],
+  "usda_174339": [
+    "lean nz lamb cooked",
+    "new zealand lean lamb cooked",
+    "imported lean lamb cooked",
+    "cooked lean nz lamb",
+    "nz lamb lean cooked"
+  ],
+  "usda_174340": [
+    "nz lamb foreshank raw",
+    "new zealand lamb shank raw",
+    "imported lamb foreshank raw",
+    "nz lamb fore shank lean raw",
+    "lamb foreshank nz raw"
+  ],
+  "usda_174341": [
+    "nz lamb shank braised",
+    "new zealand lamb shank braised",
+    "braised nz lamb foreshank",
+    "imported lamb shank braised",
+    "slow cooked nz lamb shank"
+  ],
+  "usda_174342": [
+    "nz lamb leg chop raw",
+    "new zealand lamb leg steak raw",
+    "imported lamb leg chop",
+    "nz lamb leg steak bone in",
+    "lamb leg chop nz raw"
+  ],
+  "usda_174343": [
+    "nz roast lamb leg",
+    "new zealand roasted lamb leg",
+    "imported lamb leg roasted",
+    "frozen nz lamb leg roasted",
+    "nz lamb leg whole roasted"
+  ],
+  "usda_174344": [
+    "raw moose meat",
+    "moose raw",
+    "wild moose meat",
+    "game moose raw",
+    "uncooked moose",
+    "moose venison raw",
+    "moose steak raw"
+  ],
+  "usda_174345": [
+    "roasted moose",
+    "moose cooked",
+    "baked moose meat",
+    "roast moose",
+    "wild game moose roasted",
+    "moose steak cooked",
+    "moose roast"
+  ],
+  "usda_174346": [
+    "rabbit stew",
+    "stewed rabbit",
+    "cooked rabbit",
+    "domestic rabbit stewed",
+    "bunny stew",
+    "rabbit meat stewed",
+    "braised rabbit",
+    "slow cooked rabbit"
+  ],
+  "usda_174347": [
+    "wild rabbit raw",
+    "raw wild rabbit",
+    "wild bunny meat raw",
+    "game rabbit raw",
+    "jackrabbit raw",
+    "cottontail rabbit raw"
+  ],
+  "usda_174348": [
+    "wild rabbit stew",
+    "stewed wild rabbit",
+    "wild rabbit cooked",
+    "game rabbit stewed",
+    "jackrabbit stewed",
+    "wild bunny stew"
+  ],
+  "usda_174349": [
+    "roasted raccoon",
+    "cooked raccoon",
+    "raccoon meat roasted",
+    "wild game raccoon",
+    "raccoon roast"
+  ],
+  "usda_174350": [
+    "lamb brain fried",
+    "fried lamb brain",
+    "pan fried lamb brain",
+    "lamb brains cooked",
+    "lamb cerebro fried",
+    "lamb offal brain fried"
+  ],
+  "usda_174351": [
+    "veal brain raw",
+    "raw veal brain",
+    "calf brain raw",
+    "veal brains uncooked",
+    "calf brains raw",
+    "veal cerebro raw"
+  ],
+  "usda_174352": [
+    "braised veal brain",
+    "veal brain braised",
+    "calf brain braised",
+    "cooked veal brain",
+    "stewed veal brain",
+    "veal brains cooked"
+  ],
+  "usda_174353": [
+    "fried veal brain",
+    "veal brain pan fried",
+    "pan fried calf brain",
+    "veal brains fried",
+    "calf brain fried",
+    "sauteed veal brain"
+  ],
+  "usda_174354": [
+    "lamb kidney raw",
+    "raw lamb kidney",
+    "lamb kidneys uncooked",
+    "fresh lamb kidney",
+    "lamb offal kidney raw"
+  ],
+  "usda_174355": [
+    "braised lamb kidney",
+    "lamb kidney cooked",
+    "stewed lamb kidney",
+    "lamb kidneys braised",
+    "slow cooked lamb kidney"
+  ],
+  "usda_174356": [
+    "veal kidney raw",
+    "raw veal kidney",
+    "calf kidney raw",
+    "veal kidneys uncooked",
+    "fresh calf kidney"
+  ],
+  "usda_174357": [
+    "braised veal kidney",
+    "veal kidney cooked",
+    "calf kidney braised",
+    "stewed veal kidney",
+    "veal kidneys cooked"
+  ],
+  "usda_174358": [
+    "fried veal liver",
+    "veal liver pan fried",
+    "calf liver fried",
+    "pan fried calf liver",
+    "sauteed veal liver",
+    "calf liver cooked",
+    "veal liver sauteed"
+  ],
+  "usda_174359": [
+    "lamb lung raw",
+    "raw lamb lung",
+    "lamb lungs uncooked",
+    "lamb lights raw",
+    "lamb offal lung raw",
+    "baga ng tupa raw"
+  ],
+  "usda_174360": [
+    "braised lamb lung",
+    "lamb lung cooked",
+    "stewed lamb lung",
+    "lamb lights braised",
+    "lamb lungs cooked"
+  ],
+  "usda_174361": [
+    "veal lung raw",
+    "raw veal lung",
+    "calf lung raw",
+    "veal lights raw",
+    "veal lungs uncooked"
+  ],
+  "usda_174362": [
+    "veal pancreas raw",
+    "raw veal pancreas",
+    "calf pancreas raw",
+    "veal sweetbread raw",
+    "veal sweetbreads raw",
+    "calf sweetbread raw"
+  ],
+  "usda_174363": [
+    "braised veal pancreas",
+    "veal sweetbread braised",
+    "calf sweetbread braised",
+    "cooked veal sweetbreads",
+    "veal pancreas cooked",
+    "sweetbreads veal braised"
+  ],
+  "usda_174364": [
+    "lamb spleen raw",
+    "raw lamb spleen",
+    "lamb offal spleen raw",
+    "lamb melt raw",
+    "fresh lamb spleen"
+  ],
+  "usda_174365": [
+    "braised lamb spleen",
+    "lamb spleen cooked",
+    "stewed lamb spleen",
+    "lamb melt braised",
+    "lamb spleen braised"
+  ],
+  "usda_174366": [
+    "lamb tongue raw",
+    "raw lamb tongue",
+    "lamb lengua raw",
+    "fresh lamb tongue",
+    "lamb offal tongue raw"
+  ],
+  "usda_174367": [
+    "braised lamb tongue",
+    "lamb tongue cooked",
+    "lamb lengua cooked",
+    "stewed lamb tongue",
+    "slow cooked lamb tongue",
+    "lamb tongue braised"
+  ],
+  "usda_174368": [
+    "veal tongue raw",
+    "raw veal tongue",
+    "calf tongue raw",
+    "veal lengua raw",
+    "fresh calf tongue"
+  ],
+  "usda_174369": [
+    "braised veal tongue",
+    "veal tongue cooked",
+    "calf tongue braised",
+    "stewed veal tongue",
+    "veal lengua cooked",
+    "slow cooked veal tongue"
+  ],
+  "usda_174370": [
+    "ground lamb raw",
+    "minced lamb",
+    "lamb mince raw",
+    "raw minced lamb",
+    "lamb burger meat raw",
+    "ground lamb uncooked",
+    "lamb mince uncooked",
+    "minced lamb raw"
+  ],
+  "usda_174371": [
+    "braised lamb foreshank",
+    "lamb shank braised",
+    "slow cooked lamb shank",
+    "lamb foreshank cooked",
+    "braised lamb shank",
+    "stewed lamb shank",
+    "lamb shank dinner"
+  ],
+  "usda_174372": [
+    "raw lamb leg lean fat",
+    "lamb leg whole raw trimmed",
+    "whole leg of lamb raw",
+    "fresh whole lamb leg",
+    "lamb leg joint uncooked",
+    "raw leg of lamb"
+  ],
+  "usda_174373": [
+    "roast leg of lamb",
+    "lamb leg whole roasted",
+    "roasted leg of lamb",
+    "baked whole lamb leg",
+    "whole lamb leg roasted",
+    "leg of lamb cooked",
+    "oven roasted whole lamb leg"
+  ],
+  "usda_174374": [
+    "lamb shank half raw trimmed",
+    "raw lamb shank trimmed",
+    "lamb shank cut uncooked",
+    "fresh lamb shank half",
+    "lamb lower leg cut raw"
+  ],
+  "usda_174375": [
+    "broiled lamb loin",
+    "lamb loin chop broiled",
+    "grilled lamb loin chop",
+    "lamb loin cooked broiled",
+    "lamb loin grilled",
+    "lamb chop loin grilled"
+  ],
+  "usda_174376": [
+    "roasted lamb loin",
+    "lamb loin chop roasted",
+    "baked lamb loin",
+    "lamb loin cooked roasted",
+    "oven lamb loin chop",
+    "lamb loin roast"
+  ],
+  "usda_174377": [
+    "raw lamb rib trimmed",
+    "lamb rib raw trimmed",
+    "rack of lamb raw trimmed",
+    "fresh lamb rack",
+    "lamb rib cut uncooked trimmed"
+  ],
+  "usda_174378": [
+    "broiled lamb rib trimmed",
+    "grilled lamb rib chop",
+    "lamb rib chop grilled",
+    "broiled rack of lamb trimmed",
+    "lamb rib broiled trimmed"
+  ],
+  "usda_174379": [
+    "roasted lamb shoulder trimmed",
+    "lamb shoulder roasted lean fat",
+    "baked lamb shoulder whole",
+    "oven roasted lamb shoulder",
+    "roast lamb shoulder trimmed"
+  ],
+  "usda_174380": [
+    "raw lamb arm chop",
+    "lamb arm cut raw trimmed",
+    "fresh lamb arm chop",
+    "lamb shoulder arm raw trimmed",
+    "uncooked lamb arm"
+  ],
+  "usda_174381": [
+    "braised lamb arm",
+    "lamb arm chop braised",
+    "slow cooked lamb arm",
+    "stewed lamb arm",
+    "lamb arm braised trimmed"
+  ],
+  "usda_174382": [
+    "broiled lamb arm trimmed",
+    "lamb arm chop broiled",
+    "grilled lamb arm",
+    "lamb arm cooked broiled",
+    "lamb arm grilled trimmed"
+  ],
+  "usda_174383": [
+    "roasted lamb arm",
+    "lamb arm chop roasted",
+    "baked lamb arm",
+    "lamb arm cooked roasted trimmed",
+    "oven lamb arm chop"
+  ],
+  "usda_174384": [
+    "raw nz lamb trimmed",
+    "new zealand lamb raw lean fat",
+    "frozen nz lamb raw trimmed",
+    "imported nz lamb raw",
+    "nz lamb cuts raw trimmed"
+  ],
+  "usda_174385": [
+    "cooked nz lamb trimmed",
+    "new zealand lamb cooked lean fat",
+    "frozen nz lamb cooked trimmed",
+    "imported nz lamb cooked",
+    "nz lamb cuts cooked"
+  ],
+  "usda_174386": [
+    "nz lamb foreshank raw",
+    "frozen nz lamb shank raw",
+    "imported lamb shank raw",
+    "new zealand lamb foreshank raw",
+    "nz lamb shank uncooked"
+  ],
+  "usda_174387": [
+    "nz lamb shank braised trimmed",
+    "frozen nz lamb shank braised",
+    "imported lamb shank braised",
+    "new zealand lamb foreshank braised",
+    "slow cooked nz lamb shank"
+  ],
+  "usda_174388": [
+    "nz lamb rib raw",
+    "frozen nz lamb rack raw",
+    "imported lamb rib raw",
+    "new zealand lamb rib raw",
+    "nz rack of lamb raw"
+  ],
+  "usda_174389": [
+    "nz lamb rib roasted",
+    "frozen nz lamb rack roasted",
+    "imported lamb rib roasted",
+    "new zealand lamb rib roasted",
+    "nz rack of lamb roasted"
+  ],
+  "usda_174390": [
+    "nz lamb shoulder raw",
+    "frozen nz lamb shoulder raw",
+    "imported lamb shoulder raw",
+    "new zealand lamb shoulder raw",
+    "nz lamb shoulder uncooked"
+  ],
+  "usda_174391": [
+    "nz lamb shoulder braised",
+    "frozen nz lamb shoulder braised",
+    "imported lamb shoulder braised",
+    "new zealand lamb shoulder braised",
+    "slow cooked nz lamb shoulder"
+  ],
+  "usda_174392": [
+    "veal breast raw",
+    "raw veal breast",
+    "calf breast raw",
+    "boneless veal breast raw",
+    "fresh veal breast",
+    "veal brisket raw"
+  ],
+  "usda_174393": [
+    "braised veal breast",
+    "veal breast cooked",
+    "slow cooked veal breast",
+    "calf breast braised",
+    "stewed veal breast",
+    "veal brisket braised"
+  ],
+  "usda_174394": [
+    "braised veal breast plate",
+    "veal breast plate braised",
+    "veal plate half braised",
+    "slow cooked veal plate",
+    "veal breast plate cooked"
+  ],
+  "usda_174395": [
+    "braised veal breast point",
+    "veal breast point braised",
+    "veal point half braised",
+    "slow cooked veal breast point",
+    "veal breast point cooked"
+  ],
+  "usda_174396": [
+    "lean braised veal breast",
+    "veal breast lean braised",
+    "lean veal breast cooked",
+    "calf breast lean braised",
+    "veal breast no fat braised"
+  ],
+  "usda_174397": [
+    "australian lamb raw",
+    "aussie lamb raw",
+    "imported australian lamb raw",
+    "fresh australian lamb",
+    "australian lamb cuts raw",
+    "au lamb raw"
+  ],
+  "usda_174398": [
+    "australian lamb cooked",
+    "aussie lamb cooked",
+    "imported australian lamb cooked",
+    "fresh australian lamb cooked",
+    "australian lamb cuts cooked",
+    "au lamb cooked"
+  ],
+  "usda_174399": [
+    "lean australian lamb raw",
+    "australian lean lamb raw",
+    "aussie lamb lean raw",
+    "imported lean australian lamb",
+    "au lean lamb raw"
+  ],
+  "usda_174400": [
+    "lean australian lamb cooked",
+    "australian lean lamb cooked",
+    "aussie lamb lean cooked",
+    "imported lean australian lamb cooked",
+    "au lean lamb cooked"
+  ],
+  "usda_174401": [
+    "australian lamb foreshank raw",
+    "aussie lamb shank raw",
+    "imported australian lamb shank raw",
+    "fresh australian lamb foreshank",
+    "au lamb shank raw"
+  ],
+  "usda_174402": [
+    "australian lamb shank braised",
+    "aussie lamb shank braised",
+    "imported australian lamb shank cooked",
+    "braised australian lamb foreshank",
+    "au lamb shank braised"
+  ],
+  "usda_174403": [
+    "australian lamb leg raw",
+    "aussie lamb leg raw",
+    "imported australian lamb leg raw",
+    "fresh australian whole lamb leg",
+    "au lamb leg raw"
+  ],
+  "usda_174404": [
+    "australian roast lamb leg",
+    "aussie lamb leg roasted",
+    "imported australian lamb leg roasted",
+    "roasted australian lamb leg",
+    "au lamb leg roasted"
+  ],
+  "usda_174405": [
+    "australian lamb shank half roasted",
+    "aussie lamb shank roasted",
+    "imported australian lamb shank roasted",
+    "roasted australian lamb leg shank",
+    "au lamb shank cooked"
+  ],
+  "usda_174406": [
+    "australian lamb sirloin raw",
+    "aussie lamb sirloin raw",
+    "imported australian lamb sirloin boneless raw",
+    "fresh australian lamb sirloin",
+    "au lamb sirloin raw"
+  ],
+  "usda_174407": [
+    "australian lamb sirloin roasted",
+    "aussie lamb sirloin roasted",
+    "imported australian lamb sirloin cooked",
+    "roasted australian lamb sirloin",
+    "au lamb sirloin cooked"
+  ],
+  "usda_174408": [
+    "australian lean lamb sirloin raw",
+    "aussie lean lamb sirloin raw",
+    "imported australian lean lamb sirloin",
+    "fresh lean australian lamb sirloin",
+    "au lean lamb sirloin raw"
+  ],
+  "usda_174409": [
+    "australian lamb sirloin chop broiled",
+    "aussie lamb sirloin chop grilled",
+    "grilled australian lamb sirloin",
+    "broiled australian lamb chop",
+    "au lamb sirloin chop cooked",
+    "australian lamb chop broiled"
+  ]
+}

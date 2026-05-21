@@ -1,0 +1,866 @@
+{
+  "usda_2707152": [
+    "raw egg",
+    "fresh egg",
+    "uncooked egg",
+    "itlog",
+    "whole egg raw",
+    "egg uncooked",
+    "fresh whole egg",
+    "itlog hilaw"
+  ],
+  "usda_2707153": [
+    "cooked egg",
+    "itlog luto",
+    "whole egg cooked",
+    "egg cooked",
+    "prepared egg",
+    "egg any style",
+    "itlog niluto",
+    "plain cooked egg"
+  ],
+  "usda_2707154": [
+    "boiled egg",
+    "hard boiled egg",
+    "soft boiled egg",
+    "poached egg",
+    "hard cooked egg",
+    "itlog na pinakuluan",
+    "nilagang itlog",
+    "soft cooked egg",
+    "hard boiled",
+    "poached"
+  ],
+  "usda_2707155": [
+    "fried egg",
+    "pritong itlog",
+    "fried whole egg",
+    "egg fried",
+    "pan fried egg",
+    "itlog prito",
+    "sunny side up",
+    "over easy egg"
+  ],
+  "usda_2707156": [
+    "fried egg no oil",
+    "dry fried egg",
+    "egg fried without fat",
+    "non-stick fried egg",
+    "oil free fried egg",
+    "fried egg no fat",
+    "pan fried egg no oil",
+    "itlog prito walang mantika"
+  ],
+  "usda_2707157": [
+    "egg fried in margarine",
+    "fried egg margarine",
+    "egg cooked in margarine",
+    "margarine fried egg",
+    "itlog prito margarine",
+    "egg with margarine",
+    "pan fried egg margarine"
+  ],
+  "usda_2707158": [
+    "egg fried in oil",
+    "fried egg oil",
+    "itlog prito sa mantika",
+    "oil fried egg",
+    "egg cooked in oil",
+    "pan fried egg with oil",
+    "fried egg vegetable oil",
+    "egg fried vegetable oil"
+  ],
+  "usda_2707159": [
+    "egg fried in butter",
+    "butter fried egg",
+    "egg cooked in butter",
+    "fried egg butter",
+    "buttered fried egg",
+    "itlog prito sa mantikilya",
+    "pan fried egg butter",
+    "egg with butter"
+  ],
+  "usda_2707160": [
+    "egg fried in lard",
+    "egg fried in bacon fat",
+    "egg cooked in drippings",
+    "egg fried in meat fat",
+    "lard fried egg",
+    "bacon grease egg",
+    "egg in animal fat",
+    "fried egg drippings"
+  ],
+  "usda_2707161": [
+    "egg fried cooking spray",
+    "spray fried egg",
+    "pam fried egg",
+    "egg cooked with cooking spray",
+    "fried egg nonstick spray",
+    "oil spray fried egg",
+    "egg fried pam",
+    "low cal fried egg"
+  ],
+  "usda_2707162": [
+    "fried egg unknown fat",
+    "pan fried egg",
+    "fried egg various fat",
+    "egg fried any fat",
+    "fried egg generic",
+    "plain fried egg",
+    "egg in pan",
+    "skillet egg"
+  ],
+  "usda_2707163": [
+    "restaurant fried egg",
+    "fast food fried egg",
+    "diner fried egg",
+    "breakfast egg restaurant",
+    "diner breakfast egg",
+    "egg mcmuffin egg",
+    "fast food breakfast egg",
+    "cafe fried egg"
+  ],
+  "usda_2707164": [
+    "baked egg",
+    "oven egg",
+    "egg baked",
+    "baked whole egg",
+    "oven baked egg",
+    "shirred egg",
+    "egg cooked in oven",
+    "baked egg generic"
+  ],
+  "usda_2707165": [
+    "baked egg no fat",
+    "oven egg no oil",
+    "shirred egg no fat",
+    "fat free baked egg",
+    "egg baked without fat",
+    "plain baked egg",
+    "oil free baked egg",
+    "baked egg lean"
+  ],
+  "usda_2707166": [
+    "baked egg with fat",
+    "oven egg with butter",
+    "shirred egg with fat",
+    "baked egg buttered",
+    "egg baked with oil",
+    "oven baked egg fat added",
+    "baked egg oil",
+    "shirred egg buttered"
+  ],
+  "usda_2707167": [
+    "pickled egg",
+    "vinegar egg",
+    "brined egg",
+    "pickled hard boiled egg",
+    "marinated egg",
+    "pickle jar egg",
+    "pickled whole egg",
+    "bar pickled egg"
+  ],
+  "usda_2707168": [
+    "egg white raw",
+    "raw egg white",
+    "raw albumen",
+    "uncooked egg white",
+    "fresh egg white",
+    "egg whites raw",
+    "puti ng itlog hilaw",
+    "raw whites"
+  ],
+  "usda_2707169": [
+    "cooked egg white",
+    "egg white cooked",
+    "puti ng itlog luto",
+    "cooked whites",
+    "egg whites cooked",
+    "prepared egg white",
+    "plain cooked egg white",
+    "egg white any fat"
+  ],
+  "usda_2707170": [
+    "egg white no fat",
+    "fat free egg white",
+    "plain egg white cooked",
+    "egg white no oil",
+    "cooked egg white no fat",
+    "puti ng itlog walang mantika",
+    "egg whites plain",
+    "steamed egg white"
+  ],
+  "usda_2707171": [
+    "egg white with fat",
+    "egg white cooked with oil",
+    "egg white fried",
+    "egg white with butter",
+    "cooked egg white fat added",
+    "puti ng itlog prito",
+    "egg whites pan fried",
+    "egg white with margarine"
+  ],
+  "usda_2707172": [
+    "egg yolk raw",
+    "raw egg yolk",
+    "raw yolk",
+    "fresh egg yolk",
+    "pula ng itlog hilaw",
+    "uncooked yolk",
+    "egg yolks raw",
+    "raw yellow"
+  ],
+  "usda_2707173": [
+    "cooked egg yolk",
+    "egg yolk cooked",
+    "pula ng itlog luto",
+    "cooked yolk",
+    "egg yolks cooked",
+    "prepared yolk",
+    "plain cooked yolk",
+    "egg yolk any fat"
+  ],
+  "usda_2707174": [
+    "egg yolk no fat",
+    "plain cooked yolk",
+    "fat free egg yolk",
+    "egg yolk no oil",
+    "cooked yolk no fat",
+    "pula ng itlog walang mantika",
+    "egg yolks plain cooked"
+  ],
+  "usda_2707175": [
+    "egg yolk with fat",
+    "egg yolk fried",
+    "cooked yolk fat added",
+    "egg yolk with butter",
+    "pula ng itlog prito",
+    "egg yolk with oil",
+    "fried yolk",
+    "cooked yolk with fat"
+  ],
+  "usda_2707176": [
+    "duck egg",
+    "itlog ng pato",
+    "cooked duck egg",
+    "balut egg cooked",
+    "boiled duck egg",
+    "duck egg boiled",
+    "itlog pato",
+    "fried duck egg"
+  ],
+  "usda_2707177": [
+    "goose egg",
+    "cooked goose egg",
+    "boiled goose egg",
+    "itlog ng gansa",
+    "goose egg boiled",
+    "large egg goose",
+    "goose egg fried"
+  ],
+  "usda_2707178": [
+    "quail egg canned",
+    "canned quail eggs",
+    "itlog ng pugo canned",
+    "quail eggs in can",
+    "tinned quail eggs",
+    "itlog pugo lata",
+    "quail eggs packed",
+    "small canned eggs"
+  ],
+  "usda_2707179": [
+    "creamed egg",
+    "egg in cream sauce",
+    "egg with white sauce",
+    "creamed eggs on toast",
+    "egg cream sauce",
+    "eggs in bechamel",
+    "eggs creamed",
+    "egg white sauce"
+  ],
+  "usda_2707180": [
+    "eggs benedict",
+    "eggs benny",
+    "benedict egg",
+    "hollandaise egg",
+    "egg on english muffin hollandaise",
+    "eggs bene",
+    "brunch eggs benedict",
+    "poached egg hollandaise"
+  ],
+  "usda_2707181": [
+    "deviled egg",
+    "stuffed egg",
+    "devilled egg",
+    "deviled eggs",
+    "stuffed half egg",
+    "deviled egg appetizer",
+    "devilled eggs",
+    "filled hard boiled egg"
+  ],
+  "usda_2707182": [
+    "egg salad mayo",
+    "egg mayo salad",
+    "egg salad with mayonnaise",
+    "egg mayo",
+    "egg salad sandwich filling",
+    "egg salad classic",
+    "mayo egg salad",
+    "egg salad"
+  ],
+  "usda_2707183": [
+    "egg salad light mayo",
+    "light mayo egg salad",
+    "egg salad reduced calorie mayo",
+    "egg salad diet mayo",
+    "low fat egg salad mayo",
+    "egg salad lite mayo",
+    "lighter egg salad"
+  ],
+  "usda_2707184": [
+    "egg salad miracle whip",
+    "egg salad salad dressing",
+    "egg salad with whip dressing",
+    "egg salad mayo dressing",
+    "egg salad sandwich spread",
+    "egg salad with salad dressing"
+  ],
+  "usda_2707185": [
+    "egg salad light salad dressing",
+    "egg salad lite whip",
+    "egg salad light miracle whip",
+    "light dressing egg salad",
+    "low cal egg salad dressing",
+    "egg salad reduced fat dressing"
+  ],
+  "usda_2707186": [
+    "egg salad creamy dressing",
+    "egg salad with ranch",
+    "creamy egg salad",
+    "egg salad creamy",
+    "egg salad with creamy sauce",
+    "egg salad ranch dressing",
+    "egg salad caesar dressing"
+  ],
+  "usda_2707187": [
+    "egg salad light creamy dressing",
+    "egg salad lite ranch",
+    "light creamy egg salad",
+    "low cal creamy egg salad",
+    "egg salad reduced fat creamy dressing"
+  ],
+  "usda_2707188": [
+    "egg salad italian dressing",
+    "egg salad with vinaigrette",
+    "italian egg salad",
+    "egg salad zesty",
+    "egg salad with italian",
+    "vinaigrette egg salad"
+  ],
+  "usda_2707189": [
+    "egg salad light italian",
+    "egg salad lite vinaigrette",
+    "low fat italian egg salad",
+    "light italian dressing egg salad",
+    "egg salad reduced fat italian"
+  ],
+  "usda_2707190": [
+    "egg salad fat free dressing",
+    "fat free egg salad",
+    "no fat egg salad",
+    "egg salad no fat dressing",
+    "zero fat egg salad",
+    "egg salad fat free"
+  ],
+  "usda_2707191": [
+    "huevos rancheros",
+    "rancher eggs",
+    "mexican fried eggs",
+    "eggs with salsa",
+    "eggs ranchero style",
+    "ranchero eggs",
+    "fried eggs with tomato sauce",
+    "mexican breakfast eggs"
+  ],
+  "usda_2707192": [
+    "egg casserole",
+    "egg bake with bread and cheese",
+    "breakfast casserole with egg",
+    "egg strata",
+    "egg bread cheese meat casserole",
+    "savory egg bake",
+    "egg and cheese strata",
+    "breakfast egg bake"
+  ],
+  "usda_2707193": [
+    "egg foo young",
+    "egg foo yung",
+    "chinese egg patty",
+    "egg foo yong",
+    "egg fu yung",
+    "chinese omelette",
+    "egg foo young generic",
+    "oriental egg patty"
+  ],
+  "usda_2707194": [
+    "chicken egg foo young",
+    "egg foo young chicken",
+    "chicken egg foo yung",
+    "chicken chinese omelette",
+    "egg foo yong chicken",
+    "chicken egg patty chinese"
+  ],
+  "usda_2707195": [
+    "pork egg foo young",
+    "egg foo young pork",
+    "pork egg foo yung",
+    "pork chinese omelette",
+    "egg foo yong pork",
+    "pork egg patty chinese"
+  ],
+  "usda_2707196": [
+    "shrimp egg foo young",
+    "egg foo young shrimp",
+    "shrimp egg foo yung",
+    "prawn egg foo young",
+    "shrimp chinese omelette",
+    "egg foo yong shrimp"
+  ],
+  "usda_2707197": [
+    "beef egg foo young",
+    "egg foo young beef",
+    "beef egg foo yung",
+    "beef chinese omelette",
+    "egg foo yong beef",
+    "beef egg patty chinese"
+  ],
+  "usda_2707198": [
+    "scrambled egg",
+    "omelette",
+    "omelet",
+    "scrambled eggs",
+    "plain omelet",
+    "plain scrambled egg",
+    "egg omelet",
+    "omelete"
+  ],
+  "usda_2707199": [
+    "scrambled egg margarine",
+    "omelet with margarine",
+    "scrambled eggs margarine",
+    "egg omelet margarine",
+    "omelette margarine",
+    "scrambled eggs cooked margarine"
+  ],
+  "usda_2707200": [
+    "scrambled egg with oil",
+    "omelet with oil",
+    "scrambled eggs oil",
+    "egg omelet oil",
+    "omelette with oil",
+    "scrambled eggs vegetable oil",
+    "egg fried in oil scrambled"
+  ],
+  "usda_2707201": [
+    "scrambled egg butter",
+    "omelet with butter",
+    "buttered scrambled eggs",
+    "butter scrambled eggs",
+    "omelette butter",
+    "egg omelet butter",
+    "scrambled eggs in butter"
+  ],
+  "usda_2707202": [
+    "scrambled egg lard",
+    "omelet bacon fat",
+    "scrambled eggs drippings",
+    "egg omelet meat drippings",
+    "scrambled eggs animal fat",
+    "omelette drippings"
+  ],
+  "usda_2707203": [
+    "scrambled egg cooking spray",
+    "omelet cooking spray",
+    "spray scrambled eggs",
+    "egg omelet cooking spray",
+    "omelette spray",
+    "low cal scrambled egg",
+    "nonstick spray omelette"
+  ],
+  "usda_2707204": [
+    "scrambled egg plain",
+    "plain omelette",
+    "egg omelet plain",
+    "simple scrambled egg",
+    "basic omelet",
+    "scrambled eggs plain",
+    "plain eggs scrambled",
+    "omelette plain"
+  ],
+  "usda_2707205": [
+    "egg white scrambled",
+    "fat free scrambled egg",
+    "no fat omelet",
+    "scrambled egg no oil",
+    "dry scrambled egg",
+    "plain omelet no fat",
+    "egg omelet no fat",
+    "omelette no fat"
+  ],
+  "usda_2707206": [
+    "restaurant scrambled egg",
+    "diner scrambled eggs",
+    "fast food scrambled egg",
+    "breakfast place omelet",
+    "restaurant omelette",
+    "diner omelet",
+    "cafe scrambled eggs",
+    "fast food omelet"
+  ],
+  "usda_2707207": [
+    "cheese omelet margarine",
+    "cheesy scrambled egg margarine",
+    "egg and cheese omelet margarine",
+    "scrambled egg cheese margarine",
+    "cheese omelette margarine"
+  ],
+  "usda_2707208": [
+    "cheese omelet oil",
+    "cheesy scrambled egg oil",
+    "egg and cheese omelet oil",
+    "scrambled egg cheese oil",
+    "cheese omelette oil",
+    "cheesy eggs with oil"
+  ],
+  "usda_2707209": [
+    "cheese omelet butter",
+    "cheesy scrambled egg butter",
+    "egg and cheese omelet butter",
+    "scrambled egg cheese butter",
+    "butter cheese omelette",
+    "cheesy eggs butter",
+    "cheese omelet buttered"
+  ],
+  "usda_2707210": [
+    "cheese omelet drippings",
+    "cheesy scrambled egg lard",
+    "egg and cheese omelet animal fat",
+    "cheese omelette meat drippings",
+    "cheesy eggs drippings"
+  ],
+  "usda_2707211": [
+    "cheese omelet spray",
+    "cheesy scrambled egg cooking spray",
+    "egg and cheese omelet spray",
+    "cheese omelette cooking spray",
+    "cheesy eggs spray nonstick"
+  ],
+  "usda_2707212": [
+    "cheese omelet no fat",
+    "cheesy egg no oil",
+    "fat free cheese omelet",
+    "egg and cheese omelet no fat",
+    "cheese omelette no fat",
+    "cheesy scrambled egg no fat",
+    "cheese eggs no oil"
+  ],
+  "usda_2707213": [
+    "meat omelet",
+    "egg and meat scramble",
+    "ham omelet",
+    "sausage scrambled egg",
+    "meat scrambled egg",
+    "bacon omelet",
+    "egg with meat omelet",
+    "meaty omelette"
+  ],
+  "usda_2707214": [
+    "meat omelet margarine",
+    "egg and meat omelet margarine",
+    "scrambled egg meat margarine",
+    "ham omelet margarine",
+    "meaty omelette margarine"
+  ],
+  "usda_2707215": [
+    "meat omelet oil",
+    "egg and meat omelet oil",
+    "scrambled egg meat oil",
+    "ham omelet oil",
+    "meaty omelette oil",
+    "sausage omelet oil"
+  ],
+  "usda_2707216": [
+    "meat omelet butter",
+    "egg and meat omelet butter",
+    "ham omelet butter",
+    "scrambled egg meat butter",
+    "meaty omelette butter",
+    "butter meat omelet"
+  ],
+  "usda_2707217": [
+    "meat omelet drippings",
+    "egg and meat omelet lard",
+    "ham omelet animal fat",
+    "scrambled egg meat drippings",
+    "meaty omelette lard"
+  ],
+  "usda_2707218": [
+    "meat omelet spray",
+    "egg and meat omelet cooking spray",
+    "ham omelet spray",
+    "scrambled egg meat spray",
+    "meaty omelette cooking spray"
+  ],
+  "usda_2707219": [
+    "meat omelet plain",
+    "egg and meat scramble generic",
+    "ham scrambled egg",
+    "sausage omelette plain",
+    "meaty scrambled egg",
+    "meat scramble omelette"
+  ],
+  "usda_2707220": [
+    "meat omelet no fat",
+    "egg and meat omelet no oil",
+    "fat free meat omelet",
+    "ham omelet no fat",
+    "meaty omelette no fat",
+    "egg meat scramble no oil"
+  ],
+  "usda_2707221": [
+    "cheese and meat omelet",
+    "ham and cheese omelet",
+    "cheesy meat scrambled egg",
+    "sausage cheese omelet",
+    "bacon cheese omelet",
+    "meat cheese scramble",
+    "ham cheese scrambled eggs"
+  ],
+  "usda_2707222": [
+    "ham and cheese omelet margarine",
+    "cheese meat omelet margarine",
+    "sausage cheese omelet margarine",
+    "cheesy meat scramble margarine",
+    "ham cheese omelette margarine"
+  ],
+  "usda_2707223": [
+    "ham and cheese omelet oil",
+    "cheese meat omelet oil",
+    "sausage cheese omelet oil",
+    "cheesy meat scramble oil",
+    "ham cheese omelette oil"
+  ],
+  "usda_2707224": [
+    "ham and cheese omelet butter",
+    "cheese meat omelet butter",
+    "sausage cheese omelet butter",
+    "cheesy meat scramble butter",
+    "ham cheese omelette butter"
+  ],
+  "usda_2707225": [
+    "ham and cheese omelet drippings",
+    "cheese meat omelet lard",
+    "sausage cheese omelet animal fat",
+    "cheesy meat scramble drippings",
+    "ham cheese omelette lard"
+  ],
+  "usda_2707226": [
+    "ham and cheese omelet spray",
+    "cheese meat omelet spray",
+    "sausage cheese omelet cooking spray",
+    "cheesy meat scramble spray",
+    "ham cheese omelette spray"
+  ],
+  "usda_2707227": [
+    "ham and cheese omelet plain",
+    "cheese meat omelet generic",
+    "cheesy meat scrambled egg plain",
+    "sausage cheese omelette plain",
+    "ham cheese scramble generic"
+  ],
+  "usda_2707228": [
+    "ham and cheese omelet no fat",
+    "cheese meat omelet no oil",
+    "fat free cheese meat omelet",
+    "cheesy meat scramble no fat",
+    "ham cheese omelette no fat"
+  ],
+  "usda_2707229": [
+    "tomato omelet",
+    "scrambled egg with tomato",
+    "egg and tomato",
+    "tomato scrambled egg",
+    "omelette with tomatoes",
+    "tortang kamatis",
+    "egg tomato stir"
+  ],
+  "usda_2707230": [
+    "tomato omelet no fat",
+    "scrambled egg tomato no oil",
+    "fat free tomato omelet",
+    "egg and tomato no fat",
+    "omelette tomato no fat",
+    "tomato scramble no oil"
+  ],
+  "usda_2707231": [
+    "tomato omelet plain",
+    "scrambled egg with tomato generic",
+    "omelette with tomato generic",
+    "egg tomato scramble",
+    "tomato egg dish",
+    "eggs and tomato"
+  ],
+  "usda_2707232": [
+    "spinach omelet",
+    "egg with greens",
+    "green vegetable omelet with fat",
+    "spinach scrambled egg",
+    "kale omelet",
+    "egg with leafy greens",
+    "omelette with spinach"
+  ],
+  "usda_2707233": [
+    "spinach omelet no fat",
+    "egg with greens no oil",
+    "green vegetable omelet no fat",
+    "spinach scrambled egg no oil",
+    "fat free spinach omelet",
+    "kale omelet no fat"
+  ],
+  "usda_2707234": [
+    "spinach omelet generic",
+    "egg with dark greens",
+    "green vegetable scramble",
+    "leafy green omelet",
+    "spinach egg scramble",
+    "omelette spinach generic",
+    "eggs with kale"
+  ],
+  "usda_2707235": [
+    "tomato and spinach omelet",
+    "egg with tomato and greens with fat",
+    "tomato spinach scramble fat",
+    "omelette tomato spinach fat",
+    "eggs tomato kale fat added"
+  ],
+  "usda_2707236": [
+    "tomato and spinach omelet no fat",
+    "egg with tomato and greens no oil",
+    "tomato spinach scramble no fat",
+    "omelette tomato spinach no fat",
+    "eggs tomato kale no fat"
+  ],
+  "usda_2707237": [
+    "tomato and spinach omelet generic",
+    "egg tomato and greens scramble",
+    "omelette tomato and dark greens",
+    "tomato spinach egg dish",
+    "eggs tomato kale generic"
+  ],
+  "usda_2707238": [
+    "veggie omelet with fat",
+    "egg and vegetables with fat",
+    "mixed vegetable omelet fat",
+    "vegetable scrambled egg fat",
+    "omelette veggies fat added",
+    "mushroom pepper omelet fat"
+  ],
+  "usda_2707239": [
+    "veggie omelet no fat",
+    "egg and vegetables no oil",
+    "mixed vegetable omelet no fat",
+    "vegetable scrambled egg no fat",
+    "omelette veggies no fat",
+    "healthy veggie omelet"
+  ],
+  "usda_2707240": [
+    "veggie omelet generic",
+    "egg and vegetables scramble",
+    "mixed vegetable omelet",
+    "vegetable scrambled egg",
+    "omelette with vegetables",
+    "veggie eggs",
+    "mixed veggie scramble"
+  ],
+  "usda_2707241": [
+    "cheese tomato omelet fat",
+    "egg cheese and tomato with fat",
+    "cheese tomato scramble fat",
+    "omelette cheese tomato fat",
+    "cheesy tomato egg fat added"
+  ],
+  "usda_2707242": [
+    "cheese tomato omelet no fat",
+    "egg cheese and tomato no oil",
+    "cheese tomato scramble no fat",
+    "omelette cheese tomato no fat",
+    "cheesy tomato egg no fat"
+  ],
+  "usda_2707243": [
+    "cheese tomato omelet generic",
+    "egg with cheese and tomato",
+    "cheese and tomato scramble",
+    "omelette cheese and tomato",
+    "cheesy tomato egg scramble",
+    "cheese tomato egg dish"
+  ],
+  "usda_2707244": [
+    "cheese spinach omelet fat",
+    "egg cheese and greens with fat",
+    "cheese spinach scramble fat",
+    "omelette cheese greens fat",
+    "cheesy spinach egg fat added"
+  ],
+  "usda_2707245": [
+    "cheese spinach omelet no fat",
+    "egg cheese and greens no oil",
+    "cheese spinach scramble no fat",
+    "omelette cheese greens no fat",
+    "cheesy spinach egg no fat"
+  ],
+  "usda_2707246": [
+    "cheese spinach omelet generic",
+    "egg with cheese and greens",
+    "cheese and spinach scramble",
+    "omelette cheese and spinach",
+    "cheesy spinach egg dish",
+    "cheese kale omelet"
+  ],
+  "usda_2707247": [
+    "cheese tomato spinach omelet fat",
+    "garden omelet with cheese fat",
+    "egg cheese tomato greens fat",
+    "omelette cheese tomato spinach fat",
+    "cheesy veggie egg fat"
+  ],
+  "usda_2707248": [
+    "cheese tomato spinach omelet no fat",
+    "garden omelet with cheese no fat",
+    "egg cheese tomato greens no fat",
+    "omelette cheese tomato spinach no fat",
+    "cheesy veggie egg no fat"
+  ],
+  "usda_2707249": [
+    "cheese tomato spinach omelet generic",
+    "garden omelette with cheese",
+    "egg with cheese tomato and greens",
+    "cheesy veggie scramble",
+    "cheese tomato spinach egg dish"
+  ],
+  "usda_2707250": [
+    "cheese veggie omelet fat",
+    "egg cheese and mixed vegetables fat",
+    "cheese mixed veg scramble fat",
+    "omelette cheese veggies fat",
+    "cheesy vegetable egg fat added",
+    "cheese pepper onion omelet fat"
+  ],
+  "usda_2707251": [
+    "cheese veggie omelet no fat",
+    "egg cheese and mixed vegetables no fat",
+    "cheese mixed veg scramble no fat",
+    "omelette cheese veggies no fat",
+    "cheesy vegetable egg no fat",
+    "healthy cheese veggie omelet"
+  ]
+}

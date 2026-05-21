@@ -12,8 +12,11 @@ import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/update_presenter.dart';
+import '../services/notification_service.dart';
+import '../services/storage_service.dart';
 import '../utils/app_spacing.dart';
 import 'auth/login_view.dart';
+import 'settings/notification_settings_sheet.dart';
 import 'stats_view.dart';
 import 'widgets/system/system.dart';
 
@@ -28,6 +31,8 @@ class SettingsScreen extends StatelessWidget {
     this.statsPresenter,
     this.aiCoachPresenter,
     this.updatePresenter,
+    this.storageService,
+    this.notificationService,
   });
 
   final FastingPresenter fastingPresenter;
@@ -38,6 +43,8 @@ class SettingsScreen extends StatelessWidget {
   final StatsPresenter? statsPresenter;
   final AiCoachPresenter? aiCoachPresenter;
   final UpdatePresenter? updatePresenter;
+  final StorageService? storageService;
+  final NotificationService? notificationService;
 
   @override
   Widget build(BuildContext context) {
@@ -197,6 +204,22 @@ class SettingsScreen extends StatelessWidget {
               ),
             ),
           ),
+        ),
+      ));
+    }
+
+    // Notification preferences
+    if (storageService != null) {
+      children.add(AppListTile(
+        insetGrouped: true,
+        leading: const AppIconBadge(icon: Icons.notifications_outlined),
+        title: const Text('Notification preferences'),
+        subtitle: const Text('Level-up, weight reminder, finance alerts'),
+        trailing: const Icon(Icons.chevron_right, size: 18),
+        onTap: () => showNotificationSettingsSheet(
+          context,
+          storage: storageService!,
+          notifications: notificationService ?? NotificationService(),
         ),
       ));
     }

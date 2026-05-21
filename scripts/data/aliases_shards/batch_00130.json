@@ -1,0 +1,790 @@
+{
+  "usda_2705510": [
+    "chocolate milkshake",
+    "choco milkshake",
+    "bottled choco shake",
+    "chocolate shake",
+    "choco shake",
+    "bottled milkshake chocolate",
+    "ready to drink chocolate shake",
+    "chocolate milk shake drink"
+  ],
+  "usda_2705511": [
+    "vanilla milkshake",
+    "strawberry milkshake",
+    "bottled milkshake",
+    "flavored shake",
+    "bottled shake",
+    "ready to drink milkshake",
+    "non chocolate milkshake",
+    "flavored milk shake bottle"
+  ],
+  "usda_2705512": [
+    "licuado",
+    "batido",
+    "mexican fruit shake",
+    "latin smoothie",
+    "fruit milk shake",
+    "blended fruit drink",
+    "mexican blended drink",
+    "batido de fruta",
+    "licuado de fruta"
+  ],
+  "usda_2705513": [
+    "fruit smoothie",
+    "smoothie",
+    "blended fruit drink",
+    "mixed fruit smoothie",
+    "fresh smoothie",
+    "fruit blend drink",
+    "smoothie drink",
+    "blended smoothie"
+  ],
+  "usda_2705514": [
+    "fruit and yogurt smoothie",
+    "fruit dairy smoothie",
+    "fruit milk smoothie",
+    "whole fruit smoothie with milk",
+    "smoothie with dairy",
+    "blended fruit and milk",
+    "fruit smoothie with yogurt",
+    "fresh fruit dairy blend"
+  ],
+  "usda_2705515": [
+    "protein fruit smoothie",
+    "high protein smoothie",
+    "fruit smoothie with protein powder",
+    "protein shake smoothie",
+    "fruit dairy protein shake",
+    "smoothie with added protein",
+    "protein blended smoothie",
+    "fruit protein drink"
+  ],
+  "usda_2705516": [
+    "fruit juice smoothie",
+    "smoothie juice drink",
+    "fruit juice blend with dairy",
+    "juice smoothie with milk",
+    "dairy fruit juice drink",
+    "blended juice smoothie",
+    "fruit juice dairy blend",
+    "smoothie juice"
+  ],
+  "usda_2705517": [
+    "choco milk",
+    "chocolate milk",
+    "choco drink",
+    "milo drink",
+    "ovaltine drink",
+    "nesquik",
+    "chocolate flavored milk",
+    "cocoa milk drink",
+    "choc milk"
+  ],
+  "usda_2705518": [
+    "baby formula",
+    "infant formula",
+    "baby milk formula",
+    "newborn formula",
+    "formula milk",
+    "powdered baby formula",
+    "baby milk",
+    "infant milk"
+  ],
+  "usda_2705519": [
+    "similac formula",
+    "similac baby formula",
+    "similac infant formula",
+    "similac milk",
+    "similac powder",
+    "similac",
+    "similac baby milk"
+  ],
+  "usda_2705520": [
+    "similac alimentum ready to feed",
+    "alimentum formula",
+    "similac alimentum liquid",
+    "hypoallergenic formula similac",
+    "alimentum ready to use",
+    "similac alimentum rtf",
+    "similac alimentum bottle"
+  ],
+  "usda_2705521": [
+    "similac alimentum powder",
+    "alimentum powder formula",
+    "similac alimentum mixed",
+    "similac alimentum prepared",
+    "hypoallergenic similac powder",
+    "alimentum powder mixed with water"
+  ],
+  "usda_2705522": [
+    "similac advance ready to feed",
+    "similac advance liquid",
+    "similac advance bottle",
+    "similac advance rtf",
+    "similac advance formula liquid",
+    "ready to feed similac advance"
+  ],
+  "usda_2705523": [
+    "similac advance powder tap water",
+    "similac advance powder mixed",
+    "similac advance prepared formula",
+    "similac advance powder formula",
+    "similac advance mixed tap water"
+  ],
+  "usda_2705524": [
+    "similac advance bottled water mix",
+    "similac advance powder bottled water",
+    "similac advance with bottled water",
+    "similac advance prepared bottled water"
+  ],
+  "usda_2705525": [
+    "similac advance baby water mix",
+    "similac advance powder baby water",
+    "similac advance prepared baby water",
+    "similac advance with baby water"
+  ],
+  "usda_2705526": [
+    "similac sensitive ready to feed",
+    "similac sensitive liquid",
+    "similac sensitive bottle",
+    "similac sensitive rtf",
+    "similac sensitive formula liquid"
+  ],
+  "usda_2705527": [
+    "similac sensitive powder tap water",
+    "similac sensitive powder mixed",
+    "similac sensitive prepared tap water",
+    "similac sensitive formula powder"
+  ],
+  "usda_2705528": [
+    "similac sensitive bottled water",
+    "similac sensitive powder bottled water",
+    "similac sensitive prepared bottled water",
+    "similac sensitive with bottled water"
+  ],
+  "usda_2705529": [
+    "similac sensitive baby water",
+    "similac sensitive powder baby water",
+    "similac sensitive prepared baby water",
+    "similac sensitive with baby water"
+  ],
+  "usda_2705530": [
+    "similac spit up formula",
+    "similac for spit up liquid",
+    "similac anti spit up ready to feed",
+    "similac spit up rtf",
+    "anti reflux similac formula liquid"
+  ],
+  "usda_2705531": [
+    "similac spit up powder",
+    "similac for spit up mixed",
+    "similac anti spit up powder",
+    "similac spit up prepared",
+    "similac spit up formula powder"
+  ],
+  "usda_2705532": [
+    "similac go and grow",
+    "similac toddler formula",
+    "go and grow toddler milk",
+    "similac stage 3",
+    "similac toddler milk",
+    "go and grow milk",
+    "similac growing up milk"
+  ],
+  "usda_2705533": [
+    "enfamil formula",
+    "enfamil baby formula",
+    "enfamil infant formula",
+    "enfamil milk",
+    "enfamil powder",
+    "enfamil",
+    "enfamil baby milk"
+  ],
+  "usda_2705534": [
+    "enfamil infant ready to feed",
+    "enfamil infant liquid",
+    "enfamil bottle formula",
+    "enfamil infant rtf",
+    "ready to feed enfamil",
+    "enfamil infant formula liquid"
+  ],
+  "usda_2705535": [
+    "enfamil infant powder tap water",
+    "enfamil infant powder mixed",
+    "enfamil infant prepared tap water",
+    "enfamil powder formula tap water"
+  ],
+  "usda_2705536": [
+    "enfamil infant powder bottled water",
+    "enfamil infant bottled water mix",
+    "enfamil prepared bottled water",
+    "enfamil infant formula bottled water"
+  ],
+  "usda_2705537": [
+    "enfamil infant baby water mix",
+    "enfamil infant powder baby water",
+    "enfamil prepared baby water",
+    "enfamil infant formula baby water"
+  ],
+  "usda_2705538": [
+    "enfamil ar ready to feed",
+    "enfamil anti reflux liquid",
+    "enfamil ar bottle",
+    "enfamil ar rtf",
+    "enfamil spit up formula liquid"
+  ],
+  "usda_2705539": [
+    "enfamil ar powder",
+    "enfamil ar mixed",
+    "enfamil ar prepared",
+    "enfamil anti reflux powder",
+    "enfamil ar formula powder"
+  ],
+  "usda_2705540": [
+    "enfamil gentlease ready to feed",
+    "enfamil gentlease liquid",
+    "enfamil gentlease bottle",
+    "gentlease rtf",
+    "enfamil gentle formula liquid"
+  ],
+  "usda_2705541": [
+    "enfamil gentlease powder tap water",
+    "enfamil gentlease mixed tap",
+    "gentlease prepared tap water",
+    "enfamil gentlease formula powder"
+  ],
+  "usda_2705542": [
+    "enfamil gentlease powder bottled water",
+    "enfamil gentlease bottled water mix",
+    "gentlease prepared bottled water",
+    "enfamil gentlease formula bottled water"
+  ],
+  "usda_2705543": [
+    "enfamil gentlease baby water",
+    "enfamil gentlease powder baby water",
+    "gentlease prepared baby water",
+    "enfamil gentlease formula baby water"
+  ],
+  "usda_2705544": [
+    "enfagrow toddler formula",
+    "enfamil enfagrow",
+    "enfagrow growing up milk",
+    "enfagrow toddler milk",
+    "enfagrow next step",
+    "enfagrow formula",
+    "enfamil toddler formula"
+  ],
+  "usda_2705545": [
+    "pediasure toddler drink",
+    "pediasure formula",
+    "pediasure growing up milk",
+    "pediasure nutritional shake",
+    "pediasure kids formula",
+    "pediasure milk",
+    "pediasure toddler shake"
+  ],
+  "usda_2705546": [
+    "nido kinder toddler milk",
+    "nido formula",
+    "nido growing up milk",
+    "nido toddler formula",
+    "nido kinder milk",
+    "nido 1 plus milk",
+    "nido powdered toddler milk"
+  ],
+  "usda_2705547": [
+    "store brand toddler formula",
+    "generic toddler formula",
+    "next step toddler formula",
+    "beginning stage toddler formula",
+    "generic growing up milk",
+    "store brand growing up formula",
+    "generic toddler milk"
+  ],
+  "usda_2705548": [
+    "store brand pediatric shake",
+    "generic toddler shake",
+    "pediatric nutrition shake",
+    "store brand nutrition drink",
+    "generic kids nutritional shake",
+    "store brand toddler shake"
+  ],
+  "usda_2705549": [
+    "gerber formula",
+    "gerber baby formula",
+    "gerber infant formula",
+    "gerber good start formula",
+    "gerber baby milk",
+    "gerber milk",
+    "gerber infant milk"
+  ],
+  "usda_2705550": [
+    "gerber good start gentle ready to feed",
+    "gerber good start liquid",
+    "gerber gentle formula bottle",
+    "gerber good start stage 1 liquid",
+    "gerber gentle rtf"
+  ],
+  "usda_2705551": [
+    "gerber good start gentle powder tap water",
+    "gerber gentle formula powder",
+    "gerber good start stage 1 powder tap",
+    "gerber gentle mixed tap water"
+  ],
+  "usda_2705552": [
+    "gerber good start gentle powder bottled water",
+    "gerber gentle bottled water mix",
+    "gerber good start stage 1 bottled water",
+    "gerber gentle formula bottled water"
+  ],
+  "usda_2705553": [
+    "gerber good start gentle powder baby water",
+    "gerber gentle baby water mix",
+    "gerber good start stage 1 baby water",
+    "gerber gentle formula baby water"
+  ],
+  "usda_2705554": [
+    "gerber good start gentle stage 2",
+    "gerber good start stage 2",
+    "gerber gentle stage 2 formula",
+    "gerber stage 2 infant formula",
+    "gerber good start stage 2 formula"
+  ],
+  "usda_2705555": [
+    "gerber good start stage 3",
+    "gerber toddler formula stage 3",
+    "gerber growing up milk",
+    "gerber toddler milk",
+    "gerber stage 3 formula",
+    "gerber good start toddler milk"
+  ],
+  "usda_2705556": [
+    "premature infant formula powder",
+    "preemie formula powder",
+    "premature baby formula mixed",
+    "preterm infant formula powder",
+    "nicu formula powder"
+  ],
+  "usda_2705557": [
+    "premature infant formula liquid",
+    "preemie formula ready to feed",
+    "premature baby formula bottle",
+    "preterm infant formula liquid",
+    "nicu formula ready to feed"
+  ],
+  "usda_2705558": [
+    "organic baby formula powder",
+    "organic infant formula mixed",
+    "organic formula powder prepared",
+    "organic baby milk powder mixed",
+    "organic formula with water"
+  ],
+  "usda_2705559": [
+    "organic baby formula liquid",
+    "organic infant formula ready to feed",
+    "organic formula bottle",
+    "organic baby formula rtf",
+    "organic ready to feed formula"
+  ],
+  "usda_2705560": [
+    "store brand advantage formula tap water",
+    "generic infant formula powder tap",
+    "store brand tender formula tap water",
+    "generic advantage formula mixed",
+    "store brand baby formula tap water"
+  ],
+  "usda_2705561": [
+    "store brand advantage formula bottled water",
+    "generic infant formula bottled water",
+    "store brand tender formula bottled water",
+    "generic advantage formula bottled water"
+  ],
+  "usda_2705562": [
+    "store brand advantage formula baby water",
+    "generic infant formula baby water",
+    "store brand tender formula baby water",
+    "generic advantage formula baby water"
+  ],
+  "usda_2705563": [
+    "store brand gentle formula",
+    "generic gentle infant formula",
+    "store brand sensitivity formula",
+    "generic sensitivity formula",
+    "store brand gentle sensitivity formula",
+    "generic baby gentle formula"
+  ],
+  "usda_2705564": [
+    "store brand rice added formula",
+    "generic infant formula with rice",
+    "store brand anti spit up formula",
+    "generic rice starch formula",
+    "store brand rice formula"
+  ],
+  "usda_2705565": [
+    "enfamil prosobee ready to feed",
+    "enfamil soy formula liquid",
+    "prosobee rtf",
+    "enfamil soy infant formula liquid",
+    "prosobee bottle formula"
+  ],
+  "usda_2705566": [
+    "enfamil prosobee powder tap water",
+    "prosobee powder mixed tap",
+    "enfamil soy formula powder tap water",
+    "prosobee prepared tap water"
+  ],
+  "usda_2705567": [
+    "enfamil prosobee powder bottled water",
+    "prosobee bottled water mix",
+    "enfamil soy formula powder bottled water",
+    "prosobee prepared bottled water"
+  ],
+  "usda_2705568": [
+    "enfamil prosobee powder baby water",
+    "prosobee baby water mix",
+    "enfamil soy formula powder baby water",
+    "prosobee prepared baby water"
+  ],
+  "usda_2705569": [
+    "similac isomil soy ready to feed",
+    "similac soy formula liquid",
+    "isomil rtf",
+    "similac soy infant formula liquid",
+    "isomil soy bottle"
+  ],
+  "usda_2705570": [
+    "similac isomil soy powder tap water",
+    "similac soy powder mixed tap",
+    "isomil powder tap water",
+    "similac soy formula powder tap"
+  ],
+  "usda_2705571": [
+    "similac isomil soy powder bottled water",
+    "similac soy formula bottled water",
+    "isomil powder bottled water",
+    "similac soy bottled water mix"
+  ],
+  "usda_2705572": [
+    "similac isomil soy powder baby water",
+    "similac soy formula baby water",
+    "isomil powder baby water",
+    "similac soy baby water mix"
+  ],
+  "usda_2705573": [
+    "similac diarrhea formula",
+    "similac for diarrhea formula",
+    "anti diarrhea infant formula",
+    "similac diarrhea relief formula",
+    "diarrhea baby formula",
+    "lactose free similac formula"
+  ],
+  "usda_2705574": [
+    "gerber good start soy ready to feed",
+    "gerber soy formula liquid",
+    "gerber soy stage 1 bottle",
+    "gerber soy infant formula liquid",
+    "good start soy rtf"
+  ],
+  "usda_2705575": [
+    "gerber good start soy powder tap water",
+    "gerber soy formula powder tap",
+    "good start soy mixed tap water",
+    "gerber soy stage 1 powder tap"
+  ],
+  "usda_2705576": [
+    "gerber good start soy powder bottled water",
+    "gerber soy formula bottled water",
+    "good start soy bottled water mix",
+    "gerber soy stage 1 bottled water"
+  ],
+  "usda_2705577": [
+    "gerber good start soy powder baby water",
+    "gerber soy formula baby water",
+    "good start soy baby water mix",
+    "gerber soy stage 1 baby water"
+  ],
+  "usda_2705578": [
+    "store brand soy formula",
+    "generic soy infant formula",
+    "store brand soy baby formula",
+    "generic soy formula powder",
+    "store brand soy milk formula"
+  ],
+  "usda_2705579": [
+    "enfamil nutramigen ready to feed",
+    "nutramigen liquid formula",
+    "enfamil hypoallergenic formula liquid",
+    "nutramigen rtf",
+    "nutramigen bottle formula"
+  ],
+  "usda_2705580": [
+    "enfamil nutramigen powder",
+    "nutramigen powder mixed",
+    "enfamil hypoallergenic formula powder",
+    "nutramigen prepared",
+    "nutramigen formula powder"
+  ],
+  "usda_2705581": [
+    "enfamil pregestimil ready to feed",
+    "pregestimil liquid formula",
+    "pregestimil rtf",
+    "enfamil pregestimil bottle",
+    "pregestimil formula liquid"
+  ],
+  "usda_2705582": [
+    "enfamil pregestimil powder",
+    "pregestimil powder mixed",
+    "pregestimil prepared formula",
+    "enfamil pregestimil powder formula"
+  ],
+  "usda_2705583": [
+    "amino acid infant formula",
+    "elemental baby formula",
+    "amino acid based formula",
+    "hypoallergenic elemental formula",
+    "amino acid formula milk",
+    "elemental infant formula",
+    "elemental formula"
+  ],
+  "usda_2705584": [
+    "low iron baby formula",
+    "low iron infant formula",
+    "formula with low iron",
+    "low iron formula milk",
+    "baby formula low iron",
+    "reduced iron formula"
+  ],
+  "usda_2705585": [
+    "powdered milk",
+    "dry milk powder",
+    "skimmed milk powder",
+    "dried milk",
+    "milk powder",
+    "powdered whole milk",
+    "non fat dry milk",
+    "dry milk"
+  ],
+  "usda_2705586": [
+    "sweet whey powder",
+    "whey powder",
+    "dried whey",
+    "whey dry powder",
+    "sweet whey dry",
+    "dried sweet whey",
+    "whey solids",
+    "sweet whey solids"
+  ],
+  "usda_2705587": [
+    "cocoa powder",
+    "unsweetened cocoa",
+    "baking cocoa",
+    "cacao powder",
+    "pure cocoa powder",
+    "dark cocoa powder",
+    "raw cocoa powder",
+    "cocoa"
+  ],
+  "usda_2705588": [
+    "hot chocolate mix",
+    "chocolate drink mix powder",
+    "choco drink powder",
+    "cocoa mix powder",
+    "instant chocolate powder",
+    "chocolate powder mix",
+    "choco powder mix",
+    "milo powder"
+  ],
+  "usda_2705589": [
+    "light hot chocolate mix",
+    "diet chocolate powder mix",
+    "reduced calorie choco powder",
+    "light cocoa mix powder",
+    "low calorie chocolate drink mix",
+    "light chocolate powder",
+    "sugar free choco mix"
+  ],
+  "usda_2705590": [
+    "malted milk powder",
+    "malt powder",
+    "horlicks",
+    "malted milk mix",
+    "malt drink powder",
+    "dry malt mix",
+    "malted milk drink powder",
+    "milo malt powder"
+  ],
+  "usda_2705591": [
+    "strawberry milk powder",
+    "strawberry drink mix",
+    "strawberry flavored powder",
+    "strawberry nesquik powder",
+    "strawberry milkshake powder",
+    "strawberry powder mix",
+    "strawberry flavored milk mix"
+  ],
+  "usda_2705592": [
+    "cream",
+    "dairy cream",
+    "table cream",
+    "fresh cream",
+    "liquid cream",
+    "cooking cream",
+    "all purpose cream",
+    "cream for coffee"
+  ],
+  "usda_2705593": [
+    "light cream",
+    "single cream",
+    "coffee cream",
+    "thin cream",
+    "light dairy cream",
+    "pouring cream",
+    "light pouring cream",
+    "table cream light"
+  ],
+  "usda_2705594": [
+    "half and half",
+    "coffee half and half",
+    "half half cream",
+    "half and half creamer",
+    "light cream for coffee",
+    "half half milk cream",
+    "half cream half milk",
+    "creamer half and half"
+  ],
+  "usda_2705595": [
+    "flavored half and half",
+    "vanilla half and half",
+    "flavored creamer half and half",
+    "sweetened half and half",
+    "flavored half half cream",
+    "hazelnut half and half",
+    "flavored half half creamer"
+  ],
+  "usda_2705597": [
+    "heavy cream",
+    "heavy whipping cream",
+    "whipping cream",
+    "double cream",
+    "thick cream",
+    "full fat cream",
+    "heavy dairy cream",
+    "fresh heavy cream"
+  ],
+  "usda_2705598": [
+    "whipped cream",
+    "whip cream",
+    "cream topping",
+    "canned whipped cream",
+    "whipped topping",
+    "squirt cream",
+    "reddi whip",
+    "fresh whipped cream"
+  ],
+  "usda_2705599": [
+    "coffee creamer",
+    "creamer",
+    "non dairy creamer",
+    "coffee whitener",
+    "creamer for coffee",
+    "dairy creamer",
+    "coffee cream",
+    "whitener"
+  ],
+  "usda_2705600": [
+    "liquid coffee creamer",
+    "liquid creamer",
+    "liquid non dairy creamer",
+    "pourable creamer",
+    "liquid whitener",
+    "bottled coffee creamer",
+    "liquid coffee whitener",
+    "pourable coffee creamer"
+  ],
+  "usda_2705601": [
+    "flavored liquid creamer",
+    "vanilla liquid creamer",
+    "hazelnut liquid creamer",
+    "flavored coffee creamer liquid",
+    "sweet cream liquid creamer",
+    "flavored pourable creamer",
+    "flavored whitener liquid"
+  ],
+  "usda_2705602": [
+    "fat free liquid creamer",
+    "non fat liquid creamer",
+    "fat free coffee creamer liquid",
+    "zero fat liquid creamer",
+    "skimmed liquid creamer",
+    "fat free pourable creamer"
+  ],
+  "usda_2705603": [
+    "fat free flavored liquid creamer",
+    "fat free vanilla creamer",
+    "fat free hazelnut creamer",
+    "non fat flavored liquid creamer",
+    "fat free flavored coffee creamer",
+    "fat free pourable flavored creamer"
+  ],
+  "usda_2705604": [
+    "sugar free fat free flavored creamer",
+    "zero sugar fat free creamer",
+    "diet flavored liquid creamer",
+    "sugar free fat free liquid creamer",
+    "diabetic coffee creamer liquid"
+  ],
+  "usda_2705605": [
+    "sugar free flavored liquid creamer",
+    "sugar free vanilla creamer",
+    "sugar free hazelnut creamer liquid",
+    "zero sugar flavored creamer",
+    "sugar free coffee creamer liquid",
+    "diet flavored liquid creamer"
+  ],
+  "usda_2705606": [
+    "powdered coffee creamer",
+    "powder creamer",
+    "non dairy powder creamer",
+    "powdered whitener",
+    "coffee whitener powder",
+    "dry creamer",
+    "creamer powder",
+    "powdered non dairy creamer"
+  ],
+  "usda_2705607": [
+    "flavored powder creamer",
+    "vanilla powder creamer",
+    "hazelnut powder creamer",
+    "flavored powdered coffee creamer",
+    "sweet cream powder creamer",
+    "flavored dry creamer",
+    "flavored coffee whitener powder"
+  ],
+  "usda_2705608": [
+    "fat free powder creamer",
+    "non fat powder creamer",
+    "fat free powdered creamer",
+    "zero fat dry creamer",
+    "fat free coffee whitener powder",
+    "non fat dry creamer"
+  ],
+  "usda_2705609": [
+    "sugar free powder creamer",
+    "sugar free powdered creamer",
+    "zero sugar powder creamer",
+    "diet powder creamer",
+    "sugar free flavored powder creamer",
+    "sugar free dry creamer"
+  ],
+  "usda_2705610": [
+    "soy creamer",
+    "soy milk creamer",
+    "soy coffee creamer",
+    "non dairy soy creamer",
+    "plant based creamer",
+    "soy liquid creamer",
+    "vegan coffee creamer",
+    "soy whitener"
+  ]
+}

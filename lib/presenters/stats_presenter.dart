@@ -1,13 +1,21 @@
 import 'package:flutter/material.dart';
 import '../models/user_stats.dart';
+import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 
 class StatsPresenter extends ChangeNotifier {
   final StorageService _storageService;
+  final NotificationService _notifications;
   UserStats _stats = UserStats.initial();
   bool showLevelUpDialog = false;
 
-  StatsPresenter(this._storageService) {
+  /// Tracks the rank at last notification — used to detect rank promotion.
+  String _previousRank = 'E';
+
+  StatsPresenter(
+    this._storageService, {
+    NotificationService? notifications,
+  }) : _notifications = notifications ?? NotificationService() {
     _init();
   }
 
@@ -19,6 +27,7 @@ class StatsPresenter extends ChangeNotifier {
 
   Future<void> loadStats() async {
     _stats = await _storageService.loadUserStats();
+    _previousRank = rank;
     notifyListeners();
   }
 
@@ -87,6 +96,19 @@ class StatsPresenter extends ChangeNotifier {
 
     notifyListeners();
     await _storageService.saveUserStats(_stats);
+
+    // Fire achievement notifications after level-up.
+    if (showLevelUpDialog) {
+      final prefs = await _storageService.loadNotificationPreferences();
+      final newRank = rank;
+      if (newRank != _previousRank && prefs.rankPromotionEnabled) {
+        await _notifications.showRankPromotionNotification(
+            _previousRank, newRank);
+      } else if (prefs.levelUpEnabled) {
+        await _notifications.showLevelUpNotification(newLevel, newRank);
+      }
+      _previousRank = newRank;
+    }
   }
 
   Future<void> modifyHp(int amount) async {

@@ -1,0 +1,486 @@
+{
+  "usda_168117": [
+    "pure cranberry juice",
+    "tart cranberry juice",
+    "cran juice",
+    "unsweetened cran juice",
+    "100% cranberry juice",
+    "no sugar cranberry juice",
+    "natural cranberry juice",
+    "cranberry drink plain",
+    "cranberry beverage unsweetened"
+  ],
+  "usda_168118": [
+    "beef bologna",
+    "low sodium bologna",
+    "bologna slices",
+    "deli bologna",
+    "bologna lunch meat",
+    "reduced salt bologna",
+    "bologna cold cut",
+    "beef deli meat slices",
+    "bologna sandwich meat"
+  ],
+  "usda_168119": [
+    "canned turnip greens",
+    "turnip greens no salt",
+    "unsalted turnip greens",
+    "turnip leaf greens",
+    "southern greens canned",
+    "turnip tops canned",
+    "no salt greens canned",
+    "canned leafy greens plain"
+  ],
+  "usda_168120": [
+    "smoked turkey",
+    "boneless smoked turkey",
+    "smoked turkey meat",
+    "smoked turkey with skin",
+    "deli smoked turkey",
+    "smoked turkey slices",
+    "whole smoked turkey meat",
+    "barbecue turkey cooked",
+    "hickory smoked turkey"
+  ],
+  "usda_168121": [
+    "low sodium american cheese",
+    "low salt processed cheese",
+    "reduced sodium cheddar slices",
+    "low sodium cheese slices",
+    "no salt american cheese",
+    "processed cheddar low sodium",
+    "low salt cheese slices",
+    "diet american cheese"
+  ],
+  "usda_168122": [
+    "instant coffee with creamer light",
+    "light instant coffee mix",
+    "reduced calorie coffee mix",
+    "diet instant coffee",
+    "coffee whitener mix low cal",
+    "instant coffee blend light",
+    "low calorie coffee powder",
+    "sugar free instant coffee mix"
+  ],
+  "usda_168123": [
+    "light cranberry apple juice",
+    "diet cranberry apple drink",
+    "low calorie cran apple juice",
+    "cran apple drink diet",
+    "light fruit juice blend",
+    "vitamin c cranberry apple drink",
+    "low cal cran apple blend",
+    "diet cranberry apple beverage"
+  ],
+  "usda_168124": [
+    "low sodium swiss cheese",
+    "low salt swiss",
+    "reduced sodium swiss cheese",
+    "no salt swiss cheese",
+    "sodium free swiss",
+    "plain swiss low salt",
+    "diet swiss cheese"
+  ],
+  "usda_168125": [
+    "toddler mac beef tomato",
+    "baby beef macaroni dinner",
+    "baby pasta beef tomato",
+    "toddler pasta dinner",
+    "baby food beef pasta",
+    "infant mac and beef",
+    "toddler beef tomato mac"
+  ],
+  "usda_168126": [
+    "pumpernickel roll",
+    "dark rye roll",
+    "dark bread roll",
+    "pumpernickel dinner roll",
+    "rye roll",
+    "dark german roll",
+    "pumpernickel bun",
+    "seeded dark bread roll"
+  ],
+  "usda_168127": [
+    "unsalted corn chips",
+    "plain corn puffs",
+    "no salt corn chips",
+    "salt free corn snacks",
+    "unsalted corn crisps",
+    "plain extruded corn chips",
+    "corn snack no salt",
+    "plain puffed corn chips"
+  ],
+  "usda_168128": [
+    "canned baked beans no salt",
+    "baked beans unsalted",
+    "no sodium baked beans",
+    "salt free baked beans",
+    "low sodium baked beans canned",
+    "plain baked beans canned",
+    "unsalted canned beans baked"
+  ],
+  "usda_168129": [
+    "salted jellyfish",
+    "dried jellyfish",
+    "preserved jellyfish",
+    "pickled jellyfish",
+    "jellyfish strips dried",
+    "chinese dried jellyfish",
+    "asian salted jellyfish",
+    "salt cured jellyfish"
+  ],
+  "usda_168130": [
+    "chocolate covered ice cream bar",
+    "nutty ice cream bar",
+    "caramel ice cream bar nuts",
+    "chocolate dipped frozen bar",
+    "ice cream bar with nuts",
+    "nutty frozen chocolate bar",
+    "choco nut ice cream bar",
+    "frozen novelty bar nuts"
+  ],
+  "usda_168131": [
+    "low sodium hot dog",
+    "low salt frank",
+    "reduced sodium frankfurter",
+    "low sodium wiener",
+    "low salt hot dog",
+    "diet hot dog",
+    "reduced salt frankfurter",
+    "low sodium sausage frank"
+  ],
+  "usda_168132": [
+    "diet ice pop",
+    "sugar free popsicle",
+    "low calorie ice pop",
+    "diet frozen pop",
+    "light popsicle",
+    "sugar free ice lolly",
+    "low sugar frozen pop",
+    "diet icy pole"
+  ],
+  "usda_168133": [
+    "baby peach yogurt",
+    "toddler peach yogurt",
+    "infant peach yogurt dessert",
+    "baby food peach yogurt",
+    "pureed peach yogurt baby",
+    "peach yogurt baby food"
+  ],
+  "usda_168134": [
+    "baby blueberry yogurt",
+    "toddler blueberry yogurt",
+    "strained blueberry yogurt baby",
+    "infant blueberry yogurt",
+    "baby food blueberry yogurt",
+    "pureed blueberry yogurt baby"
+  ],
+  "usda_168135": [
+    "baby banana yogurt",
+    "toddler banana yogurt",
+    "strained banana yogurt baby",
+    "infant banana yogurt",
+    "baby food banana yogurt",
+    "pureed banana yogurt baby"
+  ],
+  "usda_168136": [
+    "rich chocolate ice cream",
+    "premium chocolate ice cream",
+    "dark chocolate ice cream",
+    "decadent chocolate ice cream",
+    "creamy chocolate ice cream",
+    "full fat chocolate ice cream",
+    "gourmet chocolate ice cream",
+    "luxury choco ice cream"
+  ],
+  "usda_168137": [
+    "baked tortilla chips",
+    "light tortilla chips",
+    "low fat tortilla chips",
+    "baked corn chips",
+    "oven baked tortilla chips",
+    "reduced fat nacho chips",
+    "light nachos baked",
+    "baked chips tortilla"
+  ],
+  "usda_168138": [
+    "honey bunches of oats",
+    "honey roasted oat cereal",
+    "honey oat clusters cereal",
+    "breakfast cereal honey clusters",
+    "crunchy honey oat cereal",
+    "post honey oat cereal",
+    "honey granola clusters",
+    "oat cluster cereal honey"
+  ],
+  "usda_168139": [
+    "light microwave popcorn",
+    "low fat microwave popcorn",
+    "healthy microwave popcorn",
+    "diet popcorn microwave",
+    "reduced fat microwave popcorn",
+    "low sodium popcorn bag",
+    "low calorie microwave popcorn",
+    "light popcorn bag"
+  ],
+  "usda_168140": [
+    "baby fruit dessert",
+    "baby food mixed fruit",
+    "toddler fruit dessert",
+    "baby mixed fruit puree",
+    "infant fruit supreme",
+    "pureed fruit baby dessert",
+    "baby fruit medley"
+  ],
+  "usda_168141": [
+    "low fat swiss cheese",
+    "reduced fat swiss",
+    "light swiss cheese",
+    "diet swiss cheese",
+    "slim swiss cheese",
+    "low calorie swiss cheese",
+    "fat reduced swiss",
+    "lite swiss cheese"
+  ],
+  "usda_168142": [
+    "liquid fructose",
+    "fructose sweetener liquid",
+    "fruit sugar liquid",
+    "liquid fruit sugar",
+    "fructose syrup tabletop",
+    "natural liquid sweetener fructose",
+    "fruit sweetener liquid drops"
+  ],
+  "usda_168143": [
+    "sugar free chocolate pudding mix",
+    "diet chocolate pudding mix",
+    "light chocolate pudding powder",
+    "low calorie choco pudding mix",
+    "instant diet chocolate pudding",
+    "reduced calorie chocolate pudding dry",
+    "sugar free choco pudding dry mix"
+  ],
+  "usda_168144": [
+    "baby grape juice",
+    "unsweetened grape juice baby",
+    "toddler grape juice",
+    "infant grape juice no sugar",
+    "baby food grape juice",
+    "sugar free grape juice infant",
+    "no sugar grape drink baby"
+  ],
+  "usda_168145": [
+    "low sugar jelly",
+    "reduced sugar jam",
+    "light jelly spread",
+    "diet fruit jelly",
+    "sugar free jelly spread",
+    "homemade light jelly",
+    "low cal fruit jelly",
+    "reduced sugar fruit spread"
+  ],
+  "usda_168146": [
+    "sugar free pudding mix",
+    "diet pudding dry mix",
+    "light pudding mix powder",
+    "low calorie instant pudding mix",
+    "sugar free vanilla pudding mix",
+    "reduced calorie pudding powder",
+    "diet pudding mix instant",
+    "light instant pudding powder"
+  ],
+  "usda_168147": [
+    "wheat gluten powder",
+    "seitan flour",
+    "gluten flour",
+    "wheat protein powder",
+    "vital gluten",
+    "pure wheat gluten",
+    "bread gluten flour",
+    "high gluten wheat flour",
+    "seitan base powder"
+  ],
+  "usda_168148": [
+    "raw frog legs",
+    "fresh frog legs",
+    "uncooked frog legs",
+    "frog meat raw",
+    "frog drumstick raw",
+    "cuisses de grenouille",
+    "whole frog legs fresh"
+  ],
+  "usda_168149": [
+    "salted mackerel",
+    "salt cured mackerel",
+    "preserved mackerel fish",
+    "pickled mackerel",
+    "cured mackerel",
+    "salted fish mackerel",
+    "salt mackerel dried",
+    "mackerel in salt"
+  ],
+  "usda_168150": [
+    "jambolan fruit",
+    "java plum",
+    "jamun fruit",
+    "black plum fruit",
+    "indian blackberry",
+    "duhat",
+    "purple plum fruit",
+    "jambul berry",
+    "duhat fruit"
+  ],
+  "usda_168151": [
+    "fresh jujube",
+    "chinese date fresh",
+    "red date fruit",
+    "fresh red date",
+    "chinese apple jujube",
+    "hong zao fresh",
+    "jujube berry raw",
+    "red jujube fresh"
+  ],
+  "usda_168152": [
+    "dried chinese date",
+    "dried red date",
+    "dried jujube",
+    "hong zao dried",
+    "red date dried",
+    "chinese jujube dried",
+    "dried jujube fruit",
+    "dehydrated red dates"
+  ],
+  "usda_168154": [
+    "fresh kumquat",
+    "small orange citrus",
+    "mini orange fruit",
+    "kumquat citrus",
+    "oval orange kumquat",
+    "chinese orange small",
+    "tiny citrus fruit kumquat",
+    "bite size orange"
+  ],
+  "usda_168155": [
+    "fresh lime",
+    "green lime",
+    "raw lime fruit",
+    "whole lime",
+    "key lime",
+    "fresh green lime",
+    "lime citrus raw",
+    "lime fruit whole"
+  ],
+  "usda_168156": [
+    "fresh squeezed lime juice",
+    "fresh lime juice",
+    "raw lime juice",
+    "squeezed lime",
+    "fresh pressed lime juice",
+    "lime citrus juice fresh",
+    "raw squeezed lime"
+  ],
+  "usda_168157": [
+    "bottled lime juice",
+    "canned lime juice",
+    "packaged lime juice",
+    "commercial lime juice",
+    "pure lime juice bottled",
+    "unsweetened lime juice bottled",
+    "stored lime juice",
+    "jarred lime juice"
+  ],
+  "usda_168158": [
+    "dried blueberries",
+    "sweetened dried blueberries",
+    "blueberry raisins",
+    "sweet dried blueberry",
+    "dried berry blueberry",
+    "sugared dried blueberries",
+    "blueberry dried snack"
+  ],
+  "usda_168159": [
+    "prunes in syrup",
+    "canned prunes heavy syrup",
+    "prunes in heavy syrup",
+    "syrup packed prunes",
+    "sweet canned prunes",
+    "dried plums in syrup",
+    "prunes with syrup liquid"
+  ],
+  "usda_168160": [
+    "dehydrated prunes",
+    "low moisture prunes",
+    "dry prunes uncooked",
+    "dried plums dehydrated",
+    "raw dehydrated prunes",
+    "uncooked dried prunes low moisture",
+    "prune powder dried"
+  ],
+  "usda_168161": [
+    "stewed prunes",
+    "cooked dried prunes",
+    "warm stewed prunes",
+    "rehydrated prunes cooked",
+    "simmered prunes",
+    "prunes in water stewed",
+    "softened prunes cooked"
+  ],
+  "usda_168162": [
+    "dried plums",
+    "raw prunes",
+    "uncooked dried plums",
+    "dried plum fruit",
+    "whole dried prunes",
+    "unprocessed prunes dried",
+    "dry prunes plain"
+  ],
+  "usda_168163": [
+    "fresh quince",
+    "quince fruit raw",
+    "raw quince",
+    "quince apple",
+    "golden quince",
+    "quince pear fruit",
+    "membrillo raw fruit",
+    "whole quince"
+  ],
+  "usda_168164": [
+    "golden raisins",
+    "sultana raisins",
+    "yellow raisins",
+    "blonde raisins",
+    "light raisins golden",
+    "golden sultanas",
+    "white raisins",
+    "seedless golden raisins"
+  ],
+  "usda_168165": [
+    "dark raisins",
+    "seedless raisins",
+    "dried grapes",
+    "black raisins",
+    "regular raisins",
+    "thompson raisins",
+    "dried dark grapes seedless",
+    "raisin snack dark"
+  ],
+  "usda_168166": [
+    "seeded raisins",
+    "raisins with seeds",
+    "muscat raisins",
+    "large raisins seeded",
+    "old fashioned raisins",
+    "dried grapes seeded",
+    "big seeded raisins"
+  ],
+  "usda_168167": [
+    "canned rambutan",
+    "rambutan in syrup",
+    "rambutan fruit canned",
+    "sweet canned rambutan",
+    "preserved rambutan",
+    "rambutan syrup pack",
+    "rambutan dessert canned",
+    "rambutan tropical fruit canned"
+  ]
+}

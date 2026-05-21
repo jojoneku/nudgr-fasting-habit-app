@@ -1,5 +1,5 @@
 # Plan 014 — Supabase Sync (Local-First)
-**Status:** DRAFT — Awaiting Approval
+**Status:** IMPLEMENTED
 **Phase:** 1 of 1
 **Depends on:** Plan 013 (Authentication) — `userId` required to scope Supabase data
 

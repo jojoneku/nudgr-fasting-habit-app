@@ -1,0 +1,972 @@
+{
+  "usda_172172": [
+    "grilled sirloin cap",
+    "picanha grilled",
+    "coulotte steak grilled",
+    "top sirloin cap cooked",
+    "lean sirloin steak grilled",
+    "grilled beef cap steak",
+    "sirloin cap select grilled",
+    "coulotte cooked",
+    "grilled picanha steak",
+    "lean grilled beef steak"
+  ],
+  "usda_172173": [
+    "raw sirloin cap",
+    "picanha raw",
+    "coulotte steak raw",
+    "top sirloin cap uncooked",
+    "sirloin cap all grades",
+    "raw beef cap steak",
+    "uncooked picanha",
+    "raw coulotte",
+    "sirloin cap fresh raw",
+    "lean raw sirloin steak"
+  ],
+  "usda_172174": [
+    "choice sirloin cap raw",
+    "raw picanha choice",
+    "coulotte choice raw",
+    "top sirloin cap choice uncooked",
+    "choice grade sirloin cap",
+    "raw choice beef cap",
+    "picanha choice cut raw",
+    "uncooked choice sirloin cap",
+    "lean choice beef steak raw",
+    "choice coulotte raw"
+  ],
+  "usda_172175": [
+    "bleu cheese",
+    "blue cheese crumbles",
+    "gorgonzola",
+    "roquefort",
+    "blue mold cheese",
+    "bleu fromage",
+    "crumbled blue cheese",
+    "blue veined cheese",
+    "bleu cheese block",
+    "stilton"
+  ],
+  "usda_172176": [
+    "brick cheese slice",
+    "mild brick cheese",
+    "semi-soft brick cheese",
+    "american brick cheese",
+    "sliced brick cheese",
+    "brick style cheese",
+    "wisconsin brick cheese",
+    "mild semi-soft cheese"
+  ],
+  "usda_172177": [
+    "brie cheese",
+    "soft brie",
+    "french brie",
+    "creamy brie",
+    "white rind cheese",
+    "soft ripened cheese",
+    "brie wheel",
+    "triple cream brie",
+    "brie wedge",
+    "soft white cheese"
+  ],
+  "usda_172178": [
+    "camembert cheese",
+    "french camembert",
+    "soft camembert",
+    "normandy cheese",
+    "white bloomy rind cheese",
+    "creamy camembert",
+    "camembert wedge",
+    "soft ripened camembert",
+    "camembert round"
+  ],
+  "usda_172179": [
+    "cottage cheese",
+    "creamed cottage cheese",
+    "small curd cottage cheese",
+    "large curd cottage cheese",
+    "plain cottage cheese",
+    "fresh cottage cheese",
+    "low fat cottage cheese",
+    "curd cheese",
+    "white cottage cheese",
+    "soft curd cheese"
+  ],
+  "usda_172180": [
+    "cottage cheese with fruit",
+    "fruity cottage cheese",
+    "peach cottage cheese",
+    "pineapple cottage cheese",
+    "mixed fruit cottage cheese",
+    "sweet cottage cheese",
+    "creamed cottage cheese fruit",
+    "cottage cheese bowl with fruit"
+  ],
+  "usda_172181": [
+    "nonfat cottage cheese",
+    "fat free cottage cheese",
+    "dry cottage cheese",
+    "uncreamed cottage cheese",
+    "low calorie cottage cheese",
+    "plain dry curd cottage cheese",
+    "skim cottage cheese",
+    "dry curd cheese",
+    "diet cottage cheese"
+  ],
+  "usda_172183": [
+    "raw egg white",
+    "fresh egg white",
+    "liquid egg white",
+    "separated egg white",
+    "uncooked egg white",
+    "albumen",
+    "egg whites only",
+    "raw albumen",
+    "fresh egg albumen"
+  ],
+  "usda_172184": [
+    "raw egg yolk",
+    "fresh egg yolk",
+    "separated egg yolk",
+    "uncooked yolk",
+    "egg yolk only",
+    "fresh yolk",
+    "liquid yolk",
+    "raw egg center"
+  ],
+  "usda_172185": [
+    "omelette",
+    "omelet egg",
+    "egg omelet",
+    "folded egg",
+    "plain omelette",
+    "cooked omelet",
+    "breakfast omelet",
+    "egg fold",
+    "fluffy omelette",
+    "pan omelette"
+  ],
+  "usda_172186": [
+    "poached egg",
+    "poached whole egg",
+    "soft poached egg",
+    "eggs benedict egg",
+    "gently cooked egg",
+    "water poached egg",
+    "runny poached egg",
+    "poached egg breakfast"
+  ],
+  "usda_172187": [
+    "scrambled eggs",
+    "scrambled egg",
+    "fluffy scrambled eggs",
+    "soft scrambled eggs",
+    "cooked scrambled eggs",
+    "breakfast scrambled eggs",
+    "buttered scrambled eggs",
+    "pan scrambled eggs",
+    "scrambled whole egg"
+  ],
+  "usda_172189": [
+    "duck egg",
+    "raw duck egg",
+    "fresh duck egg",
+    "whole duck egg",
+    "uncooked duck egg",
+    "large duck egg",
+    "duck egg whole"
+  ],
+  "usda_172190": [
+    "goose egg",
+    "raw goose egg",
+    "fresh goose egg",
+    "whole goose egg",
+    "uncooked goose egg",
+    "large goose egg",
+    "goose egg whole"
+  ],
+  "usda_172191": [
+    "quail egg",
+    "raw quail egg",
+    "fresh quail egg",
+    "small quail egg",
+    "whole quail egg",
+    "itlog ng pugo",
+    "uncooked quail egg",
+    "miniature egg",
+    "quail egg raw"
+  ],
+  "usda_172192": [
+    "turkey egg",
+    "raw turkey egg",
+    "fresh turkey egg",
+    "whole turkey egg",
+    "uncooked turkey egg",
+    "large turkey egg",
+    "turkey egg whole"
+  ],
+  "usda_172193": [
+    "2 percent milk",
+    "2% milk",
+    "reduced fat milk",
+    "semi skimmed milk",
+    "low fat milk 2%",
+    "partly skimmed milk",
+    "two percent milk",
+    "reduced fat dairy milk"
+  ],
+  "usda_172194": [
+    "evaporated milk",
+    "canned milk",
+    "evap milk",
+    "condensed unsweetened milk",
+    "tinned milk",
+    "evaporated canned milk",
+    "creamy canned milk",
+    "evap canned dairy",
+    "unsweetened evaporated milk"
+  ],
+  "usda_172195": [
+    "powdered milk",
+    "dry nonfat milk",
+    "skim milk powder",
+    "dried milk powder",
+    "nonfat dry milk",
+    "skimmed milk powder",
+    "milk powder",
+    "dry milk",
+    "instant skim milk powder"
+  ],
+  "usda_172196": [
+    "instant powdered milk",
+    "instant dry milk",
+    "instant skim milk powder",
+    "non fat instant milk powder",
+    "dried instant milk",
+    "instant milk dry",
+    "powdered skim milk instant",
+    "fat free instant milk powder"
+  ],
+  "usda_172197": [
+    "hard goat cheese",
+    "aged goat cheese",
+    "firm goat cheese",
+    "fromage de chevre",
+    "chevre hard",
+    "goat milk cheese hard",
+    "aged chevre",
+    "dry goat cheese",
+    "hard goat milk cheese"
+  ],
+  "usda_172198": [
+    "vegan mozzarella",
+    "dairy free mozzarella",
+    "mozzarella substitute",
+    "plant based mozzarella",
+    "imitation mozzarella",
+    "non dairy mozzarella",
+    "fake mozzarella cheese",
+    "mozzarella alternative",
+    "soy mozzarella"
+  ],
+  "usda_172199": [
+    "mango greek yogurt",
+    "greek yogurt mango",
+    "chobani mango yogurt",
+    "mango yogurt 2%",
+    "low fat mango yogurt",
+    "2 percent mango greek yogurt",
+    "mango flavored greek yogurt",
+    "greek style mango yogurt"
+  ],
+  "usda_172200": [
+    "cheese sauce",
+    "homemade cheese sauce",
+    "cheesy sauce",
+    "nacho cheese sauce homemade",
+    "cheddar sauce",
+    "melted cheese sauce",
+    "white cheese sauce",
+    "mac and cheese sauce",
+    "cheese dip sauce"
+  ],
+  "usda_172201": [
+    "queso anejo",
+    "aged mexican cheese",
+    "mexican aged cheese",
+    "dry aged mexican cheese",
+    "cotija style cheese",
+    "queso añejo",
+    "crumbly mexican cheese",
+    "hard mexican cheese",
+    "anejo cheese"
+  ],
+  "usda_172202": [
+    "frozen raw egg",
+    "pasteurized frozen egg",
+    "frozen whole egg",
+    "liquid frozen egg pasteurized",
+    "frozen egg whole",
+    "pasteurized egg frozen",
+    "bulk frozen egg",
+    "frozen egg mix"
+  ],
+  "usda_172205": [
+    "2% milk no vitamin",
+    "2 percent plain milk",
+    "reduced fat milk plain",
+    "two percent milk unfotified",
+    "semi skimmed milk plain",
+    "regular 2 percent milk",
+    "reduced fat fluid milk",
+    "low fat 2% milk plain"
+  ],
+  "usda_172206": [
+    "fat free parmesan topping",
+    "parmesan sprinkle fat free",
+    "zero fat parmesan topping",
+    "light parmesan topping",
+    "fat free parm",
+    "parmesan cheese powder fat free",
+    "diet parmesan topping",
+    "calorie free parmesan sprinkle"
+  ],
+  "usda_172207": [
+    "fat free cream cheese",
+    "nonfat cream cheese",
+    "zero fat cream cheese",
+    "light cream cheese fat free",
+    "skim cream cheese",
+    "diet cream cheese",
+    "fat free soft cheese",
+    "low calorie cream cheese"
+  ],
+  "usda_172208": [
+    "chocolate yogurt nonfat",
+    "nonfat chocolate yogurt",
+    "chocolate flavored yogurt",
+    "skim milk chocolate yogurt",
+    "fat free chocolate yogurt",
+    "choco yogurt nonfat",
+    "nonfat choco yogurt",
+    "chocolate dairy yogurt"
+  ],
+  "usda_172209": [
+    "cheez whiz",
+    "cheese whiz",
+    "cheeze whiz",
+    "jarred cheese sauce",
+    "processed cheese sauce",
+    "nacho cheese sauce kraft",
+    "cheez whiz spread",
+    "velveeta style sauce",
+    "jarred nacho cheese"
+  ],
+  "usda_172210": [
+    "reduced fat sour cream",
+    "light sour cream",
+    "low fat sour cream",
+    "breakstone light sour cream",
+    "reduced fat cultured cream",
+    "lite sour cream",
+    "lower fat sour cream"
+  ],
+  "usda_172211": [
+    "fat free sour cream",
+    "nonfat sour cream",
+    "zero fat sour cream",
+    "breakstone fat free sour cream",
+    "skim sour cream",
+    "free sour cream",
+    "diet sour cream",
+    "light free sour cream"
+  ],
+  "usda_172212": [
+    "fat free half and half",
+    "nonfat half and half",
+    "zero fat half half",
+    "light coffee cream fat free",
+    "skim half and half",
+    "fat free creamer half half",
+    "low calorie half and half"
+  ],
+  "usda_172213": [
+    "fat free whipped cream",
+    "nonfat whipped topping",
+    "reddi whip fat free",
+    "zero fat whipped cream",
+    "light whipped topping",
+    "fat free aerosol whipped cream",
+    "spray whipped topping fat free",
+    "low cal whipped cream"
+  ],
+  "usda_172214": [
+    "powdered coffee creamer",
+    "flavored coffee creamer powder",
+    "non dairy creamer powder",
+    "dry creamer flavored",
+    "powdered non dairy creamer",
+    "coffee whitener powder",
+    "sweet powdered creamer",
+    "flavored dry creamer"
+  ],
+  "usda_172215": [
+    "reduced fat provolone",
+    "light provolone cheese",
+    "low fat provolone",
+    "provolone lite",
+    "lighter provolone cheese",
+    "slim provolone",
+    "diet provolone cheese",
+    "lower fat provolone slice"
+  ],
+  "usda_172216": [
+    "reduced fat mexican blend",
+    "light mexican cheese blend",
+    "low fat mexican cheese mix",
+    "lite mexican shredded cheese",
+    "reduced fat taco blend cheese",
+    "lighter mexican cheese blend",
+    "low fat tex mex cheese blend"
+  ],
+  "usda_172217": [
+    "whole milk",
+    "full fat milk",
+    "regular milk",
+    "full cream milk",
+    "whole dairy milk",
+    "3.25 percent milk",
+    "homogenized milk",
+    "full fat dairy milk",
+    "plain whole milk"
+  ],
+  "usda_172218": [
+    "fruit yogurt low calorie",
+    "diet fruit yogurt",
+    "light fruit yogurt low fat",
+    "sweetened lowfat fruit yogurt",
+    "low cal fruit yogurt",
+    "light lowfat fruit yogurt vitamin d",
+    "diet lowfat fruit yogurt",
+    "sugar free fruit yogurt lowfat"
+  ],
+  "usda_172219": [
+    "vanilla low fat yogurt",
+    "lowfat vanilla yogurt",
+    "plain vanilla yogurt low fat",
+    "vanilla flavored yogurt light",
+    "low fat sweet vanilla yogurt",
+    "vanilla dairy yogurt lowfat",
+    "light vanilla yogurt fortified"
+  ],
+  "usda_172220": [
+    "sugar free vanilla yogurt",
+    "diet vanilla yogurt nonfat",
+    "nonfat vanilla lemon yogurt",
+    "light sweetener vanilla yogurt",
+    "zero sugar vanilla yogurt nonfat",
+    "lemon flavored nonfat yogurt",
+    "vanilla nonfat diet yogurt",
+    "artificially sweetened vanilla yogurt"
+  ],
+  "usda_172221": [
+    "chocolate nonfat yogurt vitamin d",
+    "fat free choco yogurt fortified",
+    "nonfat chocolate yogurt vitamin d",
+    "skim chocolate yogurt",
+    "diet chocolate yogurt nonfat",
+    "fortified chocolate yogurt nonfat",
+    "light chocolate yogurt skim milk"
+  ],
+  "usda_172223": [
+    "queso fresco",
+    "fresh mexican cheese",
+    "crumbly white mexican cheese",
+    "mexican fresh cheese",
+    "fresco cheese",
+    "queso blanco fresco",
+    "soft fresh mexican cheese",
+    "crumbled queso fresco",
+    "fresh white cheese mexican"
+  ],
+  "usda_172224": [
+    "queso blanco",
+    "white mexican cheese",
+    "latin white cheese",
+    "queso blanco cheese",
+    "soft white latin cheese",
+    "fresh white cheese",
+    "mexican white cheese block",
+    "blanco cheese",
+    "queso blanco soft"
+  ],
+  "usda_172225": [
+    "whole buttermilk",
+    "full fat buttermilk",
+    "fresh buttermilk",
+    "cultured whole milk buttermilk",
+    "plain buttermilk fluid",
+    "drinking buttermilk whole",
+    "creamy buttermilk",
+    "whole milk buttermilk"
+  ],
+  "usda_172226": [
+    "ice cream sandwich",
+    "vanilla ice cream sandwich",
+    "ice cream bar sandwich",
+    "ice cream wafer sandwich",
+    "ice cream between wafers",
+    "frozen ice cream sandwich",
+    "classic ice cream sandwich",
+    "choco wafer ice cream sandwich"
+  ],
+  "usda_172227": [
+    "ice cream cookie sandwich",
+    "cookies and cream ice cream sandwich",
+    "cookie ice cream bar",
+    "ice cream between cookies",
+    "oreo ice cream sandwich",
+    "ice cream stuffed cookie",
+    "cookie sandwich ice cream",
+    "frozen cookie ice cream"
+  ],
+  "usda_172228": [
+    "chocolate dipped ice cream cone",
+    "nutty chocolate ice cream cone",
+    "choco nut ice cream cone",
+    "chocolate covered cone",
+    "ice cream cone with nuts chocolate",
+    "choco coated ice cream cone nuts",
+    "nut topped choco ice cream cone",
+    "chocolate nut cone ice cream"
+  ],
+  "usda_172229": [
+    "light vanilla ice cream sandwich",
+    "low fat vanilla ice cream sandwich",
+    "lite ice cream sandwich vanilla",
+    "reduced fat vanilla sandwich",
+    "light ice cream wafer sandwich",
+    "skinny ice cream sandwich",
+    "lighter vanilla ice cream bar"
+  ],
+  "usda_172230": [
+    "sugar free vanilla ice cream sandwich",
+    "no sugar added ice cream sandwich",
+    "light sugar free ice cream sandwich",
+    "diet ice cream sandwich vanilla",
+    "zero sugar ice cream sandwich",
+    "low cal vanilla ice cream sandwich",
+    "no sugar light vanilla sandwich"
+  ],
+  "usda_172231": [
+    "turmeric powder",
+    "ground turmeric",
+    "yellow spice powder",
+    "luyang dilaw powder",
+    "curry spice turmeric",
+    "kunyit powder",
+    "turmeric spice",
+    "golden spice powder",
+    "turmeric seasoning"
+  ],
+  "usda_172232": [
+    "fresh basil",
+    "sweet basil",
+    "basil leaves",
+    "fresh basil leaves",
+    "italian basil",
+    "green basil herb",
+    "fragrant basil",
+    "basil herb fresh",
+    "garden basil"
+  ],
+  "usda_172233": [
+    "fresh dill",
+    "dill herb",
+    "dill weed",
+    "fresh dill herb",
+    "green dill",
+    "dill sprigs",
+    "fresh dill sprig",
+    "feathery dill herb",
+    "garden dill"
+  ],
+  "usda_172235": [
+    "imitation vanilla",
+    "fake vanilla extract",
+    "artificial vanilla extract",
+    "vanilla flavoring alcohol",
+    "vanilla substitute extract",
+    "imitation vanilla flavoring",
+    "artificial vanilla",
+    "vanilla essence imitation"
+  ],
+  "usda_172236": [
+    "imitation vanilla no alcohol",
+    "alcohol free vanilla extract",
+    "non alcoholic vanilla flavoring",
+    "fake vanilla no alcohol",
+    "artificial vanilla non alcoholic",
+    "vanilla substitute no alcohol",
+    "alcohol free vanilla essence"
+  ],
+  "usda_172237": [
+    "white vinegar",
+    "distilled white vinegar",
+    "clear vinegar",
+    "plain vinegar",
+    "cooking vinegar white",
+    "household vinegar",
+    "distilled clear vinegar",
+    "pure distilled vinegar",
+    "white cooking vinegar"
+  ],
+  "usda_172238": [
+    "capers",
+    "canned capers",
+    "pickled capers",
+    "brined capers",
+    "jarred capers",
+    "salted capers",
+    "caper buds canned",
+    "pickled caper buds",
+    "tiny capers"
+  ],
+  "usda_172239": [
+    "dried spearmint",
+    "dried mint",
+    "spearmint herb dried",
+    "dried spearmint leaves",
+    "dehydrated mint",
+    "dried spearmint spice",
+    "mint herb dried",
+    "dry spearmint leaf"
+  ],
+  "usda_172240": [
+    "red wine vinegar",
+    "wine vinegar red",
+    "ruby vinegar",
+    "italian red vinegar",
+    "acidic red wine vinegar",
+    "red vinegar cooking",
+    "tangy red wine vinegar",
+    "salad red wine vinegar"
+  ],
+  "usda_172241": [
+    "balsamic vinegar",
+    "balsamic glaze",
+    "dark sweet vinegar",
+    "italian balsamic",
+    "aged balsamic vinegar",
+    "balsamic dressing vinegar",
+    "aceto balsamico",
+    "sweet dark vinegar",
+    "balsamic reduction"
+  ],
+  "usda_172243": [
+    "taco seasoning",
+    "taco spice mix",
+    "dry taco mix",
+    "taco spice packet",
+    "mexican seasoning mix",
+    "taco powder",
+    "taco flavor packet",
+    "original taco mix",
+    "ground beef taco seasoning"
+  ],
+  "usda_172244": [
+    "baby beef",
+    "infant beef puree",
+    "baby food beef jar",
+    "beef baby food jar",
+    "pureed beef baby",
+    "beef junior baby food",
+    "beef puree infant"
+  ],
+  "usda_172245": [
+    "baby veal",
+    "infant veal puree",
+    "veal baby food",
+    "pureed veal baby",
+    "baby food veal strained",
+    "strained veal infant",
+    "veal puree jar"
+  ],
+  "usda_172246": [
+    "baby pork",
+    "infant pork puree",
+    "pork baby food",
+    "pureed pork baby",
+    "baby food pork strained",
+    "strained pork infant",
+    "pork puree jar"
+  ],
+  "usda_172247": [
+    "baby ham",
+    "infant ham puree",
+    "ham baby food",
+    "pureed ham baby",
+    "baby food ham strained",
+    "strained ham infant",
+    "ham puree jar"
+  ],
+  "usda_172248": [
+    "baby chicken",
+    "infant chicken puree",
+    "chicken baby food",
+    "pureed chicken baby",
+    "baby food chicken jar",
+    "junior chicken baby food",
+    "chicken puree infant"
+  ],
+  "usda_172249": [
+    "baby chicken sticks",
+    "infant chicken stick snack",
+    "chicken stick baby food",
+    "junior chicken stick",
+    "baby food chicken stick jar",
+    "soft chicken stick infant",
+    "baby chicken finger food"
+  ],
+  "usda_172250": [
+    "baby turkey",
+    "infant turkey puree",
+    "turkey baby food strained",
+    "pureed turkey baby",
+    "baby food turkey jar",
+    "strained turkey infant",
+    "turkey puree baby"
+  ],
+  "usda_172251": [
+    "baby turkey junior",
+    "junior turkey baby food",
+    "infant turkey jar junior",
+    "baby turkey puree jar",
+    "junior pureed turkey",
+    "toddler turkey puree",
+    "turkey baby jar junior"
+  ],
+  "usda_172252": [
+    "baby puffs apple cinnamon",
+    "infant puffs snack",
+    "gerber puffs apple",
+    "apple cinnamon baby puffs",
+    "baby snack puffs",
+    "toddler puffs apple cinnamon",
+    "finger puffs baby snack",
+    "baby graduates puffs"
+  ],
+  "usda_172254": [
+    "baby fruit apple mango kiwi",
+    "gerber baby fruit pouch",
+    "infant fruit puree apple mango",
+    "baby food fruit medley",
+    "apple mango kiwi baby food",
+    "stage 3 fruit baby",
+    "mango kiwi apple baby pouch"
+  ],
+  "usda_172255": [
+    "baby tropical fruit",
+    "infant tropical puree",
+    "tropical fruit baby food",
+    "mixed tropical baby food",
+    "baby food fruit tropical",
+    "baby tropical fruit blend",
+    "pureed tropical fruit infant"
+  ],
+  "usda_172256": [
+    "baby beef dumplings vegetables",
+    "infant beef veggie dinner",
+    "baby food beef vegetable strained",
+    "strained beef dumpling dinner",
+    "beef veggie dumpling baby food",
+    "baby dinner beef dumplings jar"
+  ],
+  "usda_172257": [
+    "baby ravioli tomato sauce",
+    "infant ravioli cheese",
+    "baby food ravioli jar",
+    "cheese ravioli baby food",
+    "toddler ravioli tomato",
+    "baby pasta ravioli cheese",
+    "baby cheese ravioli jar"
+  ],
+  "usda_172258": [
+    "baby beef noodle",
+    "infant beef noodle dinner",
+    "baby food beef noodle strained",
+    "strained beef noodle baby",
+    "beef noodle baby jar",
+    "baby dinner beef noodle"
+  ],
+  "usda_172259": [
+    "baby mac and cheese",
+    "toddler macaroni cheese",
+    "baby food mac cheese",
+    "infant macaroni cheese",
+    "toddler pasta cheese baby food",
+    "baby mac n cheese jar"
+  ],
+  "usda_172260": [
+    "baby beef and rice",
+    "toddler beef rice dinner",
+    "baby food beef rice",
+    "infant beef rice jar",
+    "beef rice toddler meal",
+    "baby dinner beef rice jar"
+  ],
+  "usda_172261": [
+    "baby beef with vegetables",
+    "infant beef veggie puree",
+    "baby food beef vegetables",
+    "beef veggie baby dinner",
+    "pureed beef veggies baby",
+    "baby beef veg jar"
+  ],
+  "usda_172262": [
+    "baby lamb vegetables",
+    "infant lamb veggie dinner",
+    "baby food lamb junior",
+    "lamb veggie baby jar",
+    "junior lamb dinner baby food",
+    "pureed lamb veggies baby"
+  ],
+  "usda_172263": [
+    "baby chicken noodle strained",
+    "infant chicken noodle dinner",
+    "baby food chicken noodle",
+    "strained chicken noodle baby",
+    "baby chicken noodle jar",
+    "baby dinner chicken noodle"
+  ],
+  "usda_172264": [
+    "baby chicken noodle junior",
+    "junior chicken noodle baby food",
+    "infant chicken noodle jar junior",
+    "toddler chicken noodle dinner",
+    "baby food chicken noodle junior",
+    "junior chicken noodle jar"
+  ],
+  "usda_172265": [
+    "baby chicken vegetable noodle",
+    "infant veggie chicken noodle junior",
+    "baby food chicken noodle veggies",
+    "junior chicken veggie noodle baby",
+    "chicken noodle veggie baby jar",
+    "baby dinner chicken veg noodle"
+  ],
+  "usda_172266": [
+    "baby pasta vegetables",
+    "infant veggie pasta dinner",
+    "baby food pasta veggies",
+    "pasta veggie baby food",
+    "pureed veggie pasta baby",
+    "baby dinner pasta vegetables"
+  ],
+  "usda_172267": [
+    "baby turkey noodle strained",
+    "infant turkey noodle dinner",
+    "baby food turkey noodle",
+    "strained turkey noodle baby",
+    "baby turkey noodle jar",
+    "baby dinner turkey noodle strained"
+  ],
+  "usda_172268": [
+    "baby turkey noodle junior",
+    "junior turkey noodle baby food",
+    "infant turkey noodle jar junior",
+    "toddler turkey noodle dinner",
+    "baby food turkey noodle junior",
+    "junior turkey noodle jar"
+  ],
+  "usda_172269": [
+    "baby turkey rice",
+    "infant turkey rice dinner",
+    "baby food turkey rice strained",
+    "strained turkey rice baby",
+    "baby turkey rice jar",
+    "baby dinner turkey rice"
+  ],
+  "usda_172270": [
+    "baby mac and cheese junior",
+    "junior macaroni cheese baby food",
+    "toddler mac cheese junior jar",
+    "baby food mac cheese junior",
+    "junior mac n cheese baby",
+    "baby pasta cheese junior jar"
+  ],
+  "usda_172271": [
+    "baby green beans strained",
+    "infant green bean puree",
+    "baby food green beans jar",
+    "strained green beans baby",
+    "pureed green beans baby",
+    "baby veggie green beans"
+  ],
+  "usda_172272": [
+    "baby green beans junior",
+    "junior green beans baby food",
+    "infant green bean jar junior",
+    "toddler green beans jar",
+    "baby food green beans junior",
+    "junior pureed green beans"
+  ],
+  "usda_172273": [
+    "baby green bean dices",
+    "toddler green bean pieces",
+    "diced green beans baby food",
+    "finger food green beans baby",
+    "baby food green bean dices",
+    "toddler green bean diced jar"
+  ],
+  "usda_172274": [
+    "baby squash strained",
+    "infant squash puree",
+    "baby food squash jar",
+    "strained squash baby",
+    "pureed squash baby",
+    "baby veggie squash"
+  ],
+  "usda_172275": [
+    "baby squash junior",
+    "junior squash baby food",
+    "infant squash jar junior",
+    "toddler squash jar",
+    "baby food squash junior",
+    "junior pureed squash"
+  ],
+  "usda_172276": [
+    "baby sweet potato strained",
+    "infant sweet potato puree",
+    "baby food sweet potato jar",
+    "strained sweet potato baby",
+    "pureed sweet potato baby",
+    "baby veggie sweet potato"
+  ],
+  "usda_172277": [
+    "baby sweet potato junior",
+    "junior sweet potato baby food",
+    "infant sweet potato jar junior",
+    "toddler sweet potato jar",
+    "baby food sweet potato junior",
+    "junior pureed sweet potato"
+  ],
+  "usda_172278": [
+    "baby applesauce junior",
+    "junior applesauce baby food",
+    "infant applesauce jar junior",
+    "toddler applesauce jar",
+    "baby food apple junior",
+    "junior pureed applesauce",
+    "baby apple puree junior"
+  ],
+  "usda_172279": [
+    "baby apricot tapioca",
+    "infant apricot tapioca puree",
+    "baby food apricot strained",
+    "strained apricot tapioca baby",
+    "pureed apricot baby tapioca",
+    "baby fruit apricot jar",
+    "apricot tapioca baby puree"
+  ]
+}

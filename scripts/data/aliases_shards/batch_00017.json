@@ -1,0 +1,516 @@
+{
+  "29011": [
+    "rice cake",
+    "sticky rice cake",
+    "japanese rice cake",
+    "glutinous rice cake",
+    "soft rice cake",
+    "pounded rice cake",
+    "mochi cake",
+    "rice flour cake",
+    "wagashi cake",
+    "chewy rice cake"
+  ],
+  "29012": [
+    "red bean pancake",
+    "anko pancake",
+    "bean paste sandwich cake",
+    "japanese pancake sandwich",
+    "sweet bean pancake",
+    "fluffy red bean cake",
+    "japanese honey pancake",
+    "dorayaki bean cake",
+    "sweet filled pancake"
+  ],
+  "29013": [
+    "green tea ice cream",
+    "matcha gelato",
+    "matcha soft serve",
+    "green tea gelato",
+    "matcha flavored ice cream",
+    "japanese green tea ice cream",
+    "matcha scoop",
+    "green tea flavor dessert",
+    "matcha frozen dessert"
+  ],
+  "29014": [
+    "japanese savory pancake",
+    "japanese cabbage pancake",
+    "osaka pancake",
+    "japanese pizza",
+    "teppan pancake",
+    "savory japanese crepe",
+    "grilled cabbage pancake",
+    "okono pancake",
+    "japanese street pancake",
+    "cabbage egg pancake"
+  ],
+  "29015": [
+    "japanese steamed egg",
+    "steamed egg custard",
+    "japanese egg custard",
+    "silky steamed egg",
+    "savory egg custard",
+    "japanese custard cup",
+    "soft egg custard",
+    "savory egg pudding",
+    "steamed silky egg"
+  ],
+  "30001": [
+    "spicy rice cake",
+    "ddukbokki",
+    "ddeokbokki",
+    "topokki",
+    "tokpokki",
+    "tteokbeokki",
+    "gochujang rice cake",
+    "korean street food rice cake",
+    "spicy chewy rice cake",
+    "red sauce rice cake"
+  ],
+  "30002": [
+    "korean glass noodles",
+    "sweet potato noodles",
+    "stir fried glass noodles",
+    "korean vermicelli",
+    "dangmyeon noodles",
+    "jap chae",
+    "glass noodle stir fry",
+    "korean noodle stir fry",
+    "transparent noodles korean"
+  ],
+  "30003": [
+    "korean grilled pork belly",
+    "korean bbq pork",
+    "samgyup",
+    "kbbq pork belly",
+    "grilled pork belly korean",
+    "korean pork bbq",
+    "samgyupsal",
+    "pork belly bbq korean",
+    "korean pork grill"
+  ],
+  "30004": [
+    "spicy korean chicken stir fry",
+    "dak galbi",
+    "chuncheon chicken",
+    "korean spicy chicken",
+    "spicy chicken korean",
+    "dakgalbi stir fry",
+    "korean chicken grill",
+    "spicy grilled chicken korean"
+  ],
+  "30005": [
+    "kfc korean style",
+    "crispy korean chicken",
+    "korean double fried chicken",
+    "yangnyeom chicken",
+    "korean crispy chicken",
+    "korean glazed chicken",
+    "honey garlic korean chicken",
+    "korean style fried chicken",
+    "dakgangjeong"
+  ],
+  "30006": [
+    "korean soybean paste stew",
+    "doenjang soup",
+    "fermented soybean stew",
+    "korean miso stew",
+    "doenjang tofu stew",
+    "korean fermented bean stew",
+    "soybean paste soup korean",
+    "korean bean paste jjigae"
+  ],
+  "30007": [
+    "soft tofu stew",
+    "korean tofu stew",
+    "spicy tofu soup",
+    "soon tofu jjigae",
+    "silken tofu stew korean",
+    "korean spicy tofu soup",
+    "sundubu soup",
+    "spicy silken tofu stew"
+  ],
+  "30008": [
+    "korean seafood pancake",
+    "korean green onion pancake",
+    "pajeon",
+    "seafood scallion pancake",
+    "korean savory pancake seafood",
+    "haemul pancake",
+    "korean crispy pancake seafood",
+    "scallion seafood crepe"
+  ],
+  "30009": [
+    "korean rice roll",
+    "gimbap",
+    "kimbab",
+    "korean seaweed rice roll",
+    "korean nori roll",
+    "korean seaweed roll",
+    "seaweed wrapped rice korean",
+    "korean sushi roll",
+    "gim bap"
+  ],
+  "30010": [
+    "black bean noodles korean",
+    "jjajangmyeon",
+    "korean black sauce noodles",
+    "black bean sauce noodles",
+    "korean chinese noodles",
+    "jajang noodles",
+    "dark sauce noodles korean",
+    "chinese style black noodles korean"
+  ],
+  "30011": [
+    "pork bone soup korean",
+    "korean pork neck soup",
+    "spicy pork bone stew",
+    "gamja tang",
+    "pork neck bone stew korean",
+    "korean pork spine soup",
+    "spicy bone soup korean",
+    "pork neck soup spicy"
+  ],
+  "30012": [
+    "korean short ribs",
+    "kalbi",
+    "la galbi",
+    "korean bbq ribs",
+    "grilled ribs korean",
+    "kbbq ribs",
+    "korean marinated ribs",
+    "beef short ribs korean",
+    "grilled beef ribs korean"
+  ],
+  "27189": [
+    "tapa sinangag itlog",
+    "tapa rice egg",
+    "beef tapa breakfast",
+    "filipino tapa meal",
+    "tapsi",
+    "marinated beef breakfast filipino",
+    "filipino breakfast plate tapa",
+    "garlic rice tapa egg"
+  ],
+  "27190": [
+    "longganisa sinangag itlog",
+    "longganisa breakfast",
+    "filipino sausage garlic rice egg",
+    "sweet sausage breakfast filipino",
+    "longanisa rice egg",
+    "longsi",
+    "garlic rice sausage filipino",
+    "sweet longganisa breakfast"
+  ],
+  "27191": [
+    "bangus sinangag itlog",
+    "milkfish breakfast filipino",
+    "fried bangus garlic rice egg",
+    "bangus garlic rice",
+    "bangsi",
+    "filipino milkfish breakfast",
+    "fried milkfish rice egg"
+  ],
+  "27192": [
+    "corned beef garlic rice egg",
+    "corned beef sinangag itlog",
+    "filipino corned beef breakfast",
+    "kornsilog",
+    "canned beef breakfast filipino",
+    "corned beef rice egg",
+    "filipino corned beef silog"
+  ],
+  "27193": [
+    "tocino sinangag itlog",
+    "sweet pork garlic rice egg",
+    "filipino sweet pork breakfast",
+    "tocino rice egg",
+    "tosi",
+    "sweet cured pork breakfast filipino",
+    "tocino silog",
+    "filipino tocino meal"
+  ],
+  "27194": [
+    "hotdog sinangag itlog",
+    "hotdog garlic rice egg",
+    "filipino hotdog breakfast",
+    "hotsi",
+    "hot dog rice egg meal",
+    "filipino hotdog silog",
+    "sausage garlic rice egg filipino"
+  ],
+  "27195": [
+    "spam sinangag itlog",
+    "spam garlic rice egg",
+    "canned meat breakfast filipino",
+    "spam rice egg",
+    "filipino spam breakfast",
+    "spamsilog meal",
+    "luncheon meat garlic rice egg"
+  ],
+  "27196": [
+    "fried chicken garlic rice egg",
+    "chicken sinangag itlog",
+    "filipino fried chicken breakfast",
+    "chick silog",
+    "chicken rice egg",
+    "fried chicken breakfast filipino",
+    "chicksilog meal"
+  ],
+  "27197": [
+    "coconut bread roll",
+    "coco bread filipino",
+    "sweet coconut bread",
+    "coconut filled bun",
+    "filipino coconut bread",
+    "soft coconut roll",
+    "sweet bun coconut filling",
+    "pan de coco roll",
+    "coconut stuffed bread"
+  ],
+  "27198": [
+    "filipino dense bread",
+    "hard roll filipino",
+    "monay bread",
+    "filipino morning bread",
+    "dense round bread",
+    "stiff bread filipino",
+    "round hard bread roll",
+    "pandesal variant hard"
+  ],
+  "27199": [
+    "star bread filipino",
+    "explosion bread",
+    "filipino sugar bread",
+    "hard sugar-top bread",
+    "filipino sweet hard bread",
+    "star shaped bread filipino",
+    "sugar crust bread",
+    "putok bote"
+  ],
+  "27200": [
+    "filipino rolled bread with filling",
+    "sweet rolled bread filipino",
+    "soft roll sugar filling",
+    "spanish roll filipino",
+    "bread roll with breadcrumbs filling",
+    "buttery rolled bread filipino",
+    "sweet soft rolled bread",
+    "spanish bread roll"
+  ],
+  "27201": [
+    "filipino sponge cake",
+    "filipino chiffon cake",
+    "soft filipino cupcake",
+    "mamon cupcake",
+    "fluffy filipino cake",
+    "filipino soft cake cup",
+    "yellow sponge cake filipino",
+    "mamon bread",
+    "chiffon cup filipino"
+  ],
+  "27202": [
+    "flaky biscuit cebu",
+    "oval flaky cookie filipino",
+    "cebu pastry",
+    "crispy oval biscuit",
+    "puff pastry biscuit filipino",
+    "sweet flaky pastry filipino",
+    "cebuano sweet biscuit",
+    "oval crispy pastry"
+  ],
+  "27203": [
+    "wafer rolls filipino",
+    "sugar wafer tube",
+    "sweet wafer roll",
+    "bacolod wafer",
+    "crispy wafer roll filipino",
+    "wafer candy roll",
+    "filipino wafer sticks",
+    "barquillo sugar wafer"
+  ],
+  "27204": [
+    "mashed cassava dessert",
+    "cassava nilupak",
+    "mashed saba dessert",
+    "pounded cassava sweet",
+    "nilupak cassava",
+    "saba banana mash dessert",
+    "pounded banana kakanin",
+    "mashed root crop dessert"
+  ],
+  "27205": [
+    "filipino cassava dessert",
+    "baked cassava cake",
+    "cassava bar",
+    "kamoteng kahoy cake",
+    "cassava bibingka",
+    "grated cassava cake",
+    "sweet cassava dessert baked",
+    "cassava kakanin baked"
+  ],
+  "27206": [
+    "carabao milk pudding",
+    "pampanga milk pudding",
+    "white pudding filipino",
+    "kapampangan milk cake",
+    "thick milk pudding filipino",
+    "carabao milk cake",
+    "tibok tibok dessert",
+    "kapampangan white pudding"
+  ],
+  "27207": [
+    "sticky rice bibingka",
+    "kakanin sticky rice",
+    "malagkit bibingka",
+    "glutinous rice cake baked",
+    "sweet sticky rice dessert filipino",
+    "baked sticky rice cake",
+    "coconut sticky rice bibingka",
+    "malagkit baked cake"
+  ],
+  "27208": [
+    "cebuano sticky rice",
+    "puto maya rice",
+    "sticky rice with ginger cebu",
+    "ginger sticky rice filipino",
+    "glutinous rice cebu breakfast",
+    "cebu sticky rice cake",
+    "sikwate pairing rice",
+    "cebu puto rice"
+  ],
+  "27209": [
+    "grilled rice roll coconut leaf",
+    "ilocos rice roll",
+    "coconut leaf wrapped rice",
+    "filipino grilled kakanin",
+    "ilocano rice roll grilled",
+    "grilled bibingka variant",
+    "wrapped grilled rice ilocos",
+    "tupig ilocos"
+  ],
+  "27210": [
+    "coconut rice pudding filipino",
+    "sweet sticky kakanin",
+    "kalamay bohol",
+    "carabao milk kalamay",
+    "thick coconut sweet pudding",
+    "filipino sticky rice pudding",
+    "kalamay sa lata",
+    "coconut pudding filipino sticky"
+  ],
+  "27211": [
+    "puffed rice candy",
+    "popped rice sweet",
+    "rice puff candy filipino",
+    "ampao",
+    "crispy puffed rice bar",
+    "filipino rice pop candy",
+    "sweet puffed rice bar",
+    "rice candy puffed"
+  ],
+  "27212": [
+    "lye water suman",
+    "alkali rice suman",
+    "yellow suman",
+    "filipino rice roll lye",
+    "lihiya rice suman",
+    "suman liha",
+    "glutinous rice log lye",
+    "lye-treated rice roll"
+  ],
+  "27213": [
+    "coconut pie filipino",
+    "young coconut pie",
+    "buko tart",
+    "coconut cream pie filipino",
+    "filipino coconut pastry",
+    "buko pie slice",
+    "creamy buko pie",
+    "soft coconut filling pie"
+  ],
+  "27214": [
+    "filipino layered cake",
+    "cashew meringue cake",
+    "buttercream meringue cake filipino",
+    "filipino cashew cake",
+    "layered meringue dessert",
+    "cashew buttercream cake",
+    "sans rival layered dessert",
+    "meringue cashew layer cake"
+  ],
+  "27215": [
+    "frozen cashew cookie",
+    "cashew meringue sandwich",
+    "filipino frozen cookie",
+    "silvanas cookie",
+    "sylvanas cashew",
+    "frozen cashew buttercream sandwich",
+    "cashew meringue cookie frozen",
+    "silvanas frozen dessert"
+  ],
+  "27216": [
+    "muscovado flat bread bacolod",
+    "flat sweet bread filipino",
+    "piaya pastry",
+    "sweet filled flat bread",
+    "bacolod pastry",
+    "negros sweet bread",
+    "piaya muscovado",
+    "sugarcane flat bread filipino"
+  ],
+  "27217": [
+    "ripe mango filipino",
+    "carabao mango",
+    "sweet yellow mango",
+    "philippine mango ripe",
+    "manila mango",
+    "philippine golden mango",
+    "sweet ripe mango",
+    "dilaw na mangga",
+    "pinalamig na mangga"
+  ],
+  "27218": [
+    "green mango",
+    "unripe mango",
+    "sour mango",
+    "green sour mango",
+    "fresh green mango",
+    "sour green mango filipino",
+    "mangga with bagoong",
+    "green mango salad ingredient"
+  ],
+  "27219": [
+    "star apple filipino",
+    "caimito fruit",
+    "purple star apple",
+    "white star apple",
+    "filipino star apple",
+    "sweet milky fruit",
+    "star apple kaimito",
+    "caimito purple"
+  ],
+  "27220": [
+    "sugar apple",
+    "custard apple filipino",
+    "atis fruit",
+    "sweet grainy fruit",
+    "annona fruit",
+    "sweetsop",
+    "atis green fruit",
+    "filipino custard fruit",
+    "green bumpy sweet fruit"
+  ],
+  "27221": [
+    "soursop filipino",
+    "graviola",
+    "guanabana",
+    "guyabano fruit",
+    "soursop juice fruit",
+    "guyabano tea",
+    "creamy white soursop",
+    "philippine soursop",
+    "spiky green tropical fruit"
+  ]
+}

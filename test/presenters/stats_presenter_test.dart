@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
@@ -10,6 +11,8 @@ void main() {
 
   setUp(() {
     mockStorage = MockStorageService();
+    when(mockStorage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     when(mockStorage.loadUserStats())
         .thenAnswer((_) async => UserStats.initial());
     when(mockStorage.saveUserStats(any)).thenAnswer((_) async {});

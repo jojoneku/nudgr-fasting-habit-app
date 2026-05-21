@@ -1,0 +1,1013 @@
+{
+  "fnri_F127": [
+    "goose leg",
+    "roasted goose thigh",
+    "goose dark meat",
+    "braised goose thigh",
+    "goose thigh meat",
+    "cooked goose leg",
+    "goose drumstick",
+    "grilled goose thigh"
+  ],
+  "fnri_F128": [
+    "lamb flank steak",
+    "lamb belly cut",
+    "mutton flank",
+    "braised lamb flank",
+    "slow cooked lamb flank",
+    "lamb flank meat",
+    "sheep flank",
+    "stewed lamb flank"
+  ],
+  "fnri_F129": [
+    "lamb shank front",
+    "braised lamb shank",
+    "slow cooked lamb shank",
+    "lamb front leg",
+    "stewed lamb shank",
+    "mutton shank",
+    "lamb shank lower",
+    "lamb foreshank braised"
+  ],
+  "fnri_F130": [
+    "lamb shank",
+    "braised lamb hind shank",
+    "lamb leg shank",
+    "slow cooked lamb leg",
+    "lamb back shank",
+    "stewed lamb shank",
+    "mutton hind shank",
+    "lamb shank rear"
+  ],
+  "fnri_F131": [
+    "lamb offal",
+    "sheep liver",
+    "mutton liver",
+    "fried lamb liver",
+    "grilled lamb liver",
+    "sauteed lamb liver",
+    "lamb innards liver",
+    "lamb organ meat liver"
+  ],
+  "fnri_F132": [
+    "lamb loin chop",
+    "lamb loin cut",
+    "mutton loin",
+    "grilled lamb loin",
+    "roasted lamb loin",
+    "lamb saddle",
+    "lamb loin roast",
+    "lamb back loin",
+    "lamb chop loin"
+  ],
+  "fnri_F133": [
+    "lamb lungs",
+    "sheep lungs",
+    "mutton lung",
+    "lamb offal lung",
+    "lamb organ meat lung",
+    "lamb lights",
+    "stewed lamb lung",
+    "lamb baga"
+  ],
+  "fnri_F134": [
+    "lamb neck chop",
+    "mutton neck",
+    "braised lamb neck",
+    "stewed lamb neck",
+    "slow cooked lamb neck",
+    "lamb neck cut",
+    "sheep neck",
+    "lamb neck roast"
+  ],
+  "fnri_F135": [
+    "lamb ribs",
+    "lamb rib tips",
+    "mutton riblet",
+    "braised lamb riblets",
+    "lamb spare rib",
+    "small lamb ribs",
+    "lamb rib pieces",
+    "lamb rib tips grilled"
+  ],
+  "fnri_F136": [
+    "lamb back",
+    "roast lamb",
+    "lamb roast",
+    "mutton roast",
+    "baked lamb back",
+    "lamb back cut",
+    "roasted lamb back",
+    "lamb saddle roast",
+    "leg of lamb roast"
+  ],
+  "fnri_F137": [
+    "lamb shoulder cut",
+    "mutton shoulder",
+    "braised lamb shoulder",
+    "slow cooked lamb shoulder",
+    "lamb shoulder roast",
+    "lamb shoulder chop",
+    "stewed lamb shoulder",
+    "grilled lamb shoulder"
+  ],
+  "fnri_F139": [
+    "moorhen breast meat",
+    "swamp hen breast",
+    "wild bird breast",
+    "moorhen white meat",
+    "gallinule breast",
+    "water hen breast",
+    "wild fowl breast",
+    "moorhen poultry breast"
+  ],
+  "fnri_F140": [
+    "moorhen giblets",
+    "moorhen stomach",
+    "water hen gizzard",
+    "gallinule gizzard",
+    "wild bird gizzard",
+    "moorhen organ meat",
+    "swamp hen gizzard",
+    "wild fowl gizzard"
+  ],
+  "fnri_F141": [
+    "moorhen liver",
+    "water hen liver",
+    "gallinule liver",
+    "wild bird liver",
+    "swamp hen liver",
+    "moorhen organ meat liver",
+    "wild fowl liver",
+    "moorhen offal"
+  ],
+  "fnri_F142": [
+    "moorhen leg",
+    "water hen thigh",
+    "gallinule thigh",
+    "swamp hen thigh",
+    "wild bird thigh",
+    "moorhen dark meat",
+    "wild fowl thigh",
+    "moorhen leg meat"
+  ],
+  "fnri_F143": [
+    "pigeon breast meat",
+    "dove breast",
+    "squab breast",
+    "kalapati breast",
+    "pigeon white meat",
+    "grilled pigeon breast",
+    "pigeon fillet",
+    "wild pigeon breast"
+  ],
+  "fnri_F144": [
+    "pigeon leg",
+    "squab thigh",
+    "dove thigh",
+    "kalapati thigh",
+    "pigeon dark meat",
+    "pigeon drumstick",
+    "pigeon leg meat",
+    "grilled pigeon thigh"
+  ],
+  "fnri_F145": [
+    "squab",
+    "young pigeon",
+    "baby pigeon",
+    "squab meat",
+    "kalapati",
+    "roasted squab",
+    "whole squab",
+    "squab poultry",
+    "young dove meat",
+    "pigeon meat"
+  ],
+  "fnri_F146": [
+    "pork fat back",
+    "pork fatback",
+    "pork back lard",
+    "pork pure fat",
+    "tocino fat",
+    "pork fat slab",
+    "raw pork fat",
+    "pork fat layer",
+    "pork lard block"
+  ],
+  "fnri_F147": [
+    "liempo",
+    "pork belly slab",
+    "pork liempo",
+    "raw liempo",
+    "pork belly cut",
+    "fatty pork belly",
+    "pork belly raw",
+    "belly pork",
+    "pork stomach cut"
+  ],
+  "fnri_F148": [
+    "inihaw na liempo",
+    "grilled pork belly",
+    "broiled liempo",
+    "grilled liempo",
+    "bbq liempo",
+    "pork belly broiled",
+    "inihaw liempo",
+    "grilled belly pork"
+  ],
+  "fnri_F149": [
+    "pritong liempo",
+    "fried pork belly",
+    "fried liempo",
+    "pan fried pork belly",
+    "crispy pork belly fried",
+    "liempo fried",
+    "deep fried liempo",
+    "pork belly pan fried"
+  ],
+  "fnri_F151": [
+    "boiled pork belly",
+    "nilagang liempo",
+    "boiled liempo",
+    "sinigang liempo",
+    "pork belly nilaga",
+    "stewed pork belly",
+    "slow boiled pork belly",
+    "liempo boiled"
+  ],
+  "fnri_F152": [
+    "pork blood stew",
+    "dinuguan ingredient",
+    "pig blood",
+    "pork blood raw",
+    "dinuguan blood",
+    "black soup pork",
+    "pig blood cooked",
+    "dugo ng baboy"
+  ],
+  "fnri_F153": [
+    "pork butt",
+    "pork shoulder butt",
+    "pork shoulder blade",
+    "pork kasim",
+    "pork upper shoulder",
+    "pork butt roast",
+    "pork blade cut",
+    "raw pork shoulder cut"
+  ],
+  "fnri_F154": [
+    "boiled pork butt",
+    "pork kasim boiled",
+    "nilaga pork shoulder",
+    "boiled pork shoulder",
+    "pork butt nilaga",
+    "stewed pork butt",
+    "pork shoulder boiled",
+    "simmered pork butt"
+  ],
+  "fnri_F155": [
+    "grilled pork butt",
+    "broiled pork shoulder",
+    "grilled pork shoulder",
+    "inihaw pork butt",
+    "pork kasim inihaw",
+    "pork butt grilled",
+    "bbq pork butt",
+    "broiled pork butt"
+  ],
+  "fnri_F156": [
+    "fried pork butt",
+    "fried pork shoulder",
+    "pork kasim fried",
+    "pan fried pork butt",
+    "pritong pork shoulder",
+    "pork butt fried",
+    "sauteed pork butt",
+    "deep fried pork shoulder"
+  ],
+  "fnri_F157": [
+    "lean pork shoulder",
+    "lean pork butt",
+    "pork butt no fat",
+    "lean kasim",
+    "trimmed pork butt",
+    "pork butt lean cut",
+    "lean pork blade",
+    "pork shoulder lean"
+  ],
+  "fnri_F158": [
+    "lean pork butt boiled",
+    "boiled lean pork shoulder",
+    "lean kasim boiled",
+    "lean pork butt nilaga",
+    "simmered lean pork butt",
+    "stewed lean pork shoulder",
+    "boiled lean pork butt",
+    "lean pork shoulder boiled"
+  ],
+  "fnri_F159": [
+    "lean pork butt grilled",
+    "grilled lean pork shoulder",
+    "lean kasim inihaw",
+    "broiled lean pork butt",
+    "lean pork butt broiled",
+    "grilled lean pork butt",
+    "lean pork shoulder grilled",
+    "inihaw lean pork butt"
+  ],
+  "fnri_F160": [
+    "lean pork butt fried",
+    "fried lean pork shoulder",
+    "lean kasim fried",
+    "pan fried lean pork butt",
+    "pritong lean pork shoulder",
+    "fried lean pork butt",
+    "lean pork shoulder fried"
+  ],
+  "fnri_F161": [
+    "pork loin center cut",
+    "center cut pork chop",
+    "pork loin cut",
+    "pork center cut",
+    "pork loin roast",
+    "pork loin steak",
+    "center loin chop",
+    "pork middle loin"
+  ],
+  "fnri_F162": [
+    "pork chops",
+    "grilled pork chop",
+    "fried pork chop",
+    "pan fried pork chop",
+    "baked pork chop",
+    "pork cutlet",
+    "pork chop steak",
+    "pritong pork chop",
+    "inihaw na pork chop"
+  ],
+  "fnri_F163": [
+    "pig ear",
+    "pork ears",
+    "boiled pig ear",
+    "tokwa't baboy ear",
+    "pig ear cooked",
+    "pork ear cartilage",
+    "soft pork ear",
+    "pata ear"
+  ],
+  "fnri_F164": [
+    "bbq pig ear",
+    "grilled pork ear",
+    "inihaw na tenga ng baboy",
+    "pig ear bbq",
+    "pork ear grilled",
+    "tenga ng baboy",
+    "barbecued pig ear",
+    "pig ear inasal"
+  ],
+  "fnri_F165": [
+    "ham steak",
+    "cooked ham",
+    "sliced ham",
+    "pork ham cut",
+    "cured pork ham",
+    "ham leg",
+    "fresh ham",
+    "pork leg ham",
+    "whole ham"
+  ],
+  "fnri_F166": [
+    "pig head",
+    "pork head meat",
+    "pig face",
+    "ulo ng baboy",
+    "pork face meat",
+    "boiled pig head",
+    "pork head cooked",
+    "sisig cut pig head"
+  ],
+  "fnri_F167": [
+    "pig heart",
+    "pork organ heart",
+    "puso ng baboy",
+    "pork heart cooked",
+    "grilled pork heart",
+    "pork heart stew",
+    "sauteed pork heart",
+    "pork innards heart"
+  ],
+  "fnri_F168": [
+    "large intestine pork",
+    "pork colon",
+    "bituka ng baboy malaki",
+    "pork large gut",
+    "pig colon",
+    "pork large bowel",
+    "isaw baboy large",
+    "pig large intestine cooked"
+  ],
+  "fnri_F169": [
+    "pork small gut",
+    "pig small intestine",
+    "isaw baboy",
+    "bituka ng baboy maliit",
+    "pork small bowel",
+    "pork intestines small",
+    "pig intestine small",
+    "pork small intestine cooked"
+  ],
+  "fnri_F170": [
+    "isaw baboy bbq",
+    "bbq pork intestine",
+    "grilled pork small intestine",
+    "pork intestine skewer",
+    "inihaw na isaw baboy",
+    "bbq isaw",
+    "grilled isaw pork",
+    "pork intestine grilled"
+  ],
+  "fnri_F171": [
+    "pig kidney",
+    "pork organ kidney",
+    "bato ng baboy",
+    "pork kidney raw",
+    "pork kidney cooked",
+    "pig kidney meat",
+    "pork innards kidney",
+    "pork kidney cut"
+  ],
+  "fnri_F172": [
+    "boiled pork kidney",
+    "pig kidney boiled",
+    "pork kidney nilaga",
+    "simmered pork kidney",
+    "stewed pork kidney",
+    "boiled pig kidney",
+    "pork kidney cooked boiled",
+    "pork kidney simmered"
+  ],
+  "fnri_F173": [
+    "pata",
+    "pork pata",
+    "pig leg",
+    "pork leg cut",
+    "pata ng baboy",
+    "whole pork leg",
+    "pork hock leg",
+    "pork leg meat"
+  ],
+  "fnri_F174": [
+    "pig liver",
+    "atay ng baboy",
+    "pork liver raw",
+    "pork organ liver",
+    "pork innards liver",
+    "pork atay",
+    "raw pork liver",
+    "pork liver cooked"
+  ],
+  "fnri_F175": [
+    "boiled pork liver",
+    "pork liver nilaga",
+    "simmered pork liver",
+    "stewed pig liver",
+    "pork atay boiled",
+    "boiled pig liver",
+    "pork liver simmered",
+    "pork liver cooked boiled"
+  ],
+  "fnri_F176": [
+    "grilled pork liver",
+    "broiled pork liver",
+    "inihaw na atay ng baboy",
+    "pork liver inihaw",
+    "pork liver grilled",
+    "bbq pork liver",
+    "pig liver broiled",
+    "pork liver bbq"
+  ],
+  "fnri_F177": [
+    "fried pork liver",
+    "pritong atay ng baboy",
+    "pan fried pork liver",
+    "sauteed pork liver",
+    "pork liver stir fried",
+    "atay baboy fried",
+    "pork liver fried",
+    "deep fried pork liver"
+  ],
+  "fnri_F178": [
+    "pig lungs",
+    "baga ng baboy",
+    "pork lights",
+    "pork lung cooked",
+    "pork innards lung",
+    "boiled pork lung",
+    "pork organ lung",
+    "pig lung meat"
+  ],
+  "fnri_F179": [
+    "pork picnic shoulder",
+    "pork lower shoulder",
+    "pork arm shoulder",
+    "pork picnic cut",
+    "pork arm roast",
+    "pork picnic roast",
+    "lower pork shoulder",
+    "pork arm cut"
+  ],
+  "fnri_F180": [
+    "boiled pork picnic",
+    "pork picnic nilaga",
+    "stewed pork picnic",
+    "simmered pork picnic",
+    "pork shoulder picnic boiled",
+    "pork arm boiled",
+    "pork picnic cooked boiled",
+    "boiled pork arm shoulder"
+  ],
+  "fnri_F181": [
+    "pig skin",
+    "pork rind",
+    "balat ng baboy",
+    "pork crackling skin",
+    "pork skin raw",
+    "fried pork skin",
+    "pork skin cooked",
+    "crispy pig skin"
+  ],
+  "fnri_F182": [
+    "pork ribs",
+    "spare ribs pork",
+    "pork bbq ribs",
+    "grilled spare ribs",
+    "inihaw na tadyang",
+    "tadyang ng baboy",
+    "pork side ribs",
+    "pork rib rack"
+  ],
+  "fnri_F183": [
+    "pig spleen",
+    "pork spleen raw",
+    "pork organ spleen",
+    "pork innards spleen",
+    "pig spleen meat",
+    "pork spleen cooked",
+    "pork lien",
+    "pig spleen organ"
+  ],
+  "fnri_F184": [
+    "boiled pork spleen",
+    "pig spleen boiled",
+    "pork spleen nilaga",
+    "stewed pork spleen",
+    "simmered pork spleen",
+    "pork spleen cooked boiled",
+    "boiled pig spleen",
+    "pork spleen simmered"
+  ],
+  "fnri_F185": [
+    "pig stomach",
+    "pork tripe",
+    "tuwalya ng baboy",
+    "pork stomach cooked",
+    "pork organ stomach",
+    "pig stomach meat",
+    "pork innards stomach",
+    "pork maw"
+  ],
+  "fnri_F186": [
+    "pig tail",
+    "pork tail cut",
+    "buntot ng baboy",
+    "pork tail cooked",
+    "braised pig tail",
+    "pork tail meat",
+    "boiled pig tail",
+    "pork tail stew"
+  ],
+  "fnri_F187": [
+    "pork fillet",
+    "pork tenderloin fillet",
+    "pork loin fillet",
+    "lean pork fillet",
+    "grilled pork tenderloin",
+    "pork tenderloin steak",
+    "pork inner loin",
+    "pork fillet mignon"
+  ],
+  "fnri_F188": [
+    "pig tongue",
+    "pork tongue meat",
+    "dila ng baboy",
+    "pork tongue cooked",
+    "boiled pig tongue",
+    "pork tongue stew",
+    "braised pork tongue",
+    "pork dila"
+  ],
+  "fnri_F189": [
+    "pig uterus",
+    "pork womb",
+    "pork reproductive organ",
+    "pig womb meat",
+    "pork uterus cooked",
+    "pig uterus organ",
+    "pork matres",
+    "pig reproductive organ"
+  ],
+  "fnri_F190": [
+    "lechon belly",
+    "suckling pig belly",
+    "roast suckling pork belly",
+    "lechon baboy belly",
+    "baby pig belly",
+    "lechon de leche belly",
+    "crispy lechon belly",
+    "suckling pig liempo"
+  ],
+  "fnri_F191": [
+    "suckling pig blood",
+    "lechon de leche blood",
+    "baby pig blood",
+    "lechon blood",
+    "suckling pig dugo",
+    "piglet blood",
+    "young pig blood",
+    "lechon baboy blood"
+  ],
+  "fnri_F192": [
+    "pig brain",
+    "suckling pig brain",
+    "pork brain",
+    "utak ng baboy",
+    "lechon brain",
+    "piglet brain",
+    "pork organ brain",
+    "baby pig brain"
+  ],
+  "fnri_F193": [
+    "suckling pig heart",
+    "lechon de leche heart",
+    "baby pig heart",
+    "piglet heart",
+    "lechon heart",
+    "young pig heart",
+    "suckling pork heart",
+    "lechon baboy heart"
+  ],
+  "fnri_F194": [
+    "suckling pig large intestine",
+    "lechon de leche large gut",
+    "baby pig colon",
+    "piglet large intestine",
+    "young pig large bowel",
+    "lechon large intestine",
+    "suckling pig colon",
+    "lechon de leche bituka malaki"
+  ],
+  "fnri_F195": [
+    "suckling pig small intestine",
+    "lechon de leche isaw",
+    "baby pig intestine",
+    "piglet small intestine",
+    "young pig small gut",
+    "lechon small intestine",
+    "suckling pig isaw",
+    "lechon de leche bituka maliit"
+  ],
+  "fnri_F196": [
+    "suckling pig kidney",
+    "lechon de leche kidney",
+    "baby pig kidney",
+    "piglet kidney",
+    "young pig kidney organ",
+    "lechon kidney",
+    "suckling pork kidney",
+    "lechon de leche bato"
+  ],
+  "fnri_F197": [
+    "suckling pig leg",
+    "lechon de leche leg",
+    "lechon pata",
+    "baby pig leg",
+    "piglet leg",
+    "young pig leg",
+    "lechon baboy leg",
+    "suckling pig pata"
+  ],
+  "fnri_F198": [
+    "suckling pig liver",
+    "lechon de leche liver",
+    "lechon atay",
+    "baby pig liver",
+    "piglet liver",
+    "young pig atay",
+    "lechon baboy liver",
+    "suckling pig atay"
+  ],
+  "fnri_F199": [
+    "suckling pig lungs",
+    "lechon de leche baga",
+    "baby pig lungs",
+    "piglet lung",
+    "young pig lung",
+    "lechon lung",
+    "suckling pig baga",
+    "lechon de leche lung"
+  ],
+  "fnri_F200": [
+    "suckling pig ribs",
+    "lechon de leche ribs",
+    "baby pig spare ribs",
+    "piglet ribs",
+    "young pig ribs",
+    "lechon spare rib",
+    "suckling pig tadyang",
+    "lechon de leche spare rib"
+  ],
+  "fnri_F201": [
+    "suckling pig spleen",
+    "lechon de leche spleen",
+    "baby pig spleen",
+    "piglet spleen",
+    "young pig spleen",
+    "lechon spleen",
+    "suckling pork spleen",
+    "lechon de leche spleen organ"
+  ],
+  "fnri_F202": [
+    "suckling pig stomach",
+    "lechon de leche stomach",
+    "baby pig tripe",
+    "piglet stomach",
+    "young pig stomach",
+    "lechon stomach",
+    "suckling pig maw",
+    "lechon de leche tuwalya"
+  ],
+  "fnri_F203": [
+    "pugo meat",
+    "quail bird meat",
+    "whole quail",
+    "cooked quail",
+    "grilled quail",
+    "fried quail",
+    "roasted quail",
+    "quail poultry",
+    "small game bird"
+  ],
+  "fnri_F204": [
+    "rabbit liver organ",
+    "bunny liver",
+    "rabbit offal liver",
+    "cooked rabbit liver",
+    "wild rabbit liver",
+    "rabbit innards liver",
+    "sauteed rabbit liver",
+    "rabbit organ meat liver"
+  ],
+  "fnri_F205": [
+    "rabbit leg",
+    "rabbit hind leg",
+    "bunny leg",
+    "rabbit thigh meat",
+    "cooked rabbit leg",
+    "rabbit leg meat",
+    "grilled rabbit leg",
+    "rabbit drumstick"
+  ],
+  "fnri_F206": [
+    "rabbit meat",
+    "rabbit white meat",
+    "bunny meat",
+    "rabbit breast",
+    "lean rabbit meat",
+    "cooked rabbit meat",
+    "white rabbit meat",
+    "rabbit poultry style"
+  ],
+  "fnri_F207": [
+    "snipe bird meat",
+    "snipe game bird",
+    "lean snipe",
+    "wild snipe meat",
+    "snipe meat cooked",
+    "marsh bird meat",
+    "snipe poultry",
+    "snipe game meat"
+  ],
+  "fnri_F208": [
+    "turkey breast meat",
+    "sliced turkey breast",
+    "roasted turkey breast",
+    "grilled turkey breast",
+    "turkey white meat",
+    "turkey fillet",
+    "baked turkey breast",
+    "turkey breast cooked"
+  ],
+  "fnri_F209": [
+    "turkey liver organ",
+    "turkey offal",
+    "turkey giblets liver",
+    "cooked turkey liver",
+    "turkey liver cooked",
+    "turkey innards liver",
+    "sauteed turkey liver",
+    "turkey organ meat"
+  ],
+  "fnri_F210": [
+    "turkey leg",
+    "turkey dark meat",
+    "roasted turkey thigh",
+    "turkey thigh meat",
+    "turkey drumstick thigh",
+    "turkey leg thigh",
+    "baked turkey thigh",
+    "turkey thigh cooked"
+  ],
+  "fnri_F211": [
+    "deer rib",
+    "venison ribs",
+    "deer meat ribs",
+    "wild deer ribs",
+    "deer rib rack",
+    "braised venison rib",
+    "deer game rib",
+    "stewed venison rib"
+  ],
+  "fnri_F212": [
+    "deer thigh",
+    "venison leg",
+    "deer leg meat",
+    "wild deer thigh",
+    "venison haunch",
+    "roasted venison thigh",
+    "deer meat thigh",
+    "grilled venison thigh"
+  ],
+  "fnri_F213": [
+    "crispy bacon",
+    "bacon strips",
+    "pork bacon",
+    "streaky bacon",
+    "fried bacon",
+    "bacon rashers",
+    "smoked bacon",
+    "breakfast bacon",
+    "back bacon",
+    "bakon"
+  ],
+  "fnri_F214": [
+    "canned beef chunks",
+    "beef in can",
+    "canned beef",
+    "chunky canned beef",
+    "beef chunk canned",
+    "tinned beef chunks",
+    "corned beef chunks can",
+    "canned beef pieces"
+  ],
+  "fnri_F215": [
+    "beef jerky strips",
+    "dried beef",
+    "beef tapa jerky",
+    "smoked beef jerky",
+    "chewy beef jerky",
+    "carne seca",
+    "dried cured beef",
+    "beef jerky snack"
+  ],
+  "fnri_F217": [
+    "beef sandwich spread",
+    "canned beef spread",
+    "beef paste",
+    "beef pate spread",
+    "beefy spread",
+    "beef in a can spread",
+    "bread spread beef",
+    "beef liver spread"
+  ],
+  "fnri_F218": [
+    "sweet cured beef",
+    "cured beef tapa",
+    "sweet beef tapa",
+    "carne norte",
+    "sweet cured meat beef",
+    "beef tocino style",
+    "sweet cured beef tapa",
+    "marinated cured beef"
+  ],
+  "fnri_F219": [
+    "carabao jerky",
+    "carabeef dried",
+    "dried carabao meat",
+    "tapa carabao",
+    "carabeef tapa",
+    "dried buffalo meat",
+    "water buffalo jerky",
+    "carabao meat dried"
+  ],
+  "fnri_F220": [
+    "chicken liver paste",
+    "chicken pate",
+    "canned chicken liver spread",
+    "chicken spread liver",
+    "chicken liver in a can",
+    "chicken liver sandwich spread",
+    "liver spread chicken",
+    "chicken liver paté"
+  ],
+  "fnri_F221": [
+    "chicken balls",
+    "chicken meatballs",
+    "chicken meat ball cooked",
+    "steamed chicken balls",
+    "fried chicken meatballs",
+    "chicken ball skewer",
+    "chicken bola bola",
+    "chicken ball soup"
+  ],
+  "fnri_F222": [
+    "chicken nuggets",
+    "breaded chicken nuggets",
+    "fried chicken nuggets",
+    "crispy chicken nuggets",
+    "chicken finger nuggets",
+    "nuggets chicken",
+    "battered chicken nuggets",
+    "chicken mcnugget style"
+  ],
+  "fnri_F223": [
+    "chicken sausage links",
+    "chicken hotdog",
+    "chicken frankfurter",
+    "chicken longanisa",
+    "chicken wiener",
+    "chicken bratwurst",
+    "chicken sausage cooked",
+    "fried chicken sausage"
+  ],
+  "fnri_F224": [
+    "chicken sandwich spread",
+    "canned chicken spread",
+    "chicken paste spread",
+    "chicken in a can spread",
+    "chicken breast spread",
+    "chicken pate spread",
+    "bread spread chicken",
+    "chicken spread canned"
+  ],
+  "fnri_F225": [
+    "corned beef loaf sliced",
+    "sliced corned beef",
+    "corned beef block",
+    "corned beef loaf canned",
+    "pressed corned beef",
+    "corned beef cold cut",
+    "corned beef sliced loaf",
+    "canned corned beef loaf"
+  ],
+  "fnri_F226": [
+    "corned beef can",
+    "canned corned beef",
+    "corned beef in can",
+    "corned beef tinned",
+    "giniling corned beef",
+    "corned beef hash canned",
+    "carne norte",
+    "corned beef breakfast"
+  ],
+  "fnri_F227": [
+    "filipino meatloaf",
+    "ground pork roll",
+    "steamed pork roll",
+    "pork roulade filipino",
+    "embutido",
+    "pork meatloaf roll",
+    "filipino embutido",
+    "baked pork meatloaf roll"
+  ],
+  "fnri_F228": [
+    "sliced ham",
+    "cooked ham",
+    "deli ham",
+    "cured pork ham",
+    "ham steak",
+    "honey ham",
+    "smoked ham",
+    "christmas ham",
+    "jamon"
+  ],
+  "fnri_F229": [
+    "canned chopped ham",
+    "spam style ham",
+    "chopped ham can",
+    "canned ham spread",
+    "tinned chopped ham",
+    "ham in a can",
+    "canned pork ham chunks",
+    "chopped ham canned"
+  ]
+}

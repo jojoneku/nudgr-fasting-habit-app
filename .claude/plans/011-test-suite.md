@@ -1,6 +1,6 @@
 # Plan 011 — Full App Test Suite
 
-> Status: DRAFT — awaiting approval
+> Status: IMPLEMENTED — 24 test files in `test/` covering models, presenters, services, utils, views (see Plan 017-test-suite-refresh for follow-up)
 > Created: 2026-03-25
 
 ---

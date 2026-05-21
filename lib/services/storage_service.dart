@@ -21,6 +21,7 @@ import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
+import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 
@@ -67,6 +68,7 @@ abstract class StorageService {
   static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
   static const String keyWeightLog = 'weightLog';
+  static const String keyNotificationPreferences = 'notification_preferences';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -174,6 +176,10 @@ abstract class StorageService {
   //  Weight Log
   Future<void> saveWeightLog(List<WeightEntry> entries);
   Future<List<WeightEntry>> loadWeightLog();
+
+  //  Notification Preferences
+  Future<void> saveNotificationPreferences(NotificationPreferences prefs);
+  Future<NotificationPreferences> loadNotificationPreferences();
 
   //  Theme
   Future<void> saveThemeMode(String mode);

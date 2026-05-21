@@ -1,0 +1,448 @@
+{
+  "usda_168065": [
+    "rice and red beans",
+    "arroz con frijoles rojos",
+    "latin rice and beans",
+    "red bean rice",
+    "puerto rican rice and beans",
+    "arroz y habichuelas",
+    "sofrito rice and beans",
+    "rice with red kidney beans",
+    "congri colorado"
+  ],
+  "usda_168066": [
+    "arroz con gandules",
+    "rice and pigeon peas",
+    "puerto rican rice",
+    "gandules rice",
+    "green pigeon peas rice",
+    "sofrito rice with pigeon peas",
+    "rice and gandules",
+    "latin rice with peas",
+    "arroz gandules"
+  ],
+  "usda_168068": [
+    "sopa de frijoles negros",
+    "black bean stew",
+    "cuban black bean soup",
+    "latin black bean soup",
+    "sopa negra",
+    "frijol negro soup",
+    "black beans broth",
+    "black bean chowder",
+    "frijoles negros soup"
+  ],
+  "usda_168069": [
+    "menudo",
+    "mondongo",
+    "tripe stew",
+    "callos",
+    "beef tripe soup",
+    "sopa de mondongo",
+    "tripas soup",
+    "tripe broth",
+    "hominy tripe soup"
+  ],
+  "usda_168070": [
+    "corn cake",
+    "colombian arepa",
+    "venezuelan arepa",
+    "cornmeal patty",
+    "grilled corn bread",
+    "masa cake",
+    "arepa de maiz",
+    "corn flatbread",
+    "fried corn patty",
+    "arepa grilled"
+  ],
+  "usda_168071": [
+    "buñuelos",
+    "fried dough",
+    "latin fritter",
+    "colombian bunuelo",
+    "cheese fritter",
+    "sweet fried bread",
+    "deep fried dough ball",
+    "fried yeast fritter",
+    "bunelo",
+    "sweet fritter"
+  ],
+  "usda_168072": [
+    "beef stir fry",
+    "chinese beef and veggies",
+    "beef with mixed vegetables",
+    "stir fried beef",
+    "wok beef vegetables",
+    "beef veggie stir fry",
+    "chinese beef dish",
+    "beef broccoli mixed vegetables"
+  ],
+  "usda_168073": [
+    "cracker barrel kids chicken",
+    "fried chicken tenders kids meal",
+    "chicken strips kids platter",
+    "crispy chicken tenders kids",
+    "kids chicken platter",
+    "chicken tenderloins fried kids",
+    "kids menu chicken strips"
+  ],
+  "usda_168074": [
+    "cracker barrel shrimp",
+    "country fried shrimp",
+    "southern fried shrimp platter",
+    "breaded shrimp platter",
+    "crispy shrimp platter",
+    "fried shrimp cracker barrel",
+    "southern style fried shrimp"
+  ],
+  "usda_168075": [
+    "cracker barrel catfish",
+    "fried catfish platter",
+    "southern catfish dinner",
+    "farm catfish fillet",
+    "breaded catfish platter",
+    "catfish fillet fried",
+    "southern fried catfish"
+  ],
+  "usda_168076": [
+    "dennys mozzarella sticks",
+    "cheese sticks denny's",
+    "fried mozzarella sticks",
+    "breaded mozzarella",
+    "mozza sticks",
+    "mozzarella sticks appetizer",
+    "cheese sticks fried"
+  ],
+  "usda_168077": [
+    "dennys fried shrimp",
+    "golden shrimp denny's",
+    "breaded fried shrimp dennys",
+    "crispy shrimp dennys",
+    "fried shrimp appetizer denny's",
+    "golden crispy shrimp"
+  ],
+  "usda_168078": [
+    "dennys mac and cheese",
+    "kids mac cheese denny's",
+    "macaroni cheese kids meal",
+    "mac n cheese dennys",
+    "kids pasta denny's",
+    "macaroni and cheese denny's kids"
+  ],
+  "usda_168079": [
+    "dennys chicken nuggets",
+    "star nuggets kids",
+    "kids chicken nuggets denny's",
+    "star shaped chicken nuggets",
+    "chicken bites kids dennys",
+    "nuggets kids meal denny's"
+  ],
+  "usda_168080": [
+    "shrimp stir fry",
+    "chinese shrimp and veggies",
+    "shrimp with mixed vegetables",
+    "stir fried shrimp vegetables",
+    "wok shrimp vegetables",
+    "shrimp veggie stir fry",
+    "chinese shrimp dish"
+  ],
+  "usda_168081": [
+    "sweet sour chicken",
+    "sweet and sour chicken chinese",
+    "crispy sweet sour chicken",
+    "tang cu chicken",
+    "pineapple sweet sour chicken",
+    "chinese sweet and sour",
+    "fried sweet sour chicken"
+  ],
+  "usda_168083": [
+    "chicken chow mein",
+    "chow mein chicken",
+    "chinese noodles with chicken",
+    "stir fried noodles chicken",
+    "chicken noodle stir fry",
+    "chow mein takeout",
+    "chinese chicken noodles"
+  ],
+  "usda_168084": [
+    "vegetable stir fry chinese",
+    "chinese mixed vegetables no noodles",
+    "wok vegetables",
+    "veg chow mein no noodles",
+    "chinese sauteed vegetables",
+    "stir fried mixed vegetables",
+    "chop suey vegetables"
+  ],
+  "usda_168085": [
+    "olive garden spaghetti",
+    "spaghetti bolognese olive garden",
+    "pasta with meat sauce olive garden",
+    "spaghetti marinara meat olive garden",
+    "italian spaghetti meat sauce"
+  ],
+  "usda_168086": [
+    "carrabbas spaghetti",
+    "spaghetti meat sauce carrabbas",
+    "pasta bolognese carrabbas",
+    "italian spaghetti carrabbas",
+    "spaghetti pomodoro meat carrabbas"
+  ],
+  "usda_168087": [
+    "sesame chicken chinese",
+    "crispy sesame chicken",
+    "honey sesame chicken",
+    "sesame glazed chicken",
+    "sweet sesame chicken",
+    "sesame chicken takeout",
+    "sesame coated chicken"
+  ],
+  "usda_168088": [
+    "grenadine syrup",
+    "pomegranate syrup",
+    "red cocktail syrup",
+    "shirley temple syrup",
+    "sweet red bar syrup",
+    "fruit punch syrup",
+    "grenadine bar mixer"
+  ],
+  "usda_168089": [
+    "fake cheese",
+    "processed cheese low cholesterol",
+    "american cheese substitute",
+    "imitation american cheese",
+    "cheese alternative low cholesterol",
+    "vegan style american cheese",
+    "low cholesterol processed cheese"
+  ],
+  "usda_168090": [
+    "baby banana yogurt",
+    "infant banana yogurt drink",
+    "baby food banana yogurt",
+    "pureed banana yogurt baby",
+    "banana yogurt baby pouch",
+    "banana yogurt puree infant"
+  ],
+  "usda_168091": [
+    "baby mixed fruit yogurt",
+    "infant fruit yogurt drink",
+    "baby food fruit yogurt",
+    "mixed fruit yogurt puree baby",
+    "fruit yogurt blend infant",
+    "baby fruit yogurt pouch"
+  ],
+  "usda_168092": [
+    "turkey ham deli",
+    "sliced turkey ham",
+    "lean turkey ham lunch meat",
+    "deli turkey ham sliced",
+    "turkey ham cold cut",
+    "thin sliced turkey ham",
+    "prepackaged turkey ham"
+  ],
+  "usda_168093": [
+    "peppercorn ranch dressing",
+    "black pepper dressing",
+    "creamy peppercorn dressing",
+    "cracked pepper salad dressing",
+    "peppercorn vinaigrette",
+    "pepper cream dressing"
+  ],
+  "usda_168094": [
+    "light mayo",
+    "diet mayonnaise",
+    "low calorie mayo",
+    "cholesterol free mayo",
+    "reduced fat mayo",
+    "lite mayo",
+    "low fat mayonnaise"
+  ],
+  "usda_168095": [
+    "chocolate peanut butter granola bar",
+    "peanut butter granola bar chocolate coated",
+    "chewy granola bar pb chocolate",
+    "soft granola bar peanut butter",
+    "chocolate covered granola bar peanut butter",
+    "pb chocolate granola bar"
+  ],
+  "usda_168096": [
+    "light italian dressing",
+    "low cal italian dressing",
+    "reduced fat italian dressing",
+    "diet italian dressing",
+    "lite italian vinaigrette",
+    "low calorie italian salad dressing"
+  ],
+  "usda_168097": [
+    "coffee creamer liquid",
+    "non dairy creamer liquid",
+    "light liquid creamer",
+    "coffee whitener",
+    "half and half substitute",
+    "milk creamer light",
+    "liquid coffee creamer light"
+  ],
+  "usda_168098": [
+    "low fat monterey jack",
+    "reduced fat monterey jack",
+    "light monterey cheese",
+    "lite monterey jack",
+    "low fat monterey jack cheese",
+    "monterey jack light"
+  ],
+  "usda_168099": [
+    "fat free creamy dressing",
+    "zero fat creamy dressing",
+    "light buttermilk dressing fat free",
+    "fat free sour cream dressing",
+    "creamy dressing fat free",
+    "fat free ranch style dressing"
+  ],
+  "usda_168100": [
+    "cholesterol free creamy dressing",
+    "light buttermilk dressing low cholesterol",
+    "reduced calorie creamy dressing",
+    "low cholesterol ranch style dressing",
+    "creamy dressing no cholesterol",
+    "buttermilk dressing cholesterol free"
+  ],
+  "usda_168101": [
+    "low fat beef bologna",
+    "lean beef bologna",
+    "light bologna",
+    "reduced fat bologna beef",
+    "beef bologna lite",
+    "diet bologna beef"
+  ],
+  "usda_168102": [
+    "twix fudge",
+    "chocolate fudge twix bar",
+    "twix cookie bar fudge",
+    "fudge twix candy",
+    "fudge chocolate cookie bar",
+    "twix dark fudge bar"
+  ],
+  "usda_168103": [
+    "sugar free chocolate froyo",
+    "no sugar chocolate frozen yogurt",
+    "nonfat chocolate froyo",
+    "diabetic frozen yogurt chocolate",
+    "no sugar added chocolate froyo",
+    "unsweetened chocolate frozen yogurt"
+  ],
+  "usda_168104": [
+    "chocolate froyo",
+    "chocolate frozen yogurt",
+    "choco froyo",
+    "frozen yogurt chocolate",
+    "chocolate fro yo",
+    "froyo chocolate"
+  ],
+  "usda_168105": [
+    "vanilla froyo",
+    "fruit frozen yogurt",
+    "non chocolate froyo",
+    "flavored frozen yogurt",
+    "strawberry froyo",
+    "vanilla frozen yogurt",
+    "mixed flavor froyo",
+    "assorted frozen yogurt"
+  ],
+  "usda_168106": [
+    "papadum",
+    "pappadam",
+    "poppadom",
+    "lentil crisp",
+    "indian crispy wafer",
+    "dal wafer",
+    "spiced lentil cracker",
+    "thin crispy indian flatbread",
+    "pappar",
+    "indian cracker"
+  ],
+  "usda_168107": [
+    "mini rice cakes",
+    "rice cracker snack",
+    "puffed rice cake",
+    "rice cake snack",
+    "light rice cracker",
+    "plain rice cake",
+    "small rice cakes",
+    "hain mini rice cakes"
+  ],
+  "usda_168108": [
+    "almond m&ms",
+    "m and m almond",
+    "almond chocolate candy coated",
+    "almond chocolate m&ms",
+    "almond mms",
+    "m&m almond",
+    "chocolate almond candy pieces"
+  ],
+  "usda_168109": [
+    "light coleslaw dressing",
+    "low fat coleslaw dressing",
+    "reduced calorie coleslaw dressing",
+    "lite cole slaw dressing",
+    "light creamy coleslaw sauce",
+    "diet coleslaw dressing"
+  ],
+  "usda_168110": [
+    "low sodium ham cooked",
+    "low salt ham",
+    "lean ham low sodium",
+    "cured ham low sodium",
+    "cooked ham reduced sodium",
+    "low salt cured ham"
+  ],
+  "usda_168111": [
+    "extra lean ham low sodium",
+    "boneless roasted ham low sodium",
+    "lean roasted ham low salt",
+    "very lean ham roasted",
+    "5 percent fat ham",
+    "low fat low sodium roasted ham"
+  ],
+  "usda_168112": [
+    "low calorie mayo dressing",
+    "light mayo salad dressing",
+    "diet mayo dressing",
+    "reduced calorie mayonnaise",
+    "low cal mayo dressing",
+    "light mayonnaise type dressing"
+  ],
+  "usda_168113": [
+    "orange popsicle",
+    "orange ice pop",
+    "orange creamsicle",
+    "orange juice pop",
+    "orange freeze pop",
+    "sherbet pop orange",
+    "orange frozen bar",
+    "orange ice bar"
+  ],
+  "usda_168114": [
+    "low fat cottage cheese no salt",
+    "1 percent cottage cheese",
+    "light cottage cheese no sodium",
+    "low sodium cottage cheese",
+    "sodium free cottage cheese",
+    "diet cottage cheese 1 percent"
+  ],
+  "usda_168115": [
+    "low sodium mayo",
+    "low salt mayo",
+    "diet low sodium mayonnaise",
+    "light low sodium mayo",
+    "reduced sodium mayonnaise",
+    "sodium free mayo"
+  ],
+  "usda_168116": [
+    "unsalted tortilla chips",
+    "white corn chips no salt",
+    "plain white corn tortilla chips",
+    "no salt tortilla chips",
+    "unsalted corn chips white corn",
+    "plain tortilla chips unsalted",
+    "salt free tortilla chips"
+  ]
+}

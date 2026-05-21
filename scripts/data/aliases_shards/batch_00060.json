@@ -1,0 +1,502 @@
+{
+  "usda_168979": [
+    "beluga whale flipper",
+    "raw whale flipper",
+    "whale flipper meat",
+    "arctic whale flipper",
+    "beluga flipper",
+    "native alaska whale meat",
+    "raw marine mammal flipper",
+    "muktuk flipper"
+  ],
+  "usda_168980": [
+    "beluga whale liver",
+    "raw whale liver",
+    "beluga liver",
+    "arctic whale liver",
+    "whale organ meat",
+    "native whale liver",
+    "beluga organ",
+    "raw cetacean liver"
+  ],
+  "usda_168981": [
+    "beluga whale oil",
+    "whale oil",
+    "beluga oil",
+    "arctic whale fat",
+    "marine mammal oil",
+    "beluga blubber oil",
+    "native alaska whale oil",
+    "whale blubber"
+  ],
+  "usda_168982": [
+    "wild blackberries",
+    "alaska blackberries",
+    "native blackberries",
+    "foraged blackberries",
+    "arctic blackberries",
+    "wild picked blackberries",
+    "wild berry alaska",
+    "raw wild blackberries"
+  ],
+  "usda_168983": [
+    "caribou liver",
+    "reindeer liver",
+    "raw caribou liver",
+    "wild game liver",
+    "native caribou organ",
+    "raw reindeer liver",
+    "caribou organ meat",
+    "wild ungulate liver"
+  ],
+  "usda_168984": [
+    "caribou stew",
+    "caribou soup",
+    "reindeer stew",
+    "wild game stew",
+    "native caribou soup",
+    "alaska caribou stew",
+    "reindeer soup",
+    "caribou meat stew"
+  ],
+  "usda_168985": [
+    "caribou tongue",
+    "reindeer tongue",
+    "raw caribou tongue",
+    "wild game tongue",
+    "native caribou tongue",
+    "caribou offal",
+    "raw reindeer tongue",
+    "wild ungulate tongue"
+  ],
+  "usda_168986": [
+    "gumboot chiton",
+    "leathery chiton",
+    "gumboots shellfish",
+    "chiton shellfish",
+    "giant chiton",
+    "pacific chiton",
+    "native shellfish chiton",
+    "rock chiton alaska"
+  ],
+  "usda_168987": [
+    "devilfish",
+    "alaska octopus",
+    "pacific octopus alaska",
+    "devilfish meat",
+    "native octopus alaska",
+    "wild octopus alaska",
+    "alaskan octopus",
+    "octopus native alaska"
+  ],
+  "usda_168988": [
+    "fireweed leaves",
+    "young fireweed",
+    "raw fireweed",
+    "fireweed greens",
+    "alaska fireweed",
+    "wild fireweed",
+    "foraged fireweed leaves",
+    "native fireweed greens"
+  ],
+  "usda_168989": [
+    "herring eggs on kelp",
+    "herring roe kelp",
+    "pacific herring eggs kelp",
+    "herring spawn kelp",
+    "herring eggs seaweed",
+    "native herring eggs",
+    "kelp herring roe",
+    "herring caviar kelp"
+  ],
+  "usda_168990": [
+    "dried herring eggs",
+    "dry herring roe",
+    "dried pacific herring eggs",
+    "native dried herring eggs",
+    "dried fish roe pacific",
+    "dried herring caviar",
+    "dehydrated herring eggs",
+    "herring eggs dried"
+  ],
+  "usda_168991": [
+    "moose stew",
+    "alaskan moose stew",
+    "wild game moose stew",
+    "native moose stew",
+    "moose meat stew",
+    "moose soup alaska",
+    "wild moose stew",
+    "alaska moose soup"
+  ],
+  "usda_168992": [
+    "cooked agave",
+    "roasted agave",
+    "baked agave",
+    "agave heart cooked",
+    "roasted maguey",
+    "agave piña",
+    "native agave cooked",
+    "cooked maguey plant"
+  ],
+  "usda_168993": [
+    "dried agave",
+    "dehydrated agave",
+    "agave dried",
+    "dried maguey",
+    "agave jerky",
+    "native dried agave",
+    "maguey dried strips",
+    "agave preserved"
+  ],
+  "usda_168994": [
+    "cattail shoots",
+    "cattail stalks",
+    "narrow leaf cattail",
+    "cattail sprouts",
+    "wild cattail",
+    "foraged cattail",
+    "native cattail shoots",
+    "bulrush shoots"
+  ],
+  "usda_168995": [
+    "lambsquarters greens",
+    "wild lambsquarters",
+    "goosefoot greens",
+    "wild spinach lambsquarters",
+    "native lambsquarters",
+    "foraged lambsquarters",
+    "pigweed greens",
+    "chenopodium greens"
+  ],
+  "usda_168996": [
+    "prairie turnip",
+    "boiled prairie turnip",
+    "tipsin",
+    "breadroot",
+    "indian breadroot",
+    "wild turnip plains",
+    "boiled breadroot",
+    "native prairie turnip boiled"
+  ],
+  "usda_168997": [
+    "wild raspberries",
+    "plains wild raspberries",
+    "foraged raspberries",
+    "native raspberries",
+    "wild red raspberries",
+    "fresh wild raspberries",
+    "foraged wild berries plains",
+    "wild raspberry plains"
+  ],
+  "usda_168998": [
+    "wild rose hips",
+    "rosehip berries",
+    "raw rose hips",
+    "foraged rose hips",
+    "wild rosehip",
+    "native rose hips",
+    "rose berry",
+    "wild rosa fruit"
+  ],
+  "usda_168999": [
+    "chokecherries",
+    "raw chokecherries",
+    "pitted chokecherries",
+    "wild chokecherries",
+    "native chokecherries",
+    "choke cherries raw",
+    "foraged chokecherries",
+    "wild sour cherries plains"
+  ],
+  "usda_169000": [
+    "sea lion liver",
+    "steller sea lion liver",
+    "native sea lion liver",
+    "alaska sea lion liver",
+    "sea lion organ meat",
+    "steller sea lion organ",
+    "alaska native sea lion organ",
+    "marine mammal liver alaska"
+  ],
+  "usda_169001": [
+    "sea lion kidney",
+    "steller sea lion kidney",
+    "native sea lion kidney",
+    "alaska sea lion kidney",
+    "sea lion offal",
+    "steller sea lion organ kidney",
+    "alaska native sea lion kidney",
+    "marine mammal kidney alaska"
+  ],
+  "usda_169002": [
+    "sea lion heart",
+    "steller sea lion heart",
+    "native sea lion heart",
+    "alaska sea lion heart",
+    "sea lion organ heart",
+    "steller sea lion heart meat",
+    "alaska native sea lion heart",
+    "marine mammal heart alaska"
+  ],
+  "usda_169003": [
+    "sea lion meat",
+    "steller sea lion meat",
+    "native sea lion meat",
+    "alaska sea lion",
+    "sea lion flesh",
+    "steller sea lion flesh",
+    "alaska native sea lion meat",
+    "wild sea lion meat"
+  ],
+  "usda_169004": [
+    "piki bread",
+    "blue cornmeal bread",
+    "hopi piki",
+    "native corn bread blue",
+    "blue corn piki",
+    "hopi flatbread",
+    "native blue corn flatbread",
+    "blue cornmeal flatbread"
+  ],
+  "usda_169005": [
+    "wocas",
+    "yellow pond lily tuber",
+    "pond lily root cooked",
+    "klamath wocas",
+    "yellow pond lily cooked",
+    "native pond lily root",
+    "wocas tuber cooked",
+    "pond lily tuber oregon"
+  ],
+  "usda_169006": [
+    "pinto bean hominy stew",
+    "badufsuki",
+    "hopi bean stew",
+    "bean and hominy soup",
+    "pinto bean stew hopi",
+    "hominy bean stew native",
+    "hopi pinto stew",
+    "native bean hominy stew"
+  ],
+  "usda_169007": [
+    "hopi tamales",
+    "pork tamales masa",
+    "corn dough tamale pork",
+    "native tamales pork",
+    "masa pork tamale",
+    "hopi pork tamale",
+    "tamale pork filling corn",
+    "native corn tamale pork"
+  ],
+  "usda_169008": [
+    "applebees shrimp",
+    "double crunch shrimp",
+    "crispy shrimp applebees",
+    "applebees fried shrimp",
+    "crunchy shrimp applebees",
+    "breaded shrimp applebees",
+    "applebees shrimp platter",
+    "fried shrimp applebees"
+  ],
+  "usda_169009": [
+    "applebees fries",
+    "applebees french fries",
+    "fries applebees",
+    "applebees side fries",
+    "applebees fried potatoes",
+    "restaurant fries applebees",
+    "applebees potato fries",
+    "applebee fries"
+  ],
+  "usda_169010": [
+    "applebees mac and cheese",
+    "kraft mac cheese applebees",
+    "kids mac cheese applebees",
+    "applebees macaroni cheese",
+    "mac n cheese applebees kids",
+    "applebees kids pasta",
+    "macaroni cheese applebees kids menu",
+    "applebees kraft macaroni"
+  ],
+  "usda_169011": [
+    "applebees mozzarella sticks",
+    "mozz sticks applebees",
+    "applebees cheese sticks",
+    "fried mozzarella applebees",
+    "cheese sticks applebees",
+    "applebees mozarella sticks",
+    "applebees fried cheese sticks",
+    "applebees mozzarella appetizer"
+  ],
+  "usda_169012": [
+    "applebees chicken tenders kids",
+    "applebees kids chicken",
+    "chicken strips applebees kids",
+    "applebees chicken strips kids menu",
+    "applebees kids chicken tenders",
+    "applebees kids fried chicken",
+    "chicken tenders applebees kids menu",
+    "applebees kids chicken strips"
+  ],
+  "usda_169013": [
+    "tgi fridays chicken fingers kids",
+    "tgif kids chicken",
+    "friday's chicken fingers kids",
+    "tgi fridays kids chicken strips",
+    "tgif chicken tenders kids menu",
+    "friday's kids chicken fingers",
+    "chicken fingers fridays kids menu",
+    "tgif kids fried chicken"
+  ],
+  "usda_169014": [
+    "tgi fridays sirloin steak",
+    "tgif steak",
+    "friday's classic sirloin",
+    "tgi fridays 10oz steak",
+    "tgif sirloin",
+    "friday's steak dinner",
+    "classic sirloin tgi fridays",
+    "tgi fridays grilled steak"
+  ],
+  "usda_169015": [
+    "fried mozzarella sticks",
+    "mozzarella sticks restaurant",
+    "mozz sticks fried",
+    "fried cheese sticks",
+    "breaded mozzarella sticks",
+    "fried mozzarella appetizer",
+    "restaurant mozz sticks",
+    "deep fried mozzarella"
+  ],
+  "usda_169016": [
+    "sirloin steak restaurant",
+    "family style sirloin",
+    "grilled sirloin restaurant",
+    "restaurant sirloin beef",
+    "sirloin beef steak diner",
+    "family restaurant steak",
+    "grilled beef sirloin restaurant",
+    "diner sirloin steak"
+  ],
+  "usda_169017": [
+    "applebees battered fish",
+    "applebees hand battered fish",
+    "hand battered fish applebees",
+    "applebees fried fish",
+    "applebees fish fillet",
+    "battered fish applebees",
+    "applebees fish dinner",
+    "applebees beer battered fish"
+  ],
+  "usda_169018": [
+    "applebees chili",
+    "applebees chili bowl",
+    "chili applebees",
+    "applebees meat chili",
+    "applebees chili soup",
+    "applebees chili con carne",
+    "restaurant chili applebees",
+    "applebees beef chili"
+  ],
+  "usda_169019": [
+    "tgi fridays chicken fingers",
+    "tgif chicken strips",
+    "friday's chicken tenders",
+    "tgi fridays chicken strips",
+    "tgif chicken fingers",
+    "friday's fried chicken strips",
+    "chicken fingers tgi fridays",
+    "tgi friday chicken tenders"
+  ],
+  "usda_169020": [
+    "applebees coleslaw",
+    "applebees cole slaw",
+    "coleslaw applebees",
+    "applebees slaw",
+    "applebees side coleslaw",
+    "creamy coleslaw applebees",
+    "applebees cabbage slaw",
+    "applebee's slaw side"
+  ],
+  "usda_169021": [
+    "cracker barrel onion rings",
+    "thick cut onion rings cracker barrel",
+    "thick onion rings cracker barrel",
+    "onion rings cracker barrel thick",
+    "fried onion rings cracker barrel",
+    "cracker barrel thick onion rings",
+    "cracker barrel sides onion rings",
+    "thick sliced onion rings cracker barrel"
+  ],
+  "usda_169022": [
+    "dennys chicken strips",
+    "denny's chicken tenders",
+    "chicken strips dennys",
+    "dennys fried chicken strips",
+    "denny's chicken fingers",
+    "chicken tenders dennys",
+    "dennys crispy chicken",
+    "denny's chicken strips restaurant"
+  ],
+  "usda_169023": [
+    "dennys coleslaw",
+    "denny's cole slaw",
+    "coleslaw dennys",
+    "dennys slaw side",
+    "denny's cabbage slaw",
+    "creamy coleslaw dennys",
+    "dennys side coleslaw",
+    "denny's slaw"
+  ],
+  "usda_169024": [
+    "dennys fish fillet",
+    "denny's fried fish",
+    "battered fish dennys",
+    "dennys breaded fish fillet",
+    "denny's fish fried",
+    "fried fish fillet dennys",
+    "dennys battered fish",
+    "denny's breaded fish sandwich"
+  ],
+  "usda_169025": [
+    "dennys hash browns",
+    "denny's hashbrowns",
+    "hash browns dennys",
+    "dennys shredded potatoes",
+    "denny's breakfast potatoes",
+    "hashbrowns dennys",
+    "denny's crispy hash browns",
+    "dennys potato hashbrown"
+  ],
+  "usda_169026": [
+    "restaurant coleslaw",
+    "family style coleslaw",
+    "diner coleslaw",
+    "creamy coleslaw restaurant",
+    "coleslaw side dish restaurant",
+    "cabbage slaw diner",
+    "family restaurant coleslaw",
+    "classic coleslaw restaurant"
+  ],
+  "usda_169027": [
+    "onion rings restaurant",
+    "family style onion rings",
+    "fried onion rings restaurant",
+    "deep fried onion rings diner",
+    "battered onion rings restaurant",
+    "crispy onion rings diner",
+    "restaurant fried onion rings",
+    "family diner onion rings"
+  ],
+  "usda_169028": [
+    "chili with beans restaurant",
+    "meat and bean chili",
+    "family style chili restaurant",
+    "beef chili with beans",
+    "chili con carne restaurant",
+    "restaurant bean meat chili",
+    "chili bowl restaurant beans",
+    "beef bean chili restaurant"
+  ]
+}

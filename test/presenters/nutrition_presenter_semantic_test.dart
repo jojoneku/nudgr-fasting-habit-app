@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 // Tests for the RAG semantic-search step of NutritionPresenter._resolveOneDbItem.
 //
 // We exercise the public `parseFoodItemsForTemplate` entry point, which calls
@@ -63,6 +64,8 @@ void main() {
 
   setUp(() async {
     mockStorage = MockStorageService();
+    when(mockStorage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     mockStats = MockStatsPresenter();
     mockFasting = MockFastingPresenter();
     fakeAi = _FakeAiCoach();

@@ -1,0 +1,1002 @@
+{
+  "usda_2710161": [
+    "liquid butter substitute",
+    "butter flavored liquid",
+    "butter alternative liquid",
+    "fake butter liquid",
+    "butter flavor drops",
+    "liquid butter flavoring",
+    "non-dairy butter liquid",
+    "cooking butter replacement"
+  ],
+  "usda_2710162": [
+    "light margarine",
+    "low fat margarine",
+    "reduced fat margarine",
+    "diet margarine",
+    "lite margarine",
+    "low calorie margarine",
+    "reduced calorie spread",
+    "light butter spread"
+  ],
+  "usda_2710163": [
+    "powdered butter",
+    "butter powder",
+    "dried butter",
+    "butter flavored powder",
+    "powdered butter substitute",
+    "dehydrated butter",
+    "butter granules",
+    "dry butter replacement"
+  ],
+  "usda_2710164": [
+    "cooking oil",
+    "table fat",
+    "frying oil",
+    "generic oil",
+    "cooking fat",
+    "oil for cooking",
+    "pan oil",
+    "general cooking oil"
+  ],
+  "usda_2710165": [
+    "lard drippings",
+    "bacon grease",
+    "meat drippings",
+    "animal drippings",
+    "pan drippings",
+    "pork fat drippings",
+    "beef drippings",
+    "rendered animal fat"
+  ],
+  "usda_2710167": [
+    "shortening",
+    "vegetable shortening",
+    "cooking shortening",
+    "baking shortening",
+    "crisco",
+    "solid shortening",
+    "white shortening",
+    "baking fat"
+  ],
+  "usda_2710168": [
+    "ghee",
+    "clarified butter",
+    "desi ghee",
+    "indian ghee",
+    "pure ghee",
+    "butter ghee",
+    "cooking ghee",
+    "drawn butter"
+  ],
+  "usda_2710169": [
+    "garlic sauce",
+    "toum",
+    "garlic dip",
+    "garlic aioli",
+    "roasted garlic sauce",
+    "garlic spread",
+    "creamy garlic sauce",
+    "white garlic sauce"
+  ],
+  "usda_2710170": [
+    "lemon butter sauce",
+    "butter lemon sauce",
+    "lemon butter drizzle",
+    "lemon garlic butter sauce",
+    "lemon herb butter",
+    "citrus butter sauce",
+    "lemon butter dip",
+    "butter sauce with lemon"
+  ],
+  "usda_2710171": [
+    "hollandaise",
+    "eggs benedict sauce",
+    "butter egg yolk sauce",
+    "creamy yellow sauce",
+    "benedict sauce",
+    "egg sauce",
+    "classic hollandaise",
+    "french butter sauce"
+  ],
+  "usda_2710172": [
+    "sandwich spread",
+    "sub spread",
+    "sandwich condiment",
+    "hoagie spread",
+    "bread spread",
+    "deli spread",
+    "creamy sandwich spread",
+    "sub sauce"
+  ],
+  "usda_2710173": [
+    "tartar sauce",
+    "fish sauce dip",
+    "tartare sauce",
+    "creamy dipping sauce for fish",
+    "tartar dip",
+    "white fish dipping sauce",
+    "tarter sauce",
+    "seafood tartar"
+  ],
+  "usda_2710174": [
+    "horseradish sauce",
+    "creamy horseradish",
+    "horseradish dip",
+    "horseradish condiment",
+    "hot horseradish cream",
+    "prepared horseradish",
+    "white horseradish sauce",
+    "horseradish spread"
+  ],
+  "usda_2710176": [
+    "fry sauce",
+    "burger sauce",
+    "dipping sauce for fries",
+    "ketchup mayo mix",
+    "mayo ketchup sauce",
+    "utah fry sauce",
+    "pink sauce",
+    "fries dipping sauce"
+  ],
+  "usda_2710177": [
+    "sauce",
+    "generic sauce",
+    "mixed sauce",
+    "topping sauce",
+    "condiment sauce",
+    "cooking sauce",
+    "side sauce",
+    "table sauce"
+  ],
+  "usda_2710178": [
+    "curry sauce",
+    "indian curry sauce",
+    "yellow curry sauce",
+    "curry gravy",
+    "korma sauce",
+    "tikka masala sauce",
+    "curry cooking sauce",
+    "spiced curry sauce"
+  ],
+  "usda_2710179": [
+    "honey butter",
+    "sweet butter",
+    "honey and butter mix",
+    "honey butter spread",
+    "sweet honey spread",
+    "honey whipped butter",
+    "butter with honey",
+    "honey butter dip"
+  ],
+  "usda_2710180": [
+    "vegetable oil",
+    "cooking oil",
+    "frying oil",
+    "plant based oil",
+    "generic veg oil",
+    "all purpose cooking oil",
+    "bottle of oil",
+    "oil for frying"
+  ],
+  "usda_2710181": [
+    "almond oil",
+    "sweet almond oil",
+    "pure almond oil",
+    "almond cooking oil",
+    "cold pressed almond oil",
+    "almond extract oil",
+    "nut oil almond",
+    "almond kernel oil"
+  ],
+  "usda_2710183": [
+    "corn oil",
+    "maize oil",
+    "corn cooking oil",
+    "vegetable corn oil",
+    "frying corn oil",
+    "yellow corn oil",
+    "corn based oil",
+    "refined corn oil"
+  ],
+  "usda_2710184": [
+    "cottonseed oil",
+    "cotton oil",
+    "cottonseed cooking oil",
+    "refined cottonseed oil",
+    "cotton seed oil",
+    "frying cottonseed oil",
+    "vegetable cottonseed oil",
+    "cottonseed fry oil"
+  ],
+  "usda_2710185": [
+    "flaxseed oil",
+    "linseed oil",
+    "flax oil",
+    "cold pressed flax oil",
+    "flax seed oil",
+    "omega 3 oil",
+    "flaxoil",
+    "ground flax oil"
+  ],
+  "usda_2710187": [
+    "peanut oil",
+    "groundnut oil",
+    "peanut frying oil",
+    "arachis oil",
+    "groundnut cooking oil",
+    "peanut butter oil",
+    "roasted peanut oil",
+    "refined peanut oil"
+  ],
+  "usda_2710189": [
+    "safflower oil",
+    "safflower cooking oil",
+    "pure safflower oil",
+    "high oleic safflower oil",
+    "safflower vegetable oil",
+    "refined safflower oil",
+    "light safflower oil",
+    "safflower frying oil"
+  ],
+  "usda_2710191": [
+    "soybean oil",
+    "soy oil",
+    "soy cooking oil",
+    "vegetable soy oil",
+    "refined soy oil",
+    "soya oil",
+    "soyabean oil",
+    "generic vegetable oil soy"
+  ],
+  "usda_2710192": [
+    "sunflower oil",
+    "sunflower cooking oil",
+    "sunflower seed oil",
+    "high oleic sunflower oil",
+    "refined sunflower oil",
+    "light sunflower oil",
+    "sunflower frying oil",
+    "pure sunflower oil"
+  ],
+  "usda_2710193": [
+    "walnut oil",
+    "cold pressed walnut oil",
+    "pure walnut oil",
+    "walnut cooking oil",
+    "nut oil walnut",
+    "toasted walnut oil",
+    "walnut salad oil",
+    "refined walnut oil"
+  ],
+  "usda_2710194": [
+    "wheat germ oil",
+    "wheatgerm oil",
+    "wheat oil",
+    "cold pressed wheat germ oil",
+    "pure wheat germ oil",
+    "vitamin e oil wheat",
+    "wheat kernel oil",
+    "wheat germ extract oil"
+  ],
+  "usda_2710195": [
+    "salad dressing",
+    "generic salad dressing",
+    "salad topping",
+    "dressing for salad",
+    "regular salad dressing",
+    "mixed salad dressing",
+    "bottled dressing",
+    "salad sauce"
+  ],
+  "usda_2710196": [
+    "sandwich dressing",
+    "spread for sandwich",
+    "dressing for sandwich",
+    "sandwich topping sauce",
+    "sub dressing",
+    "hoagie dressing",
+    "condiment for sandwich",
+    "sandwich sauce"
+  ],
+  "usda_2710197": [
+    "blue cheese dressing",
+    "bleu cheese dressing",
+    "roquefort dressing",
+    "blue cheese salad dressing",
+    "creamy blue cheese",
+    "blue cheese dip",
+    "bleu cheese sauce",
+    "roquefort salad dressing"
+  ],
+  "usda_2710198": [
+    "bacon tomato dressing",
+    "blt dressing",
+    "bacon ranch tomato dressing",
+    "bacon vinaigrette",
+    "tomato bacon salad dressing",
+    "smoky tomato dressing",
+    "bacon flavored dressing",
+    "tomato and bacon vinaigrette"
+  ],
+  "usda_2710200": [
+    "coleslaw dressing",
+    "slaw dressing",
+    "creamy coleslaw sauce",
+    "cole slaw dressing",
+    "coleslaw sauce",
+    "creamy slaw sauce",
+    "coleslaw mayo dressing",
+    "cabbage slaw dressing"
+  ],
+  "usda_2710201": [
+    "french dressing",
+    "catalina dressing",
+    "red french dressing",
+    "sweet french dressing",
+    "orange french dressing",
+    "catalina salad dressing",
+    "tangy french dressing",
+    "french salad sauce"
+  ],
+  "usda_2710202": [
+    "honey mustard dressing",
+    "honey mustard sauce",
+    "sweet mustard dressing",
+    "honey dijon dressing",
+    "honey mustard salad dressing",
+    "sweet honey mustard",
+    "honey mustard dip",
+    "creamy honey mustard"
+  ],
+  "usda_2710203": [
+    "italian dressing",
+    "vinaigrette italian",
+    "oil and vinegar dressing",
+    "italian vinaigrette",
+    "zesty italian dressing",
+    "classic italian dressing",
+    "oil vinegar italian",
+    "italian salad dressing"
+  ],
+  "usda_2710204": [
+    "mayo",
+    "mayonnaise",
+    "regular mayo",
+    "full fat mayo",
+    "white mayo",
+    "classic mayo",
+    "hellmanns mayo",
+    "creamy mayonnaise"
+  ],
+  "usda_2710205": [
+    "vegan mayo",
+    "egg free mayo",
+    "plant based mayo",
+    "dairy free mayonnaise",
+    "vegan mayonnaise",
+    "eggless mayo",
+    "non dairy mayo",
+    "vegan spread mayo"
+  ],
+  "usda_2710206": [
+    "russian dressing",
+    "russian salad dressing",
+    "thousand island style russian",
+    "creamy russian dressing",
+    "pink russian dressing",
+    "tangy russian dressing",
+    "russian sauce",
+    "russian cocktail dressing"
+  ],
+  "usda_2710207": [
+    "miracle whip",
+    "salad dressing mayo style",
+    "mayo type dressing",
+    "whipped dressing",
+    "creamy salad dressing",
+    "sandwich mayo dressing",
+    "salad cream",
+    "mayo salad dressing"
+  ],
+  "usda_2710208": [
+    "avocado dressing",
+    "avocado salad dressing",
+    "creamy avocado dressing",
+    "guacamole dressing",
+    "avocado lime dressing",
+    "green avocado dressing",
+    "avocado vinaigrette",
+    "avocado cream dressing"
+  ],
+  "usda_2710209": [
+    "creamy italian dressing",
+    "creamy italian salad dressing",
+    "white italian dressing",
+    "thick italian dressing",
+    "creamy zesty italian",
+    "rich italian dressing",
+    "creamy italian vinaigrette",
+    "italian cream dressing"
+  ],
+  "usda_2710210": [
+    "poppy seed dressing",
+    "poppyseed dressing",
+    "sweet poppy seed dressing",
+    "creamy poppyseed",
+    "poppy seed salad dressing",
+    "honey poppyseed dressing",
+    "poppy seed vinaigrette",
+    "sweet poppyseed sauce"
+  ],
+  "usda_2710211": [
+    "sesame dressing",
+    "sesame salad dressing",
+    "asian sesame dressing",
+    "sesame ginger dressing",
+    "toasted sesame dressing",
+    "sesame oil dressing",
+    "japanese sesame dressing",
+    "sesame vinaigrette"
+  ],
+  "usda_2710213": [
+    "thousand island",
+    "thousand island dressing",
+    "thousand island sauce",
+    "1000 island dressing",
+    "1000 island sauce",
+    "special sauce",
+    "pink dressing",
+    "creamy tomato dressing"
+  ],
+  "usda_2710214": [
+    "fruit dressing",
+    "sweet fruit dressing",
+    "fruity salad dressing",
+    "fruit salad sauce",
+    "fruit vinaigrette",
+    "sweet citrus dressing",
+    "tropical fruit dressing",
+    "fruit based dressing"
+  ],
+  "usda_2710215": [
+    "light salad dressing",
+    "low fat salad dressing",
+    "reduced calorie dressing",
+    "diet salad dressing",
+    "lite dressing",
+    "low calorie dressing",
+    "reduced fat dressing",
+    "light dressing nfs"
+  ],
+  "usda_2710216": [
+    "light blue cheese dressing",
+    "low fat blue cheese dressing",
+    "lite bleu cheese dressing",
+    "reduced fat blue cheese",
+    "light roquefort dressing",
+    "low calorie blue cheese dressing",
+    "light bleu cheese",
+    "diet blue cheese dressing"
+  ],
+  "usda_2710217": [
+    "light creamy italian dressing",
+    "low fat creamy italian",
+    "lite creamy italian dressing",
+    "reduced fat creamy italian",
+    "light italian cream dressing",
+    "low calorie creamy italian",
+    "diet creamy italian dressing",
+    "lite italian dressing creamy"
+  ],
+  "usda_2710218": [
+    "light french dressing",
+    "low fat french dressing",
+    "lite catalina dressing",
+    "light catalina dressing",
+    "reduced fat french dressing",
+    "low calorie french dressing",
+    "diet french dressing",
+    "lite french salad dressing"
+  ],
+  "usda_2710219": [
+    "light caesar dressing",
+    "low fat caesar dressing",
+    "lite caesar dressing",
+    "reduced fat caesar",
+    "low calorie caesar dressing",
+    "diet caesar dressing",
+    "lighter caesar dressing",
+    "light caesar salad sauce"
+  ],
+  "usda_2710220": [
+    "light mayo",
+    "low fat mayo",
+    "lite mayonnaise",
+    "reduced fat mayo",
+    "low calorie mayo",
+    "light mayonnaise",
+    "diet mayo",
+    "reduced calorie mayonnaise"
+  ],
+  "usda_2710222": [
+    "light miracle whip",
+    "low fat mayo type dressing",
+    "lite salad dressing mayo",
+    "reduced fat whipped dressing",
+    "light mayo dressing",
+    "diet mayo style dressing",
+    "lite mayo dressing",
+    "low calorie miracle whip"
+  ],
+  "usda_2710223": [
+    "light honey mustard dressing",
+    "low fat honey mustard",
+    "lite honey mustard dressing",
+    "reduced fat honey mustard",
+    "low calorie honey mustard",
+    "diet honey mustard dressing",
+    "light sweet mustard dressing",
+    "lite honey dijon dressing"
+  ],
+  "usda_2710224": [
+    "light italian dressing",
+    "low fat italian dressing",
+    "lite italian dressing",
+    "reduced fat italian dressing",
+    "low calorie italian dressing",
+    "diet italian dressing",
+    "light vinaigrette italian",
+    "lite zesty italian dressing"
+  ],
+  "usda_2710225": [
+    "light ranch dressing",
+    "low fat ranch",
+    "lite ranch dressing",
+    "reduced fat ranch",
+    "low calorie ranch dressing",
+    "diet ranch dressing",
+    "lighter ranch",
+    "light ranch sauce"
+  ],
+  "usda_2710226": [
+    "light sesame dressing",
+    "low fat sesame dressing",
+    "lite sesame dressing",
+    "reduced fat sesame dressing",
+    "low calorie sesame dressing",
+    "diet sesame dressing",
+    "light asian sesame dressing",
+    "lite sesame vinaigrette"
+  ],
+  "usda_2710227": [
+    "light thousand island",
+    "low fat thousand island",
+    "lite thousand island dressing",
+    "reduced fat thousand island",
+    "low calorie thousand island",
+    "diet thousand island dressing",
+    "light 1000 island",
+    "lite pink dressing"
+  ],
+  "usda_2710228": [
+    "korean dressing",
+    "korean marinade",
+    "gochujang dressing",
+    "korean bbq marinade",
+    "kalbi marinade",
+    "korean salad dressing",
+    "bulgogi marinade",
+    "korean style sauce"
+  ],
+  "usda_2710229": [
+    "fat free blue cheese dressing",
+    "zero fat blue cheese dressing",
+    "non fat blue cheese dressing",
+    "fat free bleu cheese",
+    "nonfat roquefort dressing",
+    "fat free blue cheese",
+    "no fat blue cheese dressing",
+    "skimmed blue cheese dressing"
+  ],
+  "usda_2710230": [
+    "fat free caesar dressing",
+    "zero fat caesar dressing",
+    "non fat caesar dressing",
+    "nonfat caesar dressing",
+    "fat free caesar",
+    "no fat caesar dressing",
+    "fat free caesar salad dressing",
+    "zero calorie caesar dressing"
+  ],
+  "usda_2710231": [
+    "fat free creamy italian dressing",
+    "zero fat creamy italian",
+    "non fat creamy italian dressing",
+    "nonfat italian cream dressing",
+    "fat free italian cream dressing",
+    "no fat creamy italian",
+    "zero fat italian dressing creamy",
+    "fat free thick italian dressing"
+  ],
+  "usda_2710232": [
+    "fat free french dressing",
+    "zero fat french dressing",
+    "non fat catalina dressing",
+    "fat free catalina dressing",
+    "nonfat french dressing",
+    "no fat french dressing",
+    "fat free sweet french dressing",
+    "zero calorie french dressing"
+  ],
+  "usda_2710233": [
+    "fat free honey mustard dressing",
+    "zero fat honey mustard",
+    "non fat honey mustard dressing",
+    "nonfat honey mustard",
+    "fat free sweet mustard dressing",
+    "no fat honey mustard",
+    "zero fat honey dijon",
+    "fat free honey dijon dressing"
+  ],
+  "usda_2710234": [
+    "fat free italian dressing",
+    "zero fat italian dressing",
+    "non fat italian dressing",
+    "nonfat italian dressing",
+    "no fat italian dressing",
+    "fat free vinaigrette italian",
+    "zero calorie italian dressing",
+    "fat free light italian"
+  ],
+  "usda_2710235": [
+    "fat free mayo",
+    "zero fat mayo",
+    "non fat mayonnaise",
+    "nonfat mayo",
+    "fat free mayonnaise",
+    "no fat mayo",
+    "zero calorie mayo",
+    "fat free white spread"
+  ],
+  "usda_2710236": [
+    "fat free ranch dressing",
+    "zero fat ranch",
+    "non fat ranch dressing",
+    "nonfat ranch",
+    "fat free ranch",
+    "no fat ranch dressing",
+    "zero calorie ranch",
+    "fat free ranch sauce"
+  ],
+  "usda_2710237": [
+    "fat free salad dressing",
+    "zero fat dressing",
+    "non fat salad dressing",
+    "nonfat dressing",
+    "no fat salad dressing",
+    "diet fat free dressing",
+    "zero fat salad sauce",
+    "fat free dressing nfs"
+  ],
+  "usda_2710238": [
+    "fat free thousand island",
+    "zero fat thousand island",
+    "non fat thousand island dressing",
+    "nonfat thousand island",
+    "fat free 1000 island",
+    "no fat thousand island",
+    "zero calorie thousand island",
+    "fat free pink dressing"
+  ],
+  "usda_2710239": [
+    "bacon bits",
+    "bacon topping",
+    "bacon for veggies",
+    "crumbled bacon",
+    "bacon pieces",
+    "cooked bacon bits",
+    "bacon vegetable topping",
+    "chopped bacon"
+  ],
+  "usda_2710240": [
+    "ham topping",
+    "diced ham",
+    "ham for vegetables",
+    "chopped ham",
+    "ham pieces",
+    "cooked ham bits",
+    "ham veggie topping",
+    "ham add on"
+  ],
+  "usda_2710241": [
+    "beef topping",
+    "cooked beef for veggies",
+    "beef bits",
+    "beef for vegetables",
+    "ground beef topping",
+    "beef add on",
+    "shredded beef topping",
+    "beef veggie mix"
+  ],
+  "usda_2710242": [
+    "chicken topping",
+    "cooked chicken for veggies",
+    "chicken bits",
+    "chicken for vegetables",
+    "chicken pieces topping",
+    "diced chicken topping",
+    "chicken veggie add on",
+    "shredded chicken topping"
+  ],
+  "usda_2710243": [
+    "cream sauce",
+    "white sauce",
+    "bechamel",
+    "creamy sauce for veggies",
+    "creamy vegetable sauce",
+    "white cream sauce",
+    "cream topping for vegetables",
+    "bechamel sauce"
+  ],
+  "usda_2710244": [
+    "cheese sauce",
+    "cheesy sauce",
+    "cheddar sauce",
+    "cheese dip",
+    "nacho cheese sauce",
+    "cheesy topping",
+    "melted cheese sauce",
+    "velveeta style sauce"
+  ],
+  "usda_2710245": [
+    "gravy topping",
+    "brown gravy",
+    "vegetable gravy",
+    "meat gravy",
+    "gravy for veggies",
+    "gravy add on",
+    "thick gravy sauce",
+    "pan gravy"
+  ],
+  "usda_2710246": [
+    "soy sauce topping",
+    "teriyaki sauce",
+    "soy based stir fry sauce",
+    "soy glaze",
+    "asian soy sauce",
+    "stir fry sauce",
+    "soy seasoning sauce",
+    "tamari sauce"
+  ],
+  "usda_2710247": [
+    "tomato sauce topping",
+    "marinara topping",
+    "tomato sauce for veggies",
+    "tomato based sauce",
+    "red sauce topping",
+    "pomodoro sauce",
+    "tomato vegetable sauce",
+    "italian tomato topping"
+  ],
+  "usda_2710248": [
+    "avocado on sandwich",
+    "sliced avocado",
+    "avocado slice",
+    "avo on sandwich",
+    "avocado topping sandwich",
+    "avocado spread sandwich",
+    "sandwich avocado",
+    "avo slice"
+  ],
+  "usda_2710249": [
+    "cucumber on sandwich",
+    "sliced cucumber",
+    "cucumber slice",
+    "cucumber topping sandwich",
+    "sandwich cucumber",
+    "fresh cucumber on sub",
+    "cuke on sandwich",
+    "cucumber add on"
+  ],
+  "usda_2710250": [
+    "lettuce on sandwich",
+    "sandwich lettuce",
+    "shredded lettuce",
+    "iceberg lettuce on sub",
+    "lettuce leaf sandwich",
+    "green lettuce topping",
+    "lettuce for sub",
+    "sandwich greens"
+  ],
+  "usda_2710251": [
+    "mushrooms on sandwich",
+    "sliced mushrooms sandwich",
+    "sandwich mushrooms",
+    "grilled mushroom topping",
+    "sauteed mushrooms sub",
+    "mushroom add on sandwich",
+    "mushroom topping sub",
+    "sandwich sliced mushrooms"
+  ],
+  "usda_2710252": [
+    "onions on sandwich",
+    "sliced onions sandwich",
+    "sandwich onions",
+    "raw onion topping",
+    "grilled onions sub",
+    "onion on sub",
+    "onion topping sandwich",
+    "caramelized onions sandwich"
+  ],
+  "usda_2710253": [
+    "pepper on sandwich",
+    "sliced pepper sandwich",
+    "bell pepper sandwich",
+    "peppers on sub",
+    "sandwich peppers",
+    "green pepper topping",
+    "banana pepper sandwich",
+    "jalapeno sandwich topping"
+  ],
+  "usda_2710254": [
+    "spinach on sandwich",
+    "sandwich spinach",
+    "fresh spinach sub",
+    "baby spinach sandwich",
+    "spinach topping sandwich",
+    "leafy spinach sub",
+    "spinach add on",
+    "greens sandwich spinach"
+  ],
+  "usda_2710255": [
+    "tomatoes on sandwich",
+    "sliced tomatoes sandwich",
+    "sandwich tomatoes",
+    "tomato on sub",
+    "fresh tomato topping",
+    "tomato slice sandwich",
+    "tomato add on sub",
+    "sliced tomato"
+  ],
+  "usda_2710256": [
+    "bacon on sandwich",
+    "sandwich bacon",
+    "crispy bacon sandwich",
+    "bacon strip sub",
+    "bacon topping sub",
+    "cooked bacon sandwich",
+    "bacon add on sandwich",
+    "strip of bacon sandwich"
+  ],
+  "usda_2710257": [
+    "sugar",
+    "white sugar",
+    "table sugar",
+    "granulated sugar",
+    "plain sugar",
+    "regular sugar",
+    "refined sugar",
+    "asukal"
+  ],
+  "usda_2710258": [
+    "granulated sugar",
+    "white granulated sugar",
+    "table sugar",
+    "refined sugar",
+    "lump sugar",
+    "cane sugar",
+    "white sugar granules",
+    "regular white sugar"
+  ],
+  "usda_2710259": [
+    "powdered sugar",
+    "icing sugar",
+    "confectioners sugar",
+    "powdered white sugar",
+    "castor sugar",
+    "fine sugar powder",
+    "dusting sugar",
+    "cake sugar powder"
+  ],
+  "usda_2710260": [
+    "brown sugar",
+    "dark brown sugar",
+    "light brown sugar",
+    "muscovado sugar",
+    "raw sugar",
+    "soft brown sugar",
+    "packed brown sugar",
+    "caramel sugar"
+  ],
+  "usda_2710261": [
+    "cinnamon sugar",
+    "cinnamon and sugar mix",
+    "sweet cinnamon topping",
+    "cinnamon sugar blend",
+    "spiced sugar",
+    "cinnamon sugar sprinkle",
+    "churro sugar",
+    "donut cinnamon sugar"
+  ],
+  "usda_2710262": [
+    "sugar blend",
+    "splenda sugar blend",
+    "half sugar half sweetener",
+    "sugar substitute blend",
+    "baking sugar blend",
+    "sugar and sweetener mix",
+    "stevia sugar blend",
+    "mixed sugar substitute"
+  ],
+  "usda_2710263": [
+    "splenda",
+    "sucralose powder",
+    "splenda powder",
+    "sucralose sweetener",
+    "yellow packet sweetener",
+    "artificial sweetener powder",
+    "zero calorie sweetener powder",
+    "sucralose sugar substitute"
+  ],
+  "usda_2710265": [
+    "liquid stevia",
+    "stevia drops",
+    "stevia liquid sweetener",
+    "stevia extract liquid",
+    "natural liquid sweetener",
+    "plant based sweetener liquid",
+    "green stevia drops",
+    "sweet leaf liquid stevia"
+  ],
+  "usda_2710267": [
+    "sugar substitute powder",
+    "artificial sweetener packet",
+    "zero calorie sweetener",
+    "diet sweetener powder",
+    "sweetener powder",
+    "low calorie sugar powder",
+    "generic fake sugar powder",
+    "powdered sweetener"
+  ],
+  "usda_2710268": [
+    "liquid sweetener",
+    "liquid sugar substitute",
+    "liquid artificial sweetener",
+    "sweet drops",
+    "zero calorie liquid sweetener",
+    "sugar free syrup drops",
+    "diet sweetener liquid",
+    "liquid fake sugar"
+  ],
+  "usda_2710269": [
+    "saccharin powder",
+    "sweet n low",
+    "pink packet sweetener",
+    "saccharin sweetener",
+    "sweet and low powder",
+    "artificial sweetener saccharin",
+    "saccharin sugar substitute",
+    "zero calorie saccharin"
+  ],
+  "usda_2710270": [
+    "liquid saccharin",
+    "sweet n low liquid",
+    "saccharin liquid sweetener",
+    "saccharin drops",
+    "liquid sweet and low",
+    "liquid artificial saccharin",
+    "saccharin sweet drops",
+    "zero calorie saccharin liquid"
+  ],
+  "usda_2710271": [
+    "aspartame powder",
+    "equal sweetener",
+    "nutrasweet",
+    "blue packet sweetener",
+    "aspartame sugar substitute",
+    "equal packet",
+    "diet sweetener aspartame",
+    "artificial sweetener aspartame"
+  ]
+}

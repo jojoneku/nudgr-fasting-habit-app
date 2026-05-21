@@ -1,0 +1,502 @@
+{
+  "usda_167611": [
+    "seal oil",
+    "oogruk oil",
+    "bearded seal fat",
+    "arctic seal oil",
+    "marine mammal oil",
+    "native seal oil",
+    "rendered seal oil",
+    "subsistence seal oil"
+  ],
+  "usda_167612": [
+    "tunicate",
+    "sea squirt",
+    "oopa",
+    "sea animal alaska",
+    "oopah whole",
+    "marine invertebrate alaska",
+    "native sea squirt",
+    "tunicate whole"
+  ],
+  "usda_167613": [
+    "horned owl meat",
+    "great horned owl flesh",
+    "raw owl meat",
+    "owl flesh alaska",
+    "wild bird meat alaska",
+    "horned owl raw",
+    "native owl",
+    "game bird alaska"
+  ],
+  "usda_167614": [
+    "canned smoked king salmon",
+    "smoked chinook canned",
+    "canned alaska king salmon",
+    "tinned smoked salmon",
+    "chinook smoked tin",
+    "king salmon tin smoked",
+    "alaska canned salmon smoked",
+    "smoked salmon canned"
+  ],
+  "usda_167615": [
+    "brined smoked salmon",
+    "smoked brined chinook",
+    "king salmon brined smoked",
+    "salt-cured smoked salmon",
+    "chinook brine cured",
+    "native smoked salmon brined",
+    "alaska smoked brined fish",
+    "cured king salmon"
+  ],
+  "usda_167616": [
+    "salmon liver",
+    "chinook liver",
+    "king salmon liver",
+    "raw salmon liver",
+    "fish liver alaska",
+    "native salmon offal",
+    "chinook fish liver",
+    "alaska salmon organ"
+  ],
+  "usda_167617": [
+    "scoter duck",
+    "sea duck meat",
+    "white-winged scoter",
+    "duck meat alaska",
+    "native duck",
+    "sea duck alaska",
+    "scoter meat",
+    "wild duck alaska"
+  ],
+  "usda_167618": [
+    "sea cucumber",
+    "yane alaska",
+    "trepang",
+    "alaska sea cucumber",
+    "native sea cucumber",
+    "holothurian",
+    "sea cucumber whole",
+    "native marine animal"
+  ],
+  "usda_167619": [
+    "ground squirrel",
+    "arctic ground squirrel",
+    "squirrel meat",
+    "sik-sik",
+    "native squirrel",
+    "wild squirrel alaska",
+    "ground squirrel meat",
+    "roasted squirrel"
+  ],
+  "usda_167620": [
+    "tundra tea",
+    "labrador tea",
+    "arctic herb tea",
+    "wild herb tea",
+    "native alaska tea",
+    "herbal tundra tea",
+    "labrador combo tea",
+    "alaska wild tea"
+  ],
+  "usda_167621": [
+    "dried walrus",
+    "walrus jerky",
+    "walrus meat dried",
+    "cured walrus",
+    "walrus dry meat",
+    "native walrus",
+    "dehydrated walrus",
+    "walrus meat cured"
+  ],
+  "usda_167622": [
+    "sitka deer venison",
+    "sitka venison raw",
+    "raw deer meat alaska",
+    "black-tailed deer",
+    "sitka blacktail",
+    "venison raw alaska",
+    "wild deer sitka",
+    "native deer meat"
+  ],
+  "usda_167623": [
+    "whale blubber",
+    "bowhead blubber",
+    "arctic blubber",
+    "whale fat",
+    "bowhead fat",
+    "subsistence blubber",
+    "native whale fat",
+    "arctic whale blubber"
+  ],
+  "usda_167624": [
+    "muktuk",
+    "maktak",
+    "whale skin blubber",
+    "bowhead skin",
+    "arctic muktuk",
+    "native country food",
+    "whale skin fat",
+    "bowhead muktuk"
+  ],
+  "usda_167625": [
+    "whale oil",
+    "bowhead oil",
+    "arctic whale oil",
+    "rendered whale oil",
+    "native whale oil",
+    "bowhead rendered fat",
+    "subsistence whale oil",
+    "marine mammal oil alaska"
+  ],
+  "usda_167626": [
+    "whitefish liver",
+    "broad whitefish liver",
+    "fish liver alaska native",
+    "raw whitefish liver",
+    "native fish liver",
+    "broadfish liver",
+    "alaska whitefish organ",
+    "whitefish offal"
+  ],
+  "usda_167627": [
+    "blue corn mush",
+    "navajo corn porridge",
+    "ash corn mush",
+    "corn atole",
+    "blue corn porridge",
+    "navajo mush",
+    "cornmeal mush blue",
+    "ash hominy mush"
+  ],
+  "usda_167628": [
+    "blue cornmeal",
+    "navajo blue corn",
+    "blue corn flour",
+    "hopi blue corn meal",
+    "native blue cornmeal",
+    "ground blue corn",
+    "blue maize meal",
+    "blue corn ground"
+  ],
+  "usda_167629": [
+    "banana melon",
+    "navajo melon",
+    "long yellow melon",
+    "casaba-style melon",
+    "native melon navajo",
+    "yellow elongated melon",
+    "sweet navajo melon",
+    "traditional melon navajo"
+  ],
+  "usda_167630": [
+    "red berry drink",
+    "navajo berry beverage",
+    "chilchen berry",
+    "native red berry tea",
+    "berry juice navajo",
+    "wild berry drink native",
+    "red berry tea navajo",
+    "native berry infusion"
+  ],
+  "usda_167631": [
+    "dried corn navajo",
+    "field corn dried",
+    "hominy corn",
+    "dried maize",
+    "native dried maize",
+    "navajo corn kernels",
+    "traditional dried corn",
+    "dehydrated corn navajo"
+  ],
+  "usda_167632": [
+    "boiled squash navajo",
+    "indian squash cooked",
+    "native squash boiled",
+    "navajo winter squash",
+    "cooked indian squash",
+    "traditional squash navajo",
+    "boiled native squash",
+    "navajo vegetable squash"
+  ],
+  "usda_167633": [
+    "kneel down bread",
+    "navajo corn bread",
+    "green corn bread roasted",
+    "native corn bread",
+    "roasted corn navajo bread",
+    "traditional navajo bread",
+    "corn husk bread",
+    "steamed corn bread navajo"
+  ],
+  "usda_167634": [
+    "roasted mutton",
+    "navajo roasted lamb",
+    "mutton roast",
+    "roasted sheep navajo",
+    "native mutton",
+    "navajo lamb roast",
+    "slow roasted mutton",
+    "traditional mutton navajo"
+  ],
+  "usda_167635": [
+    "navajo frybread",
+    "fry bread lard",
+    "indian fry bread",
+    "fried bread navajo",
+    "traditional frybread",
+    "native fry bread",
+    "navajo fried dough",
+    "lard fry bread navajo"
+  ],
+  "usda_167636": [
+    "navajo tamale",
+    "corn tamale native",
+    "steamed tamale navajo",
+    "masa tamale",
+    "native steamed tamale",
+    "traditional tamale navajo",
+    "corn dough tamale",
+    "tamale wrapped navajo"
+  ],
+  "usda_167637": [
+    "corn stew navajo",
+    "steamed corn stew",
+    "navajo hominy stew",
+    "native corn stew",
+    "traditional corn stew",
+    "hominy stew navajo",
+    "navajo vegetable stew corn",
+    "steamed corn dish navajo"
+  ],
+  "usda_167638": [
+    "raw halibut skin on",
+    "halibut with skin",
+    "alaska halibut fresh",
+    "fresh raw halibut",
+    "whole halibut alaska",
+    "uncooked halibut",
+    "native halibut raw",
+    "halibut fillet skin"
+  ],
+  "usda_167639": [
+    "coho salmon",
+    "silver salmon raw",
+    "raw silver salmon",
+    "fresh coho",
+    "coho raw alaska",
+    "silver salmon fresh",
+    "native coho salmon",
+    "alaska silver salmon"
+  ],
+  "usda_167640": [
+    "wild blueberries",
+    "alaska wild blueberries",
+    "tundra blueberries",
+    "raw wild blueberries",
+    "native alaska berries",
+    "arctic blueberries",
+    "subsistence blueberries",
+    "wild blue berries alaska"
+  ],
+  "usda_167641": [
+    "spotted seal oil",
+    "seal oil alaska",
+    "native seal fat",
+    "spotted seal fat",
+    "rendered spotted seal oil",
+    "subsistence seal oil spotted",
+    "arctic spotted seal oil",
+    "marine oil alaska"
+  ],
+  "usda_167642": [
+    "canned red salmon",
+    "sockeye canned boneless",
+    "boneless canned salmon",
+    "red salmon tin",
+    "canned sockeye bones out",
+    "tinned red salmon",
+    "boneless red salmon can",
+    "alaska red salmon canned"
+  ],
+  "usda_167643": [
+    "whitefish roe",
+    "fish eggs alaska",
+    "whitefish caviar",
+    "fish roe alaska",
+    "native fish eggs",
+    "whitefish spawn",
+    "freshwater fish eggs",
+    "alaska whitefish eggs"
+  ],
+  "usda_167644": [
+    "half dried caribou",
+    "semi-dried caribou",
+    "caribou jerky",
+    "dried caribou meat",
+    "partially cured caribou",
+    "native caribou dried",
+    "reindeer dried meat",
+    "caribou half jerky"
+  ],
+  "usda_167645": [
+    "smoked canned sockeye",
+    "canned smoked red salmon",
+    "sockeye smoked tin",
+    "red salmon smoked canned",
+    "tinned smoked sockeye",
+    "alaska smoked red salmon can",
+    "sockeye canned smoke",
+    "smoked tinned salmon"
+  ],
+  "usda_167646": [
+    "kippered sockeye",
+    "kippered red salmon",
+    "sockeye jerky",
+    "smoked dried sockeye",
+    "red salmon kippered",
+    "sockeye smoked dried",
+    "native kippered salmon",
+    "alaska kippered red salmon"
+  ],
+  "usda_167647": [
+    "kippered king salmon",
+    "king salmon jerky",
+    "skin-on kippered salmon",
+    "chinook kippered",
+    "smoked king salmon dried",
+    "king salmon smoked skin",
+    "native kippered chinook",
+    "alaska king salmon kippered"
+  ],
+  "usda_167648": [
+    "sheefish",
+    "inconnu",
+    "coney fish",
+    "raw sheefish alaska",
+    "freshwater alaska fish",
+    "native sheefish",
+    "alaska inconnu",
+    "wild sheefish raw"
+  ],
+  "usda_167649": [
+    "raw buffalo steak",
+    "bison top round raw",
+    "free range bison raw",
+    "raw bison steak",
+    "buffalo round steak",
+    "uncooked bison steak",
+    "native buffalo raw",
+    "wild bison top round"
+  ],
+  "usda_167650": [
+    "oogruk meat dried",
+    "bearded seal jerky",
+    "partially dried seal",
+    "dried seal meat",
+    "seal meat alaska dried",
+    "native dried seal",
+    "cured bearded seal",
+    "subsistence seal meat dried"
+  ],
+  "usda_167651": [
+    "cooked buffalo steak",
+    "bison top round cooked",
+    "grilled buffalo steak",
+    "bison steak cooked",
+    "roasted buffalo steak",
+    "native buffalo cooked",
+    "free range bison steak cooked",
+    "bison round cooked"
+  ],
+  "usda_167652": [
+    "raw elk roast",
+    "elk eye of round",
+    "free range elk raw",
+    "elk roast uncooked",
+    "native elk raw",
+    "wild elk roast",
+    "elk round roast raw",
+    "venison elk uncooked"
+  ],
+  "usda_167653": [
+    "dried yellow corn",
+    "yellow field corn dried",
+    "native dried yellow corn",
+    "dehydrated yellow corn",
+    "dried maize yellow",
+    "plains corn dried",
+    "yellow corn kernels dried",
+    "traditional dried yellow maize"
+  ],
+  "usda_167654": [
+    "dried smelt",
+    "dried oolichan",
+    "dried eulachon",
+    "dried hooligan fish",
+    "smelt jerky alaska",
+    "native dried smelt",
+    "cured smelt alaska",
+    "small dried fish alaska"
+  ],
+  "usda_167655": [
+    "apache frybread",
+    "indian fry bread apache",
+    "fried bread apache",
+    "native fry bread lard",
+    "apache fried dough",
+    "traditional apache bread",
+    "fry bread native",
+    "lard fried bread apache"
+  ],
+  "usda_167656": [
+    "apache tortilla wrap",
+    "corned beef potato tortilla",
+    "beef potato wrap",
+    "native beef tortilla",
+    "corned beef wrapped",
+    "apache beef wrap",
+    "potato beef tortilla",
+    "corned beef burrito apache"
+  ],
+  "usda_167657": [
+    "soft taco ground beef",
+    "beef cheese lettuce soft taco",
+    "soft shell beef taco",
+    "fast food soft taco beef",
+    "ground beef taco lettuce",
+    "border soft taco",
+    "beef soft shell taco",
+    "soft taco restaurant beef"
+  ],
+  "usda_167658": [
+    "mexican soft taco beef",
+    "ground beef soft taco restaurant",
+    "beef taco mexican",
+    "soft taco ground beef cheese",
+    "restaurant beef taco soft",
+    "mexican beef taco",
+    "soft shell taco beef lettuce",
+    "taco with ground beef"
+  ],
+  "usda_167659": [
+    "arroz con pollo",
+    "chicken and rice restaurant",
+    "latino chicken rice",
+    "chicken rice entree",
+    "restaurant chicken rice prepared",
+    "pollo con arroz",
+    "hispanic chicken rice",
+    "chicken rice plate"
+  ],
+  "usda_167660": [
+    "beef empanada",
+    "empanada de carne",
+    "fried beef pastry",
+    "meat pie empanada",
+    "restaurant empanada beef",
+    "beef stuffed pastry",
+    "latino beef empanada",
+    "empanada filled beef"
+  ]
+}

@@ -1,0 +1,476 @@
+{
+  "usda_168876": [
+    "parboiled brown rice",
+    "converted brown rice",
+    "instant brown rice",
+    "brown rice parboiled",
+    "par-cooked brown rice",
+    "quick cook brown rice",
+    "dry brown rice parboiled",
+    "whole grain parboiled rice"
+  ],
+  "usda_168877": [
+    "raw long grain white rice",
+    "uncooked white rice",
+    "dry long grain rice",
+    "long grain rice raw",
+    "white rice uncooked",
+    "plain rice dry",
+    "long grain rice dry",
+    "enriched white rice raw"
+  ],
+  "usda_168878": [
+    "kanin",
+    "cooked white rice",
+    "steamed white rice",
+    "boiled white rice",
+    "plain rice",
+    "long grain rice cooked",
+    "fluffy white rice",
+    "long grain white rice cooked",
+    "bigas luto"
+  ],
+  "usda_168879": [
+    "medium grain rice raw",
+    "sushi rice uncooked",
+    "calrose rice raw",
+    "medium grain white rice dry",
+    "japanese style rice raw",
+    "medium white rice uncooked",
+    "calrose uncooked",
+    "short sushi rice dry"
+  ],
+  "usda_168880": [
+    "medium grain rice cooked",
+    "sushi rice cooked",
+    "calrose rice cooked",
+    "japanese style rice cooked",
+    "medium grain white rice cooked",
+    "sticky white rice cooked",
+    "calrose cooked"
+  ],
+  "usda_168881": [
+    "short grain white rice dry",
+    "short grain rice uncooked",
+    "arborio style rice raw",
+    "japanese rice uncooked",
+    "risotto rice dry",
+    "short grain rice raw",
+    "white short grain rice dry",
+    "sushi rice dry"
+  ],
+  "usda_168882": [
+    "short grain rice cooked",
+    "japanese rice cooked",
+    "short grain white rice cooked",
+    "sticky white rice",
+    "arborio cooked",
+    "risotto rice cooked",
+    "short white rice cooked"
+  ],
+  "usda_168883": [
+    "sticky rice uncooked",
+    "malagkit",
+    "glutinous rice raw",
+    "sweet rice uncooked",
+    "mochi rice dry",
+    "waxy rice uncooked",
+    "malagkit rice dry",
+    "sweet sticky rice raw",
+    "galapong rice"
+  ],
+  "usda_168884": [
+    "rye berries",
+    "whole rye grain",
+    "rye kernels",
+    "whole grain rye",
+    "rye whole berry",
+    "raw rye grain",
+    "rye seed",
+    "rye grain whole"
+  ],
+  "usda_168885": [
+    "dark rye flour",
+    "pumpernickel flour",
+    "whole grain rye flour",
+    "coarse rye flour",
+    "whole rye flour dark",
+    "dark wholemeal rye flour",
+    "rye flour whole grain"
+  ],
+  "usda_168886": [
+    "medium rye flour",
+    "regular rye flour",
+    "rye bread flour medium",
+    "all-purpose rye flour",
+    "rye flour medium grind",
+    "standard rye flour",
+    "rye flour for bread"
+  ],
+  "usda_168887": [
+    "light rye flour",
+    "white rye flour",
+    "pale rye flour",
+    "refined rye flour",
+    "fine rye flour",
+    "light-colored rye flour",
+    "sifted rye flour"
+  ],
+  "usda_168888": [
+    "triticale flour",
+    "rye wheat hybrid flour",
+    "whole grain triticale flour",
+    "triticale whole wheat flour",
+    "triticale wholemeal",
+    "whole triticale flour"
+  ],
+  "usda_168889": [
+    "hard red spring wheat",
+    "spring wheat berries",
+    "bread wheat grain",
+    "hard spring wheat",
+    "hrs wheat berries",
+    "spring wheat grain",
+    "red spring wheat kernels",
+    "hard wheat berries spring"
+  ],
+  "usda_168890": [
+    "hard red winter wheat",
+    "winter wheat berries",
+    "hrw wheat",
+    "hard winter wheat grain",
+    "red winter wheat kernels",
+    "hard wheat berries winter",
+    "winter wheat whole grain",
+    "red winter wheat grain"
+  ],
+  "usda_168891": [
+    "soft red winter wheat",
+    "srw wheat",
+    "soft winter wheat grain",
+    "pastry wheat grain",
+    "soft wheat berries winter",
+    "cake wheat grain",
+    "soft red wheat kernels"
+  ],
+  "usda_168892": [
+    "raw wheat germ",
+    "crude wheat germ",
+    "plain wheat germ",
+    "untoasted wheat germ",
+    "natural wheat germ",
+    "wheat germ raw untoasted",
+    "whole wheat germ crude"
+  ],
+  "usda_168893": [
+    "whole wheat flour",
+    "wholemeal flour",
+    "whole grain wheat flour",
+    "wholewheat flour",
+    "100% whole wheat flour",
+    "brown wheat flour",
+    "stoneground wheat flour",
+    "wholemeal wheat flour"
+  ],
+  "usda_168894": [
+    "all purpose flour",
+    "ap flour",
+    "plain flour",
+    "white flour",
+    "bleached flour",
+    "all-purpose white flour",
+    "regular flour",
+    "general purpose flour",
+    "cooking flour white"
+  ],
+  "usda_168895": [
+    "self rising flour",
+    "self-raising flour",
+    "self rise flour",
+    "leavened flour",
+    "self rising white flour",
+    "all-purpose self rising flour",
+    "self raising plain flour"
+  ],
+  "usda_168896": [
+    "bread flour",
+    "white bread flour",
+    "high gluten flour",
+    "strong flour",
+    "bakers flour",
+    "high protein white flour",
+    "bread making flour",
+    "strong white flour"
+  ],
+  "usda_168897": [
+    "cooked wild rice",
+    "wild rice boiled",
+    "black wild rice cooked",
+    "wild rice steamed",
+    "minnesota wild rice cooked",
+    "wild grain rice cooked",
+    "native wild rice cooked",
+    "wild rice pilaf"
+  ],
+  "usda_168898": [
+    "brown rice flour",
+    "whole grain rice flour",
+    "gluten free brown rice flour",
+    "brown rice powder",
+    "rice flour brown",
+    "whole rice flour",
+    "gf brown rice flour",
+    "ground brown rice flour"
+  ],
+  "usda_168899": [
+    "corn pasta dry",
+    "gluten free pasta dry",
+    "gf pasta uncooked",
+    "corn noodles dry",
+    "gluten free corn pasta dry",
+    "maize pasta dry",
+    "gf corn pasta dry",
+    "corn-based pasta dry"
+  ],
+  "usda_168900": [
+    "corn pasta cooked",
+    "gluten free pasta cooked",
+    "gf pasta cooked",
+    "corn noodles cooked",
+    "gluten free corn noodles",
+    "maize pasta cooked",
+    "gf corn pasta",
+    "corn pasta boiled"
+  ],
+  "usda_168901": [
+    "homemade egg pasta",
+    "fresh egg pasta",
+    "handmade egg noodles cooked",
+    "fresh pasta with egg",
+    "egg pasta homemade cooked",
+    "homemade noodles egg",
+    "fresh egg noodles cooked",
+    "hand-rolled egg pasta"
+  ],
+  "usda_168902": [
+    "homemade pasta no egg",
+    "fresh pasta without egg",
+    "eggless homemade pasta",
+    "vegan fresh pasta",
+    "plain homemade pasta cooked",
+    "handmade pasta no egg",
+    "fresh pasta eggless",
+    "homemade noodles plain"
+  ],
+  "usda_168903": [
+    "vegetable macaroni dry",
+    "veggie mac dry",
+    "tri-color macaroni dry",
+    "rainbow pasta dry",
+    "vegetable pasta dry",
+    "colorful macaroni dry",
+    "veggie pasta dry",
+    "tri-colored pasta dry"
+  ],
+  "usda_168904": [
+    "vegetable macaroni cooked",
+    "veggie mac cooked",
+    "tri-color pasta cooked",
+    "rainbow pasta cooked",
+    "vegetable pasta cooked",
+    "colorful macaroni cooked",
+    "veggie macaroni boiled"
+  ],
+  "usda_168905": [
+    "chow mein noodles",
+    "crispy chow mein",
+    "fried chow mein noodles",
+    "chinese crispy noodles",
+    "canton noodles",
+    "pancit canton noodles",
+    "crispy chinese noodles",
+    "chow mein crispy"
+  ],
+  "usda_168906": [
+    "soba noodles dry",
+    "buckwheat noodles dry",
+    "dry soba",
+    "japanese buckwheat noodles dry",
+    "soba uncooked",
+    "dried soba noodles",
+    "buckwheat pasta dry",
+    "japanese soba dry"
+  ],
+  "usda_168907": [
+    "soba noodles cooked",
+    "buckwheat noodles cooked",
+    "cooked soba",
+    "boiled soba",
+    "japanese soba cooked",
+    "soba boiled",
+    "buckwheat pasta cooked",
+    "cold soba"
+  ],
+  "usda_168908": [
+    "somen noodles dry",
+    "thin japanese noodles dry",
+    "somen uncooked",
+    "japanese thin wheat noodles dry",
+    "dry somen",
+    "somen dried",
+    "very thin noodles dry japanese"
+  ],
+  "usda_168909": [
+    "somen noodles cooked",
+    "thin japanese noodles cooked",
+    "somen boiled",
+    "cooked somen",
+    "japanese thin noodles cooked",
+    "somen hot",
+    "cold somen noodles"
+  ],
+  "usda_168910": [
+    "whole wheat pasta cooked",
+    "whole grain pasta cooked",
+    "wholemeal pasta cooked",
+    "brown pasta cooked",
+    "whole wheat spaghetti cooked",
+    "high fiber pasta cooked",
+    "multigrain pasta cooked"
+  ],
+  "usda_168911": [
+    "spinach spaghetti dry",
+    "green spaghetti dry",
+    "spinach pasta dry",
+    "spinach noodles dry",
+    "vegetable spaghetti dry",
+    "green pasta dry",
+    "spinach flavored spaghetti dry"
+  ],
+  "usda_168912": [
+    "spinach spaghetti cooked",
+    "green pasta cooked",
+    "spinach pasta cooked",
+    "spinach noodles cooked",
+    "spinach spaghetti boiled",
+    "green spaghetti cooked",
+    "spinach flavored pasta cooked"
+  ],
+  "usda_168913": [
+    "unenriched bread flour",
+    "bread flour plain",
+    "strong flour unenriched",
+    "white bread flour unenriched",
+    "bread flour without enrichment",
+    "high gluten flour unenriched"
+  ],
+  "usda_168915": [
+    "whole grain pasta dry",
+    "whole wheat pasta dry",
+    "whole grain spaghetti dry",
+    "high fiber pasta dry",
+    "multigrain pasta dry",
+    "51% whole wheat pasta dry",
+    "whole grain noodles dry",
+    "wholemeal pasta dry"
+  ],
+  "usda_168916": [
+    "whole grain pasta cooked",
+    "multigrain pasta cooked",
+    "51% whole wheat pasta cooked",
+    "whole grain noodles cooked",
+    "high fiber pasta cooked whole grain",
+    "wholemeal pasta cooked",
+    "whole wheat semolina pasta cooked"
+  ],
+  "usda_168919": [
+    "egg noodles cooked salted",
+    "cooked egg noodles",
+    "boiled egg noodles",
+    "egg pasta cooked",
+    "egg noodles boiled salted",
+    "pancit egg noodles",
+    "flat egg noodles cooked",
+    "wide egg noodles cooked"
+  ],
+  "usda_168920": [
+    "white corn grain",
+    "white corn kernels",
+    "white maize",
+    "dried white corn",
+    "white field corn",
+    "whole white corn grain",
+    "white hominy corn dry",
+    "maize blanco"
+  ],
+  "usda_168921": [
+    "blue corn flour",
+    "purple corn flour",
+    "harina de maiz morado",
+    "whole grain blue corn flour",
+    "blue masa flour",
+    "masa morada",
+    "blue cornmeal flour",
+    "purple maize flour"
+  ],
+  "usda_168922": [
+    "white cornmeal",
+    "white corn meal",
+    "enriched white cornmeal",
+    "degermed white cornmeal",
+    "white polenta meal",
+    "fine white cornmeal",
+    "white corn grits meal"
+  ],
+  "usda_168923": [
+    "self rising white cornmeal",
+    "white cornmeal self rising",
+    "leavened white cornmeal plain",
+    "bolted white cornmeal self rising",
+    "self raise white cornmeal plain"
+  ],
+  "usda_168924": [
+    "white cornmeal mix with flour",
+    "cornmeal wheat flour mix",
+    "self rising cornmeal with wheat",
+    "bolted cornmeal flour blend",
+    "white cornmeal self rising wheat blend"
+  ],
+  "usda_168925": [
+    "degermed white cornmeal self rising",
+    "white self rising cornmeal degermed",
+    "enriched self rising white corn meal",
+    "leavened degermed white cornmeal",
+    "self raise degermed white cornmeal"
+  ],
+  "usda_168926": [
+    "egg noodles cooked unsalted",
+    "plain egg noodles cooked",
+    "unsalted egg noodles",
+    "boiled egg noodles no salt",
+    "egg noodles plain cooked",
+    "flat egg noodles unsalted",
+    "egg pasta plain no salt"
+  ],
+  "usda_168927": [
+    "dry pasta",
+    "uncooked pasta",
+    "pasta uncooked",
+    "dried pasta",
+    "raw noodles",
+    "dry noodles uncooked",
+    "dried spaghetti",
+    "pasta dried uncooked",
+    "box pasta dry"
+  ],
+  "usda_168928": [
+    "plain cooked pasta",
+    "boiled pasta no salt",
+    "unsalted pasta cooked",
+    "plain pasta boiled",
+    "cooked noodles plain",
+    "pasta boiled no salt",
+    "plain boiled noodles",
+    "cooked pasta unsalted"
+  ]
+}

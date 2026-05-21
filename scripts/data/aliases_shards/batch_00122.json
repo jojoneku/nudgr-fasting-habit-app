@@ -1,0 +1,1008 @@
+{
+  "usda_174613": [
+    "deli turkey",
+    "sliced turkey breast",
+    "rotisserie turkey slices",
+    "turkey cold cuts",
+    "turkey lunch meat",
+    "white turkey deli meat",
+    "turkey deli slices",
+    "sliced turkey white meat",
+    "turkey breast cold cut",
+    "luncheon turkey"
+  ],
+  "usda_174614": [
+    "beef hot dog",
+    "beef frank",
+    "beef wiener",
+    "grilled beef hot dog",
+    "boiled beef hot dog",
+    "beef dog cooked",
+    "beef frankfurter cooked",
+    "all beef hot dog",
+    "beef sausage link",
+    "beef hotdog"
+  ],
+  "usda_174615": [
+    "hot dog cooked",
+    "frank heated",
+    "wiener cooked",
+    "grilled hot dog",
+    "boiled hot dog",
+    "mixed meat hot dog",
+    "pork and beef hot dog",
+    "meat frank",
+    "cooked frankfurter",
+    "heated wiener"
+  ],
+  "usda_174617": [
+    "raw turkey sausage",
+    "ground turkey sausage",
+    "turkey breakfast sausage raw",
+    "fresh turkey sausage link",
+    "uncooked turkey sausage",
+    "turkey sausage patty raw",
+    "lean turkey sausage",
+    "turkey sausage uncooked"
+  ],
+  "usda_174618": [
+    "beef sausage cooked",
+    "grilled beef sausage",
+    "fried beef sausage",
+    "beef breakfast sausage cooked",
+    "beef sausage link cooked",
+    "cooked beef sausage patty",
+    "pan fried beef sausage",
+    "beef sausage browned"
+  ],
+  "usda_174619": [
+    "coco roos cereal",
+    "chocolate puffed cereal",
+    "cocoa puffs generic",
+    "chocolate corn puffs",
+    "malt o meal chocolate cereal",
+    "chocolate ball cereal",
+    "cocoa rice puffs",
+    "budget cocoa puffs"
+  ],
+  "usda_174620": [
+    "cinnamon life cereal",
+    "quaker life cinnamon",
+    "cinnamon oat cereal",
+    "life cereal cinnamon flavor",
+    "oat cinnamon squares cereal",
+    "cinnamon life squares",
+    "quaker cinnamon cereal",
+    "oat cereal cinnamon"
+  ],
+  "usda_174621": [
+    "honey graham cereal",
+    "graham cracker cereal",
+    "quaker ohs cereal",
+    "honey graham ohs",
+    "sweet graham cereal",
+    "graham flavored oat cereal",
+    "quaker honey graham",
+    "graham bumpers cereal"
+  ],
+  "usda_174622": [
+    "oatmeal squares cereal",
+    "quaker oatmeal squares",
+    "oat squares cereal",
+    "baked oat squares",
+    "oatmeal cluster cereal",
+    "whole grain oat squares",
+    "quaker oat squares plain",
+    "crunchy oatmeal cereal"
+  ],
+  "usda_174623": [
+    "cinnamon oatmeal squares",
+    "quaker cinnamon oat squares",
+    "oat squares cinnamon",
+    "cinnamon baked oat cereal",
+    "quaker oatmeal squares cinnamon",
+    "cinnamon oat cluster cereal",
+    "spiced oat squares",
+    "cinnamon oat biscuit cereal"
+  ],
+  "usda_174624": [
+    "fruit and cream instant oatmeal",
+    "quaker fruit cream oatmeal dry",
+    "flavored instant oatmeal dry",
+    "fruit cream oatmeal packet dry",
+    "quaker oatmeal variety pack dry",
+    "instant oatmeal fruit flavor dry",
+    "quaker fruit oatmeal uncooked",
+    "cream flavored oatmeal packets dry"
+  ],
+  "usda_174625": [
+    "raisin date walnut oatmeal",
+    "quaker oatmeal raisins dates walnuts dry",
+    "instant oatmeal with dried fruit dry",
+    "oatmeal with raisins and walnuts dry",
+    "quaker fruit nut oatmeal dry",
+    "raisin walnut oatmeal packet",
+    "dried fruit oatmeal dry",
+    "oatmeal with nuts and raisins uncooked"
+  ],
+  "usda_174626": [
+    "quaker oat bran dry",
+    "oat bran cereal dry",
+    "mothers oat bran dry",
+    "dry oat bran",
+    "raw oat bran quaker",
+    "uncooked oat bran",
+    "oat bran flakes dry",
+    "quaker oat bran uncooked"
+  ],
+  "usda_174627": [
+    "cooked oat bran",
+    "oat bran porridge",
+    "oat bran with water",
+    "mothers oat bran cooked",
+    "quaker oat bran prepared",
+    "hot oat bran cereal",
+    "oat bran no salt cooked",
+    "plain oat bran porridge"
+  ],
+  "usda_174628": [
+    "waffle crisp cereal",
+    "post waffle cereal",
+    "waffle shaped cereal",
+    "sweet waffle cereal",
+    "maple waffle cereal",
+    "waffle crunch cereal",
+    "breakfast waffle cereal",
+    "waffle flavored corn cereal"
+  ],
+  "usda_174629": [
+    "quick grits dry",
+    "white grits dry",
+    "instant grits uncooked",
+    "quaker quick grits dry",
+    "dry white grits",
+    "hominy grits quick dry",
+    "quick cook grits dry",
+    "grits uncooked white"
+  ],
+  "usda_174630": [
+    "regular grits dry",
+    "white grits regular dry",
+    "slow cook grits dry",
+    "hominy grits uncooked",
+    "quaker regular grits dry",
+    "old fashioned grits dry",
+    "dry hominy grits",
+    "plain white grits dry"
+  ],
+  "usda_174631": [
+    "colossal crunch cereal",
+    "malt o meal crunch cereal",
+    "corn puffs cereal",
+    "crispy puffed corn cereal",
+    "budget corn pops",
+    "malt o meal corn cereal",
+    "sweet corn puff cereal",
+    "crunchy corn cereal generic"
+  ],
+  "usda_174632": [
+    "cinnamon oat crunch cereal",
+    "mothers cinnamon oat crunch",
+    "quaker cinnamon oat clusters",
+    "cinnamon granola clusters cereal",
+    "crunchy cinnamon oat cereal",
+    "oat crunch cinnamon",
+    "mothers cereal cinnamon",
+    "cinnamon cluster cereal"
+  ],
+  "usda_174633": [
+    "graham bumpers cereal",
+    "mothers graham bumpers",
+    "graham flavored cereal puffs",
+    "honey graham puffs cereal",
+    "quaker graham cereal",
+    "graham cracker puff cereal",
+    "sweet graham corn cereal",
+    "mothers graham cereal"
+  ],
+  "usda_174634": [
+    "cocoa bumpers cereal",
+    "mothers cocoa bumpers",
+    "chocolate puff cereal mothers",
+    "cocoa flavored puffed cereal",
+    "quaker cocoa bumpers",
+    "chocolate corn puffs cereal",
+    "mothers chocolate cereal",
+    "cocoa cereal puffs"
+  ],
+  "usda_174635": [
+    "toasted wheat bran cereal",
+    "kretschmer wheat bran",
+    "wheat bran flakes",
+    "toasted bran cereal",
+    "sun country wheat bran",
+    "wheat bran breakfast",
+    "high fiber wheat bran cereal",
+    "bran flakes toasted"
+  ],
+  "usda_174636": [
+    "cinnamon spice oatmeal dry",
+    "quaker cinnamon oatmeal dry",
+    "cinnamon spice instant oatmeal packet dry",
+    "spiced oatmeal dry",
+    "instant oatmeal cinnamon flavor dry",
+    "quaker cinnamon instant oatmeal uncooked",
+    "cinnamon oatmeal packet uncooked",
+    "spicy cinnamon oatmeal dry"
+  ],
+  "usda_174637": [
+    "dinosaur egg oatmeal dry",
+    "brown sugar oatmeal dry",
+    "quaker dinosaur oatmeal dry",
+    "kids oatmeal brown sugar dry",
+    "quaker brown sugar instant oatmeal dry",
+    "dinosaur oatmeal packet dry",
+    "brown sugar oatmeal packet uncooked",
+    "fun oatmeal for kids dry"
+  ],
+  "usda_174638": [
+    "banana bread oatmeal dry",
+    "quaker banana oatmeal dry",
+    "banana flavored instant oatmeal dry",
+    "banana oatmeal packet dry",
+    "quaker banana bread oatmeal uncooked",
+    "banana instant oatmeal dry",
+    "oatmeal banana flavor uncooked",
+    "sweet banana oatmeal packet dry"
+  ],
+  "usda_174639": [
+    "uncle sam cereal",
+    "flaxseed wheat cereal",
+    "high fiber flax cereal",
+    "uncle sam whole wheat flax",
+    "wheat berry flax cereal",
+    "whole grain fiber cereal flax",
+    "uncle sam breakfast cereal",
+    "wheat flax bran cereal"
+  ],
+  "usda_174640": [
+    "quick oats dry",
+    "quaker quick oats dry",
+    "rolled oats quick dry",
+    "dry quick oats",
+    "uncooked quick oats",
+    "oatmeal dry quaker",
+    "quick cooking oats dry",
+    "oats raw quick"
+  ],
+  "usda_174641": [
+    "whole wheat cereal dry",
+    "quaker whole wheat hot cereal dry",
+    "cracked wheat cereal dry",
+    "whole wheat porridge dry",
+    "quaker wheat cereal dry",
+    "wheat hot cereal uncooked",
+    "natural whole wheat cereal dry",
+    "dry whole wheat cereal"
+  ],
+  "usda_174642": [
+    "honey buzzers cereal",
+    "malt o meal honey oat cereal",
+    "honey flavored oat rings",
+    "budget honey nut cheerios",
+    "honey oat ring cereal generic",
+    "sweet honey oat cereal",
+    "malt o meal honey rings",
+    "honey oats cereal"
+  ],
+  "usda_174643": [
+    "golden puffs cereal",
+    "malt o meal golden puffs",
+    "honey wheat puffs cereal",
+    "sugar puffed wheat cereal",
+    "golden sweet puffs",
+    "honey puffed wheat cereal",
+    "budget sugar puffs cereal",
+    "sweet wheat puff cereal"
+  ],
+  "usda_174644": [
+    "honey nut toasty os",
+    "moms best honey nut cereal",
+    "honey nut o cereal",
+    "honey nut oat rings generic",
+    "budget honey nut cheerios",
+    "sweet oat ring cereal honey",
+    "honey almond oat cereal",
+    "toasty os cereal"
+  ],
+  "usda_174645": [
+    "apple zings cereal",
+    "malt o meal apple cereal",
+    "apple flavored ring cereal",
+    "apple froot loops generic",
+    "budget apple cereal",
+    "sweet apple ring cereal",
+    "apple oat ring cereal",
+    "fruit ring cereal apple"
+  ],
+  "usda_174646": [
+    "cinnamon toasters cereal",
+    "malt o meal cinnamon cereal",
+    "cinnamon square cereal generic",
+    "budget cinnamon toast crunch",
+    "cinnamon sugar square cereal",
+    "crispy cinnamon cereal squares",
+    "sweet cinnamon cereal",
+    "cinnamon rice squares cereal"
+  ],
+  "usda_174647": [
+    "cocoa dyno bites cereal",
+    "malt o meal chocolate cereal",
+    "chocolate rice puffs cereal",
+    "budget cocoa pebbles",
+    "chocolate puffed rice cereal generic",
+    "cocoa rice cereal",
+    "chocolate crisp rice cereal",
+    "sweet chocolate cereal puffs"
+  ],
+  "usda_174648": [
+    "ralston corn flakes",
+    "generic corn flakes",
+    "corn flakes cereal",
+    "crispy corn flake cereal",
+    "store brand corn flakes",
+    "plain corn flakes",
+    "toasted corn flakes",
+    "budget corn flakes cereal"
+  ],
+  "usda_174649": [
+    "crispy hexagons cereal",
+    "ralston hexagon cereal",
+    "corn hexagon cereal",
+    "cap n crunch generic",
+    "sweet corn cereal hexagons",
+    "crunchy corn hexagon cereal",
+    "budget cap n crunch",
+    "corn crunch hexagons"
+  ],
+  "usda_174650": [
+    "cereal bar milk",
+    "milk and cereal snack bar",
+    "breakfast cereal bar",
+    "milk cereal snack",
+    "morning cereal bar",
+    "grain milk bar",
+    "cereal snack bar",
+    "oat milk bar snack"
+  ],
+  "usda_174651": [
+    "malt o meal hot cereal",
+    "plain hot wheat cereal",
+    "malt o meal original cooked",
+    "cream of wheat generic cooked",
+    "hot cereal plain cooked",
+    "wheat porridge no salt",
+    "cooked malt o meal",
+    "plain wheat porridge cooked"
+  ],
+  "usda_174652": [
+    "christmas crunch cereal",
+    "holiday cap n crunch",
+    "quaker christmas cereal",
+    "festive crunch cereal",
+    "holiday crunch cereal",
+    "christmas corn cereal",
+    "seasonal cap n crunch",
+    "quaker holiday crunch"
+  ],
+  "usda_174653": [
+    "maple pecan crunch cereal",
+    "post maple pecan cereal",
+    "pecan granola cereal",
+    "maple crunch cereal",
+    "nut and maple cereal",
+    "post selects pecan cereal",
+    "crunchy maple pecan granola cereal",
+    "sweet pecan crunch cereal"
+  ],
+  "usda_174654": [
+    "pumpkin granola",
+    "flax pumpkin granola",
+    "natures path granola pumpkin",
+    "organic pumpkin seed granola",
+    "flax plus granola",
+    "pumpkin seed flax cereal",
+    "organic granola pumpkin",
+    "flaxseed pumpkin granola cereal"
+  ],
+  "usda_174655": [
+    "cream of wheat dry",
+    "quick cream of wheat uncooked",
+    "farina dry",
+    "hot wheat cereal dry",
+    "cream of wheat 2.5 min dry",
+    "dry wheat porridge",
+    "semolina hot cereal dry",
+    "uncooked cream of wheat"
+  ],
+  "usda_174656": [
+    "incaparina dry",
+    "corn soy flour mix dry",
+    "masa soy blend dry",
+    "central american corn soy mix",
+    "incaparina uncooked",
+    "corn soy drink powder",
+    "fortified corn soy flour dry",
+    "incaparina powder"
+  ],
+  "usda_174657": [
+    "halloween crunch cereal",
+    "halloween cap n crunch",
+    "quaker halloween cereal",
+    "spooky crunch cereal",
+    "cap n crunch halloween edition",
+    "holiday corn cereal halloween",
+    "sweet corn puff halloween cereal",
+    "halloween corn crunch"
+  ],
+  "usda_174658": [
+    "apple cranberry almond granola",
+    "quaker granola apple cranberry",
+    "fruit and nut granola",
+    "natural granola with cranberry almond",
+    "quaker natural granola",
+    "apple almond granola cereal",
+    "cranberry almond granola",
+    "quaker fruit granola"
+  ],
+  "usda_174659": [
+    "maple brown sugar life cereal",
+    "quaker maple life cereal",
+    "maple flavored oat cereal",
+    "brown sugar maple oat squares",
+    "sweet maple cereal",
+    "life cereal maple",
+    "quaker maple cereal",
+    "maple oat crunch cereal"
+  ],
+  "usda_174660": [
+    "organic instant oatmeal plain",
+    "quaker organic oatmeal",
+    "plain organic oatmeal packet",
+    "organic hot oatmeal regular",
+    "quaker organic plain oats",
+    "natural organic oatmeal",
+    "organic rolled oats instant",
+    "plain organic instant oats"
+  ],
+  "usda_174661": [
+    "reduced sugar fruit cream oatmeal",
+    "quaker low sugar oatmeal fruit",
+    "fruit and cream oatmeal low sugar",
+    "less sugar oatmeal variety",
+    "light oatmeal fruit cream",
+    "reduced sugar instant oatmeal",
+    "quaker lighter oatmeal fruit",
+    "low sugar fruit oatmeal packet"
+  ],
+  "usda_174662": [
+    "apple cinnamon oatmeal reduced sugar",
+    "low sugar apple cinnamon oatmeal",
+    "quaker apple cinnamon light oatmeal",
+    "reduced sugar apple oatmeal",
+    "lighter apple oatmeal",
+    "less sugar apple cinnamon oats",
+    "quaker low sugar apple cinnamon",
+    "apple oatmeal packet low sugar"
+  ],
+  "usda_174663": [
+    "honey bunches of oats pecan",
+    "post pecan bunches",
+    "pecan honey oat cereal",
+    "honey bunches pecan crunch",
+    "oat cereal with pecans",
+    "post honey pecan cereal",
+    "pecan cluster oat cereal",
+    "honey oat pecan bunches"
+  ],
+  "usda_174664": [
+    "chocolate marshmallow cereal",
+    "malt o meal chocolate marshmallow",
+    "chocolate lucky charms generic",
+    "cocoa marshmallow cereal",
+    "chocolate and marshmallow breakfast cereal",
+    "budget chocolate marshmallow cereal",
+    "cocoa mateys cereal",
+    "chocolate oat marshmallow cereal"
+  ],
+  "usda_174666": [
+    "stewed dried figs",
+    "cooked dried figs",
+    "simmered figs",
+    "dried fig compote",
+    "soft stewed figs",
+    "rehydrated dried figs",
+    "braised dried figs",
+    "figs simmered in water"
+  ],
+  "usda_174667": [
+    "canned fruit cocktail in water",
+    "fruit cocktail water pack",
+    "mixed canned fruit water",
+    "canned mixed fruit no syrup",
+    "fruit cocktail light water pack",
+    "diet fruit cocktail canned",
+    "mixed fruit in water can",
+    "canned peach pear grape cherry water"
+  ],
+  "usda_174668": [
+    "canned fruit cocktail in juice",
+    "fruit cocktail juice pack",
+    "mixed fruit in fruit juice canned",
+    "fruit cocktail no added sugar",
+    "canned fruit in natural juice",
+    "mixed canned fruit juice pack",
+    "fruit cocktail natural juice",
+    "light canned fruit cocktail juice"
+  ],
+  "usda_174669": [
+    "canned fruit salad water pack",
+    "mixed fruit salad water pack canned",
+    "fruit salad in water can",
+    "canned fruit mix water",
+    "diet canned fruit salad",
+    "peach pear apricot pineapple canned water",
+    "fruit salad no syrup canned",
+    "mixed fruit salad can water"
+  ],
+  "usda_174670": [
+    "canned fruit salad juice pack",
+    "fruit salad in juice canned",
+    "natural juice fruit salad can",
+    "mixed fruit salad juice",
+    "fruit salad no added sugar canned",
+    "canned fruit mix in juice",
+    "fruit salad natural juice pack",
+    "peach pear apricot can juice"
+  ],
+  "usda_174671": [
+    "canned fruit salad light syrup",
+    "fruit salad light syrup can",
+    "mixed fruit light syrup canned",
+    "fruit cocktail light syrup",
+    "canned fruit mix light syrup",
+    "peach pear fruit salad light syrup",
+    "sweet canned fruit salad light",
+    "fruit salad lightly sweetened can"
+  ],
+  "usda_174672": [
+    "canned fruit salad heavy syrup",
+    "fruit salad extra heavy syrup",
+    "mixed fruit in heavy syrup can",
+    "sweetened canned fruit salad",
+    "fruit salad thick syrup canned",
+    "extra sweet canned fruit mix",
+    "fruit salad in syrup heavy",
+    "peach pear pineapple heavy syrup can"
+  ],
+  "usda_174673": [
+    "pink grapefruit raw",
+    "red grapefruit fresh",
+    "fresh pink grapefruit",
+    "raw red grapefruit",
+    "whole grapefruit pink",
+    "fresh grapefruit",
+    "ruby grapefruit raw",
+    "pink red grapefruit fresh"
+  ],
+  "usda_174674": [
+    "california grapefruit pink",
+    "arizona pink grapefruit",
+    "pink grapefruit california",
+    "red grapefruit california arizona",
+    "fresh pink grapefruit west coast",
+    "raw pink grapefruit california",
+    "california ruby grapefruit",
+    "pink grapefruit fresh west"
+  ],
+  "usda_174675": [
+    "florida pink grapefruit",
+    "florida red grapefruit",
+    "fresh florida grapefruit",
+    "raw grapefruit florida pink",
+    "ruby red grapefruit florida",
+    "florida fresh grapefruit",
+    "southeast grapefruit pink",
+    "florida grapefruit raw"
+  ],
+  "usda_174676": [
+    "white grapefruit raw",
+    "plain grapefruit fresh",
+    "raw white grapefruit",
+    "fresh white grapefruit",
+    "yellow grapefruit raw",
+    "white flesh grapefruit",
+    "grapefruit white fresh",
+    "raw grapefruit plain"
+  ],
+  "usda_174677": [
+    "california white grapefruit",
+    "white grapefruit california fresh",
+    "california grapefruit white",
+    "fresh california grapefruit white",
+    "west coast white grapefruit",
+    "raw white grapefruit california",
+    "california grapefruit raw white",
+    "white grapefruit west coast"
+  ],
+  "usda_174679": [
+    "sweetened grapefruit juice canned",
+    "canned grapefruit juice sweet",
+    "white grapefruit juice canned sweet",
+    "sweetened canned grapefruit juice",
+    "grapefruit juice with sugar canned",
+    "sweetened bottled grapefruit juice",
+    "canned sweet grapefruit drink",
+    "grapefruit juice can sweetened"
+  ],
+  "usda_174680": [
+    "frozen grapefruit juice concentrate",
+    "grapefruit juice frozen undiluted",
+    "grapefruit concentrate undiluted",
+    "white grapefruit frozen concentrate",
+    "frozen concentrate grapefruit juice",
+    "undiluted grapefruit juice concentrate",
+    "grapefruit juice frozen unsweetened concentrate",
+    "frozen grapefruit concentrate undiluted"
+  ],
+  "usda_174681": [
+    "grapefruit juice from frozen concentrate",
+    "reconstituted grapefruit juice",
+    "diluted grapefruit juice concentrate",
+    "frozen grapefruit juice prepared",
+    "grapefruit juice made from frozen",
+    "mixed grapefruit juice concentrate",
+    "thawed grapefruit juice diluted",
+    "prepared grapefruit juice frozen"
+  ],
+  "usda_174682": [
+    "concord grapes",
+    "slip skin grapes",
+    "american grapes raw",
+    "dark purple grapes",
+    "concord grape fresh",
+    "native american grapes",
+    "purple slip skin grapes",
+    "whole concord grapes raw"
+  ],
+  "usda_174683": [
+    "green grapes",
+    "red grapes",
+    "seedless grapes",
+    "thompson seedless fresh",
+    "table grapes raw",
+    "european grapes raw",
+    "fresh red green grapes",
+    "globe grapes seedless"
+  ],
+  "usda_174684": [
+    "canned grapes water pack",
+    "thompson seedless canned water",
+    "grapes in water can",
+    "canned seedless grapes no syrup",
+    "packed grapes water can",
+    "tinned grapes water pack",
+    "grapes canned plain",
+    "seedless grapes water pack can"
+  ],
+  "usda_174685": [
+    "canned grapes heavy syrup",
+    "grapes in syrup can",
+    "thompson seedless in syrup",
+    "sweetened canned grapes",
+    "tinned grapes heavy syrup",
+    "canned seedless grapes syrup",
+    "grapes in heavy syrup tin",
+    "sweet canned grapes"
+  ],
+  "usda_174686": [
+    "guava sauce cooked",
+    "cooked guava puree",
+    "guava compote",
+    "guava jam sauce",
+    "stewed guava",
+    "guava preserve cooked",
+    "guava fruit sauce",
+    "cooked guava spread"
+  ],
+  "usda_174687": [
+    "jackfruit fresh",
+    "raw jackfruit",
+    "fresh jack fruit",
+    "langka raw",
+    "langka fresh",
+    "unripe jackfruit raw",
+    "ripe jackfruit raw",
+    "whole jackfruit fresh"
+  ],
+  "usda_174688": [
+    "grilled top loin filet",
+    "grilled strip filet lean",
+    "grilled beef loin filet",
+    "ny strip filet grilled lean",
+    "top loin beef grilled",
+    "cooked strip loin filet",
+    "grilled lean beef filet top loin",
+    "grilled new york strip filet"
+  ],
+  "usda_174689": [
+    "grilled choice strip filet",
+    "choice top loin filet grilled",
+    "choice ny strip filet grilled lean",
+    "grilled choice beef loin filet",
+    "choice strip loin cooked",
+    "grilled choice top loin lean",
+    "choice grade strip filet grilled",
+    "ny strip choice grilled lean"
+  ],
+  "usda_174690": [
+    "select strip filet grilled",
+    "grilled select top loin filet",
+    "lean select strip filet grilled",
+    "select grade loin filet grilled",
+    "cooked select strip loin",
+    "grilled lean select beef filet",
+    "select ny strip filet grilled",
+    "select top loin grilled lean"
+  ],
+  "usda_174691": [
+    "raw choice strip petite roast",
+    "uncooked choice top loin roast",
+    "choice top loin filet raw",
+    "raw beef strip petite roast choice",
+    "choice strip loin filet raw",
+    "uncooked choice loin filet",
+    "raw lean strip roast choice",
+    "choice top loin raw lean"
+  ],
+  "usda_174692": [
+    "raw select strip petite roast",
+    "uncooked select top loin filet",
+    "select top loin raw",
+    "select strip petite roast raw",
+    "raw lean select loin filet",
+    "select grade strip roast raw",
+    "uncooked select loin roast",
+    "raw select strip filet lean"
+  ],
+  "usda_174693": [
+    "grilled sirloin filet lean",
+    "top sirloin filet grilled",
+    "lean sirloin filet grilled",
+    "cooked sirloin filet boneless",
+    "grilled top sirloin lean",
+    "sirloin filet no fat grilled",
+    "grilled lean sirloin steak filet",
+    "top sirloin boneless grilled lean"
+  ],
+  "usda_174694": [
+    "choice sirloin filet grilled",
+    "grilled choice sirloin filet lean",
+    "choice top sirloin filet cooked",
+    "grilled lean choice sirloin",
+    "choice sirloin steak filet grilled",
+    "top sirloin choice grilled lean",
+    "grilled choice sirloin boneless",
+    "choice grade sirloin filet grilled"
+  ],
+  "usda_174695": [
+    "raw select sirloin petite roast",
+    "select top sirloin filet raw",
+    "uncooked select sirloin filet",
+    "raw lean select sirloin",
+    "select sirloin petite roast raw",
+    "select grade sirloin raw lean",
+    "raw select sirloin boneless lean",
+    "uncooked sirloin filet select"
+  ],
+  "usda_174696": [
+    "raw ribeye filet",
+    "raw ribeye petite roast",
+    "uncooked ribeye filet boneless",
+    "raw lean ribeye steak",
+    "ribeye filet raw lean",
+    "raw boneless ribeye lean",
+    "ribeye petite roast raw all grades",
+    "uncooked ribeye lean beef"
+  ],
+  "usda_174697": [
+    "choice ribeye filet raw",
+    "raw choice ribeye",
+    "uncooked choice ribeye filet",
+    "choice grade ribeye raw lean",
+    "raw lean choice ribeye",
+    "choice ribeye petite roast raw",
+    "uncooked ribeye choice grade",
+    "choice ribeye raw boneless"
+  ],
+  "usda_174698": [
+    "select ribeye filet raw",
+    "raw select ribeye",
+    "uncooked select ribeye filet",
+    "select grade ribeye raw lean",
+    "raw lean select ribeye",
+    "select ribeye petite roast raw",
+    "uncooked ribeye select grade",
+    "select ribeye raw boneless"
+  ],
+  "usda_174699": [
+    "ribeye cap steak raw choice",
+    "choice ribeye cap raw",
+    "spinalis dorsi steak raw",
+    "ribeye cap lean raw choice",
+    "choice grade ribeye cap raw",
+    "uncooked ribeye cap steak choice",
+    "raw choice spinalis beef",
+    "ribeye cap boneless raw choice"
+  ],
+  "usda_174700": [
+    "ribeye cap steak raw select",
+    "select ribeye cap raw",
+    "select grade ribeye cap steak",
+    "raw lean ribeye cap select",
+    "uncooked ribeye cap select",
+    "select spinalis steak raw",
+    "raw boneless ribeye cap select",
+    "ribeye cap steak select raw lean"
+  ],
+  "usda_174701": [
+    "grilled ribeye filet lean",
+    "ribeye filet cooked grilled",
+    "boneless ribeye filet grilled lean",
+    "grilled lean ribeye steak",
+    "cooked ribeye filet all grades",
+    "grilled ribeye no fat",
+    "ribeye filet grilled boneless lean",
+    "grilled beef ribeye filet"
+  ],
+  "usda_174702": [
+    "grilled choice ribeye filet",
+    "choice ribeye filet grilled lean",
+    "cooked choice ribeye filet",
+    "grilled lean choice ribeye",
+    "choice ribeye steak grilled",
+    "choice grade ribeye filet cooked",
+    "grilled choice ribeye boneless",
+    "ribeye choice cooked grilled lean"
+  ],
+  "usda_174703": [
+    "grilled select ribeye filet",
+    "select ribeye filet grilled lean",
+    "cooked select ribeye filet",
+    "grilled lean select ribeye",
+    "select ribeye steak grilled",
+    "select grade ribeye filet cooked",
+    "grilled select ribeye boneless",
+    "ribeye select cooked grilled lean"
+  ],
+  "usda_174704": [
+    "sirloin cap steak grilled choice",
+    "grilled coulotte steak choice",
+    "picanha steak grilled choice",
+    "choice sirloin cap cooked grilled",
+    "grilled top sirloin cap choice",
+    "cooked sirloin cap steak choice",
+    "choice picanha grilled",
+    "sirloin cap choice grilled with fat"
+  ],
+  "usda_174705": [
+    "sirloin cap steak grilled select",
+    "grilled coulotte steak select",
+    "select sirloin cap grilled",
+    "cooked select sirloin cap",
+    "grilled top sirloin cap select",
+    "select picanha grilled",
+    "sirloin cap select grilled",
+    "select grade sirloin cap cooked"
+  ],
+  "usda_174706": [
+    "raw sirloin cap steak",
+    "uncooked top sirloin cap",
+    "raw coulotte steak",
+    "sirloin cap raw all grades",
+    "picanha steak raw",
+    "raw top sirloin cap boneless",
+    "uncooked sirloin cap steak",
+    "raw beef sirloin cap"
+  ],
+  "usda_174707": [
+    "raw choice sirloin cap",
+    "choice coulotte steak raw",
+    "uncooked choice sirloin cap",
+    "choice picanha raw",
+    "raw top sirloin cap choice",
+    "choice grade sirloin cap raw",
+    "uncooked sirloin cap choice",
+    "choice sirloin cap steak raw"
+  ],
+  "usda_174708": [
+    "roasted top loin petite roast",
+    "cooked strip loin roast",
+    "top loin roast cooked all grades",
+    "baked strip petite roast",
+    "oven roasted top loin",
+    "cooked beef strip roast",
+    "top loin roasted boneless",
+    "roast beef top loin cooked"
+  ],
+  "usda_174709": [
+    "choice top loin roast cooked",
+    "roasted choice strip roast",
+    "choice strip loin roast cooked",
+    "baked top loin roast choice",
+    "oven roasted choice strip beef",
+    "cooked choice top loin roast",
+    "choice grade loin roast cooked",
+    "roasted beef strip choice"
+  ],
+  "usda_174710": [
+    "select top loin roast cooked",
+    "roasted select strip roast",
+    "select strip loin roast cooked",
+    "baked top loin roast select",
+    "oven roasted select strip beef",
+    "cooked select top loin roast",
+    "select grade loin roast cooked",
+    "roasted beef strip select"
+  ],
+  "usda_174711": [
+    "raw top loin petite roast",
+    "uncooked strip loin roast",
+    "raw boneless strip roast all grades",
+    "uncooked top loin filet raw",
+    "raw beef strip roast",
+    "top loin petite roast raw lean and fat",
+    "raw strip loin roast boneless",
+    "uncooked beef loin roast"
+  ],
+  "usda_174712": [
+    "new york strip steak grilled choice",
+    "choice ny strip grilled",
+    "top loin strip steak grilled choice",
+    "grilled choice strip steak",
+    "choice strip steak cooked grilled",
+    "ny strip choice grilled",
+    "grilled beef strip choice",
+    "choice boneless strip steak grilled"
+  ],
+  "usda_174713": [
+    "select ny strip grilled",
+    "grilled select strip steak",
+    "top loin strip steak grilled select",
+    "select strip steak cooked",
+    "ny strip select grilled",
+    "grilled beef strip select",
+    "select boneless strip steak grilled",
+    "cooked select strip steak"
+  ],
+  "usda_174714": [
+    "ny strip steak grilled",
+    "grilled strip steak",
+    "top loin steak grilled",
+    "boneless strip steak grilled",
+    "grilled new york strip",
+    "strip steak cooked grilled",
+    "beef strip loin grilled",
+    "grilled top loin all grades"
+  ],
+  "usda_174715": [
+    "new zealand blade roast lean",
+    "bolar blade beef cooked",
+    "blade roast fast roasted",
+    "nz beef bolar blade",
+    "imported beef blade roast",
+    "fast roasted blade beef",
+    "lean blade roast cooked nz",
+    "new zealand bolar roast lean"
+  ]
+}

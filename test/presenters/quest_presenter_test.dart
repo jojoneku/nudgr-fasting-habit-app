@@ -1,3 +1,4 @@
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/habit_routine.dart';
@@ -91,6 +92,8 @@ void main() {
 
   setUp(() {
     mockStorage = MockStorageService();
+    when(mockStorage.loadNotificationPreferences())
+        .thenAnswer((_) async => NotificationPreferences.defaults());
     mockNotifications = MockNotificationService();
     mockStats = MockStatsPresenter();
 
@@ -547,6 +550,7 @@ void main() {
     test('Quest scheduled today in future appears in todayActiveQuests',
         () async {
       final now = DateTime.now();
+      if (now.hour >= 22) return; // would wrap to next day
       // Quest 2 hours from now
       final q = _quest(id: 1, hour: (now.hour + 2) % 24, minute: 0);
 

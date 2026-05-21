@@ -1,0 +1,891 @@
+{
+  "usda_173291": [
+    "pizza hut pan pizza",
+    "pan crust cheese pizza",
+    "deep dish cheese pizza",
+    "pizza hut deep dish",
+    "pan pizza cheese",
+    "cheesy pan pizza",
+    "pizza hut large pizza",
+    "thick crust pizza hut",
+    "cheese deep dish pizza",
+    "pizza hut personal pan"
+  ],
+  "usda_173292": [
+    "fast food cheese pizza",
+    "plain cheese pizza",
+    "pizza chain cheese pizza",
+    "regular crust cheese pizza",
+    "large cheese pizza",
+    "classic cheese pizza",
+    "pizza slice cheese",
+    "hand tossed cheese pizza",
+    "cheese pizza delivery",
+    "medium crust pizza"
+  ],
+  "usda_173293": [
+    "thick crust cheese pizza",
+    "deep dish pizza chain",
+    "thick pizza cheese",
+    "stuffed crust cheese pizza",
+    "thick slice cheese pizza",
+    "fast food thick pizza",
+    "pan style cheese pizza",
+    "cheesy thick crust pizza",
+    "pizza chain deep dish"
+  ],
+  "usda_173294": [
+    "thin crust cheese pizza",
+    "thin pizza cheese",
+    "crispy cheese pizza",
+    "thin slice pizza",
+    "fast food thin pizza",
+    "thin and crispy cheese pizza",
+    "pizza chain thin crust",
+    "light cheese pizza thin",
+    "crispy crust pizza"
+  ],
+  "usda_173295": [
+    "pepperoni pizza regular crust",
+    "fast food pepperoni pizza",
+    "pizza chain pepperoni",
+    "large pepperoni pizza",
+    "hand tossed pepperoni pizza",
+    "classic pepperoni pizza",
+    "delivery pepperoni pizza",
+    "pepperoni slice",
+    "pizza with pepperoni"
+  ],
+  "usda_173296": [
+    "thick crust pepperoni pizza",
+    "deep dish pepperoni pizza",
+    "pan pizza pepperoni",
+    "pepperoni thick pizza",
+    "pizza chain pepperoni thick",
+    "pepperoni deep dish",
+    "thick slice pepperoni",
+    "pan crust pepperoni"
+  ],
+  "usda_173297": [
+    "mcnuggets",
+    "chicken nuggets mcdonalds",
+    "nuggets mcdonald's",
+    "chicken nuggets fast food",
+    "mcd nuggets",
+    "crispy chicken nuggets",
+    "mcdo nuggets",
+    "fried chicken nuggets mcdonalds",
+    "6 piece nuggets",
+    "10 piece nuggets"
+  ],
+  "usda_173298": [
+    "mcdonalds hashbrown",
+    "hash brown mcdonald's",
+    "mcd hash brown",
+    "potato hash brown mcdo",
+    "mcdo hashbrown",
+    "breakfast hash brown mcdonalds",
+    "crispy hashbrown mcdonald's",
+    "hash browns fast food",
+    "potato cake mcdonalds"
+  ],
+  "usda_173299": [
+    "mcdonalds pancakes",
+    "mcdonald's hotcakes",
+    "mcdo pancakes",
+    "breakfast pancakes mcdonalds",
+    "plain pancakes mcdonald's",
+    "mcd hotcakes",
+    "fluffy pancakes mcdonalds",
+    "mcdo hotcakes plain",
+    "fast food pancakes"
+  ],
+  "usda_173300": [
+    "mcgriddles bacon egg cheese",
+    "bacon egg cheese mcgriddles",
+    "mcdonald's mcgriddles",
+    "mcdo mcgriddles",
+    "breakfast sandwich mcgriddles",
+    "sweet pancake sandwich mcdonald's",
+    "bacon mcgriddles",
+    "mcd mcgriddles breakfast"
+  ],
+  "usda_173301": [
+    "caramel sundae mcdonalds",
+    "hot caramel sundae mcdonald's",
+    "mcdo caramel sundae",
+    "mcd caramel ice cream",
+    "caramel ice cream sundae fast food",
+    "mcdonald's sundae caramel",
+    "caramel topping sundae mcdo"
+  ],
+  "usda_173302": [
+    "hot fudge sundae mcdonald's",
+    "chocolate sundae mcdonalds",
+    "mcdo fudge sundae",
+    "mcd hot fudge",
+    "chocolate ice cream sundae mcdonalds",
+    "mcdonald's chocolate sundae",
+    "fudge sundae fast food",
+    "mcdo chocolate sundae"
+  ],
+  "usda_173303": [
+    "mcflurry m&m",
+    "m&m mcflurry mcdonald's",
+    "mcdo mcflurry m&m",
+    "mcd mcflurry candy",
+    "m&m ice cream mcdonalds",
+    "chocolate candy mcflurry",
+    "mcflurry with candies",
+    "mcdo blizzard m&m"
+  ],
+  "usda_173304": [
+    "oreo mcflurry",
+    "mcflurry oreo mcdonald's",
+    "mcdo oreo mcflurry",
+    "mcd oreo ice cream",
+    "oreo cookie mcflurry",
+    "cookies and cream mcflurry",
+    "mcdo mcflurry oreo",
+    "oreo blizzard mcdonalds"
+  ],
+  "usda_173305": [
+    "mcchicken sandwich",
+    "mcdonald's chicken sandwich",
+    "mcdo mcchicken",
+    "mcd mcchicken",
+    "fried chicken sandwich mcdonalds",
+    "mcchicken with mayo",
+    "crispy chicken sandwich mcdonald's",
+    "mcdo chicken burger",
+    "chicken burger fast food"
+  ],
+  "usda_173306": [
+    "mcchicken no mayo",
+    "mcchicken without mayonnaise",
+    "plain mcchicken",
+    "mcdonald's chicken sandwich no sauce",
+    "mcdo mcchicken no mayo",
+    "dry mcchicken",
+    "chicken sandwich no mayo mcdonald's"
+  ],
+  "usda_173307": [
+    "egg mcmuffin mcdonald's",
+    "mcmuffin egg",
+    "mcdo egg mcmuffin",
+    "mcd breakfast muffin",
+    "egg muffin sandwich mcdonalds",
+    "english muffin egg sandwich",
+    "breakfast egg sandwich mcdonald's",
+    "muffin egg cheese ham mcdo"
+  ],
+  "usda_173308": [
+    "sausage mcmuffin mcdonald's",
+    "mcdo sausage muffin",
+    "mcd sausage breakfast",
+    "sausage muffin sandwich",
+    "breakfast sausage mcmuffin",
+    "sausage egg muffin mcdonalds",
+    "sausage patty muffin mcdonald's",
+    "mcdo sausage mcmuffin"
+  ],
+  "usda_173309": [
+    "mcdonalds deluxe breakfast",
+    "mcdonald's big breakfast",
+    "mcdo full breakfast",
+    "mcd breakfast platter",
+    "deluxe breakfast with syrup",
+    "full breakfast mcdonalds",
+    "mcdonald's breakfast combo",
+    "eggs sausage pancakes mcdonald's",
+    "mcdo breakfast platter"
+  ],
+  "usda_173310": [
+    "hotcakes and sausage mcdonald's",
+    "mcdo pancakes and sausage",
+    "mcd hotcakes sausage",
+    "breakfast pancakes with sausage mcdonalds",
+    "pancakes sausage fast food",
+    "sausage and pancakes mcdo",
+    "mcdonalds pancake sausage combo"
+  ],
+  "usda_173311": [
+    "mcdonalds hotcakes with butter syrup",
+    "pancakes with syrup mcdonald's",
+    "mcdo hotcakes syrup butter",
+    "buttered pancakes mcdonalds",
+    "hotcakes with margarine mcdonald's",
+    "mcd pancakes syrup",
+    "sweet pancakes mcdo",
+    "pancakes butter syrup fast food"
+  ],
+  "usda_173312": [
+    "mcdonalds bacon ranch salad",
+    "grilled chicken salad mcdonald's",
+    "mcdo chicken salad",
+    "mcd bacon ranch salad",
+    "chicken ranch salad fast food",
+    "grilled chicken ranch salad mcdonalds",
+    "bacon salad with chicken mcdo"
+  ],
+  "usda_173313": [
+    "mcdonald's yogurt parfait",
+    "mcdo fruit parfait",
+    "mcd parfait no granola",
+    "fruit and yogurt cup mcdonald's",
+    "yogurt fruit cup mcdonalds",
+    "mcdo yogurt cup",
+    "fruit yogurt mcdonald's no granola"
+  ],
+  "usda_173314": [
+    "filet o fish no tartar",
+    "mcdonald's fish sandwich no sauce",
+    "mcdo fish fillet no tartar",
+    "fish burger no tartar mcdonald's",
+    "filet o fish plain",
+    "mcd fish sandwich no sauce",
+    "plain fish sandwich mcdonalds"
+  ],
+  "usda_173315": [
+    "burger king croissanwich",
+    "bk croissanwich sausage egg cheese",
+    "breakfast croissant burger king",
+    "sausage egg cheese croissant bk",
+    "croissanwich bk",
+    "burger king breakfast sandwich",
+    "bk sausage croissant breakfast"
+  ],
+  "usda_173316": [
+    "bk croissanwich sausage cheese",
+    "burger king sausage cheese croissant",
+    "croissanwich no egg",
+    "bk breakfast sandwich no egg",
+    "sausage cheese croissant burger king",
+    "croissanwich sausage bk"
+  ],
+  "usda_173317": [
+    "large hamburger with condiments",
+    "big hamburger fast food",
+    "large patty burger",
+    "single large burger",
+    "hamburger with mayo veggies",
+    "loaded hamburger fast food",
+    "big single patty burger"
+  ],
+  "usda_173318": [
+    "double decker hamburger",
+    "special sauce burger",
+    "mac style burger",
+    "single patty double bun burger",
+    "hamburger special sauce",
+    "fast food double decker burger",
+    "secret sauce hamburger"
+  ],
+  "usda_173319": [
+    "double cheeseburger fast food",
+    "double patty cheeseburger",
+    "two patty cheeseburger",
+    "regular double cheeseburger",
+    "fast food double cheese",
+    "cheeseburger double regular",
+    "double burger with cheese"
+  ],
+  "usda_173320": [
+    "large double cheeseburger",
+    "big double cheeseburger fast food",
+    "double large patty burger",
+    "double cheeseburger big patty",
+    "large patty double cheeseburger",
+    "loaded double cheeseburger"
+  ],
+  "usda_173321": [
+    "chicken tenders fast food",
+    "crispy chicken strips",
+    "chicken fingers",
+    "fried chicken tenders",
+    "breaded chicken strips",
+    "chicken strips fast food",
+    "chicken fillets fried",
+    "tender chicken strips"
+  ],
+  "usda_173322": [
+    "breakfast bagel sausage egg cheese",
+    "sausage egg cheese bagel sandwich",
+    "fast food bagel breakfast",
+    "bagel breakfast sandwich",
+    "egg sausage bagel",
+    "morning bagel sandwich"
+  ],
+  "usda_173323": [
+    "steak egg cheese bagel",
+    "breakfast steak bagel sandwich",
+    "bagel with steak and egg",
+    "fast food steak bagel",
+    "breakfast bagel steak",
+    "steak bagel morning sandwich"
+  ],
+  "usda_173324": [
+    "mcflurry light",
+    "soft serve with chocolate candies",
+    "light ice cream with m&m",
+    "blended soft serve candy",
+    "chocolate candy ice cream blend",
+    "soft serve candy mix",
+    "light blended ice cream"
+  ],
+  "usda_173325": [
+    "canned mac and cheese",
+    "mac and cheese can",
+    "canned macaroni cheese",
+    "chef boyardee mac cheese",
+    "tinned mac and cheese",
+    "easy mac canned",
+    "mac n cheese can",
+    "canned pasta cheese"
+  ],
+  "usda_173326": [
+    "hot pockets chicken broccoli cheddar",
+    "chicken broccoli hot pocket",
+    "frozen chicken hot pocket",
+    "croissant hot pocket chicken",
+    "hot pocket frozen snack",
+    "chicken cheddar hot pocket",
+    "microwave hot pocket chicken"
+  ],
+  "usda_173327": [
+    "hot pockets ham cheese",
+    "ham and cheese hot pocket",
+    "frozen ham cheese pocket",
+    "ham hot pocket",
+    "microwave ham cheese pocket",
+    "hot pocket ham frozen",
+    "ham cheese stuffed sandwich frozen"
+  ],
+  "usda_173328": [
+    "canned cheese ravioli",
+    "chef boyardee ravioli cheese",
+    "tinned cheese ravioli",
+    "cheese ravioli in can",
+    "canned pasta ravioli",
+    "cheese filled ravioli canned",
+    "ravioli can cheese"
+  ],
+  "usda_173329": [
+    "canned meat ravioli",
+    "beef ravioli in tomato sauce",
+    "chef boyardee beef ravioli",
+    "meat ravioli canned",
+    "ravioli with meat sauce can",
+    "tinned beef ravioli",
+    "canned ravioli meat"
+  ],
+  "usda_173330": [
+    "canned beef stew",
+    "tinned beef stew",
+    "beef stew in a can",
+    "ready made beef stew",
+    "canned stew beef potato",
+    "beef and potato stew canned",
+    "instant beef stew",
+    "dinty moore beef stew"
+  ],
+  "usda_173331": [
+    "chicken pot pie frozen",
+    "frozen pot pie",
+    "microwave chicken pot pie",
+    "chicken pie frozen",
+    "creamy chicken pie",
+    "pot pie frozen entree",
+    "baked chicken pot pie",
+    "individual chicken pot pie"
+  ],
+  "usda_173332": [
+    "corned beef hash",
+    "canned corned beef hash",
+    "corned beef with potatoes",
+    "corned beef and potato can",
+    "hash corned beef tinned",
+    "fried corned beef hash",
+    "cbh canned",
+    "tinned corned beef hash"
+  ],
+  "usda_173333": [
+    "frozen cheese lasagna",
+    "baked cheese lasagna",
+    "vegetarian lasagna frozen",
+    "lasagna no meat frozen",
+    "cheese lasagna microwave",
+    "frozen pasta lasagna cheese",
+    "white lasagna frozen"
+  ],
+  "usda_173334": [
+    "frozen meat lasagna",
+    "beef lasagna frozen",
+    "lasagna with meat sauce frozen",
+    "baked meat lasagna",
+    "microwave lasagna meat",
+    "frozen lasagna bolognese",
+    "lasagna frozen entree beef"
+  ],
+  "usda_173335": [
+    "frozen beef bean burrito",
+    "beef and bean burrito",
+    "frozen burrito beef",
+    "microwave burrito beef bean",
+    "bean beef wrap frozen",
+    "burrito frozen fast food style",
+    "frozen mexican burrito beef"
+  ],
+  "usda_173336": [
+    "frozen bean cheese burrito",
+    "bean and cheese burrito",
+    "vegetarian frozen burrito",
+    "cheese bean wrap frozen",
+    "microwave bean burrito",
+    "bean cheese wrap",
+    "frozen burrito meatless"
+  ],
+  "usda_173337": [
+    "microwavable mac and cheese",
+    "microwave mac n cheese",
+    "cup mac and cheese",
+    "easy mac microwave",
+    "mac and cheese microwave cup",
+    "instant mac cheese microwave",
+    "single serve mac and cheese"
+  ],
+  "usda_173338": [
+    "frozen turkey dinner",
+    "thanksgiving frozen meal",
+    "turkey with stuffing frozen",
+    "frozen turkey mashed potato dinner",
+    "tv dinner turkey",
+    "thanksgiving tv dinner",
+    "turkey gravy frozen meal",
+    "microwave turkey dinner"
+  ],
+  "usda_173339": [
+    "frozen rice bowl chicken",
+    "chicken teriyaki rice bowl frozen",
+    "sweet and sour chicken rice bowl",
+    "microwave chicken rice bowl",
+    "fried rice bowl frozen",
+    "chicken bowl frozen entree",
+    "asian chicken rice bowl frozen"
+  ],
+  "usda_173340": [
+    "kraft mac and cheese box",
+    "boxed mac and cheese",
+    "macaroni cheese box dry",
+    "kraft dinner box",
+    "dry mac and cheese mix",
+    "blue box mac and cheese",
+    "kraft mac n cheese uncooked",
+    "mac and cheese packet"
+  ],
+  "usda_173341": [
+    "kraft mac and cheese prepared",
+    "boxed mac and cheese cooked",
+    "mac and cheese from box",
+    "kraft dinner made",
+    "stovetop mac and cheese",
+    "homemade box mac cheese",
+    "kraft macaroni prepared"
+  ],
+  "usda_173342": [
+    "frozen mac and cheese",
+    "baked mac and cheese frozen",
+    "mac n cheese frozen dinner",
+    "microwave mac cheese frozen",
+    "stouffer's mac cheese",
+    "frozen macaroni entree",
+    "mac and cheese frozen meal"
+  ],
+  "usda_173343": [
+    "potato salad with egg",
+    "egg potato salad",
+    "creamy potato salad",
+    "cold potato salad",
+    "mayo potato salad with egg",
+    "deli potato salad",
+    "classic potato salad"
+  ],
+  "usda_173344": [
+    "pulled pork bbq",
+    "bbq pulled pork",
+    "shredded pork bbq",
+    "slow cooked pulled pork",
+    "pork in bbq sauce",
+    "smoked pulled pork",
+    "shredded bbq pork",
+    "slow cooker pork"
+  ],
+  "usda_173345": [
+    "corn dog frozen",
+    "corndog on a stick",
+    "breaded hot dog",
+    "fried corn dog",
+    "battered hot dog stick",
+    "corn battered hot dog",
+    "fair corn dog",
+    "frozen corndog"
+  ],
+  "usda_173346": [
+    "frozen chicken tenders",
+    "breaded chicken strips frozen",
+    "frozen chicken fingers",
+    "oven baked chicken tenders",
+    "frozen crispy chicken strips",
+    "chicken tenders baked frozen",
+    "air fryer chicken tenders frozen"
+  ],
+  "usda_173347": [
+    "rice a roni chicken",
+    "chicken rice a roni box",
+    "boxed chicken rice mix",
+    "rice vermicelli chicken flavor",
+    "chicken flavored rice mix dry",
+    "chicken rice pilaf box",
+    "instant chicken rice mix"
+  ],
+  "usda_173348": [
+    "chicken rice a roni cooked",
+    "prepared chicken rice mix",
+    "rice and pasta chicken flavor",
+    "chicken rice pilaf cooked",
+    "stovetop chicken rice",
+    "rice with vermicelli cooked",
+    "chicken flavored rice prepared"
+  ],
+  "usda_173349": [
+    "shoulder pot roast beef",
+    "beef chuck shoulder raw",
+    "pot roast cut beef",
+    "shoulder steak beef raw",
+    "chuck shoulder beef",
+    "beef pot roast raw",
+    "shoulder roast beef uncooked"
+  ],
+  "usda_173350": [
+    "porterhouse steak raw",
+    "porterhouse beef",
+    "short loin steak raw",
+    "t-bone porterhouse",
+    "porterhouse cut beef",
+    "large loin steak raw",
+    "porterhouse uncooked"
+  ],
+  "usda_173351": [
+    "t-bone steak grilled",
+    "grilled t bone",
+    "t bone cooked",
+    "tbone steak bbq",
+    "short loin t-bone grilled",
+    "t-bone beef grilled",
+    "grilled tbone steak",
+    "bbq t bone steak"
+  ],
+  "usda_173352": [
+    "t-bone steak raw select",
+    "t bone beef raw",
+    "raw tbone steak",
+    "uncooked t-bone",
+    "t bone cut raw beef",
+    "select t-bone steak",
+    "t-bone steak uncooked"
+  ],
+  "usda_173353": [
+    "grilled t-bone select",
+    "t bone grilled select grade",
+    "cooked tbone steak",
+    "select grade tbone grilled",
+    "t-bone grilled beef",
+    "tbone steak cooked select"
+  ],
+  "usda_173354": [
+    "tip side steak raw",
+    "round knuckle steak beef",
+    "beef round steak raw",
+    "sirloin tip side steak",
+    "knuckle tip beef raw",
+    "round tip steak uncooked"
+  ],
+  "usda_173355": [
+    "shoulder tender medallion grilled",
+    "beef medallion grilled",
+    "chuck shoulder tender cooked",
+    "beef shoulder medallion bbq",
+    "grilled shoulder medallion beef",
+    "chuck tender steak grilled"
+  ],
+  "usda_173356": [
+    "shoulder tender medallion raw",
+    "beef medallion raw",
+    "chuck shoulder tender uncooked",
+    "select shoulder tender beef",
+    "beef tender medallion raw",
+    "chuck tender steak raw"
+  ],
+  "usda_173357": [
+    "shoulder top steak raw",
+    "chuck shoulder steak raw",
+    "beef shoulder clod raw",
+    "top blade chuck raw",
+    "chuck center steak raw beef",
+    "shoulder steak beef uncooked"
+  ],
+  "usda_173358": [
+    "shoulder top steak grilled",
+    "chuck shoulder grilled",
+    "beef shoulder steak cooked",
+    "grilled chuck shoulder steak",
+    "shoulder center steak bbq",
+    "cooked chuck shoulder beef"
+  ],
+  "usda_173359": [
+    "top blade steak raw select",
+    "flat iron steak raw",
+    "chuck top blade beef raw",
+    "flat iron cut uncooked",
+    "top blade beef select raw",
+    "flat iron steak uncooked"
+  ],
+  "usda_173360": [
+    "top blade steak grilled select",
+    "flat iron steak grilled",
+    "chuck top blade cooked",
+    "grilled flat iron steak",
+    "top blade beef grilled",
+    "flat iron bbq steak"
+  ],
+  "usda_173361": [
+    "tip center steak raw",
+    "round knuckle tip center beef",
+    "sirloin tip center raw",
+    "beef knuckle steak raw",
+    "round tip center uncooked",
+    "tip center beef cut raw"
+  ],
+  "usda_173362": [
+    "tip center steak grilled",
+    "round knuckle grilled beef",
+    "sirloin tip center cooked",
+    "tip center beef grilled",
+    "knuckle steak bbq",
+    "grilled round tip steak"
+  ],
+  "usda_173363": [
+    "tip center steak raw select",
+    "select round tip center beef",
+    "sirloin tip select raw",
+    "knuckle tip center select uncooked",
+    "round tip steak select raw"
+  ],
+  "usda_173364": [
+    "bottom round steak grilled",
+    "outside round grilled beef",
+    "bottom round cooked select",
+    "grilled round steak",
+    "outside round steak bbq",
+    "bottom round beef cooked"
+  ],
+  "usda_173365": [
+    "shoulder tender medallion all grades raw",
+    "beef shoulder medallion raw",
+    "chuck tender medallion uncooked",
+    "shoulder tender beef raw",
+    "medallion steak beef raw"
+  ],
+  "usda_173366": [
+    "shoulder tender medallion grilled all grades",
+    "grilled beef medallion",
+    "chuck shoulder tender grilled",
+    "medallion steak grilled beef",
+    "beef tender medallion cooked"
+  ],
+  "usda_173367": [
+    "tip side steak all grades raw",
+    "round knuckle tip side uncooked",
+    "sirloin tip side beef raw",
+    "tip side beef steak raw",
+    "knuckle tip side raw beef"
+  ],
+  "usda_173368": [
+    "top blade steak grilled all grades",
+    "flat iron steak cooked",
+    "chuck top blade grilled",
+    "grilled top blade beef",
+    "flat iron beef bbq all grades"
+  ],
+  "usda_173369": [
+    "tip center steak all grades raw",
+    "round knuckle tip center raw",
+    "sirloin tip center all grades uncooked",
+    "tip center beef all raw",
+    "knuckle tip center raw"
+  ],
+  "usda_173370": [
+    "tip center steak grilled all grades",
+    "round knuckle tip center cooked",
+    "grilled tip center beef",
+    "sirloin tip grilled all grades",
+    "knuckle tip center bbq"
+  ],
+  "usda_173371": [
+    "bottom round steak raw",
+    "outside round beef raw",
+    "bottom round all grades uncooked",
+    "outside round steak raw",
+    "round steak beef raw",
+    "bottom round cut uncooked"
+  ],
+  "usda_173372": [
+    "ribeye roast boneless",
+    "boneless rib eye roast",
+    "rib eye roast cooked",
+    "roasted ribeye select",
+    "prime rib roast boneless",
+    "ribeye roast oven",
+    "roast beef ribeye"
+  ],
+  "usda_173373": [
+    "inside skirt steak grilled",
+    "skirt steak cooked",
+    "grilled skirt beef",
+    "fajita steak grilled",
+    "inside skirt grilled lean",
+    "skirt steak bbq",
+    "grilled fajita beef"
+  ],
+  "usda_173374": [
+    "inside skirt steak raw",
+    "fajita steak raw",
+    "skirt beef uncooked",
+    "inside skirt beef raw",
+    "raw skirt steak",
+    "fajita cut beef raw"
+  ],
+  "usda_173375": [
+    "inside skirt steak grilled choice",
+    "choice skirt steak cooked",
+    "grilled inside skirt choice",
+    "fajita steak choice grilled",
+    "skirt steak bbq choice"
+  ],
+  "usda_173376": [
+    "outside skirt steak raw",
+    "fajita outside cut raw",
+    "outside skirt beef uncooked",
+    "raw outside skirt",
+    "skirt steak outside raw",
+    "fajita beef outside raw"
+  ],
+  "usda_173377": [
+    "outside skirt steak grilled choice",
+    "choice outside skirt cooked",
+    "grilled outside skirt beef",
+    "fajita steak outside bbq",
+    "outside skirt choice grilled"
+  ],
+  "usda_173378": [
+    "outside skirt steak raw choice",
+    "choice skirt beef raw",
+    "fajita outside skirt choice raw",
+    "skirt steak choice uncooked",
+    "outside skirt choice raw"
+  ],
+  "usda_173379": [
+    "outside skirt steak grilled select",
+    "select outside skirt cooked",
+    "grilled outside skirt select",
+    "skirt steak select grilled",
+    "outside skirt bbq select"
+  ],
+  "usda_173380": [
+    "ribeye steak raw choice",
+    "boneless ribeye raw",
+    "raw rib eye steak choice",
+    "ribeye beef uncooked choice",
+    "rib eye steak raw boneless",
+    "choice ribeye uncooked"
+  ],
+  "usda_173381": [
+    "ribeye steak grilled select",
+    "boneless rib eye grilled",
+    "select ribeye cooked",
+    "grilled ribeye lean select",
+    "rib eye steak grilled boneless",
+    "ribeye bbq select"
+  ],
+  "usda_173382": [
+    "ribeye steak raw select",
+    "boneless rib eye raw select",
+    "select ribeye uncooked",
+    "rib eye beef raw select boneless",
+    "ribeye cut raw select"
+  ],
+  "usda_173383": [
+    "beef back ribs braised",
+    "beef ribs braised",
+    "braised beef back ribs",
+    "slow cooked beef ribs",
+    "beef rib bones cooked",
+    "beef ribs bone-in braised",
+    "braised beef rib rack"
+  ],
+  "usda_173384": [
+    "beef back ribs raw",
+    "raw beef ribs",
+    "beef rib rack uncooked",
+    "beef back ribs uncooked",
+    "bone-in beef ribs raw",
+    "beef rib slab raw"
+  ],
+  "usda_173385": [
+    "bone-in ribeye steak grilled choice",
+    "cowboy ribeye grilled",
+    "rib eye bone in choice cooked",
+    "grilled bone-in ribeye",
+    "choice bone in ribeye bbq",
+    "ribeye bone grilled choice"
+  ],
+  "usda_173386": [
+    "bone-in ribeye steak grilled select",
+    "select bone in ribeye cooked",
+    "grilled bone ribeye select",
+    "rib eye on bone select grilled",
+    "bone-in ribeye bbq select"
+  ],
+  "usda_173387": [
+    "bone-in ribeye steak grilled",
+    "cowboy steak grilled",
+    "ribeye on bone bbq",
+    "bone in rib eye cooked",
+    "grilled ribeye bone-in",
+    "rib steak grilled bone"
+  ],
+  "usda_173388": [
+    "rib eye roast bone-in choice",
+    "prime rib roast choice",
+    "bone-in ribeye roast cooked",
+    "oven roasted bone-in ribeye",
+    "prime rib choice roasted",
+    "standing rib roast choice"
+  ],
+  "usda_173389": [
+    "bone-in ribeye steak raw select",
+    "rib eye on bone raw",
+    "select bone in ribeye uncooked",
+    "raw bone-in ribeye",
+    "ribeye raw bone-in select",
+    "cowboy steak raw select"
+  ],
+  "usda_173390": [
+    "boneless ribeye steak grilled choice",
+    "rib eye lip on grilled",
+    "choice ribeye cooked",
+    "boneless ribeye bbq choice",
+    "grilled ribeye choice",
+    "ribeye steak cooked choice boneless"
+  ]
+}

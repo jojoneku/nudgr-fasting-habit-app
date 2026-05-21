@@ -1,0 +1,997 @@
+{
+  "fnri_R036": [
+    "canned beef gravy",
+    "beef in gravy canned",
+    "canned beef with gravy",
+    "beef gravy can",
+    "tinned beef gravy",
+    "beef stew with gravy",
+    "canned braised beef",
+    "beef gravy dish"
+  ],
+  "fnri_R037": [
+    "canned beef mushroom sauce",
+    "beef in mushroom sauce can",
+    "tinned beef with mushroom",
+    "canned beef mushroom",
+    "beef mushroom canned",
+    "beef with mushroom gravy canned",
+    "canned beef in brown mushroom sauce",
+    "tinned beef mushroom dish"
+  ],
+  "fnri_R038": [
+    "canned beef chickpeas",
+    "beef with garbanzos canned",
+    "beef and chickpeas can",
+    "tinned beef garbanzo",
+    "canned beef and garbanzos",
+    "beef garbanzo stew canned",
+    "beef with chick peas can",
+    "canned beef legume stew"
+  ],
+  "fnri_R039": [
+    "chili con carne",
+    "canned chili beef",
+    "beef chili canned",
+    "chili canned",
+    "con carne",
+    "spicy beef chili can",
+    "tinned chili con carne",
+    "beef chili with beans",
+    "canned chili"
+  ],
+  "fnri_R040": [
+    "canned chicken stew",
+    "tinned chicken stew",
+    "chicken stew in can",
+    "canned stewed chicken",
+    "chicken casserole canned",
+    "chicken with vegetables canned",
+    "canned chicken dish",
+    "chicken stew tin"
+  ],
+  "fnri_R041": [
+    "corned beef hash canned",
+    "canned corned beef hash",
+    "corned beef and potato hash",
+    "hash canned",
+    "corned beef hash tin",
+    "tinned corned beef hash",
+    "cornsilog base",
+    "canned hash"
+  ],
+  "fnri_R042": [
+    "pato tim canned",
+    "canned duck pato tim",
+    "braised duck canned",
+    "duck in mushroom sauce canned",
+    "tinned pato tim",
+    "chinese braised duck canned",
+    "canned duck dish",
+    "pato tim lata",
+    "duck stew canned"
+  ],
+  "fnri_R045": [
+    "meatball quail egg sweet sour canned",
+    "sweet and sour meatballs canned",
+    "canned meatball with quail egg",
+    "sweet sour meatballs can",
+    "meatball sweet sour sauce canned",
+    "tinned meatballs sweet sour",
+    "canned sweet sour meatball",
+    "meatballs with quail eggs canned"
+  ],
+  "fnri_R047": [
+    "pork chicken adobo canned",
+    "canned adobo pork and chicken",
+    "mixed adobo canned",
+    "lata adobo pork chicken",
+    "canned mixed adobo",
+    "tinned pork chicken adobo",
+    "adobo mix canned",
+    "chicken pork adobo lata",
+    "canned adobo mix"
+  ],
+  "fnri_R050": [
+    "canned pork adobo",
+    "adobong baboy canned",
+    "lata pork adobo",
+    "tinned pork adobo",
+    "pork adobo lata",
+    "canned adobo baboy",
+    "adobo sa lata",
+    "canned filipino pork adobo"
+  ],
+  "fnri_R051": [
+    "pork adobo with egg canned",
+    "canned adobo with egg",
+    "adobong baboy with egg lata",
+    "pork adobo egg canned",
+    "tinned pork adobo with egg",
+    "canned adobo may itlog",
+    "adobo with boiled egg canned",
+    "pork egg adobo lata"
+  ],
+  "fnri_R052": [
+    "canned pork afritada",
+    "afritada lata",
+    "tinned pork afritada",
+    "pork afritada canned",
+    "canned afritada baboy",
+    "filipino pork tomato stew canned",
+    "afritadang baboy lata",
+    "canned pork in tomato sauce afritada"
+  ],
+  "fnri_R053": [
+    "dinuguan canned",
+    "pork blood stew canned",
+    "canned dinuguan",
+    "blood stew canned",
+    "dinuguan lata",
+    "pork dinuguan canned",
+    "canned pork blood dish",
+    "tinned blood stew",
+    "dinuguan baboy canned"
+  ],
+  "fnri_R054": [
+    "pork humba canned",
+    "humba lata",
+    "canned humba",
+    "tinned pork humba",
+    "humba baboy canned",
+    "canned sweet braised pork",
+    "pork humba visayan canned",
+    "braised pork humba canned",
+    "humba canned"
+  ],
+  "fnri_R055": [
+    "pork leg mushroom sauce canned",
+    "canned pata with mushroom",
+    "pata mushroom sauce lata",
+    "tinned pork leg mushroom",
+    "canned pata mushroom gravy",
+    "pork leg mushroom canned",
+    "canned humba pata mushroom",
+    "pork pata mushroom lata"
+  ],
+  "fnri_R056": [
+    "pork leg mushroom chestnut canned",
+    "canned pata with mushroom and chestnut",
+    "tinned pork leg chestnut mushroom",
+    "pata chestnut mushroom lata",
+    "canned pork leg with chestnut",
+    "pork leg chestnut canned",
+    "canned pata mushroom chestnuts",
+    "pork pata chestnuts canned"
+  ],
+  "fnri_R057": [
+    "pork leg paksiw canned",
+    "paksiw na pata lata",
+    "canned paksiw pata",
+    "tinned pork leg paksiw",
+    "paksiw pata canned",
+    "canned pata paksiw",
+    "pork pata vinegar stew canned",
+    "paksiw lata pork leg"
+  ],
+  "fnri_R058": [
+    "pork pastel canned",
+    "canned pastel baboy",
+    "tinned pork pastel",
+    "filipino pork pastel canned",
+    "pork pie pastel canned",
+    "canned pork in pastry filling",
+    "pastel de puerco canned",
+    "canned filipino pork pastel"
+  ],
+  "fnri_R059": [
+    "pork with black beans canned",
+    "canned pork black beans",
+    "pork taosi canned",
+    "canned pork in black bean sauce",
+    "tinned pork black beans",
+    "pork black bean sauce canned",
+    "canned pork with tausi",
+    "pork tausi lata"
+  ],
+  "fnri_R060": [
+    "roasted pork paksiw canned",
+    "paksiw na lechon canned",
+    "canned lechon paksiw",
+    "tinned roast pork paksiw",
+    "lechon paksiw lata",
+    "canned paksiw lechon",
+    "leftover lechon paksiw canned",
+    "paksiw baboy roasted lata"
+  ],
+  "fnri_R061": [
+    "roast beef hash canned",
+    "canned roast beef hash",
+    "tinned roast beef hash",
+    "roast beef and potato hash",
+    "canned beef hash",
+    "roast beef hash tin",
+    "canned roasted beef hash",
+    "beef potato hash canned"
+  ],
+  "fnri_R062": [
+    "beef spring roll uncooked",
+    "beef lumpia uncooked",
+    "frozen beef lumpia",
+    "beef lumpia shanghai raw",
+    "uncooked beef egg roll",
+    "raw beef spring roll",
+    "beef lumpia frozen",
+    "beef lumpia wrapper uncooked"
+  ],
+  "fnri_R063": [
+    "chicken spring roll uncooked",
+    "chicken lumpia frozen",
+    "uncooked chicken lumpia",
+    "raw chicken spring roll",
+    "frozen chicken egg roll",
+    "chicken lumpia uncooked",
+    "chicken egg roll frozen",
+    "raw chicken lumpia"
+  ],
+  "fnri_R064": [
+    "lumpia shanghai uncooked",
+    "frozen lumpia shanghai",
+    "pork lumpia shanghai raw",
+    "uncooked shanghai lumpia",
+    "raw lumpia shanghai",
+    "lumpia shanghai frozen",
+    "shanghai spring roll frozen",
+    "lumpia frozen uncooked"
+  ],
+  "fnri_R065": [
+    "instant chicken noodle broth",
+    "chicken noodle instant soup",
+    "chicken broth with noodles instant",
+    "instant chicken soup noodles",
+    "chicken noodle pack",
+    "instant chicken noodle",
+    "chicken soup instant noodle broth",
+    "instant chicken broth noodle"
+  ],
+  "fnri_R066": [
+    "bean soup with bacon canned",
+    "canned beans and bacon soup",
+    "bacon bean soup canned",
+    "tinned bean bacon soup",
+    "canned bean soup bacon",
+    "beans with bacon soup can",
+    "condensed bean bacon soup",
+    "bean and bacon canned soup"
+  ],
+  "fnri_R067": [
+    "canned beef vegetable soup",
+    "beef and veggie soup canned",
+    "tinned beef veg soup",
+    "canned beef soup with vegetables",
+    "beef vegetable soup can",
+    "canned vegetable beef soup",
+    "beef veggie canned soup",
+    "beef soup with veggies canned"
+  ],
+  "fnri_R068": [
+    "bird's nest soup canned",
+    "nido soup canned",
+    "canned birds nest soup",
+    "tinned bird nest soup",
+    "swiftlet nest soup canned",
+    "canned nido soup",
+    "bird nest soup condensed",
+    "chinese bird nest soup canned"
+  ],
+  "fnri_R069": [
+    "chicken asparagus soup canned",
+    "canned chicken and asparagus soup",
+    "tinned chicken asparagus soup",
+    "chicken soup with asparagus canned",
+    "canned asparagus chicken soup",
+    "chicken asparagus canned soup",
+    "cream chicken asparagus soup can",
+    "canned chicken asparagus"
+  ],
+  "fnri_R070": [
+    "canned chicken vegetable soup",
+    "chicken veggie soup canned",
+    "tinned chicken veg soup",
+    "chicken and vegetables soup can",
+    "canned chicken soup with veggies",
+    "chicken veg soup canned",
+    "tinned chicken vegetable soup",
+    "canned chicken and veggie soup"
+  ],
+  "fnri_R071": [
+    "condensed chicken vegetable soup canned",
+    "canned condensed chicken veg soup",
+    "chicken veg condensed soup",
+    "tinned condensed chicken vegetable soup",
+    "chicken vegetable soup condensed can",
+    "condensed canned chicken veggie soup",
+    "condensed chicken soup with vegetables",
+    "canned chicken veg condensed"
+  ],
+  "fnri_R072": [
+    "canned chicken noodle soup",
+    "chicken noodle soup canned",
+    "tinned chicken noodle soup",
+    "chicken soup with noodles canned",
+    "chicken noodle can",
+    "canned chicken noodle",
+    "chicken noodle in can",
+    "soup chicken noodle canned"
+  ],
+  "fnri_R073": [
+    "corn potage canned",
+    "canned corn soup",
+    "cream of corn soup canned",
+    "corn chowder canned",
+    "tinned corn potage",
+    "canned creamy corn soup",
+    "corn potage condensed",
+    "sweet corn soup canned"
+  ],
+  "fnri_R074": [
+    "cream of asparagus soup canned",
+    "canned cream asparagus soup",
+    "asparagus cream soup condensed",
+    "tinned cream of asparagus",
+    "creamy asparagus soup canned",
+    "condensed asparagus soup canned",
+    "canned asparagus cream soup",
+    "cream asparagus condensed can"
+  ],
+  "fnri_R075": [
+    "cream of chicken soup canned",
+    "canned cream of chicken",
+    "cream chicken soup condensed canned",
+    "tinned cream of chicken soup",
+    "condensed cream chicken soup",
+    "creamy chicken soup canned",
+    "canned cream chicken condensed",
+    "cream of chicken condensed can"
+  ],
+  "fnri_R076": [
+    "cream of mushroom soup canned",
+    "canned cream of mushroom",
+    "mushroom cream soup canned",
+    "tinned cream of mushroom",
+    "creamy mushroom soup canned",
+    "condensed mushroom soup",
+    "canned mushroom soup",
+    "mushroom soup canned"
+  ],
+  "fnri_R077": [
+    "monggo soup with shrimp",
+    "mung bean soup with shrimp",
+    "ginisang monggo with shrimp",
+    "monggo guisado shrimp",
+    "munggo soup shrimp",
+    "cooked mung bean shrimp soup",
+    "monggo with hipon",
+    "mungbean shrimp soup cooked"
+  ],
+  "fnri_R078": [
+    "noodle beef soup canned",
+    "canned beef noodle soup",
+    "beef noodle soup condensed canned",
+    "tinned noodles and beef soup",
+    "canned noodle and beef condensed",
+    "condensed beef noodle soup can",
+    "beef soup noodles canned",
+    "canned beef noodle condensed"
+  ],
+  "fnri_R079": [
+    "pancit molo soup canned",
+    "pansit molo lata",
+    "canned molo soup",
+    "filipino wonton soup canned",
+    "molo soup condensed canned",
+    "tinned pancit molo",
+    "canned pansit molo",
+    "molo dumpling soup canned"
+  ],
+  "fnri_R081": [
+    "sotanghon soup condensed",
+    "canned sotanghon soup",
+    "glass noodle soup canned",
+    "sotanghon guisado soup canned",
+    "tinned sotanghon soup",
+    "cellophane noodle soup canned",
+    "sotanghon condensed canned",
+    "filipino glass noodle soup canned"
+  ],
+  "fnri_R082": [
+    "turkey noodle soup canned",
+    "canned turkey noodle soup",
+    "tinned turkey noodle soup",
+    "turkey soup with noodles canned",
+    "turkey noodle can",
+    "canned turkey soup noodle",
+    "turkey and noodle soup canned",
+    "tinned turkey soup"
+  ],
+  "fnri_R083": [
+    "alphabet vegetable soup canned",
+    "veggie alphabet soup canned",
+    "canned alphabet soup",
+    "canned vegetable alphabet soup",
+    "tinned alphabet soup",
+    "alphabet soup vegetables can",
+    "canned veggie letter soup",
+    "alphabet pasta vegetable soup canned"
+  ],
+  "fnri_R084": [
+    "canned vegetable soup condensed",
+    "condensed veg soup canned",
+    "tinned vegetable soup condensed",
+    "canned veggie soup condensed",
+    "vegetable soup condensed can",
+    "condensed canned veggie soup",
+    "canned vegetable soup",
+    "condensed vegetable soup tin"
+  ],
+  "fnri_R085": [
+    "vermicelli chicken soup canned",
+    "canned chicken vermicelli soup",
+    "tinned chicken vermicelli soup condensed",
+    "condensed chicken vermicelli soup",
+    "chicken thin noodle soup canned",
+    "canned vermicelli chicken condensed",
+    "chicken soup vermicelli can",
+    "condensed vermicelli chicken canned"
+  ],
+  "fnri_R086": [
+    "pork and beans canned",
+    "canned pork and beans",
+    "beans with pork canned",
+    "pork beans lata",
+    "canned baked beans with pork",
+    "tinned pork and beans",
+    "pork beans can",
+    "filipino pork and beans canned"
+  ],
+  "fnri_R088": [
+    "hotcake with milk",
+    "pancake with powdered milk",
+    "hotcakes prepared",
+    "pancake mix prepared",
+    "filipino hotcake",
+    "hotcake breakfast",
+    "pancake with milk powder",
+    "fluffy pancake prepared"
+  ],
+  "fnri_R089": [
+    "polvoron with milk",
+    "polvoron prepared",
+    "filipino polvoron candy",
+    "powdered milk polvoron",
+    "polvoron sweet",
+    "filipino shortbread candy",
+    "polboron",
+    "milk polvoron filipino"
+  ],
+  "fnri_R090": [
+    "gelatin drink with milk",
+    "jelly drink with powdered milk",
+    "gulaman drink",
+    "gelatin milk drink",
+    "gulaman with milk powder",
+    "jelly milk drink prepared",
+    "gelatin powder drink",
+    "gulaman drink prepared"
+  ],
+  "fnri_R091": [
+    "ice candy with milk",
+    "homemade ice candy",
+    "ice candy prepared",
+    "filipino ice candy",
+    "frozen ice candy milk",
+    "ice candy sweet frozen treat",
+    "plastic bag ice candy",
+    "milk ice candy prepared"
+  ],
+  "fnri_R092": [
+    "yacon shake",
+    "yacon smoothie",
+    "yacon drink prepared",
+    "yacon juice shake",
+    "yacon healthy shake",
+    "yacon blended drink",
+    "yacon fruit shake",
+    "yacon milkshake"
+  ],
+  "fnri_R093": [
+    "carbonara with milk",
+    "filipino carbonara prepared",
+    "creamy pasta carbonara",
+    "carbonara with powdered milk",
+    "white sauce pasta carbonara",
+    "pasta carbonara prepared",
+    "filipino style carbonara",
+    "creamy carbonara prepared"
+  ],
+  "fnri_R094": [
+    "fruit salad with yacon",
+    "yacon fruit salad",
+    "filipino fruit salad yacon",
+    "fresh fruit salad with yacon",
+    "fruit salad healthy yacon",
+    "mixed fruit salad yacon",
+    "yacon mixed fruit salad",
+    "fruit salad prepared yacon"
+  ],
+  "fnri_R095": [
+    "macaroni salad with yacon",
+    "yacon macaroni salad",
+    "filipino macaroni salad yacon",
+    "pasta salad with yacon",
+    "macaroni salad prepared yacon",
+    "cold pasta salad yacon",
+    "yacon pasta salad",
+    "macaroni salad healthy"
+  ],
+  "fnri_R096": [
+    "waldorf salad with yacon",
+    "yacon waldorf salad",
+    "apple walnut salad with yacon",
+    "waldorf salad prepared",
+    "yacon apple walnut salad",
+    "classic waldorf yacon",
+    "waldorf salad healthy version",
+    "yacon waldorf"
+  ],
+  "fnri_R097": [
+    "anchovy omelet with milk",
+    "dilis omelet",
+    "fried anchovy egg omelet",
+    "anchovy fry omelette",
+    "dilis omelet prepared",
+    "anchovies egg omelette",
+    "filipino anchovy omelette",
+    "dilis itlog omelet"
+  ],
+  "fnri_R098": [
+    "red snapper frittata with milk",
+    "maya maya frittata",
+    "red snapper egg frittata",
+    "fish frittata prepared",
+    "snapper egg dish",
+    "red snapper omelette",
+    "baked fish egg frittata",
+    "red snapper egg bake"
+  ],
+  "fnri_R099": [
+    "chopsuey with yacon",
+    "chop suey yacon",
+    "filipino chopsuey prepared",
+    "vegetable chopsuey yacon",
+    "chop suey with vegetables yacon",
+    "stir fry vegetables yacon",
+    "chopsuey guisado yacon",
+    "filipino chop suey yacon"
+  ],
+  "fnri_R100": [
+    "wonton soup with milk",
+    "filipino wonton soup prepared",
+    "wonton soup homemade",
+    "dumpling soup prepared",
+    "wonton broth prepared",
+    "chinese dumpling soup filipino",
+    "pork wonton soup prepared",
+    "wonton noodle soup prepared"
+  ],
+  "fnri_R101": [
+    "pork wonton with milk",
+    "pork dumpling prepared",
+    "filipino pork wonton",
+    "pork wonton filling prepared",
+    "pork wonton dumpling",
+    "pork siomai wonton",
+    "wonton baboy prepared",
+    "pork filled wonton prepared"
+  ],
+  "fnri_R102": [
+    "scrambled eggs with milk",
+    "scrambled egg prepared",
+    "eggs scrambled with milk",
+    "fluffy scrambled eggs",
+    "scrambled itlog with milk",
+    "scrambled egg with powdered milk",
+    "soft scrambled eggs prepared",
+    "scrambled eggs milk powder"
+  ],
+  "fnri_R103": [
+    "shanghai pork roll with yacon",
+    "lumpia shanghai with yacon",
+    "pork spring roll yacon",
+    "shanghai roll yacon prepared",
+    "fried pork roll yacon",
+    "lumpia shanghai yacon version",
+    "pork lumpia yacon",
+    "shanghai roll prepared yacon"
+  ],
+  "fnri_R104": [
+    "fried rice with yacon",
+    "sinangag with yacon",
+    "yacon fried rice",
+    "garlic fried rice yacon",
+    "fried rice mix yacon prepared",
+    "yacon sinangag",
+    "stir fried rice yacon",
+    "fried rice yacon mix"
+  ],
+  "fnri_R105": [
+    "vegetable stir fry with quail eggs yacon",
+    "chopsuey with quail eggs yacon",
+    "stir fried vegetables quail egg yacon",
+    "veggies quail egg stir fry yacon",
+    "mixed vegetable quail egg dish yacon",
+    "veggie stir fry yacon quail egg",
+    "guisadong gulay quail egg yacon",
+    "vegetable quail egg saute yacon"
+  ],
+  "fnri_R106": [
+    "vegetable soup with yacon",
+    "yacon vegetable soup",
+    "gulay soup yacon",
+    "filipino veg soup yacon",
+    "mixed vegetable soup yacon",
+    "healthy vegetable soup yacon",
+    "veggie soup prepared yacon",
+    "yacon gulay soup"
+  ],
+  "fnri_R107": [
+    "vegetable spring roll with yacon",
+    "fresh lumpia yacon",
+    "lumpiang sariwa yacon",
+    "fresh veggie spring roll yacon",
+    "lumpiang gulay yacon",
+    "fresh spring roll yacon",
+    "vegetable lumpia yacon",
+    "fresh lumpiang yacon"
+  ],
+  "fnri_R108": [
+    "pork ball wrapped",
+    "wrapped pork meatball",
+    "pork dumpling ball",
+    "pork ball in wrapper",
+    "pork meat ball wrapped",
+    "filipino pork ball wrapped",
+    "wrapped ground pork ball",
+    "pork balls dim sum"
+  ],
+  "fnri_S001": [
+    "baby food beef vegetables",
+    "strained beef veg baby food",
+    "infant beef veggie puree",
+    "baby beef and veg strained",
+    "beef veg baby puree",
+    "infant food beef vegetables",
+    "strained baby beef",
+    "beef vegetable puree baby"
+  ],
+  "fnri_S002": [
+    "baby food beef egg noodle vegetable",
+    "strained beef noodle baby food",
+    "infant beef noodle veggie puree",
+    "baby beef noodle strained",
+    "beef egg noodle baby puree",
+    "infant food beef noodle veg",
+    "strained baby beef noodles",
+    "beef noodle veg baby jar"
+  ],
+  "fnri_S003": [
+    "baby food carrot",
+    "strained carrot baby food",
+    "infant carrot puree",
+    "baby carrot puree",
+    "mashed carrot baby food",
+    "carrot baby jar",
+    "infant carrot strained",
+    "strained baby carrots"
+  ],
+  "fnri_S004": [
+    "baby cereal applesauce banana",
+    "infant cereal apple banana",
+    "strained baby cereal fruit",
+    "apple banana cereal baby food",
+    "baby food apple banana cereal",
+    "infant applesauce banana cereal",
+    "baby porridge apple banana",
+    "cereal fruit baby strained"
+  ],
+  "fnri_S005": [
+    "baby food chicken noodle",
+    "strained chicken noodle baby",
+    "infant chicken noodle puree",
+    "baby chicken noodle jar",
+    "chicken noodle infant food",
+    "strained baby chicken noodle",
+    "baby chicken noodle strained",
+    "infant food chicken noodle"
+  ],
+  "fnri_S006": [
+    "baby food chicken vegetables",
+    "strained chicken veg baby food",
+    "infant chicken vegetable puree",
+    "baby chicken veg strained",
+    "chicken veggie baby puree",
+    "infant food chicken vegetables",
+    "strained baby chicken",
+    "chicken vegetable baby jar"
+  ],
+  "fnri_S007": [
+    "baby food chicken asparagus",
+    "strained chicken asparagus infant",
+    "infant chicken asparagus puree",
+    "baby chicken asparagus strained",
+    "chicken asparagus baby jar",
+    "infant food chicken asparagus",
+    "strained baby chicken asparagus",
+    "chicken asparagus puree baby"
+  ],
+  "fnri_S008": [
+    "baby food cream of chicken soup",
+    "infant creamy chicken soup strained",
+    "strained cream chicken baby",
+    "baby cream chicken soup jar",
+    "infant cream chicken strained",
+    "baby chicken soup creamy strained",
+    "strained baby cream chicken",
+    "cream chicken soup infant food"
+  ],
+  "fnri_S009": [
+    "baby food chocolate custard",
+    "infant chocolate pudding strained",
+    "baby choco custard pudding",
+    "strained chocolate custard baby",
+    "baby custard chocolate jar",
+    "infant choco pudding baby",
+    "chocolate custard baby food",
+    "baby chocolate pudding strained"
+  ],
+  "fnri_S010": [
+    "baby food vanilla custard",
+    "infant vanilla pudding strained",
+    "baby vanilla custard pudding",
+    "strained vanilla custard baby",
+    "baby custard vanilla jar",
+    "infant vanilla pudding baby",
+    "vanilla custard baby food",
+    "baby vanilla pudding strained"
+  ],
+  "fnri_S011": [
+    "baby food fruit tapioca",
+    "infant fruit tapioca strained",
+    "baby fruit with tapioca puree",
+    "strained fruit tapioca baby",
+    "baby tapioca fruit jar",
+    "infant food fruit tapioca",
+    "tapioca fruit baby puree",
+    "strained baby fruit tapioca"
+  ],
+  "fnri_S013": [
+    "baby food mango papaya",
+    "infant mango papaya puree",
+    "strained mango papaya baby",
+    "baby mango papaya jar",
+    "mango papaya baby food strained",
+    "infant mango papaya strained",
+    "baby mango papaya puree",
+    "strained mango papaya infant"
+  ],
+  "fnri_S014": [
+    "baby food mango",
+    "infant mango puree",
+    "strained mango baby",
+    "baby mango jar",
+    "mango baby food puree",
+    "strained baby mango",
+    "pureed mango baby food",
+    "infant mango strained"
+  ],
+  "fnri_S015": [
+    "baby food mixed fruits",
+    "infant mixed fruit puree",
+    "strained mixed fruit baby",
+    "baby mixed fruits jar",
+    "mixed fruit baby food puree",
+    "strained baby mixed fruits",
+    "infant mixed fruits puree",
+    "baby fruit mix strained"
+  ],
+  "fnri_S016": [
+    "baby food mixed vegetables",
+    "infant mixed veg puree",
+    "strained mixed veg baby",
+    "baby mixed veggies jar",
+    "mixed vegetable baby food puree",
+    "strained baby mixed vegetables",
+    "infant mixed vegetables puree",
+    "baby veggie mix strained"
+  ],
+  "fnri_S017": [
+    "baby food peach",
+    "infant peach puree",
+    "strained peach baby",
+    "baby peach jar",
+    "peach baby food puree",
+    "strained baby peach",
+    "pureed peach baby food",
+    "infant peach strained"
+  ],
+  "fnri_S018": [
+    "baby food rice chicken",
+    "infant rice and chicken puree",
+    "strained rice chicken baby",
+    "baby rice with chicken jar",
+    "rice chicken baby food puree",
+    "strained baby rice chicken",
+    "infant rice chicken strained",
+    "baby chicken rice puree"
+  ],
+  "fnri_S019": [
+    "baby food squash",
+    "infant squash puree",
+    "strained squash baby",
+    "baby squash jar",
+    "kalabasa baby food",
+    "pureed squash baby food",
+    "strained baby squash",
+    "infant squash strained"
+  ],
+  "fnri_S021": [
+    "baby food vegetable liver bacon",
+    "infant veg liver bacon strained",
+    "strained liver bacon veg baby",
+    "baby liver bacon veg jar",
+    "liver bacon vegetable baby food",
+    "strained baby liver veg",
+    "infant liver veg bacon puree",
+    "baby veg liver bacon strained"
+  ],
+  "fnri_T001": [
+    "azolla water fern",
+    "aquatic fern azolla",
+    "duckweed fern azolla",
+    "floating fern azolla",
+    "mosquito fern",
+    "water velvet fern",
+    "azolla plant",
+    "pinnate azolla"
+  ],
+  "fnri_T002": [
+    "baking powder leavening",
+    "baking powder agent",
+    "rising powder",
+    "leavening powder",
+    "baking agent powder",
+    "cake rising powder",
+    "powder leavening agent",
+    "baking rise powder"
+  ],
+  "fnri_T004": [
+    "agar agar bar",
+    "gelatin bar seaweed",
+    "ceylon moss bar",
+    "seaweed agar bar",
+    "gulaman bar",
+    "agar bar filipino",
+    "seaweed jelly bar",
+    "agar agar solid bar"
+  ],
+  "fnri_T005": [
+    "coffee creamer",
+    "non dairy creamer",
+    "powdered coffee creamer",
+    "whitener coffee",
+    "creamer for coffee",
+    "coffee whitener",
+    "non-dairy whitener",
+    "powdered creamer"
+  ],
+  "fnri_T006": [
+    "chlorella supplement",
+    "green algae chlorella",
+    "chlorella powder",
+    "chlorella health food",
+    "microalgae chlorella",
+    "chlorella tablet",
+    "green chlorella supplement",
+    "chlorella food"
+  ],
+  "fnri_T007": [
+    "gelatin powder",
+    "unflavored gelatin",
+    "jelly powder plain",
+    "gelatin unflavored powder",
+    "knox gelatin",
+    "plain gelatin powder",
+    "setting powder gelatin",
+    "gulaman powder unflavored"
+  ],
+  "fnri_T008": [
+    "rice washing water",
+    "hugas bigas",
+    "rice wash water",
+    "water from washing rice",
+    "bigas washing water",
+    "rice rinse water",
+    "water used washing rice",
+    "rice starch water"
+  ],
+  "fnri_T009": [
+    "active dry yeast",
+    "baker's yeast dry",
+    "bread yeast",
+    "dry yeast baking",
+    "yeast for baking",
+    "dried bakers yeast",
+    "bread making yeast",
+    "active yeast dry"
+  ],
+  "fnri_M015": [
+    "sweetened grated coconut",
+    "sweet coconut shreds",
+    "sweetened coconut flakes",
+    "sweet niyog grated",
+    "grated coconut sweetened",
+    "coconut grated with sugar",
+    "sweetened coconut meat grated",
+    "niyog sweetened grated"
+  ],
+  "fnri_D304": [
+    "luya",
+    "fresh ginger",
+    "ginger root",
+    "ginger spice",
+    "grated ginger",
+    "raw ginger",
+    "ginger knob",
+    "ginger rhizome"
+  ],
+  "fnri_D305": [
+    "luyang dilaw",
+    "turmeric root",
+    "fresh turmeric",
+    "yellow ginger",
+    "turmeric spice",
+    "turmeric powder",
+    "kunyit",
+    "turmeric rhizome"
+  ],
+  "fnri_H023": [
+    "sea hare eggs",
+    "kulafu eggs",
+    "marine snail egg mass",
+    "sea hare egg mass",
+    "kulafu fish eggs",
+    "sea slug eggs",
+    "taba ng dagat sea hare",
+    "sea hare roe"
+  ],
+  "fnri_Q062": [
+    "plain tea",
+    "unsweetened tea",
+    "brewed tea no sugar",
+    "black tea no sugar",
+    "tea plain water",
+    "tea without sugar",
+    "sugarless tea",
+    "hot tea plain"
+  ],
+  "fnri_T012": [
+    "edible locust",
+    "grasshopper insect food",
+    "locust insect",
+    "fried locust",
+    "roasted locust",
+    "edible grasshopper",
+    "insect protein locust",
+    "locust snack"
+  ]
+}

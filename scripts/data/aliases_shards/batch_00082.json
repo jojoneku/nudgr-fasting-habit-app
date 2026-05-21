@@ -1,0 +1,773 @@
+{
+  "usda_170548": [
+    "boiled turnips",
+    "cooked turnips",
+    "frozen turnips cooked",
+    "salted turnips",
+    "turnip side dish",
+    "steamed turnips",
+    "turnips boiled",
+    "soft turnips"
+  ],
+  "usda_170549": [
+    "winter melon cooked",
+    "dong gua",
+    "chinese melon boiled",
+    "wax gourd cooked",
+    "white gourd",
+    "boiled winter melon",
+    "ash gourd cooked",
+    "chinese preserving melon boiled",
+    "salted wax gourd"
+  ],
+  "usda_170550": [
+    "winged beans cooked",
+    "boiled winged beans",
+    "four-angled bean",
+    "goa bean cooked",
+    "princess bean boiled",
+    "sigarilyas cooked",
+    "boiled sigarilyas",
+    "winged bean seeds boiled"
+  ],
+  "usda_170551": [
+    "boiled yam",
+    "baked yam",
+    "cooked yam",
+    "steamed yam",
+    "soft yam",
+    "yam side dish",
+    "boiled purple yam",
+    "ube boiled",
+    "cooked ube"
+  ],
+  "usda_170552": [
+    "breadnut seeds raw",
+    "maya nut raw",
+    "ramon seed",
+    "raw breadnut",
+    "fresh breadnut seeds",
+    "chataigne seeds raw",
+    "breadnut kernels"
+  ],
+  "usda_170553": [
+    "dried breadnut seeds",
+    "breadnut seeds dried",
+    "dried maya nut",
+    "dehydrated breadnut",
+    "dried chataigne seeds",
+    "breadnut kernels dried"
+  ],
+  "usda_170554": [
+    "chia seeds",
+    "dried chia",
+    "chia",
+    "salvia seeds",
+    "chia seed snack",
+    "raw chia seeds",
+    "chia for smoothie",
+    "chia pudding seeds"
+  ],
+  "usda_170555": [
+    "cottonseed flour",
+    "defatted cottonseed flour",
+    "cottonseed meal flour",
+    "cottonseed protein flour",
+    "low fat cottonseed flour"
+  ],
+  "usda_170556": [
+    "pumpkin seeds raw",
+    "pepitas raw",
+    "squash seeds dried",
+    "raw pepitas",
+    "dried pumpkin kernels",
+    "green pumpkin seeds",
+    "unroasted pepitas",
+    "squash kernels"
+  ],
+  "usda_170557": [
+    "roasted pepitas",
+    "roasted pumpkin seeds",
+    "toasted squash seeds",
+    "pepitas roasted",
+    "unsalted pepitas roasted",
+    "roasted squash kernels",
+    "dry roasted pumpkin seeds",
+    "toasted pumpkin kernels"
+  ],
+  "usda_170558": [
+    "safflower seeds",
+    "dried safflower kernels",
+    "safflower seed kernels",
+    "raw safflower seeds",
+    "safflower kernels dried"
+  ],
+  "usda_170559": [
+    "safflower meal",
+    "defatted safflower meal",
+    "safflower seed meal",
+    "safflower protein meal",
+    "partially defatted safflower"
+  ],
+  "usda_170560": [
+    "sesame flour",
+    "low fat sesame flour",
+    "sesame seed flour",
+    "defatted sesame flour",
+    "tahini flour",
+    "sesame protein flour"
+  ],
+  "usda_170561": [
+    "sesame meal",
+    "defatted sesame meal",
+    "sesame seed meal",
+    "ground sesame meal",
+    "sesame protein meal",
+    "partially defatted sesame"
+  ],
+  "usda_170562": [
+    "sunflower seeds raw",
+    "sunflower kernels dried",
+    "raw sunflower seeds",
+    "dried sunflower kernels",
+    "unroasted sunflower seeds",
+    "sunflower seed snack",
+    "plain sunflower seeds"
+  ],
+  "usda_170563": [
+    "dry roasted sunflower seeds",
+    "roasted sunflower seeds unsalted",
+    "toasted sunflower kernels",
+    "dry roasted sunflower kernels",
+    "unsalted roasted sunflower seeds",
+    "sunflower seeds no salt"
+  ],
+  "usda_170564": [
+    "oil roasted sunflower seeds",
+    "sunflower seeds oil roasted",
+    "fried sunflower kernels",
+    "oil toasted sunflower seeds",
+    "sunflower kernels oil roasted unsalted"
+  ],
+  "usda_170565": [
+    "dried acorns",
+    "acorn nuts dried",
+    "wild acorns",
+    "dried oak nuts",
+    "dehydrated acorns",
+    "acorn snack"
+  ],
+  "usda_170566": [
+    "acorn flour",
+    "oak nut flour",
+    "acorn meal",
+    "full fat acorn flour",
+    "acorn powder"
+  ],
+  "usda_170567": [
+    "raw almonds",
+    "whole almonds",
+    "plain almonds",
+    "natural almonds",
+    "almonds unsalted",
+    "almond nuts",
+    "almonds raw"
+  ],
+  "usda_170568": [
+    "blanched almonds",
+    "skinless almonds",
+    "peeled almonds",
+    "almond without skin",
+    "white almonds",
+    "blanched almond nuts"
+  ],
+  "usda_170569": [
+    "brazil nuts",
+    "brazilnut",
+    "brazil nut raw",
+    "amazon nut",
+    "cream nut",
+    "para nut",
+    "dried brazil nuts",
+    "unblanched brazil nuts"
+  ],
+  "usda_170570": [
+    "butternuts",
+    "white walnut",
+    "dried butternuts",
+    "butternut seeds",
+    "wild butternut",
+    "oilnut"
+  ],
+  "usda_170571": [
+    "dry roasted cashews unsalted",
+    "roasted cashews no salt",
+    "dry roasted cashew nuts",
+    "toasted cashews unsalted",
+    "cashews dry roasted",
+    "plain roasted cashews"
+  ],
+  "usda_170572": [
+    "oil roasted cashews unsalted",
+    "cashews oil roasted",
+    "fried cashews unsalted",
+    "cashew nuts oil roasted",
+    "oil toasted cashews no salt"
+  ],
+  "usda_170573": [
+    "roasted chestnuts chinese",
+    "chinese chestnuts roasted",
+    "roasted chinese chestnut",
+    "asian chestnuts roasted",
+    "hot roasted chestnuts"
+  ],
+  "usda_170574": [
+    "raw chestnuts",
+    "fresh chestnuts unpeeled",
+    "european chestnuts raw",
+    "whole chestnuts raw",
+    "chestnuts with skin"
+  ],
+  "usda_170575": [
+    "peeled chestnuts raw",
+    "raw chestnuts peeled",
+    "fresh peeled chestnuts",
+    "european chestnuts peeled",
+    "skinless chestnuts raw"
+  ],
+  "usda_170576": [
+    "dried chestnuts",
+    "dehydrated chestnuts unpeeled",
+    "dried european chestnuts",
+    "chestnuts dried",
+    "chestnut with skin dried"
+  ],
+  "usda_170577": [
+    "sweetened coconut flakes",
+    "packaged coconut flakes",
+    "sweetened shredded coconut",
+    "desiccated coconut sweet",
+    "coconut flakes packaged",
+    "sweet dried coconut flakes",
+    "baking coconut flakes"
+  ],
+  "usda_170578": [
+    "canned coconut flakes",
+    "sweetened coconut flakes canned",
+    "canned shredded coconut",
+    "desiccated coconut canned sweet",
+    "coconut flakes in can"
+  ],
+  "usda_170579": [
+    "toasted coconut",
+    "toasted desiccated coconut",
+    "toasted shredded coconut",
+    "toasted dried coconut",
+    "coconut flakes toasted",
+    "browned coconut flakes"
+  ],
+  "usda_170580": [
+    "coconut cream raw",
+    "fresh coconut cream",
+    "raw coconut cream",
+    "gata raw",
+    "squeezed coconut cream",
+    "thick coconut cream fresh",
+    "pure coconut cream"
+  ],
+  "usda_170581": [
+    "hazelnuts",
+    "filberts",
+    "raw hazelnuts",
+    "whole hazelnuts",
+    "hazelnut nuts",
+    "plain filberts",
+    "natural hazelnuts"
+  ],
+  "usda_170582": [
+    "blanched hazelnuts",
+    "skinless hazelnuts",
+    "peeled hazelnuts",
+    "blanched filberts",
+    "hazelnut without skin"
+  ],
+  "usda_170583": [
+    "dry roasted hazelnuts",
+    "roasted hazelnuts unsalted",
+    "toasted hazelnuts no salt",
+    "dry roasted filberts",
+    "roasted filberts unsalted"
+  ],
+  "usda_170584": [
+    "ginkgo nuts raw",
+    "fresh ginkgo nuts",
+    "gingko nuts",
+    "ginkgo biloba nuts",
+    "raw ginkgo",
+    "white nuts ginkgo"
+  ],
+  "usda_170585": [
+    "mixed nuts no salt",
+    "dry roasted mixed nuts unsalted",
+    "mixed nuts with peanuts",
+    "assorted nuts dry roasted",
+    "trail mix nuts dry roasted",
+    "party mix nuts unsalted"
+  ],
+  "usda_170586": [
+    "mixed nuts salted",
+    "dry roasted mixed nuts salted",
+    "pistachio blend mixed nuts",
+    "assorted nuts with pistachios",
+    "mixed nut blend salted"
+  ],
+  "usda_170587": [
+    "oil roasted mixed nuts",
+    "mixed nuts oil roasted unsalted",
+    "assorted nuts oil roasted",
+    "fried mixed nuts unsalted",
+    "cocktail nuts oil roasted"
+  ],
+  "usda_170588": [
+    "mixed nuts no peanuts",
+    "oil roasted nuts no peanuts",
+    "fancy mixed nuts",
+    "assorted nuts without peanuts",
+    "premium mixed nuts oil roasted"
+  ],
+  "usda_170589": [
+    "oil roasted pecans",
+    "pecans oil roasted",
+    "fried pecans unsalted",
+    "roasted pecan nuts",
+    "toasted pecans no salt"
+  ],
+  "usda_170590": [
+    "pili nuts",
+    "dried pili nuts",
+    "philippine pili nuts",
+    "pili nut kernels",
+    "raw pili nuts dried",
+    "pili"
+  ],
+  "usda_170591": [
+    "pine nuts",
+    "pignoli",
+    "pine nut kernels",
+    "raw pine nuts",
+    "italian pine nuts",
+    "pinon nuts dried",
+    "pignolia nuts"
+  ],
+  "usda_170592": [
+    "pinyon nuts",
+    "pinon nuts",
+    "pine nuts pinyon",
+    "american pine nuts",
+    "southwest pine nuts",
+    "pinon pine seeds"
+  ],
+  "usda_170593": [
+    "glazed walnuts",
+    "candied walnuts",
+    "sweet walnuts",
+    "honey glazed walnuts",
+    "sugar coated walnuts",
+    "caramelized walnuts"
+  ],
+  "usda_170594": [
+    "roasted walnuts salted",
+    "dry roasted walnuts",
+    "salted walnuts roasted",
+    "toasted walnuts salted",
+    "seasoned roasted walnuts"
+  ],
+  "usda_170595": [
+    "roasted breadfruit seeds",
+    "breadfruit seeds roasted",
+    "toasted breadfruit seeds",
+    "rimas seeds roasted",
+    "breadfruit kernel roasted"
+  ],
+  "usda_170596": [
+    "roasted cottonseed kernels",
+    "cottonseed roasted",
+    "glandless cottonseed roasted",
+    "roasted cotton seeds"
+  ],
+  "usda_170597": [
+    "beef spleen",
+    "braised beef spleen",
+    "cooked beef spleen",
+    "beef organs spleen",
+    "beef offal spleen",
+    "spleen braised"
+  ],
+  "usda_170598": [
+    "beef tongue",
+    "lengua",
+    "braised beef tongue",
+    "cooked tongue",
+    "beef lengua",
+    "simmered beef tongue",
+    "slow cooked tongue",
+    "lengua beef"
+  ],
+  "usda_170599": [
+    "beef tripe",
+    "raw tripe",
+    "green tripe",
+    "beef stomach raw",
+    "callos tripe raw",
+    "raw beef honeycomb",
+    "uncooked tripe"
+  ],
+  "usda_170600": [
+    "sandwich steak",
+    "thin sliced beef",
+    "shaved beef raw",
+    "formed beef slices",
+    "deli beef steak sliced",
+    "chopped formed beef",
+    "philly steak meat raw"
+  ],
+  "usda_170601": [
+    "beef brisket lean",
+    "braised brisket lean",
+    "flat cut brisket cooked",
+    "lean brisket braised",
+    "brisket flat half cooked",
+    "slow cooked lean brisket"
+  ],
+  "usda_170602": [
+    "canned corned beef",
+    "corned beef can",
+    "carne norte",
+    "corned beef hash canned",
+    "tinned corned beef",
+    "cf canned",
+    "corned beef loaf"
+  ],
+  "usda_170603": [
+    "chuck steak lean",
+    "under blade steak raw",
+    "pot roast chuck raw",
+    "chuck roast lean raw",
+    "boneless chuck lean",
+    "select chuck steak"
+  ],
+  "usda_170604": [
+    "dried beef",
+    "chipped beef",
+    "beef jerky cured",
+    "cured dried beef",
+    "salt beef dried",
+    "sliced dried beef",
+    "chipped steak beef"
+  ],
+  "usda_170605": [
+    "denver steak cooked",
+    "grilled denver steak",
+    "chuck denver cut grilled",
+    "under blade center steak grilled",
+    "denver cut beef",
+    "grilled chuck steak denver"
+  ],
+  "usda_170606": [
+    "beef smoked sausage",
+    "smoked beef sausage",
+    "cooked beef sausage smoked",
+    "cured beef sausage",
+    "beef kielbasa",
+    "smoked beef link"
+  ],
+  "usda_170607": [
+    "smoked chopped beef",
+    "cured smoked beef",
+    "chopped beef smoked",
+    "beef deli smoked",
+    "smoked beef luncheon"
+  ],
+  "usda_170608": [
+    "denver steak raw",
+    "raw denver cut",
+    "chuck center steak raw",
+    "under blade denver steak raw",
+    "boneless denver steak choice raw"
+  ],
+  "usda_170609": [
+    "cooked beef lean and fat",
+    "mixed beef cuts cooked",
+    "beef retail cuts cooked",
+    "all grades beef cooked",
+    "general beef cooked lean fat"
+  ],
+  "usda_170610": [
+    "lean beef cooked select",
+    "cooked lean beef",
+    "select beef lean cooked",
+    "trimmed lean beef cooked",
+    "lean only beef select"
+  ],
+  "usda_170611": [
+    "whole brisket braised",
+    "beef brisket cooked",
+    "braised whole brisket",
+    "slow cooked brisket",
+    "brisket with fat braised",
+    "bbq brisket"
+  ],
+  "usda_170612": [
+    "lean whole brisket",
+    "braised lean brisket",
+    "whole brisket lean cooked",
+    "slow cooked lean brisket whole",
+    "trimmed brisket braised"
+  ],
+  "usda_170613": [
+    "flat brisket braised",
+    "brisket flat cooked",
+    "braised flat half brisket",
+    "flat cut brisket",
+    "beef brisket flat braised"
+  ],
+  "usda_170614": [
+    "chuck arm roast",
+    "arm pot roast beef",
+    "braised chuck arm",
+    "beef arm roast cooked",
+    "chuck arm steak braised select"
+  ],
+  "usda_170615": [
+    "chuck arm roast lean",
+    "lean arm pot roast",
+    "braised lean chuck arm choice",
+    "beef arm roast lean choice",
+    "choice arm roast lean"
+  ],
+  "usda_170616": [
+    "lean chuck arm roast select",
+    "select arm roast beef lean",
+    "chuck arm lean select braised",
+    "lean beef arm roast select"
+  ],
+  "usda_170617": [
+    "blade roast beef",
+    "chuck blade roast",
+    "beef blade roast braised",
+    "braised chuck blade",
+    "chuck blade steak cooked"
+  ],
+  "usda_170618": [
+    "under blade pot roast",
+    "chuck pot roast braised",
+    "beef pot roast chuck",
+    "braised chuck under blade",
+    "boneless pot roast chuck"
+  ],
+  "usda_170619": [
+    "beef rib roast",
+    "prime rib roasted",
+    "large end rib roast choice",
+    "beef ribs 6-9 roasted",
+    "rib roast with fat choice",
+    "prime rib cooked"
+  ],
+  "usda_170620": [
+    "beef rib roast select",
+    "rib roast select",
+    "large end rib select roasted",
+    "beef rib 6-9 select roasted",
+    "select prime rib roasted"
+  ],
+  "usda_170621": [
+    "lean rib roast",
+    "beef rib lean roasted",
+    "lean large end rib",
+    "rib roast lean all grades",
+    "trimmed rib roast lean"
+  ],
+  "usda_170622": [
+    "lean prime rib choice",
+    "rib roast lean choice",
+    "choice rib roast lean cooked",
+    "beef rib lean choice roasted",
+    "prime rib lean choice"
+  ],
+  "usda_170623": [
+    "beef rib broiled",
+    "small end rib steak",
+    "beef ribs 10-12 broiled",
+    "lean rib steak broiled",
+    "broiled beef rib all grades"
+  ],
+  "usda_170624": [
+    "beef rib small end choice broiled",
+    "choice beef rib broiled lean",
+    "rib steak choice broiled",
+    "beef rib 10-12 choice lean"
+  ],
+  "usda_170625": [
+    "select beef rib broiled lean",
+    "rib steak select broiled",
+    "lean beef rib select broiled",
+    "small end rib select lean"
+  ],
+  "usda_170626": [
+    "bottom round steak braised",
+    "beef bottom round cooked",
+    "braised round steak",
+    "bottom round beef steak",
+    "round steak braised all grades"
+  ],
+  "usda_170627": [
+    "bottom round roast select",
+    "beef bottom round roast",
+    "roasted bottom round select",
+    "round roast beef select",
+    "bottom round cooked roasted"
+  ],
+  "usda_170628": [
+    "lean bottom round steak",
+    "bottom round lean braised",
+    "round steak lean braised",
+    "lean beef round steak",
+    "bottom round lean all grades"
+  ],
+  "usda_170629": [
+    "bottom round roast lean",
+    "lean round roast beef",
+    "roasted bottom round lean",
+    "beef round roast lean cooked",
+    "trimmed bottom round roast"
+  ],
+  "usda_170630": [
+    "lean bottom round choice",
+    "choice bottom round steak lean",
+    "beef bottom round choice lean",
+    "round steak lean choice braised"
+  ],
+  "usda_170631": [
+    "bottom round roast choice lean",
+    "lean beef roast choice",
+    "choice bottom round roast lean",
+    "round roast lean choice cooked"
+  ],
+  "usda_170632": [
+    "eye of round roast select",
+    "eye round roast cooked",
+    "eye of round with fat select",
+    "round roast select cooked",
+    "beef eye round select"
+  ],
+  "usda_170633": [
+    "eye of round lean",
+    "lean eye round roast",
+    "eye of round roast lean",
+    "trimmed eye round roast",
+    "boneless eye round lean cooked"
+  ],
+  "usda_170634": [
+    "eye of round choice lean",
+    "lean eye round choice",
+    "choice eye round roast lean",
+    "beef eye round lean choice cooked"
+  ],
+  "usda_170635": [
+    "eye of round select lean",
+    "lean eye round select roasted",
+    "select eye round roast lean",
+    "beef eye of round select lean"
+  ],
+  "usda_170636": [
+    "tip round roast lean choice",
+    "beef tip round choice",
+    "sirloin tip roast lean",
+    "round tip roast choice cooked",
+    "lean tip round choice"
+  ],
+  "usda_170637": [
+    "tip round roast select lean",
+    "beef tip round select",
+    "round tip roast lean select",
+    "sirloin tip roast select lean"
+  ],
+  "usda_170638": [
+    "top round beef braised",
+    "braised top round",
+    "beef top round cooked",
+    "round steak top braised all grades",
+    "top round with fat braised"
+  ],
+  "usda_170639": [
+    "top round choice braised",
+    "beef top round choice",
+    "braised top round choice",
+    "choice top round steak braised",
+    "top round with fat choice"
+  ],
+  "usda_170640": [
+    "tenderloin steak grilled",
+    "beef tenderloin select grilled",
+    "grilled beef tenderloin",
+    "fillet steak grilled select",
+    "tenderloin with fat select grilled"
+  ],
+  "usda_170641": [
+    "lean beef tenderloin grilled",
+    "grilled lean tenderloin",
+    "tenderloin steak lean grilled",
+    "filet mignon grilled lean",
+    "beef tenderloin lean all grades"
+  ],
+  "usda_170642": [
+    "filet mignon choice grilled",
+    "choice tenderloin lean grilled",
+    "lean tenderloin choice",
+    "beef filet choice grilled lean",
+    "grilled tenderloin lean choice"
+  ],
+  "usda_170643": [
+    "lean tenderloin select grilled",
+    "select filet mignon grilled",
+    "beef tenderloin select lean grilled",
+    "grilled filet select lean"
+  ],
+  "usda_170644": [
+    "vanilla pudding mix",
+    "dry vanilla pudding",
+    "instant vanilla pudding mix",
+    "pudding mix vanilla",
+    "boxed vanilla pudding",
+    "vanilla pudding packet"
+  ],
+  "usda_170645": [
+    "apricot jam",
+    "apricot preserves",
+    "apricot jelly",
+    "apricot spread",
+    "apricot conserve",
+    "fruit jam apricot",
+    "apricot marmalade"
+  ],
+  "usda_170646": [
+    "pancake syrup",
+    "table syrup",
+    "maple blend syrup",
+    "fake maple syrup",
+    "breakfast syrup",
+    "pancake topping syrup",
+    "log cabin style syrup",
+    "imitation maple syrup"
+  ],
+  "usda_170647": [
+    "corn cakes low sodium",
+    "rice cake corn",
+    "corn rice cake",
+    "plain corn cakes",
+    "low salt corn cakes",
+    "corn puffed cakes",
+    "light corn cakes snack",
+    "unsalted corn cakes"
+  ]
+}

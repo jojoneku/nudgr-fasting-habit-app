@@ -1,0 +1,508 @@
+{
+  "usda_169130": [
+    "ripe plantain",
+    "yellow plantain",
+    "sweet plantain",
+    "maduro raw",
+    "ripe cooking banana",
+    "yellow saba",
+    "maturing plantain",
+    "soft plantain raw",
+    "ripe banana plantain"
+  ],
+  "usda_169131": [
+    "baked sweet plantain",
+    "maduros",
+    "roasted plantain",
+    "oven baked plantain",
+    "baked ripe plantain",
+    "sweet baked plantain",
+    "caramelized baked plantain",
+    "plantain in oven",
+    "baked yellow plantain"
+  ],
+  "usda_169132": [
+    "canned plums syrup",
+    "plums in syrup",
+    "purple plums canned",
+    "sweet canned plums",
+    "jarred plums",
+    "plums in heavy syrup",
+    "canned plum dessert",
+    "tinned plums syrup"
+  ],
+  "usda_169133": [
+    "canned plums thick syrup",
+    "extra sweet canned plums",
+    "plums in extra heavy syrup",
+    "very sweet canned plums",
+    "candied plums canned",
+    "plums thick sweet syrup",
+    "jarred plums extra sweet",
+    "purple plums extra syrup"
+  ],
+  "usda_169134": [
+    "pomegranate",
+    "fresh pomegranate",
+    "granada",
+    "pomegranate seeds",
+    "pomegranate arils",
+    "ruby fruit",
+    "pomegranate kernels",
+    "whole pomegranate",
+    "granada fruit"
+  ],
+  "usda_169135": [
+    "butter beans cooked",
+    "boiled lima beans",
+    "cooked butter beans",
+    "green lima beans boiled",
+    "baby lima beans",
+    "boiled white lima beans",
+    "cooked lima",
+    "steamed lima beans",
+    "lima beans unsalted cooked"
+  ],
+  "usda_169136": [
+    "canned butter beans",
+    "jarred lima beans",
+    "lima beans tin",
+    "butter beans in can",
+    "canned white lima beans",
+    "tinned lima beans",
+    "lima beans canned unsalted"
+  ],
+  "usda_169137": [
+    "toge boiled",
+    "cooked bean sprouts",
+    "boiled mongo sprouts",
+    "cooked mung sprouts",
+    "mung bean sprouts cooked",
+    "boiled toge",
+    "cooked sprouted mung beans",
+    "mongo sprouts boiled",
+    "bean sprouts boiled unsalted"
+  ],
+  "usda_169138": [
+    "ginisang toge",
+    "stir fried bean sprouts",
+    "fried toge",
+    "sauteed bean sprouts",
+    "toge guisado",
+    "stir fried mung sprouts",
+    "bean sprouts stir fry",
+    "mongo sprouts stir fried",
+    "sauteed mung sprouts"
+  ],
+  "usda_169139": [
+    "navy bean sprouts raw",
+    "sprouted navy beans",
+    "white bean sprouts raw",
+    "sprouted white beans",
+    "navy sprouts uncooked",
+    "raw sprouted navy beans",
+    "navy beans germinated raw",
+    "white navy sprouts"
+  ],
+  "usda_169140": [
+    "cooked navy bean sprouts",
+    "boiled navy sprouts",
+    "boiled white bean sprouts",
+    "cooked sprouted navy beans",
+    "navy sprouts cooked",
+    "white bean sprouts boiled",
+    "navy bean sprouts boiled unsalted",
+    "sprouted navy beans cooked"
+  ],
+  "usda_169141": [
+    "boiled green beans",
+    "cooked string beans",
+    "boiled string beans",
+    "sitaw cooked",
+    "french beans boiled",
+    "haricot vert cooked",
+    "cooked snap beans",
+    "string beans steamed",
+    "green beans boiled unsalted"
+  ],
+  "usda_169142": [
+    "canned green beans",
+    "canned string beans",
+    "green beans in can",
+    "snap beans canned",
+    "string beans canned",
+    "jarred green beans",
+    "tinned green beans",
+    "canned french beans"
+  ],
+  "usda_169144": [
+    "seasoned canned green beans",
+    "flavored canned green beans",
+    "seasoned snap beans",
+    "spiced canned green beans",
+    "seasoned string beans canned",
+    "green beans with seasoning canned",
+    "herbed canned snap beans",
+    "canned beans seasoned all styles"
+  ],
+  "usda_169145": [
+    "fresh beets",
+    "raw beetroot",
+    "red beet raw",
+    "whole beetroot",
+    "fresh beetroot uncooked",
+    "garden beet",
+    "raw red beet",
+    "beet root fresh",
+    "fresh garden beet"
+  ],
+  "usda_169146": [
+    "boiled beets",
+    "cooked beetroot",
+    "steamed beets",
+    "boiled beetroot",
+    "tender cooked beets",
+    "cooked red beet",
+    "beet boiled",
+    "soft cooked beet",
+    "beet root boiled"
+  ],
+  "usda_169147": [
+    "canned beets",
+    "jarred beets",
+    "canned beetroot",
+    "pickled beets",
+    "beets in can",
+    "tinned beets",
+    "sliced canned beets",
+    "beet root canned"
+  ],
+  "usda_169148": [
+    "roasted boneless ham",
+    "baked lean ham",
+    "cooked lean roast ham",
+    "oven ham lean",
+    "lean roasted ham whole",
+    "sliced roasted ham",
+    "baked whole ham lean",
+    "ham roast boneless",
+    "cooked lean deli ham"
+  ],
+  "usda_169149": [
+    "deli ham lean",
+    "cold sliced lean ham",
+    "raw boneless lean ham",
+    "packaged lean ham",
+    "uncooked lean ham boneless",
+    "fresh cut lean ham",
+    "sliced deli ham raw",
+    "lean ham uncooked whole"
+  ],
+  "usda_169150": [
+    "roasted bone-in ham shank",
+    "ham shank roasted lean",
+    "baked shank ham lean",
+    "bone-in shank ham cooked",
+    "roasted ham leg shank",
+    "shank ham lean roasted",
+    "cooked shank ham bone-in lean",
+    "ham shank oven roasted"
+  ],
+  "usda_169151": [
+    "raw bone-in ham slice lean",
+    "cold ham slice with bone",
+    "uncooked sliced bone-in ham lean",
+    "ham slice raw bone-in",
+    "fresh ham slice bone-in lean",
+    "cold sliced ham with bone lean",
+    "unheated ham slice bone-in"
+  ],
+  "usda_169152": [
+    "raw ham rump lean",
+    "cold rump ham lean",
+    "uncooked ham butt bone-in",
+    "raw bone-in rump ham lean",
+    "ham rump uncooked lean",
+    "fresh rump ham bone-in",
+    "cold ham butt lean"
+  ],
+  "usda_169153": [
+    "cold ham slice bone-in lean",
+    "uncooked ham slice with bone lean",
+    "raw sliced ham bone-in lean",
+    "ham slice uncooked lean bone-in",
+    "fresh bone-in ham slice lean",
+    "unheated bone-in ham slice lean",
+    "cold sliced bone-in lean ham"
+  ],
+  "usda_169154": [
+    "cold ham shank lean",
+    "raw shank ham bone-in lean",
+    "uncooked ham shank bone-in",
+    "fresh ham shank lean",
+    "unheated bone-in ham shank lean",
+    "cold bone-in ham shank lean",
+    "raw ham shank uncooked lean"
+  ],
+  "usda_169155": [
+    "cooked ham fat",
+    "heated ham fat",
+    "fatty ham cooked",
+    "ham fat trimming cooked",
+    "rendered ham fat",
+    "warm ham fat boneless",
+    "cooked pork ham fat trim",
+    "heated ham trim fat"
+  ],
+  "usda_169156": [
+    "raw ham fat",
+    "uncooked ham fat",
+    "fresh ham fat",
+    "ham fat trimming raw",
+    "cold ham fat boneless",
+    "pork ham fat raw",
+    "unheated ham fat",
+    "raw pork cure fat"
+  ],
+  "usda_169157": [
+    "pickled pig knuckles",
+    "pork hocks in brine",
+    "vinegar pork hocks",
+    "brined pork hocks",
+    "pata pickled",
+    "marinated pork knuckles",
+    "pickled pork feet",
+    "sour pork hocks",
+    "brine cured pork hocks"
+  ],
+  "usda_169158": [
+    "pan fried ham slice",
+    "fried ham bone-in",
+    "pan broiled ham slice",
+    "skillet ham",
+    "pan cooked ham lean",
+    "broiled ham slice",
+    "pan grilled ham",
+    "fried lean ham slice bone-in"
+  ],
+  "usda_169159": [
+    "raw whole ham natural juices",
+    "uncooked boneless ham whole",
+    "fresh whole ham with juices",
+    "cold natural ham boneless",
+    "raw whole natural juice ham",
+    "unheated whole boneless ham",
+    "fresh boneless ham natural juices",
+    "cold whole ham with juices"
+  ],
+  "usda_169160": [
+    "raw whole boneless ham",
+    "uncooked packaged ham",
+    "fresh whole boneless ham",
+    "cold whole ham boneless raw",
+    "unheated whole ham boneless",
+    "packaged raw ham whole",
+    "fresh boneless whole ham",
+    "uncooked whole ham with fat"
+  ],
+  "usda_169161": [
+    "raw ham slice with fat",
+    "cold ham slice bone-in fatty",
+    "uncooked ham slice bone-in with fat",
+    "ham slice raw fatty bone-in",
+    "fresh bone-in ham slice with fat",
+    "unheated ham slice bone-in lean and fat",
+    "cold sliced ham bone-in fat included"
+  ],
+  "usda_169162": [
+    "raw shank ham with fat",
+    "cold ham shank bone-in fatty",
+    "uncooked shank ham with fat",
+    "fresh shank ham bone-in fat",
+    "unheated ham shank lean and fat",
+    "cold bone-in shank ham with fat",
+    "raw bone-in shank ham fatty"
+  ],
+  "usda_169163": [
+    "raw rump ham with fat",
+    "cold rump ham fatty bone-in",
+    "uncooked ham rump with fat",
+    "fresh bone-in rump ham with fat",
+    "unheated rump ham lean and fat",
+    "cold ham butt bone-in with fat",
+    "raw bone-in rump ham fatty"
+  ],
+  "usda_169164": [
+    "roasted rump ham",
+    "baked ham rump",
+    "cooked rump ham oven",
+    "oven roasted ham butt",
+    "roasted bone-in rump ham",
+    "baked bone-in rump ham",
+    "ham rump roasted with fat",
+    "cooked rump ham with fat"
+  ],
+  "usda_169165": [
+    "roasted shank ham",
+    "baked ham shank",
+    "cooked ham shank oven",
+    "oven roasted shank ham",
+    "roasted bone-in shank ham",
+    "baked bone-in shank ham",
+    "ham shank roasted with fat",
+    "cooked shank ham with fat"
+  ],
+  "usda_169166": [
+    "pan fried bone-in ham slice",
+    "fried ham slice with bone and fat",
+    "pan broiled bone-in ham",
+    "skillet ham slice bone-in",
+    "pan cooked bone-in ham slice",
+    "broiled ham bone-in with fat",
+    "pan grilled ham bone-in slice",
+    "fried ham slice bone-in fatty"
+  ],
+  "usda_169167": [
+    "pan fried boneless ham slice",
+    "fried boneless ham",
+    "pan broiled boneless ham",
+    "skillet ham slice boneless",
+    "sauteed ham slice",
+    "pan cooked ham boneless slice",
+    "fried ham slice with fat boneless",
+    "pan grilled boneless ham"
+  ],
+  "usda_169168": [
+    "pan cooked boneless ham with fat",
+    "fried boneless ham slice with fat",
+    "pan broiled boneless ham fatty",
+    "skillet ham boneless with fat",
+    "sauteed ham with fat boneless",
+    "pan fried ham slice boneless fatty",
+    "broiled boneless ham with fat",
+    "pan grilled ham boneless slice fat"
+  ],
+  "usda_169169": [
+    "roasted whole boneless ham",
+    "baked boneless whole ham",
+    "oven roasted boneless ham",
+    "roast ham boneless with fat",
+    "baked whole ham boneless fat",
+    "cooked whole boneless ham roasted",
+    "oven ham whole boneless",
+    "roasted boneless ham whole with fat"
+  ],
+  "usda_169170": [
+    "roasted rump ham natural juices",
+    "baked bone-in rump ham with fat",
+    "cooked rump ham natural juices",
+    "roasted ham rump bone-in juicy",
+    "bone-in rump ham roasted with juices",
+    "natural juice rump ham roasted",
+    "baked rump ham with natural juices",
+    "oven rump ham natural juices"
+  ],
+  "usda_169171": [
+    "roasted shank ham natural juices",
+    "baked bone-in shank ham with fat",
+    "cooked shank ham natural juices",
+    "roasted ham shank bone-in juicy",
+    "bone-in shank ham roasted with juices",
+    "natural juice shank ham roasted",
+    "baked shank ham natural juices",
+    "oven shank ham natural juices"
+  ],
+  "usda_169172": [
+    "pan fried ham natural juices",
+    "broiled ham slice with juices",
+    "skillet ham bone-in natural juices",
+    "pan broiled natural juice ham",
+    "pan cooked ham slice natural juices",
+    "fried ham with natural juices bone-in",
+    "pan grilled ham natural juices slice",
+    "broiled bone-in ham with juices"
+  ],
+  "usda_169173": [
+    "roasted lean rump ham",
+    "baked lean rump ham bone-in",
+    "cooked rump ham lean oven",
+    "lean bone-in rump ham roasted",
+    "oven rump ham lean",
+    "baked rump ham lean bone-in",
+    "ham rump lean roasted",
+    "roasted bone-in lean rump ham"
+  ],
+  "usda_169174": [
+    "raw lean rump ham",
+    "cold rump ham lean bone-in",
+    "uncooked lean rump ham",
+    "fresh rump ham lean bone-in",
+    "unheated lean rump ham bone-in",
+    "cold bone-in lean rump ham",
+    "raw bone-in rump ham lean",
+    "fresh lean ham rump uncooked"
+  ],
+  "usda_169175": [
+    "roasted lean shank ham",
+    "baked lean shank ham bone-in",
+    "cooked shank ham lean oven",
+    "lean bone-in shank ham roasted",
+    "oven shank ham lean",
+    "baked shank ham lean bone-in",
+    "ham shank lean roasted",
+    "roasted bone-in lean shank ham"
+  ],
+  "usda_169176": [
+    "raw lean shank ham",
+    "cold shank ham lean bone-in",
+    "uncooked lean shank ham",
+    "fresh shank ham lean bone-in",
+    "unheated lean shank ham bone-in",
+    "cold bone-in lean shank ham",
+    "raw bone-in shank ham lean",
+    "fresh lean ham shank uncooked"
+  ],
+  "usda_169177": [
+    "raw ham slice bone-in with fat",
+    "cold sliced ham bone-in fatty",
+    "uncooked ham slice with fat and bone",
+    "fresh bone-in ham slice fatty",
+    "ham slice raw lean and fat bone-in",
+    "cold bone-in sliced ham with fat",
+    "unheated ham slice bone-in fat",
+    "raw fatty ham slice bone-in"
+  ],
+  "usda_169178": [
+    "roasted pork ribs",
+    "oven spareribs",
+    "baked pork spare ribs",
+    "roasted ribs",
+    "oven baked ribs",
+    "pork spare ribs roasted",
+    "baked spare ribs",
+    "oven pork ribs",
+    "roasted pork side ribs"
+  ],
+  "usda_169179": [
+    "raw pork fat",
+    "fresh pork fat",
+    "pork fat trimming",
+    "raw pork fat with brine",
+    "fresh pork fat composite",
+    "pork trimmings fat raw",
+    "raw enhanced pork fat",
+    "fresh composite pork fat"
+  ],
+  "usda_169180": [
+    "roasted pork tenderloin",
+    "baked pork tenderloin",
+    "oven pork tenderloin",
+    "roast pork loin",
+    "pork tenderloin cooked",
+    "baked pork loin fillet",
+    "roasted pork fillet",
+    "tenderloin pork oven",
+    "pork loin tenderloin roasted",
+    "cooked pork tenderloin oven"
+  ]
+}

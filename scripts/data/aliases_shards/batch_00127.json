@@ -1,0 +1,817 @@
+{
+  "usda_175127": [
+    "northern pike baked",
+    "pike fillet cooked",
+    "grilled pike",
+    "baked pike fish",
+    "pike dry heat",
+    "freshwater pike cooked",
+    "pike fish fillet",
+    "northern pike grilled"
+  ],
+  "usda_175128": [
+    "walleye fish raw",
+    "walleye fillet",
+    "raw walleye",
+    "freshwater walleye",
+    "walleye pike",
+    "lake walleye",
+    "walleye uncooked"
+  ],
+  "usda_175129": [
+    "atlantic pollock raw",
+    "pollock fish raw",
+    "raw pollock fillet",
+    "pollock uncooked",
+    "atlantic pollock fillet",
+    "pollock white fish",
+    "fresh pollock"
+  ],
+  "usda_175130": [
+    "alaska pollock raw",
+    "alaskan pollock",
+    "raw alaska pollock",
+    "pollock fillet alaska",
+    "wild pollock raw",
+    "pollock fish uncooked",
+    "alaska white fish raw"
+  ],
+  "usda_175131": [
+    "pacific rockfish cooked",
+    "rockfish fillet baked",
+    "grilled rockfish",
+    "rock cod cooked",
+    "pacific snapper cooked",
+    "baked rockfish",
+    "rockfish dry heat",
+    "ocean perch cooked"
+  ],
+  "usda_175132": [
+    "fish roe raw",
+    "raw fish eggs",
+    "fish eggs",
+    "fish caviar",
+    "roe eggs",
+    "raw roe",
+    "mixed fish roe"
+  ],
+  "usda_175133": [
+    "orange roughy raw",
+    "roughy fish",
+    "raw orange roughy",
+    "orange roughy fillet",
+    "deep sea fish raw",
+    "roughy uncooked"
+  ],
+  "usda_175134": [
+    "sablefish raw",
+    "black cod raw",
+    "raw sablefish",
+    "butterfish alaska",
+    "raw black cod",
+    "sable fish fillet",
+    "alaska black cod raw"
+  ],
+  "usda_175135": [
+    "canned chum salmon",
+    "chum salmon can",
+    "canned salmon with bone",
+    "dog salmon canned",
+    "chum salmon drained",
+    "canned salmon bones",
+    "salmon in a can chum"
+  ],
+  "usda_175136": [
+    "coho salmon raw",
+    "silver salmon raw",
+    "wild coho salmon",
+    "raw silver salmon",
+    "wild salmon raw coho",
+    "coho fillet raw",
+    "fresh coho salmon"
+  ],
+  "usda_175137": [
+    "coho salmon cooked",
+    "steamed coho salmon",
+    "silver salmon cooked",
+    "wild coho cooked",
+    "poached coho salmon",
+    "coho salmon moist heat",
+    "cooked silver salmon"
+  ],
+  "usda_175138": [
+    "pink salmon raw",
+    "humpback salmon raw",
+    "raw pink salmon",
+    "fresh pink salmon",
+    "pink salmon fillet",
+    "wild pink salmon raw",
+    "humpy salmon raw"
+  ],
+  "usda_175139": [
+    "canned sardines in oil",
+    "sardines oil packed",
+    "atlantic sardines canned",
+    "tinned sardines oil",
+    "sardine can oil",
+    "oily sardines canned",
+    "sardinas en aceite"
+  ],
+  "usda_175140": [
+    "sardines in tomato sauce",
+    "pacific sardines canned",
+    "tinned sardines tomato",
+    "sardines tomato can",
+    "canned sardines tomato sauce",
+    "sardinas en salsa de tomate",
+    "sardines in tomato"
+  ],
+  "usda_175141": [
+    "scup fish raw",
+    "porgy fish raw",
+    "raw scup",
+    "fresh scup",
+    "scup porgy",
+    "porgy raw",
+    "sea bream raw"
+  ],
+  "usda_175142": [
+    "sea bass raw",
+    "raw sea bass",
+    "fresh sea bass",
+    "sea bass fillet raw",
+    "bass fish raw",
+    "ocean bass raw",
+    "seabass uncooked"
+  ],
+  "usda_175143": [
+    "fried shark",
+    "battered shark",
+    "shark fish fried",
+    "shark batter fried",
+    "deep fried shark",
+    "shark meat fried",
+    "shark fillet battered"
+  ],
+  "usda_175144": [
+    "sheepshead fish raw",
+    "raw sheepshead",
+    "fresh sheepshead",
+    "sheepshead fillet raw",
+    "convict fish raw",
+    "sheepshead uncooked"
+  ],
+  "usda_175145": [
+    "sheepshead cooked",
+    "baked sheepshead",
+    "grilled sheepshead",
+    "sheepshead fillet cooked",
+    "sheepshead dry heat",
+    "cooked sheepshead fish"
+  ],
+  "usda_175146": [
+    "rainbow smelt raw",
+    "smelt fish raw",
+    "raw smelt",
+    "fresh smelt",
+    "smelt uncooked",
+    "lake smelt raw",
+    "smelt fish fresh"
+  ],
+  "usda_175147": [
+    "smelt cooked",
+    "fried smelt",
+    "baked smelt",
+    "grilled smelt fish",
+    "rainbow smelt cooked",
+    "smelt dry heat",
+    "pan fried smelt"
+  ],
+  "usda_175148": [
+    "sturgeon cooked",
+    "baked sturgeon",
+    "grilled sturgeon",
+    "sturgeon fillet cooked",
+    "sturgeon dry heat",
+    "cooked sturgeon fish",
+    "sturgeon steak cooked"
+  ],
+  "usda_175149": [
+    "smoked sturgeon",
+    "sturgeon smoked",
+    "cold smoked sturgeon",
+    "smoked fish sturgeon",
+    "cured sturgeon"
+  ],
+  "usda_175150": [
+    "white sucker fish raw",
+    "sucker fish raw",
+    "raw white sucker",
+    "fresh sucker fish",
+    "sucker fish uncooked"
+  ],
+  "usda_175151": [
+    "pumpkinseed fish raw",
+    "pumpkin seed sunfish",
+    "sunfish raw",
+    "pumpkinseed sunfish raw",
+    "freshwater sunfish raw",
+    "raw sunfish"
+  ],
+  "usda_175152": [
+    "tilefish cooked",
+    "baked tilefish",
+    "grilled tilefish",
+    "tilefish fillet cooked",
+    "cooked tilefish",
+    "tilefish dry heat"
+  ],
+  "usda_175153": [
+    "trout fish raw",
+    "raw trout",
+    "fresh trout",
+    "trout fillet raw",
+    "lake trout raw",
+    "trout uncooked",
+    "freshwater trout raw"
+  ],
+  "usda_175154": [
+    "rainbow trout raw",
+    "wild rainbow trout",
+    "wild trout raw",
+    "fresh rainbow trout",
+    "rainbow trout fillet",
+    "river trout raw",
+    "raw wild trout"
+  ],
+  "usda_175155": [
+    "rainbow trout cooked",
+    "grilled rainbow trout",
+    "baked rainbow trout",
+    "wild trout cooked",
+    "pan fried rainbow trout",
+    "rainbow trout dry heat",
+    "cooked wild trout"
+  ],
+  "usda_175156": [
+    "skipjack tuna raw",
+    "raw skipjack tuna",
+    "fresh skipjack",
+    "skipjack fish raw",
+    "bonito tuna raw",
+    "raw fresh tuna skipjack",
+    "katsuo raw"
+  ],
+  "usda_175157": [
+    "albacore tuna in oil",
+    "canned tuna in oil",
+    "white tuna oil packed",
+    "tuna oil can",
+    "albacore in oil drained",
+    "canned albacore oil",
+    "tuna packed in oil"
+  ],
+  "usda_175158": [
+    "albacore tuna in water",
+    "canned white tuna water",
+    "tuna water packed",
+    "albacore tuna can water",
+    "white tuna canned",
+    "tuna in water drained",
+    "canned albacore water"
+  ],
+  "usda_175159": [
+    "yellowfin tuna raw",
+    "ahi tuna raw",
+    "fresh yellowfin tuna",
+    "ahi raw",
+    "raw ahi tuna",
+    "yellowfin ahi",
+    "fresh tuna yellowfin"
+  ],
+  "usda_175160": [
+    "tuna salad",
+    "tuna mayo salad",
+    "tuna with mayo",
+    "tuna sandwich filling",
+    "tuna fish salad",
+    "tuna salad mix",
+    "creamy tuna salad"
+  ],
+  "usda_175161": [
+    "whiting fish cooked",
+    "cooked whiting",
+    "baked whiting",
+    "grilled whiting",
+    "whiting fillet cooked",
+    "fried whiting",
+    "southern whiting cooked"
+  ],
+  "usda_175162": [
+    "wolffish raw",
+    "atlantic wolffish raw",
+    "ocean catfish raw",
+    "raw wolffish",
+    "wolf fish fillet raw",
+    "sea wolf fish raw"
+  ],
+  "usda_175163": [
+    "yellowtail fish raw",
+    "raw yellowtail",
+    "hamachi raw",
+    "fresh yellowtail",
+    "yellowtail fillet raw",
+    "amberjack raw",
+    "yellowtail sashimi"
+  ],
+  "usda_175164": [
+    "king crab raw",
+    "alaska king crab",
+    "raw king crab",
+    "king crab legs raw",
+    "alaskan king crab",
+    "fresh king crab",
+    "crab raw"
+  ],
+  "usda_175165": [
+    "channel catfish raw",
+    "farmed catfish raw",
+    "raw catfish",
+    "fresh catfish",
+    "catfish fillet raw",
+    "farm raised catfish",
+    "catfish uncooked"
+  ],
+  "usda_175166": [
+    "fried catfish",
+    "baked catfish",
+    "grilled catfish",
+    "channel catfish cooked",
+    "catfish fillet cooked",
+    "farm catfish cooked",
+    "pan fried catfish"
+  ],
+  "usda_175167": [
+    "atlantic salmon raw",
+    "farmed salmon raw",
+    "raw atlantic salmon",
+    "fresh atlantic salmon",
+    "salmon fillet raw",
+    "farm raised salmon raw",
+    "fresh salmon uncooked"
+  ],
+  "usda_175168": [
+    "atlantic salmon cooked",
+    "baked atlantic salmon",
+    "grilled atlantic salmon",
+    "farmed salmon cooked",
+    "salmon fillet baked",
+    "pan seared salmon",
+    "cooked farmed salmon"
+  ],
+  "usda_175169": [
+    "crayfish raw",
+    "crawfish raw",
+    "crawdads raw",
+    "fresh crayfish",
+    "farmed crawfish raw",
+    "raw crawfish",
+    "mudbugs raw"
+  ],
+  "usda_175170": [
+    "boiled crayfish",
+    "cooked crawfish",
+    "steamed crawfish",
+    "boiled crawdads",
+    "crayfish boiled",
+    "crawfish cooked",
+    "mudbugs cooked"
+  ],
+  "usda_175171": [
+    "cooked oysters",
+    "baked oysters",
+    "grilled oysters",
+    "eastern oyster cooked",
+    "wild oyster cooked",
+    "oysters dry heat",
+    "roasted oysters"
+  ],
+  "usda_175172": [
+    "raw oysters",
+    "fresh oysters",
+    "eastern oyster raw",
+    "farmed oyster raw",
+    "oysters on the half shell",
+    "raw oyster",
+    "fresh farmed oyster"
+  ],
+  "usda_175173": [
+    "farmed oyster cooked",
+    "baked farmed oyster",
+    "eastern oyster baked",
+    "grilled farmed oyster",
+    "cooked farmed oyster",
+    "oyster dry heat farmed"
+  ],
+  "usda_175174": [
+    "sockeye salmon canned",
+    "red salmon canned",
+    "canned sockeye",
+    "sockeye salmon can",
+    "red salmon can",
+    "canned red salmon",
+    "tinned sockeye salmon"
+  ],
+  "usda_175175": [
+    "canned pink salmon",
+    "pink salmon can",
+    "tinned pink salmon",
+    "canned salmon pink drained",
+    "salmon in a can pink",
+    "pink salmon drained"
+  ],
+  "usda_175176": [
+    "tilapia raw",
+    "raw tilapia",
+    "fresh tilapia",
+    "tilapia fillet raw",
+    "tilapia fish uncooked",
+    "raw tilapia fillet",
+    "whole tilapia raw"
+  ],
+  "usda_175177": [
+    "tilapia cooked",
+    "baked tilapia",
+    "grilled tilapia",
+    "fried tilapia",
+    "tilapia fillet cooked",
+    "pan fried tilapia",
+    "tilapia dry heat"
+  ],
+  "usda_175178": [
+    "pacific cod cooked",
+    "baked cod",
+    "grilled cod fish",
+    "cod fillet cooked",
+    "cooked cod pacific",
+    "baked pacific cod",
+    "cod fish cooked"
+  ],
+  "usda_175179": [
+    "raw shrimp",
+    "fresh shrimp",
+    "shrimp uncooked",
+    "green shrimp",
+    "raw prawns",
+    "uncooked shrimp",
+    "fresh prawns"
+  ],
+  "usda_175180": [
+    "cooked shrimp",
+    "boiled shrimp",
+    "steamed shrimp",
+    "cooked prawns",
+    "shrimp boiled",
+    "grilled shrimp",
+    "poached shrimp"
+  ],
+  "usda_175181": [
+    "brook trout raw",
+    "fresh brook trout",
+    "raw brook trout",
+    "brookies raw",
+    "speckled trout raw",
+    "brook trout fillet raw"
+  ],
+  "usda_175182": [
+    "vegetarian baked beans",
+    "plain baked beans canned",
+    "canned baked beans",
+    "baked beans no meat",
+    "veggie baked beans",
+    "tinned baked beans plain",
+    "baked beans can"
+  ],
+  "usda_175183": [
+    "baked beans with beef",
+    "beef baked beans canned",
+    "canned beans with beef",
+    "baked beans beef can",
+    "beef and beans canned"
+  ],
+  "usda_175184": [
+    "baked beans with hot dogs",
+    "beans and franks",
+    "franks and beans",
+    "hot dog baked beans",
+    "beans with weiners",
+    "beanie weenies",
+    "canned franks and beans"
+  ],
+  "usda_175185": [
+    "baked beans with pork",
+    "pork and beans",
+    "canned pork and beans",
+    "beans with pork canned",
+    "pork baked beans",
+    "tinned pork and beans"
+  ],
+  "usda_175186": [
+    "black turtle beans raw",
+    "dried black turtle beans",
+    "raw turtle beans",
+    "black turtle bean dried",
+    "turtle beans uncooked",
+    "dry turtle beans"
+  ],
+  "usda_175187": [
+    "cooked black turtle beans",
+    "boiled turtle beans",
+    "black turtle beans cooked",
+    "turtle beans boiled",
+    "cooked turtle beans"
+  ],
+  "usda_175188": [
+    "canned black turtle beans",
+    "tinned turtle beans",
+    "black turtle beans can",
+    "canned turtle beans"
+  ],
+  "usda_175189": [
+    "cranberry beans raw",
+    "roman beans raw",
+    "borlotti beans raw",
+    "dried cranberry beans",
+    "roman beans dried",
+    "borlotti raw",
+    "dry cranberry beans"
+  ],
+  "usda_175190": [
+    "great northern beans raw",
+    "dried great northern beans",
+    "large white beans raw",
+    "great northern dry",
+    "great northern bean dried",
+    "raw great northern beans"
+  ],
+  "usda_175191": [
+    "great northern beans cooked",
+    "boiled great northern beans",
+    "cooked great northern beans",
+    "great northern beans boiled",
+    "white beans great northern cooked"
+  ],
+  "usda_175192": [
+    "great northern beans canned",
+    "canned great northern beans",
+    "tinned great northern beans",
+    "great northern bean can"
+  ],
+  "usda_175193": [
+    "kidney beans raw",
+    "dried kidney beans",
+    "raw kidney beans",
+    "dry kidney beans",
+    "kidney bean dried",
+    "red kidney beans raw"
+  ],
+  "usda_175194": [
+    "red kidney beans cooked",
+    "boiled red kidney beans",
+    "cooked kidney beans",
+    "kidney beans boiled",
+    "red beans cooked",
+    "kidney beans no salt cooked"
+  ],
+  "usda_175195": [
+    "canned red kidney beans",
+    "kidney beans canned",
+    "red kidney beans can",
+    "tinned kidney beans",
+    "canned kidney beans red"
+  ],
+  "usda_175196": [
+    "royal red kidney beans raw",
+    "dark red kidney beans raw",
+    "royal red beans raw",
+    "dried royal red beans",
+    "dark red beans raw"
+  ],
+  "usda_175197": [
+    "royal red kidney beans cooked",
+    "dark red kidney beans cooked",
+    "boiled royal red beans",
+    "royal red beans cooked"
+  ],
+  "usda_175198": [
+    "pink beans cooked",
+    "boiled pink beans",
+    "cooked pink beans",
+    "pink beans boiled"
+  ],
+  "usda_175199": [
+    "pinto beans raw",
+    "dried pinto beans",
+    "raw pinto beans",
+    "dry pinto beans",
+    "pinto bean dried",
+    "uncooked pinto beans"
+  ],
+  "usda_175200": [
+    "pinto beans cooked",
+    "boiled pinto beans",
+    "cooked pinto beans",
+    "pinto beans boiled",
+    "pinto beans no salt"
+  ],
+  "usda_175201": [
+    "canned pinto beans",
+    "pinto beans canned",
+    "tinned pinto beans",
+    "pinto bean can",
+    "canned pintos"
+  ],
+  "usda_175202": [
+    "white beans raw",
+    "dried white beans",
+    "raw white beans",
+    "dry white beans",
+    "cannellini beans raw",
+    "navy beans raw",
+    "white bean dried"
+  ],
+  "usda_175203": [
+    "white beans cooked",
+    "boiled white beans",
+    "cooked white beans",
+    "cannellini cooked",
+    "navy beans cooked",
+    "white beans boiled"
+  ],
+  "usda_175204": [
+    "canned white beans",
+    "white beans canned",
+    "cannellini beans canned",
+    "tinned white beans",
+    "white bean can",
+    "canned cannellini"
+  ],
+  "usda_175205": [
+    "fava beans raw",
+    "broad beans raw",
+    "dried fava beans",
+    "dry fava beans",
+    "broad bean raw",
+    "fava bean dried",
+    "habas secas"
+  ],
+  "usda_175206": [
+    "canned chickpeas",
+    "garbanzo beans canned",
+    "canned garbanzo beans",
+    "chickpeas can",
+    "tinned chickpeas",
+    "canned garbanzos",
+    "chickpeas in liquid"
+  ],
+  "usda_175207": [
+    "chili with beans",
+    "canned chili beans",
+    "bean chili canned",
+    "chili con carne with beans",
+    "can of chili",
+    "tinned chili beans",
+    "chili beans can"
+  ],
+  "usda_175208": [
+    "catjang cowpeas raw",
+    "catjang beans raw",
+    "dried catjang peas",
+    "cowpeas catjang raw",
+    "catjang peas dried"
+  ],
+  "usda_175209": [
+    "catjang cowpeas cooked",
+    "boiled catjang peas",
+    "cooked catjang beans",
+    "catjang peas cooked"
+  ],
+  "usda_175210": [
+    "hyacinth beans raw",
+    "lablab beans raw",
+    "dried hyacinth beans",
+    "lablab raw",
+    "dry hyacinth beans"
+  ],
+  "usda_175211": [
+    "hyacinth beans cooked",
+    "boiled hyacinth beans",
+    "lablab beans cooked",
+    "cooked hyacinth beans"
+  ],
+  "usda_175212": [
+    "organic creamy soymilk",
+    "vitasoy creamy soy milk",
+    "organic soy milk creamy",
+    "creamy soy milk",
+    "vitasoy organic soy",
+    "soy milk creamy organic"
+  ],
+  "usda_175213": [
+    "organic classic soymilk",
+    "vitasoy classic soy milk",
+    "original soy milk organic",
+    "vitasoy original soy",
+    "classic soy milk",
+    "organic original soy milk"
+  ],
+  "usda_175214": [
+    "vanilla soymilk light",
+    "vitasoy light vanilla soy",
+    "light vanilla soy milk",
+    "vanilla light soy milk",
+    "low calorie vanilla soy milk"
+  ],
+  "usda_175215": [
+    "unsweetened soy milk",
+    "plain soymilk unsweetened",
+    "soy milk no sugar",
+    "unsweetened soymilk fortified",
+    "soy milk calcium fortified unsweetened",
+    "plain soy milk unsweetened"
+  ],
+  "usda_175216": [
+    "nonfat soy milk",
+    "fat free soymilk",
+    "skim soy milk",
+    "nonfat soymilk fortified",
+    "low fat soy milk plain"
+  ],
+  "usda_175217": [
+    "chocolate soy milk",
+    "chocolate soymilk nonfat",
+    "choco soy milk",
+    "soy chocolate milk",
+    "nonfat chocolate soy milk",
+    "dairy free chocolate milk soy"
+  ],
+  "usda_175218": [
+    "plain soy milk silk",
+    "silk soy milk original",
+    "soy milk plain",
+    "silk plain soymilk",
+    "original silk soymilk"
+  ],
+  "usda_175219": [
+    "vanilla soy milk silk",
+    "silk vanilla soymilk",
+    "soy milk vanilla",
+    "vanilla soymilk silk brand"
+  ],
+  "usda_175220": [
+    "silk omega 3 soymilk",
+    "dha soy milk",
+    "omega 3 soy milk",
+    "silk dha soymilk",
+    "soy milk with omega 3"
+  ],
+  "usda_175221": [
+    "silk bone health soymilk",
+    "calcium soy milk silk",
+    "silk soymilk bone",
+    "soy milk calcium bone health"
+  ],
+  "usda_175222": [
+    "silk fiber soymilk",
+    "high fiber soy milk",
+    "silk soy milk fiber",
+    "soymilk with fiber silk"
+  ],
+  "usda_175223": [
+    "unsweetened silk soymilk",
+    "silk unsweetened soy milk",
+    "silk plain unsweetened soy",
+    "no sugar soy milk silk"
+  ],
+  "usda_175224": [
+    "coffee soy milk",
+    "silk coffee soymilk",
+    "soy latte milk",
+    "coffee flavored soy milk",
+    "silk coffee flavored soy"
+  ],
+  "usda_175225": [
+    "silk vanilla soy yogurt large",
+    "vanilla soy yogurt family size",
+    "soy yogurt vanilla silk",
+    "silk soy yogurt vanilla big",
+    "dairy free vanilla yogurt silk"
+  ],
+  "usda_175226": [
+    "silk vanilla soy yogurt single",
+    "vanilla soy yogurt cup",
+    "soy yogurt vanilla small",
+    "silk soy yogurt individual",
+    "dairy free vanilla yogurt single serving"
+  ]
+}

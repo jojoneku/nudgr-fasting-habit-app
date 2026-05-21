@@ -1,0 +1,832 @@
+{
+  "usda_2705843": [
+    "oxtail",
+    "ox tail",
+    "beef tail",
+    "kare kare meat",
+    "braised oxtail",
+    "oxtail stew",
+    "slow cooked oxtail",
+    "ox tails beef",
+    "oxtail soup meat"
+  ],
+  "usda_2705844": [
+    "beef neck",
+    "neck bones beef",
+    "beef neck bone",
+    "braised beef neck",
+    "beef neck stew",
+    "slow cooked neck bones",
+    "beef neck for soup",
+    "beef neckbone"
+  ],
+  "usda_2705845": [
+    "beef short ribs",
+    "short ribs",
+    "beef ribs",
+    "braised short ribs",
+    "kalbi meat",
+    "beef rib meat",
+    "flanken ribs",
+    "bone in beef ribs",
+    "slow cooked beef ribs",
+    "bbq beef short ribs"
+  ],
+  "usda_2705846": [
+    "cow head meat",
+    "beef head",
+    "cabeza",
+    "beef cheek meat",
+    "cow cheek",
+    "barbacoa meat",
+    "beef head meat",
+    "cow head"
+  ],
+  "usda_2705847": [
+    "roast beef",
+    "beef roast",
+    "oven roast beef",
+    "baked beef",
+    "roasted beef",
+    "sunday roast beef",
+    "beef oven roast",
+    "sliced roast beef",
+    "beef joint"
+  ],
+  "usda_2705848": [
+    "pot roast",
+    "braised beef roast",
+    "slow cooker beef roast",
+    "beef chuck roast",
+    "crock pot roast",
+    "beef pot roast cooked",
+    "slow cooked beef roast",
+    "dutch oven beef roast",
+    "braised chuck roast"
+  ],
+  "usda_2705849": [
+    "beef stew chunks",
+    "stew beef",
+    "beef chunks",
+    "braised beef chunks",
+    "beef cubes",
+    "beef for stew",
+    "chunked beef",
+    "beef simmered",
+    "beef nilaga meat",
+    "beef mechado meat"
+  ],
+  "usda_2705850": [
+    "corned beef",
+    "canned corned beef",
+    "cured beef",
+    "corned beef brisket",
+    "salt beef",
+    "brine cured beef",
+    "corned beef cooked",
+    "giniling na corned beef",
+    "corned beef hash meat"
+  ],
+  "usda_2705851": [
+    "brisket",
+    "beef brisket",
+    "smoked brisket",
+    "bbq brisket",
+    "slow cooked brisket",
+    "braised brisket",
+    "brisket flat",
+    "point brisket",
+    "texas brisket",
+    "oven brisket"
+  ],
+  "usda_2705852": [
+    "sandwich steak",
+    "beef sandwich steak",
+    "philly steak meat",
+    "shaved beef",
+    "thin sliced beef steak",
+    "beef for cheesesteak",
+    "sliced steak",
+    "beef strips steak"
+  ],
+  "usda_2705853": [
+    "raw ground beef",
+    "ground beef uncooked",
+    "minced beef raw",
+    "hamburger meat raw",
+    "raw hamburger",
+    "fresh ground beef",
+    "uncooked minced beef",
+    "raw beef mince"
+  ],
+  "usda_2705854": [
+    "ground beef",
+    "minced beef",
+    "hamburger meat",
+    "beef mince",
+    "giniling na baka",
+    "cooked ground beef",
+    "browned ground beef",
+    "beef giniling",
+    "minced cow"
+  ],
+  "usda_2705855": [
+    "beef patty",
+    "hamburger patty",
+    "burger patty",
+    "ground beef patty",
+    "beef burger",
+    "hamburger",
+    "grilled burger patty",
+    "beef patty cooked",
+    "smash burger patty"
+  ],
+  "usda_2705856": [
+    "beef bacon",
+    "cooked beef bacon",
+    "beef strip bacon",
+    "beef breakfast bacon",
+    "halal bacon",
+    "beef bacon strips",
+    "crispy beef bacon"
+  ],
+  "usda_2705857": [
+    "low sodium beef bacon",
+    "beef bacon low salt",
+    "reduced salt beef bacon",
+    "healthy beef bacon",
+    "less sodium beef bacon",
+    "beef bacon light"
+  ],
+  "usda_2705858": [
+    "dried beef",
+    "chipped beef",
+    "beef jerky sliced",
+    "dried chipped beef",
+    "creamed chipped beef meat",
+    "salt dried beef",
+    "cured dried beef",
+    "deli dried beef"
+  ],
+  "usda_2705859": [
+    "fried dried beef",
+    "chipped beef fried",
+    "dried beef cooked in fat",
+    "pan fried dried beef",
+    "crispy dried beef",
+    "fried chipped beef"
+  ],
+  "usda_2705861": [
+    "baby beef puree",
+    "toddler beef food",
+    "infant beef",
+    "baby food beef",
+    "pureed beef baby",
+    "baby beef jar",
+    "toddler beef puree"
+  ],
+  "usda_2705862": [
+    "pork",
+    "cooked pork",
+    "plain pork",
+    "pork meat",
+    "karne ng baboy",
+    "baboy",
+    "generic pork",
+    "pork serving"
+  ],
+  "usda_2705863": [
+    "ground pork",
+    "minced pork",
+    "pork mince",
+    "giniling na baboy",
+    "ground pork cooked",
+    "pork giniling",
+    "minced pig meat"
+  ],
+  "usda_2705864": [
+    "carnitas",
+    "mexican pulled pork",
+    "slow cooked pork carnitas",
+    "braised pork carnitas",
+    "shredded pork mexican",
+    "pork carnitas taco meat",
+    "crispy carnitas",
+    "pulled pork mexican style"
+  ],
+  "usda_2705865": [
+    "pork jerky",
+    "dried pork",
+    "pork snack stick",
+    "cured pork strip",
+    "smoked pork jerky",
+    "pork jerky snack",
+    "dried pork strip"
+  ],
+  "usda_2705866": [
+    "pork chop",
+    "grilled pork chop",
+    "pan fried pork chop",
+    "pork chop cooked",
+    "baked pork chop",
+    "inihaw na baboy chop",
+    "pork chops"
+  ],
+  "usda_2705867": [
+    "pork chop with fat",
+    "fatty pork chop",
+    "pork chop lean and fat",
+    "full pork chop",
+    "grilled pork chop fat on"
+  ],
+  "usda_2705868": [
+    "lean pork chop",
+    "trimmed pork chop",
+    "pork chop no fat",
+    "skinless pork chop",
+    "pork chop lean only",
+    "light pork chop"
+  ],
+  "usda_2705869": [
+    "breaded pork chop",
+    "coated pork chop",
+    "fried breaded pork chop",
+    "crispy pork chop",
+    "battered pork chop",
+    "pork chop breaded"
+  ],
+  "usda_2705870": [
+    "breaded pork chop with fat",
+    "crispy pork chop fat included",
+    "fried pork chop fatty",
+    "coated pork chop lean and fat"
+  ],
+  "usda_2705871": [
+    "breaded lean pork chop",
+    "crispy pork chop no fat",
+    "fried pork chop lean",
+    "coated pork chop trimmed"
+  ],
+  "usda_2705872": [
+    "stuffed pork chop",
+    "pork chop with stuffing",
+    "filled pork chop",
+    "pork chop stuffed with dressing"
+  ],
+  "usda_2705873": [
+    "pork steak",
+    "pork shoulder steak",
+    "grilled pork steak",
+    "pan fried pork steak",
+    "baboy steak"
+  ],
+  "usda_2705874": [
+    "pork steak with fat",
+    "fatty pork steak",
+    "pork steak full cut",
+    "pork steak lean and fat"
+  ],
+  "usda_2705875": [
+    "lean pork steak",
+    "pork steak no fat",
+    "trimmed pork steak",
+    "light pork steak"
+  ],
+  "usda_2705876": [
+    "breaded pork steak",
+    "coated pork steak",
+    "fried pork steak breaded",
+    "crispy pork steak"
+  ],
+  "usda_2705877": [
+    "pork tenderloin",
+    "pork loin fillet",
+    "grilled pork tenderloin",
+    "baked pork tenderloin",
+    "lean pork loin",
+    "pork fillet",
+    "roasted pork tenderloin",
+    "pan seared pork tenderloin"
+  ],
+  "usda_2705878": [
+    "ham",
+    "sliced ham",
+    "cooked ham",
+    "baked ham",
+    "holiday ham",
+    "deli ham",
+    "smoked ham",
+    "ham slices",
+    "pork ham"
+  ],
+  "usda_2705879": [
+    "prosciutto",
+    "italian dry cured ham",
+    "parma ham",
+    "cured ham sliced thin",
+    "prosciutto di parma",
+    "thin sliced cured pork",
+    "dry aged ham"
+  ],
+  "usda_2705880": [
+    "canned ham",
+    "tinned ham",
+    "ham in a can",
+    "spam like ham",
+    "luncheon ham",
+    "canned pork ham"
+  ],
+  "usda_2705881": [
+    "ground ham",
+    "minced ham",
+    "ham spread meat",
+    "chopped ham",
+    "ham loaf meat",
+    "deviled ham"
+  ],
+  "usda_2705882": [
+    "pork roast",
+    "roasted pork",
+    "oven roast pork",
+    "baked pork roast",
+    "pork shoulder roast",
+    "slow cooked pork roast",
+    "sunday pork roast",
+    "lechon sa hurno",
+    "roast pork loin"
+  ],
+  "usda_2705883": [
+    "pork roll",
+    "rolled pork",
+    "pork loin roll",
+    "pork roulade",
+    "rolled roast pork",
+    "pork pinwheel"
+  ],
+  "usda_2705884": [
+    "canadian bacon",
+    "back bacon",
+    "peameal bacon",
+    "round bacon",
+    "grilled canadian bacon",
+    "breakfast back bacon",
+    "pan fried back bacon"
+  ],
+  "usda_2705885": [
+    "bacon",
+    "cooked bacon",
+    "bacon strips",
+    "fried bacon",
+    "crispy bacon",
+    "breakfast bacon",
+    "strip bacon"
+  ],
+  "usda_2705886": [
+    "low sodium bacon",
+    "reduced salt bacon",
+    "light bacon",
+    "healthy bacon",
+    "less sodium bacon strips"
+  ],
+  "usda_2705887": [
+    "pork bacon",
+    "bacon strips pork",
+    "fried pork bacon",
+    "crispy pork strips",
+    "smoked bacon",
+    "cured bacon cooked"
+  ],
+  "usda_2705888": [
+    "low salt pork bacon",
+    "reduced sodium pork bacon",
+    "light pork bacon",
+    "pork bacon less sodium"
+  ],
+  "usda_2705889": [
+    "smoked pork bacon",
+    "cured smoked bacon",
+    "hickory smoked bacon",
+    "crispy smoked bacon",
+    "cured bacon strips"
+  ],
+  "usda_2705890": [
+    "fresh bacon",
+    "side pork",
+    "fresh pork belly strips",
+    "uncured bacon",
+    "fresh side pork cooked",
+    "pan fried fresh bacon"
+  ],
+  "usda_2705891": [
+    "low sodium smoked bacon",
+    "reduced sodium cured bacon",
+    "light smoked bacon",
+    "cured bacon low salt"
+  ],
+  "usda_2705892": [
+    "fatback",
+    "fat back pork",
+    "cooked fatback",
+    "pork fat slab",
+    "salt pork fat",
+    "rendered fatback",
+    "fried fat back"
+  ],
+  "usda_2705893": [
+    "ribs",
+    "bbq ribs",
+    "cooked ribs",
+    "rack of ribs",
+    "grilled ribs",
+    "smoked ribs",
+    "rib meat"
+  ],
+  "usda_2705894": [
+    "pork ribs",
+    "baby back ribs",
+    "spare ribs",
+    "bbq pork ribs",
+    "grilled pork ribs",
+    "smoked pork ribs",
+    "inihaw na ribs",
+    "slow cooked pork ribs",
+    "pork spareribs"
+  ],
+  "usda_2705895": [
+    "pork cracklings",
+    "chicharon",
+    "chicharron",
+    "crispy pork skin",
+    "fried pork rinds",
+    "pork scratching",
+    "deep fried pork skin",
+    "pork crackling"
+  ],
+  "usda_2705896": [
+    "pork ears",
+    "pig ears",
+    "cooked pig ear",
+    "crispy pig ears",
+    "pickled pig ears",
+    "pig ear meat",
+    "fried pig ears"
+  ],
+  "usda_2705897": [
+    "pork bones",
+    "pig bones",
+    "pork bone for soup",
+    "pork neck bones",
+    "pork back bones",
+    "pork bone broth meat"
+  ],
+  "usda_2705898": [
+    "pig feet",
+    "pig trotters",
+    "pigs feet",
+    "pork trotters",
+    "cooked pig feet",
+    "pata",
+    "pork feet",
+    "braised pig trotters"
+  ],
+  "usda_2705899": [
+    "pickled pig feet",
+    "pickled pigs feet",
+    "marinated pig trotters",
+    "vinegar pig feet",
+    "cured pig feet",
+    "pickled pork feet"
+  ],
+  "usda_2705900": [
+    "ham hocks",
+    "pork hocks",
+    "smoked ham hock",
+    "pork knuckle",
+    "ham hock cooked",
+    "braised ham hock",
+    "pata hamonado meat"
+  ],
+  "usda_2705901": [
+    "pork belly",
+    "liempo",
+    "fried pork belly",
+    "braised pork belly",
+    "roasted pork belly",
+    "lechon kawali",
+    "pork belly strips",
+    "slow roasted belly pork",
+    "crispy pork belly"
+  ],
+  "usda_2705902": [
+    "pork rinds",
+    "chicharron snack",
+    "pork skin snack",
+    "pork crackers",
+    "bagged pork rinds",
+    "fried pork skin snack",
+    "chicharon bulaklak",
+    "crunchy pork skins"
+  ],
+  "usda_2705903": [
+    "baby ham food",
+    "toddler ham puree",
+    "infant ham",
+    "baby food ham",
+    "pureed ham baby",
+    "baby ham jar"
+  ],
+  "usda_2705904": [
+    "baby meat stick",
+    "toddler meat stick",
+    "infant meat stick",
+    "baby food meat stick",
+    "pureed meat stick toddler"
+  ],
+  "usda_2705905": [
+    "lamb",
+    "cooked lamb",
+    "lamb meat",
+    "mutton",
+    "roasted lamb",
+    "grilled lamb",
+    "lamb serving"
+  ],
+  "usda_2705906": [
+    "lamb chop",
+    "grilled lamb chop",
+    "lamb rib chop",
+    "baked lamb chop",
+    "pan fried lamb chop",
+    "lamb loin chop",
+    "lamb cutlet"
+  ],
+  "usda_2705907": [
+    "ground lamb",
+    "minced lamb",
+    "lamb mince",
+    "ground lamb cooked",
+    "lamb keema",
+    "minced mutton"
+  ],
+  "usda_2705908": [
+    "goat meat",
+    "goat",
+    "kaldereta meat",
+    "kambing",
+    "goat stew",
+    "cooked goat",
+    "braised goat",
+    "goat curry meat"
+  ],
+  "usda_2705909": [
+    "veal chop",
+    "grilled veal chop",
+    "pan fried veal chop",
+    "veal loin chop",
+    "baby beef chop"
+  ],
+  "usda_2705910": [
+    "ground veal",
+    "minced veal",
+    "veal mince",
+    "ground baby beef",
+    "minced veal cooked"
+  ],
+  "usda_2705911": [
+    "mock chicken",
+    "city chicken",
+    "mock chicken leg",
+    "pork and veal skewer",
+    "city chicken skewer",
+    "fake chicken leg"
+  ],
+  "usda_2705912": [
+    "rabbit meat",
+    "cooked rabbit",
+    "braised rabbit",
+    "roasted rabbit",
+    "rabbit stew meat",
+    "fried rabbit",
+    "rabbit cooked"
+  ],
+  "usda_2705913": [
+    "venison",
+    "deer meat",
+    "cooked venison",
+    "game meat deer",
+    "deer cooked",
+    "venison cut"
+  ],
+  "usda_2705914": [
+    "venison steak",
+    "deer steak",
+    "grilled venison steak",
+    "pan fried deer steak",
+    "venison loin steak"
+  ],
+  "usda_2705915": [
+    "deer jerky",
+    "venison jerky",
+    "dried deer meat",
+    "smoked venison jerky",
+    "deer snack stick",
+    "dried venison"
+  ],
+  "usda_2705916": [
+    "venison sausage",
+    "deer sausage",
+    "smoked deer sausage",
+    "venison bratwurst",
+    "wild game sausage",
+    "deer brat"
+  ],
+  "usda_2705917": [
+    "moose meat",
+    "cooked moose",
+    "moose steak",
+    "roasted moose",
+    "braised moose",
+    "wild moose meat"
+  ],
+  "usda_2705918": [
+    "bear meat",
+    "cooked bear",
+    "wild bear meat",
+    "bear steak",
+    "roasted bear"
+  ],
+  "usda_2705919": [
+    "caribou meat",
+    "cooked caribou",
+    "reindeer meat",
+    "wild caribou",
+    "caribou steak"
+  ],
+  "usda_2705920": [
+    "bison meat",
+    "buffalo meat",
+    "american buffalo",
+    "ground bison",
+    "bison steak",
+    "bison burger",
+    "cooked bison"
+  ],
+  "usda_2705921": [
+    "groundhog meat",
+    "woodchuck meat",
+    "cooked groundhog",
+    "roasted groundhog"
+  ],
+  "usda_2705922": [
+    "opossum meat",
+    "possum meat",
+    "cooked opossum",
+    "roasted possum"
+  ],
+  "usda_2705923": [
+    "squirrel meat",
+    "cooked squirrel",
+    "fried squirrel",
+    "squirrel stew meat",
+    "roasted squirrel"
+  ],
+  "usda_2705924": [
+    "beaver meat",
+    "cooked beaver",
+    "roasted beaver",
+    "wild beaver meat"
+  ],
+  "usda_2705925": [
+    "raccoon meat",
+    "cooked raccoon",
+    "roasted raccoon",
+    "wild raccoon"
+  ],
+  "usda_2705926": [
+    "armadillo meat",
+    "cooked armadillo",
+    "roasted armadillo",
+    "wild armadillo"
+  ],
+  "usda_2705927": [
+    "wild boar",
+    "boar meat",
+    "feral pig meat",
+    "wild hog meat",
+    "cooked wild boar",
+    "wild pig steak",
+    "wild boar roast"
+  ],
+  "usda_2705928": [
+    "ostrich meat",
+    "ostrich steak",
+    "cooked ostrich",
+    "ostrich filet",
+    "grilled ostrich",
+    "ostrich burger"
+  ],
+  "usda_2705929": [
+    "chicken",
+    "cooked chicken",
+    "plain chicken",
+    "chicken meat",
+    "manok",
+    "generic chicken"
+  ],
+  "usda_2705930": [
+    "chicken with skin",
+    "chicken skin on",
+    "cooked chicken with skin",
+    "crispy skin chicken",
+    "chicken skin eaten"
+  ],
+  "usda_2705931": [
+    "chicken no skin",
+    "skinless chicken",
+    "chicken meat only",
+    "chicken without skin",
+    "cooked chicken skinless"
+  ],
+  "usda_2705932": [
+    "baked chicken",
+    "broiled chicken",
+    "roasted chicken",
+    "oven chicken",
+    "oven baked chicken",
+    "baked whole chicken piece"
+  ],
+  "usda_2705933": [
+    "baked chicken with skin",
+    "roasted chicken skin on",
+    "crispy roasted chicken",
+    "oven roasted chicken with skin"
+  ],
+  "usda_2705934": [
+    "baked chicken no skin",
+    "roasted chicken skinless",
+    "broiled chicken no skin",
+    "oven chicken without skin",
+    "healthy baked chicken"
+  ],
+  "usda_2705935": [
+    "rotisserie chicken",
+    "store bought rotisserie",
+    "roast chicken rotisserie",
+    "rotisserie whole chicken",
+    "supermarket rotisserie"
+  ],
+  "usda_2705936": [
+    "rotisserie chicken with skin",
+    "rotisserie skin on",
+    "crispy rotisserie chicken",
+    "rotisserie whole skin eaten"
+  ],
+  "usda_2705937": [
+    "rotisserie chicken no skin",
+    "skinless rotisserie chicken",
+    "rotisserie chicken meat only",
+    "rotisserie without skin"
+  ],
+  "usda_2705938": [
+    "stewed chicken",
+    "chicken tinola",
+    "boiled chicken",
+    "chicken soup meat",
+    "simmered chicken",
+    "tinola chicken"
+  ],
+  "usda_2705939": [
+    "stewed chicken with skin",
+    "chicken stew skin on",
+    "boiled chicken skin eaten",
+    "simmered chicken skin on"
+  ],
+  "usda_2705940": [
+    "stewed chicken no skin",
+    "skinless stewed chicken",
+    "chicken stew no skin",
+    "boiled chicken skinless",
+    "tinola chicken no skin"
+  ],
+  "usda_2705941": [
+    "grilled chicken",
+    "inihaw na manok",
+    "bbq chicken",
+    "chargrilled chicken",
+    "grilled chicken plain",
+    "chicken grill no sauce"
+  ],
+  "usda_2705942": [
+    "grilled chicken with skin",
+    "bbq chicken skin on",
+    "inihaw manok with skin",
+    "chargrilled chicken skin eaten"
+  ],
+  "usda_2705943": [
+    "grilled chicken no skin",
+    "skinless grilled chicken",
+    "bbq chicken no skin",
+    "plain grilled chicken breast",
+    "inihaw na manok walang balat"
+  ]
+}

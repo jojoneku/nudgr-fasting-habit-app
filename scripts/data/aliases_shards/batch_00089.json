@@ -1,0 +1,887 @@
+{
+  "usda_171257": [
+    "sour cream",
+    "crema",
+    "cultured cream",
+    "tangy cream topping",
+    "dollop of cream",
+    "cream for tacos",
+    "baked potato topping",
+    "creamy sour dip",
+    "dairy topping sour",
+    "smetana"
+  ],
+  "usda_171258": [
+    "holiday eggnog",
+    "christmas drink",
+    "creamy egg drink",
+    "nog",
+    "spiced eggnog",
+    "egg drink",
+    "festive nog",
+    "milk and egg drink",
+    "holiday cream drink",
+    "seasonal eggnog"
+  ],
+  "usda_171259": [
+    "imitation sour cream",
+    "fake sour cream",
+    "non-dairy sour cream",
+    "dairy-free sour cream",
+    "sour cream alternative",
+    "filled cream dressing",
+    "non-butterfat cream",
+    "cream dressing substitute"
+  ],
+  "usda_171260": [
+    "coconut greek yogurt",
+    "greek yogurt coconut",
+    "coconut yogurt",
+    "2% coconut yogurt",
+    "tropical yogurt",
+    "creamy coconut yogurt",
+    "coconut blend yogurt",
+    "coconut flavored greek yogurt"
+  ],
+  "usda_171261": [
+    "liquid coffee creamer",
+    "coffee whitener",
+    "non-dairy creamer",
+    "soy creamer",
+    "vegetable oil creamer",
+    "dairy-free coffee creamer",
+    "liquid creamer",
+    "coffee cream substitute"
+  ],
+  "usda_171262": [
+    "liquid coffee creamer",
+    "non-dairy liquid creamer",
+    "coffee whitener liquid",
+    "cream for coffee",
+    "coffee lightener",
+    "dairy creamer substitute",
+    "liquid non-dairy creamer",
+    "caseinate creamer"
+  ],
+  "usda_171263": [
+    "powdered coffee creamer",
+    "coffee creamer powder",
+    "non-dairy creamer powder",
+    "coffee whitener powder",
+    "dry creamer",
+    "instant creamer",
+    "powder creamer for coffee",
+    "coffee powder creamer"
+  ],
+  "usda_171264": [
+    "non-dairy milk",
+    "milk alternative",
+    "dairy-free milk",
+    "imitation milk fluid",
+    "plant-based milk substitute",
+    "milk replacement liquid",
+    "non-dairy liquid milk",
+    "dairy substitute fluid"
+  ],
+  "usda_171266": [
+    "whole milk",
+    "full fat milk",
+    "fresh whole milk",
+    "regular milk",
+    "farm fresh milk",
+    "full cream milk",
+    "gatas",
+    "3.7% milk",
+    "rich fresh milk",
+    "producer fresh milk"
+  ],
+  "usda_171268": [
+    "1% milk",
+    "low fat milk",
+    "one percent milk",
+    "protein fortified milk",
+    "light milk",
+    "low fat dairy milk",
+    "fortified 1% milk",
+    "reduced fat milk 1%"
+  ],
+  "usda_171270": [
+    "skim milk",
+    "fat free milk",
+    "nonfat milk",
+    "skimmed milk",
+    "zero fat milk",
+    "fat-free dairy milk",
+    "non-fat white milk",
+    "fat free skim milk"
+  ],
+  "usda_171271": [
+    "protein skim milk",
+    "fortified skim milk",
+    "fat free protein milk",
+    "nonfat protein milk",
+    "high protein skim milk",
+    "enriched skim milk",
+    "protein fortified nonfat milk"
+  ],
+  "usda_171272": [
+    "instant milk powder",
+    "powdered skim milk",
+    "dry milk powder",
+    "nonfat dry milk",
+    "instant powdered milk",
+    "skimmed milk powder",
+    "dehydrated nonfat milk",
+    "dry instant skim milk"
+  ],
+  "usda_171273": [
+    "low calcium milk powder",
+    "calcium reduced milk powder",
+    "dry nonfat milk",
+    "powdered milk low calcium",
+    "dry skim milk calcium reduced",
+    "nonfat dry milk low cal"
+  ],
+  "usda_171274": [
+    "dried buttermilk",
+    "buttermilk powder",
+    "powdered buttermilk",
+    "dry buttermilk",
+    "dehydrated buttermilk",
+    "buttermilk baking powder",
+    "buttermilk dry mix"
+  ],
+  "usda_171275": [
+    "condensed milk",
+    "sweetened condensed milk",
+    "sweet condensed milk",
+    "canned condensed milk",
+    "condensada",
+    "thick sweet milk",
+    "sweet milk for baking",
+    "milky condensed can"
+  ],
+  "usda_171276": [
+    "evaporated milk",
+    "canned evaporated milk",
+    "evap milk",
+    "unsweetened canned milk",
+    "thick canned milk",
+    "concentrated canned milk",
+    "evaporated dairy canned"
+  ],
+  "usda_171277": [
+    "hot chocolate",
+    "homemade hot cocoa",
+    "cocoa drink",
+    "hot choco",
+    "warm chocolate drink",
+    "chocolate milk hot",
+    "cocoa beverage homemade",
+    "hot cocoa from scratch"
+  ],
+  "usda_171278": [
+    "goat milk",
+    "fresh goat milk",
+    "goat's milk",
+    "gatas ng kambing",
+    "kambing milk",
+    "whole goat milk",
+    "goat dairy milk",
+    "goat farm milk"
+  ],
+  "usda_171279": [
+    "breast milk",
+    "human breast milk",
+    "mother's milk",
+    "mature breast milk",
+    "breastmilk",
+    "nursing milk",
+    "lactation milk",
+    "human mature milk"
+  ],
+  "usda_171280": [
+    "buffalo milk",
+    "carabao milk",
+    "water buffalo milk",
+    "gatas ng kalabaw",
+    "kalabaw milk",
+    "rich buffalo milk",
+    "thick buffalo dairy",
+    "indian buffalo dairy"
+  ],
+  "usda_171281": [
+    "acid whey powder",
+    "dried acid whey",
+    "whey powder acidic",
+    "dry acid whey",
+    "acidic dried whey",
+    "whey solids acid type",
+    "dehydrated acid whey"
+  ],
+  "usda_171282": [
+    "liquid sweet whey",
+    "sweet whey liquid",
+    "fluid whey",
+    "sweet dairy whey fluid",
+    "liquid whey",
+    "sweet whey drink",
+    "cheese whey liquid"
+  ],
+  "usda_171283": [
+    "sweet whey powder",
+    "dried whey",
+    "whey powder sweet",
+    "dry whey",
+    "dehydrated sweet whey",
+    "whey solids dried",
+    "powdered sweet whey"
+  ],
+  "usda_171285": [
+    "fruit yogurt low fat",
+    "low fat fruit yogurt",
+    "fruity yogurt",
+    "yogurt with fruit",
+    "light fruit yogurt",
+    "low fat yogurt fruit blend",
+    "healthy fruit yogurt 10g protein"
+  ],
+  "usda_171286": [
+    "fruit yogurt high protein",
+    "protein fruit yogurt",
+    "low fat fruit yogurt 11g",
+    "high protein fruit yogurt",
+    "fruity yogurt protein boost",
+    "yogurt with fruit 11g protein"
+  ],
+  "usda_171287": [
+    "raw egg",
+    "fresh egg",
+    "itlog",
+    "whole egg raw",
+    "uncooked egg",
+    "fresh whole egg",
+    "single raw egg",
+    "egg itlog sariwa"
+  ],
+  "usda_171288": [
+    "mexican cheese blend",
+    "shredded mexican cheese",
+    "tex-mex cheese",
+    "taco cheese blend",
+    "four cheese mexican",
+    "fiesta cheese blend",
+    "mixed mexican shredded cheese",
+    "quesadilla cheese blend"
+  ],
+  "usda_171289": [
+    "american cheese",
+    "processed cheese slice",
+    "sliced american cheese",
+    "american cheese product",
+    "fortified american cheese",
+    "sandwich cheese slice",
+    "process cheese american"
+  ],
+  "usda_171290": [
+    "american cheese",
+    "processed american cheese",
+    "pasteurized cheese",
+    "american cheese slice",
+    "sliced process cheese",
+    "american processed cheese slice"
+  ],
+  "usda_171291": [
+    "american cheese food",
+    "process cheese food",
+    "american cheese spread",
+    "pasteurized cheese food",
+    "melty american cheese food",
+    "processed cheese food american"
+  ],
+  "usda_171292": [
+    "reduced fat cheddar",
+    "light cheddar",
+    "low fat cheddar",
+    "cheddar light",
+    "lowfat cheddar cheese",
+    "diet cheddar",
+    "light cheddar cheese reduced fat"
+  ],
+  "usda_171293": [
+    "soft serve chocolate",
+    "light chocolate soft serve",
+    "chocolate soft ice cream",
+    "light chocolate ice cream",
+    "chocolate soft serve cone",
+    "choco soft serve light",
+    "lite chocolate soft serve"
+  ],
+  "usda_171294": [
+    "crunchy ice cream bar",
+    "crunch coated ice cream",
+    "ice cream nugget crunch",
+    "crunch ice cream stick",
+    "coated ice cream bar",
+    "crispy coated ice cream",
+    "chocolate crunch ice cream bar"
+  ],
+  "usda_171295": [
+    "fat free cheddar",
+    "nonfat cheddar",
+    "zero fat cheddar cheese",
+    "skim cheddar",
+    "nonfat cheddar cheese fat free",
+    "fat-free cheddar block"
+  ],
+  "usda_171296": [
+    "vanilla greek yogurt nonfat",
+    "nonfat vanilla greek yogurt",
+    "fat-free vanilla yogurt",
+    "vanilla yogurt greek nonfat",
+    "greek vanilla nonfat yogurt",
+    "vanilla chobani nonfat"
+  ],
+  "usda_171297": [
+    "strawberry greek yogurt",
+    "greek yogurt strawberry",
+    "oikos strawberry yogurt",
+    "strawberry yogurt greek style",
+    "greek strawberry dannon",
+    "thick strawberry yogurt"
+  ],
+  "usda_171298": [
+    "oikos vanilla",
+    "vanilla greek yogurt nonfat dannon",
+    "dannon vanilla greek",
+    "fat-free vanilla greek yogurt",
+    "vanilla oikos nonfat",
+    "nonfat vanilla dannon yogurt"
+  ],
+  "usda_171299": [
+    "oikos strawberry nonfat",
+    "nonfat strawberry greek yogurt",
+    "fat-free strawberry yogurt",
+    "dannon nonfat strawberry greek",
+    "strawberry oikos nonfat",
+    "nonfat greek strawberry dannon"
+  ],
+  "usda_171300": [
+    "strawberry greek yogurt lowfat",
+    "low fat strawberry yogurt",
+    "strawberry yogurt low fat",
+    "light strawberry greek yogurt",
+    "lowfat strawberry thick yogurt",
+    "strawberry greek low fat"
+  ],
+  "usda_171301": [
+    "strawberry kefir",
+    "lowfat kefir drink",
+    "kefir strawberry",
+    "probiotic strawberry kefir",
+    "fermented milk strawberry",
+    "kefir yogurt drink strawberry",
+    "cultured milk strawberry drink"
+  ],
+  "usda_171302": [
+    "evaporated milk 2%",
+    "reduced fat evap milk",
+    "light evaporated milk",
+    "low fat canned milk",
+    "2 percent evap milk",
+    "evap 2% fat canned",
+    "light canned evaporated milk"
+  ],
+  "usda_171303": [
+    "fat free chocolate milk",
+    "skim chocolate milk",
+    "nonfat choco milk",
+    "fat-free choco milk",
+    "chocolate skim milk",
+    "zero fat chocolate milk",
+    "fat free choco drink"
+  ],
+  "usda_171304": [
+    "whole milk greek yogurt",
+    "full fat greek yogurt",
+    "plain whole milk greek yogurt",
+    "full fat plain yogurt",
+    "rich greek yogurt plain",
+    "whole plain yogurt greek",
+    "full cream greek yogurt"
+  ],
+  "usda_171305": [
+    "chocolate nut ice cream bar",
+    "nutty ice cream bar",
+    "ice cream bar with nuts",
+    "chocolate covered ice cream nuts",
+    "nut coated ice cream bar",
+    "ice cream bar choco nuts covered"
+  ],
+  "usda_171306": [
+    "sundae cone",
+    "ice cream sundae cone",
+    "cone sundae",
+    "waffle cone sundae",
+    "ice cream in a cone sundae",
+    "sundae in a cone",
+    "soft serve sundae cone"
+  ],
+  "usda_171307": [
+    "creamsicle",
+    "orange creamsicle",
+    "orange vanilla ice cream bar",
+    "orange cream popsicle",
+    "creamsicle bar",
+    "vanilla orange ice cream pop",
+    "orange sherbet bar"
+  ],
+  "usda_171308": [
+    "lowfat half and half",
+    "light half and half",
+    "low fat cream blend",
+    "half and half light",
+    "reduced fat half and half",
+    "light coffee cream blend",
+    "low fat creamer blend"
+  ],
+  "usda_171309": [
+    "whole milk chobani",
+    "plain chobani whole",
+    "full fat chobani plain",
+    "whole plain greek yogurt chobani",
+    "chobani whole plain",
+    "full fat chobani greek",
+    "chobani full cream plain"
+  ],
+  "usda_171310": [
+    "lemon greek yogurt",
+    "nonfat lemon yogurt",
+    "lemon blend yogurt",
+    "greek lemon yogurt chobani",
+    "fat-free lemon yogurt",
+    "chobani lemon nonfat",
+    "lemon flavored greek yogurt"
+  ],
+  "usda_171311": [
+    "peach greek yogurt",
+    "nonfat peach yogurt",
+    "greek yogurt peach",
+    "fat-free peach yogurt",
+    "peach yogurt greek style",
+    "chobani peach nonfat",
+    "peach flavored greek yogurt"
+  ],
+  "usda_171312": [
+    "plain chobani nonfat",
+    "nonfat plain greek yogurt",
+    "fat-free plain greek yogurt",
+    "plain greek nonfat",
+    "unsweetened nonfat greek yogurt",
+    "chobani plain fat free",
+    "zero fat plain greek yogurt"
+  ],
+  "usda_171313": [
+    "raspberry greek yogurt",
+    "nonfat raspberry yogurt",
+    "greek yogurt raspberry",
+    "fat-free raspberry yogurt",
+    "raspberry yogurt greek style",
+    "chobani raspberry nonfat",
+    "raspberry flavored greek yogurt"
+  ],
+  "usda_171314": [
+    "ghee",
+    "clarified butter",
+    "indian ghee",
+    "desi ghee",
+    "cooking ghee",
+    "pure butterfat",
+    "keto cooking fat",
+    "clarified cooking butter"
+  ],
+  "usda_171315": [
+    "ground allspice",
+    "allspice powder",
+    "allspice seasoning",
+    "pimento spice",
+    "whole allspice ground",
+    "mixed spice allspice",
+    "allspice ground spice"
+  ],
+  "usda_171316": [
+    "anise seeds",
+    "aniseed",
+    "anise spice",
+    "licorice seed",
+    "anis seed",
+    "licorice flavored seed",
+    "whole anise seed"
+  ],
+  "usda_171317": [
+    "dried basil",
+    "basil flakes",
+    "dried basil herb",
+    "basil seasoning",
+    "italian basil dried",
+    "pizza herb basil",
+    "herb basil dried",
+    "sweet basil dried"
+  ],
+  "usda_171318": [
+    "dried chervil",
+    "chervil herb dried",
+    "chervil flakes",
+    "french herb chervil",
+    "chervil seasoning",
+    "dried chervil herb",
+    "chervil dry spice"
+  ],
+  "usda_171319": [
+    "chili powder spice",
+    "red chili powder",
+    "chili seasoning",
+    "dried chili powder",
+    "chilli powder",
+    "hot pepper powder",
+    "chili spice blend",
+    "red pepper chili powder"
+  ],
+  "usda_171320": [
+    "ground cinnamon",
+    "cinnamon powder",
+    "cinnamon spice",
+    "kanela",
+    "powdered cinnamon",
+    "sweet cinnamon spice",
+    "cinnamon ground spice"
+  ],
+  "usda_171321": [
+    "ground cloves",
+    "cloves powder",
+    "clove spice powder",
+    "powdered cloves",
+    "ground clove seasoning",
+    "dried clove powder",
+    "cloves ground spice"
+  ],
+  "usda_171322": [
+    "dried dill",
+    "dill flakes",
+    "dill herb dried",
+    "dill weed dried",
+    "dried dill herb",
+    "dill seasoning flakes",
+    "dill weed herb"
+  ],
+  "usda_171323": [
+    "fennel seeds",
+    "sweet fennel seed",
+    "fennel spice seeds",
+    "licorice flavored seeds",
+    "fennel herb seed",
+    "anise-like seeds fennel",
+    "whole fennel seed"
+  ],
+  "usda_171324": [
+    "fenugreek seeds",
+    "methi seeds",
+    "methi",
+    "dried fenugreek seed",
+    "fenugreek spice",
+    "bitter spice seeds",
+    "fenugreek herb seeds"
+  ],
+  "usda_171325": [
+    "garlic powder spice",
+    "powdered garlic",
+    "dried garlic powder",
+    "garlic seasoning powder",
+    "bawang powder",
+    "garlic dust",
+    "dehydrated garlic powder"
+  ],
+  "usda_171326": [
+    "ground nutmeg",
+    "nutmeg powder",
+    "grated nutmeg spice",
+    "nutmeg spice ground",
+    "powdered nutmeg",
+    "nutmeg seasoning ground"
+  ],
+  "usda_171327": [
+    "onion powder spice",
+    "powdered onion",
+    "dried onion powder",
+    "onion seasoning powder",
+    "sibuyas powder",
+    "dehydrated onion powder",
+    "onion dust"
+  ],
+  "usda_171328": [
+    "dried oregano",
+    "oregano flakes",
+    "oregano herb dried",
+    "italian oregano dried",
+    "pizza herb oregano",
+    "oregano seasoning dried",
+    "herb oregano flakes"
+  ],
+  "usda_171329": [
+    "paprika spice",
+    "sweet paprika",
+    "red paprika powder",
+    "smoked paprika",
+    "paprika powder",
+    "hungarian paprika",
+    "red pepper paprika spice"
+  ],
+  "usda_171330": [
+    "poppy seeds",
+    "blue poppy seed",
+    "poppy seed spice",
+    "baking poppy seeds",
+    "poppy for bagels",
+    "seed poppy baking",
+    "dried poppy seeds"
+  ],
+  "usda_171331": [
+    "chicken seasoning blend",
+    "poultry spice blend",
+    "turkey seasoning mix",
+    "herb chicken seasoning",
+    "seasoning for chicken",
+    "poultry herb mix",
+    "roast chicken spice blend"
+  ],
+  "usda_171332": [
+    "pumpkin spice",
+    "pumpkin pie seasoning",
+    "fall spice blend",
+    "psl spice",
+    "pumpkin spice mix",
+    "warm fall spice blend",
+    "pumpkin pie spice mix"
+  ],
+  "usda_171333": [
+    "dried rosemary",
+    "rosemary herb dried",
+    "rosemary flakes",
+    "rosemary seasoning",
+    "rosemary for roasting",
+    "dried rosemary herb",
+    "rosemary dry spice"
+  ],
+  "usda_171334": [
+    "baby creamed corn",
+    "junior corn baby food",
+    "baby corn puree",
+    "infant corn cream",
+    "creamed corn for baby",
+    "toddler corn puree",
+    "baby veggie corn cream"
+  ],
+  "usda_171335": [
+    "baby banana food",
+    "strained banana tapioca",
+    "banana tapioca baby food",
+    "infant banana puree",
+    "banana baby puree",
+    "banana tapioca infant food",
+    "strained banana for baby"
+  ],
+  "usda_171336": [
+    "baby peach puree",
+    "strained peach baby food",
+    "peach infant food",
+    "baby peaches strained",
+    "pureed peach baby food",
+    "strained baby peaches"
+  ],
+  "usda_171337": [
+    "junior peach baby food",
+    "baby peaches junior",
+    "peach toddler food",
+    "junior infant peaches",
+    "peach baby food large jar",
+    "junior size peach baby food"
+  ],
+  "usda_171338": [
+    "baby pear puree",
+    "strained pear baby food",
+    "pear infant food",
+    "baby pears pureed",
+    "strained pear for baby",
+    "pureed pear baby food"
+  ],
+  "usda_171339": [
+    "baby prune tapioca food",
+    "junior prune baby food",
+    "prune tapioca baby puree",
+    "baby prunes with tapioca junior",
+    "infant prune tapioca food",
+    "prune baby food junior"
+  ],
+  "usda_171340": [
+    "strained baby prunes",
+    "baby prune puree",
+    "prune baby food strained",
+    "infant prune puree",
+    "baby prunes no vitamin c",
+    "strained prunes for baby"
+  ],
+  "usda_171341": [
+    "baby mango food",
+    "mango tapioca baby food",
+    "baby mango puree",
+    "infant mango dessert",
+    "mango baby dessert tapioca",
+    "mango with tapioca baby food"
+  ],
+  "usda_171342": [
+    "toddler pear pieces",
+    "diced pear baby food",
+    "pear dices toddler",
+    "baby diced pears",
+    "toddler pear diced food",
+    "finger food pears toddler"
+  ],
+  "usda_171343": [
+    "baby applesauce pineapple",
+    "strained apple pineapple baby",
+    "apple pineapple baby food",
+    "infant apple pineapple puree",
+    "apple pineapple strained baby"
+  ],
+  "usda_171344": [
+    "junior apple pineapple baby food",
+    "baby applesauce pineapple junior",
+    "toddler apple pineapple food",
+    "apple pineapple baby junior",
+    "junior size apple pineapple baby"
+  ],
+  "usda_171345": [
+    "baby apple raspberry",
+    "strained apple raspberry baby food",
+    "infant apple raspberry puree",
+    "apple raspberry baby puree",
+    "strained baby apple raspberry"
+  ],
+  "usda_171346": [
+    "junior apple raspberry baby food",
+    "baby apple raspberry junior",
+    "toddler apple raspberry food",
+    "apple raspberry baby food large",
+    "junior apple raspberry infant"
+  ],
+  "usda_171347": [
+    "junior pear pineapple baby food",
+    "baby pear pineapple junior",
+    "toddler pear pineapple food",
+    "pear pineapple baby food junior",
+    "junior infant pear pineapple"
+  ],
+  "usda_171348": [
+    "baby guava papaya food",
+    "strained guava papaya baby",
+    "guava papaya tapioca baby food",
+    "infant guava papaya puree",
+    "baby tropical fruit puree guava papaya"
+  ],
+  "usda_171349": [
+    "toddler peach pieces",
+    "diced peach baby food",
+    "peach dices toddler",
+    "baby diced peaches",
+    "toddler peach diced food",
+    "finger food peaches toddler"
+  ],
+  "usda_171350": [
+    "baby papaya applesauce",
+    "strained papaya apple baby",
+    "papaya apple tapioca baby",
+    "infant papaya puree",
+    "baby papaya food strained",
+    "papaya applesauce baby puree"
+  ],
+  "usda_171351": [
+    "baby apple banana juice",
+    "infant apple banana drink",
+    "apple banana baby juice",
+    "baby fruit juice apple banana",
+    "infant apple banana blend drink"
+  ],
+  "usda_171352": [
+    "baby apple peach juice",
+    "infant apple peach drink",
+    "apple peach baby juice",
+    "baby fruit juice apple peach",
+    "infant apple peach blend"
+  ],
+  "usda_171353": [
+    "baby apple prune juice",
+    "infant prune apple drink",
+    "apple prune baby juice",
+    "baby prune juice",
+    "infant prune drink apple",
+    "baby juice prune apple"
+  ],
+  "usda_171354": [
+    "baby orange juice",
+    "infant oj",
+    "baby oj",
+    "orange juice for baby",
+    "infant orange drink",
+    "baby citrus juice",
+    "strained orange juice baby"
+  ],
+  "usda_171355": [
+    "baby orange apple juice",
+    "infant orange apple drink",
+    "apple orange baby juice",
+    "baby oj with apple",
+    "infant oj apple blend",
+    "baby juice orange apple"
+  ],
+  "usda_171356": [
+    "baby prune orange juice",
+    "infant prune oj",
+    "prune orange baby juice",
+    "baby prune citrus drink",
+    "baby juice prune orange",
+    "infant prune orange blend"
+  ],
+  "usda_171357": [
+    "baby mixed fruit juice",
+    "infant fruit blend juice",
+    "mixed baby fruit drink",
+    "baby fruit juice blend",
+    "infant mixed fruit drink",
+    "baby juice mixed fruit"
+  ],
+  "usda_171358": [
+    "baby barley cereal",
+    "fortified barley baby cereal",
+    "baby barley porridge",
+    "infant barley cereal dry",
+    "barley baby food dry",
+    "dry fortified barley cereal baby"
+  ],
+  "usda_171359": [
+    "baby wheat apple cereal",
+    "whole wheat baby cereal apple",
+    "infant wheat apple porridge",
+    "dry wheat apple baby cereal",
+    "whole wheat apple baby food dry",
+    "baby cereal wheat with apple"
+  ],
+  "usda_171360": [
+    "baby oatmeal cereal",
+    "fortified baby oats",
+    "infant oatmeal dry",
+    "dry baby oatmeal",
+    "baby oat cereal",
+    "oatmeal baby food dry",
+    "baby porridge oats fortified"
+  ]
+}

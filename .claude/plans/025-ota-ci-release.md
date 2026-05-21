@@ -1,4 +1,6 @@
-# OTA CI Release Job — Implementation Plan
+# Plan 025 — OTA CI Release Job
+
+> Status: IMPLEMENTED (release job lives in `.github/workflows/ci.yml`)
 
 ## Goal
 Add a `release` job to `ci.yml` that fires automatically on every push to `main`, builds a

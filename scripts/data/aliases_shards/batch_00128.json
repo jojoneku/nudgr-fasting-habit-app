@@ -1,0 +1,1003 @@
+{
+  "usda_175227": [
+    "plain soy yogurt",
+    "dairy free plain yogurt",
+    "vegan plain yogurt",
+    "soy based yogurt",
+    "non dairy plain yogurt",
+    "plant based yogurt plain",
+    "unsweetened soy yogurt",
+    "silk plain yogurt"
+  ],
+  "usda_175228": [
+    "strawberry soy yogurt",
+    "dairy free strawberry yogurt",
+    "vegan strawberry yogurt",
+    "plant based strawberry yogurt",
+    "non dairy strawberry yogurt",
+    "soy strawberry yogurt",
+    "silk strawberry yogurt"
+  ],
+  "usda_175229": [
+    "key lime soy yogurt",
+    "dairy free key lime yogurt",
+    "vegan key lime yogurt",
+    "plant based key lime yogurt",
+    "non dairy key lime yogurt",
+    "lime soy yogurt",
+    "silk lime yogurt",
+    "key lime plant yogurt"
+  ],
+  "usda_175230": [
+    "banana strawberry soy yogurt",
+    "dairy free banana strawberry yogurt",
+    "vegan banana strawberry yogurt",
+    "plant based banana strawberry yogurt",
+    "non dairy banana strawberry yogurt",
+    "soy banana strawberry yogurt",
+    "silk banana strawberry yogurt",
+    "banana strawberry plant yogurt"
+  ],
+  "usda_175231": [
+    "soy creamer",
+    "dairy free coffee creamer",
+    "vegan coffee creamer",
+    "plant based creamer",
+    "non dairy creamer original",
+    "soy milk creamer",
+    "original non dairy creamer",
+    "silk soy creamer"
+  ],
+  "usda_175232": [
+    "french vanilla soy creamer",
+    "dairy free vanilla creamer",
+    "vegan vanilla coffee creamer",
+    "plant based vanilla creamer",
+    "non dairy french vanilla creamer",
+    "soy vanilla creamer",
+    "silk vanilla creamer",
+    "vegan french vanilla creamer"
+  ],
+  "usda_175233": [
+    "organic firm tofu",
+    "nasoya firm tofu",
+    "organic tofu firm",
+    "tofu plus firm",
+    "firm soy tofu",
+    "organic soybean curd firm",
+    "plant protein tofu",
+    "tokwa firm",
+    "vitasoy firm tofu"
+  ],
+  "usda_175234": [
+    "organic super firm tofu",
+    "sprouted tofu super firm",
+    "nasoya super firm tofu",
+    "extra firm sprouted tofu",
+    "sprouted soybean tofu",
+    "tofu plus super firm",
+    "organic sprouted tofu",
+    "high protein tofu firm",
+    "vitasoy sprouted tofu"
+  ],
+  "usda_175235": [
+    "azumaya extra firm tofu",
+    "extra firm soy tofu",
+    "tokwa extra firm",
+    "firm bean curd extra",
+    "azumaya tofu extra firm",
+    "extra firm tofu block",
+    "tofu extra firm vitasoy",
+    "soybean curd extra firm"
+  ],
+  "usda_175236": [
+    "azumaya firm tofu",
+    "firm soy curd",
+    "tokwa firm azumaya",
+    "regular firm tofu",
+    "azumaya tofu firm",
+    "firm bean curd",
+    "soybean curd firm block",
+    "tofu firm vitasoy"
+  ],
+  "usda_175237": [
+    "black beans cooked salted",
+    "boiled black beans",
+    "cooked black beans salted",
+    "black beans with salt",
+    "black bean cooked",
+    "frijoles negros cooked",
+    "salted black beans boiled",
+    "black beans stove top"
+  ],
+  "usda_175238": [
+    "canned black beans low sodium",
+    "low salt canned black beans",
+    "reduced sodium black beans",
+    "black beans can low sodium",
+    "low sodium frijoles negros",
+    "canned black bean low salt",
+    "black beans tin low sodium",
+    "low sodium black bean can"
+  ],
+  "usda_175239": [
+    "black turtle beans cooked",
+    "turtle beans boiled",
+    "black turtle bean salted",
+    "cooked turtle beans",
+    "black turtle bean cooked salted",
+    "boiled turtle beans",
+    "frijoles negros turtle",
+    "small black beans cooked"
+  ],
+  "usda_175240": [
+    "cranberry beans cooked",
+    "roman beans boiled",
+    "borlotti beans cooked salted",
+    "roman beans cooked",
+    "cranberry bean boiled",
+    "borlotti beans salted",
+    "shell beans cooked",
+    "speckled beans cooked"
+  ],
+  "usda_175241": [
+    "french beans cooked",
+    "flageolet beans boiled",
+    "french legume beans cooked",
+    "french bean salted boiled",
+    "haricot vert dried cooked",
+    "cooked french beans salted",
+    "boiled french beans",
+    "dried french beans cooked"
+  ],
+  "usda_175242": [
+    "red kidney beans cooked",
+    "boiled kidney beans",
+    "kidney beans salted cooked",
+    "red beans cooked",
+    "frijoles rojos cooked",
+    "cooked red beans salted",
+    "kidney bean boiled salted",
+    "red kidney bean stewed"
+  ],
+  "usda_175243": [
+    "canned kidney beans drained",
+    "red kidney beans canned rinsed",
+    "canned red beans drained",
+    "kidney beans tin drained",
+    "rinsed canned red beans",
+    "drained red kidney beans",
+    "canned kidney bean rinsed",
+    "red beans from can drained"
+  ],
+  "usda_175244": [
+    "royal red kidney beans cooked",
+    "dark red kidney beans boiled",
+    "royal red beans cooked salted",
+    "large red kidney beans cooked",
+    "royal red bean boiled",
+    "dark kidney beans salted",
+    "cooked royal red beans",
+    "red kidney beans dark cooked"
+  ],
+  "usda_175245": [
+    "canned red kidney beans low sodium",
+    "low salt kidney beans can",
+    "reduced sodium kidney beans canned",
+    "low sodium red beans can",
+    "canned kidney beans low salt",
+    "kidney bean tin low sodium",
+    "low sodium canned red beans",
+    "red bean can low sodium"
+  ],
+  "usda_175246": [
+    "small white beans cooked",
+    "baby white beans boiled",
+    "cooked small white beans salted",
+    "white navy beans small cooked",
+    "small white bean salted",
+    "tiny white beans cooked",
+    "white beans small boiled",
+    "cooked baby white beans"
+  ],
+  "usda_175247": [
+    "canned pinto beans low sodium",
+    "low salt pinto beans can",
+    "pinto beans tin low sodium",
+    "reduced sodium pinto beans",
+    "low sodium pinto bean canned",
+    "canned pinto low salt",
+    "pinto beans low sodium can",
+    "pintos canned low sodium"
+  ],
+  "usda_175248": [
+    "yellow beans cooked",
+    "boiled yellow beans",
+    "cooked yellow beans salted",
+    "yellow bean boiled salted",
+    "yellow wax beans dried cooked",
+    "golden beans cooked",
+    "yellow legume beans cooked",
+    "dried yellow beans boiled"
+  ],
+  "usda_175249": [
+    "white beans cooked",
+    "cannellini beans boiled",
+    "great northern beans cooked",
+    "white bean salted cooked",
+    "navy beans cooked salted",
+    "boiled white beans",
+    "cooked cannellini beans salted",
+    "white bean stewed"
+  ],
+  "usda_175250": [
+    "canned chickpeas low sodium",
+    "garbanzo beans canned low salt",
+    "canned garbanzo low sodium",
+    "chickpeas tin low sodium",
+    "low sodium canned garbanzos",
+    "reduced sodium chickpeas canned",
+    "low salt garbanzo beans can",
+    "hummus base low sodium"
+  ],
+  "usda_175251": [
+    "catjang beans cooked",
+    "catjang cowpeas boiled",
+    "cooked catjang beans salted",
+    "boiled catjang peas",
+    "catjang legume cooked",
+    "small cowpeas cooked",
+    "catjang bean salted",
+    "cooked catjang cowpeas"
+  ],
+  "usda_175252": [
+    "black eyed peas cooked",
+    "blackeye peas boiled",
+    "southern peas cooked",
+    "crowder peas cooked salted",
+    "black eyed beans cooked",
+    "cowpeas boiled salted",
+    "black eyed pea salted",
+    "southern cowpeas cooked"
+  ],
+  "usda_175253": [
+    "hyacinth beans cooked",
+    "lablab beans boiled",
+    "bonavist beans cooked",
+    "cooked hyacinth beans salted",
+    "lablab legume cooked",
+    "dolichos beans cooked",
+    "hyacinth bean boiled salted",
+    "cooked lablab beans"
+  ],
+  "usda_175254": [
+    "lentils cooked salted",
+    "boiled lentils",
+    "cooked lentils salted",
+    "dal boiled",
+    "red lentils cooked",
+    "green lentils boiled",
+    "lentil soup base",
+    "lentil boiled with salt"
+  ],
+  "usda_175255": [
+    "mung beans cooked",
+    "monggo cooked",
+    "boiled mung beans",
+    "green mung beans cooked",
+    "munggo salted cooked",
+    "mung bean boiled salted",
+    "mongo beans cooked",
+    "cooked monggo salted"
+  ],
+  "usda_175256": [
+    "mungo beans cooked",
+    "black gram cooked",
+    "urad dal cooked",
+    "black lentils boiled",
+    "vigna mungo cooked",
+    "black mungo beans boiled",
+    "cooked black gram salted",
+    "urad beans cooked"
+  ],
+  "usda_175257": [
+    "split peas cooked",
+    "yellow split peas boiled",
+    "green split peas cooked",
+    "split pea cooked salted",
+    "cooked split peas salted",
+    "dal split peas",
+    "boiled split peas",
+    "dried split peas cooked"
+  ],
+  "usda_175258": [
+    "oil roasted peanuts no salt",
+    "dry roasted peanuts unsalted",
+    "roasted peanuts no salt",
+    "oil roasted peanuts plain",
+    "unsalted roasted peanuts",
+    "roasted groundnuts no salt",
+    "peanuts oil roasted plain",
+    "roasted mani unsalted"
+  ],
+  "usda_175259": [
+    "nz lamb loin broiled",
+    "new zealand lamb loin cooked",
+    "imported lamb loin grilled",
+    "nz lamb broiled",
+    "lamb loin chop cooked",
+    "frozen lamb loin broiled",
+    "grilled nz lamb loin",
+    "nz lamb with fat broiled"
+  ],
+  "usda_175260": [
+    "nz lamb rack raw",
+    "new zealand rack of lamb raw",
+    "frenched lamb rack raw",
+    "imported lamb rack uncooked",
+    "raw lamb rack nz",
+    "lamb rib rack raw nz",
+    "partly frenched lamb rack",
+    "nz lamb rack lean raw"
+  ],
+  "usda_175261": [
+    "nz lamb rack roasted",
+    "new zealand rack of lamb cooked",
+    "frenched lamb rack roasted",
+    "imported lamb rack fast roasted",
+    "roasted nz lamb rack",
+    "lamb rack oven roasted nz",
+    "nz rack of lamb lean cooked",
+    "fast roasted lamb rack"
+  ],
+  "usda_175262": [
+    "nz lamb shoulder raw",
+    "new zealand lamb shoulder uncooked",
+    "square cut lamb shoulder raw",
+    "imported lamb shoulder raw",
+    "raw nz lamb shoulder",
+    "lamb shoulder nz uncooked",
+    "nz shoulder cut lamb raw",
+    "imported shoulder lamb raw"
+  ],
+  "usda_175263": [
+    "nz lamb shoulder braised",
+    "new zealand lamb shoulder cooked",
+    "braised lamb shoulder nz",
+    "imported lamb shoulder braised",
+    "slow cooked nz lamb shoulder",
+    "frozen lamb shoulder braised",
+    "lamb shoulder arm blade braised",
+    "nz lamb shoulder stewed"
+  ],
+  "usda_175264": [
+    "nz lamb shoulder lean raw",
+    "new zealand lean lamb shoulder raw",
+    "square cut lamb shoulder lean raw",
+    "imported lean lamb shoulder uncooked",
+    "raw nz lean lamb shoulder",
+    "lean lamb shoulder nz raw",
+    "trimmed nz lamb shoulder raw",
+    "nz lean shoulder lamb"
+  ],
+  "usda_175265": [
+    "cooked veal lean",
+    "veal trimmed cuts cooked",
+    "lean veal cooked",
+    "veal meat cooked lean",
+    "mixed veal cuts lean cooked",
+    "veal lean only cooked",
+    "cooked lean veal cuts",
+    "veal without fat cooked"
+  ],
+  "usda_175266": [
+    "veal fat raw",
+    "raw veal fat trimming",
+    "veal trimming fat uncooked",
+    "veal separable fat raw",
+    "raw fat from veal",
+    "veal fat uncooked",
+    "trimmed veal fat raw",
+    "veal cut fat raw"
+  ],
+  "usda_175267": [
+    "veal fat cooked",
+    "cooked veal fat",
+    "veal fat trimming cooked",
+    "veal separable fat cooked",
+    "cooked fat from veal",
+    "veal fat rendered",
+    "veal trim fat cooked",
+    "cooked veal fat cuts"
+  ],
+  "usda_175268": [
+    "veal leg raw",
+    "raw veal top round",
+    "veal top round uncooked",
+    "veal round raw",
+    "veal leg cut raw",
+    "raw veal round steak",
+    "top round veal raw",
+    "veal leg with fat raw"
+  ],
+  "usda_175269": [
+    "veal leg lean raw",
+    "raw lean veal top round",
+    "veal top round lean uncooked",
+    "lean veal round raw",
+    "veal leg lean cut raw",
+    "raw lean veal round",
+    "top round veal lean raw",
+    "trimmed veal leg raw"
+  ],
+  "usda_175270": [
+    "braised veal leg",
+    "veal top round braised",
+    "veal leg cooked braised lean",
+    "braised lean veal round",
+    "slow cooked veal leg",
+    "veal round braised lean",
+    "stewed veal leg lean",
+    "veal top round lean braised"
+  ],
+  "usda_175271": [
+    "breaded veal cutlet",
+    "pan fried veal breaded",
+    "veal schnitzel",
+    "breaded veal leg fried",
+    "wiener schnitzel veal",
+    "fried veal cutlet breaded",
+    "veal cutlet panko",
+    "pan fried veal cutlet breaded"
+  ],
+  "usda_175272": [
+    "pan fried veal cutlet",
+    "veal cutlet pan fried",
+    "fried veal leg no breading",
+    "veal leg pan fried plain",
+    "veal scallopine",
+    "pan fried lean veal",
+    "veal cutlet unbreaded",
+    "sauteed veal cutlet"
+  ],
+  "usda_175273": [
+    "braised veal loin",
+    "veal loin chop braised",
+    "veal loin cooked lean braised",
+    "slow cooked veal loin",
+    "veal loin stewed lean",
+    "braised lean veal loin",
+    "veal chop braised",
+    "veal loin lean braised"
+  ],
+  "usda_175274": [
+    "roasted veal loin",
+    "veal loin roast",
+    "oven roasted veal loin",
+    "veal loin chop roasted",
+    "roast veal loin lean",
+    "baked veal loin",
+    "veal loin cooked roasted",
+    "veal loin lean roasted"
+  ],
+  "usda_175275": [
+    "veal rib raw",
+    "raw veal rib chop",
+    "veal rack raw",
+    "veal rib cut uncooked",
+    "veal rib with fat raw",
+    "raw veal ribs",
+    "veal rib chop uncooked",
+    "veal rack uncooked"
+  ],
+  "usda_175276": [
+    "braised veal rib",
+    "veal rib chop braised",
+    "veal rib cooked braised",
+    "slow cooked veal rib",
+    "veal rib stewed",
+    "braised veal rack",
+    "veal rib with fat braised",
+    "veal rib cooked"
+  ],
+  "usda_175277": [
+    "veal shoulder raw",
+    "raw veal shoulder",
+    "veal arm blade raw",
+    "veal shoulder cut uncooked",
+    "veal shoulder with fat raw",
+    "raw whole veal shoulder",
+    "veal shoulder uncooked",
+    "veal blade arm raw"
+  ],
+  "usda_175278": [
+    "braised veal shoulder",
+    "veal shoulder cooked braised",
+    "slow cooked veal shoulder",
+    "veal shoulder stewed",
+    "veal arm blade braised",
+    "braised whole veal shoulder",
+    "veal shoulder with fat braised",
+    "veal shoulder stew"
+  ],
+  "usda_175279": [
+    "roasted veal shoulder",
+    "veal shoulder roast",
+    "oven roasted veal shoulder",
+    "veal arm blade roasted",
+    "baked veal shoulder",
+    "veal shoulder cooked roasted",
+    "roast veal shoulder",
+    "veal shoulder with fat roasted"
+  ],
+  "usda_175280": [
+    "lean veal shoulder raw",
+    "raw lean veal shoulder",
+    "veal shoulder lean uncooked",
+    "trimmed veal shoulder raw",
+    "veal arm blade lean raw",
+    "raw veal shoulder no fat",
+    "lean whole veal shoulder raw",
+    "veal shoulder lean cut raw"
+  ],
+  "usda_175281": [
+    "roasted veal arm",
+    "veal arm shoulder roasted",
+    "veal arm roast cooked",
+    "oven roasted veal arm",
+    "baked veal arm shoulder",
+    "veal arm cooked roasted",
+    "roast veal arm",
+    "veal shoulder arm roasted"
+  ],
+  "usda_175282": [
+    "lean veal arm raw",
+    "raw lean veal arm",
+    "veal arm lean uncooked",
+    "trimmed veal arm raw",
+    "veal shoulder arm lean raw",
+    "raw veal arm no fat",
+    "lean veal arm shoulder raw",
+    "veal arm cut lean raw"
+  ],
+  "usda_175283": [
+    "braised veal arm",
+    "veal arm shoulder braised",
+    "veal arm stewed lean",
+    "slow cooked veal arm",
+    "veal arm lean braised",
+    "braised lean veal arm",
+    "veal arm cooked braised",
+    "stewed veal arm shoulder"
+  ],
+  "usda_175284": [
+    "roasted lean veal arm",
+    "veal arm shoulder lean roasted",
+    "lean veal arm roast",
+    "oven roasted lean veal arm",
+    "baked lean veal arm shoulder",
+    "veal arm lean cooked roasted",
+    "roast lean veal arm",
+    "veal shoulder arm lean roasted"
+  ],
+  "usda_175285": [
+    "roasted veal blade",
+    "veal blade shoulder roasted",
+    "veal blade lean roast",
+    "oven roasted veal blade",
+    "baked veal blade shoulder",
+    "veal blade cooked roasted",
+    "roast lean veal blade",
+    "veal shoulder blade lean roasted"
+  ],
+  "usda_175286": [
+    "veal sirloin raw",
+    "raw veal sirloin",
+    "veal sirloin cut uncooked",
+    "veal sirloin with fat raw",
+    "raw sirloin veal",
+    "veal sirloin steak raw",
+    "uncooked veal sirloin",
+    "veal sirloin chop raw"
+  ],
+  "usda_175287": [
+    "braised veal sirloin",
+    "veal sirloin cooked braised",
+    "slow cooked veal sirloin",
+    "veal sirloin stewed",
+    "braised sirloin veal",
+    "veal sirloin with fat braised",
+    "stewed veal sirloin",
+    "veal sirloin chop braised"
+  ],
+  "usda_175288": [
+    "roasted veal sirloin",
+    "veal sirloin roast",
+    "oven roasted veal sirloin",
+    "baked veal sirloin",
+    "veal sirloin cooked roasted",
+    "roast veal sirloin",
+    "veal sirloin with fat roasted",
+    "veal sirloin chop roasted"
+  ],
+  "usda_175289": [
+    "veal stew meat",
+    "veal stew braised",
+    "braised veal stew",
+    "veal cubes cooked",
+    "veal stew lean braised",
+    "slow cooked veal stew",
+    "veal stew chunks braised",
+    "cubed veal cooked stew"
+  ],
+  "usda_175290": [
+    "ground veal raw",
+    "raw ground veal",
+    "minced veal uncooked",
+    "veal mince raw",
+    "fresh ground veal",
+    "raw veal mince",
+    "ground veal uncooked",
+    "veal ground meat raw"
+  ],
+  "usda_175291": [
+    "ground veal cooked",
+    "broiled ground veal",
+    "cooked ground veal",
+    "grilled veal burger",
+    "veal mince cooked",
+    "cooked minced veal",
+    "ground veal broiled",
+    "veal patty cooked"
+  ],
+  "usda_175292": [
+    "antelope meat raw",
+    "wild antelope raw",
+    "game antelope uncooked",
+    "raw antelope",
+    "antelope venison raw",
+    "wild game antelope",
+    "antelope meat uncooked",
+    "raw game antelope"
+  ],
+  "usda_175293": [
+    "ground bison raw",
+    "grass fed bison ground",
+    "raw ground buffalo",
+    "ground buffalo raw grass fed",
+    "bison mince raw",
+    "raw grass fed bison",
+    "ground bison grass fed",
+    "buffalo burger raw"
+  ],
+  "usda_175294": [
+    "beaver meat raw",
+    "wild beaver raw",
+    "game beaver uncooked",
+    "raw beaver meat",
+    "beaver game meat raw",
+    "wild game beaver raw",
+    "uncooked beaver meat",
+    "raw wild beaver"
+  ],
+  "usda_175295": [
+    "beaver meat roasted",
+    "roasted beaver",
+    "cooked beaver roasted",
+    "wild beaver cooked",
+    "game beaver roasted",
+    "oven roasted beaver meat",
+    "roast beaver",
+    "cooked wild beaver"
+  ],
+  "usda_175296": [
+    "beefalo meat raw",
+    "raw beefalo",
+    "beefalo game meat uncooked",
+    "buffalo beef hybrid raw",
+    "beefalo cuts raw",
+    "raw beefalo composite",
+    "beefalo mixed cuts raw",
+    "uncooked beefalo meat"
+  ],
+  "usda_175297": [
+    "wild boar raw",
+    "wild pig raw",
+    "wild boar meat uncooked",
+    "raw wild boar",
+    "game boar raw",
+    "feral pig raw",
+    "wild hog meat raw",
+    "raw game boar"
+  ],
+  "usda_175298": [
+    "wild boar roasted",
+    "roasted wild boar",
+    "cooked wild boar",
+    "wild pig roasted",
+    "game boar cooked",
+    "oven roasted wild boar",
+    "roast wild boar",
+    "wild hog roasted"
+  ],
+  "usda_175299": [
+    "water buffalo raw",
+    "raw water buffalo meat",
+    "carabao meat raw",
+    "wild buffalo raw",
+    "game water buffalo uncooked",
+    "raw carabao",
+    "water buffalo game raw",
+    "uncooked water buffalo"
+  ],
+  "usda_175300": [
+    "water buffalo roasted",
+    "roasted water buffalo",
+    "carabao meat cooked",
+    "cooked water buffalo",
+    "game water buffalo roasted",
+    "oven roasted water buffalo",
+    "roast water buffalo",
+    "carabao roasted"
+  ],
+  "usda_175301": [
+    "elk meat raw",
+    "raw elk",
+    "wild elk uncooked",
+    "game elk raw",
+    "wapiti meat raw",
+    "raw wapiti",
+    "elk venison raw",
+    "uncooked elk meat"
+  ],
+  "usda_175302": [
+    "elk meat roasted",
+    "roasted elk",
+    "cooked elk",
+    "wild elk roasted",
+    "game elk cooked",
+    "oven roasted elk",
+    "roast elk meat",
+    "wapiti roasted"
+  ],
+  "usda_175303": [
+    "goat meat raw",
+    "raw goat",
+    "kambing raw",
+    "wild goat meat raw",
+    "game goat uncooked",
+    "raw chevon",
+    "goat meat uncooked",
+    "chevon raw"
+  ],
+  "usda_175304": [
+    "roasted goat meat",
+    "goat meat cooked",
+    "kambing roasted",
+    "cooked goat",
+    "game goat roasted",
+    "oven roasted goat",
+    "roast goat",
+    "chevon cooked roasted"
+  ],
+  "usda_2705384": [
+    "milk unspecified",
+    "glass of milk",
+    "cup of milk",
+    "dairy milk",
+    "plain milk",
+    "regular milk",
+    "milk drink",
+    "gatas"
+  ],
+  "usda_2705385": [
+    "full fat milk",
+    "whole milk",
+    "full cream milk",
+    "regular whole milk",
+    "full fat dairy milk",
+    "whole cow milk",
+    "full cream dairy",
+    "gatas whole"
+  ],
+  "usda_2705386": [
+    "2 percent milk",
+    "2% milk",
+    "reduced fat milk",
+    "semi skimmed milk",
+    "low fat 2 percent milk",
+    "partly skimmed milk",
+    "2% dairy milk",
+    "reduced fat dairy milk"
+  ],
+  "usda_2705387": [
+    "1 percent milk",
+    "1% milk",
+    "low fat milk",
+    "slim milk",
+    "light milk 1%",
+    "low fat dairy milk",
+    "1% low fat dairy",
+    "gatas low fat"
+  ],
+  "usda_2705388": [
+    "skim milk",
+    "fat free milk",
+    "nonfat milk",
+    "skimmed milk",
+    "zero fat milk",
+    "non fat dairy milk",
+    "skim dairy milk",
+    "gatas skim"
+  ],
+  "usda_2705389": [
+    "lactose free 1% milk",
+    "lactose free low fat milk",
+    "lactaid 1% milk",
+    "lactose intolerant milk 1%",
+    "dairy free lactose milk 1%",
+    "low fat lactose free milk",
+    "lactose free slim milk",
+    "lactaid low fat"
+  ],
+  "usda_2705390": [
+    "lactose free skim milk",
+    "lactaid skim milk",
+    "lactose free fat free milk",
+    "lactose free nonfat milk",
+    "lactaid fat free",
+    "lactose intolerant skim milk",
+    "skim lactose free dairy",
+    "fat free lactose free milk"
+  ],
+  "usda_2705391": [
+    "lactose free 2% milk",
+    "lactaid 2% milk",
+    "lactose free reduced fat milk",
+    "lactose intolerant 2% milk",
+    "lactaid reduced fat",
+    "2% lactose free milk",
+    "reduced fat lactose free milk",
+    "lactose free semi skimmed"
+  ],
+  "usda_2705392": [
+    "lactose free whole milk",
+    "lactaid whole milk",
+    "lactose free full fat milk",
+    "lactose intolerant whole milk",
+    "lactaid full cream",
+    "whole lactose free milk",
+    "full fat lactose free milk",
+    "lactaid full fat"
+  ],
+  "usda_2705393": [
+    "buttermilk drink",
+    "cultured buttermilk",
+    "low fat buttermilk",
+    "sour milk",
+    "tangy milk buttermilk",
+    "churned buttermilk",
+    "fermented buttermilk",
+    "baking buttermilk"
+  ],
+  "usda_2705394": [
+    "kefir milk drink",
+    "fermented milk kefir",
+    "probiotic milk drink",
+    "cultured milk kefir",
+    "drinkable kefir",
+    "kefir yogurt drink",
+    "kefir dairy drink",
+    "sour kefir milk"
+  ],
+  "usda_2705395": [
+    "goat milk drink",
+    "fresh goat milk",
+    "gatas ng kambing",
+    "goats milk",
+    "raw goat milk",
+    "dairy goat milk",
+    "full cream goat milk",
+    "goat dairy milk"
+  ],
+  "usda_2705396": [
+    "nonfat powdered milk reconstituted",
+    "dry skim milk mixed",
+    "reconstituted skim milk powder",
+    "powdered milk nonfat liquid",
+    "instant nonfat dry milk",
+    "rehydrated skim milk powder",
+    "mixed powdered skim milk",
+    "milk from nonfat powder"
+  ],
+  "usda_2705397": [
+    "whole powdered milk reconstituted",
+    "dry whole milk mixed",
+    "reconstituted whole milk powder",
+    "full cream powdered milk liquid",
+    "instant whole dry milk",
+    "rehydrated whole milk powder",
+    "mixed powdered whole milk",
+    "milk from whole powder"
+  ],
+  "usda_2705398": [
+    "evaporated milk",
+    "canned evaporated milk",
+    "unsweetened canned milk",
+    "evap milk",
+    "tinned evaporated milk",
+    "condensed unsweetened milk",
+    "evaporated dairy milk",
+    "canned milk unsweetened"
+  ],
+  "usda_2705399": [
+    "whole evaporated milk",
+    "full fat evaporated milk",
+    "whole evap milk",
+    "canned whole evaporated milk",
+    "full cream evaporated milk",
+    "evaporated full fat milk",
+    "whole milk evaporated can",
+    "full cream evap"
+  ],
+  "usda_2705400": [
+    "2% evaporated milk",
+    "reduced fat evaporated milk",
+    "low fat evap milk",
+    "evaporated 2 percent milk",
+    "reduced fat canned milk",
+    "semi skimmed evaporated milk",
+    "2% evap milk can",
+    "evap reduced fat"
+  ],
+  "usda_2705401": [
+    "skim evaporated milk",
+    "fat free evaporated milk",
+    "nonfat evaporated milk",
+    "skim evap milk",
+    "fat free evap milk",
+    "nonfat canned evaporated milk",
+    "evaporated skim milk can",
+    "skimmed evap milk"
+  ],
+  "usda_2705402": [
+    "sweetened condensed milk",
+    "condensed milk",
+    "sweet condensed milk",
+    "sugary canned milk",
+    "condensada",
+    "sweet canned milk",
+    "condensed sweetened milk can",
+    "sticky sweet milk can"
+  ],
+  "usda_2705403": [
+    "plant based milk",
+    "non dairy milk",
+    "dairy alternative milk",
+    "vegan milk",
+    "plant milk",
+    "alternative milk",
+    "non dairy drink",
+    "dairy free milk"
+  ],
+  "usda_2705404": [
+    "sweetened soy milk",
+    "sweet soy milk",
+    "flavored soy milk",
+    "soy milk with sugar",
+    "sugary soy milk",
+    "sweet soymilk",
+    "soy drink sweetened",
+    "soybean milk sweetened"
+  ],
+  "usda_2705405": [
+    "unsweetened soy milk",
+    "plain soy milk",
+    "unflavored soy milk",
+    "soy milk no sugar",
+    "natural soy milk",
+    "pure soymilk",
+    "soy drink unsweetened",
+    "soybean milk plain"
+  ]
+}

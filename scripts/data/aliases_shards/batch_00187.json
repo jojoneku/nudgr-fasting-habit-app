@@ -1,0 +1,987 @@
+{
+  "fnri_D243": [
+    "kangkong boiled",
+    "water spinach boiled",
+    "swamp cabbage cooked",
+    "boiled kangkong",
+    "kangkong leaves cooked",
+    "river spinach boiled",
+    "morning glory vegetable boiled",
+    "water morning glory cooked"
+  ],
+  "fnri_D244": [
+    "camote tops raw",
+    "sweet potato leaves",
+    "camote leaves",
+    "talbos ng kamote",
+    "sweet potato greens",
+    "camote greens raw",
+    "sweet potato tops",
+    "kamote leaves raw"
+  ],
+  "fnri_D245": [
+    "boiled camote tops",
+    "cooked sweet potato leaves",
+    "talbos ng kamote luto",
+    "boiled camote leaves",
+    "sweet potato greens cooked",
+    "cooked camote tops",
+    "boiled sweet potato tops",
+    "kamote leaves boiled"
+  ],
+  "fnri_D246": [
+    "purple camote tops",
+    "purple sweet potato leaves",
+    "talbos ng kamote purple",
+    "purple kamote leaves",
+    "violet sweet potato tops",
+    "red camote tops",
+    "purple sweet potato greens",
+    "red sweet potato leaves"
+  ],
+  "fnri_D247": [
+    "boiled purple camote tops",
+    "cooked purple sweet potato leaves",
+    "purple camote tops boiled",
+    "boiled purple kamote leaves",
+    "cooked talbos ng kamote purple",
+    "purple sweet potato greens boiled",
+    "red camote tops boiled",
+    "cooked purple sweet potato tops"
+  ],
+  "fnri_D248": [
+    "tamarind blossoms",
+    "sampalok flower",
+    "tamarind blooms",
+    "sampalok bulaklak",
+    "tamarind tree flower",
+    "raw tamarind flower",
+    "sampalok flowers edible"
+  ],
+  "fnri_D249": [
+    "tamarind leaves",
+    "sampalok leaves",
+    "tamarind tree leaves",
+    "sampalok dahon",
+    "raw tamarind leaves",
+    "fresh tamarind leaves",
+    "sinigang leaves tamarind",
+    "sampalok dahon raw"
+  ],
+  "fnri_D250": [
+    "boiled tamarind leaves",
+    "cooked sampalok leaves",
+    "boiled sampalok dahon",
+    "tamarind leaves cooked",
+    "sampalok leaves boiled",
+    "cooked tamarind leaves",
+    "boiled tamarind greens"
+  ],
+  "fnri_D251": [
+    "ivy gourd leaves",
+    "tindora leaves",
+    "scarlet gourd leaves",
+    "coccinia leaves raw",
+    "baby watermelon leaves",
+    "kundri leaves",
+    "ivy gourd greens raw",
+    "kovakkai leaves"
+  ],
+  "fnri_D252": [
+    "boiled ivy gourd leaves",
+    "cooked ivy gourd leaves",
+    "tindora leaves boiled",
+    "coccinia leaves cooked",
+    "ivy gourd greens boiled",
+    "boiled kundri leaves",
+    "cooked scarlet gourd leaves"
+  ],
+  "fnri_D253": [
+    "gabi leaves",
+    "taro leaves raw",
+    "gabi dahon",
+    "elephant ear leaves edible",
+    "dasheen leaves",
+    "raw gabi leaves",
+    "taro greens",
+    "colocasia leaves raw"
+  ],
+  "fnri_D254": [
+    "boiled gabi leaves",
+    "cooked taro leaves",
+    "gabi dahon luto",
+    "boiled dasheen leaves",
+    "taro greens boiled",
+    "cooked gabi leaves",
+    "boiled colocasia leaves",
+    "laing leaves cooked"
+  ],
+  "fnri_D255": [
+    "taro stem",
+    "gabi stem",
+    "taro stalk",
+    "gabi petiole",
+    "colocasia stem raw",
+    "dasheen stem",
+    "gabi tangkay",
+    "taro leaf stalk"
+  ],
+  "fnri_D256": [
+    "boiled taro stem",
+    "cooked gabi stem",
+    "gabi tangkay luto",
+    "boiled taro stalk",
+    "cooked colocasia stem",
+    "taro petiole cooked",
+    "boiled gabi stalk",
+    "cooked dasheen stem"
+  ],
+  "fnri_D257": [
+    "raw tomato",
+    "fresh tomato",
+    "kamatis",
+    "tomato raw",
+    "red tomato",
+    "sliced tomato",
+    "whole tomato fresh",
+    "uncooked tomato"
+  ],
+  "fnri_D258": [
+    "cooked tomato",
+    "stewed tomato",
+    "boiled tomato",
+    "kamatis luto",
+    "sauteed tomato",
+    "softened tomato",
+    "cooked kamatis",
+    "tomato cooked"
+  ],
+  "fnri_D259": [
+    "ripe spanish tomato",
+    "large ripe tomato",
+    "beefsteak tomato",
+    "big red tomato",
+    "spanish tomato ripe",
+    "red ripe tomato large",
+    "globe tomato ripe",
+    "kamatis pula"
+  ],
+  "fnri_D260": [
+    "singkamas",
+    "jicama",
+    "mexican turnip",
+    "yam bean root",
+    "singkamas raw",
+    "turnip root vegetable",
+    "jicama root",
+    "sweet turnip filipino"
+  ],
+  "fnri_D261": [
+    "singkamas pod",
+    "yam bean seed pod",
+    "jicama pod",
+    "singkamas shell",
+    "yam bean outer pod",
+    "jicama bean pod",
+    "singkamas husks",
+    "yam bean green pod"
+  ],
+  "fnri_D263": [
+    "boiled water caltrop",
+    "cooked water chestnut caltrop",
+    "singhara boiled",
+    "water nut boiled",
+    "bat nut cooked",
+    "devil pod boiled",
+    "water caltrop cooked",
+    "horned water nut boiled"
+  ],
+  "fnri_D264": [
+    "water chestnut raw",
+    "apulid",
+    "fresh water chestnut",
+    "chinese water chestnut",
+    "raw water chestnut",
+    "apulid raw",
+    "water chestnut bulb",
+    "fresh apulid"
+  ],
+  "fnri_D265": [
+    "boiled water chestnut",
+    "cooked water chestnut",
+    "apulid boiled",
+    "cooked apulid",
+    "water chestnut cooked",
+    "boiled apulid",
+    "chinese water chestnut cooked",
+    "steamed water chestnut"
+  ],
+  "fnri_D268": [
+    "fresh watercress",
+    "watercress leaves",
+    "pako watercress",
+    "garden cress water",
+    "river cress",
+    "raw watercress",
+    "watercress salad greens",
+    "watercress vegetable"
+  ],
+  "fnri_D269": [
+    "winter melon",
+    "white gourd",
+    "ash gourd",
+    "kondol",
+    "wax gourd raw",
+    "chinese winter melon",
+    "kundol fresh",
+    "kundol raw"
+  ],
+  "fnri_D270": [
+    "boiled winter melon",
+    "cooked kondol",
+    "boiled kundol",
+    "winter melon cooked",
+    "ash gourd cooked",
+    "wax gourd cooked",
+    "kondol boiled",
+    "boiled white gourd"
+  ],
+  "fnri_D271": [
+    "wild ginger root",
+    "luya sa gubat",
+    "forest ginger",
+    "wild luya",
+    "galangal wild",
+    "aromatic wild ginger",
+    "bush ginger",
+    "wild ginger rhizome"
+  ],
+  "fnri_D272": [
+    "sigarilyas",
+    "winged bean",
+    "four-angled bean",
+    "princess bean",
+    "sigarilyas raw",
+    "asparagus bean winged",
+    "goa bean",
+    "winged bean raw"
+  ],
+  "fnri_D273": [
+    "boiled sigarilyas",
+    "cooked winged bean",
+    "sigarilyas luto",
+    "boiled four-angled bean",
+    "winged bean cooked",
+    "cooked sigarilyas",
+    "boiled goa bean",
+    "princess bean boiled"
+  ],
+  "fnri_D274": [
+    "canned asparagus",
+    "asparagus in can",
+    "tinned asparagus",
+    "asparagus spears canned",
+    "canned asparagus spears",
+    "asparagus packed",
+    "jarred asparagus",
+    "ready to eat asparagus"
+  ],
+  "fnri_D275": [
+    "canned bamboo shoots",
+    "tinned bamboo shoots",
+    "labong canned",
+    "bamboo shoots in can",
+    "canned labong",
+    "bamboo shoots packed",
+    "jarred bamboo shoots",
+    "ready to eat bamboo shoots"
+  ],
+  "fnri_D276": [
+    "dried bamboo shoots",
+    "labong dried",
+    "dried labong",
+    "dehydrated bamboo shoots",
+    "dry bamboo shoots",
+    "bamboo shoot strips dried",
+    "dried bamboo",
+    "labong tuyo"
+  ],
+  "fnri_D277": [
+    "dried black fungus",
+    "wood ear mushroom dried",
+    "cloud ear mushroom dried",
+    "tenga ng daga dried",
+    "black fungus dried",
+    "dried wood ear",
+    "dried cloud fungus",
+    "black mushroom dried"
+  ],
+  "fnri_D278": [
+    "salted cucumber canned",
+    "pickled cucumber canned",
+    "canned salted cucumber",
+    "brined cucumber",
+    "tinned pickled cucumber",
+    "salted cucumber packed",
+    "canned cucumber pickled",
+    "preserved cucumber"
+  ],
+  "fnri_D279": [
+    "canned mushroom",
+    "tinned mushroom",
+    "mushroom in can",
+    "canned button mushroom",
+    "ready to eat mushroom",
+    "mushroom packed",
+    "jarred mushroom",
+    "canned sliced mushroom"
+  ],
+  "fnri_D280": [
+    "dried mushroom",
+    "dehydrated mushroom",
+    "dry mushroom",
+    "shiitake dried",
+    "dried shitake",
+    "mushroom dried",
+    "dried button mushroom",
+    "mushroom tuyo"
+  ],
+  "fnri_D281": [
+    "pickled mustard greens",
+    "atchara mustard",
+    "pickled mustasa",
+    "fermented mustard leaves",
+    "sour mustard greens",
+    "mustasa pickled",
+    "pickled greens mustard",
+    "suan cai"
+  ],
+  "fnri_D282": [
+    "salted mustard leaves",
+    "mustasa salted",
+    "preserved mustard greens",
+    "salted mustasa",
+    "brined mustard leaves",
+    "mustard greens salted",
+    "salt preserved mustard",
+    "mustasa na inasnan"
+  ],
+  "fnri_D283": [
+    "green olives",
+    "green olives brine",
+    "stuffed olives",
+    "green olives jar",
+    "pickled green olives",
+    "brined green olives",
+    "olives green",
+    "green olive in jar"
+  ],
+  "fnri_D284": [
+    "black olives",
+    "ripe olives brine",
+    "black olives jar",
+    "pickled black olives",
+    "brined black olives",
+    "olives black",
+    "ripe olives canned",
+    "black olives canned"
+  ],
+  "fnri_D285": [
+    "dried green papaya",
+    "dehydrated unripe papaya",
+    "papaya dried raw",
+    "green papaya dried",
+    "unripe papaya dried",
+    "papaya chips dried",
+    "dry green papaya",
+    "papaya tuyo"
+  ],
+  "fnri_D286": [
+    "sweet relish",
+    "pickle relish condiment",
+    "sweet pickle relish",
+    "relish sauce",
+    "hotdog relish",
+    "sandwich relish",
+    "sweet green relish",
+    "chopped pickle relish"
+  ],
+  "fnri_D287": [
+    "mixed pickles",
+    "assorted pickles",
+    "vegetable pickles mixed",
+    "atchara mixed",
+    "pickled vegetables mixed",
+    "mixed pickled veggies",
+    "jar of mixed pickles",
+    "assorted pickled vegetables"
+  ],
+  "fnri_D288": [
+    "papaya atchara",
+    "atchara",
+    "pickled papaya",
+    "green papaya atchara",
+    "filipino pickled papaya",
+    "sweet pickled papaya",
+    "atsara papaya",
+    "atcharang papaya"
+  ],
+  "fnri_D289": [
+    "gherkin pickles",
+    "whole pickles",
+    "dill pickles",
+    "gherkins jar",
+    "whole dill gherkins",
+    "pickle spears",
+    "small pickled cucumbers",
+    "pickled gherkins"
+  ],
+  "fnri_D290": [
+    "canned pimiento",
+    "roasted red pepper canned",
+    "pimiento canned",
+    "tinned pimiento",
+    "red pepper strips canned",
+    "jarred pimiento",
+    "sweet red pepper canned",
+    "canned roasted pepper"
+  ],
+  "fnri_D292": [
+    "salted radish",
+    "pickled radish canned",
+    "preserved radish",
+    "canned salted radish",
+    "brined radish",
+    "daikon salted",
+    "radish preserved",
+    "labanos salted"
+  ],
+  "fnri_D293": [
+    "dried taro leaves",
+    "gabi leaves dried",
+    "dried gabi dahon",
+    "dehydrated taro leaves",
+    "laing dried leaves",
+    "dry taro leaves",
+    "gabi tuyo",
+    "taro leaf dried"
+  ],
+  "fnri_D294": [
+    "bagbagkong flower",
+    "raw bagbagkong",
+    "bagbagkong bulaklak",
+    "wild tree flower vegetable",
+    "bagbagkong blossom",
+    "edible wild flower bagbagkong",
+    "bagbagkong raw",
+    "bagbagkong buds"
+  ],
+  "fnri_D295": [
+    "batwan fruit",
+    "batuan",
+    "batwan souring agent",
+    "batuan fruit raw",
+    "green batwan",
+    "sour batwan fruit",
+    "batwan pampaasim",
+    "batuan immature"
+  ],
+  "fnri_D296": [
+    "wild ampalaya",
+    "wild bitter melon",
+    "wild bitter gourd",
+    "ampalaya wild",
+    "small bitter gourd wild",
+    "wild ampalaya fruit",
+    "ampalaya native wild",
+    "wild bitter cucumber"
+  ],
+  "fnri_D297": [
+    "malunggay powder",
+    "moringa powder",
+    "dried malunggay",
+    "moringa leaf powder",
+    "malunggay leaf powder",
+    "moringa powder supplement",
+    "malunggay supplement powder",
+    "dried moringa leaves ground"
+  ],
+  "fnri_D298": [
+    "mangrove apple raw",
+    "tumu fruit",
+    "mangrove fruit",
+    "raw mangrove apple",
+    "pagatpat fruit",
+    "mangrove edible fruit",
+    "tidal fruit mangrove",
+    "mangrove apple fresh"
+  ],
+  "fnri_D299": [
+    "ivy gourd fruit",
+    "tindora",
+    "small ivy gourd",
+    "coccinia fruit raw",
+    "baby watermelon vegetable",
+    "kundri fruit",
+    "scarlet gourd fruit raw",
+    "kovakkai fruit"
+  ],
+  "fnri_D300": [
+    "sweet basil",
+    "fresh basil",
+    "basil leaves",
+    "italian basil fresh",
+    "basil herb fresh",
+    "basil raw",
+    "fresh sweet basil leaves",
+    "basil herb"
+  ],
+  "fnri_D301": [
+    "libas leaves mature",
+    "libas dahon",
+    "mature libas",
+    "libas vegetable mature",
+    "sour leaf libas",
+    "libas full grown leaves",
+    "libas herb mature",
+    "libas souring leaf"
+  ],
+  "fnri_D302": [
+    "young libas leaves",
+    "libas dahon bata",
+    "tender libas leaves",
+    "libas young",
+    "fresh young libas",
+    "libas shoots young",
+    "libas baby leaves",
+    "young sour libas leaf"
+  ],
+  "fnri_D303": [
+    "fresh thyme",
+    "thyme herb",
+    "thyme leaves fresh",
+    "garden thyme",
+    "thyme sprig",
+    "raw thyme",
+    "thyme fresh herb",
+    "thyme cooking herb"
+  ],
+  "fnri_E001": [
+    "green apple",
+    "granny smith",
+    "sour apple",
+    "tart apple",
+    "green sour apple",
+    "crisp green apple",
+    "granny smith apple",
+    "green apple fruit"
+  ],
+  "fnri_E002": [
+    "red apple",
+    "sweet apple",
+    "red delicious apple",
+    "apple fruit red",
+    "fuji apple",
+    "gala apple",
+    "fresh red apple",
+    "sweet red apple"
+  ],
+  "fnri_E003": [
+    "atemoya fruit",
+    "sugar apple hybrid",
+    "custard apple atemoya",
+    "anona atemoya",
+    "sweetsop hybrid",
+    "atemoya cherimoya",
+    "atemoya fresh",
+    "anon fruit"
+  ],
+  "fnri_E004": [
+    "green avocado",
+    "green skinned avocado",
+    "unripe avocado",
+    "avocado green skin",
+    "green avocado pear",
+    "avocado fruit green",
+    "smooth avocado green",
+    "fresh green avocado"
+  ],
+  "fnri_E005": [
+    "red avocado",
+    "red skinned avocado",
+    "avocado red variety",
+    "red skin avocado",
+    "avocado fruit red",
+    "filipino red avocado",
+    "red avocado pear",
+    "fresh red avocado"
+  ],
+  "fnri_E006": [
+    "bungulan banana",
+    "saging bungulan",
+    "bungulan saging",
+    "native banana bungulan",
+    "banana bungulan variety",
+    "bungulan filipino banana",
+    "local banana bungulan",
+    "saging na bungulan"
+  ],
+  "fnri_E007": [
+    "butuan banana",
+    "saging butuan",
+    "banana butuan variety",
+    "butuan saging",
+    "local banana butuan",
+    "filipino banana butuan",
+    "native butuan banana"
+  ],
+  "fnri_E008": [
+    "cavendish banana ripe",
+    "yellow banana",
+    "ripe banana",
+    "saging cavendish",
+    "regular banana ripe",
+    "yellow cavendish",
+    "sweet ripe banana",
+    "banana yellow"
+  ],
+  "fnri_E009": [
+    "unripe cavendish banana",
+    "green banana",
+    "saging berde",
+    "unripe yellow banana",
+    "green cavendish",
+    "banana green unripe",
+    "hard green banana",
+    "unripe saging"
+  ],
+  "fnri_E010": [
+    "gloria banana",
+    "saging gloria",
+    "banana gloria variety",
+    "gloria saging",
+    "local banana gloria",
+    "native banana gloria",
+    "filipino banana gloria"
+  ],
+  "fnri_E011": [
+    "lacatan banana",
+    "saging lacatan",
+    "lakatan banana",
+    "filipino lacatan",
+    "saging lakatan",
+    "lakatan ripe",
+    "sweet lacatan banana",
+    "banana lakatan"
+  ],
+  "fnri_E012": [
+    "latundan banana",
+    "saging latundan",
+    "silk banana",
+    "apple banana",
+    "latundan saging",
+    "white latundan",
+    "filipino latundan",
+    "latundan sweet"
+  ],
+  "fnri_E013": [
+    "murado banana",
+    "saging murado",
+    "banana murado variety",
+    "murado saging",
+    "native banana murado",
+    "filipino banana murado"
+  ],
+  "fnri_E014": [
+    "saba banana",
+    "saging saba",
+    "plantain banana",
+    "cooking banana",
+    "saba raw",
+    "saging na saba",
+    "cardaba banana",
+    "filipino cooking banana"
+  ],
+  "fnri_E015": [
+    "boiled saba",
+    "nilaga na saging saba",
+    "boiled plantain",
+    "cooked saba banana",
+    "saging saba na nilaga",
+    "boiled cooking banana",
+    "saba luto",
+    "boiled saba banana"
+  ],
+  "fnri_E016": [
+    "ternate banana",
+    "saging ternate",
+    "banana ternate variety",
+    "ternate saging",
+    "native banana ternate",
+    "filipino banana ternate"
+  ],
+  "fnri_E017": [
+    "tuldok banana",
+    "saging tuldok",
+    "banana tuldok variety",
+    "tuldok saging",
+    "native banana tuldok",
+    "spotted banana filipino"
+  ],
+  "fnri_E018": [
+    "bignay fruit",
+    "bugnay",
+    "bignay berry",
+    "philippine bignay",
+    "wild bignay",
+    "bignay filipino fruit",
+    "bugnay berry",
+    "bignay red berry"
+  ],
+  "fnri_E019": [
+    "bilimbi fruit",
+    "kamias",
+    "cucumber tree fruit",
+    "kamias fruit",
+    "tree sorrel",
+    "bilimbi sour fruit",
+    "kamias souring fruit",
+    "bilimbing"
+  ],
+  "fnri_E020": [
+    "java plum",
+    "black plum",
+    "duhat",
+    "jambolan",
+    "duhat fruit",
+    "jamun fruit",
+    "filipino duhat",
+    "black berry duhat"
+  ],
+  "fnri_E021": [
+    "barbados gooseberry",
+    "lemon vine fruit",
+    "pereskia fruit",
+    "gooseberry barbados",
+    "tropical gooseberry",
+    "leaf cactus fruit",
+    "barbados gooseberry fresh"
+  ],
+  "fnri_E022": [
+    "buri palm fruit",
+    "buri fruit",
+    "filipino palm fruit",
+    "buri tree fruit",
+    "sugar palm fruit",
+    "buri palm seed",
+    "buri kaong",
+    "young buri fruit"
+  ],
+  "fnri_E023": [
+    "calamansi",
+    "calamondin",
+    "philippine lime",
+    "filipino lemon",
+    "kalamansi",
+    "calamansi fruit",
+    "philippine lemon",
+    "calamondin citrus"
+  ],
+  "fnri_E024": [
+    "canistel fruit",
+    "tiesa",
+    "egg fruit",
+    "yellow sapote",
+    "tiesa fruit",
+    "eggfruit canistel",
+    "filipino tiesa",
+    "canistel yellow fruit"
+  ],
+  "fnri_E025": [
+    "cashew fruit",
+    "cashew apple",
+    "kasoy fruit",
+    "peras kasoy",
+    "cashew pear",
+    "kasoy apple",
+    "filipino cashew fruit",
+    "cashew apple fresh"
+  ],
+  "fnri_E026": [
+    "java apple",
+    "wax apple",
+    "makopa",
+    "bell fruit",
+    "makopa fruit",
+    "wax jambu",
+    "filipino makopa",
+    "rose apple"
+  ],
+  "fnri_E027": [
+    "custard apple",
+    "atis",
+    "sugar apple",
+    "sweetsop",
+    "atis fruit",
+    "annona custard apple",
+    "atis filipino fruit",
+    "sweet custard apple"
+  ],
+  "fnri_E028": [
+    "durian fruit",
+    "king of fruits",
+    "durian fresh",
+    "durian flesh",
+    "filipino durian",
+    "pungent fruit durian",
+    "durian meat",
+    "spiky fruit durian"
+  ],
+  "fnri_E029": [
+    "velvet apple",
+    "mabolo",
+    "mabolo fruit",
+    "velvet persimmon",
+    "butter fruit filipino",
+    "filipino mabolo",
+    "kamagong fruit",
+    "mabolo velvet apple"
+  ],
+  "fnri_E030": [
+    "grapes",
+    "fresh grapes",
+    "table grapes",
+    "grape fruit fresh",
+    "seedless grapes",
+    "green grapes",
+    "purple grapes",
+    "ubas"
+  ],
+  "fnri_E031": [
+    "red guava",
+    "guava red flesh",
+    "bayabas red",
+    "pink guava",
+    "red fleshed guava",
+    "guava pink inside",
+    "bayabas pula",
+    "strawberry guava"
+  ],
+  "fnri_E032": [
+    "white guava",
+    "bayabas",
+    "guava white flesh",
+    "bayabas puti",
+    "common guava",
+    "fresh guava",
+    "white fleshed guava",
+    "filipino guava"
+  ],
+  "fnri_E033": [
+    "jackfruit",
+    "langka",
+    "nangka",
+    "ripe jackfruit",
+    "langka fruit",
+    "jackfruit flesh",
+    "sweet jackfruit ripe",
+    "langka hinog"
+  ],
+  "fnri_E034": [
+    "johey oak fruit",
+    "pagatpat fruit",
+    "sea oak fruit",
+    "coastal oak fruit",
+    "johey oak",
+    "tropical oak fruit",
+    "johey oak seed"
+  ],
+  "fnri_E035": [
+    "jamaica cherry",
+    "aratiles",
+    "sarisa",
+    "mansanitas",
+    "aratiles fruit",
+    "aratilis",
+    "cotton candy berry",
+    "philippine cherry"
+  ],
+  "fnri_E036": [
+    "jujube fruit",
+    "chinese date",
+    "indian date",
+    "red date jujube",
+    "ziziphus fruit",
+    "manzanas jujube",
+    "jujube berry",
+    "asian date fruit"
+  ],
+  "fnri_E037": [
+    "kaffir lime",
+    "makrut lime",
+    "kaffir lime fruit",
+    "thai lime",
+    "makrut citrus",
+    "bumpy lime",
+    "kaffir citrus fruit",
+    "wild lime kaffir"
+  ],
+  "fnri_E038": [
+    "kalumpit fruit",
+    "philippine wild fruit kalumpit",
+    "kalumpit berry",
+    "native kalumpit",
+    "kalumpit tree fruit",
+    "filipino kalumpit fruit"
+  ],
+  "fnri_E039": [
+    "lanzones",
+    "langsat",
+    "lansones",
+    "lanzones fruit",
+    "lansones fresh",
+    "lanzones sweet",
+    "philippine lanzones",
+    "sweet lanzones"
+  ],
+  "fnri_E040": [
+    "lemon fruit",
+    "fresh lemon",
+    "yellow lemon",
+    "lemon citrus",
+    "raw lemon",
+    "lemon whole",
+    "sour lemon fruit",
+    "lemon fresh"
+  ],
+  "fnri_E041": [
+    "lemon zest",
+    "lemon skin",
+    "lemon rind",
+    "zest of lemon",
+    "lemon outer peel",
+    "lemon peel raw",
+    "citrus lemon peel",
+    "grated lemon peel"
+  ],
+  "fnri_E042": [
+    "lime fruit",
+    "fresh lime",
+    "green lime",
+    "lime citrus",
+    "raw lime",
+    "sour lime",
+    "lime wedge",
+    "lime whole fresh"
+  ],
+  "fnri_E043": [
+    "lime zest",
+    "lime skin",
+    "lime rind",
+    "zest of lime",
+    "lime outer peel",
+    "lime peel raw",
+    "citrus lime peel",
+    "grated lime peel"
+  ]
+}

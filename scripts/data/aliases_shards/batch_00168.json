@@ -1,0 +1,1002 @@
+{
+  "usda_2709419": [
+    "potato in beef stew",
+    "carne guisada potato",
+    "stewed potato with gravy",
+    "potato in puerto rican stew",
+    "beef stew potato",
+    "guisado potato",
+    "potato with meat gravy",
+    "stewed beef potato"
+  ],
+  "usda_2709420": [
+    "potato in chicken stew",
+    "fricassee potato",
+    "chicken fricassee potato",
+    "stewed potato with chicken sauce",
+    "puerto rican chicken stew potato",
+    "pollo guisado potato",
+    "potato in chicken gravy",
+    "stewed chicken potato"
+  ],
+  "usda_2709421": [
+    "crisps",
+    "potato crisps",
+    "chips snack",
+    "bag of chips",
+    "crispy chips",
+    "salted chips",
+    "potato snack chips",
+    "plain crisps"
+  ],
+  "usda_2709422": [
+    "salted chips",
+    "original chips",
+    "plain crisps",
+    "classic potato chips",
+    "original flavor chips",
+    "regular chips",
+    "salted crisps",
+    "plain salted chips"
+  ],
+  "usda_2709423": [
+    "bbq chips",
+    "barbecue crisps",
+    "bbq flavored chips",
+    "smoky chips",
+    "bar-b-q chips",
+    "barbecue potato crisps",
+    "smoky bbq chips",
+    "bbq potato snack"
+  ],
+  "usda_2709424": [
+    "sour cream chips",
+    "sour cream onion crisps",
+    "sour cream and onion chips",
+    "creamy onion chips",
+    "sc&o chips",
+    "sour cream potato chips",
+    "sour cream snack chips",
+    "onion sour cream crisps"
+  ],
+  "usda_2709425": [
+    "cheesy chips",
+    "cheddar chips",
+    "cheese crisps",
+    "cheese flavored crisps",
+    "cheesy potato chips",
+    "cheddar potato chips",
+    "cheese snack chips",
+    "cheesy crisps"
+  ],
+  "usda_2709426": [
+    "flavored chips",
+    "seasoned chips",
+    "flavored crisps",
+    "seasoned potato chips",
+    "flavored potato snack",
+    "seasoned crisps",
+    "assorted flavor chips",
+    "special flavor chips"
+  ],
+  "usda_2709427": [
+    "ridged chips",
+    "wavy chips",
+    "ruffled crisps",
+    "ridged potato chips",
+    "ripple chips",
+    "wavy potato chips",
+    "rippled chips",
+    "ruffled plain chips"
+  ],
+  "usda_2709428": [
+    "ruffled bbq chips",
+    "ridged barbecue chips",
+    "wavy bbq chips",
+    "ripple bbq chips",
+    "bbq ridged chips",
+    "ruffled smoky chips",
+    "wavy barbecue crisps",
+    "ridged bbq potato chips"
+  ],
+  "usda_2709429": [
+    "ruffled sour cream chips",
+    "wavy sour cream onion chips",
+    "ridged sour cream chips",
+    "ruffled sour cream and onion",
+    "ripple sour cream chips",
+    "wavy sour cream crisps",
+    "ridged sour cream onion chips",
+    "ruffled creamy onion chips"
+  ],
+  "usda_2709430": [
+    "ruffled cheese chips",
+    "wavy cheese chips",
+    "ridged cheddar chips",
+    "ripple cheese chips",
+    "ruffled cheesy crisps",
+    "wavy cheddar chips",
+    "ridged cheese potato chips",
+    "ruffled cheesy chips"
+  ],
+  "usda_2709431": [
+    "ruffled flavored chips",
+    "wavy seasoned chips",
+    "ridged flavored chips",
+    "ripple flavored crisps",
+    "ruffled seasoned potato chips",
+    "wavy flavored crisps",
+    "ridged seasoned chips",
+    "ruffled assorted flavor chips"
+  ],
+  "usda_2709432": [
+    "stacked chips",
+    "formed potato chips",
+    "pressed chips",
+    "pringles style chips",
+    "canister chips",
+    "uniform chips",
+    "stacked crisps",
+    "molded potato chips"
+  ],
+  "usda_2709433": [
+    "flavored stacked chips",
+    "seasoned pringles style chips",
+    "flavored formed chips",
+    "seasoned canister chips",
+    "flavored pressed chips",
+    "seasoned stacked crisps",
+    "flavored molded chips",
+    "seasoned uniform chips"
+  ],
+  "usda_2709434": [
+    "baked chips",
+    "baked crisps",
+    "oven baked chips",
+    "low fat baked chips",
+    "baked potato crisps",
+    "oven chips snack",
+    "light baked chips",
+    "baked plain chips"
+  ],
+  "usda_2709435": [
+    "baked flavored chips",
+    "flavored oven chips",
+    "baked seasoned crisps",
+    "oven baked flavored chips",
+    "light flavored chips",
+    "baked seasoned chips",
+    "flavored baked crisps",
+    "oven baked seasoned chips"
+  ],
+  "usda_2709436": [
+    "light chips",
+    "reduced fat crisps",
+    "low fat chips",
+    "lighter chips",
+    "less fat potato chips",
+    "reduced fat potato snack",
+    "lower fat chips",
+    "light potato crisps"
+  ],
+  "usda_2709437": [
+    "lightly salted stacked chips",
+    "low sodium formed chips",
+    "lightly salted pringles style",
+    "reduced fat lightly salted crisps",
+    "low salt stacked chips",
+    "light salt formed crisps",
+    "lightly salted pressed chips",
+    "reduced fat low salt chips"
+  ],
+  "usda_2709438": [
+    "no salt chips",
+    "unsalted crisps",
+    "salt free chips",
+    "no sodium chips",
+    "unsalted potato crisps",
+    "plain unsalted chips",
+    "salt free potato chips",
+    "no salt potato snack"
+  ],
+  "usda_2709439": [
+    "low salt chips",
+    "lightly salted crisps",
+    "less salty chips",
+    "light salt potato chips",
+    "lightly seasoned chips",
+    "low sodium chips",
+    "slightly salted chips",
+    "mildly salted crisps"
+  ],
+  "usda_2709440": [
+    "lightly salted stacked chips",
+    "low salt formed chips",
+    "lightly salted canister chips",
+    "light salt pringles style",
+    "low sodium stacked crisps",
+    "lightly seasoned pressed chips",
+    "mild salt uniform chips",
+    "lightly salted molded chips"
+  ],
+  "usda_2709441": [
+    "popped potato chips",
+    "air popped chips",
+    "popped crisps",
+    "puffed potato chips",
+    "popped potato snack",
+    "air popped potato crisps",
+    "popped plain chips",
+    "puffed potato crisps"
+  ],
+  "usda_2709442": [
+    "flavored popped chips",
+    "seasoned popped crisps",
+    "popped flavored potato chips",
+    "flavored air popped chips",
+    "seasoned puffed chips",
+    "popped seasoned potato snack",
+    "flavored puffed potato chips",
+    "seasoned air popped chips"
+  ],
+  "usda_2709443": [
+    "popped chips",
+    "air popped potato snack",
+    "popped potato crisps",
+    "puffed chips snack",
+    "popped chip snack",
+    "air crisps",
+    "popped snack chips",
+    "puffed potato snack"
+  ],
+  "usda_2709444": [
+    "potato sticks",
+    "potato straws",
+    "shoestring potato snack",
+    "crispy potato sticks",
+    "potato snack sticks",
+    "thin potato sticks",
+    "crunchy potato straws",
+    "potato matchsticks"
+  ],
+  "usda_2709445": [
+    "flavored potato sticks",
+    "seasoned potato straws",
+    "flavored potato straws",
+    "seasoned potato sticks snack",
+    "flavored shoestring potato",
+    "seasoned crispy potato sticks",
+    "flavored potato matchsticks",
+    "seasoned potato snack sticks"
+  ],
+  "usda_2709446": [
+    "fry shaped snack",
+    "fry shaped potato sticks",
+    "snack fries",
+    "potato snack fries",
+    "fake fries snack",
+    "french fry shaped snack",
+    "crispy fry snack",
+    "fry snack sticks"
+  ],
+  "usda_2709447": [
+    "veggie chips",
+    "vegetable crisps",
+    "veggie crisps",
+    "mixed veggie chips",
+    "veggie snack chips",
+    "vegetable snack chips",
+    "garden vegetable chips",
+    "mixed vegetable crisps"
+  ],
+  "usda_2709448": [
+    "scalloped potatoes",
+    "creamy sliced potatoes",
+    "au gratin style potato",
+    "sliced potatoes in cream",
+    "potato gratin",
+    "creamy layered potato",
+    "cheesy scalloped potato",
+    "baked sliced potato"
+  ],
+  "usda_2709449": [
+    "restaurant scalloped potatoes",
+    "fast food scalloped potato",
+    "diner scalloped potato",
+    "creamy sliced potato side",
+    "restaurant potato gratin",
+    "scalloped potato side dish",
+    "au gratin potato restaurant",
+    "creamy potato side"
+  ],
+  "usda_2709450": [
+    "homemade scalloped potatoes",
+    "fresh scalloped potato",
+    "baked sliced potatoes",
+    "creamy baked potato slices",
+    "homemade potato gratin",
+    "fresh potato gratin",
+    "layered potato bake",
+    "sliced potato casserole"
+  ],
+  "usda_2709451": [
+    "scalloped potatoes with meat",
+    "scalloped potato and ham",
+    "meaty scalloped potato",
+    "creamy potato with meat",
+    "scalloped potato casserole with meat",
+    "sliced potato with ham",
+    "potato gratin with meat",
+    "baked potato and meat"
+  ],
+  "usda_2709452": [
+    "box scalloped potatoes",
+    "instant scalloped potato",
+    "packet scalloped potato",
+    "mix scalloped potato",
+    "boxed potato gratin",
+    "instant potato gratin",
+    "dry mix potato bake",
+    "packaged scalloped potato"
+  ],
+  "usda_2709453": [
+    "box scalloped potatoes with meat",
+    "instant scalloped potato with ham",
+    "packet scalloped potato with meat",
+    "boxed potato and ham",
+    "instant meaty scalloped potato",
+    "dry mix potato with meat",
+    "packaged scalloped potato with meat",
+    "boxed potato gratin with ham"
+  ],
+  "usda_2709454": [
+    "ready to heat scalloped potato",
+    "microwaveable scalloped potato",
+    "pre-made scalloped potato",
+    "heat and serve scalloped potato",
+    "frozen scalloped potato",
+    "precooked scalloped potato",
+    "microwave potato gratin",
+    "packaged ready scalloped potato"
+  ],
+  "usda_2709455": [
+    "ready to heat scalloped potato with meat",
+    "microwaveable scalloped potato with ham",
+    "pre-made scalloped potato with meat",
+    "heat and serve meaty potato",
+    "frozen scalloped potato with meat",
+    "precooked potato gratin with meat",
+    "microwave potato and ham",
+    "ready scalloped potato with meat"
+  ],
+  "usda_2709456": [
+    "fries",
+    "french fries",
+    "fried potatoes",
+    "crispy fries",
+    "potato fries",
+    "deep fried fries",
+    "frites",
+    "pommes frites"
+  ],
+  "usda_2709457": [
+    "fries",
+    "french fries",
+    "fried potato strips",
+    "potato wedge fries",
+    "regular fries",
+    "standard fries",
+    "generic fries",
+    "deep fried potato strips"
+  ],
+  "usda_2709458": [
+    "fresh cut fries",
+    "homemade fries",
+    "fresh fried fries",
+    "hand cut fries",
+    "fresh potato fries fried",
+    "homemade fried fries",
+    "fresh deep fried fries",
+    "crispy fresh fries"
+  ],
+  "usda_2709459": [
+    "oven fries",
+    "baked french fries",
+    "baked fries fresh",
+    "oven baked fresh fries",
+    "healthy fries baked",
+    "baked potato strips",
+    "oven baked potato strips",
+    "baked fresh cut fries"
+  ],
+  "usda_2709460": [
+    "oven baked frozen fries",
+    "baked frozen fries",
+    "frozen fries baked",
+    "oven frozen fries",
+    "healthy frozen fries",
+    "baked fries from frozen",
+    "oven fries frozen",
+    "baked straight cut fries"
+  ],
+  "usda_2709461": [
+    "fast food fries",
+    "drive thru fries",
+    "mcdonald's style fries",
+    "burger joint fries",
+    "takeout fries",
+    "quick service fries",
+    "combo fries",
+    "value meal fries"
+  ],
+  "usda_2709462": [
+    "restaurant fries",
+    "diner fries",
+    "sit down restaurant fries",
+    "bistro fries",
+    "pub fries",
+    "steakhouse fries",
+    "bar fries",
+    "side order fries"
+  ],
+  "usda_2709463": [
+    "frozen fries fried",
+    "deep fried frozen fries",
+    "fried frozen fries",
+    "pan fried frozen fries",
+    "crispy frozen fries",
+    "deep fry frozen fries",
+    "fried from frozen fries",
+    "frozen potato fries fried"
+  ],
+  "usda_2709464": [
+    "school lunch fries",
+    "cafeteria fries",
+    "school fries",
+    "lunch tray fries",
+    "school potato fries",
+    "cafeteria potato fries",
+    "school meal fries",
+    "lunchroom fries"
+  ],
+  "usda_2709465": [
+    "cheese fries fast food",
+    "fast food cheesy fries",
+    "loaded cheese fries restaurant",
+    "nacho cheese fries takeout",
+    "drive thru cheese fries",
+    "burger place cheese fries",
+    "cheesy fast food fries",
+    "restaurant cheese topped fries"
+  ],
+  "usda_2709466": [
+    "school cheese fries",
+    "cafeteria cheese fries",
+    "school loaded fries",
+    "school nacho fries",
+    "cafeteria cheesy fries",
+    "school lunch cheese fries",
+    "lunchroom cheese fries",
+    "school potato cheese fries"
+  ],
+  "usda_2709467": [
+    "chili fries",
+    "fries with chili",
+    "chili topped fries",
+    "chili cheese fries no cheese",
+    "loaded chili fries",
+    "fries covered in chili",
+    "chili dog fries",
+    "steak fries with chili"
+  ],
+  "usda_2709468": [
+    "chili cheese fries",
+    "loaded fries",
+    "fries with chili and cheese",
+    "chili cheese loaded fries",
+    "nacho chili fries",
+    "cheesy chili fries",
+    "topped fries chili cheese",
+    "fully loaded fries"
+  ],
+  "usda_2709469": [
+    "cheese fries",
+    "cheesy fries",
+    "fries with cheese",
+    "nacho cheese fries",
+    "loaded cheese fries",
+    "cheesy potato fries",
+    "cheddar fries",
+    "fries with cheese sauce"
+  ],
+  "usda_2709470": [
+    "chili cheese fries",
+    "loaded fries chili cheese",
+    "fries with chili and cheese",
+    "chili cheesy fries",
+    "fully loaded potato fries",
+    "topped fries",
+    "chili nacho fries",
+    "loaded potato fries"
+  ],
+  "usda_2709471": [
+    "chili fries",
+    "fries with chili",
+    "chili topped fries",
+    "loaded chili fries",
+    "fries covered chili",
+    "beef chili fries",
+    "steak fries with chili sauce",
+    "chili potato fries"
+  ],
+  "usda_2709472": [
+    "home fries",
+    "pan fried potatoes",
+    "skillet potatoes",
+    "breakfast potatoes",
+    "fried diced potatoes",
+    "pan fries",
+    "diner home fries",
+    "skillet home fries"
+  ],
+  "usda_2709473": [
+    "diner home fries",
+    "restaurant home fries",
+    "fast food home fries",
+    "breakfast skillet potatoes restaurant",
+    "diner breakfast potatoes",
+    "fast food skillet potatoes",
+    "restaurant pan potatoes",
+    "diner fried potatoes"
+  ],
+  "usda_2709474": [
+    "homemade home fries",
+    "pan fried potatoes fresh",
+    "skillet potatoes fresh",
+    "fresh home fries",
+    "homemade skillet potatoes",
+    "fresh pan fries",
+    "fried diced potatoes fresh",
+    "home cooked potatoes"
+  ],
+  "usda_2709475": [
+    "ready to heat home fries",
+    "microwaveable home fries",
+    "frozen home fries",
+    "heat and serve home fries",
+    "precooked home fries",
+    "frozen skillet potatoes",
+    "microwave home fries",
+    "ready home fries"
+  ],
+  "usda_2709476": [
+    "home fries with veggies",
+    "skillet potatoes and vegetables",
+    "vegetable home fries",
+    "mixed veggie home fries",
+    "potato and pepper home fries",
+    "breakfast potato and veggies",
+    "home fries with peppers and onions",
+    "vegetable skillet potatoes"
+  ],
+  "usda_2709477": [
+    "hash browns",
+    "hashbrowns",
+    "hash brown patty",
+    "shredded potato",
+    "grated fried potato",
+    "crispy hash brown",
+    "potato hash",
+    "fried shredded potato"
+  ],
+  "usda_2709478": [
+    "fast food hash browns",
+    "drive thru hash brown",
+    "breakfast hash brown patty",
+    "mcdonald's hash brown",
+    "fast food hash brown patty",
+    "quick service hash browns",
+    "takeout hash brown",
+    "drive thru breakfast potato"
+  ],
+  "usda_2709479": [
+    "fast food hash brown with cheese",
+    "cheesy hash brown fast food",
+    "drive thru hash brown cheese",
+    "breakfast hash brown with cheese",
+    "fast food cheesy hash brown",
+    "hash brown patty with cheese fast food",
+    "takeout hash brown cheese",
+    "cheese topped fast food hash brown"
+  ],
+  "usda_2709480": [
+    "restaurant hash browns",
+    "diner hash browns",
+    "breakfast hash brown restaurant",
+    "diner shredded potato",
+    "sit down hash brown",
+    "diner potato patty",
+    "restaurant hash brown patty",
+    "diner fried shredded potato"
+  ],
+  "usda_2709481": [
+    "restaurant hash brown with cheese",
+    "diner hash brown cheese",
+    "cheesy hash brown restaurant",
+    "diner hash brown with cheese",
+    "restaurant cheesy hash brown",
+    "hash brown patty with cheese restaurant",
+    "sit down hash brown cheese",
+    "diner cheese hash brown"
+  ],
+  "usda_2709482": [
+    "school hash browns",
+    "cafeteria hash browns",
+    "school lunch hash brown",
+    "cafeteria hash brown patty",
+    "school breakfast potato",
+    "lunchroom hash brown",
+    "school meal hash brown",
+    "cafeteria shredded potato"
+  ],
+  "usda_2709483": [
+    "homemade hash browns",
+    "fresh hash browns",
+    "fresh made hash brown",
+    "homemade shredded potato",
+    "pan fried hash brown fresh",
+    "fresh grated potato",
+    "homemade crispy hash brown",
+    "fresh potato hash brown"
+  ],
+  "usda_2709484": [
+    "homemade hash brown with cheese",
+    "fresh hash brown cheese",
+    "cheesy homemade hash brown",
+    "fresh hash brown with cheese",
+    "homemade cheesy hash brown",
+    "pan fried hash brown cheese",
+    "fresh grated potato with cheese",
+    "cheese topped fresh hash brown"
+  ],
+  "usda_2709485": [
+    "instant hash browns",
+    "boxed hash browns",
+    "dry mix hash brown",
+    "packet hash brown",
+    "powdered hash brown",
+    "box mix hash brown",
+    "dry potato hash brown",
+    "mix hash brown patty"
+  ],
+  "usda_2709486": [
+    "frozen hash browns",
+    "ready to heat hash brown",
+    "microwaveable hash brown",
+    "heat and serve hash brown",
+    "frozen hash brown patty",
+    "precooked hash brown",
+    "microwave hash brown",
+    "frozen shredded potato"
+  ],
+  "usda_2709487": [
+    "frozen hash brown with cheese",
+    "ready to heat hash brown cheese",
+    "microwaveable cheesy hash brown",
+    "frozen hash brown patty cheese",
+    "precooked hash brown with cheese",
+    "microwave hash brown cheese",
+    "heat and serve hash brown cheese",
+    "frozen cheesy hash brown"
+  ],
+  "usda_2709488": [
+    "potato skins plain",
+    "empty potato skins",
+    "baked potato skins",
+    "plain potato shell",
+    "potato skins no topping",
+    "crispy potato skins",
+    "baked potato shells plain",
+    "potato skin appetizer plain"
+  ],
+  "usda_2709489": [
+    "cheesy potato skins",
+    "potato skins cheese",
+    "cheese topped potato skins",
+    "loaded potato skins cheese",
+    "baked potato skins with cheese",
+    "cheddar potato skins",
+    "potato shells with cheese",
+    "cheesy baked potato skins"
+  ],
+  "usda_2709490": [
+    "potato skins bacon cheese",
+    "loaded potato skins",
+    "bacon and cheese potato skins",
+    "cheesy bacon potato skins",
+    "fully loaded potato skins",
+    "bacon cheddar potato skins",
+    "topped potato skins",
+    "potato skins with toppings"
+  ],
+  "usda_2709491": [
+    "potato skins",
+    "loaded potato skins",
+    "potato skin appetizer",
+    "crispy potato skins",
+    "baked potato skins",
+    "potato shell snack",
+    "restaurant potato skins",
+    "bar snack potato skins"
+  ],
+  "usda_2709492": [
+    "mashed potatoes",
+    "mash",
+    "potato mash",
+    "creamy mashed potato",
+    "whipped potato",
+    "smooth mashed potato",
+    "buttery mash",
+    "fluffy mashed potato"
+  ],
+  "usda_2709493": [
+    "fast food mashed potato",
+    "drive thru mashed potato",
+    "quick service mashed potatoes",
+    "takeout mashed potato",
+    "fast food mash",
+    "burger place mashed potato",
+    "drive thru potato side",
+    "fast food potato mash"
+  ],
+  "usda_2709494": [
+    "mashed potato with gravy",
+    "mash and gravy",
+    "gravy mashed potato fast food",
+    "kfc style mashed potato",
+    "drive thru mashed potato gravy",
+    "fast food mash and gravy",
+    "mashed potato gravy side",
+    "smothered mashed potato fast food"
+  ],
+  "usda_2709495": [
+    "instant mashed potato",
+    "microwaveable mashed potato",
+    "ready mashed potato",
+    "heat and serve mash",
+    "precooked mashed potato",
+    "frozen mashed potato",
+    "microwave mash",
+    "packaged mashed potato"
+  ],
+  "usda_2709496": [
+    "mashed potato with milk",
+    "creamy mashed potato fresh",
+    "homemade mashed potato",
+    "buttery mash with milk",
+    "milk mashed potato",
+    "fresh mashed potato creamy",
+    "mash made with milk",
+    "fluffy potato mash with milk"
+  ],
+  "usda_2709497": [
+    "cheesy mashed potato",
+    "mashed potato with cheese and milk",
+    "cheese mash",
+    "cheddar mashed potato",
+    "creamy cheese mash",
+    "homemade cheesy mash",
+    "mashed potato with cheese fresh",
+    "cheesy potato mash with milk"
+  ],
+  "usda_2709498": [
+    "mashed potato with gravy",
+    "mash and gravy fresh",
+    "homemade mashed potato gravy",
+    "gravy potato mash",
+    "smothered mashed potato fresh",
+    "fresh mashed potato and gravy",
+    "mash topped with gravy",
+    "buttery mashed potato with gravy"
+  ],
+  "usda_2709499": [
+    "homemade mashed potato",
+    "fresh mashed potato",
+    "made from scratch mash",
+    "plain mashed potato fresh",
+    "basic mashed potato",
+    "simple mash",
+    "plain potato mash fresh",
+    "from scratch mashed potato"
+  ],
+  "usda_2709500": [
+    "restaurant mashed potato",
+    "diner mashed potato",
+    "sit down mashed potato",
+    "bistro mash",
+    "steakhouse mashed potato",
+    "side of mash restaurant",
+    "diner potato mash",
+    "restaurant side mash"
+  ],
+  "usda_2709501": [
+    "restaurant mashed potato with gravy",
+    "diner mash and gravy",
+    "sit down mashed potato gravy",
+    "bistro mash with sauce",
+    "steakhouse mashed potato gravy",
+    "gravy mash restaurant",
+    "diner mashed potato gravy",
+    "restaurant mash topped with gravy"
+  ],
+  "usda_2709502": [
+    "school mashed potato",
+    "cafeteria mashed potato",
+    "school lunch mash",
+    "lunchroom mashed potato",
+    "school cafeteria mash",
+    "cafeteria potato mash",
+    "school meal mashed potato",
+    "lunch tray mashed potato"
+  ],
+  "usda_2709503": [
+    "instant mashed potato",
+    "boxed mashed potato",
+    "dry mix mash",
+    "packet mashed potato",
+    "powdered mashed potato",
+    "box mashed potato",
+    "dry potato mash",
+    "instant potato flakes"
+  ],
+  "usda_2709504": [
+    "instant mashed potato with milk",
+    "boxed mash made with milk",
+    "packet potato with milk",
+    "powdered mash with milk",
+    "box mashed potato milk",
+    "instant potato flakes with milk",
+    "dry mix potato with milk",
+    "instant creamy mashed potato"
+  ],
+  "usda_2709505": [
+    "instant cheesy mashed potato",
+    "boxed mash with cheese and milk",
+    "packet potato cheese",
+    "powdered mash with cheese",
+    "box mashed potato with cheese",
+    "instant cheesy potato flakes",
+    "dry mix potato with cheese",
+    "instant cheddar mash"
+  ],
+  "usda_2709506": [
+    "instant mashed potato with gravy",
+    "boxed mash and gravy",
+    "packet potato with gravy",
+    "powdered mash with gravy",
+    "box mashed potato gravy",
+    "instant potato with brown gravy",
+    "dry mix potato and gravy",
+    "instant mash smothered in gravy"
+  ],
+  "usda_2709507": [
+    "ready to heat mashed potato",
+    "microwaveable mash",
+    "frozen mashed potato",
+    "heat and serve mash",
+    "precooked mash",
+    "microwave mashed potato",
+    "packaged mashed potato ready",
+    "instant heat mash"
+  ],
+  "usda_2709508": [
+    "ready to heat cheesy mash",
+    "microwaveable cheese mash",
+    "frozen mashed potato with cheese",
+    "heat and serve cheesy potato",
+    "precooked cheese mash",
+    "microwave cheesy mashed potato",
+    "packaged cheesy mash",
+    "instant heat cheddar mash"
+  ],
+  "usda_2709509": [
+    "ready to heat mash with gravy",
+    "microwaveable mashed potato gravy",
+    "frozen mashed potato with gravy",
+    "heat and serve mash and gravy",
+    "precooked mash with gravy",
+    "microwave mashed potato gravy",
+    "packaged mash with gravy",
+    "instant heat mash and gravy"
+  ],
+  "usda_2709510": [
+    "potato patty",
+    "potato cake",
+    "potato pancake",
+    "latke",
+    "fried potato patty",
+    "potato fritter",
+    "pan fried potato cake",
+    "potato burger patty"
+  ],
+  "usda_2709511": [
+    "tater tots",
+    "tots",
+    "potato tots",
+    "mini potato bites",
+    "crispy tots",
+    "fried tater tots",
+    "potato nuggets",
+    "tater tot bites"
+  ],
+  "usda_2709512": [
+    "fast food tater tots",
+    "restaurant tots",
+    "drive thru tater tots",
+    "fast food potato tots",
+    "burger joint tots",
+    "takeout tater tots",
+    "restaurant tater tot side",
+    "drive thru tots"
+  ],
+  "usda_2709513": [
+    "school tater tots",
+    "cafeteria tater tots",
+    "school lunch tots",
+    "lunchroom tater tots",
+    "cafeteria potato tots",
+    "school meal tots",
+    "school potato nuggets",
+    "cafeteria tots"
+  ],
+  "usda_2709514": [
+    "homemade tater tots",
+    "fresh tater tots",
+    "fresh made potato tots",
+    "homemade tots fried",
+    "fresh baked tots",
+    "homemade potato nuggets",
+    "fresh potato tots baked",
+    "made from scratch tater tots"
+  ],
+  "usda_2709515": [
+    "frozen tater tots baked",
+    "oven baked tater tots",
+    "baked frozen tots",
+    "frozen tots baked",
+    "oven tater tots",
+    "baked potato tots frozen",
+    "frozen potato nuggets baked",
+    "oven frozen tater tots"
+  ],
+  "usda_2709516": [
+    "deep fried tater tots",
+    "fried frozen tots",
+    "frozen tots fried",
+    "crispy fried tater tots",
+    "deep fried potato tots",
+    "frozen tater tots fried",
+    "fried potato nuggets frozen",
+    "crispy frozen tots"
+  ],
+  "usda_2709517": [
+    "frozen tater tots",
+    "frozen tots",
+    "frozen potato tots",
+    "frozen potato nuggets",
+    "bagged tater tots",
+    "store bought tater tots",
+    "frozen mini potato bites",
+    "packaged tater tots"
+  ],
+  "usda_2709518": [
+    "baked potato with butter",
+    "baked spud butter",
+    "butter baked potato",
+    "jacket potato with butter",
+    "baked potato no skin",
+    "buttery baked potato",
+    "plain baked potato butter",
+    "oven baked potato with butter"
+  ]
+}

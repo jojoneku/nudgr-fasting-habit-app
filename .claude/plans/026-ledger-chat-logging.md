@@ -1,5 +1,6 @@
-# Plan: Chat-based logging for the Finance Ledger
+# Plan 026 — Chat-based Logging for the Finance Ledger
 
+**Status:** NOT IMPLEMENTED — commit 45546f9 only added this plan document; none of the planned files (`finance_nlp_parser.dart`, `finance_parse_result.dart`, `finance_personal_dictionary.dart`) or symbols (`sendChatInput`, `LedgerChatState`, `runFinanceClassifierStep`) exist in `lib/`. Ledger view still uses the FAB column.
 **Branch target:** `feat/ledger-chat-logging` (off `feat/hub-and-treasury-ui-overhaul`)
 
 ## 1. Goal

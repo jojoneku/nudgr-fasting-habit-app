@@ -1,0 +1,507 @@
+{
+  "usda_167561": [
+    "trail mix",
+    "gorp",
+    "mixed nuts and dried fruit",
+    "nut and raisin mix",
+    "hiking snack mix",
+    "energy mix",
+    "nuts raisins and seeds",
+    "snack mix",
+    "dried fruit nut mix",
+    "outdoor trail snack"
+  ],
+  "usda_167562": [
+    "almond joy bar",
+    "coconut almond bar",
+    "chocolate coconut candy",
+    "coconut chocolate candy bar",
+    "almond coconut chocolate",
+    "coconut candy bar",
+    "almond chocolate coconut bar",
+    "almond joy chocolate"
+  ],
+  "usda_167563": [
+    "cherry twizzlers bites",
+    "cherry licorice bites",
+    "red candy bites",
+    "cherry chewy candy bites",
+    "twizzler cherry pieces",
+    "cherry bite candy",
+    "chewy cherry red candy",
+    "small cherry licorice"
+  ],
+  "usda_167564": [
+    "bit o honey",
+    "honey taffy",
+    "honey almond chews",
+    "honey flavored candy",
+    "chewy honey candy",
+    "almond honey taffy",
+    "honey chew candy",
+    "soft honey candy"
+  ],
+  "usda_167565": [
+    "butterfinger bar",
+    "crispy peanut butter bar",
+    "peanut butter chocolate bar",
+    "crunchy pb candy bar",
+    "butterfingers",
+    "peanut butter toffee bar",
+    "crispy pb chocolate",
+    "peanut butter crisp bar",
+    "butterfinger candy"
+  ],
+  "usda_167566": [
+    "chocolate caramel roll",
+    "caramel chocolate chew",
+    "chocolate caramel candy roll",
+    "rolled caramel candy",
+    "chocolate flavored caramel",
+    "caramel chew roll",
+    "chocolate caramel chews",
+    "caramel candy roll"
+  ],
+  "usda_167567": [
+    "liquid baking chocolate",
+    "unsweetened chocolate liquid",
+    "melted baker's chocolate",
+    "pure chocolate liquid",
+    "liquid dark baking chocolate",
+    "unsweetened liquid cocoa",
+    "baking chocolate melted",
+    "chocolate baking liquid"
+  ],
+  "usda_167568": [
+    "baker's chocolate",
+    "unsweetened chocolate square",
+    "baking chocolate block",
+    "dark unsweetened chocolate",
+    "pure baking chocolate",
+    "chocolate baking square",
+    "bitter baking chocolate",
+    "unsweetened cocoa square"
+  ],
+  "usda_167569": [
+    "yogurt coating",
+    "white yogurt dip coating",
+    "yogurt candy coating",
+    "yogurt confectionery coating",
+    "yogurt flavored coating",
+    "white yogurt chocolate coating",
+    "yogurt dipping coating",
+    "yogurt bark coating"
+  ],
+  "usda_167570": [
+    "peanut butter coating",
+    "pb candy coating",
+    "peanut butter confectionery coating",
+    "peanut butter dip coating",
+    "pb chocolate coating",
+    "peanut butter bark coating",
+    "peanut flavored coating",
+    "pb confection coating"
+  ],
+  "usda_167571": [
+    "white chocolate bar",
+    "white choco",
+    "ivory chocolate",
+    "sweet white chocolate",
+    "vanilla chocolate bar",
+    "white chocolate candy",
+    "white choco bar",
+    "creamy white chocolate"
+  ],
+  "usda_167572": [
+    "light vanilla ice cream",
+    "low fat vanilla ice cream",
+    "reduced fat vanilla ice cream",
+    "diet vanilla ice cream",
+    "lighter vanilla ice cream",
+    "vanilla ice cream light",
+    "low calorie vanilla ice cream",
+    "slim vanilla ice cream"
+  ],
+  "usda_167573": [
+    "premium vanilla ice cream",
+    "rich vanilla ice cream",
+    "full fat vanilla ice cream",
+    "creamy vanilla ice cream",
+    "luxury vanilla ice cream",
+    "heavy cream vanilla ice cream",
+    "thick vanilla ice cream",
+    "decadent vanilla ice cream"
+  ],
+  "usda_167574": [
+    "flan",
+    "leche flan",
+    "caramel custard",
+    "caramel flan",
+    "egg custard dessert",
+    "creme caramel",
+    "filipino leche flan",
+    "custard with caramel sauce",
+    "baked caramel custard",
+    "caramel egg custard"
+  ],
+  "usda_167575": [
+    "vanilla ice cream",
+    "vanilla scoop",
+    "plain vanilla ice cream",
+    "vanilla flavor ice cream",
+    "vanilla sundae",
+    "regular vanilla ice cream",
+    "vanilla helado",
+    "classic vanilla ice cream"
+  ],
+  "usda_167576": [
+    "vanilla soft serve",
+    "light soft serve",
+    "low fat soft serve vanilla",
+    "vanilla swirl",
+    "vanilla soft ice cream",
+    "soft serve light vanilla",
+    "vanilla soft serve cone",
+    "light vanilla swirl"
+  ],
+  "usda_167577": [
+    "orange sherbet",
+    "orange sherbert",
+    "creamy orange sorbet",
+    "orange frozen dessert",
+    "citrus sherbet",
+    "orange ice dessert",
+    "orange cream sorbet",
+    "fruity orange sherbet"
+  ],
+  "usda_167578": [
+    "peanut butter fudge",
+    "pb fudge",
+    "homemade pb fudge",
+    "peanut butter candy square",
+    "peanut fudge",
+    "creamy pb fudge",
+    "peanut butter sweet fudge",
+    "soft peanut butter fudge"
+  ],
+  "usda_167579": [
+    "vanilla fudge",
+    "white fudge",
+    "homemade vanilla fudge",
+    "vanilla candy square",
+    "creamy vanilla fudge",
+    "sweet vanilla fudge",
+    "soft vanilla fudge",
+    "classic vanilla fudge"
+  ],
+  "usda_167580": [
+    "vanilla nut fudge",
+    "fudge with walnuts",
+    "nutty vanilla fudge",
+    "walnut fudge",
+    "vanilla pecan fudge",
+    "nut studded fudge",
+    "vanilla fudge with nuts",
+    "nutty white fudge"
+  ],
+  "usda_167581": [
+    "goobers",
+    "chocolate covered peanuts",
+    "choco peanuts",
+    "peanuts in chocolate",
+    "chocolate coated peanuts",
+    "chocolate peanut candy",
+    "movie theater peanuts",
+    "choco dipped peanuts"
+  ],
+  "usda_167582": [
+    "baby ruth bar",
+    "peanut caramel nougat bar",
+    "baby ruth chocolate",
+    "peanut nougat chocolate bar",
+    "caramel peanut nougat bar",
+    "baby ruth candy",
+    "peanut chocolate caramel bar",
+    "baby ruth snack"
+  ],
+  "usda_167583": [
+    "strawberry twizzlers",
+    "red licorice twists",
+    "strawberry licorice",
+    "twizzler sticks",
+    "red twist candy",
+    "strawberry chewy sticks",
+    "strawberry licorice twists",
+    "red chewy candy twists"
+  ],
+  "usda_167584": [
+    "butter pancake syrup",
+    "pancake syrup with butter",
+    "buttery maple syrup",
+    "table syrup with butter",
+    "maple butter syrup blend",
+    "breakfast syrup with butter",
+    "pancake topping butter",
+    "buttery pancake topping"
+  ],
+  "usda_167585": [
+    "light chocolate ice cream",
+    "low fat chocolate ice cream",
+    "reduced fat chocolate ice cream",
+    "diet chocolate ice cream",
+    "lighter chocolate ice cream",
+    "chocolate ice cream light",
+    "low calorie choco ice cream",
+    "slim chocolate ice cream"
+  ],
+  "usda_167586": [
+    "chunky bar",
+    "chocolate raisin nut bar",
+    "raisin peanut chocolate bar",
+    "chunky chocolate candy",
+    "nut and raisin chocolate bar",
+    "chunky candy bar",
+    "chocolate bar with raisins and nuts",
+    "chunky chocolate square"
+  ],
+  "usda_167587": [
+    "milk chocolate bar",
+    "milk chocolate candy",
+    "creamy milk chocolate",
+    "plain chocolate bar",
+    "sweet milk chocolate",
+    "regular chocolate bar",
+    "choco bar",
+    "classic milk chocolate"
+  ],
+  "usda_167588": [
+    "banana pudding instant",
+    "instant banana pudding",
+    "banana cream pudding",
+    "banana flavored pudding",
+    "banana pudding mix",
+    "quick banana pudding",
+    "banana custard instant",
+    "banana pudding prepared"
+  ],
+  "usda_167589": [
+    "banana pudding cooked",
+    "cooked banana pudding",
+    "regular banana pudding",
+    "homestyle banana pudding",
+    "banana custard pudding",
+    "stovetop banana pudding",
+    "banana pudding from mix",
+    "traditional banana pudding"
+  ],
+  "usda_167590": [
+    "gluten free dinner roll",
+    "gf dinner roll",
+    "gluten free bread roll",
+    "soft gf roll",
+    "gluten free supper roll",
+    "gf soft roll",
+    "gluten free small roll",
+    "celiac dinner roll"
+  ],
+  "usda_167591": [
+    "gluten free crackers",
+    "multigrain crisps gf",
+    "gf snack crackers",
+    "gluten free multi-grain crackers",
+    "crunchy gf crackers",
+    "crunchmaster crackers",
+    "rice crackers gluten free",
+    "gf multigrain crisps"
+  ],
+  "usda_167592": [
+    "gluten free chocolate cream cookies",
+    "gf chocolate sandwich cookie",
+    "gluten free oreo style",
+    "chocolate vanilla gf cookies",
+    "gf chocolate creme cookies",
+    "celiac chocolate cookies",
+    "gluten free choco creme",
+    "gf sandwich cookies chocolate"
+  ],
+  "usda_167593": [
+    "gluten free vanilla cream cookies",
+    "gf vanilla sandwich cookie",
+    "vanilla creme gf cookies",
+    "gluten free vanilla cookies",
+    "gf vanilla creme sandwich",
+    "celiac vanilla cookies",
+    "gluten free vanilla cream sandwich",
+    "gf vanilla cream biscuit"
+  ],
+  "usda_167594": [
+    "goldfish crackers",
+    "original goldfish",
+    "goldfish snack crackers",
+    "fish shaped crackers",
+    "baked goldfish",
+    "pepperidge farm goldfish",
+    "goldfish original flavor",
+    "cheddar fish crackers"
+  ],
+  "usda_167595": [
+    "parmesan goldfish",
+    "goldfish parmesan",
+    "parmesan fish crackers",
+    "cheese goldfish parmesan",
+    "goldfish parmesan flavor",
+    "parmesan flavored fish crackers",
+    "goldfish white cheddar parmesan",
+    "pepperidge farm parmesan goldfish"
+  ],
+  "usda_167596": [
+    "pizza goldfish",
+    "goldfish pizza flavor",
+    "pizza flavored crackers",
+    "pizza fish crackers",
+    "goldfish pizza snack",
+    "pizza shaped goldfish crackers",
+    "pepperidge farm pizza goldfish",
+    "pizza goldfish snack"
+  ],
+  "usda_167597": [
+    "gluten free sandwich bread",
+    "gf white sandwich bread",
+    "gluten free bread loaf",
+    "gluten free sliced bread",
+    "gf sandwich loaf",
+    "rudis gf bread",
+    "celiac sandwich bread",
+    "gluten free bread sliced"
+  ],
+  "usda_167598": [
+    "gluten free white bread",
+    "soft gf white bread",
+    "gluten free soft bread",
+    "udis white bread",
+    "gf soft sandwich bread",
+    "celiac white bread",
+    "soft gluten free sandwich loaf",
+    "gf white loaf"
+  ],
+  "usda_167599": [
+    "gluten free whole grain bread",
+    "gf whole grain bread",
+    "gluten free multigrain bread",
+    "hearty gf bread",
+    "gf hearty whole grain loaf",
+    "celiac whole grain bread",
+    "gluten free seedy bread",
+    "gf multigrain loaf"
+  ],
+  "usda_167600": [
+    "gluten free whole grain rolls",
+    "gf dinner rolls",
+    "whole grain gf rolls",
+    "gluten free rolls whole grain",
+    "gf whole grain dinner rolls",
+    "celiac dinner rolls",
+    "gluten free hearty rolls",
+    "gf multigrain rolls"
+  ],
+  "usda_167601": [
+    "gluten free pancakes",
+    "gf pancakes",
+    "frozen gluten free pancakes",
+    "gluten free breakfast pancakes",
+    "gf frozen pancakes",
+    "celiac pancakes",
+    "gluten free flapjacks",
+    "gf breakfast pancakes"
+  ],
+  "usda_167602": [
+    "dried seaweed",
+    "dry sea vegetable",
+    "dried red seaweed",
+    "dry emi-tsunomata",
+    "dehydrated seaweed",
+    "dried sea algae",
+    "dried seaweed snack",
+    "dry cultivated seaweed"
+  ],
+  "usda_167603": [
+    "rehydrated seaweed",
+    "soaked seaweed",
+    "wet seaweed",
+    "prepared seaweed",
+    "reconstituted seaweed",
+    "hydrated sea vegetable",
+    "cooked seaweed",
+    "softened seaweed"
+  ],
+  "usda_167604": [
+    "raw hash browns",
+    "uncooked hash browns",
+    "refrigerated hash browns",
+    "shredded potato patty uncooked",
+    "hash brown patty raw",
+    "shredded potatoes uncooked",
+    "fresh hash brown patty",
+    "potato hash brown uncooked"
+  ],
+  "usda_167605": [
+    "fried hash browns",
+    "pan fried hash brown",
+    "cooked hash brown patty",
+    "crispy hash browns",
+    "hash browns pan fried",
+    "fried potato patty",
+    "golden hash browns",
+    "skillet hash browns"
+  ],
+  "usda_167606": [
+    "frozen sweet potato fries",
+    "sweet potato fries",
+    "sweet fries",
+    "camote fries",
+    "sweet potato french fries frozen",
+    "baked sweet potato fries",
+    "frozen camote fries",
+    "sweet potato sticks frozen"
+  ],
+  "usda_167607": [
+    "raw moose meat",
+    "wild game moose",
+    "uncooked moose",
+    "alaska moose meat",
+    "moose venison",
+    "moose protein raw",
+    "wild moose raw",
+    "alaska native moose"
+  ],
+  "usda_167608": [
+    "mashu root",
+    "wild alaska root",
+    "alaska native plant root",
+    "raw mashu vegetable",
+    "native root vegetable alaska",
+    "wild root alaska",
+    "mashu vegetable",
+    "alaska wild root"
+  ],
+  "usda_167609": [
+    "braised moose liver",
+    "cooked moose liver",
+    "moose organ meat",
+    "wild game liver",
+    "alaska moose liver cooked",
+    "moose offal braised",
+    "native alaska moose liver",
+    "stewed moose liver"
+  ],
+  "usda_167610": [
+    "bearded seal meat",
+    "oogruk meat",
+    "raw seal meat",
+    "alaska seal",
+    "wild seal meat",
+    "native alaska seal",
+    "oogruk raw",
+    "bearded seal raw meat"
+  ]
+}

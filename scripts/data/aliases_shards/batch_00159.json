@@ -1,0 +1,883 @@
+{
+  "usda_2708507": [
+    "mexican pizza taco bell",
+    "taco pizza",
+    "mexian pizza",
+    "double decker pizza",
+    "tortilla pizza",
+    "mexican style pizza",
+    "taco bell pizza",
+    "crispy tortilla pizza",
+    "mexican flatbread pizza"
+  ],
+  "usda_2708508": [
+    "taco salad with meat",
+    "tostada salad beef",
+    "mexican salad with beef",
+    "taco bowl salad",
+    "tortilla bowl salad with meat",
+    "ground beef taco salad",
+    "mexican taco salad",
+    "tostada bowl with meat",
+    "fiesta salad with meat"
+  ],
+  "usda_2708509": [
+    "taco salad with chicken",
+    "chicken tostada salad",
+    "mexican chicken salad",
+    "chicken taco bowl salad",
+    "tortilla bowl chicken salad",
+    "fiesta chicken salad",
+    "tostada bowl chicken",
+    "chicken mexican salad",
+    "chicken taco bowl"
+  ],
+  "usda_2708510": [
+    "vegetarian taco salad",
+    "meatless tostada salad",
+    "veggie taco salad",
+    "bean taco salad",
+    "mexican salad no meat",
+    "tostada salad no meat",
+    "veg taco bowl salad",
+    "meatless mexican salad",
+    "vegetable taco salad"
+  ],
+  "usda_2708511": [
+    "taco salad with meat and sour cream",
+    "beef taco salad sour cream",
+    "tostada salad meat sour cream",
+    "mexican salad beef sour cream",
+    "taco bowl with sour cream and meat",
+    "ground beef taco salad sour cream",
+    "tostada bowl meat sour cream"
+  ],
+  "usda_2708512": [
+    "chicken taco salad with sour cream",
+    "tostada salad chicken sour cream",
+    "chicken mexican salad sour cream",
+    "chicken taco bowl sour cream",
+    "fiesta chicken salad sour cream",
+    "tostada bowl chicken sour cream",
+    "chicken taco salad crema"
+  ],
+  "usda_2708513": [
+    "meatless taco salad sour cream",
+    "veggie taco salad with sour cream",
+    "vegetarian tostada salad sour cream",
+    "bean taco salad sour cream",
+    "meatless mexican salad sour cream",
+    "veg tostada salad sour cream",
+    "no meat taco salad sour cream"
+  ],
+  "usda_2708514": [
+    "taco",
+    "street taco",
+    "hard shell taco",
+    "soft taco",
+    "mexican taco",
+    "tacos",
+    "taco nfs",
+    "basic taco",
+    "plain taco",
+    "taco general"
+  ],
+  "usda_2708515": [
+    "beef taco corn tortilla",
+    "hard taco beef cheese",
+    "corn shell beef taco",
+    "crunchy beef taco with cheese",
+    "hard shell beef taco",
+    "ground beef hard taco",
+    "beef cheddar taco",
+    "corn tortilla beef taco"
+  ],
+  "usda_2708516": [
+    "beef bean taco corn tortilla",
+    "hard taco beef beans cheese",
+    "crunchy beef and bean taco",
+    "corn shell beef bean taco",
+    "hard shell beef bean taco",
+    "ground beef bean hard taco",
+    "bean and beef corn taco"
+  ],
+  "usda_2708517": [
+    "pork taco corn tortilla",
+    "hard shell pork taco",
+    "corn shell pork taco",
+    "crunchy pork taco cheese",
+    "pork and cheese corn taco",
+    "carnitas hard taco",
+    "pork corn taco with cheese"
+  ],
+  "usda_2708518": [
+    "pork bean taco corn tortilla",
+    "hard shell pork bean taco",
+    "crunchy pork and bean taco",
+    "corn tortilla pork bean taco",
+    "carnitas bean hard taco",
+    "pork beans cheese corn taco",
+    "pork and bean corn shell taco"
+  ],
+  "usda_2708519": [
+    "chicken taco corn tortilla",
+    "hard shell chicken taco",
+    "corn shell chicken taco",
+    "crunchy chicken taco cheese",
+    "chicken and cheese corn taco",
+    "hard taco chicken",
+    "crispy chicken taco corn"
+  ],
+  "usda_2708520": [
+    "chicken bean taco corn tortilla",
+    "hard shell chicken bean taco",
+    "crunchy chicken and bean taco",
+    "corn tortilla chicken bean taco",
+    "chicken beans cheese corn taco",
+    "crispy chicken bean taco"
+  ],
+  "usda_2708521": [
+    "bean taco corn tortilla",
+    "hard shell bean taco",
+    "corn shell bean cheese taco",
+    "crunchy bean taco",
+    "vegetarian hard taco corn",
+    "bean and cheese corn taco",
+    "hard taco beans no meat"
+  ],
+  "usda_2708522": [
+    "beef taco flour tortilla",
+    "soft taco beef cheese",
+    "flour shell beef taco",
+    "soft beef taco with cheese",
+    "flour tortilla beef taco",
+    "ground beef soft taco",
+    "soft taco beef cheddar"
+  ],
+  "usda_2708523": [
+    "beef bean taco flour tortilla",
+    "soft taco beef beans cheese",
+    "flour shell beef bean taco",
+    "soft beef and bean taco",
+    "ground beef bean soft taco",
+    "flour tortilla beef bean taco"
+  ],
+  "usda_2708524": [
+    "pork taco flour tortilla",
+    "soft shell pork taco",
+    "flour tortilla pork taco cheese",
+    "carnitas soft taco",
+    "pork soft taco with cheese",
+    "pork and cheese flour taco"
+  ],
+  "usda_2708525": [
+    "pork bean taco flour tortilla",
+    "soft shell pork bean taco",
+    "flour tortilla pork bean taco",
+    "carnitas bean soft taco",
+    "pork and bean soft taco cheese",
+    "soft pork bean cheese taco"
+  ],
+  "usda_2708526": [
+    "chicken taco flour tortilla",
+    "soft taco chicken cheese",
+    "flour shell chicken taco",
+    "soft chicken taco with cheese",
+    "flour tortilla chicken taco",
+    "grilled chicken soft taco"
+  ],
+  "usda_2708527": [
+    "chicken bean taco flour tortilla",
+    "soft taco chicken beans cheese",
+    "flour shell chicken bean taco",
+    "soft chicken and bean taco",
+    "flour tortilla chicken bean taco",
+    "chicken bean soft taco"
+  ],
+  "usda_2708528": [
+    "bean taco flour tortilla",
+    "soft taco beans cheese",
+    "flour shell bean taco",
+    "soft bean and cheese taco",
+    "veggie soft taco",
+    "bean cheese flour taco",
+    "meatless soft taco"
+  ],
+  "usda_2708529": [
+    "fish taco",
+    "baja fish taco",
+    "fried fish taco",
+    "grilled fish taco",
+    "seafood taco",
+    "fish street taco",
+    "battered fish taco",
+    "cod taco",
+    "tilapia taco"
+  ],
+  "usda_2708530": [
+    "meat taco no cheese",
+    "beef taco no cheese",
+    "taco sin queso",
+    "plain meat taco",
+    "ground beef taco without cheese",
+    "taco with meat no cheese",
+    "dairy free taco"
+  ],
+  "usda_2708531": [
+    "meat bean taco no cheese",
+    "beef and bean taco no cheese",
+    "taco beans meat no cheese",
+    "bean taco with meat no cheese",
+    "plain beef bean taco",
+    "meat bean taco dairy free"
+  ],
+  "usda_2708532": [
+    "bean taco no cheese",
+    "taco de frijoles no cheese",
+    "bean only taco no cheese",
+    "plain bean taco",
+    "meatless taco no cheese",
+    "vegan taco beans",
+    "bean taco dairy free"
+  ],
+  "usda_2708533": [
+    "cheese taco",
+    "quesotaco",
+    "taco de queso",
+    "cheese only taco",
+    "just cheese taco",
+    "plain cheese taco",
+    "melted cheese taco"
+  ],
+  "usda_2708534": [
+    "burrito",
+    "mexican burrito",
+    "wrap burrito",
+    "bean and rice wrap",
+    "flour tortilla wrap",
+    "burrito nfs",
+    "basic burrito",
+    "plain burrito",
+    "regular burrito"
+  ],
+  "usda_2708535": [
+    "beef burrito with cheese",
+    "ground beef burrito",
+    "beef and cheese burrito",
+    "carne burrito",
+    "beef cheddar burrito",
+    "beef burrito no beans",
+    "classic beef burrito"
+  ],
+  "usda_2708536": [
+    "beef rice burrito",
+    "beef and rice burrito cheese",
+    "burrito carne con arroz",
+    "ground beef rice burrito",
+    "beef burrito with rice and cheese",
+    "arroz beef burrito"
+  ],
+  "usda_2708537": [
+    "beef bean burrito",
+    "bean and beef burrito cheese",
+    "beef burrito with beans",
+    "burrito carne frijoles",
+    "classic beef bean burrito",
+    "ground beef bean burrito"
+  ],
+  "usda_2708538": [
+    "beef bean rice burrito",
+    "beef burrito with beans and rice",
+    "complete beef burrito",
+    "burrito carne arroz frijoles",
+    "ground beef bean rice burrito",
+    "full beef burrito"
+  ],
+  "usda_2708539": [
+    "pork burrito with cheese",
+    "carnitas burrito",
+    "pork and cheese burrito",
+    "carnitas burrito con queso",
+    "pork burrito no beans",
+    "shredded pork burrito"
+  ],
+  "usda_2708540": [
+    "pork rice burrito",
+    "carnitas rice burrito cheese",
+    "pork and rice burrito with cheese",
+    "carnitas arroz burrito",
+    "shredded pork rice burrito"
+  ],
+  "usda_2708541": [
+    "pork bean burrito",
+    "carnitas bean burrito cheese",
+    "pork burrito with beans and cheese",
+    "carnitas frijoles burrito",
+    "shredded pork bean burrito"
+  ],
+  "usda_2708542": [
+    "pork bean rice burrito",
+    "carnitas bean rice burrito",
+    "pork burrito beans and rice",
+    "complete pork burrito",
+    "carnitas arroz frijoles burrito",
+    "shredded pork rice bean burrito"
+  ],
+  "usda_2708543": [
+    "chicken burrito with cheese",
+    "pollo burrito",
+    "grilled chicken burrito",
+    "chicken and cheese burrito",
+    "chicken burrito no beans",
+    "chipotle chicken burrito"
+  ],
+  "usda_2708544": [
+    "chicken rice burrito",
+    "pollo arroz burrito",
+    "chicken and rice burrito cheese",
+    "grilled chicken rice burrito",
+    "chicken burrito with rice"
+  ],
+  "usda_2708545": [
+    "chicken bean burrito",
+    "pollo frijoles burrito",
+    "chicken burrito with beans and cheese",
+    "grilled chicken bean burrito",
+    "chicken and bean burrito"
+  ],
+  "usda_2708546": [
+    "chicken bean rice burrito",
+    "pollo arroz frijoles burrito",
+    "chicken burrito beans and rice",
+    "complete chicken burrito",
+    "grilled chicken rice bean burrito",
+    "chipotle style chicken burrito"
+  ],
+  "usda_2708547": [
+    "bean burrito no cheese",
+    "burrito de frijoles",
+    "plain bean burrito",
+    "vegetarian burrito no cheese",
+    "bean only burrito",
+    "meatless burrito no cheese",
+    "dairy free bean burrito"
+  ],
+  "usda_2708548": [
+    "bean burrito with cheese",
+    "burrito de frijoles con queso",
+    "bean and cheese burrito",
+    "refried bean burrito",
+    "veggie burrito with cheese",
+    "bean cheese burrito"
+  ],
+  "usda_2708549": [
+    "bean rice burrito with cheese",
+    "burrito frijoles arroz queso",
+    "bean and rice burrito cheese",
+    "veggie burrito rice beans",
+    "refried bean rice burrito"
+  ],
+  "usda_2708550": [
+    "meat burrito no cheese",
+    "plain meat burrito",
+    "beef burrito sin queso",
+    "dairy free meat burrito",
+    "burrito carne no cheese",
+    "meat only burrito"
+  ],
+  "usda_2708551": [
+    "meat rice burrito no cheese",
+    "beef rice burrito no cheese",
+    "burrito carne arroz no queso",
+    "plain meat rice burrito",
+    "dairy free beef rice burrito"
+  ],
+  "usda_2708552": [
+    "meat bean burrito no cheese",
+    "beef bean burrito no cheese",
+    "dairy free beef bean burrito",
+    "plain meat bean burrito",
+    "burrito carne frijoles no queso"
+  ],
+  "usda_2708553": [
+    "meat bean rice burrito no cheese",
+    "beef bean rice burrito no cheese",
+    "dairy free complete burrito",
+    "plain meat bean rice burrito",
+    "burrito carne frijoles arroz no queso"
+  ],
+  "usda_2708554": [
+    "cheese burrito",
+    "burrito de queso",
+    "cheese only burrito",
+    "just cheese burrito",
+    "plain cheese burrito",
+    "melted cheese burrito",
+    "quesito burrito"
+  ],
+  "usda_2708555": [
+    "burrito bowl",
+    "chipotle bowl",
+    "mexican rice bowl",
+    "burrito in a bowl",
+    "taco bowl",
+    "mexican bowl",
+    "tortilla-free burrito",
+    "deconstructed burrito"
+  ],
+  "usda_2708556": [
+    "beef burrito bowl",
+    "pork burrito bowl",
+    "carnitas bowl",
+    "ground beef bowl",
+    "carne burrito bowl",
+    "steak burrito bowl",
+    "chipotle beef bowl"
+  ],
+  "usda_2708557": [
+    "beef rice burrito bowl",
+    "pork rice bowl",
+    "carnitas rice bowl",
+    "steak rice burrito bowl",
+    "ground beef rice bowl",
+    "chipotle beef rice bowl",
+    "carne arroz bowl"
+  ],
+  "usda_2708558": [
+    "beef bean burrito bowl",
+    "pork bean bowl",
+    "carnitas bean bowl",
+    "ground beef bean bowl",
+    "steak bean burrito bowl",
+    "chipotle beef bean bowl",
+    "carne frijoles bowl"
+  ],
+  "usda_2708559": [
+    "beef bean rice burrito bowl",
+    "pork bean rice bowl",
+    "carnitas rice and bean bowl",
+    "complete beef burrito bowl",
+    "steak bean rice bowl",
+    "chipotle beef bowl full",
+    "carne arroz frijoles bowl"
+  ],
+  "usda_2708561": [
+    "chicken rice burrito bowl",
+    "pollo rice bowl",
+    "grilled chicken rice bowl",
+    "chipotle chicken rice bowl",
+    "chicken arroz bowl",
+    "chicken burrito bowl with rice"
+  ],
+  "usda_2708562": [
+    "chicken bean burrito bowl",
+    "pollo bean bowl",
+    "grilled chicken bean bowl",
+    "chipotle chicken bean bowl",
+    "chicken frijoles bowl",
+    "chicken burrito bowl with beans"
+  ],
+  "usda_2708563": [
+    "chicken bean rice burrito bowl",
+    "pollo arroz frijoles bowl",
+    "grilled chicken rice bean bowl",
+    "chipotle chicken full bowl",
+    "complete chicken burrito bowl",
+    "chicken rice and beans bowl"
+  ],
+  "usda_2708564": [
+    "bean burrito bowl",
+    "frijoles bowl",
+    "bean bowl",
+    "vegetarian burrito bowl",
+    "refried bean bowl",
+    "bean only burrito bowl",
+    "meatless burrito bowl"
+  ],
+  "usda_2708565": [
+    "enchilada",
+    "mexican enchilada",
+    "rolled tortilla with sauce",
+    "enchilada nfs",
+    "basic enchilada",
+    "plain enchilada",
+    "red sauce enchilada",
+    "enchilada general"
+  ],
+  "usda_2708566": [
+    "beef enchilada",
+    "ground beef enchilada",
+    "carne enchilada",
+    "red chile beef enchilada",
+    "enchilada de carne",
+    "beef filled enchilada",
+    "enchilada with ground beef"
+  ],
+  "usda_2708567": [
+    "pork enchilada",
+    "carnitas enchilada",
+    "shredded pork enchilada",
+    "enchilada de puerco",
+    "pork filled enchilada",
+    "pulled pork enchilada"
+  ],
+  "usda_2708568": [
+    "chicken enchilada",
+    "pollo enchilada",
+    "shredded chicken enchilada",
+    "enchilada de pollo",
+    "chicken filled enchilada",
+    "grilled chicken enchilada",
+    "verde chicken enchilada"
+  ],
+  "usda_2708569": [
+    "vegetarian enchilada",
+    "cheese enchilada",
+    "meatless enchilada",
+    "veggie enchilada",
+    "bean enchilada",
+    "enchilada no meat",
+    "vegetable enchilada"
+  ],
+  "usda_2708570": [
+    "tamale",
+    "tamal",
+    "masa tamale",
+    "corn husk tamale",
+    "homemade tamale",
+    "steamed tamale",
+    "tamale nfs",
+    "basic tamale",
+    "plain tamale"
+  ],
+  "usda_2708571": [
+    "beef tamale",
+    "tamal de carne",
+    "ground beef tamale",
+    "red beef tamale",
+    "carne tamale",
+    "beef filled tamale",
+    "tamale with beef"
+  ],
+  "usda_2708572": [
+    "pork tamale",
+    "tamal de puerco",
+    "carnitas tamale",
+    "shredded pork tamale",
+    "red pork tamale",
+    "pork filled tamale",
+    "tamale with pork"
+  ],
+  "usda_2708573": [
+    "chicken tamale",
+    "tamal de pollo",
+    "shredded chicken tamale",
+    "pollo tamale",
+    "chicken filled tamale",
+    "green chicken tamale",
+    "tamale with chicken"
+  ],
+  "usda_2708574": [
+    "vegetarian tamale",
+    "meatless tamale",
+    "bean tamale",
+    "cheese tamale",
+    "veggie tamale",
+    "tamal de rajas",
+    "plain masa tamale",
+    "sweet tamale"
+  ],
+  "usda_2708575": [
+    "tamale casserole",
+    "tamale pie with meat",
+    "baked tamale casserole",
+    "tamale bake",
+    "mexican tamale casserole",
+    "tamale pie",
+    "layered tamale bake",
+    "masa casserole with meat"
+  ],
+  "usda_2708576": [
+    "nachos",
+    "tortilla chips with toppings",
+    "loaded nachos",
+    "mexican nachos",
+    "nachos nfs",
+    "basic nachos",
+    "plain nachos",
+    "nacho platter"
+  ],
+  "usda_2708577": [
+    "cheese nachos",
+    "nachos con queso",
+    "chips and cheese",
+    "nacho cheese chips",
+    "tortilla chips with cheese",
+    "plain cheese nachos",
+    "melted cheese nachos"
+  ],
+  "usda_2708578": [
+    "beef nachos",
+    "pork nachos",
+    "meat nachos",
+    "ground beef nachos",
+    "carnitas nachos",
+    "nachos with beef",
+    "loaded beef nachos",
+    "meaty nachos"
+  ],
+  "usda_2708579": [
+    "beef bean nachos",
+    "pork bean nachos",
+    "nachos with beans and meat",
+    "loaded beef bean nachos",
+    "nachos carne frijoles",
+    "meat and bean nachos",
+    "nachos with beef and beans"
+  ],
+  "usda_2708580": [
+    "chicken nachos",
+    "pollo nachos",
+    "grilled chicken nachos",
+    "nachos with chicken",
+    "loaded chicken nachos",
+    "shredded chicken nachos"
+  ],
+  "usda_2708581": [
+    "chicken bean nachos",
+    "pollo frijoles nachos",
+    "nachos with chicken and beans",
+    "loaded chicken bean nachos",
+    "grilled chicken bean nachos"
+  ],
+  "usda_2708582": [
+    "bean nachos",
+    "nachos with beans",
+    "frijoles nachos",
+    "vegetarian nachos",
+    "bean and cheese nachos",
+    "refried bean nachos",
+    "meatless nachos"
+  ],
+  "usda_2708583": [
+    "gordita with cheese",
+    "cheese gordita",
+    "gordita de queso",
+    "cheese stuffed gordita",
+    "plain gordita with cheese",
+    "gordita queso only"
+  ],
+  "usda_2708584": [
+    "gordita with beans",
+    "bean gordita",
+    "gordita de frijoles",
+    "bean stuffed gordita",
+    "refried bean gordita",
+    "veggie gordita"
+  ],
+  "usda_2708585": [
+    "meat gordita",
+    "beef gordita",
+    "gordita de carne",
+    "stuffed gordita with meat",
+    "ground beef gordita",
+    "gordita with beef"
+  ],
+  "usda_2708586": [
+    "meat bean gordita",
+    "beef bean gordita",
+    "gordita carne frijoles",
+    "stuffed gordita meat beans",
+    "ground beef bean gordita",
+    "gordita with meat and beans"
+  ],
+  "usda_2708587": [
+    "chimichanga with meat",
+    "beef chimichanga",
+    "fried burrito with meat",
+    "deep fried burrito",
+    "chimi with beef",
+    "crispy beef burrito",
+    "chimichangas"
+  ],
+  "usda_2708588": [
+    "bean chimichanga",
+    "chimichanga with beans",
+    "fried bean burrito",
+    "veggie chimichanga",
+    "chimichangas with beans",
+    "deep fried bean burrito",
+    "frijoles chimichanga"
+  ],
+  "usda_2708589": [
+    "chicken chimichanga",
+    "pollo chimichanga",
+    "fried chicken burrito",
+    "deep fried chicken burrito",
+    "crispy chicken burrito",
+    "chimi chicken"
+  ],
+  "usda_2708590": [
+    "quesadilla",
+    "mexican quesadilla",
+    "grilled tortilla",
+    "basic quesadilla",
+    "plain quesadilla",
+    "quesadilla nfs",
+    "folded tortilla",
+    "quesadilla general"
+  ],
+  "usda_2708591": [
+    "cheese quesadilla",
+    "quesadilla de queso",
+    "plain cheese quesadilla",
+    "just cheese quesadilla",
+    "melted cheese tortilla",
+    "cheese only quesadilla",
+    "grilled cheese quesadilla"
+  ],
+  "usda_2708592": [
+    "beef quesadilla",
+    "pork quesadilla",
+    "meat quesadilla",
+    "ground beef quesadilla",
+    "carnitas quesadilla",
+    "steak quesadilla",
+    "beef and cheese quesadilla"
+  ],
+  "usda_2708593": [
+    "chicken quesadilla",
+    "pollo quesadilla",
+    "grilled chicken quesadilla",
+    "chicken and cheese quesadilla",
+    "shredded chicken quesadilla",
+    "chicken cheese quesadilla"
+  ],
+  "usda_2708594": [
+    "veggie quesadilla",
+    "vegetable quesadilla",
+    "vegetarian quesadilla",
+    "pepper and onion quesadilla",
+    "grilled veggie quesadilla",
+    "meatless quesadilla",
+    "cheese and veggie quesadilla"
+  ],
+  "usda_2708595": [
+    "beef veggie quesadilla",
+    "pork veggie quesadilla",
+    "meat and vegetable quesadilla",
+    "steak and pepper quesadilla",
+    "beef pepper quesadilla",
+    "carnitas veggie quesadilla"
+  ],
+  "usda_2708596": [
+    "chicken veggie quesadilla",
+    "chicken and vegetable quesadilla",
+    "grilled chicken pepper quesadilla",
+    "pollo veggie quesadilla",
+    "chicken onion quesadilla"
+  ],
+  "usda_2708597": [
+    "egg quesadilla",
+    "breakfast quesadilla",
+    "huevo quesadilla",
+    "egg and cheese quesadilla",
+    "quesadilla de huevo",
+    "morning quesadilla",
+    "scrambled egg quesadilla"
+  ],
+  "usda_2708598": [
+    "egg and meat quesadilla",
+    "breakfast quesadilla with meat",
+    "egg sausage quesadilla",
+    "huevo carne quesadilla",
+    "egg and bacon quesadilla",
+    "morning meat quesadilla",
+    "breakfast burrito quesadilla"
+  ],
+  "usda_2708599": [
+    "cheese taquito",
+    "taquito de queso",
+    "rolled cheese taco",
+    "cheese flautas",
+    "crispy cheese taquito",
+    "fried cheese taquito",
+    "cheese only rolled taco"
+  ],
+  "usda_2708600": [
+    "beef taquito",
+    "pork taquito",
+    "rolled taco beef",
+    "flautas de carne",
+    "crispy beef taquito",
+    "fried beef taquito",
+    "meat taquito",
+    "carnitas taquito"
+  ],
+  "usda_2708601": [
+    "chicken taquito",
+    "rolled chicken taco",
+    "flautas de pollo",
+    "crispy chicken taquito",
+    "fried chicken taquito",
+    "pollo taquito",
+    "chicken flautas"
+  ],
+  "usda_2708602": [
+    "egg taquito",
+    "breakfast taquito",
+    "rolled egg taco",
+    "huevo taquito",
+    "fried egg taquito",
+    "morning taquito",
+    "egg flautas"
+  ],
+  "usda_2708603": [
+    "fajita",
+    "sizzling fajita",
+    "mexican fajita",
+    "fajita wrap",
+    "basic fajita",
+    "plain fajita",
+    "grilled fajita",
+    "fajitas"
+  ],
+  "usda_2708604": [
+    "chicken fajita",
+    "pollo fajita",
+    "grilled chicken fajita",
+    "sizzling chicken fajita",
+    "chicken strip fajita",
+    "fajita de pollo",
+    "chicken fajitas"
+  ],
+  "usda_2708605": [
+    "beef fajita",
+    "pork fajita",
+    "steak fajita",
+    "carne fajita",
+    "grilled beef fajita",
+    "sizzling beef fajita",
+    "skirt steak fajita",
+    "beef fajitas"
+  ],
+  "usda_2708606": [
+    "shrimp fajita",
+    "camarones fajita",
+    "grilled shrimp fajita",
+    "sizzling shrimp fajita",
+    "seafood fajita",
+    "prawn fajita",
+    "fajita de camarones"
+  ],
+  "usda_2708607": [
+    "veggie fajita",
+    "vegetable fajita",
+    "vegetarian fajita",
+    "pepper and onion fajita",
+    "grilled vegetable fajita",
+    "fajita no meat",
+    "meatless fajita",
+    "bell pepper fajita"
+  ]
+}

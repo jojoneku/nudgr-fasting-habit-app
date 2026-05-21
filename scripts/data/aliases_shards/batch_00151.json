@@ -1,0 +1,840 @@
+{
+  "usda_2707676": [
+    "pan dulce with raisins",
+    "sweet bread with raisins",
+    "mexican sweet bread raisins",
+    "raisin pan dulce",
+    "glazed sweet roll raisins",
+    "iced sweet bread",
+    "pan dulce icing",
+    "sweet roll with raisins and frosting",
+    "raisin sweet bun"
+  ],
+  "usda_2707677": [
+    "yeast coffee cake",
+    "coffee cake bread",
+    "sweet yeast cake",
+    "breakfast coffee cake",
+    "streusel yeast cake",
+    "coffee crumb cake",
+    "yeasted coffee cake",
+    "morning coffee cake bread",
+    "sweet coffee bread"
+  ],
+  "usda_2707679": [
+    "cheese croissant",
+    "croissant au fromage",
+    "cheesy croissant",
+    "baked cheese croissant",
+    "flaky cheese pastry",
+    "cheese filled croissant",
+    "buttery cheese croissant",
+    "crescent roll cheese"
+  ],
+  "usda_2707680": [
+    "chocolate croissant",
+    "pain au chocolat",
+    "chocolate filled croissant",
+    "choco croissant",
+    "flaky chocolate pastry",
+    "chocolate crescent",
+    "pan au chocolat",
+    "buttery chocolate croissant",
+    "chocolatine"
+  ],
+  "usda_2707681": [
+    "fruit croissant",
+    "fruit filled croissant",
+    "berry croissant",
+    "jam croissant",
+    "flaky fruit pastry",
+    "fruity croissant",
+    "croissant with fruit filling",
+    "sweet fruit crescent"
+  ],
+  "usda_2707682": [
+    "brioche bread",
+    "brioche bun",
+    "brioche roll",
+    "french brioche",
+    "buttery brioche",
+    "sweet egg bread",
+    "brioche loaf",
+    "french butter bread",
+    "soft brioche bun",
+    "egg brioche"
+  ],
+  "usda_2707683": [
+    "spanish coffee bread",
+    "pan de cafe",
+    "coffee flavored bread",
+    "filipino coffee bread",
+    "coffee roll",
+    "sweet coffee bun",
+    "ensaymada coffee style",
+    "coffee bread roll",
+    "morning sweet bread"
+  ],
+  "usda_2707684": [
+    "plain bagel",
+    "ny bagel",
+    "new york bagel",
+    "round bread bagel",
+    "boiled bagel",
+    "toasted bagel",
+    "bagel bread",
+    "breakfast bagel",
+    "bagel roll",
+    "bagle"
+  ],
+  "usda_2707685": [
+    "raisin bagel",
+    "bagel with raisins",
+    "cinnamon raisin bagel",
+    "sweet raisin bagel",
+    "raisin bread bagel",
+    "cinnamon bagel with raisins",
+    "raisin swirl bagel"
+  ],
+  "usda_2707686": [
+    "fruit bagel",
+    "blueberry bagel",
+    "cranberry bagel",
+    "bagel with fruit",
+    "fruity bagel",
+    "sweet fruit bagel",
+    "berry bagel",
+    "bagel with dried fruit"
+  ],
+  "usda_2707687": [
+    "stuffing",
+    "bread stuffing",
+    "turkey stuffing",
+    "dressing stuffing",
+    "thanksgiving stuffing",
+    "holiday stuffing",
+    "seasoned stuffing",
+    "herb stuffing",
+    "bread dressing"
+  ],
+  "usda_2707688": [
+    "egg stuffing",
+    "stuffing with egg",
+    "bread stuffing egg",
+    "egg bread dressing",
+    "thanksgiving egg stuffing",
+    "holiday stuffing with egg",
+    "egg herb stuffing",
+    "moist stuffing with egg"
+  ],
+  "usda_2707689": [
+    "breadstick",
+    "bread stick",
+    "italian breadstick",
+    "crunchy breadstick",
+    "soft breadstick",
+    "dinner breadstick",
+    "restaurant breadstick",
+    "grissini",
+    "bread stix"
+  ],
+  "usda_2707690": [
+    "hard breadstick",
+    "crunchy breadstick",
+    "crispy breadstick",
+    "italian hard breadstick",
+    "grissini",
+    "dry breadstick",
+    "hard bread stick",
+    "crispy grissini",
+    "crunchy bread sticks"
+  ],
+  "usda_2707691": [
+    "low sodium breadstick",
+    "reduced salt breadstick",
+    "low salt hard breadstick",
+    "unsalted hard breadstick",
+    "low sodium grissini",
+    "reduced sodium crispy breadstick",
+    "salt free breadstick"
+  ],
+  "usda_2707692": [
+    "soft breadstick",
+    "chewy breadstick",
+    "soft bread stick",
+    "fluffy breadstick",
+    "pillowy breadstick",
+    "soft dinner breadstick",
+    "soft italian breadstick"
+  ],
+  "usda_2707693": [
+    "restaurant breadstick",
+    "fast food breadstick",
+    "olive garden breadstick",
+    "soft restaurant bread stick",
+    "dine in breadstick",
+    "buttery restaurant breadstick",
+    "garlic breadstick restaurant"
+  ],
+  "usda_2707694": [
+    "frozen breadstick",
+    "frozen soft breadstick",
+    "store bought soft breadstick",
+    "baked frozen breadstick",
+    "frozen bread stick",
+    "homemade style frozen breadstick"
+  ],
+  "usda_2707695": [
+    "parmesan breadstick",
+    "cheese breadstick restaurant",
+    "parmesan soft breadstick",
+    "parmesan restaurant breadstick",
+    "fast food parmesan breadstick",
+    "cheesy restaurant breadstick",
+    "parmesan garlic breadstick"
+  ],
+  "usda_2707696": [
+    "cheese stuffed breadstick",
+    "cheesy breadstick",
+    "mozzarella breadstick",
+    "cheese filled breadstick",
+    "melted cheese breadstick",
+    "stuffed cheese bread stick",
+    "cheesy stuffed bread stick",
+    "cheese topped breadstick"
+  ],
+  "usda_2707697": [
+    "croutons",
+    "salad croutons",
+    "toasted bread cubes",
+    "crunchy croutons",
+    "salad topping croutons",
+    "garlic croutons",
+    "seasoned croutons",
+    "crispy bread crumbles",
+    "crutons"
+  ],
+  "usda_2707698": [
+    "english muffin",
+    "toasted english muffin",
+    "breakfast muffin",
+    "english muffin bread",
+    "nooks and crannies muffin",
+    "round breakfast muffin",
+    "plain english muffin",
+    "toaster muffin",
+    "ingles muffin"
+  ],
+  "usda_2707699": [
+    "raisin english muffin",
+    "english muffin with raisins",
+    "cinnamon raisin english muffin",
+    "raisin breakfast muffin",
+    "sweet raisin muffin toasted",
+    "toaster muffin raisins"
+  ],
+  "usda_2707700": [
+    "cheese english muffin",
+    "cheesy english muffin",
+    "cheese breakfast muffin",
+    "english muffin with cheese",
+    "melted cheese muffin",
+    "cheese topped english muffin"
+  ],
+  "usda_2707701": [
+    "fruit english muffin",
+    "blueberry english muffin",
+    "cranberry english muffin",
+    "english muffin with fruit",
+    "sweet fruit breakfast muffin",
+    "fruity english muffin"
+  ],
+  "usda_2707702": [
+    "melba toast",
+    "thin crispy toast",
+    "crispy melba cracker",
+    "dry crisp toast",
+    "light crispy cracker bread",
+    "melba cracker",
+    "diet toast",
+    "thin toast cracker",
+    "melba crackers"
+  ],
+  "usda_2707703": [
+    "anisette toast",
+    "anise toast",
+    "anise biscotti style toast",
+    "italian anise toast",
+    "anise flavored toast",
+    "sweet anise cracker",
+    "licorice flavor toast"
+  ],
+  "usda_2707704": [
+    "panettone",
+    "italian christmas bread",
+    "holiday fruit bread",
+    "italian sweet loaf",
+    "christmas panettone",
+    "panetone",
+    "fruit christmas bread",
+    "sweet italian holiday bread",
+    "pannetone bread",
+    "italian raisin bread"
+  ],
+  "usda_2707705": [
+    "zwieback",
+    "baby toast",
+    "teething toast",
+    "crispy rusk",
+    "hard baby biscuit",
+    "zweiback toast",
+    "dry baby cracker",
+    "zwieback rusk",
+    "toasted rusk biscuit"
+  ],
+  "usda_2707706": [
+    "whole grain white bread",
+    "white whole grain bread",
+    "soft whole grain bread",
+    "whole grain white loaf",
+    "healthy white bread",
+    "white wheat bread",
+    "whole grain white sandwich bread"
+  ],
+  "usda_2707707": [
+    "toasted whole grain white bread",
+    "whole grain white toast",
+    "toasted white whole grain",
+    "healthy white toast",
+    "whole grain white bread toasted",
+    "toasted white wheat bread"
+  ],
+  "usda_2707708": [
+    "whole grain white bagel",
+    "white whole grain bagel",
+    "healthy white bagel",
+    "soft whole grain bagel",
+    "whole grain white breakfast bagel"
+  ],
+  "usda_2707710": [
+    "toasted whole wheat bread",
+    "whole wheat toast",
+    "brown toast",
+    "wheat toast",
+    "toasted wheat bread",
+    "whole wheat toasted slice",
+    "healthy toast",
+    "wholewheat toast"
+  ],
+  "usda_2707711": [
+    "homemade whole wheat bread",
+    "bakery whole wheat bread",
+    "artisan whole wheat bread",
+    "fresh whole wheat loaf",
+    "bakery wheat bread",
+    "homemade wheat loaf",
+    "fresh baked wheat bread"
+  ],
+  "usda_2707712": [
+    "toasted homemade whole wheat bread",
+    "toasted bakery whole wheat bread",
+    "artisan wheat toast",
+    "toasted fresh wheat bread",
+    "bakery wheat toast"
+  ],
+  "usda_2707713": [
+    "chapati",
+    "chappati",
+    "roti",
+    "indian flatbread",
+    "whole wheat flatbread",
+    "phulka",
+    "soft roti",
+    "indian roti",
+    "chapatti bread",
+    "wheat roti"
+  ],
+  "usda_2707714": [
+    "puri",
+    "poori",
+    "fried indian bread",
+    "deep fried flatbread",
+    "indian puffed bread",
+    "fried puri",
+    "puffy fried bread",
+    "indian poori bread"
+  ],
+  "usda_2707715": [
+    "paratha",
+    "paratha bread",
+    "indian layered flatbread",
+    "stuffed paratha",
+    "butter paratha",
+    "fried paratha",
+    "layered indian bread",
+    "parata",
+    "whole wheat paratha"
+  ],
+  "usda_2707716": [
+    "whole wheat bread with raisins",
+    "raisin whole wheat bread",
+    "wheat raisin loaf",
+    "whole wheat raisin loaf",
+    "sweet whole wheat bread",
+    "raisin brown bread"
+  ],
+  "usda_2707717": [
+    "toasted whole wheat raisin bread",
+    "whole wheat raisin toast",
+    "raisin wheat toast",
+    "toasted raisin brown bread",
+    "toasted sweet wheat bread"
+  ],
+  "usda_2707718": [
+    "sprouted wheat bread",
+    "ezekiel style bread",
+    "sprouted grain bread",
+    "sprouted bread loaf",
+    "living bread",
+    "sprouted wheat loaf",
+    "germinated wheat bread"
+  ],
+  "usda_2707719": [
+    "toasted sprouted wheat bread",
+    "sprouted wheat toast",
+    "ezekiel toast",
+    "toasted sprouted grain bread",
+    "sprouted bread toast"
+  ],
+  "usda_2707720": [
+    "wheat bread",
+    "cracked wheat bread",
+    "brown bread",
+    "wheat sandwich bread",
+    "cracked wheat loaf",
+    "wheat loaf",
+    "wheat sliced bread",
+    "soft wheat bread"
+  ],
+  "usda_2707721": [
+    "wheat toast",
+    "cracked wheat toast",
+    "toasted wheat bread",
+    "brown bread toast",
+    "toasted cracked wheat",
+    "wheat bread toasted"
+  ],
+  "usda_2707722": [
+    "homemade wheat bread",
+    "bakery wheat bread",
+    "artisan cracked wheat bread",
+    "fresh wheat loaf",
+    "bakery cracked wheat",
+    "homemade cracked wheat bread"
+  ],
+  "usda_2707723": [
+    "toasted homemade wheat bread",
+    "toasted bakery wheat bread",
+    "artisan wheat toast toasted",
+    "toasted fresh wheat loaf"
+  ],
+  "usda_2707724": [
+    "wheat bread with raisins",
+    "cracked wheat raisin bread",
+    "raisin wheat loaf",
+    "brown bread with raisins",
+    "sweet wheat raisin bread"
+  ],
+  "usda_2707725": [
+    "toasted wheat raisin bread",
+    "cracked wheat raisin toast",
+    "raisin brown toast",
+    "toasted raisin wheat bread"
+  ],
+  "usda_2707726": [
+    "light wheat bread",
+    "low calorie wheat bread",
+    "high fiber wheat bread",
+    "diet wheat bread",
+    "reduced calorie wheat bread",
+    "thin sliced wheat bread",
+    "light cracked wheat bread"
+  ],
+  "usda_2707727": [
+    "toasted light wheat bread",
+    "toasted diet wheat bread",
+    "high fiber wheat toast",
+    "low cal wheat toast",
+    "light wheat toast"
+  ],
+  "usda_2707729": [
+    "toasted whole wheat french bread",
+    "whole wheat baguette toasted",
+    "wheat vienna toast",
+    "toasted whole wheat baguette",
+    "whole wheat french toast bread"
+  ],
+  "usda_2707731": [
+    "wheat pita",
+    "cracked wheat pita",
+    "brown pita bread",
+    "wheat pita bread",
+    "wheat pocket bread",
+    "whole wheat pita",
+    "wheat flatbread pita"
+  ],
+  "usda_2707732": [
+    "wheat bagel",
+    "wheat flour bagel",
+    "brown bagel",
+    "wheat breakfast bagel",
+    "cracked wheat bagel",
+    "soft wheat bagel"
+  ],
+  "usda_2707733": [
+    "whole wheat bagel",
+    "100% whole wheat bagel",
+    "brown whole wheat bagel",
+    "healthy whole wheat bagel",
+    "whole grain bagel"
+  ],
+  "usda_2707734": [
+    "wheat bagel with raisins",
+    "raisin wheat bagel",
+    "sweet wheat bagel",
+    "cinnamon raisin wheat bagel",
+    "wheat raisin breakfast bagel"
+  ],
+  "usda_2707735": [
+    "whole wheat bagel with raisins",
+    "raisin whole wheat bagel",
+    "sweet whole wheat bagel",
+    "cinnamon raisin whole wheat bagel"
+  ],
+  "usda_2707736": [
+    "wheat bagel with fruit and nuts",
+    "nutty fruit wheat bagel",
+    "fruity wheat bagel with nuts",
+    "wheat bagel fruit nut mix",
+    "trail mix wheat bagel"
+  ],
+  "usda_2707737": [
+    "wheat bran bagel",
+    "bran bagel",
+    "high fiber bagel",
+    "wheat bran breakfast bagel",
+    "fiber bagel",
+    "bran rich bagel"
+  ],
+  "usda_2707738": [
+    "wheat bran english muffin",
+    "bran english muffin",
+    "high fiber english muffin",
+    "fiber muffin toaster",
+    "wheat bran breakfast muffin"
+  ],
+  "usda_2707739": [
+    "wheat bran english muffin with raisins",
+    "bran raisin english muffin",
+    "high fiber raisin muffin",
+    "raisin bran english muffin",
+    "fiber raisin breakfast muffin"
+  ],
+  "usda_2707740": [
+    "wheat english muffin",
+    "cracked wheat english muffin",
+    "brown english muffin",
+    "wheat breakfast muffin toasted",
+    "wheat toaster muffin"
+  ],
+  "usda_2707741": [
+    "whole wheat english muffin",
+    "100% whole wheat muffin",
+    "brown whole wheat muffin",
+    "healthy english muffin",
+    "whole grain english muffin"
+  ],
+  "usda_2707742": [
+    "wheat english muffin raisins",
+    "cracked wheat raisin muffin",
+    "wheat raisin breakfast muffin",
+    "sweet wheat english muffin",
+    "raisin wheat toaster muffin"
+  ],
+  "usda_2707743": [
+    "whole wheat english muffin with raisins",
+    "whole wheat raisin muffin",
+    "raisin whole wheat breakfast muffin",
+    "healthy raisin muffin",
+    "whole grain raisin muffin"
+  ],
+  "usda_2707744": [
+    "whole grain white english muffin",
+    "white whole grain muffin",
+    "healthy white english muffin",
+    "soft whole grain white muffin",
+    "whole grain white breakfast muffin"
+  ],
+  "usda_2707745": [
+    "whole wheat breadstick",
+    "wheat breadstick",
+    "whole grain breadstick",
+    "brown breadstick",
+    "healthy breadstick",
+    "whole wheat grissini",
+    "fiber breadstick"
+  ],
+  "usda_2707746": [
+    "wheat roll",
+    "cracked wheat roll",
+    "brown dinner roll",
+    "wheat dinner roll",
+    "cracked wheat bun",
+    "wheat bun",
+    "soft wheat roll"
+  ],
+  "usda_2707747": [
+    "wheat hot dog bun",
+    "cracked wheat hot dog bun",
+    "brown hot dog bun",
+    "whole wheat hot dog roll",
+    "wheat bun hot dog"
+  ],
+  "usda_2707748": [
+    "wheat hamburger bun",
+    "cracked wheat burger bun",
+    "brown burger bun",
+    "wheat burger roll",
+    "wheat sandwich bun"
+  ],
+  "usda_2707749": [
+    "whole wheat roll",
+    "whole wheat dinner roll",
+    "100% whole wheat bun",
+    "healthy dinner roll",
+    "whole grain roll",
+    "whole wheat bun"
+  ],
+  "usda_2707750": [
+    "whole wheat hot dog bun",
+    "whole grain hot dog bun",
+    "brown hot dog bun whole wheat",
+    "healthy hot dog roll",
+    "whole wheat hot dog roll"
+  ],
+  "usda_2707751": [
+    "whole wheat hamburger bun",
+    "whole grain burger bun",
+    "brown burger bun whole wheat",
+    "healthy burger bun",
+    "whole wheat sandwich bun"
+  ],
+  "usda_2707752": [
+    "whole grain white roll",
+    "white whole grain roll",
+    "soft whole grain dinner roll",
+    "healthy white roll",
+    "whole grain white bun"
+  ],
+  "usda_2707753": [
+    "whole grain white hot dog bun",
+    "white whole grain hot dog bun",
+    "healthy white hot dog roll",
+    "soft whole grain hot dog bun"
+  ],
+  "usda_2707754": [
+    "whole grain white hamburger bun",
+    "white whole grain burger bun",
+    "healthy white burger bun",
+    "soft whole grain sandwich bun"
+  ],
+  "usda_2707757": [
+    "marble rye bread",
+    "pumpernickel rye bread",
+    "swirled rye bread",
+    "marbled bread",
+    "dark swirl bread",
+    "rye and pumpernickel loaf",
+    "marbled rye loaf",
+    "dark rye marble bread"
+  ],
+  "usda_2707758": [
+    "toasted marble rye bread",
+    "marble rye toast",
+    "toasted pumpernickel rye",
+    "marbled rye toast",
+    "swirled rye toast"
+  ],
+  "usda_2707759": [
+    "rye english muffin",
+    "dark rye muffin",
+    "rye breakfast muffin",
+    "rye toaster muffin",
+    "dark rye english muffin"
+  ],
+  "usda_2707761": [
+    "toasted pumpernickel",
+    "pumpernickel toast",
+    "dark bread toast",
+    "toasted dark pumpernickel",
+    "dark rye toast"
+  ],
+  "usda_2707762": [
+    "pumpernickel bagel",
+    "dark rye bagel",
+    "dark bread bagel",
+    "pumpernickel breakfast bagel",
+    "hearty dark bagel"
+  ],
+  "usda_2707763": [
+    "pumpernickel english muffin",
+    "dark pumpernickel muffin",
+    "dark bread muffin",
+    "pumpernickel toaster muffin"
+  ],
+  "usda_2707764": [
+    "black bread",
+    "dark bread",
+    "eastern european black bread",
+    "russian black bread",
+    "dark rye black bread",
+    "dense black bread loaf"
+  ],
+  "usda_2707765": [
+    "toasted black bread",
+    "black bread toast",
+    "dark toast",
+    "toasted dark black bread",
+    "russian black toast"
+  ],
+  "usda_2707766": [
+    "rye roll",
+    "rye dinner roll",
+    "dark rye roll",
+    "rye bun",
+    "deli rye roll",
+    "soft rye roll"
+  ],
+  "usda_2707767": [
+    "pumpernickel roll",
+    "dark roll",
+    "pumpernickel dinner roll",
+    "dark pumpernickel bun",
+    "hearty dark roll"
+  ],
+  "usda_2707772": [
+    "oat bran bagel",
+    "bran bagel oat",
+    "oat bagel",
+    "high fiber oat bagel",
+    "oat bran breakfast bagel",
+    "healthy oat bagel"
+  ],
+  "usda_2707773": [
+    "oatmeal roll",
+    "oat roll",
+    "oatmeal dinner roll",
+    "oat bun",
+    "soft oat roll",
+    "oatmeal bun",
+    "oat grain roll"
+  ],
+  "usda_2707774": [
+    "oat bran english muffin",
+    "oat muffin toaster",
+    "oat bran breakfast muffin",
+    "high fiber oat muffin",
+    "oat english muffin"
+  ],
+  "usda_2707775": [
+    "oat bran english muffin raisins",
+    "oat raisin muffin",
+    "oat bran raisin breakfast muffin",
+    "raisin oat bran muffin toasted",
+    "high fiber oat raisin muffin"
+  ],
+  "usda_2707776": [
+    "toasted multigrain bread",
+    "multigrain toast",
+    "multi grain toast",
+    "toasted seeded bread",
+    "toasted 7 grain bread",
+    "multigrain loaf toast",
+    "toasted 9 grain bread"
+  ],
+  "usda_2707777": [
+    "multigrain bread",
+    "multi-grain bread",
+    "7 grain bread",
+    "9 grain bread",
+    "seeded bread",
+    "multi seed bread",
+    "hearty grain bread",
+    "mixed grain bread",
+    "7grain bread"
+  ],
+  "usda_2707778": [
+    "multigrain bread with raisins",
+    "raisin multigrain bread",
+    "sweet multigrain loaf",
+    "raisin multi grain bread",
+    "mixed grain raisin bread"
+  ],
+  "usda_2707779": [
+    "toasted multigrain raisin bread",
+    "multigrain raisin toast",
+    "toasted raisin multi grain bread",
+    "sweet multigrain toast"
+  ],
+  "usda_2707780": [
+    "light multigrain bread",
+    "low calorie multigrain bread",
+    "high fiber multigrain bread",
+    "diet multigrain bread",
+    "thin multigrain bread",
+    "reduced calorie multi grain"
+  ],
+  "usda_2707781": [
+    "toasted light multigrain bread",
+    "light multigrain toast",
+    "high fiber multigrain toast",
+    "low cal multigrain toast",
+    "diet multigrain toast"
+  ],
+  "usda_2707782": [
+    "multigrain roll",
+    "multi grain roll",
+    "seeded dinner roll",
+    "mixed grain roll",
+    "multigrain bun",
+    "hearty grain roll"
+  ],
+  "usda_2707783": [
+    "multigrain hot dog bun",
+    "multi grain hot dog bun",
+    "seeded hot dog roll",
+    "mixed grain hot dog bun"
+  ],
+  "usda_2707784": [
+    "multigrain hamburger bun",
+    "multi grain burger bun",
+    "seeded burger bun",
+    "mixed grain sandwich bun",
+    "multigrain sandwich roll"
+  ],
+  "usda_2707785": [
+    "multigrain bagel",
+    "multi grain bagel",
+    "seeded multigrain bagel",
+    "7 grain bagel",
+    "mixed grain bagel",
+    "hearty multigrain bagel"
+  ],
+  "usda_2707786": [
+    "multigrain bagel with raisins",
+    "raisin multigrain bagel",
+    "sweet multi grain bagel",
+    "raisin mixed grain bagel",
+    "multigrain raisin breakfast bagel"
+  ]
+}

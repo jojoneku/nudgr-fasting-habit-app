@@ -1,0 +1,733 @@
+{
+  "usda_173699": [
+    "grilled snapper",
+    "baked snapper",
+    "red snapper cooked",
+    "pan seared snapper",
+    "snapper fillet",
+    "lutong snapper",
+    "broiled snapper",
+    "roasted snapper",
+    "snapper fish cooked"
+  ],
+  "usda_173700": [
+    "spot fish",
+    "raw spot fish",
+    "atlantic spot",
+    "spot croaker",
+    "fresh spot fish",
+    "raw spot",
+    "spot fish fillet"
+  ],
+  "usda_173701": [
+    "raw sturgeon",
+    "sturgeon fish",
+    "fresh sturgeon",
+    "sturgeon fillet raw",
+    "beluga fish",
+    "sturgeon uncooked"
+  ],
+  "usda_173702": [
+    "imitation crab",
+    "crab stick",
+    "kani",
+    "fake crab meat",
+    "imitation crab meat",
+    "crab stick meat",
+    "seafood stick",
+    "kanikama",
+    "imitation seafood",
+    "fish cake stick"
+  ],
+  "usda_173703": [
+    "raw swordfish",
+    "swordfish steak raw",
+    "fresh swordfish",
+    "swordfish fillet",
+    "uncooked swordfish"
+  ],
+  "usda_173704": [
+    "grilled swordfish",
+    "baked swordfish",
+    "swordfish steak cooked",
+    "pan seared swordfish",
+    "broiled swordfish",
+    "cooked swordfish steak",
+    "swordfish fillet cooked"
+  ],
+  "usda_173705": [
+    "tilefish raw",
+    "golden tilefish",
+    "raw tilefish",
+    "fresh tilefish",
+    "tilefish fillet"
+  ],
+  "usda_173706": [
+    "bluefin tuna raw",
+    "fresh bluefin tuna",
+    "bluefin tuna sashimi",
+    "maguro",
+    "raw bluefin",
+    "tuna sashimi",
+    "bluefin tuna steak raw",
+    "fresh tuna raw"
+  ],
+  "usda_173707": [
+    "grilled bluefin tuna",
+    "cooked bluefin tuna",
+    "baked bluefin tuna",
+    "seared tuna steak",
+    "bluefin tuna steak cooked",
+    "pan seared tuna",
+    "broiled tuna steak"
+  ],
+  "usda_173708": [
+    "canned tuna in oil",
+    "tuna in oil",
+    "oily canned tuna",
+    "tuna chunks in oil",
+    "drained tuna oil",
+    "canned light tuna oil",
+    "tuna packed in oil"
+  ],
+  "usda_173709": [
+    "canned tuna in water",
+    "tuna in water",
+    "light tuna canned",
+    "drained canned tuna",
+    "tuna chunks in water",
+    "canned tuna drained",
+    "chunk light tuna water",
+    "tuna lata"
+  ],
+  "usda_173710": [
+    "turbot fish raw",
+    "european turbot",
+    "raw turbot",
+    "turbot fillet",
+    "fresh turbot"
+  ],
+  "usda_173711": [
+    "raw whitefish",
+    "fresh whitefish",
+    "lake whitefish raw",
+    "whitefish fillet raw",
+    "uncooked whitefish"
+  ],
+  "usda_173712": [
+    "smoked whitefish",
+    "whitefish smoked",
+    "smoked lake whitefish",
+    "smoked fish whitefish",
+    "cold smoked whitefish"
+  ],
+  "usda_173713": [
+    "raw whiting",
+    "fresh whiting",
+    "whiting fish raw",
+    "whiting fillet",
+    "merluza raw"
+  ],
+  "usda_173714": [
+    "grilled catfish",
+    "wild catfish cooked",
+    "baked catfish",
+    "fried catfish",
+    "channel catfish cooked",
+    "broiled catfish",
+    "wild caught catfish cooked"
+  ],
+  "usda_173715": [
+    "raw coho salmon",
+    "farmed coho salmon",
+    "fresh coho salmon",
+    "coho salmon fillet raw",
+    "silver salmon raw",
+    "farmed salmon raw"
+  ],
+  "usda_173716": [
+    "cooked coho salmon",
+    "grilled coho salmon",
+    "baked coho salmon",
+    "farmed coho salmon cooked",
+    "silver salmon cooked",
+    "pan seared coho salmon",
+    "broiled coho salmon"
+  ],
+  "usda_173717": [
+    "raw rainbow trout",
+    "farmed rainbow trout",
+    "fresh rainbow trout",
+    "trout fillet raw",
+    "farmed trout raw",
+    "uncooked rainbow trout"
+  ],
+  "usda_173718": [
+    "grilled rainbow trout",
+    "baked rainbow trout",
+    "cooked rainbow trout",
+    "pan fried trout",
+    "farmed trout cooked",
+    "broiled rainbow trout",
+    "trout fillet cooked"
+  ],
+  "usda_173719": [
+    "wild coho salmon cooked",
+    "grilled wild salmon",
+    "baked wild coho",
+    "wild caught salmon cooked",
+    "silver salmon wild cooked",
+    "broiled wild coho salmon"
+  ],
+  "usda_173720": [
+    "baked conch",
+    "broiled conch",
+    "cooked conch",
+    "conch meat cooked",
+    "queen conch baked",
+    "conch seafood cooked"
+  ],
+  "usda_173721": [
+    "breaded salmon nuggets",
+    "frozen salmon bites",
+    "salmon fish nuggets",
+    "salmon nuggets heated",
+    "baked salmon nuggets",
+    "crispy salmon nuggets"
+  ],
+  "usda_173722": [
+    "unheated salmon nuggets",
+    "ready to eat salmon nuggets",
+    "salmon bites unheated",
+    "pre-cooked salmon nuggets"
+  ],
+  "usda_173723": [
+    "canned sockeye salmon",
+    "red salmon canned",
+    "sockeye salmon drained",
+    "canned red salmon no skin",
+    "sockeye lata"
+  ],
+  "usda_173724": [
+    "canned pink salmon",
+    "pink salmon can",
+    "canned salmon drained",
+    "tinned salmon no skin",
+    "salmon lata",
+    "pink salmon no bones"
+  ],
+  "usda_173725": [
+    "alaska pollock raw",
+    "raw pollock",
+    "pollock fillet raw",
+    "walleye pollock raw",
+    "fresh pollock",
+    "alaskan pollock uncooked"
+  ],
+  "usda_173726": [
+    "cooked pollock",
+    "alaska pollock cooked",
+    "baked pollock",
+    "grilled pollock",
+    "pollock fillet cooked",
+    "alaskan pollock cooked"
+  ],
+  "usda_173727": [
+    "raw adzuki beans",
+    "red bean raw",
+    "azuki beans dry",
+    "small red beans raw",
+    "uncooked adzuki",
+    "dried red beans"
+  ],
+  "usda_173728": [
+    "boiled adzuki beans",
+    "cooked red beans",
+    "azuki beans cooked",
+    "boiled azuki",
+    "adzuki no salt",
+    "cooked small red beans"
+  ],
+  "usda_173729": [
+    "sweet red bean paste",
+    "canned adzuki beans sweetened",
+    "sweetened azuki",
+    "canned sweet red beans",
+    "anko beans",
+    "sweet red beans canned"
+  ],
+  "usda_173730": [
+    "yokan",
+    "red bean jelly",
+    "azuki sweet jelly",
+    "anko jelly bar",
+    "japanese red bean dessert",
+    "bean paste jelly",
+    "wagashi yokan"
+  ],
+  "usda_173731": [
+    "homemade baked beans",
+    "boston baked beans homemade",
+    "baked beans from scratch",
+    "slow cooked baked beans",
+    "baked beans home cooked"
+  ],
+  "usda_173732": [
+    "pork and beans sweet",
+    "canned baked beans pork sweet sauce",
+    "baked beans with pork",
+    "sweet baked beans canned",
+    "beans in sweet sauce with pork"
+  ],
+  "usda_173733": [
+    "pork and beans tomato",
+    "canned pork and beans",
+    "baked beans tomato sauce pork",
+    "beans in tomato sauce with pork",
+    "canned baked beans tomato"
+  ],
+  "usda_173734": [
+    "raw black beans",
+    "dried black beans",
+    "black turtle beans raw",
+    "uncooked black beans",
+    "dry black beans"
+  ],
+  "usda_173735": [
+    "cooked black beans",
+    "boiled black beans",
+    "black beans no salt",
+    "plain black beans cooked",
+    "black frijoles cooked"
+  ],
+  "usda_173736": [
+    "boiled cranberry beans",
+    "roman beans cooked",
+    "borlotti beans cooked",
+    "cranberry beans no salt",
+    "boiled roman beans"
+  ],
+  "usda_173737": [
+    "canned cranberry beans",
+    "canned roman beans",
+    "borlotti beans canned",
+    "canned borlotti",
+    "roman beans tin"
+  ],
+  "usda_173738": [
+    "french beans raw",
+    "dry french beans",
+    "flageolet beans raw",
+    "raw french beans uncooked",
+    "dried french beans"
+  ],
+  "usda_173739": [
+    "boiled french beans",
+    "cooked french beans",
+    "flageolet cooked",
+    "french beans no salt"
+  ],
+  "usda_173740": [
+    "boiled kidney beans",
+    "cooked kidney beans",
+    "red kidney beans cooked",
+    "kidney beans no salt",
+    "cooked red beans"
+  ],
+  "usda_173741": [
+    "canned kidney beans",
+    "kidney beans in can",
+    "canned red kidney beans",
+    "tinned kidney beans",
+    "kidney beans tin"
+  ],
+  "usda_173742": [
+    "california red kidney beans raw",
+    "dried california red beans",
+    "raw california kidney beans",
+    "dry california red kidney beans"
+  ],
+  "usda_173743": [
+    "california red kidney beans cooked",
+    "boiled california red beans",
+    "cooked california red kidney beans",
+    "california red beans no salt"
+  ],
+  "usda_173744": [
+    "dry red kidney beans",
+    "raw red kidney beans",
+    "dried red kidney beans",
+    "uncooked kidney beans",
+    "red kidney beans dry"
+  ],
+  "usda_173745": [
+    "raw navy beans",
+    "dried navy beans",
+    "dry white navy beans",
+    "pea beans raw",
+    "uncooked navy beans"
+  ],
+  "usda_173746": [
+    "cooked navy beans",
+    "boiled navy beans",
+    "navy beans no salt",
+    "pea beans cooked",
+    "plain navy beans"
+  ],
+  "usda_173747": [
+    "canned navy beans",
+    "navy beans in can",
+    "tinned navy beans",
+    "canned pea beans",
+    "navy beans tin"
+  ],
+  "usda_173748": [
+    "raw pink beans",
+    "dried pink beans",
+    "dry pink beans",
+    "uncooked pink beans",
+    "pink frijoles raw"
+  ],
+  "usda_173749": [
+    "small white beans raw",
+    "dried small white beans",
+    "dry white beans small",
+    "uncooked small white beans"
+  ],
+  "usda_173750": [
+    "boiled small white beans",
+    "cooked small white beans",
+    "small white beans no salt",
+    "plain white beans cooked"
+  ],
+  "usda_173751": [
+    "yellow beans raw",
+    "dried yellow beans",
+    "dry yellow beans",
+    "uncooked yellow beans",
+    "raw yellow legumes"
+  ],
+  "usda_173752": [
+    "cooked yellow beans",
+    "boiled yellow beans",
+    "yellow beans no salt",
+    "plain yellow beans cooked"
+  ],
+  "usda_173753": [
+    "boiled fava beans",
+    "cooked fava beans",
+    "broad beans cooked",
+    "fava beans no salt",
+    "boiled broad beans",
+    "cooked broadbeans"
+  ],
+  "usda_173754": [
+    "canned fava beans",
+    "canned broad beans",
+    "fava beans tin",
+    "tinned broad beans",
+    "broad beans canned"
+  ],
+  "usda_173755": [
+    "carob powder",
+    "carob cocoa substitute",
+    "ground carob",
+    "carob pod flour",
+    "chocolate substitute powder",
+    "carob meal"
+  ],
+  "usda_173756": [
+    "raw chickpeas",
+    "dried chickpeas",
+    "garbanzo beans raw",
+    "dry garbanzo",
+    "uncooked chickpeas",
+    "bengal gram raw",
+    "channa raw"
+  ],
+  "usda_173757": [
+    "boiled chickpeas",
+    "cooked chickpeas",
+    "garbanzo beans cooked",
+    "plain chickpeas",
+    "cooked garbanzo",
+    "boiled garbanzo beans",
+    "channa cooked"
+  ],
+  "usda_173758": [
+    "blackeye peas raw",
+    "cowpeas raw",
+    "black eyed beans raw",
+    "dried black eyed peas",
+    "crowder peas raw",
+    "southern peas raw"
+  ],
+  "usda_173759": [
+    "cooked black eyed peas",
+    "boiled cowpeas",
+    "black eyed beans cooked",
+    "blackeye peas boiled",
+    "southern peas cooked",
+    "crowder peas cooked"
+  ],
+  "usda_173760": [
+    "canned black eyed peas",
+    "canned cowpeas plain",
+    "black eyed beans canned",
+    "tinned black eyed peas",
+    "canned southern peas"
+  ],
+  "usda_173761": [
+    "canned black eyed peas with pork",
+    "cowpeas with pork canned",
+    "black eyed peas pork tin",
+    "southern peas canned pork"
+  ],
+  "usda_173762": [
+    "organic extra firm tofu",
+    "extra firm tofu nasoya",
+    "firm tofu block",
+    "hard tofu organic",
+    "extra firm bean curd"
+  ],
+  "usda_173763": [
+    "organic firm tofu",
+    "nasoya firm tofu",
+    "firm bean curd",
+    "firm tofu block organic",
+    "regular firm tofu"
+  ],
+  "usda_173764": [
+    "organic silken tofu",
+    "nasoya silken tofu",
+    "soft silken tofu organic",
+    "smooth silken bean curd",
+    "silky tofu"
+  ],
+  "usda_173765": [
+    "soy milk enhanced",
+    "fortified soy milk",
+    "enriched soymilk",
+    "soya milk fortified",
+    "enhanced plant milk soy"
+  ],
+  "usda_173766": [
+    "light soy milk vanilla",
+    "light vanilla soymilk",
+    "low cal soy milk vanilla",
+    "vanilla soya milk light",
+    "soy milk light original"
+  ],
+  "usda_173767": [
+    "chocolate soy milk light",
+    "light choco soymilk",
+    "soy chocolate milk low cal",
+    "chocolate soya milk light",
+    "light chocolate plant milk"
+  ],
+  "usda_173768": [
+    "unsweetened light soy milk",
+    "plain unsweetened soymilk",
+    "light unsweetened soya milk",
+    "no sugar soy milk vanilla light"
+  ],
+  "usda_173769": [
+    "lowfat soy milk",
+    "low fat soya milk",
+    "low fat soymilk fortified",
+    "reduced fat soy milk",
+    "light soymilk all flavors"
+  ],
+  "usda_173770": [
+    "chocolate silk soymilk",
+    "silk choco soy drink",
+    "chocolate soy drink silk brand",
+    "soy chocolate milk silk",
+    "choco soya milk"
+  ],
+  "usda_173771": [
+    "silk plain soy milk light",
+    "light plain silk soymilk",
+    "unsweetened silk soy",
+    "plain light soy drink silk"
+  ],
+  "usda_173772": [
+    "silk vanilla soy milk light",
+    "vanilla soy drink silk light",
+    "light vanilla silk soya milk",
+    "silk light vanilla drink"
+  ],
+  "usda_173773": [
+    "silk light chocolate soymilk",
+    "light choco silk soy drink",
+    "silk chocolate soy milk low cal",
+    "light chocolate silk soya"
+  ],
+  "usda_173774": [
+    "silk very vanilla soymilk",
+    "silk vanilla soy drink",
+    "very vanilla soy milk",
+    "sweet vanilla soya milk silk"
+  ],
+  "usda_173775": [
+    "soy egg nog",
+    "silk holiday nog",
+    "soy nog drink",
+    "plant based eggnog",
+    "dairy free eggnog soy"
+  ],
+  "usda_173776": [
+    "silk chai soy milk",
+    "chai flavored soy drink",
+    "spiced chai soymilk",
+    "soy chai latte drink",
+    "chai soya milk"
+  ],
+  "usda_173777": [
+    "silk mocha soymilk",
+    "mocha soy drink",
+    "coffee mocha soy milk",
+    "mocha flavored soya milk",
+    "soy mocha latte drink"
+  ],
+  "usda_173778": [
+    "raspberry soy yogurt",
+    "soy yogurt raspberry",
+    "dairy free raspberry yogurt",
+    "vegan raspberry yogurt",
+    "plant based raspberry yogurt"
+  ],
+  "usda_173779": [
+    "peach soy yogurt",
+    "soy yogurt peach",
+    "dairy free peach yogurt",
+    "vegan peach yogurt",
+    "plant based peach yogurt"
+  ],
+  "usda_173780": [
+    "black cherry soy yogurt",
+    "soy yogurt black cherry",
+    "dairy free black cherry yogurt",
+    "vegan cherry yogurt soy",
+    "plant based cherry yogurt"
+  ],
+  "usda_173781": [
+    "blueberry soy yogurt",
+    "soy yogurt blueberry",
+    "dairy free blueberry yogurt",
+    "vegan blueberry yogurt",
+    "plant based blueberry yogurt"
+  ],
+  "usda_173782": [
+    "hazelnut soy creamer",
+    "dairy free hazelnut creamer",
+    "soy coffee creamer hazelnut",
+    "vegan hazelnut creamer",
+    "plant based hazelnut creamer"
+  ],
+  "usda_173783": [
+    "soft tofu organic",
+    "nasoya soft tofu",
+    "soft bean curd",
+    "organic soft tofu block",
+    "silky soft tofu nasoya"
+  ],
+  "usda_173784": [
+    "lite silken tofu",
+    "low calorie silken tofu",
+    "light silken bean curd",
+    "lite soft tofu nasoya",
+    "silken tofu low fat"
+  ],
+  "usda_173785": [
+    "tofu plus extra firm",
+    "extra firm fortified tofu",
+    "nasoya extra firm tofu plus",
+    "enriched extra firm tofu",
+    "firm tofu with added nutrients"
+  ],
+  "usda_173786": [
+    "azumaya silken tofu",
+    "silken tofu azumaya",
+    "smooth silken tofu block",
+    "japanese style silken tofu",
+    "kinugoshi tofu"
+  ],
+  "usda_173787": [
+    "house foods soft tofu",
+    "premium soft tofu",
+    "soft tofu house brand",
+    "silky soft premium tofu",
+    "house tofu soft"
+  ],
+  "usda_173788": [
+    "house foods firm tofu",
+    "premium firm tofu",
+    "firm tofu house brand",
+    "house tofu firm",
+    "premium firm bean curd"
+  ],
+  "usda_173789": [
+    "boiled adzuki salted",
+    "cooked adzuki with salt",
+    "azuki beans salted cooked",
+    "adzuki beans boiled salted",
+    "red beans cooked salted"
+  ],
+  "usda_173790": [
+    "great northern beans cooked salted",
+    "boiled great northern beans",
+    "white beans cooked with salt",
+    "large white beans salted cooked"
+  ],
+  "usda_173791": [
+    "low sodium great northern beans",
+    "great northern beans canned low salt",
+    "no salt great northern canned",
+    "low sodium white beans canned"
+  ],
+  "usda_173792": [
+    "kidney beans cooked salted",
+    "red kidney beans boiled salted",
+    "kidney beans with salt cooked",
+    "salted red kidney beans boiled"
+  ],
+  "usda_173793": [
+    "california red kidney beans salted",
+    "cooked california red beans salted",
+    "california red kidney salted boiled"
+  ],
+  "usda_173794": [
+    "navy beans cooked salted",
+    "boiled navy beans salted",
+    "pea beans cooked with salt",
+    "salted navy beans boiled"
+  ],
+  "usda_173795": [
+    "pink beans cooked salted",
+    "boiled pink beans salted",
+    "pink frijoles cooked salted",
+    "salted pink beans boiled"
+  ],
+  "usda_173796": [
+    "pinto beans cooked salted",
+    "boiled pinto beans salted",
+    "salted pinto beans",
+    "pinto beans with salt cooked",
+    "frijoles pintos salted"
+  ],
+  "usda_173797": [
+    "canned pinto beans rinsed",
+    "drained pinto beans canned",
+    "rinsed pinto beans",
+    "canned pinto beans washed",
+    "pinto beans tin drained"
+  ],
+  "usda_173798": [
+    "fava beans cooked salted",
+    "boiled broad beans salted",
+    "fava beans with salt boiled",
+    "broadbeans cooked salted",
+    "salted fava beans"
+  ]
+}

@@ -1,0 +1,1003 @@
+{
+  "usda_173185": [
+    "table wine",
+    "house wine",
+    "glass of wine",
+    "wine",
+    "vino",
+    "dinner wine",
+    "red or white wine",
+    "mixed wine",
+    "wine glass"
+  ],
+  "usda_173186": [
+    "peach mango smoothie drink",
+    "v8 peach mango",
+    "peach mango juice drink",
+    "fruit smoothie drink",
+    "peach mango beverage",
+    "v8 splash peach",
+    "mango peach drink",
+    "peach mango splash"
+  ],
+  "usda_173187": [
+    "chocolate almond milk unsweetened",
+    "choco almond milk",
+    "unsweetened choco almond milk",
+    "dark chocolate almond milk",
+    "almond milk chocolate",
+    "dairy free chocolate milk",
+    "shelf stable chocolate almond milk",
+    "fortified almond milk chocolate"
+  ],
+  "usda_173189": [
+    "limeade minute maid",
+    "lime juice drink",
+    "limeade drink",
+    "minute maid limeade",
+    "lemon lime drink",
+    "lemonada lime",
+    "sweetened limeade",
+    "canned limeade"
+  ],
+  "usda_173190": [
+    "red wine",
+    "glass of red wine",
+    "vino tinto",
+    "red table wine",
+    "red wine glass",
+    "dry red wine",
+    "red wine drink",
+    "house red"
+  ],
+  "usda_173191": [
+    "barbera wine",
+    "barbera red wine",
+    "italian red wine",
+    "barbera glass",
+    "barbera vino",
+    "dry italian red",
+    "barbera table wine",
+    "red barbera"
+  ],
+  "usda_173192": [
+    "zinfandel wine",
+    "zin wine",
+    "red zinfandel",
+    "zinfandel glass",
+    "zin red wine",
+    "bold red wine",
+    "zinfandel red",
+    "california zinfandel"
+  ],
+  "usda_173193": [
+    "petite sirah wine",
+    "petit sirah",
+    "petite syrah wine",
+    "dark red wine",
+    "sirah wine glass",
+    "petite sirah red",
+    "bold red sirah",
+    "petite sirah table wine"
+  ],
+  "usda_173194": [
+    "claret wine",
+    "bordeaux style red",
+    "claret red wine",
+    "claret glass",
+    "red claret wine",
+    "dry red claret",
+    "claret table wine",
+    "bordeaux red"
+  ],
+  "usda_173195": [
+    "chenin blanc wine",
+    "chenin blanc glass",
+    "white chenin wine",
+    "dry white wine chenin",
+    "chenin blanc table wine",
+    "light white wine",
+    "chenin blanc pour",
+    "white wine chenin blanc"
+  ],
+  "usda_173196": [
+    "fume blanc wine",
+    "fume blanc glass",
+    "sauvignon blanc fume",
+    "smoky white wine",
+    "fume blanc dry white",
+    "fume blanc table wine",
+    "fume blanc pour",
+    "white fume wine"
+  ],
+  "usda_173197": [
+    "mixed veggie fruit juice",
+    "vegetable fruit juice drink",
+    "v8 style juice blend",
+    "fortified juice drink",
+    "veggie fruit blend drink",
+    "mixed juice with nutrients",
+    "fruit veggie drink",
+    "enriched juice blend"
+  ],
+  "usda_173198": [
+    "muller thurgau wine",
+    "müller thurgau",
+    "muller thurgau white",
+    "german white wine",
+    "light german wine",
+    "muller thurgau glass",
+    "thurgau white wine",
+    "mild white wine"
+  ],
+  "usda_173199": [
+    "cream soda",
+    "vanilla soda",
+    "carbonated cream soda",
+    "creamy soda pop",
+    "sweet cream soda",
+    "cream flavored soda",
+    "fizzy cream soda",
+    "soft drink cream soda"
+  ],
+  "usda_173200": [
+    "riesling wine",
+    "riesling white wine",
+    "riesling glass",
+    "sweet white wine",
+    "german riesling",
+    "dry riesling",
+    "white riesling",
+    "riesling pour"
+  ],
+  "usda_173201": [
+    "sauvignon blanc wine",
+    "sauv blanc",
+    "sauvignon blanc glass",
+    "dry white wine",
+    "sauv blanc pour",
+    "crisp white wine",
+    "sauvignon blanc table wine",
+    "white sauv blanc"
+  ],
+  "usda_173202": [
+    "late harvest wine",
+    "dessert wine late harvest",
+    "sweet late harvest wine",
+    "late harvest white",
+    "late harvest glass",
+    "sweet harvest wine",
+    "late harvest table wine",
+    "dessert style wine"
+  ],
+  "usda_173203": [
+    "grape soda",
+    "carbonated grape drink",
+    "grape pop",
+    "fizzy grape drink",
+    "grape flavored soda",
+    "grape soft drink",
+    "grape fizz",
+    "purple soda"
+  ],
+  "usda_173205": [
+    "lemon lime soda",
+    "clear soda",
+    "caffeine free lemon lime soda",
+    "lemon lime fizz",
+    "lemon lime pop",
+    "clear carbonated drink",
+    "lemon lime soft drink",
+    "citrus soda no caffeine"
+  ],
+  "usda_173206": [
+    "sprite",
+    "lemon lime soda sprite",
+    "sprite drink",
+    "sprite can",
+    "clear lemon lime soda",
+    "sprite zero",
+    "lemon lime fizzy drink",
+    "sprite bottle"
+  ],
+  "usda_173208": [
+    "burgundy wine",
+    "red burgundy",
+    "pinot noir burgundy",
+    "french red wine",
+    "burgundy red glass",
+    "bourgogne red",
+    "burgundy table wine",
+    "french burgundy red"
+  ],
+  "usda_173209": [
+    "dr pepper",
+    "pepper type soda",
+    "dr pepper drink",
+    "cola pepper soda",
+    "pepper soda with caffeine",
+    "dr pepper can",
+    "spicy cola soda",
+    "pepper flavored cola"
+  ],
+  "usda_173210": [
+    "red bull",
+    "energy drink red bull",
+    "red bull can",
+    "red bull energy",
+    "redbull",
+    "red bull drink",
+    "energy drink with caffeine",
+    "red bull small can"
+  ],
+  "usda_173212": [
+    "decaf iced tea",
+    "decaffeinated black tea",
+    "ready to drink decaf tea",
+    "black tea no caffeine",
+    "bottled decaf tea",
+    "decaf tea drink",
+    "decaffeinated iced tea",
+    "ready to drink black tea decaf"
+  ],
+  "usda_173213": [
+    "grape juice drink",
+    "grape juice canned",
+    "grape drink can",
+    "canned grape juice",
+    "grape nectar drink",
+    "grape flavored juice drink",
+    "bottled grape juice",
+    "grape juice blend"
+  ],
+  "usda_173214": [
+    "cranberry juice cocktail",
+    "cran juice",
+    "cranberry cocktail drink",
+    "cranberry juice drink",
+    "cranberry cocktail",
+    "cran cocktail",
+    "cranberry juice blend",
+    "sweet cranberry drink"
+  ],
+  "usda_173215": [
+    "snapple peach tea diet",
+    "diet peach tea snapple",
+    "snapple diet peach",
+    "peach tea diet drink",
+    "diet iced peach tea",
+    "snapple diet tea peach",
+    "low calorie peach tea",
+    "diet snapple peach green tea"
+  ],
+  "usda_173216": [
+    "frozen lemonade concentrate",
+    "lemonade concentrate frozen",
+    "frozen white lemonade mix",
+    "concentrated lemonade",
+    "lemonade mix frozen",
+    "frozen lemon drink concentrate",
+    "white lemonade frozen mix",
+    "lemon concentrate frozen"
+  ],
+  "usda_173217": [
+    "lemonade from concentrate",
+    "homemade lemonade",
+    "prepared lemonade",
+    "white lemonade prepared",
+    "lemonade with water",
+    "lemonade drink prepared",
+    "fresh lemonade from mix",
+    "mixed lemonade"
+  ],
+  "usda_173218": [
+    "snapple lemon tea diet",
+    "diet lemon tea snapple",
+    "snapple diet lemon",
+    "lemon tea diet drink",
+    "diet iced lemon tea",
+    "snapple diet tea lemon",
+    "low calorie lemon tea",
+    "diet snapple lemon green tea"
+  ],
+  "usda_173219": [
+    "malted milk drink",
+    "malt drink with milk",
+    "ovaltine style drink",
+    "malted milk prepared",
+    "malted powder with whole milk",
+    "malt beverage with milk",
+    "malted drink mix prepared",
+    "chocolate malt milk drink"
+  ],
+  "usda_173220": [
+    "malt drink powder",
+    "malted milk powder",
+    "natural malt powder",
+    "dairy malt mix",
+    "malted drink mix powder",
+    "malt mix dry",
+    "dairy based malt powder",
+    "malt drink dry mix"
+  ],
+  "usda_173221": [
+    "malted milk prepared",
+    "malt drink prepared",
+    "natural malt with milk",
+    "malted milk powder prepared",
+    "malt milk drink",
+    "prepared malt drink",
+    "malt beverage prepared with milk",
+    "malted whole milk drink"
+  ],
+  "usda_173222": [
+    "ovaltine chocolate malt",
+    "ovaltine powder",
+    "chocolate malt ovaltine",
+    "ovaltine choco powder",
+    "ovaltine malt drink mix",
+    "chocolate malt powder drink",
+    "ovaltine chocolate",
+    "ovaltine milk drink mix"
+  ],
+  "usda_173223": [
+    "orange apricot juice",
+    "orange apricot drink",
+    "apricot orange juice blend",
+    "canned orange apricot drink",
+    "orange apricot juice drink",
+    "apricot orange blend",
+    "tropical juice blend orange",
+    "orange apricot nectar drink"
+  ],
+  "usda_173224": [
+    "pineapple grapefruit juice",
+    "pineapple grapefruit drink",
+    "grapefruit pineapple blend",
+    "canned pineapple grapefruit",
+    "pineapple grapefruit juice drink",
+    "tropical grapefruit blend",
+    "citrus pineapple drink",
+    "pineapple grapefruit nectar"
+  ],
+  "usda_173225": [
+    "pineapple orange juice drink",
+    "orange pineapple blend",
+    "canned pineapple orange",
+    "tropical orange pineapple drink",
+    "pineapple orange nectar",
+    "orange pineapple juice",
+    "tropical juice blend",
+    "pineapple orange drink can"
+  ],
+  "usda_173226": [
+    "vanilla milkshake",
+    "fast food vanilla shake",
+    "vanilla shake",
+    "creamy vanilla shake",
+    "thick vanilla shake",
+    "vanilla milk shake",
+    "mcdonalds vanilla shake",
+    "burger joint vanilla shake"
+  ],
+  "usda_173227": [
+    "black tea brewed",
+    "hot black tea",
+    "plain black tea",
+    "brewed tea",
+    "tea black",
+    "hot tea brewed",
+    "cup of black tea",
+    "plain brewed tea"
+  ],
+  "usda_173228": [
+    "diet lemon tea decaf instant",
+    "sugar free lemon iced tea",
+    "diet decaf lemon tea powder",
+    "instant decaf lemon tea diet",
+    "lemon tea diet no caffeine",
+    "decaf diet lemon tea mix",
+    "zero calorie lemon tea",
+    "light lemon iced tea decaf"
+  ],
+  "usda_173229": [
+    "sweetened lemon iced tea decaf",
+    "lemon tea decaf sweet",
+    "sweet decaf lemon tea instant",
+    "instant lemon tea decaffeinated sweet",
+    "sweet lemon iced tea powder",
+    "decaf lemon sweet tea mix",
+    "lemon tea sweetened no caffeine",
+    "sweet lemon tea instant"
+  ],
+  "usda_173230": [
+    "instant tea powder",
+    "unsweetened tea powder",
+    "plain iced tea powder",
+    "tea powder unsweetened",
+    "dry instant tea",
+    "plain tea mix powder",
+    "instant unsweetened iced tea",
+    "tea powder plain"
+  ],
+  "usda_173231": [
+    "diet lemon iced tea",
+    "lemon tea diet instant",
+    "sugar free lemon tea",
+    "instant diet lemon tea",
+    "lemon tea zero calorie",
+    "diet lemon tea mix",
+    "light lemon tea instant",
+    "low calorie lemon iced tea"
+  ],
+  "usda_173232": [
+    "herbal tea",
+    "herb tea brewed",
+    "herbal brewed tea",
+    "non chamomile herbal tea",
+    "hot herbal tea",
+    "botanical tea brewed",
+    "peppermint tea",
+    "herbal infusion tea"
+  ],
+  "usda_173235": [
+    "orange drink powder",
+    "orange breakfast drink powder",
+    "tang powder",
+    "orange flavored powder drink",
+    "orange powder mix",
+    "breakfast orange powder",
+    "orange drink mix dry",
+    "morning orange drink powder"
+  ],
+  "usda_173236": [
+    "tang drink prepared",
+    "orange drink prepared",
+    "orange powder drink mixed",
+    "breakfast orange drink prepared",
+    "orange drink with water",
+    "prepared orange powder drink",
+    "orange flavored drink mixed",
+    "morning orange drink ready"
+  ],
+  "usda_173237": [
+    "diet orange drink powder",
+    "low calorie orange powder",
+    "sugar free orange drink mix",
+    "light orange breakfast powder",
+    "zero calorie orange powder",
+    "orange powder diet mix",
+    "lite orange drink powder",
+    "low cal orange drink mix"
+  ],
+  "usda_173238": [
+    "english muffin plain",
+    "sourdough english muffin",
+    "plain muffin bread",
+    "toasted english muffin",
+    "english muffin toasted",
+    "unenriched english muffin",
+    "breakfast english muffin",
+    "muffin bread plain"
+  ],
+  "usda_173239": [
+    "apple pie store bought",
+    "commercial apple pie",
+    "apple pie slice",
+    "baked apple pie",
+    "classic apple pie",
+    "apple filled pie",
+    "homestyle apple pie",
+    "apple pie dessert"
+  ],
+  "usda_173240": [
+    "fried cherry pie",
+    "cherry hand pie",
+    "cherry fried pie",
+    "small fried cherry pie",
+    "cherry filled fried pastry",
+    "cherry pie pocket",
+    "deep fried cherry pie",
+    "cherry turnovers fried"
+  ],
+  "usda_173241": [
+    "corn tortilla",
+    "small corn tortilla",
+    "masa tortilla",
+    "tortilla de maiz",
+    "corn wrap",
+    "corn taco shell soft",
+    "plain corn tortilla",
+    "soft corn tortilla"
+  ],
+  "usda_173242": [
+    "flour tortilla",
+    "soft flour wrap",
+    "tortilla de harina",
+    "plain flour tortilla",
+    "burrito wrap",
+    "soft white tortilla",
+    "flour wrap tortilla",
+    "flour flat bread wrap"
+  ],
+  "usda_173243": [
+    "fat free pound cake",
+    "light pound cake",
+    "fat free cake slice",
+    "low fat pound cake",
+    "plain fat free cake",
+    "pound cake fat free",
+    "light sponge cake",
+    "fat free loaf cake"
+  ],
+  "usda_173244": [
+    "yellow cake mix light",
+    "light yellow cake dry mix",
+    "yellow cake dry mix",
+    "low calorie yellow cake mix",
+    "light cake mix yellow",
+    "yellow cake powder mix",
+    "diet yellow cake mix",
+    "yellow sponge cake mix"
+  ],
+  "usda_173245": [
+    "coconut macaroon cookie",
+    "coconut cookie",
+    "macaroon cookie",
+    "chewy coconut cookie",
+    "toasted coconut cookie",
+    "coconut drop cookie",
+    "archway coconut cookie",
+    "sweet coconut biscuit"
+  ],
+  "usda_173246": [
+    "date oatmeal cookie",
+    "oatmeal date filled cookie",
+    "date filled cookie",
+    "oatmeal cookie with dates",
+    "date sandwich cookie",
+    "soft oatmeal date cookie",
+    "filled oatmeal cookie",
+    "date oat cookie"
+  ],
+  "usda_173247": [
+    "chocolate cocoa cookie",
+    "dutch cocoa cookie",
+    "dark chocolate cookie",
+    "cocoa flavored cookie",
+    "chocolate archway cookie",
+    "chocolate biscuit cocoa",
+    "dark cocoa cookie",
+    "chocolate drop cookie"
+  ],
+  "usda_173248": [
+    "lemon iced cookie",
+    "frosted lemon cookie",
+    "lemon sugar cookie",
+    "lemon glazed cookie",
+    "iced lemon biscuit",
+    "lemon flavored cookie",
+    "lemon frosted cookie",
+    "citrus iced cookie"
+  ],
+  "usda_173249": [
+    "iced molasses cookie",
+    "molasses cookie with icing",
+    "frosted ginger molasses cookie",
+    "glazed molasses cookie",
+    "soft iced molasses",
+    "spiced iced cookie",
+    "molasses iced biscuit",
+    "sweet molasses frosted cookie"
+  ],
+  "usda_173250": [
+    "molasses cookie",
+    "old fashioned molasses cookie",
+    "soft ginger molasses cookie",
+    "spiced molasses cookie",
+    "classic molasses cookie",
+    "plain molasses cookie",
+    "ginger molasses biscuit",
+    "chewy molasses cookie"
+  ],
+  "usda_173251": [
+    "windmill cookie",
+    "dutch windmill cookie",
+    "spiced windmill biscuit",
+    "cinnamon windmill cookie",
+    "speculaas style cookie",
+    "old fashioned windmill",
+    "thin spiced cookie",
+    "windmill shaped cookie"
+  ],
+  "usda_173252": [
+    "peanut butter cookie",
+    "pb cookie",
+    "peanut butter biscuit",
+    "classic peanut butter cookie",
+    "soft peanut butter cookie",
+    "archway pb cookie",
+    "creamy peanut butter cookie",
+    "peanut cookie"
+  ],
+  "usda_173253": [
+    "raspberry filled cookie",
+    "jam filled cookie",
+    "raspberry jam cookie",
+    "raspberry sandwich cookie",
+    "fruit filled cookie",
+    "raspberry center cookie",
+    "raspberry thumbprint cookie",
+    "jam cookie raspberry"
+  ],
+  "usda_173254": [
+    "sage onion stuffing mix",
+    "stuffing mix dry",
+    "herb stuffing dry mix",
+    "onion sage stuffing dry",
+    "thanksgiving stuffing mix",
+    "breadcrumb stuffing mix",
+    "dry dressing mix",
+    "savory stuffing mix dry"
+  ],
+  "usda_173255": [
+    "chocolate graham crackers",
+    "chocolate graham snacks",
+    "choco graham",
+    "chocolate flavored graham",
+    "dark chocolate graham cracker",
+    "sweet chocolate cracker",
+    "keebler chocolate graham",
+    "cocoa graham crackers"
+  ],
+  "usda_173256": [
+    "almond poppyseed muffin mix",
+    "almond poppy muffin dry mix",
+    "poppyseed almond muffin mix",
+    "almond poppyseed bake mix",
+    "muffin mix almond poppy dry",
+    "dry almond muffin mix",
+    "poppy almond muffin powder",
+    "almond poppyseed mix dry"
+  ],
+  "usda_173257": [
+    "nutty bars",
+    "little debbie nutty bar",
+    "peanut butter wafer chocolate",
+    "chocolate peanut butter wafer",
+    "nutty bar snack",
+    "wafer peanut butter covered chocolate",
+    "little debbie peanut bar",
+    "pb chocolate wafer bar"
+  ],
+  "usda_173258": [
+    "ritz crackers",
+    "ritz",
+    "buttery crackers",
+    "round butter crackers",
+    "ritz biscuits",
+    "salted butter crackers",
+    "ritz snack crackers",
+    "classic ritz cracker"
+  ],
+  "usda_173259": [
+    "pillsbury biscuit",
+    "buttermilk biscuit refrigerated",
+    "canned biscuit dough",
+    "pillsbury can biscuit",
+    "refrigerated biscuit",
+    "pop can biscuit",
+    "buttermilk biscuit dough",
+    "ready to bake biscuit"
+  ],
+  "usda_173260": [
+    "pillsbury chocolate chip cookie dough",
+    "refrigerated cookie dough",
+    "choc chip cookie dough pillsbury",
+    "slice and bake cookies",
+    "ready to bake cookies",
+    "chocolate chip dough refrigerated",
+    "pillsbury cookie dough",
+    "canned cookie dough"
+  ],
+  "usda_173261": [
+    "pillsbury french bread dough",
+    "refrigerated french loaf",
+    "crusty french bread dough",
+    "pillsbury bread loaf dough",
+    "ready to bake french bread",
+    "pop can french bread",
+    "refrigerated bread dough french",
+    "bake at home french loaf"
+  ],
+  "usda_173262": [
+    "sorghum flour",
+    "refined sorghum flour",
+    "gluten free sorghum flour",
+    "grain sorghum flour",
+    "jowar flour",
+    "sorghum powder flour",
+    "sweet sorghum flour",
+    "milo flour"
+  ],
+  "usda_173263": [
+    "parboiled brown rice",
+    "uncle bens brown rice",
+    "instant brown rice cooked",
+    "converted brown rice",
+    "quick brown rice",
+    "parboiled rice brown",
+    "pre cooked brown rice",
+    "uncle bens rice cooked"
+  ],
+  "usda_173264": [
+    "gluten free rice pasta",
+    "rice flour pasta cooked",
+    "gluten free pasta rice",
+    "gf pasta rice based",
+    "rice bran pasta",
+    "de boles rice pasta",
+    "gluten free noodles rice",
+    "rice pasta cooked gf"
+  ],
+  "usda_173265": [
+    "gluten free pasta corn rice",
+    "corn rice pasta",
+    "gf pasta corn and rice",
+    "gluten free noodles corn",
+    "corn flour pasta gf",
+    "rice corn pasta cooked",
+    "gf noodles corn rice",
+    "corn based pasta gluten free"
+  ],
+  "usda_173266": [
+    "biscuit with egg and bacon",
+    "egg bacon biscuit",
+    "bacon egg biscuit sandwich",
+    "breakfast biscuit bacon egg",
+    "fast food biscuit egg bacon",
+    "egg biscuit with bacon",
+    "morning biscuit bacon egg",
+    "biscuit breakfast sandwich egg bacon"
+  ],
+  "usda_173267": [
+    "biscuit with egg and ham",
+    "ham egg biscuit",
+    "egg ham biscuit sandwich",
+    "breakfast biscuit ham egg",
+    "fast food ham egg biscuit",
+    "ham and egg biscuit",
+    "morning biscuit ham egg",
+    "biscuit breakfast sandwich egg ham"
+  ],
+  "usda_173268": [
+    "chicken biscuit",
+    "crispy chicken biscuit",
+    "fried chicken biscuit sandwich",
+    "chicken fillet biscuit",
+    "fast food chicken biscuit",
+    "breaded chicken biscuit",
+    "chicken sandwich biscuit",
+    "crispy chicken on biscuit"
+  ],
+  "usda_173269": [
+    "croissant bacon egg cheese",
+    "egg bacon cheese croissant",
+    "bacon egg croissant sandwich",
+    "breakfast croissant bacon",
+    "fast food croissant egg bacon",
+    "croissant breakfast sandwich bacon",
+    "egg cheese bacon croissant",
+    "morning croissant bacon egg"
+  ],
+  "usda_173270": [
+    "croissant ham egg cheese",
+    "egg ham cheese croissant",
+    "ham egg croissant sandwich",
+    "breakfast croissant ham",
+    "fast food croissant egg ham",
+    "croissant breakfast sandwich ham",
+    "egg cheese ham croissant",
+    "morning croissant ham egg"
+  ],
+  "usda_173271": [
+    "croissant sausage egg cheese",
+    "egg sausage cheese croissant",
+    "sausage egg croissant sandwich",
+    "breakfast croissant sausage",
+    "fast food croissant egg sausage",
+    "croissant breakfast sandwich sausage",
+    "egg cheese sausage croissant",
+    "morning croissant sausage egg"
+  ],
+  "usda_173272": [
+    "scrambled eggs fast food",
+    "fast food scrambled egg",
+    "breakfast scrambled egg",
+    "diner scrambled eggs",
+    "drive thru scrambled eggs",
+    "quick scrambled eggs",
+    "soft scrambled eggs",
+    "plain scrambled eggs"
+  ],
+  "usda_173273": [
+    "hash brown patty",
+    "hash brown round",
+    "fast food hash brown",
+    "breakfast hash brown",
+    "crispy hash brown patty",
+    "round hash brown",
+    "fried potato patty",
+    "mcdonalds hash brown"
+  ],
+  "usda_173274": [
+    "soft serve vanilla cone",
+    "vanilla ice cream cone",
+    "soft serve cone",
+    "vanilla soft serve",
+    "small vanilla cone",
+    "fast food vanilla cone",
+    "light ice cream cone",
+    "vanilla swirl cone"
+  ],
+  "usda_173275": [
+    "caramel sundae",
+    "fast food caramel sundae",
+    "ice cream caramel topping",
+    "caramel ice cream sundae",
+    "caramel sauce ice cream",
+    "sweet caramel sundae",
+    "caramel drizzle sundae",
+    "vanilla caramel sundae"
+  ],
+  "usda_173276": [
+    "hot fudge sundae",
+    "chocolate fudge sundae",
+    "fudge ice cream sundae",
+    "hot chocolate sundae",
+    "fast food fudge sundae",
+    "hot fudge ice cream",
+    "chocolate sauce sundae",
+    "fudge topped sundae"
+  ],
+  "usda_173277": [
+    "bean and beef burrito",
+    "beef bean burrito",
+    "burrito beans beef",
+    "bean beef wrap",
+    "fast food burrito beans beef",
+    "mexican burrito beef bean",
+    "beef burrito with beans",
+    "bean burrito with meat"
+  ],
+  "usda_173278": [
+    "bean beef cheese burrito",
+    "burrito beans beef cheese",
+    "cheesy beef bean burrito",
+    "fast food burrito with cheese",
+    "bean cheese beef wrap",
+    "loaded burrito beef beans",
+    "cheesy burrito beans meat",
+    "three filling burrito"
+  ],
+  "usda_173279": [
+    "pizza hut pepperoni hand tossed",
+    "pepperoni hand tossed pizza",
+    "pizza hut pepperoni",
+    "medium pepperoni pizza hand tossed",
+    "pepperoni pizza regular crust",
+    "pizza hut 12 inch pepperoni",
+    "hand tossed pepperoni pizza",
+    "pizza hut classic pepperoni"
+  ],
+  "usda_173280": [
+    "pizza hut pepperoni pan pizza",
+    "pepperoni pan crust pizza",
+    "deep dish pepperoni pizza hut",
+    "pizza hut pan pepperoni",
+    "thick crust pepperoni pizza",
+    "pan pizza pepperoni",
+    "pizza hut deep pan pepperoni",
+    "12 inch pan pepperoni pizza"
+  ],
+  "usda_173281": [
+    "pizza hut super supreme",
+    "supreme pizza hand tossed",
+    "pizza hut loaded pizza",
+    "super supreme pizza",
+    "loaded hand tossed pizza",
+    "pizza hut 12 supreme",
+    "everything pizza hut",
+    "hand tossed supreme pizza"
+  ],
+  "usda_173282": [
+    "dominos cheese pizza hand tossed",
+    "cheese pizza dominos",
+    "plain pizza dominos",
+    "dominos classic cheese",
+    "cheese hand tossed dominos",
+    "dominos 14 inch cheese",
+    "classic cheese pizza dominos",
+    "dominos regular crust cheese"
+  ],
+  "usda_173283": [
+    "dominos deep dish cheese pizza",
+    "dominos deep dish",
+    "deep dish cheese pizza dominos",
+    "thick crust dominos cheese",
+    "dominos ultimate deep dish",
+    "deep dish plain pizza",
+    "dominos stuffed crust cheese",
+    "dominos pan pizza cheese"
+  ],
+  "usda_173284": [
+    "papa johns cheese pizza",
+    "papa john cheese pizza original",
+    "plain papa johns pizza",
+    "papa johns classic cheese",
+    "papa johns 14 inch cheese",
+    "cheese pizza papa johns original",
+    "papa johns regular crust cheese",
+    "classic papa johns cheese"
+  ],
+  "usda_173285": [
+    "papa johns pepperoni pizza",
+    "pepperoni pizza papa johns",
+    "papa john pepperoni original",
+    "papa johns 14 inch pepperoni",
+    "pepperoni papa johns original crust",
+    "papa johns classic pepperoni",
+    "pepperoni original crust papa johns",
+    "papa johns regular pepperoni"
+  ],
+  "usda_173286": [
+    "papa johns the works pizza",
+    "papa johns loaded pizza",
+    "the works papa johns",
+    "supreme style papa johns",
+    "everything papa johns pizza",
+    "papa johns 14 works",
+    "loaded topping pizza papa johns",
+    "papa johns deluxe pizza"
+  ],
+  "usda_173287": [
+    "papa johns thin crust cheese pizza",
+    "thin crust cheese papa johns",
+    "papa johns thin cheese",
+    "thin pizza papa johns",
+    "papa johns 14 thin crust cheese",
+    "thin crust plain pizza papa johns",
+    "light crust cheese papa johns",
+    "thin cheese pizza papa johns"
+  ],
+  "usda_173288": [
+    "little caesars pepperoni deep dish",
+    "little caesars deep dish",
+    "pepperoni deep dish little caesars",
+    "deep dish pepperoni pizza little caesars",
+    "little caesars thick crust pepperoni",
+    "pan pepperoni little caesars",
+    "little caesars 14 pepperoni deep dish",
+    "deep dish pizza little caesars pepperoni"
+  ],
+  "usda_173289": [
+    "little caesars thin crust cheese",
+    "thin cheese pizza little caesars",
+    "little caesars thin cheese pizza",
+    "plain thin pizza little caesars",
+    "little caesars 14 thin cheese",
+    "thin crust plain little caesars",
+    "light crust cheese little caesars",
+    "little caesars thin plain pizza"
+  ],
+  "usda_173290": [
+    "pizza hut cheese pizza hand tossed",
+    "pizza hut plain cheese",
+    "cheese hand tossed pizza hut",
+    "pizza hut 14 inch cheese",
+    "pizza hut classic cheese",
+    "cheese pizza hut hand tossed",
+    "plain pizza pizza hut",
+    "pizza hut regular cheese pizza"
+  ]
+}

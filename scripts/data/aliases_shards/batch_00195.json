@@ -1,0 +1,1005 @@
+{
+  "fnri_P001": [
+    "lager beer",
+    "pale pilsen",
+    "cold beer",
+    "draft beer",
+    "bottled beer",
+    "canned beer",
+    "light beer",
+    "pilsner",
+    "cerveza",
+    "beer bottle"
+  ],
+  "fnri_P002": [
+    "tuba",
+    "lambanog base",
+    "fermented coconut sap",
+    "palm wine",
+    "coconut wine",
+    "nipa palm wine",
+    "fermented tuba",
+    "palm toddy",
+    "sukang tuba"
+  ],
+  "fnri_P003": [
+    "dark rum",
+    "white rum",
+    "cane rum",
+    "rum drink",
+    "ron",
+    "aged rum",
+    "spiced rum",
+    "rum spirits"
+  ],
+  "fnri_P004": [
+    "basi",
+    "sugarcane wine",
+    "cane wine",
+    "fermented cane juice",
+    "ilocos basi",
+    "sugarcane spirits",
+    "cane alcohol",
+    "native cane wine"
+  ],
+  "fnri_P005": [
+    "shaoxing wine",
+    "chinese rice wine",
+    "rice wine",
+    "cooking wine chinese",
+    "hua diao wine",
+    "chinese cooking wine",
+    "sake alternative",
+    "rice spirits"
+  ],
+  "fnri_Q001": [
+    "gulaman in syrup",
+    "agar agar dessert",
+    "seaweed jelly syrup",
+    "gulaman syrup",
+    "agar jelly sweet",
+    "ceylon moss dessert",
+    "seaweed in sweet syrup",
+    "jelly in syrup"
+  ],
+  "fnri_Q002": [
+    "choco drink prepared",
+    "ready to drink chocolate",
+    "mixed choco drink",
+    "chocolate drink mixed",
+    "prepared choco beverage",
+    "hot choco drink",
+    "chocovit drink",
+    "tablea drink prepared"
+  ],
+  "fnri_Q003": [
+    "choco powder drink",
+    "chocolate drink powder",
+    "cocoa powder mix",
+    "choco mix powder",
+    "instant choco powder",
+    "milo powder",
+    "chocolate powder beverage",
+    "choco drink mix"
+  ],
+  "fnri_Q004": [
+    "uht choco drink",
+    "boxed chocolate milk",
+    "tetra pack choco drink",
+    "ready to drink choco",
+    "shelf stable choco drink",
+    "chocolate milk box",
+    "long life choco drink",
+    "choco drink carton"
+  ],
+  "fnri_Q005": [
+    "choco energy drink granules",
+    "fortified choco granules",
+    "chocolate energy granules",
+    "choco malt granules",
+    "energy choco drink mix",
+    "malt choco granules",
+    "fortified chocolate energy",
+    "choco granule supplement"
+  ],
+  "fnri_Q006": [
+    "choco energy powder fortified",
+    "chocolate energy powder",
+    "malt choco powder fortified",
+    "choco supplement powder",
+    "fortified chocolate drink powder",
+    "energy choco powder",
+    "malt energy powder choco",
+    "choco fortified powder drink"
+  ],
+  "fnri_Q007": [
+    "choco milk powder",
+    "chocolate flavored milk powder",
+    "choco food milk powder",
+    "powdered choco milk",
+    "full cream choco powder",
+    "milk choco powder",
+    "choco growing up milk",
+    "chocolate powdered milk"
+  ],
+  "fnri_Q008": [
+    "cocoa powder imported",
+    "dutch cocoa powder",
+    "imported cacao powder",
+    "baking cocoa imported",
+    "unsweetened cocoa powder",
+    "dark cocoa powder",
+    "international cocoa powder",
+    "cacao powder imported"
+  ],
+  "fnri_Q009": [
+    "local cocoa powder",
+    "tablea powder",
+    "philippine cacao powder",
+    "native cocoa powder",
+    "local cacao powder",
+    "sikwate powder",
+    "benguet cocoa powder",
+    "tablea ground"
+  ],
+  "fnri_Q010": [
+    "buko juice",
+    "coconut juice",
+    "young coconut water",
+    "niyog water",
+    "fresh coconut water",
+    "buko water",
+    "green coconut water",
+    "natural coconut water"
+  ],
+  "fnri_Q011": [
+    "3 in 1 coffee",
+    "instant 3in1",
+    "sachet coffee",
+    "white coffee mix",
+    "coffee mix sachet",
+    "premix coffee",
+    "instant white coffee",
+    "coffee creamer sugar mix"
+  ],
+  "fnri_Q012": [
+    "pure instant coffee",
+    "black instant coffee",
+    "100% coffee powder",
+    "pure black coffee powder",
+    "straight instant coffee",
+    "plain instant coffee",
+    "unsweetened instant coffee",
+    "pure brewed instant coffee"
+  ],
+  "fnri_Q013": [
+    "roasted coffee beans",
+    "brewed coffee grounds",
+    "ground roasted coffee",
+    "drip coffee grounds",
+    "freshly roasted coffee",
+    "coffee grounds",
+    "brewed coffee beans",
+    "barako roasted"
+  ],
+  "fnri_Q014": [
+    "soy coffee with husk",
+    "soybean coffee",
+    "soy bean coffee blend",
+    "soycafe whole",
+    "coffee soy substitute",
+    "soybean roasted coffee",
+    "soy coffee with coat",
+    "vegetable coffee soy"
+  ],
+  "fnri_Q015": [
+    "soy coffee no husk",
+    "soybean coffee peeled",
+    "pure soy coffee",
+    "soy cafe skinless",
+    "roasted soybean coffee",
+    "soy coffee blend",
+    "decorticated soy coffee",
+    "soybean drink roasted"
+  ],
+  "fnri_Q016": [
+    "calamansi juice concentrate",
+    "kalamansi concentrate",
+    "calamansi drink mix",
+    "concentrated calamansi juice",
+    "lime juice concentrate filipino",
+    "calamansi cordial",
+    "kalamansi juice mix",
+    "philippine lime concentrate"
+  ],
+  "fnri_Q017": [
+    "grape juice concentrate",
+    "grape drink concentrate",
+    "concentrated grape juice",
+    "grape cordial",
+    "grape drink mix",
+    "grape juice mix",
+    "purple grape concentrate",
+    "buko grape concentrate"
+  ],
+  "fnri_Q018": [
+    "grapefruit juice concentrate",
+    "concentrated grapefruit drink",
+    "grapefruit drink mix",
+    "grapefruit cordial",
+    "citrus grapefruit concentrate",
+    "grapefruit squash",
+    "grapefruit juice mix",
+    "pomelo juice concentrate"
+  ],
+  "fnri_Q019": [
+    "guyabano juice concentrate",
+    "soursop juice concentrate",
+    "guyabano drink mix",
+    "soursop concentrate",
+    "guyabano cordial",
+    "soursop drink concentrate",
+    "concentrated guyabano juice",
+    "guyabano squash"
+  ],
+  "fnri_Q020": [
+    "mango juice concentrate",
+    "mango drink concentrate",
+    "concentrated mango juice",
+    "mango cordial",
+    "mango squash",
+    "mango drink mix",
+    "philippine mango concentrate",
+    "ripe mango juice concentrate"
+  ],
+  "fnri_Q021": [
+    "orange juice concentrate",
+    "concentrated oj",
+    "orange drink concentrate",
+    "orange cordial",
+    "orange squash concentrate",
+    "orange juice mix",
+    "citrus concentrate orange",
+    "oj concentrate"
+  ],
+  "fnri_Q022": [
+    "apple juice drink tetra",
+    "apple drink box",
+    "apple juice tetra pack",
+    "apple drink carton",
+    "boxed apple juice",
+    "apple juice ttb",
+    "apple fruit drink box",
+    "tetra pack apple juice"
+  ],
+  "fnri_Q023": [
+    "citrus cooler drink",
+    "mixed citrus juice drink",
+    "citrus blend drink tetra",
+    "citrus fruit drink box",
+    "citrus cooler tetra pack",
+    "lemon lime blend drink",
+    "citrus mix juice drink",
+    "citrus cooler carton"
+  ],
+  "fnri_Q025": [
+    "grape juice drink pack",
+    "grape drink tetra",
+    "grape fruit drink carton",
+    "boxed grape juice",
+    "grape drink box",
+    "grape juice pack",
+    "grape drink pouch",
+    "tetra pack grape drink"
+  ],
+  "fnri_Q026": [
+    "guava juice drink pack",
+    "bayabas juice drink",
+    "guava drink tetra",
+    "guava fruit drink pouch",
+    "guava drink carton",
+    "boxed guava juice",
+    "bayabas juice pack",
+    "guava juice tetra pack"
+  ],
+  "fnri_Q027": [
+    "guyabano juice bottle",
+    "soursop juice drink bottle",
+    "bottled guyabano juice",
+    "guyabano drink bottled",
+    "soursop fruit drink bottle",
+    "guyabano juice btl",
+    "bottled soursop drink",
+    "guyabano fruit drink bottle"
+  ],
+  "fnri_Q028": [
+    "mango juice bottle",
+    "bottled mango juice",
+    "mango drink bottled",
+    "mango fruit drink bottle",
+    "bottled mango drink",
+    "mango juice btl",
+    "ripe mango drink bottle",
+    "philippine mango juice bottle"
+  ],
+  "fnri_Q029": [
+    "mango juice pouch",
+    "mango drink foil pack",
+    "mango juice polyfoil",
+    "mango drink sachet",
+    "foil pack mango juice",
+    "mango drink pouch",
+    "mango juice foil",
+    "mango drink pack foil"
+  ],
+  "fnri_Q030": [
+    "mango juice tetra pack",
+    "mango drink box",
+    "boxed mango juice",
+    "mango juice carton",
+    "tetra mango drink",
+    "mango drink ttb",
+    "mango fruit drink carton",
+    "mango juice brick"
+  ],
+  "fnri_Q031": [
+    "orange pineapple juice drink",
+    "oj pineapple blend drink",
+    "orange pine drink tetra",
+    "pineapple orange juice box",
+    "citrus pineapple blend carton",
+    "orange pineapple tetra pack",
+    "pineapple orange drink carton",
+    "orange and pineapple juice box"
+  ],
+  "fnri_Q032": [
+    "orange juice bottle",
+    "bottled orange juice",
+    "bottled oj",
+    "orange drink bottled",
+    "orange fruit drink bottle",
+    "oj bottle",
+    "orange juice btl",
+    "bottled orange drink"
+  ],
+  "fnri_Q033": [
+    "orange juice foil pack",
+    "orange drink polyfoil",
+    "oj foil pouch",
+    "orange juice sachet",
+    "orange drink pouch foil",
+    "orange juice foil",
+    "orange drink foil pack",
+    "oj pouch"
+  ],
+  "fnri_Q034": [
+    "orange juice tetra pack",
+    "oj box drink",
+    "orange drink carton",
+    "boxed orange juice",
+    "tetra pack oj",
+    "orange drink box",
+    "orange juice brick pack",
+    "orange drink ttb"
+  ],
+  "fnri_Q035": [
+    "pineapple lychee juice drink",
+    "pineapple lychee blend carton",
+    "pine lychee drink box",
+    "pineapple lychee tetra pack",
+    "lychee pineapple juice drink",
+    "pineapple lychee drink ttb",
+    "lychee pine blend drink",
+    "pineapple lychee fruit drink"
+  ],
+  "fnri_Q036": [
+    "pineapple orange juice canned",
+    "canned pineapple orange drink",
+    "pine orange canned juice",
+    "pineapple orange drink can",
+    "canned citrus pineapple juice",
+    "orange pineapple canned drink",
+    "pineapple orange can juice",
+    "canned pine oj drink"
+  ],
+  "fnri_Q037": [
+    "pineapple juice drink tetra",
+    "pineapple drink box",
+    "boxed pineapple juice",
+    "pineapple drink carton",
+    "tetra pack pineapple juice",
+    "pineapple juice ttb",
+    "pinya juice drink box",
+    "pineapple fruit drink carton"
+  ],
+  "fnri_Q038": [
+    "strawberry juice foil pack",
+    "strawberry drink polyfoil",
+    "strawberry drink pouch",
+    "strawberry juice sachet",
+    "strawberry fruit drink foil",
+    "strawberry juice foil",
+    "strawberry drink foil pack",
+    "strawberry juice pack foil"
+  ],
+  "fnri_Q039": [
+    "sugarcane juice drink tetra",
+    "tubig tubo drink",
+    "cane juice drink box",
+    "sugarcane drink carton",
+    "tetra pack cane juice",
+    "sugarcane drink ttb",
+    "sugar cane juice box",
+    "fresh cane drink tetra"
+  ],
+  "fnri_Q040": [
+    "orange flavored drink concentrate",
+    "orange cordial concentrate",
+    "orange squash concentrate",
+    "orange syrup drink mix",
+    "orange flavored syrup",
+    "citrus flavor concentrate orange",
+    "orange drink syrup",
+    "orange flavor cordial"
+  ],
+  "fnri_Q041": [
+    "strawberry flavored drink concentrate",
+    "strawberry cordial",
+    "strawberry squash concentrate",
+    "strawberry syrup drink",
+    "strawberry drink mix concentrate",
+    "strawberry flavor concentrate",
+    "strawberry cordial mix",
+    "strawberry flavored syrup"
+  ],
+  "fnri_Q042": [
+    "orange powdered drink",
+    "orange juice powder",
+    "powdered orange drink",
+    "orange drink mix powder",
+    "orange flavor powder drink",
+    "instant orange drink powder",
+    "orange squash powder",
+    "orange powdered juice"
+  ],
+  "fnri_Q043": [
+    "canned apple juice",
+    "apple juice can",
+    "tinned apple juice",
+    "apple juice canned",
+    "canned pure apple juice",
+    "apple juice tin",
+    "pure apple juice can",
+    "apple juice in can"
+  ],
+  "fnri_Q044": [
+    "calamansi juice",
+    "kalamansi juice",
+    "philippine lime juice",
+    "calamansi nectar",
+    "kalamansi nectar",
+    "fresh calamansi juice",
+    "calamansi drink",
+    "kalamansi drink nectar"
+  ],
+  "fnri_Q045": [
+    "fresh mango juice",
+    "pure mango juice",
+    "mango juice drink",
+    "real mango juice",
+    "mango nectar",
+    "ripe mango juice",
+    "philippine mango juice",
+    "natural mango juice"
+  ],
+  "fnri_Q046": [
+    "canned orange juice",
+    "unsweetened oj canned",
+    "pure orange juice can",
+    "orange juice tin",
+    "unsweetened canned oj",
+    "natural orange juice canned",
+    "tinned orange juice",
+    "straight oj canned"
+  ],
+  "fnri_Q047": [
+    "pineapple grapefruit juice canned",
+    "pine grapefruit juice can",
+    "canned pineapple grapefruit juice",
+    "pineapple pomelo juice can",
+    "grapefruit pineapple canned juice",
+    "citrus pineapple juice can",
+    "pineapple grapefruit blend can",
+    "pine grape fruit juice canned"
+  ],
+  "fnri_Q048": [
+    "canned pineapple juice",
+    "pineapple juice can",
+    "tinned pineapple juice",
+    "pinya juice canned",
+    "pure pineapple juice can",
+    "pineapple juice tin",
+    "canned pinya juice",
+    "natural pineapple juice can"
+  ],
+  "fnri_Q049": [
+    "fresh sugarcane juice",
+    "cane juice",
+    "tubig tubo",
+    "sugar cane juice fresh",
+    "pressed cane juice",
+    "pure cane juice",
+    "raw sugarcane juice",
+    "straight cane juice"
+  ],
+  "fnri_Q050": [
+    "canned tomato juice",
+    "tomato juice can",
+    "tinned tomato juice",
+    "pure tomato juice canned",
+    "tomato drink canned",
+    "tomato juice tin",
+    "natural tomato juice can",
+    "straight tomato juice canned"
+  ],
+  "fnri_Q051": [
+    "lemon tea tetra",
+    "lemon iced tea box",
+    "lemon tea carton",
+    "lemon tea drink box",
+    "boxed lemon tea",
+    "tetra lemon tea",
+    "lemon tea ttb",
+    "lemon tea brick pack"
+  ],
+  "fnri_Q052": [
+    "sago syrup",
+    "sago pearls in syrup",
+    "sweet sago",
+    "sago dessert",
+    "tapioca pearls in syrup",
+    "sago gulaman",
+    "small pearls sweet syrup",
+    "sago in sweet syrup"
+  ],
+  "fnri_Q053": [
+    "cola drink",
+    "coke",
+    "cola soda",
+    "cola softdrink",
+    "carbonated cola",
+    "cola soda pop",
+    "fizzy cola",
+    "cola pop"
+  ],
+  "fnri_Q054": [
+    "orange soda",
+    "orange soft drink",
+    "orange fizzy drink",
+    "orange pop",
+    "carbonated orange drink",
+    "orange soda pop",
+    "orange flavored soda",
+    "fizzy orange drink"
+  ],
+  "fnri_Q055": [
+    "plain soy milk powder",
+    "soy powder drink",
+    "powdered soy milk",
+    "soya milk powder",
+    "soy drink mix plain",
+    "plain soymilk powder",
+    "soya powder plain",
+    "unsweetened soy milk powder"
+  ],
+  "fnri_Q056": [
+    "corn flavored soy powder",
+    "soy corn drink powder",
+    "soy powder corn flavor",
+    "corn soy drink mix",
+    "corn flavor soymilk powder",
+    "soya corn powder",
+    "corn soy milk powder",
+    "corn flavored soya powder"
+  ],
+  "fnri_Q057": [
+    "pandan soy powder",
+    "soy powder pandan",
+    "pandan flavored soy milk powder",
+    "pandan soya powder",
+    "pandan soy drink mix",
+    "pandan soymilk powder",
+    "soy powder pandan flavor",
+    "pandan flavor soya powder"
+  ],
+  "fnri_Q058": [
+    "chocolate soy milk",
+    "choco soymilk",
+    "soy chocolate drink",
+    "chocolate soybean milk",
+    "choco soya milk",
+    "soy milk choco",
+    "chocolate flavored soymilk",
+    "soya choco drink"
+  ],
+  "fnri_Q059": [
+    "soy milk drink",
+    "soymilk",
+    "soya milk",
+    "plain soy milk",
+    "soybean milk",
+    "fresh soy milk",
+    "white soy drink",
+    "taho milk base"
+  ],
+  "fnri_Q060": [
+    "dried tea leaves",
+    "loose leaf tea",
+    "black tea leaves",
+    "tea leaves dry",
+    "loose tea",
+    "dried loose tea",
+    "whole tea leaves",
+    "raw tea leaves"
+  ],
+  "fnri_Q061": [
+    "young coconut drink",
+    "buko shake",
+    "young coconut shredded drink",
+    "shredded coconut drink",
+    "buko drink with coconut meat",
+    "young coconut beverage",
+    "fresh buko drink",
+    "coconut meat drink"
+  ],
+  "fnri_R001": [
+    "cheese pimiento sandwich",
+    "pimiento cheese sandwich",
+    "cheese spread sandwich",
+    "red pepper cheese sandwich",
+    "pimiento spread sandwich",
+    "cheez pimiento bread",
+    "cheese pimento sandwich",
+    "filipino cheese spread sandwich"
+  ],
+  "fnri_R002": [
+    "plain cheese sandwich",
+    "grilled cheese sandwich",
+    "toasted cheese sandwich",
+    "cheese bread sandwich",
+    "simple cheese sandwich",
+    "cheese on bread",
+    "melted cheese sandwich",
+    "cheesy sandwich"
+  ],
+  "fnri_R003": [
+    "cheeseburger",
+    "burger with cheese",
+    "beef cheeseburger",
+    "cheese beef burger",
+    "single cheeseburger",
+    "hamburger with cheese",
+    "cheesy burger",
+    "classic cheeseburger"
+  ],
+  "fnri_R004": [
+    "mongo siopao",
+    "mung bean siopao",
+    "vegetable siopao",
+    "bean filled bun",
+    "steamed dumpling mung bean",
+    "green bean bao",
+    "monggo siopao",
+    "munggo stuffed bun"
+  ],
+  "fnri_R005": [
+    "siopao",
+    "pork siopao",
+    "pork filled bun",
+    "steamed pork bun",
+    "asado siopao",
+    "bola bola siopao",
+    "chinese pork bun",
+    "baozi pork"
+  ],
+  "fnri_R006": [
+    "biko with munggo",
+    "malagkit with mongo coconut milk",
+    "sticky rice mung bean coconut",
+    "glutinous rice monggo gata",
+    "biko monggo",
+    "sticky rice mung bean dessert",
+    "malagkit monggo gata",
+    "sweet sticky rice mung bean"
+  ],
+  "fnri_R007": [
+    "burger with coleslaw",
+    "hamburger coleslaw",
+    "slaw burger",
+    "coleslaw hamburger sandwich",
+    "burger n slaw",
+    "hamburger with slaw",
+    "coleslaw beef burger",
+    "slaw topped burger"
+  ],
+  "fnri_R008": [
+    "hamburger",
+    "beef burger",
+    "plain hamburger",
+    "regular burger",
+    "classic hamburger",
+    "beef patty sandwich",
+    "burger sandwich",
+    "simple hamburger"
+  ],
+  "fnri_R009": [
+    "empanada",
+    "baked meat pie",
+    "savory pie meat",
+    "beef pie",
+    "filipino meat pie",
+    "pastry meat filling",
+    "meat filled pastry",
+    "baked empanada"
+  ],
+  "fnri_R010": [
+    "meat roll",
+    "beef roll",
+    "meat wrapped roll",
+    "rolled meat snack",
+    "meat filled roll",
+    "savory meat roll",
+    "pork meat roll",
+    "stuffed meat roll"
+  ],
+  "fnri_R011": [
+    "arroz caldo chicken",
+    "chicken lugaw",
+    "chicken rice porridge",
+    "chicken congee",
+    "chicken arrozcaldo",
+    "goto chicken",
+    "rice soup chicken",
+    "lugaw manok"
+  ],
+  "fnri_R012": [
+    "champorado",
+    "chocolate rice porridge",
+    "choco rice gruel",
+    "sweet choco lugaw",
+    "chocolate congee",
+    "rice porridge choco milk",
+    "champorado with milk",
+    "malagkit champorado"
+  ],
+  "fnri_R013": [
+    "goto",
+    "tripe rice porridge",
+    "beef tripe congee",
+    "goto soup",
+    "rice gruel tripe",
+    "beef tripe lugaw",
+    "arroz caldo tripe",
+    "goto beef tripe"
+  ],
+  "fnri_R014": [
+    "canned spaghetti meatballs",
+    "spaghetti and meatballs can",
+    "canned pasta meatballs tomato",
+    "spaghetti meatballs tin",
+    "tinned spaghetti meatballs",
+    "ready to eat spaghetti meatballs",
+    "canned spaghetti tomato sauce",
+    "meatball spaghetti canned"
+  ],
+  "fnri_R015": [
+    "canned spaghetti with sausage",
+    "spaghetti vienna sausage can",
+    "canned pasta sausage tomato",
+    "spaghetti hotdog canned",
+    "tinned spaghetti sausage",
+    "spaghetti wiener canned",
+    "canned spaghetti franks",
+    "sausage spaghetti tin"
+  ],
+  "fnri_R016": [
+    "buko pie",
+    "coconut pie",
+    "young coconut pie",
+    "filipino coconut pie",
+    "buko pastry pie",
+    "native coconut pie",
+    "buco pie",
+    "fresh coconut pie"
+  ],
+  "fnri_R017": [
+    "egg custard pie",
+    "filipino egg pie",
+    "sweet egg pie",
+    "custard pie",
+    "baked egg pie",
+    "egg tart pie",
+    "egg pastelillo",
+    "sweet custard egg pie"
+  ],
+  "fnri_R018": [
+    "halo halo canned",
+    "canned halo halo",
+    "mixed dessert can",
+    "haluhalo canned",
+    "halo halo tin",
+    "canned mixed sweet dessert",
+    "tinned halo halo",
+    "halohalo canned"
+  ],
+  "fnri_R019": [
+    "halo halo",
+    "haluhalo",
+    "halo halo with ice",
+    "shaved ice halo halo",
+    "mixed filipino dessert",
+    "halo halo shaved ice",
+    "halohalo ice dessert",
+    "filipino shaved ice dessert"
+  ],
+  "fnri_R020": [
+    "pineapple pie",
+    "pinya pie",
+    "sweet pineapple pie",
+    "baked pineapple pie",
+    "pineapple pastry pie",
+    "pineapple tart pie",
+    "pineapple filled pie",
+    "filipino pineapple pie"
+  ],
+  "fnri_R021": [
+    "pizza",
+    "pizza pie",
+    "baked pizza",
+    "round pizza",
+    "cheesy pizza",
+    "tomato cheese pizza",
+    "classic pizza",
+    "oven pizza"
+  ],
+  "fnri_R022": [
+    "bangus in black bean",
+    "milkfish black bean canned",
+    "canned bangus black bean",
+    "bangus tausi canned",
+    "milkfish tausi can",
+    "canned milkfish",
+    "bangus canned tausi",
+    "tinned milkfish black bean"
+  ],
+  "fnri_R023": [
+    "crab spring roll",
+    "lumpia crab uncooked",
+    "crab lumpia raw",
+    "fresh crab spring roll",
+    "uncooked crab lumpia",
+    "crab lumpia unfried",
+    "raw crab spring roll",
+    "crab lumpiang shanghai uncooked"
+  ],
+  "fnri_R024": [
+    "fish spring roll uncooked",
+    "lumpia fish raw",
+    "fish lumpia uncooked",
+    "raw fish spring roll",
+    "unfried fish lumpia",
+    "fish lumpiang shanghai raw",
+    "uncooked fish lumpia",
+    "fresh fish spring roll"
+  ],
+  "fnri_R025": [
+    "shrimp spring roll uncooked",
+    "lumpia hipon raw",
+    "prawn spring roll uncooked",
+    "shrimp lumpia uncooked",
+    "raw shrimp spring roll",
+    "unfried shrimp lumpia",
+    "prawn lumpia raw",
+    "uncooked shrimp lumpia"
+  ],
+  "fnri_R026": [
+    "beef tomato spread",
+    "canned beef spread tomato",
+    "beef tomato sandwich spread",
+    "beef spread can",
+    "canned beef tomato spread",
+    "tomato beef spread canned",
+    "beef in tomato spread",
+    "tinned beef tomato spread"
+  ],
+  "fnri_R027": [
+    "beef caldereta canned",
+    "canned caldereta",
+    "kaldereta canned",
+    "beef kaldereta can",
+    "tinned caldereta",
+    "canned beef kaldereta",
+    "caldereta in can",
+    "ready to eat caldereta"
+  ],
+  "fnri_R028": [
+    "beef callos canned",
+    "canned callos",
+    "ox tripe stew canned",
+    "callos can",
+    "tinned beef callos",
+    "canned tripe callos",
+    "ox feet stew canned",
+    "callos in can"
+  ],
+  "fnri_R029": [
+    "beef curry canned",
+    "canned beef curry",
+    "tinned curry beef",
+    "curry beef can",
+    "beef curry tin",
+    "ready to eat beef curry",
+    "canned curry dish beef",
+    "beef in curry sauce canned"
+  ],
+  "fnri_R030": [
+    "canned beef hamburger tomato",
+    "beef patty tomato sauce canned",
+    "hamburger steak canned",
+    "canned hamburger steak",
+    "beef in tomato sauce canned",
+    "hamburger tomato sauce tin",
+    "canned beef patty tomato",
+    "tinned hamburger beef tomato"
+  ],
+  "fnri_R031": [
+    "kare kare canned",
+    "canned kare kare",
+    "beef kare kare can",
+    "kare-kare tin",
+    "tinned kare kare",
+    "canned peanut beef stew",
+    "beef oxtail kare kare canned",
+    "ready to eat kare kare"
+  ],
+  "fnri_R032": [
+    "mechado canned",
+    "canned mechado",
+    "beef mechado can",
+    "tinned mechado",
+    "beef roll mechado canned",
+    "canned beef roll mechado",
+    "mechado beef tin",
+    "ready to eat mechado"
+  ],
+  "fnri_R033": [
+    "morcon canned",
+    "canned morcon",
+    "beef morcon can",
+    "tinned morcon",
+    "canned beef roll morcon",
+    "morcon beef tin",
+    "stuffed beef roll canned",
+    "canned filipino beef roll"
+  ],
+  "fnri_R034": [
+    "canned beef steak",
+    "beef steak can",
+    "bistek canned",
+    "tinned beef steak",
+    "canned beefsteak",
+    "beef steak in can",
+    "ready to eat beef steak",
+    "bistek tin canned"
+  ],
+  "fnri_R035": [
+    "canned beef stew",
+    "beef stew can",
+    "tinned beef stew",
+    "ready to eat beef stew",
+    "beef stew in can",
+    "canned braised beef",
+    "beef stew tin",
+    "slow cooked beef stew canned"
+  ]
+}
