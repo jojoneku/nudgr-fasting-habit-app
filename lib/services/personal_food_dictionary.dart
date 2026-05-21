@@ -114,8 +114,18 @@ class PersonalFoodDictionary {
     await _persist();
   }
 
+  /// Plan 027 §2.1 — nuclear reset. Used by the Settings "Reset learned
+  /// foods" button so users can recover from old bad entries (e.g. "rice"
+  /// stuck on Sapin-Sapin from pre-v10 days).
+  Future<void> clearAll() async {
+    _map.clear();
+    await _persist();
+  }
+
   List<PersonalFoodEntry> all() => _map.values.toList()
     ..sort((a, b) => b.lastUsedAt.compareTo(a.lastUsedAt));
+
+  int get count => _map.length;
 
   void _evictIfNeeded() {
     if (_map.length <= _maxEntries) return;

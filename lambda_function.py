@@ -35,6 +35,8 @@ def lambda_handler(event, context):
         return _extract_food_items(payload)
     if op == "estimateMacros":
         return _estimate_macros(payload)
+    if op == "parseFoodWithCandidates":
+        return _parse_food_with_candidates(payload)
     if op == "respond":
         return _respond(payload)
 
@@ -94,6 +96,136 @@ def _extract_food_items(payload):
         parse_fn=lambda parsed: _resp(200, {"items": parsed.get("items", [])}),
         fallback={"items": []},
     )
+
+
+def _parse_food_with_candidates(payload):
+    """Plan 026 — single-call extract + resolve + estimate.
+
+    Takes the raw meal text plus a pre-fetched candidate pool from the
+    client's FTS/alias-aware retrieval. Returns each extracted item with
+    either:
+      - food_id + confidence (when a candidate matches), OR
+      - estimated_macros (when no candidate fits; Haiku estimates from
+        its own knowledge).
+    """
+    text = (payload.get("text") or "").strip()
+    if not text:
+        return _resp(400, {"error": "missing_text"})
+
+    candidates = payload.get("candidates") or []
+    if candidates:
+        candidates_text = "\n".join(
+            f"- id: {c.get('food_id', c.get('id', '?'))}, name: {c.get('name', '?')}"
+            for c in candidates[:15]
+        )
+        candidates_block = (
+            f"\n\nCandidate foods from the user's database (pick from these when one matches):\n"
+            f"{candidates_text}\n"
+        )
+    else:
+        candidates_block = "\n\nNo candidates provided — estimate macros for every item from your own knowledge.\n"
+
+    prompt = (
+        f'Extract all food items from this meal description:\n"{text}"\n'
+        f"{candidates_block}\n"
+        "For each item, output one object with these fields:\n"
+        '  "name": short food name\n'
+        '  "grams": estimated portion size in grams (use 100 when unclear)\n'
+        '  "hyde": short descriptive phrase for later search (e.g. "cooked white rice, steamed, plain")\n'
+        '  "food_id": id of the best candidate match, or null if no candidate fits well\n'
+        '  "confidence": 0.0 to 1.0 — your confidence in the food_id pick (ignored when food_id is null)\n'
+        '  "estimated_macros": REQUIRED when food_id is null; otherwise null.\n'
+        '                       Object: {"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number}\n'
+        "\n"
+        'At the top level, also set "intent" to one of:\n'
+        '  "single_dish" — the user is logging ONE composite dish whose ingredients '
+        "happen to be named (connectors like 'with', 'at', 'into'; OR no per-item weights; "
+        "OR a single total weight at the start like '150g egg with sardines'). The client "
+        "will combine the items into one log entry.\n"
+        '  "items_list" — the user is logging SEPARATE items, each with their own portion '
+        "(per-item weights like '100g rice and 80g chicken'; commas or 'and' as list separators; "
+        "or items that are clearly different courses). The client will log them separately.\n"
+        '  When in doubt, prefer "single_dish" only if a connector like "with" / "at" is used '
+        "with at most 4 ingredients. Otherwise default to \"items_list\".\n"
+        "\n"
+        "Rules:\n"
+        "- Pick food_id only when the candidate clearly matches; if unsure, set null and estimate macros.\n"
+        "- Macros are per the whole item (not per 100g) — multiply by grams/100 mentally before answering.\n"
+        "- Use standard nutritional values; round to one decimal place.\n"
+        "\n"
+        "Reply with ONLY valid JSON, no markdown, no commentary:\n"
+        '{"intent": "single_dish" | "items_list", "items": [...]}\n'
+    )
+
+    return _invoke_bedrock(
+        prompt=prompt,
+        max_tokens=1024,
+        parse_fn=lambda parsed: _emit_parse_food_response(parsed),
+        fallback={"intent": "items_list", "items": []},
+    )
+
+
+def _emit_parse_food_response(parsed):
+    normalized = _normalize_parsed_items(parsed)
+    items = normalized.get("items", [])
+    resolved = sum(1 for i in items if i.get("food_id"))
+    estimated = sum(1 for i in items if i.get("estimated_macros"))
+    intent = normalized.get("intent", "items_list")
+    # Structured cost-monitoring log line — picked up by CloudWatch Insights.
+    print(
+        f"cost_line op=parseFoodWithCandidates items={len(items)} "
+        f"resolved={resolved} estimated={estimated} intent={intent}"
+    )
+    return _resp(200, normalized)
+
+
+def _normalize_parsed_items(parsed):
+    """Coerce the model output into the response schema with safe defaults."""
+    intent = parsed.get("intent")
+    if intent not in ("single_dish", "items_list"):
+        intent = "items_list"  # safe default
+    items_in = parsed.get("items") or []
+    items_out = []
+    for it in items_in:
+        if not isinstance(it, dict):
+            continue
+        name = (it.get("name") or "").strip()
+        if not name:
+            continue
+        try:
+            grams = float(it.get("grams") or 100)
+        except (TypeError, ValueError):
+            grams = 100.0
+        food_id = it.get("food_id")
+        if food_id in ("", "null", None):
+            food_id = None
+        else:
+            # Haiku sometimes returns numeric ids when the source ids look
+            # numeric; the Dart side expects a string. Coerce defensively.
+            food_id = str(food_id)
+        try:
+            confidence = float(it.get("confidence") or 0.0)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        macros = it.get("estimated_macros")
+        if macros is not None and isinstance(macros, dict):
+            macros = {
+                "calories": float(macros.get("calories") or 0),
+                "protein_g": float(macros.get("protein_g") or 0),
+                "carbs_g": float(macros.get("carbs_g") or 0),
+                "fat_g": float(macros.get("fat_g") or 0),
+            }
+        else:
+            macros = None
+        items_out.append({
+            "name": name,
+            "grams": grams,
+            "hyde": (it.get("hyde") or name).strip(),
+            "food_id": food_id,
+            "confidence": confidence,
+            "estimated_macros": macros,
+        })
+    return {"intent": intent, "items": items_out}
 
 
 def _estimate_macros(payload):

@@ -206,7 +206,7 @@ class NutritionPresenter extends ChangeNotifier {
   String? _parseError;
 
   // ── Cloud AI (optional upgrade tier for disambiguation) ──────────────────
-  AiCoachService? _cloudAi;
+  final AiCoachService? _cloudAi;
 
   // ── Chat + exercise state ─────────────────────────────────────────────────
   DateTime _selectedDate = DateTime.now();
@@ -420,6 +420,79 @@ class NutritionPresenter extends ChangeNotifier {
   bool get isAiAvailable => _ai.isAvailable;
   bool get isAiEstimating => _isAiEstimating;
   bool get isAiDownloading => _ai.downloadProgress != null;
+
+  /// True when the cloud tier is wired in (constructor passed cloudAi) AND
+  /// the user has flipped it on AND a valid auth token is present. Used by
+  /// the UI to surface a status chip so the user knows logs will go through
+  /// Bedrock Haiku.
+  bool get isCloudAiAvailable => _cloudAi?.isAvailable ?? false;
+
+  /// True when the cloud service is wired in but currently not available —
+  /// usually means signed out or settings toggle off. Distinct from "not
+  /// wired in at all" so the chip can show a muted state.
+  bool get isCloudAiConfigured => _cloudAi != null;
+
+  // ── First-run AI prompt (Plan 027 §3.2) ──────────────────────────────────
+
+  static const Duration _aiPromptCooldown = Duration(days: 7);
+
+  /// True when neither cloud (signed in + toggle on) nor on-device AI is
+  /// usable AND the user hasn't skipped the prompt within the cool-down
+  /// window. Drives the "Set up smart food logging" modal.
+  Future<bool> shouldShowAiPrompt() async {
+    if (isCloudAiAvailable || isAiAvailable) return false;
+    final skippedAt = await _storage.loadAiPromptSkippedAt();
+    if (skippedAt == null) return true;
+    final since = DateTime.fromMillisecondsSinceEpoch(skippedAt);
+    return DateTime.now().difference(since) >= _aiPromptCooldown;
+  }
+
+  /// Persist the skip timestamp so we don't nag for [_aiPromptCooldown].
+  Future<void> skipAiPrompt() async {
+    await _storage.saveAiPromptSkippedAt(DateTime.now().millisecondsSinceEpoch);
+  }
+
+  /// Clear the skip timestamp — used after sign-in / download succeeds so
+  /// future "no AI" sessions show the prompt again.
+  Future<void> resetAiPromptCooldown() async {
+    await _storage.saveAiPromptSkippedAt(null);
+  }
+
+  // ── Personal dict access (Plan 027 §2) ───────────────────────────────────
+
+  int get learnedFoodCount => _personalDict.count;
+  List<PersonalFoodEntry> get learnedFoods => _personalDict.all();
+
+  Future<void> clearLearnedFoods() async {
+    await _personalDict.clearAll();
+    notifyListeners();
+  }
+
+  Future<void> removeLearnedFood(String name) async {
+    await _personalDict.remove(name);
+    notifyListeners();
+  }
+
+  /// Plan 027 — let the user correct a learned food's per-100g macros when
+  /// the auto-promoted estimate was wrong. Reuses [PersonalFoodDictionary.upsert]
+  /// which overwrites the existing entry by normalized key.
+  Future<void> updateLearnedFood({
+    required String name,
+    required double kcalPer100g,
+    double? proteinPer100g,
+    double? carbsPer100g,
+    double? fatPer100g,
+  }) async {
+    await _personalDict.upsert(
+      name: name,
+      kcalPer100g: kcalPer100g,
+      proteinPer100g: proteinPer100g,
+      carbsPer100g: carbsPer100g,
+      fatPer100g: fatPer100g,
+    );
+    notifyListeners();
+  }
+
   int get aiDownloadProgress => _ai.downloadProgress ?? 0;
   String get aiSizeLabel => '~586 MB';
   AiMealEstimate? get lastEstimate => _lastEstimate;
@@ -1277,12 +1350,37 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> _parseChatAsFood(String text) async {
-    // Plan 022 §2 — three-layer pipeline replacing the old 6-step dance.
-    //   Layer 1: AI single-pass extraction (or NLP fallback when no AI).
-    //   Layer 2: per-item resolution: personal dict → hybrid FTS + semantic.
-    //   Layer 3: confidence-gated commit with optional swap chips.
+    // Plan 026/027 — tiered single-call pipeline.
+    //   Path A (cloud, Plan 026): Bedrock single call extracts + resolves +
+    //     estimates macros for off-DB foods. Highest quality.
+    //   Path B (on-device single-call, Plan 027 §2.1): Qwen extracts +
+    //     picks from candidates. No macro estimation — falls through to
+    //     keyword bucket for unmatched items.
+    //   Path C (on-device legacy, Plan 022): extractFoodItems + per-item
+    //     personal dict → hybrid FTS+semantic → keyword fallback. Reached
+    //     when paths A and B both return null/fail.
 
-    // ── Layer 1: extract items + grams + HyDE descriptions ────────────────
+    // Path A: cloud-primary single call.
+    if ((_cloudAi?.isAvailable ?? false)) {
+      final cloudResult = await _tryCloudParseFood(text);
+      if (cloudResult != null) {
+        await _commitFoodChat(
+            text, cloudResult.entries, cloudResult.alts, cloudResult.rawTexts);
+        return;
+      }
+    }
+
+    // Path B: on-device single-call (Plan 027 §2.1).
+    if (_ai.isAvailable) {
+      final localResult = await _tryLocalParseFood(text);
+      if (localResult != null) {
+        await _commitFoodChat(
+            text, localResult.entries, localResult.alts, localResult.rawTexts);
+        return;
+      }
+    }
+
+    // Path C: on-device extraction → per-item local resolution.
     List<ExtractedFoodItem> items = const [];
     if (_ai.isAvailable) {
       try {
@@ -1346,11 +1444,9 @@ class NutritionPresenter extends ChangeNotifier {
               confidence: hybrid.confidence,
             );
         entries.add(entry);
-        // Learn confident matches into personal dict for instant next-time.
-        if (hybrid.confidence >= 0.75) {
-          // ignore: unawaited_futures
-          _learnFromEntry(item.name, entry);
-        }
+        // Plan 027 §2.1 — local hybrid resolve no longer auto-promotes to the
+        // personal dict (too risky for false positives). Cloud-confirmed
+        // picks still do, and the user can save manually via the chat row.
         // Stash up to 2 alternatives when the auto-pick was uncertain so
         // the chat row can render swap chips (ChatFoodItem.needsConfirmation
         // gates the rendering at the < 0.6 threshold).
@@ -1403,6 +1499,342 @@ class NutritionPresenter extends ChangeNotifier {
       );
     }
 
+    await _commitFoodChat(
+      text,
+      entries,
+      altsList,
+      [for (final item in items) item.rawText],
+    );
+  }
+
+  // ── On-device single-call path (Plan 027 §2.1) ───────────────────────────
+
+  /// On-device parallel to [_tryCloudParseFood]. Qwen extracts items and
+  /// picks from candidates; unmatched items get null food_id and we fall
+  /// through to keyword-bucket synthesis here so the user still gets *some*
+  /// entry logged. Returns null on total failure so caller falls through to
+  /// the legacy hybrid path.
+  Future<_CloudParseResult?> _tryLocalParseFood(String text) async {
+    try {
+      final candidates = await _buildCandidatePool(text);
+      final extracted = await _ai
+          .parseFoodWithCandidates(text, candidates)
+          .timeout(const Duration(seconds: 30));
+      if (extracted == null || extracted.items.isEmpty) return null;
+
+      final entries = <FoodEntry>[];
+      final altsList = <List<ChatFoodAlternative>>[];
+      final rawTexts = <String>[];
+
+      for (final item in extracted.items) {
+        rawTexts.add(item.rawText);
+        FoodEntry? entry;
+
+        // Personal dict precedence.
+        final dictHit = _personalDict.lookup(item.name);
+        if (dictHit != null) {
+          entry = _buildEntryFromDict(
+            ParsedFoodItem(
+                rawText: item.rawText,
+                name: item.name,
+                grams: item.grams,
+                isEstimated: false),
+            dictHit,
+          );
+        } else if (item.resolvedFoodId != null &&
+            item.resolverConfidence >= 0.6) {
+          final hit = await _foodDb.getById(item.resolvedFoodId!);
+          if (hit != null) {
+            entry = hit.toFoodEntry(item.grams).copyWith(
+                  estimationSource: EstimationSource.localAi,
+                  confidence: item.resolverConfidence,
+                );
+          }
+        }
+
+        // No DB hit + no dict hit → keyword bucket fallback. Qwen does not
+        // estimate macros itself in this tier (Plan 027 §2.1 pick-only).
+        if (entry == null) {
+          final estKcal = _estimateCalories(item.name, item.grams);
+          final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+          entry = FoodEntry(
+            id: FoodEntry.generateId(),
+            name: _formatDisplayName(item.name),
+            calories: estKcal,
+            protein: estProtein,
+            carbs: estCarbs,
+            fat: estFat,
+            grams: item.grams,
+            estimationSource: EstimationSource.keywordDensity,
+            confidence: 0.3,
+            loggedAt: DateTime.now(),
+          );
+        }
+
+        entries.add(entry);
+        altsList.add(const []);
+      }
+
+      // Plan 027 — collapse into one entry when AI flagged the input as a
+      // single composite dish (e.g. "egg with sardines"). Keeps the log
+      // tidy without losing macro accuracy.
+      if (extracted.intent == ParseIntent.singleDish && entries.length > 1) {
+        final combined = _combineEntriesAsOneDish(entries, text);
+        return _CloudParseResult(
+          entries: [combined],
+          alts: const [[]],
+          rawTexts: [text],
+        );
+      }
+
+      return _CloudParseResult(
+        entries: entries,
+        alts: altsList,
+        rawTexts: rawTexts,
+      );
+    } catch (e) {
+      debugPrint('NutritionPresenter: local parse failed: $e');
+      return null;
+    }
+  }
+
+  // ── Cloud-primary path (Plan 026) ───────────────────────────────────────
+
+  /// Single Bedrock call that extracts items, picks `food_id` from a
+  /// pre-fetched candidate pool, and estimates macros for unmatched items.
+  /// Returns null on any failure so the caller can fall back to on-device.
+  Future<_CloudParseResult?> _tryCloudParseFood(String text) async {
+    final cloud = _cloudAi;
+    if (cloud == null || !cloud.isAvailable) return null;
+
+    try {
+      // Build candidate pool from alias-aware FTS over the whole text plus
+      // each NLP-detected fragment. Total budget: <100ms.
+      final candidates = await _buildCandidatePool(text);
+
+      final extracted = await cloud
+          .parseFoodWithCandidates(text, candidates)
+          .timeout(const Duration(seconds: 25));
+      if (extracted == null || extracted.items.isEmpty) return null;
+
+      // IF-Sync gate runs at commit time, not here.
+      final entries = <FoodEntry>[];
+      final altsList = <List<ChatFoodAlternative>>[];
+      final rawTexts = <String>[];
+
+      for (final item in extracted.items) {
+        rawTexts.add(item.rawText);
+        FoodEntry? entry;
+
+        // Personal dict precedence — saves a round-trip the next time.
+        final dictHit = _personalDict.lookup(item.name);
+        if (dictHit != null) {
+          entry = _buildEntryFromDict(
+            ParsedFoodItem(
+                rawText: item.rawText,
+                name: item.name,
+                grams: item.grams,
+                isEstimated: false),
+            dictHit,
+          );
+        } else if (item.resolvedFoodId != null &&
+            item.resolverConfidence >= 0.6) {
+          // Cloud picked a DB candidate. Hydrate from DB for fresh macros.
+          // Tag as cloudAi so the badge shows "Cloud" — the resolution was
+          // cloud-driven even though the macros came from the DB row.
+          final hit = await _foodDb.getById(item.resolvedFoodId!);
+          if (hit != null) {
+            entry = hit.toFoodEntry(item.grams).copyWith(
+                  estimationSource: EstimationSource.cloudAi,
+                  confidence: item.resolverConfidence,
+                );
+            // Auto-promote confident cloud-resolved picks to personal dict.
+            if (item.resolverConfidence >= 0.8) {
+              // ignore: unawaited_futures
+              _learnFromEntry(item.name, entry);
+            }
+          }
+        } else if (item.estimatedMacros != null) {
+          // Cloud couldn't pick a DB candidate; use its open-ended estimate.
+          final m = item.estimatedMacros!;
+          entry = FoodEntry(
+            id: FoodEntry.generateId(),
+            name: _formatDisplayName(item.name),
+            calories: m.calories.round(),
+            protein: m.proteinG,
+            carbs: m.carbsG,
+            fat: m.fatG,
+            grams: item.grams,
+            // Plan 027 §2.2 — cloud-estimated (no DB candidate) entries get
+            // the cloudAi badge so users can distinguish them from local AI
+            // estimates and from raw keyword fallbacks.
+            estimationSource: EstimationSource.cloudAi,
+            confidence:
+                item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
+            loggedAt: DateTime.now(),
+          );
+          // Auto-promote even AI estimates when the model was confident.
+          if (item.resolverConfidence >= 0.8 && m.calories > 0) {
+            // ignore: unawaited_futures
+            _personalDict.upsert(
+              name: item.name,
+              kcalPer100g: m.calories / (item.grams / 100.0),
+              proteinPer100g: m.proteinG / (item.grams / 100.0),
+              carbsPer100g: m.carbsG / (item.grams / 100.0),
+              fatPer100g: m.fatG / (item.grams / 100.0),
+            );
+          }
+        }
+
+        if (entry == null) {
+          // Neither cloud-resolved nor cloud-estimated nor in dict.
+          // Bail and let the on-device path try.
+          return null;
+        }
+
+        entries.add(entry);
+        altsList.add(const []);
+      }
+
+      // Plan 027 — collapse into one entry when AI flagged the input as a
+      // single composite dish (e.g. "egg with sardines"). Keeps the log
+      // tidy without losing macro accuracy.
+      if (extracted.intent == ParseIntent.singleDish && entries.length > 1) {
+        final combined = _combineEntriesAsOneDish(entries, text);
+        return _CloudParseResult(
+          entries: [combined],
+          alts: const [[]],
+          rawTexts: [text],
+        );
+      }
+
+      return _CloudParseResult(
+        entries: entries,
+        alts: altsList,
+        rawTexts: rawTexts,
+      );
+    } catch (e) {
+      debugPrint('NutritionPresenter: cloud parse failed: $e');
+      return null;
+    }
+  }
+
+  /// Plan 027 — sum a list of [FoodEntry] into a single combined entry whose
+  /// name is the user's original input. Used when the AI flags a multi-item
+  /// extraction as a single composite dish. The resulting `estimationSource`
+  /// is the worst-quality (most-degraded) source among constituents so the
+  /// badge accurately reflects the lowest-confidence ingredient.
+  FoodEntry _combineEntriesAsOneDish(
+      List<FoodEntry> parts, String originalText) {
+    int cal = 0;
+    double? p = 0, c = 0, f = 0;
+    double grams = 0;
+    double minConfidence = 1.0;
+    EstimationSource worstSource = EstimationSource.db;
+    const sourceRank = {
+      EstimationSource.db: 0,
+      EstimationSource.personalDict: 0,
+      EstimationSource.userManual: 0,
+      EstimationSource.cloudAi: 1,
+      EstimationSource.localAi: 2,
+      EstimationSource.aiPerItem: 2,
+      EstimationSource.keywordDensity: 3,
+    };
+    for (final e in parts) {
+      cal += e.calories;
+      if (e.protein != null) p = (p ?? 0) + e.protein!;
+      if (e.carbs != null) c = (c ?? 0) + e.carbs!;
+      if (e.fat != null) f = (f ?? 0) + e.fat!;
+      if (e.grams != null) grams += e.grams!;
+      if ((e.confidence ?? 1.0) < minConfidence) minConfidence = e.confidence!;
+      if ((sourceRank[e.estimationSource] ?? 0) >
+          (sourceRank[worstSource] ?? 0)) {
+        worstSource = e.estimationSource;
+      }
+    }
+    return FoodEntry(
+      id: FoodEntry.generateId(),
+      name: _formatDisplayName(originalText),
+      calories: cal,
+      protein: p,
+      carbs: c,
+      fat: f,
+      grams: grams > 0 ? grams : null,
+      estimationSource: worstSource,
+      confidence: minConfidence,
+      loggedAt: DateTime.now(),
+    );
+  }
+
+  /// Builds a deduped candidate pool from alias-aware FTS. Searches:
+  ///   (a) the whole text — catches the dominant food
+  ///   (b) each NLP-detected fragment — catches multi-item meals
+  /// Top-15 final, ordered by combined FTS rank.
+  /// Aggressive splitter for retrieval — broader than [FoodNlpParser]'s
+  /// splitter because for candidate retrieval we want a hit per ingredient
+  /// even when the user uses connectors the NLP parser keeps glued
+  /// ("egg with sardines", "ulam at kanin", "pork into talong").
+  ///
+  /// Splits on: , and + plus with at na o in into. Drops 1–2 char tokens.
+  static final _candidateSplitter = RegExp(
+    r'\s*(?:,|\band\b|\bplus\b|\+|\bwith\b|\bat\b|\bna\b|\bo\b|\bin\b|\binto\b)\s*',
+    caseSensitive: false,
+  );
+
+  List<String> _splitForCandidateRetrieval(String text) {
+    return text
+        .split(_candidateSplitter)
+        .map((f) => f.trim())
+        .where((f) => f.length >= 3)
+        .toList();
+  }
+
+  /// Builds a deduped candidate pool by querying FTS over the whole text
+  /// AND each ingredient fragment, then **round-robin** filling the final
+  /// pool so multi-ingredient queries get representation from every
+  /// fragment instead of being dominated by the first one.
+  Future<List<FoodSearchCandidate>> _buildCandidatePool(String text) async {
+    final fragments = _splitForCandidateRetrieval(text);
+    // Search the whole text + each distinct fragment (skip dupes of full text).
+    final queries = <String>{text, ...fragments}.toList();
+    final searches = queries.map((q) => _foodDb.search(q)).toList();
+    final hitLists = await Future.wait(searches);
+
+    // Round-robin: take position 0 from each list, then position 1, etc.
+    // This guarantees fragment hits aren't squeezed out by a dominant
+    // whole-text hit list.
+    final seen = <String, FoodSearchCandidate>{};
+    const maxTotal = 15;
+    final maxDepth =
+        hitLists.fold<int>(0, (m, list) => list.length > m ? list.length : m);
+    for (var depth = 0; depth < maxDepth; depth++) {
+      for (final list in hitLists) {
+        if (depth >= list.length) continue;
+        final hit = list[depth];
+        seen.putIfAbsent(
+          hit.id,
+          () => FoodSearchCandidate(
+            entry: hit,
+            score: 1.0,
+            source: SearchSource.fts5,
+          ),
+        );
+        if (seen.length >= maxTotal) break;
+      }
+      if (seen.length >= maxTotal) break;
+    }
+    return seen.values.toList();
+  }
+
+  /// Shared commit path for both cloud and on-device branches. Adds
+  /// entries to today's log, builds the chat message, persists, and runs
+  /// streak/goal checks.
+  Future<void> _commitFoodChat(
+    String text,
+    List<FoodEntry> entries,
+    List<List<ChatFoodAlternative>> altsList,
+    List<String> rawTexts,
+  ) async {
     // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
 
@@ -1417,11 +1849,11 @@ class NutritionPresenter extends ChangeNotifier {
       timestamp: DateTime.now(),
       kind: ChatMessageKind.food,
       foodItems: [
-        for (var i = 0; i < items.length; i++)
+        for (var i = 0; i < entries.length; i++)
           ChatFoodItem.fromFoodEntry(
             entries[i],
-            amountText: items[i].rawText,
-            alternatives: altsList[i],
+            amountText: i < rawTexts.length ? rawTexts[i] : entries[i].name,
+            alternatives: i < altsList.length ? altsList[i] : const [],
           ),
       ],
       mealSlot: MealSlot.meal,
@@ -2069,5 +2501,18 @@ class _HybridMatch {
     required this.pick,
     required this.alternatives,
     required this.confidence,
+  });
+}
+
+/// Plan 026 — result bundle for the cloud-primary food parse path.
+class _CloudParseResult {
+  final List<FoodEntry> entries;
+  final List<List<ChatFoodAlternative>> alts;
+  final List<String> rawTexts;
+
+  const _CloudParseResult({
+    required this.entries,
+    required this.alts,
+    required this.rawTexts,
   });
 }
