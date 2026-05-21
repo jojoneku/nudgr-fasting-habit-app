@@ -221,11 +221,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _storage.onRemoteDataApplied = _reloadAll;
     _storage.onDirty = _syncService!.schedulePush;
     await _syncService!.init();
-    // Flush any queued offline changes first, then do the initial push of
-    // pre-existing local data (runs once per user per device), then pull.
+    // Pull cloud data first so a fresh install (cleared SharedPrefs) never
+    // overwrites existing cloud data with empty local state in pushAll().
+    await _syncService!.pullAll();
+    // Flush queued offline changes, then do the once-per-device initial push.
     await _syncService!.pushPending();
     await _syncService!.pushAll();
-    await _syncService!.pullAll();
     if (mounted) setState(() {});
   }
 
@@ -242,6 +243,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void _reloadAll() {
     _fastingPresenter.loadState();
     _questPresenter.reload();
+    _activityPresenter.loadState();
     _nutritionPresenter?.loadState();
   }
 
