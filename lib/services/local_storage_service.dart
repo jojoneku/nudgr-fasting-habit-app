@@ -1183,6 +1183,22 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<void> saveAiPromptSkippedAt(int? msSinceEpoch) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (msSinceEpoch == null) {
+      await prefs.remove(StorageService.kAiPromptSkippedAt);
+    } else {
+      await prefs.setInt(StorageService.kAiPromptSkippedAt, msSinceEpoch);
+    }
+  }
+
+  @override
+  Future<int?> loadAiPromptSkippedAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(StorageService.kAiPromptSkippedAt);
+  }
+
+  @override
   Future<void> importAllData(String jsonString) async {
     final prefs = await SharedPreferences.getInstance();
     try {

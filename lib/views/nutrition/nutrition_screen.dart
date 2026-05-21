@@ -64,13 +64,21 @@ class _NutritionBody extends StatelessWidget {
                 onPressed: () => Navigator.pop(context),
               )
             : null,
-        title: Text(
-          'Nutrition',
-          style: TextStyle(
-            color: cs.onSurface,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              'Nutrition',
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(width: 8),
+            _AiTierBadge(presenter: presenter),
+          ],
         ),
         actions: [
           IconButton(
@@ -110,7 +118,7 @@ class _NutritionBody extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _WeekStripRow(presenter: presenter),
+            _WeekStrip(presenter: presenter),
             _StatSection(presenter: presenter),
             Expanded(child: _ChatFeed(presenter: presenter)),
             _SmartSearchBanner(presenter: presenter),
@@ -122,25 +130,173 @@ class _NutritionBody extends StatelessWidget {
   }
 }
 
-// ─── Week Strip ───────────────────────────────────────────────────────────────
+// ─── AI Tier Badge ────────────────────────────────────────────────────────────
 
-class _WeekStripRow extends StatelessWidget {
+class _AiTierBadge extends StatelessWidget {
   final NutritionPresenter presenter;
-  const _WeekStripRow({required this.presenter});
+  const _AiTierBadge({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final monday = today.subtract(Duration(days: today.weekday - 1));
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: AppDayChipRow(
-        selectedDate: presenter.selectedDate,
-        weekStart: monday,
-        onSelected: (day) {
-          if (!day.isAfter(today)) presenter.setSelectedDate(day);
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        final cs = Theme.of(context).colorScheme;
+        final isCloud = presenter.isCloudAiConfigured &&
+            presenter.isCloudAiAvailable;
+        final label = isCloud ? 'Cloud' : 'Local';
+        final icon =
+            isCloud ? Icons.cloud_outlined : Icons.phone_android_outlined;
+        final color = isCloud ? cs.primary : cs.outline;
+
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: color.withValues(alpha: 0.35), width: 0.8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 11, color: color),
+              const SizedBox(width: 3),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ─── Week Strip ───────────────────────────────────────────────────────────────
+
+class _WeekStrip extends StatefulWidget {
+  final NutritionPresenter presenter;
+  const _WeekStrip({required this.presenter});
+
+  @override
+  State<_WeekStrip> createState() => _WeekStripState();
+}
+
+class _WeekStripState extends State<_WeekStrip> {
+  late DateTime _weekStart;
+
+  static DateTime _mondayOf(DateTime date) {
+    final d = DateUtils.dateOnly(date);
+    return d.subtract(Duration(days: d.weekday - 1));
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _weekStart = _mondayOf(widget.presenter.selectedDate);
+  }
+
+  void _goBack() =>
+      setState(() => _weekStart = _weekStart.subtract(const Duration(days: 7)));
+
+  void _goForward() {
+    final currentMonday = _mondayOf(DateUtils.dateOnly(DateTime.now()));
+    if (_weekStart.isBefore(currentMonday)) {
+      setState(() => _weekStart = _weekStart.add(const Duration(days: 7)));
+    }
+  }
+
+  void _openMonthPicker(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Pick Date',
+      body: _MonthPicker(
+        selectedDate: widget.presenter.selectedDate,
+        onDateSelected: (date) {
+          setState(() => _weekStart = _mondayOf(date));
+          widget.presenter.setSelectedDate(date);
         },
       ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final today = DateUtils.dateOnly(DateTime.now());
+    final currentMonday = _mondayOf(today);
+    final canGoForward = _weekStart.isBefore(currentMonday);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  icon: Icon(Icons.chevron_left,
+                      color: theme.colorScheme.onSurfaceVariant),
+                  iconSize: 22,
+                  padding: EdgeInsets.zero,
+                  onPressed: _goBack,
+                  tooltip: 'Previous week',
+                ),
+              ),
+              Expanded(
+                child: AppDayChipRow(
+                  selectedDate: widget.presenter.selectedDate,
+                  weekStart: _weekStart,
+                  onSelected: (day) {
+                    if (!day.isAfter(today))
+                      widget.presenter.setSelectedDate(day);
+                  },
+                ),
+              ),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  icon: Icon(
+                    Icons.chevron_right,
+                    color: canGoForward
+                        ? theme.colorScheme.onSurfaceVariant
+                        : theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.25),
+                  ),
+                  iconSize: 22,
+                  padding: EdgeInsets.zero,
+                  onPressed: canGoForward ? _goForward : null,
+                  tooltip: 'Next week',
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Calendar expand handle — full-width strip so it's easy to tap
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => _openMonthPicker(context),
+          child: SizedBox(
+            width: double.infinity,
+            height: 24,
+            child: Icon(
+              Icons.keyboard_arrow_down_rounded,
+              size: 18,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -285,7 +441,7 @@ class _ColDivider extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         width: 1,
         height: 36,
-        margin: const EdgeInsets.symmetric(horizontal: 10),
+        margin: const EdgeInsets.symmetric(horizontal: 6),
         color: Theme.of(context).colorScheme.outlineVariant,
       );
 }
@@ -318,21 +474,31 @@ class _StatCell extends StatelessWidget {
             ),
             const SizedBox(height: 8),
           ],
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              height: 1,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                height: 1,
+              ),
+              maxLines: 1,
             ),
           ),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 10,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 10,
+              ),
+              maxLines: 1,
             ),
           ),
         ],
@@ -657,6 +823,146 @@ class _SmartSearchBanner extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Tiny pill above the chat input showing whether Cloud AI will handle the
+/// next food log. Hidden when cloud isn't configured at all (no endpoint).
+class _CloudStatusChip extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _CloudStatusChip({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        if (!presenter.isCloudAiConfigured) return const SizedBox.shrink();
+
+        final theme = Theme.of(context);
+        final active = presenter.isCloudAiAvailable;
+        final color =
+            active ? theme.colorScheme.primary : theme.colorScheme.outline;
+        final label = active ? 'Cloud AI' : 'Local only';
+        final icon =
+            active ? Icons.cloud_outlined : Icons.cloud_off_outlined;
+
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.10),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: color.withValues(alpha: 0.30),
+                    width: 0.8,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(icon, size: 12, color: color),
+                    const SizedBox(width: 4),
+                    Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Plan 027 §3.2 — first-run modal. Shown when the user opens the chat
+/// input but neither cloud (signed in + toggle on) nor on-device Qwen is
+/// available, and the user hasn't skipped within the cool-down window.
+class _FirstRunAiPrompt extends StatefulWidget {
+  final NutritionPresenter presenter;
+  const _FirstRunAiPrompt({required this.presenter});
+
+  @override
+  State<_FirstRunAiPrompt> createState() => _FirstRunAiPromptState();
+}
+
+class _FirstRunAiPromptState extends State<_FirstRunAiPrompt> {
+  bool _downloading = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return AlertDialog(
+      title: const Text('Set up smart food logging'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Food logging works best with AI to read your meal descriptions.',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '• On-device AI (~586 MB) — works offline, downloads once.\n'
+            '• Cloud AI — sign in via Settings → Cloud AI for higher quality.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Without AI, logging falls back to keyword matching — '
+            'low accuracy for out-of-database foods.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.error,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _downloading
+              ? null
+              : () async {
+                  await widget.presenter.skipAiPrompt();
+                  if (context.mounted) Navigator.pop(context);
+                },
+          child: const Text('Skip for now'),
+        ),
+        FilledButton(
+          onPressed: _downloading ? null : _onDownload,
+          child: _downloading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('Download AI'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _onDownload() async {
+    setState(() => _downloading = true);
+    try {
+      await widget.presenter.downloadAiModel();
+      await widget.presenter.resetAiPromptCooldown();
+    } catch (e) {
+      debugPrint('First-run AI download failed: $e');
+    }
+    if (mounted) Navigator.pop(context);
   }
 }
 
@@ -1642,11 +1948,15 @@ class _ChatInputBarState extends State<_ChatInputBar> {
   String? _suggestQuery;
   List<String> _suggestions = const [];
 
+  // Plan 027 §3.2 — show first-run AI prompt at most once per session.
+  bool _aiPromptShown = false;
+
   @override
   void initState() {
     super.initState();
     _ctrl.addListener(_onInputChanged);
     _focus.addListener(_onInputChanged);
+    _focus.addListener(_maybeShowAiPrompt);
   }
 
   @override
@@ -1654,9 +1964,23 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     _suggestTimer?.cancel();
     _ctrl.removeListener(_onInputChanged);
     _focus.removeListener(_onInputChanged);
+    _focus.removeListener(_maybeShowAiPrompt);
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  Future<void> _maybeShowAiPrompt() async {
+    if (_aiPromptShown || !_focus.hasFocus) return;
+    final should = await widget.presenter.shouldShowAiPrompt();
+    if (!should || !mounted) return;
+    _aiPromptShown = true;
+    // Drop focus so the keyboard doesn't fight the modal.
+    _focus.unfocus();
+    await showDialog<void>(
+      context: context,
+      builder: (_) => _FirstRunAiPrompt(presenter: widget.presenter),
+    );
   }
 
   void _onInputChanged() {
@@ -2084,6 +2408,173 @@ class _ManualFoodBodyState extends State<_ManualFoodBody> {
         const SizedBox(height: 16),
         AppPrimaryButton(label: 'Add', onPressed: _add),
         const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+// ─── Month Picker ─────────────────────────────────────────────────────────────
+
+class _MonthPicker extends StatefulWidget {
+  final DateTime selectedDate;
+  final ValueChanged<DateTime> onDateSelected;
+  const _MonthPicker(
+      {required this.selectedDate, required this.onDateSelected});
+
+  @override
+  State<_MonthPicker> createState() => _MonthPickerState();
+}
+
+class _MonthPickerState extends State<_MonthPicker> {
+  late DateTime _month; // normalized to day=1
+
+  static final _monthFmt = DateFormat('MMMM yyyy');
+  static const _dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
+  @override
+  void initState() {
+    super.initState();
+    _month = DateTime(widget.selectedDate.year, widget.selectedDate.month);
+  }
+
+  void _prevMonth() =>
+      setState(() => _month = DateTime(_month.year, _month.month - 1));
+
+  void _nextMonth() {
+    final now = DateTime.now();
+    final next = DateTime(_month.year, _month.month + 1);
+    if (!next.isAfter(DateTime(now.year, now.month))) {
+      setState(() => _month = next);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final today = DateUtils.dateOnly(DateTime.now());
+    final selected = DateUtils.dateOnly(widget.selectedDate);
+    final canGoForward = _month.isBefore(DateTime(today.year, today.month));
+
+    final daysInMonth = DateUtils.getDaysInMonth(_month.year, _month.month);
+    // Monday-first: Monday weekday = 1 → offset 0, Sunday = 7 → offset 6
+    final offset = _month.weekday - 1;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Month navigation
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.chevron_left),
+              onPressed: _prevMonth,
+              tooltip: 'Previous month',
+            ),
+            Expanded(
+              child: Text(
+                _monthFmt.format(_month),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleSmall
+                    ?.copyWith(fontWeight: FontWeight.w600),
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                Icons.chevron_right,
+                color: canGoForward
+                    ? null
+                    : theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.25),
+              ),
+              onPressed: canGoForward ? _nextMonth : null,
+              tooltip: 'Next month',
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        // Day-of-week labels
+        Row(
+          children: _dayLabels
+              .map((l) => Expanded(
+                    child: Text(
+                      l,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ),
+        const SizedBox(height: 6),
+        // Calendar grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 0,
+            crossAxisSpacing: 0,
+            childAspectRatio: 1.1,
+          ),
+          itemCount: offset + daysInMonth,
+          itemBuilder: (ctx, index) {
+            if (index < offset) return const SizedBox.shrink();
+
+            final dayNum = index - offset + 1;
+            final date =
+                DateUtils.dateOnly(DateTime(_month.year, _month.month, dayNum));
+            final isFuture = date.isAfter(today);
+            final isSelected = date == selected;
+            final isToday = date == today;
+
+            Color? bg;
+            Color fg;
+            BoxBorder? border;
+
+            if (isSelected) {
+              bg = theme.colorScheme.primary;
+              fg = theme.colorScheme.onPrimary;
+            } else if (isFuture) {
+              fg = theme.colorScheme.onSurface.withValues(alpha: 0.2);
+            } else if (isToday) {
+              border = Border.all(color: theme.colorScheme.primary, width: 1.5);
+              fg = theme.colorScheme.primary;
+            } else {
+              fg = theme.colorScheme.onSurface;
+            }
+
+            return GestureDetector(
+              onTap: isFuture
+                  ? null
+                  : () {
+                      Navigator.pop(ctx);
+                      widget.onDateSelected(date);
+                    },
+              child: Container(
+                margin: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: bg,
+                  shape: BoxShape.circle,
+                  border: border,
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$dayNum',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: fg,
+                    fontWeight: isSelected || isToday
+                        ? FontWeight.w700
+                        : FontWeight.w400,
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+        const SizedBox(height: 4),
       ],
     );
   }

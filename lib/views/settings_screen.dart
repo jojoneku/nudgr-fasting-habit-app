@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../presenters/ai_coach_presenter.dart';
@@ -68,10 +67,11 @@ class SettingsScreen extends StatelessWidget {
               builder: (context, _) => AppGroupedList(
                 sections: [
                   _accountGroupSection(context),
-                  if (nutritionPresenter != null) _bodySection(context),
                   if (nutritionPresenter?.isFoodSearchAvailable ?? false)
                     _smartSearchSection(context),
                   if (authPresenter.isSignedIn) _cloudAiSection(context),
+                  if (nutritionPresenter != null)
+                    _foodLearningSection(context),
                   _dataSection(context),
                   _aboutSection(context),
                   if (kDebugMode) _developerSection(context),
@@ -259,48 +259,14 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  AppGroupedListSection _bodySection(BuildContext context) {
-    final p = nutritionPresenter!;
-    final latest = p.latestWeight;
-    final delta = p.weightDelta;
-
-    String subtitle;
-    if (latest == null) {
-      subtitle = 'No entries yet';
-    } else {
-      subtitle = '${latest.weightKg.toStringAsFixed(1)} kg';
-      if (delta != null) {
-        final sign = delta >= 0 ? '+' : '';
-        subtitle += '  ($sign${delta.toStringAsFixed(1)} kg)';
-      }
-    }
-
-    return AppGroupedListSection(
-      title: 'Body',
-      children: [
-        AppListTile(
-          insetGrouped: true,
-          leading: const AppIconBadge(icon: Icons.monitor_weight_outlined),
-          title: const Text('Weight'),
-          subtitle: Text(subtitle),
-          trailing: const Icon(Icons.chevron_right, size: 18),
-          onTap: () => AppBottomSheet.show(
-            context: context,
-            title: 'Weight Log',
-            body: _WeightLogSheet(presenter: p),
-            isScrollControlled: true,
-          ),
-        ),
-      ],
-    );
-  }
-
   AppGroupedListSection _cloudAiSection(BuildContext context) {
     final theme = Theme.of(context);
     return AppGroupedListSection(
       title: 'Cloud AI',
-      footer: 'Sends food and chat data to Anthropic Claude via your account. '
-          'On-device AI still handles everything when disabled.',
+      footer: 'When on, Claude Haiku parses your food log in one call — '
+          'reading the local food DB as context to resolve items '
+          '(including out-of-DB foods with estimated macros). '
+          'Disable to use on-device AI only.',
       children: [
         Padding(
           padding: const EdgeInsets.symmetric(
@@ -324,7 +290,7 @@ class SettingsScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       'Claude Haiku via AWS Bedrock — '
-                      'smarter food disambiguation and chat.',
+                      'primary food parser when signed in.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -341,6 +307,88 @@ class SettingsScreen extends StatelessWidget {
         ),
       ],
     );
+  }
+
+  AppGroupedListSection _foodLearningSection(BuildContext context) {
+    final theme = Theme.of(context);
+    final p = nutritionPresenter!;
+    return AppGroupedListSection(
+      title: 'Food learning',
+      footer: 'Foods you log confidently are saved here for instant lookup '
+          'next time. If a wrong food got stuck (e.g. typing "rice" returns '
+          'a rice dessert), reset to clear and start fresh.',
+      children: [
+        ListenableBuilder(
+          listenable: p,
+          builder: (context, _) => Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm + 2,
+            ),
+            child: Row(
+              children: [
+                const AppIconBadge(icon: Icons.menu_book_outlined),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Learned foods',
+                          style: theme.textTheme.bodyLarge),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${p.learnedFoodCount} saved',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: p.learnedFoodCount == 0
+                      ? null
+                      : () => _confirmReset(context, p),
+                  child: const Text('Reset'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _confirmReset(
+      BuildContext context, NutritionPresenter presenter) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reset learned foods?'),
+        content: Text(
+          'This clears all ${presenter.learnedFoodCount} saved foods. '
+          'Next time you log them, the AI will resolve from scratch.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Reset'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await presenter.clearLearnedFoods();
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Learned foods reset.')),
+        );
+      }
+    }
   }
 
   AppGroupedListSection _dataSection(BuildContext context) {
@@ -873,140 +921,5 @@ class SettingsScreen extends StatelessWidget {
         ),
       ],
     );
-  }
-}
-
-// ─── Weight Log Sheet ─────────────────────────────────────────────────────────
-
-class _WeightLogSheet extends StatefulWidget {
-  final NutritionPresenter presenter;
-  const _WeightLogSheet({required this.presenter});
-
-  @override
-  State<_WeightLogSheet> createState() => _WeightLogSheetState();
-}
-
-class _WeightLogSheetState extends State<_WeightLogSheet> {
-  final _ctrl = TextEditingController();
-  bool _saving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    final latest = widget.presenter.latestWeight;
-    if (latest != null) {
-      _ctrl.text = latest.weightKg.toStringAsFixed(1);
-    }
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final kg = double.tryParse(_ctrl.text.trim());
-    if (kg == null || kg <= 0 || kg > 500) return;
-    setState(() => _saving = true);
-    await widget.presenter.logWeight(kg);
-    if (mounted) Navigator.pop(context);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return ListenableBuilder(
-      listenable: widget.presenter,
-      builder: (context, _) {
-        final freshHistory =
-            widget.presenter.weightLog.reversed.take(10).toList();
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    autofocus: true,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _save(),
-                    style: TextStyle(color: cs.onSurface, fontSize: 16),
-                    decoration: InputDecoration(
-                      labelText: 'Weight (kg)',
-                      labelStyle: TextStyle(color: cs.onSurfaceVariant),
-                      border: const OutlineInputBorder(),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  height: 44,
-                  child: AppPrimaryButton(
-                    label: _saving ? '…' : 'Log',
-                    onPressed: _saving ? null : _save,
-                  ),
-                ),
-              ],
-            ),
-            if (freshHistory.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              Text(
-                'RECENT',
-                style: TextStyle(
-                  color: cs.onSurfaceVariant,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.6,
-                ),
-              ),
-              const SizedBox(height: 6),
-              for (final entry in freshHistory)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${entry.weightKg.toStringAsFixed(1)} kg',
-                          style: TextStyle(color: cs.onSurface, fontSize: 14),
-                        ),
-                      ),
-                      Text(
-                        _formatDate(entry.loggedAt),
-                        style:
-                            TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-                      ),
-                      const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap: () => widget.presenter.deleteWeight(entry.id),
-                        child: Icon(Icons.close,
-                            size: 16, color: cs.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 8),
-          ],
-        );
-      },
-    );
-  }
-
-  String _formatDate(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays}d ago';
-    return DateFormat('MMM d').format(dt);
   }
 }

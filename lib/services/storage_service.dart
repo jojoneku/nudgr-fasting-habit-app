@@ -67,6 +67,7 @@ abstract class StorageService {
   static const String keyFoodIndexProgress = 'nutrition.foodIndexProgress';
   static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
+  static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   static const String keyWeightLog = 'weightLog';
   static const String keyNotificationPreferences = 'notification_preferences';
 
@@ -188,6 +189,11 @@ abstract class StorageService {
   //  Settings flags
   Future<void> saveUseCloudAi(bool value);
   Future<bool> loadUseCloudAi();
+
+  //  First-run AI prompt cool-down (Plan 027 §3.2). Stores the ms-since-epoch
+  //  timestamp when the user last skipped; null when they've never skipped.
+  Future<void> saveAiPromptSkippedAt(int? msSinceEpoch);
+  Future<int?> loadAiPromptSkippedAt();
 
   //  Export / Import ─
   Future<String> exportAllData();
