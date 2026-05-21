@@ -44,6 +44,8 @@ import 'package:intermittent_fasting/models/food_search_candidate.dart' as _i39;
 import 'package:intermittent_fasting/models/food_template.dart' as _i16;
 import 'package:intermittent_fasting/models/habit_routine.dart' as _i13;
 import 'package:intermittent_fasting/models/index_progress.dart' as _i7;
+import 'package:intermittent_fasting/models/notification_preferences.dart'
+    as _i52;
 import 'package:intermittent_fasting/models/nutrition_goals.dart' as _i4;
 import 'package:intermittent_fasting/models/personal_food_entry.dart' as _i26;
 import 'package:intermittent_fasting/models/quest.dart' as _i12;
@@ -1031,6 +1033,30 @@ class MockStorageService extends _i1.Mock implements _i9.StorageService {
         returnValue: _i10.Future<void>.value(),
         returnValueForMissingStub: _i10.Future<void>.value(),
       ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> saveNotificationPreferences(
+          _i52.NotificationPreferences? prefs) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveNotificationPreferences,
+          [prefs],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<_i52.NotificationPreferences> loadNotificationPreferences() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadNotificationPreferences,
+          [],
+        ),
+        returnValue: _i10.Future<_i52.NotificationPreferences>.value(
+          _i52.NotificationPreferences.defaults(),
+        ),
+      ) as _i10.Future<_i52.NotificationPreferences>);
 }
 
 /// A class which mocks [HealthService].
@@ -1467,6 +1493,128 @@ class MockNotificationService extends _i1.Mock
         Invocation.method(
           #cancel,
           [id],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> showLevelUpNotification(
+    int? level,
+    String? rank,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showLevelUpNotification,
+          [level, rank],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> showRankPromotionNotification(
+    String? fromRank,
+    String? toRank,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showRankPromotionNotification,
+          [fromRank, toRank],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> cancelAchievementNotifications() => (super.noSuchMethod(
+        Invocation.method(
+          #cancelAchievementNotifications,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> scheduleWeightReminder(_i51.TimeOfDay? time) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #scheduleWeightReminder,
+          [time],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> cancelWeightReminder() => (super.noSuchMethod(
+        Invocation.method(
+          #cancelWeightReminder,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> showCalorieGoalNotification(
+    int? calories,
+    int? goal,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showCalorieGoalNotification,
+          [calories, goal],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> scheduleBillsReminder(int? dayOfMonth) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #scheduleBillsReminder,
+          [dayOfMonth],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> cancelBillsReminder() => (super.noSuchMethod(
+        Invocation.method(
+          #cancelBillsReminder,
+          [],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> showBudgetWarning(
+    String? budgetId,
+    String? budgetName,
+    double? spent,
+    double? limit,
+    int? thresholdPercent,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #showBudgetWarning,
+          [budgetId, budgetName, spent, limit, thresholdPercent],
+        ),
+        returnValue: _i10.Future<void>.value(),
+        returnValueForMissingStub: _i10.Future<void>.value(),
+      ) as _i10.Future<void>);
+
+  @override
+  _i10.Future<void> cancelBudgetWarning(String? budgetId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cancelBudgetWarning,
+          [budgetId],
         ),
         returnValue: _i10.Future<void>.value(),
         returnValueForMissingStub: _i10.Future<void>.value(),

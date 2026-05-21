@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
@@ -21,17 +22,20 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     StatsPresenter stats, {
     TreasuryDashboardPresenter? dashboard,
     BudgetPresenter? budget,
+    NotificationService? notifications,
   })  : _storage = storage,
         _ledger = ledger,
         _stats = stats,
         _dashboard = dashboard,
-        _budget = budget;
+        _budget = budget,
+        _notifications = notifications ?? NotificationService();
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
   final StatsPresenter _stats;
   final TreasuryDashboardPresenter? _dashboard;
   final BudgetPresenter? _budget;
+  final NotificationService _notifications;
 
   /// Refresh the dashboard and budget presenters' bill/receivable/expense
   /// state after this presenter mutates storage. Ledger sync handles the
@@ -115,6 +119,15 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     _allBills = await _storage.loadBills();
     _allReceivables = await _storage.loadReceivables();
     _allExpenses = await _storage.loadBudgetedExpenses();
+
+    // Schedule or cancel monthly bills reminder based on user preferences.
+    final prefs = await _storage.loadNotificationPreferences();
+    if (prefs.billsReminderEnabled && _allBills.isNotEmpty) {
+      await _notifications.scheduleBillsReminder(prefs.billsReminderDayOfMonth);
+    } else {
+      await _notifications.cancelBillsReminder();
+    }
+
     notifyListeners();
   }
 

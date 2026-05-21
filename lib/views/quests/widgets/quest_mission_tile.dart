@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
 import '../../../app_colors.dart';
 import '../../../models/quest.dart';
 import '../../../presenters/quest_presenter.dart';
@@ -21,11 +20,11 @@ Color linkedStatColor(LinkedStat stat, BuildContext context) {
 }
 
 IconData linkedStatIcon(LinkedStat stat) => switch (stat) {
-      LinkedStat.str => MdiIcons.weightLifter,
-      LinkedStat.vit => MdiIcons.heart,
-      LinkedStat.agi => MdiIcons.run,
-      LinkedStat.intl => MdiIcons.brain,
-      LinkedStat.sen => MdiIcons.eye,
+      LinkedStat.str => Icons.fitness_center,
+      LinkedStat.vit => Icons.favorite,
+      LinkedStat.agi => Icons.directions_run,
+      LinkedStat.intl => Icons.psychology,
+      LinkedStat.sen => Icons.visibility,
     };
 
 String linkedStatLabel(LinkedStat stat) => switch (stat) {
@@ -177,7 +176,7 @@ class _QuestTileState extends State<_QuestTile>
       centerChild: Icon(
         q.linkedStat != null
             ? linkedStatIcon(q.linkedStat!)
-            : MdiIcons.circleDouble,
+            : Icons.radio_button_unchecked,
         size: 20,
         color: isCompleted ? null : sc,
       ),
@@ -394,7 +393,7 @@ class _EditTile extends StatelessWidget {
       leading: Icon(
         quest.linkedStat != null
             ? linkedStatIcon(quest.linkedStat!)
-            : MdiIcons.swordCross,
+            : Icons.sports_martial_arts,
         color: statColor,
       ),
       title: Text(quest.title,
