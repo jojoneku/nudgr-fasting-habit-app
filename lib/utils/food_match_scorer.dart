@@ -85,6 +85,24 @@ class FoodMatchScorer {
     // Penalise very verbose USDA-style names.
     s -= eWords.length ~/ 5;
 
+    // Alias-aware boost (Plan 026): when the entry's name doesn't carry the
+    // query words but one of its aliases does, credit it. Weighted lower
+    // than name hits so name matches still win when both are present.
+    if (entry.aliases.isNotEmpty) {
+      final fullAliasText = entry.aliases.join(' ').toLowerCase();
+      for (final qw in qWords) {
+        if (eWords.any((ew) => ew == qw)) continue; // already credited above
+        if (fullAliasText.contains(qw)) s += 3;
+      }
+      // Exact whole-alias match — strong signal.
+      for (final a in entry.aliases) {
+        if (a.toLowerCase() == fullQuery) {
+          s += 50;
+          break;
+        }
+      }
+    }
+
     return s;
   }
 
@@ -101,14 +119,26 @@ class FoodMatchScorer {
     final q = query.toLowerCase();
     if (eName == q) return true;
 
+    // Exact alias hit — also learnable (Plan 026).
+    for (final a in entry.aliases) {
+      if (a.toLowerCase() == q) return true;
+    }
+
     final qWords = q.split(RegExp(r'\s+')).where((w) => w.length > 1).toSet();
     if (qWords.isEmpty) return false;
 
     final eWords =
         eName.split(RegExp(r'[,\s\-()]+')).where((w) => w.length > 1).toSet();
 
-    // Every query word must be present as a whole word.
-    if (!qWords.every(eWords.contains)) return false;
+    // Every query word must be present as a whole word in the name OR
+    // in the union of alias words.
+    final aliasWords = entry.aliases
+        .expand((a) => a.toLowerCase().split(RegExp(r'[,\s\-()]+')))
+        .where((w) => w.length > 1)
+        .toSet();
+    if (!qWords.every((qw) => eWords.contains(qw) || aliasWords.contains(qw))) {
+      return false;
+    }
 
     // Entry must not add a transforming word not in the query.
     for (final ew in eWords) {

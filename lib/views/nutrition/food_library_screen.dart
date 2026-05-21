@@ -5,6 +5,7 @@ import '../../models/food_db_entry.dart';
 import '../../models/food_entry.dart';
 import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
+import '../../models/personal_food_entry.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
 
@@ -57,6 +58,22 @@ class FoodLibraryScreen extends StatelessWidget {
                               template: t,
                               presenter: presenter,
                               showDelete: true,
+                            ))
+                        .toList(),
+                  ),
+          ),
+          const SizedBox(height: 20),
+          AppSection(
+            title: 'Learned by AI',
+            child: presenter.learnedFoods.isEmpty
+                ? const _EmptyLabel(
+                    text:
+                        'No learned foods yet — confident Cloud AI logs land here')
+                : Column(
+                    children: presenter.learnedFoods
+                        .map((e) => _LearnedFoodRow(
+                              entry: e,
+                              presenter: presenter,
                             ))
                         .toList(),
                   ),
@@ -636,6 +653,248 @@ class _ItemChip extends StatelessWidget {
 }
 
 // ── Template Row ──────────────────────────────────────────────────────────────
+
+/// Row for one personal-dict entry (Plan 027 §2.1). Shows the food name,
+/// stored macros per 100g, hit count, and edit + delete affordances so
+/// users can correct or remove a wrong entry without nuking the whole
+/// dictionary.
+class _LearnedFoodRow extends StatelessWidget {
+  final PersonalFoodEntry entry;
+  final NutritionPresenter presenter;
+  const _LearnedFoodRow({required this.entry, required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () => _showEditDialog(context),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.name,
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(fontWeight: FontWeight.w500),
+                  ),
+                  Text(
+                    '${entry.kcalPer100g.round()} kcal / 100g  ·  '
+                    '${entry.hits} ${entry.hits == 1 ? 'use' : 'uses'}',
+                    style: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 11),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              width: 36,
+              height: 44,
+              child: IconButton(
+                icon: Icon(
+                  Icons.edit_outlined,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  size: 18,
+                ),
+                tooltip: 'Edit macros',
+                onPressed: () => _showEditDialog(context),
+              ),
+            ),
+            SizedBox(
+              width: 36,
+              height: 44,
+              child: IconButton(
+                icon: Icon(
+                  Icons.close,
+                  color: theme.colorScheme.onSurfaceVariant,
+                  size: 18,
+                ),
+                tooltip: 'Remove from learned',
+                onPressed: () => _confirmDelete(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _showEditDialog(BuildContext context) async {
+    final updated = await showDialog<_EditedMacros>(
+      context: context,
+      builder: (_) => _EditMacrosDialog(entry: entry),
+    );
+    if (updated == null) return;
+    await presenter.updateLearnedFood(
+      name: entry.name,
+      kcalPer100g: updated.kcal,
+      proteinPer100g: updated.protein,
+      carbsPer100g: updated.carbs,
+      fatPer100g: updated.fat,
+    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Updated ${entry.name}')),
+      );
+    }
+  }
+
+  Future<void> _confirmDelete(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove learned food?'),
+        content: Text(
+            'The next time you log "${entry.name}", the AI will resolve it from scratch.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      await presenter.removeLearnedFood(entry.name);
+    }
+  }
+}
+
+class _EditedMacros {
+  final double kcal;
+  final double? protein;
+  final double? carbs;
+  final double? fat;
+  const _EditedMacros(this.kcal, this.protein, this.carbs, this.fat);
+}
+
+/// Compact form for correcting a learned food's per-100g macros. The user
+/// only sees this when AI-estimated macros came out wrong and they want to
+/// pin in the correct values for instant future lookups.
+class _EditMacrosDialog extends StatefulWidget {
+  final PersonalFoodEntry entry;
+  const _EditMacrosDialog({required this.entry});
+
+  @override
+  State<_EditMacrosDialog> createState() => _EditMacrosDialogState();
+}
+
+class _EditMacrosDialogState extends State<_EditMacrosDialog> {
+  late final TextEditingController _kcal;
+  late final TextEditingController _protein;
+  late final TextEditingController _carbs;
+  late final TextEditingController _fat;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _kcal = TextEditingController(
+        text: widget.entry.kcalPer100g.toStringAsFixed(0));
+    _protein = TextEditingController(
+        text: widget.entry.proteinPer100g?.toStringAsFixed(1) ?? '');
+    _carbs = TextEditingController(
+        text: widget.entry.carbsPer100g?.toStringAsFixed(1) ?? '');
+    _fat = TextEditingController(
+        text: widget.entry.fatPer100g?.toStringAsFixed(1) ?? '');
+  }
+
+  @override
+  void dispose() {
+    _kcal.dispose();
+    _protein.dispose();
+    _carbs.dispose();
+    _fat.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final kcal = double.tryParse(_kcal.text.trim());
+    if (kcal == null || kcal <= 0) {
+      setState(() => _error = 'Calories must be a number > 0');
+      return;
+    }
+    final protein = _parseOptional(_protein.text);
+    final carbs = _parseOptional(_carbs.text);
+    final fat = _parseOptional(_fat.text);
+    Navigator.pop(context, _EditedMacros(kcal, protein, carbs, fat));
+  }
+
+  double? _parseOptional(String s) {
+    final t = s.trim();
+    if (t.isEmpty) return null;
+    return double.tryParse(t);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.entry.name),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Per 100g'),
+            const SizedBox(height: 8),
+            _MacroField(label: 'Calories (kcal)', controller: _kcal),
+            const SizedBox(height: 8),
+            _MacroField(label: 'Protein (g)', controller: _protein),
+            const SizedBox(height: 8),
+            _MacroField(label: 'Carbs (g)', controller: _carbs),
+            const SizedBox(height: 8),
+            _MacroField(label: 'Fat (g)', controller: _fat),
+            if (_error != null) ...[
+              const SizedBox(height: 8),
+              Text(_error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(onPressed: _submit, child: const Text('Save')),
+      ],
+    );
+  }
+}
+
+class _MacroField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  const _MacroField({required this.label, required this.controller});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+}
 
 class _TemplateRow extends StatelessWidget {
   final FoodTemplate template;

@@ -55,3 +55,11 @@ app.*.map.json
 
 # Supabase CLI scratch
 supabase/.temp/
+
+# Build-time alias generation shards (resumable cache; only the merged
+# assets/data/food_aliases.json is committed)
+scripts/data/aliases_shards/
+
+# Lambda deployment artifact — rebuilt as needed
+lambda.zip
+scripts/data/aliases_run.log
