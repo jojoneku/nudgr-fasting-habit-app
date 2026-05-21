@@ -29,6 +29,7 @@ class QuestPresenter extends ChangeNotifier {
   List<HabitRoutine> _routines = [];
   List<QuestAchievement> _achievements = [];
   DateTime? _lastPenaltyCheckDate;
+  bool _disposed = false;
 
   final _random = Random();
 
@@ -167,7 +168,14 @@ class QuestPresenter extends ChangeNotifier {
 
   Future<void> reload() async {
     _quests = (await _storage.loadQuests()).map(_backfillStreak).toList();
+    if (_disposed) return;
     notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
   }
 
   // ─── Completion ──────────────────────────────────────────────────────────────

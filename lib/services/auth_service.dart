@@ -41,6 +41,9 @@ class AuthService {
       _client.auth.currentUser?.userMetadata?['full_name'] as String? ??
       _client.auth.currentUser?.userMetadata?['name'] as String?;
 
+  /// Current Supabase access token. Refreshed automatically by the SDK.
+  String? get currentAccessToken => _client.auth.currentSession?.accessToken;
+
   /// Emits on every auth state change (sign-in, sign-out, token refresh).
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 

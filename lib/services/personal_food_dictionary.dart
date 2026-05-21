@@ -51,11 +51,17 @@ class PersonalFoodDictionary {
     _initialized = true;
   }
 
-  static String normalizeKey(String name) => name
-      .toLowerCase()
-      .replaceAll(RegExp(r"[^a-z0-9\sñ']"), ' ')
-      .replaceAll(RegExp(r'\s+'), ' ')
-      .trim();
+  // Sort words so "rolled oats" and "oats rolled" map to the same key.
+  static String normalizeKey(String name) {
+    final words = name
+        .toLowerCase()
+        .replaceAll(RegExp(r"[^a-z0-9\sñ']"), ' ')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .split(' ')
+      ..sort();
+    return words.join(' ');
+  }
 
   PersonalFoodEntry? lookup(String name) => _map[normalizeKey(name)];
 
