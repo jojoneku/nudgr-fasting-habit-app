@@ -9,6 +9,7 @@ class FoodDbEntry {
   final double? carbsPer100g;
   final double? fatPer100g;
   final String? category;
+  final List<String> aliases;
 
   const FoodDbEntry({
     required this.id,
@@ -18,17 +19,24 @@ class FoodDbEntry {
     this.carbsPer100g,
     this.fatPer100g,
     this.category,
+    this.aliases = const [],
   });
 
-  factory FoodDbEntry.fromRow(Map<String, dynamic> row) => FoodDbEntry(
-        id: row['id'] as String,
-        name: row['name'] as String,
-        caloriesPer100g: (row['cal'] as num).toDouble(),
-        proteinPer100g: (row['protein'] as num?)?.toDouble(),
-        carbsPer100g: (row['carbs'] as num?)?.toDouble(),
-        fatPer100g: (row['fat'] as num?)?.toDouble(),
-        category: row['category'] as String?,
-      );
+  factory FoodDbEntry.fromRow(Map<String, dynamic> row) {
+    final aliasRaw = row['aliases'] as String?;
+    return FoodDbEntry(
+      id: row['id'] as String,
+      name: row['name'] as String,
+      caloriesPer100g: (row['cal'] as num).toDouble(),
+      proteinPer100g: (row['protein'] as num?)?.toDouble(),
+      carbsPer100g: (row['carbs'] as num?)?.toDouble(),
+      fatPer100g: (row['fat'] as num?)?.toDouble(),
+      category: row['category'] as String?,
+      aliases: aliasRaw == null || aliasRaw.isEmpty
+          ? const []
+          : aliasRaw.split(',').map((a) => a.trim()).where((a) => a.isNotEmpty).toList(),
+    );
+  }
 
   FoodEntry toFoodEntry(double grams) {
     final factor = grams / 100.0;

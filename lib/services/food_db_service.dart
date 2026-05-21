@@ -16,7 +16,8 @@ import '../utils/food_fuzzy.dart';
 /// schema bump triggers a fresh copy automatically.
 class FoodDbService {
   static const _assetPath = 'assets/food_db.sqlite';
-  static const _dbFilename = 'food_db_v9.sqlite';
+  // v10: added `aliases` + `aliases_norm` columns and reindexed FTS5.
+  static const _dbFilename = 'food_db_v10.sqlite';
 
   Database? _db;
   bool _fts5Available = false;
@@ -84,12 +85,14 @@ class FoodDbService {
         final match =
             terms.map((t) => '"${t.replaceAll('"', '""')}"').join(' OR ');
         try {
+          // BM25 weights: name column 2x weight vs aliases column. Lower
+          // bm25 score = better match in FTS5, so ORDER BY ascending.
           final rows = await _db!.rawQuery(
-            'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat '
+            'SELECT f.id, f.name, f.category, f.cal, f.protein, f.carbs, f.fat, f.aliases '
             'FROM foods f '
             'JOIN foods_fts ON foods_fts.rowid = f.rowid '
             'WHERE foods_fts MATCH ? '
-            'ORDER BY rank '
+            'ORDER BY bm25(foods_fts, 2.0, 1.0) '
             'LIMIT 20',
             [match],
           );
@@ -124,7 +127,7 @@ class FoodDbService {
     final prefix = seed.substring(0, 3);
 
     final rows = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat '
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods WHERE lower(name) LIKE ? LIMIT 200',
       ['%$prefix%'],
     );
@@ -142,11 +145,10 @@ class FoodDbService {
   /// Exact lookup by USDA FDC id.
   Future<FoodDbEntry?> getById(String id) async {
     if (_db == null) return null;
-    final rows = await _db!.query(
-      'foods',
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
+    final rows = await _db!.rawQuery(
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
+      'FROM foods WHERE id = ? LIMIT 1',
+      [id],
     );
     return rows.isEmpty ? null : FoodDbEntry.fromRow(rows.first);
   }
@@ -169,7 +171,7 @@ class FoodDbService {
   }) async {
     if (_db == null) return const [];
     final rows = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat '
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods '
       '${afterId != null ? "WHERE id > ?" : ""} '
       'ORDER BY id ASC LIMIT ?',
@@ -184,7 +186,7 @@ class FoodDbService {
     if (_db == null || ids.isEmpty) return const [];
     final placeholders = List.filled(ids.length, '?').join(',');
     final rows = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat '
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods WHERE id IN ($placeholders)',
       ids,
     );
@@ -210,14 +212,14 @@ class FoodDbService {
 
   Future<List<FoodDbEntry>> _searchLike(String dense) async {
     final prefix = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat '
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods WHERE name_norm LIKE ? LIMIT 20',
       ['$dense%'],
     );
     if (prefix.length >= 20) return prefix.map(FoodDbEntry.fromRow).toList();
 
     final contains = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat '
+      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods WHERE name_norm LIKE ? AND name_norm NOT LIKE ? LIMIT ?',
       ['%$dense%', '$dense%', 20 - prefix.length],
     );
