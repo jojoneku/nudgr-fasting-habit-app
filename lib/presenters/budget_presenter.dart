@@ -328,11 +328,6 @@ class BudgetPresenter extends ChangeNotifier {
   List<Budget> get _budgetsForMonth =>
       _allBudgets.where((b) => b.month == _selectedMonth).toList();
 
-  List<TransactionRecord> get _outflowsForMonth => _allTransactions
-      .where(
-          (t) => t.month == _selectedMonth && t.type == TransactionType.outflow)
-      .toList();
-
   Future<void> _checkBudgetNotExceededXp() async {
     if (totalAllocated <= 0) return;
     if (totalSpent <= totalAllocated) await _stats.addXp(30);
