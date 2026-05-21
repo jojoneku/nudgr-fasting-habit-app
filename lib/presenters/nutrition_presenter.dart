@@ -391,25 +391,6 @@ class NutritionPresenter extends ChangeNotifier {
     return recent;
   }
 
-  Future<List<String>> suggestFoodNames(String query, {int limit = 6}) async {
-    final q = query.trim().toLowerCase();
-    if (q.length < 2) return const [];
-    final result = <String>[];
-    final seen = <String>{};
-    for (final e in _personalDict.all()) {
-      if (e.name.toLowerCase().startsWith(q)) {
-        if (seen.add(e.name.toLowerCase())) result.add(e.name);
-        if (result.length >= limit) return result;
-      }
-    }
-    final dbHits = await _foodDb.search(q);
-    for (final e in dbHits) {
-      if (result.length >= limit) break;
-      if (seen.add(e.name.toLowerCase())) result.add(e.name);
-    }
-    return result;
-  }
-
   // ── AI getters ───────────────────────────────────────────────────────────────
 
   FoodDbService get foodDb => _foodDb;
