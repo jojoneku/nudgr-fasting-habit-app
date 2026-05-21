@@ -5,8 +5,10 @@ import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
+import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
@@ -15,15 +17,18 @@ class BudgetPresenter extends ChangeNotifier {
     StorageService storage,
     StatsPresenter stats, [
     LedgerPresenter? ledger,
+    NotificationService? notifications,
   ])  : _storage = storage,
         _stats = stats,
-        _ledger = ledger {
+        _ledger = ledger,
+        _notifications = notifications ?? NotificationService() {
     _ledger?.addListener(_syncFromLedger);
   }
 
   final StorageService _storage;
   final StatsPresenter _stats;
   final LedgerPresenter? _ledger;
+  final NotificationService _notifications;
 
   /// Pull transactions, accounts, and categories from LedgerPresenter so
   /// budget totals stay in sync after ledger mutations or mark-paid flows.
@@ -34,6 +39,38 @@ class BudgetPresenter extends ChangeNotifier {
     _categories = ledger.categories;
     _accounts = ledger.accounts;
     notifyListeners();
+    // Check budget warning thresholds asynchronously after sync.
+    _checkBudgetWarnings(_cachedNotifPrefs);
+  }
+
+  /// Fire a budget-over-threshold warning for any budget that crossed the
+  /// configured percentage for the first time this session.
+  Future<void> _checkBudgetWarnings(NotificationPreferences prefs) async {
+    if (!prefs.budgetWarningEnabled) return;
+    final threshold = prefs.budgetWarningPercent / 100.0;
+    for (final budget in _budgetsForMonth) {
+      final spent = spentFor(budget.categoryId);
+      final limit = budget.allocatedAmount;
+      if (limit <= 0) continue;
+      final pct = spent / limit;
+      if (pct >= threshold && !_warnedBudgets.contains(budget.id)) {
+        _warnedBudgets.add(budget.id);
+        final catName = _categories
+            .where((c) => c.id == budget.categoryId)
+            .map((c) => c.name)
+            .firstOrNull;
+        await _notifications.showBudgetWarning(
+          budget.id,
+          catName ?? budget.categoryId,
+          spent,
+          limit,
+          prefs.budgetWarningPercent,
+        );
+      } else if (pct < threshold) {
+        // Reset so the warning fires again next time spending crosses the threshold.
+        _warnedBudgets.remove(budget.id);
+      }
+    }
   }
 
   @override
@@ -47,6 +84,14 @@ class BudgetPresenter extends ChangeNotifier {
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
   List<FinancialAccount> _accounts = [];
+
+  /// Tracks which budgets have already triggered a warning this session.
+  /// Resets when spending drops below threshold so the warning re-fires next month.
+  final Set<String> _warnedBudgets = {};
+
+  /// Cached notification preferences — loaded in [load()] and used by [_syncFromLedger].
+  NotificationPreferences _cachedNotifPrefs =
+      NotificationPreferences.defaults();
 
   // ─── Public state ────────────────────────────────────────────────────────────
 
@@ -270,7 +315,9 @@ class BudgetPresenter extends ChangeNotifier {
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
+    _cachedNotifPrefs = await _storage.loadNotificationPreferences();
     notifyListeners();
+    await _checkBudgetWarnings(_cachedNotifPrefs);
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────

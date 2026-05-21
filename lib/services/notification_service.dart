@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -29,6 +30,23 @@ class NotificationService {
 
   static const String channelIdQuests = 'quests_channel_v6';
   static const String channelNameQuests = 'Daily Quests';
+
+  static const String channelIdAchievements = 'achievements_channel_v1';
+  static const String channelNameAchievements = 'Character Achievements';
+
+  static const String channelIdFinance = 'finance_channel_v1';
+  static const String channelNameFinance = 'Finance Alerts';
+
+  // ── Notification ID constants ───────────────────────────────────────────────
+  static const int notifIdLevelUp = 500;
+  static const int notifIdRankPromotion = 501;
+  static const int notifIdWeightReminder = 510;
+  static const int notifIdCalorieGoal = 511;
+  static const int notifIdBillsReminder = 600;
+
+  // Budget warnings: stable int in 601–640 range
+  static int _budgetWarningId(String budgetId) =>
+      budgetId.hashCode.abs() % 40 + 601;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
@@ -158,6 +176,30 @@ class NotificationService {
           playSound: true,
           sound: null,
           enableVibration: true,
+        ),
+      );
+
+      // 5. Character Achievements (level-up, rank promotion)
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelIdAchievements,
+          channelNameAchievements,
+          description: 'Notifications for level-up and rank promotion',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+
+      // 6. Finance Alerts (bill reminders, budget warnings)
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelIdFinance,
+          channelNameFinance,
+          description: 'Bill reminders and budget-over-limit warnings',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: false,
         ),
       );
 
@@ -768,6 +810,208 @@ class NotificationService {
 
   Future<void> cancel(int id) async {
     await flutterLocalNotificationsPlugin.cancel(id);
+  }
+
+  // ── RPG Achievement notifications ────────────────────────────────────────────
+
+  Future<void> showLevelUpNotification(int level, String rank) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdAchievements,
+      channelNameAchievements,
+      channelDescription: 'Notifications for level-up and rank promotion',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      notifIdLevelUp,
+      '⚔️ LEVEL UP — Lv. $level [$rank]',
+      'Your power grows, Shadow.',
+      const NotificationDetails(android: androidDetails),
+    );
+    debugPrint(
+        'NotificationService: Level-up notification shown. Level=$level Rank=$rank');
+  }
+
+  Future<void> showRankPromotionNotification(
+      String fromRank, String toRank) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdAchievements,
+      channelNameAchievements,
+      channelDescription: 'Notifications for level-up and rank promotion',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      notifIdRankPromotion,
+      '★ RANK PROMOTION — $fromRank → $toRank',
+      'You have ascended.',
+      const NotificationDetails(android: androidDetails),
+    );
+    debugPrint(
+        'NotificationService: Rank-promotion notification shown. $fromRank → $toRank');
+  }
+
+  Future<void> cancelAchievementNotifications() async {
+    await flutterLocalNotificationsPlugin.cancel(notifIdLevelUp);
+    await flutterLocalNotificationsPlugin.cancel(notifIdRankPromotion);
+  }
+
+  // ── Nutrition notifications ─────────────────────────────────────────────────
+
+  /// Schedule a daily weight-log reminder at [time]. Fires daily via
+  /// [DateTimeComponents.time] — persists across app restarts automatically.
+  Future<void> scheduleWeightReminder(TimeOfDay time) async {
+    await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
+
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduled = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, time.hour, time.minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdMilestones,
+      channelNameMilestones,
+      channelDescription: 'Fasting & Eating Alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        notifIdWeightReminder,
+        'Log your weight',
+        'Keep your progress tracked — tap to open.',
+        scheduled,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint(
+          'NotificationService: Weight reminder scheduled for ${time.hour}:${time.minute.toString().padLeft(2, '0')} daily');
+    } catch (e) {
+      debugPrint('NotificationService: Error scheduling weight reminder: $e');
+    }
+  }
+
+  Future<void> cancelWeightReminder() async {
+    await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
+  }
+
+  Future<void> showCalorieGoalNotification(int calories, int goal) async {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdMilestones,
+      channelNameMilestones,
+      channelDescription: 'Fasting & Eating Alerts',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      notifIdCalorieGoal,
+      'Daily goal reached 🎯',
+      '$calories / $goal kcal logged today.',
+      const NotificationDetails(android: androidDetails),
+    );
+    debugPrint(
+        'NotificationService: Calorie-goal notification shown. $calories/$goal kcal');
+  }
+
+  // ── Finance notifications ────────────────────────────────────────────────────
+
+  /// Schedule a monthly bills reminder on [dayOfMonth] at 9 AM via
+  /// [DateTimeComponents.dayOfMonthAndTime].
+  Future<void> scheduleBillsReminder(int dayOfMonth) async {
+    await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
+
+    final day = dayOfMonth.clamp(1, 28);
+    final scheduled = _nextInstanceOfMonthDay(day, 9, 0);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdFinance,
+      channelNameFinance,
+      channelDescription: 'Bill reminders and budget-over-limit warnings',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: false,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        notifIdBillsReminder,
+        'Bills due this month',
+        'Check your unpaid bills in Treasury.',
+        scheduled,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      );
+      debugPrint(
+          'NotificationService: Bills reminder scheduled for day $day of month at 9 AM');
+    } catch (e) {
+      debugPrint('NotificationService: Error scheduling bills reminder: $e');
+    }
+  }
+
+  Future<void> cancelBillsReminder() async {
+    await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
+  }
+
+  Future<void> showBudgetWarning(
+    String budgetId,
+    String budgetName,
+    double spent,
+    double limit,
+    int thresholdPercent,
+  ) async {
+    final id = _budgetWarningId(budgetId);
+    final spentLabel = spent.toStringAsFixed(0);
+    final limitLabel = limit.toStringAsFixed(0);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdFinance,
+      channelNameFinance,
+      channelDescription: 'Bill reminders and budget-over-limit warnings',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: false,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      id,
+      'Budget alert — $budgetName',
+      '$thresholdPercent% of limit reached ($spentLabel / $limitLabel).',
+      const NotificationDetails(android: androidDetails),
+    );
+    debugPrint(
+        'NotificationService: Budget warning shown for "$budgetName" (id=$id)');
+  }
+
+  Future<void> cancelBudgetWarning(String budgetId) async {
+    await flutterLocalNotificationsPlugin.cancel(_budgetWarningId(budgetId));
   }
 
   tz.TZDateTime _nextInstanceOfDay(int dayOfWeek, int hour, int minute) {

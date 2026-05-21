@@ -23,6 +23,7 @@ import '../services/ai_coach_service.dart';
 import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
+import '../services/notification_service.dart';
 import '../services/open_food_facts_service.dart';
 import '../models/personal_food_entry.dart';
 import '../services/personal_food_dictionary.dart';
@@ -42,6 +43,7 @@ class NutritionPresenter extends ChangeNotifier {
   final FoodSemanticSearchService? _semanticSearch;
   final EmbeddingService? _embedder;
   final OpenFoodFactsService _barcodeLookup;
+  final NotificationService _notifications;
   StreamSubscription<IndexProgress>? _indexProgressSub;
 
   // Confidence thresholds — see docs/rag_food_search_spec.md for tuning notes.
@@ -62,6 +64,7 @@ class NutritionPresenter extends ChangeNotifier {
   String? _logStreakDate; // last date an entry was logged
 
   bool _proteinGoalMetToday = false;
+  bool _calorieGoalNotifiedToday = false;
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
   String? _aiEstimateError;
@@ -221,6 +224,7 @@ class NutritionPresenter extends ChangeNotifier {
     FoodSemanticSearchService? semanticSearch,
     EmbeddingService? embedder,
     OpenFoodFactsService? barcodeLookup,
+    NotificationService? notifications,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
         _storage = storage,
@@ -228,7 +232,8 @@ class NutritionPresenter extends ChangeNotifier {
         _ai = aiCoach,
         _semanticSearch = semanticSearch,
         _embedder = embedder,
-        _barcodeLookup = barcodeLookup ?? OpenFoodFactsService() {
+        _barcodeLookup = barcodeLookup ?? OpenFoodFactsService(),
+        _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     // Surface index progress to the UI without polling.
     _indexProgressSub =
@@ -686,6 +691,26 @@ class NutritionPresenter extends ChangeNotifier {
     await _checkGoalMet();
     await _checkProteinGoalMet();
     await _checkOvershoot();
+  }
+
+  // ── Actions — weight log ─────────────────────────────────────────────────────
+
+  /// Cancel today's weight reminder after the user logs their weight.
+  /// The recurring schedule (DateTimeComponents.time) will fire again tomorrow.
+  Future<void> logWeight(double kg) async {
+    await logWeightOnDate(kg, DateTime.now());
+  }
+
+  /// Cancel today's weight reminder for [date]. Re-scheduling happens
+  /// automatically on next app open via [loadState].
+  Future<void> logWeightOnDate(double kg, DateTime date) async {
+    // Cancel today's pending reminder; the recurring schedule fires again tomorrow.
+    await _notifications.cancelWeightReminder();
+    // Re-schedule if still enabled so tomorrow's alarm is set.
+    final prefs = await _storage.loadNotificationPreferences();
+    if (prefs.weightReminderEnabled) {
+      await _notifications.scheduleWeightReminder(prefs.weightReminderTime);
+    }
   }
 
   // ── Actions — goals / TDEE ───────────────────────────────────────────────────
@@ -1868,6 +1893,19 @@ class NutritionPresenter extends ChangeNotifier {
     final todayKey = _dateFmt.format(DateTime.now());
     final rawChat = await _storage.loadChatMessagesRaw(todayKey);
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
+
+    // Reset same-day calorie notification flag on new-day load.
+    _calorieGoalNotifiedToday = false;
+
+    // Apply notification preferences: schedule or cancel weight reminder.
+    final notifPrefs = await _storage.loadNotificationPreferences();
+    if (notifPrefs.weightReminderEnabled) {
+      await _notifications
+          .scheduleWeightReminder(notifPrefs.weightReminderTime);
+    } else {
+      await _notifications.cancelWeightReminder();
+    }
+
     notifyListeners();
   }
 
@@ -1877,6 +1915,15 @@ class NutritionPresenter extends ChangeNotifier {
     final today = _dateFmt.format(DateTime.now());
     if (isCalorieGoalMet && _goalMetDate != today) {
       await _onCalorieGoalMet(today);
+    }
+    // Fire calorie-goal notification once per day when user first hits the goal.
+    if (isCalorieGoalMet && !_calorieGoalNotifiedToday) {
+      final prefs = await _storage.loadNotificationPreferences();
+      if (prefs.calorieGoalEnabled) {
+        _calorieGoalNotifiedToday = true;
+        await _notifications.showCalorieGoalNotification(
+            todayCalories, effectiveGoal);
+      }
     }
   }
 
