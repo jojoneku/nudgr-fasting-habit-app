@@ -10,8 +10,12 @@ import 'package:flutter_gemma/rag/embedding_models.dart' as fg_rag;
 ///   - Expose `embed()` and `embedBatch()` for the rest of the pipeline
 ///   - Track install / load state so callers can show download UI
 ///
-/// Defaults to `EmbeddingModel.embeddingGemma300M4bit` (75 MB, 768 dims,
-/// multilingual). Choice rationale lives in `docs/rag_food_search_spec.md`.
+/// Defaults to Gecko 110M quantized (145 MB, 768 dims, English) from
+/// `litert-community/Gecko-110m-en`. flutter_gemma 0.12.6's EmbeddingModel enum
+/// ships broken URLs (Google's repos publish .safetensors only, not .tflite,
+/// and the Gecko enum points at `gecko.tflite` which doesn't exist — actual
+/// filename is `Gecko_1024_quant.tflite`). We bypass the enum by passing the
+/// concrete URLs directly.
 class EmbeddingService {
   /// Resolves the HuggingFace read token at download time.
   /// Returns null if no token is available (offline + uncached).
@@ -19,12 +23,31 @@ class EmbeddingService {
   /// attempt rather than bundled into the APK.
   final Future<String?> Function()? tokenProvider;
 
-  /// Which embedder to install on first use.
+  /// Which embedder to install on first use (kept for `dimension` only;
+  /// enum URLs are ignored — see [modelUrl] / [tokenizerUrl]).
   final fg_rag.EmbeddingModel modelChoice;
+
+  /// Concrete HuggingFace URL for the .tflite model file.
+  final String modelUrl;
+
+  /// Concrete HuggingFace URL for the sentencepiece tokenizer file.
+  final String tokenizerUrl;
+
+  /// Display label for the model in Settings (e.g. "Gecko 110M (quant)").
+  final String displayName;
+
+  /// Approximate download size label, e.g. "145 MB".
+  final String sizeLabel;
 
   EmbeddingService({
     this.tokenProvider,
-    this.modelChoice = fg_rag.EmbeddingModel.embeddingGemma300M4bit,
+    this.modelChoice = fg_rag.EmbeddingModel.gecko110M,
+    this.modelUrl =
+        'https://huggingface.co/litert-community/Gecko-110m-en/resolve/main/Gecko_1024_quant.tflite',
+    this.tokenizerUrl =
+        'https://huggingface.co/litert-community/Gecko-110m-en/resolve/main/sentencepiece.model',
+    this.displayName = 'Gecko 110M (quant)',
+    this.sizeLabel = '145 MB',
   });
 
   fg.EmbeddingModel? _model;
@@ -43,8 +66,8 @@ class EmbeddingService {
   /// Dimension of vectors this embedder produces.
   int get vectorDim => modelChoice.dimension;
 
-  String get modelSizeLabel => modelChoice.size;
-  String get modelDisplayName => modelChoice.displayName;
+  String get modelSizeLabel => sizeLabel;
+  String get modelDisplayName => displayName;
 
   // ── Lifecycle ─────────────────────────────────────────────────────────────
 
@@ -86,9 +109,9 @@ class EmbeddingService {
 
       final token = await tokenProvider?.call();
       await fg.FlutterGemma.installEmbedder()
-          .modelFromNetwork(modelChoice.url, token: token)
+          .modelFromNetwork(modelUrl, token: token)
           .tokenizerFromNetwork(
-            modelChoice.tokenizerUrl,
+            tokenizerUrl,
             token: token,
           )
           .withModelProgress((p) {
