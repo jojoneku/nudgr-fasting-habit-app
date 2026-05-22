@@ -560,9 +560,20 @@ class NutritionPresenter extends ChangeNotifier {
 
     if (!embedder.isReady) return; // download/load failed; status reflects it
     await semantic.init();
-    // Build runs in the background — don't block the caller.
+
+    final bundle = _vectorBundle;
+    if (bundle != null && !await bundle.isDownloaded()) {
+      try {
+        await bundle.download(onProgress: (_) => notifyListeners());
+      } catch (e) {
+        debugPrint(
+            'enableFoodSearch: bundle download failed, falling back: $e');
+      }
+    }
+    notifyListeners();
+
     // ignore: unawaited_futures
-    semantic.buildIndex();
+    _startIndexFromBundleOrFallback(semantic, bundle);
     notifyListeners();
   }
 
@@ -575,8 +586,26 @@ class NutritionPresenter extends ChangeNotifier {
     if (!embedder.isReady) return;
     if (semantic.isReady || semantic.isIndexing) return;
     // ignore: unawaited_futures
-    semantic.buildIndex();
+    _startIndexFromBundleOrFallback(semantic, _vectorBundle);
     notifyListeners();
+  }
+
+  /// Import vectors from the pre-built bundle into the HNSW store.
+  /// Falls back to on-device [buildIndex] if the bundle is absent or corrupt.
+  Future<void> _startIndexFromBundleOrFallback(
+    FoodSemanticSearchService semantic,
+    VectorBundleService? bundle,
+  ) async {
+    if (bundle != null && await bundle.isDownloaded()) {
+      try {
+        final vectors = await bundle.loadVectors();
+        await semantic.buildIndexFromBundle(bundleVectors: vectors);
+        return;
+      } catch (e) {
+        debugPrint('_startIndexFromBundleOrFallback: bundle parse failed: $e');
+      }
+    }
+    await semantic.buildIndex();
   }
 
   /// Wipe the vector index and rebuild from scratch. Used by Settings.
