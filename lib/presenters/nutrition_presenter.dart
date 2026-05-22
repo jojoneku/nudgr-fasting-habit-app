@@ -24,7 +24,6 @@ import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
 import '../services/notification_service.dart';
-import '../services/open_food_facts_service.dart';
 import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
@@ -43,7 +42,6 @@ class NutritionPresenter extends ChangeNotifier {
   final AiCoachService _ai;
   final FoodSemanticSearchService? _semanticSearch;
   final EmbeddingService? _embedder;
-  final OpenFoodFactsService _barcodeLookup;
   final NotificationService _notifications;
   StreamSubscription<IndexProgress>? _indexProgressSub;
 
@@ -232,7 +230,6 @@ class NutritionPresenter extends ChangeNotifier {
     AiCoachService? cloudAi,
     FoodSemanticSearchService? semanticSearch,
     EmbeddingService? embedder,
-    OpenFoodFactsService? barcodeLookup,
     NotificationService? notifications,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
@@ -242,7 +239,6 @@ class NutritionPresenter extends ChangeNotifier {
         _cloudAi = cloudAi,
         _semanticSearch = semanticSearch,
         _embedder = embedder,
-        _barcodeLookup = barcodeLookup ?? OpenFoodFactsService(),
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     // Surface index progress to the UI without polling.
@@ -1971,75 +1967,6 @@ class NutritionPresenter extends ChangeNotifier {
     );
   }
 
-  // ── Barcode scan ─────────────────────────────────────────────────────────────
-
-  /// Look up [barcode] against OpenFoodFacts. Returns the parsed result, or
-  /// null when OFF doesn't have the barcode / the entry lacks calories. Pure
-  /// I/O; the caller (UI) handles preview + confirm before logging.
-  Future<BarcodeLookupResult?> lookupBarcode(String barcode) async {
-    try {
-      return await _barcodeLookup.lookup(barcode);
-    } catch (e) {
-      debugPrint('NutritionPresenter.lookupBarcode failed: $e');
-      return null;
-    }
-  }
-
-  /// Log [result] as a chat row + nutrition entry at [grams]. Also caches the
-  /// product into [PersonalFoodDictionary] so future text searches like
-  /// "bear brand 33g" hit it instantly without another network round-trip.
-  Future<void> logScannedProduct(
-    BarcodeLookupResult result, {
-    required double grams,
-  }) async {
-    if (grams <= 0) return;
-    if (_isChatParsing) return;
-    _isChatParsing = true;
-    notifyListeners();
-
-    try {
-      final entry = result.entry.toFoodEntry(grams).copyWith(
-            estimationSource: EstimationSource.db,
-            confidence: 0.95,
-          );
-
-      // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
-      if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
-
-      await _ensureTodayLogFresh();
-      _todayLog = _todayLog.addEntries([entry], MealSlot.meal);
-
-      final msg = ChatMessage(
-        id: ChatMessage.generateId(),
-        rawText: '📷 ${result.displayName}',
-        timestamp: DateTime.now(),
-        kind: ChatMessageKind.food,
-        foodItems: [
-          ChatFoodItem.fromFoodEntry(entry,
-              amountText: '${grams.toStringAsFixed(0)}g')
-        ],
-        mealSlot: MealSlot.meal,
-      );
-      _chatMessages.add(msg);
-      notifyListeners();
-
-      await Future.wait([
-        _storage.saveNutritionLog(_todayLog),
-        _persistChatMessages(),
-      ]);
-      // Cache so the next "bear brand" text query also finds this product.
-      // ignore: unawaited_futures
-      _learnFromEntry(result.entry.name, entry);
-
-      await _updateLogStreak();
-      await _checkGoalMet();
-      await _checkProteinGoalMet();
-      await _checkOvershoot();
-    } finally {
-      _isChatParsing = false;
-      notifyListeners();
-    }
-  }
 
   /// Mark every item in a chat food message as a bad match. Captures one
   /// [FoodFeedbackKind.userDislike] entry per item so a curator sees both the

@@ -11,7 +11,6 @@ import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
-import 'barcode_scanner_sheet.dart';
 import 'food_library_screen.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
@@ -2104,15 +2103,6 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                     Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
                 onPressed: isToday ? () => _showTemplates(context) : null,
                 tooltip: 'Templates',
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              ),
-              IconButton(
-                icon: Icon(Icons.qr_code_scanner, color: cs.onSurfaceVariant),
-                onPressed: isToday && !locked
-                    ? () => showBarcodeScanFlow(context,
-                        presenter: widget.presenter)
-                    : null,
-                tooltip: 'Scan barcode',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
               IconButton(
