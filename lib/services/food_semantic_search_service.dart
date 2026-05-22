@@ -381,7 +381,8 @@ class FoodSemanticSearchService {
         try {
           vectors = await _embedder.embedBatch(texts);
         } catch (e) {
-          debugPrint('FoodSemanticSearchService.buildAndExportBundle: embed failed: $e');
+          debugPrint(
+              'FoodSemanticSearchService.buildAndExportBundle: embed failed: $e');
           break;
         }
         if (vectors.length != page.length) break;
