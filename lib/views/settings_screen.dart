@@ -561,7 +561,7 @@ class SettingsScreen extends StatelessWidget {
       return AppGroupedListSection(
         title: 'AI Models',
         footer:
-            'Smart search lights up after step 1. Downloads run sequentially.',
+            'Smart search builds the search index once the download finishes.',
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -610,12 +610,13 @@ class SettingsScreen extends StatelessWidget {
       );
     }
 
-    // Bundle entry point — when neither model is installed, offer one combined action.
+    // Smart search entry point — embedder isn't installed yet.
+    // (The on-device LLM is downloaded separately from the Nutrition screen.)
     if (p.isAiBundleAvailable) {
       return AppGroupedListSection(
         title: 'AI Models',
         footer:
-            'Both models run on-device after install. No cloud, no data leaves your phone.',
+            'Smart search runs on-device. No cloud, no data leaves your phone.',
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(
@@ -631,13 +632,13 @@ class SettingsScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Get the AI bundle',
+                        'Get smart search',
                         style: theme.textTheme.bodyLarge,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Smart food search (75 MB) + AI Coach (586 MB). '
-                        'Downloads in stages — search works after step 1.',
+                        'On-device food vector search (~145 MB). '
+                        'AI Coach is downloaded separately from Nutrition.',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

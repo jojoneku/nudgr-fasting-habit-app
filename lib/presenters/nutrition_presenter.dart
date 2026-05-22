@@ -568,16 +568,20 @@ class NutritionPresenter extends ChangeNotifier {
     semantic.rebuildIndex();
   }
 
-  // ── AI bundle download (embedder + LLM) ───────────────────────────────────
+  // ── Smart-search embedder download ────────────────────────────────────────
+  //
+  // Previously this also downloaded the on-device LLM (Qwen, 586 MB). That
+  // step is now invoked from the Nutrition screen instead, so Settings only
+  // exposes the embedder (~145 MB). Kept the `*AiBundle*` getter names for
+  // UI binding stability — they now refer just to the embedder phase.
 
-  /// True while the bundle download is in flight (either phase).
+  /// True while the embedder download is in flight.
   bool _isBundleDownloading = false;
-  int _bundlePhase = 0; // 0 = idle, 1 = embedder, 2 = LLM
   String? _bundleError;
 
   bool get isAiBundleDownloading => _isBundleDownloading;
 
-  /// Last bundle download error message, or null if none / cleared.
+  /// Last download error message, or null if none / cleared.
   /// Cleared automatically when a new download starts.
   String? get aiBundleError => _bundleError;
 
@@ -588,76 +592,53 @@ class NutritionPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Coarse percent across both downloads, weighted by size (75 MB / 586 MB).
-  /// Returns 0 when not bundling.
+  /// Embedder download percent (0–100). 0 when not downloading.
   int get aiBundleProgress {
     if (!_isBundleDownloading) return 0;
-    const embedderWeight = 0.11; // 75 / (75 + 586)
-    const llmWeight = 0.89;
-    final embedderPct = _embedder?.downloadProgress ?? 0;
-    final llmPct = _ai.downloadProgress ?? 0;
-    return ((embedderPct * embedderWeight) + (llmPct * llmWeight)).round();
+    return _embedder?.downloadProgress ?? 0;
   }
 
-  /// Human-readable phase label for the bundle UI.
-  String get aiBundlePhaseLabel => switch (_bundlePhase) {
-        1 => 'Smart search · 1 of 2 (~75 MB)',
-        2 => 'AI Coach · 2 of 2 (~586 MB)',
-        _ => '',
-      };
+  /// Human-readable phase label for the UI.
+  String get aiBundlePhaseLabel {
+    if (!_isBundleDownloading) return '';
+    final embedder = _embedder;
+    return 'Smart search · ${embedder?.modelSizeLabel ?? '~145 MB'}';
+  }
 
-  /// Returns true when neither model is installed yet.
+  /// Returns true when the embedder isn't installed yet.
   bool get isAiBundleAvailable {
     final embedder = _embedder;
     if (embedder == null) return false;
-    return !embedder.isInstalled || !_ai.isAvailable;
+    return !embedder.isInstalled;
   }
 
-  /// Download the embedder first (small, gets smart search live fast), then
-  /// the LLM (big, enhances disambiguation + AI Coach). Idempotent — already-
-  /// installed components are skipped.
+  /// Download the embedder and build the semantic index. Idempotent —
+  /// returns immediately if already installed.
   Future<void> downloadAiBundle() async {
     if (_isBundleDownloading) return;
     final embedder = _embedder;
-    if (embedder == null) return;
+    if (embedder == null || embedder.isInstalled) return;
 
     _isBundleDownloading = true;
     _bundleError = null;
+    notifyListeners();
 
-    // Phase 1 — embedder.
-    if (!embedder.isInstalled) {
-      _bundlePhase = 1;
+    try {
+      await embedder.downloadModel(onProgress: (_) => notifyListeners());
+    } catch (e) {
+      debugPrint('NutritionPresenter.downloadAiBundle: embedder failed: $e');
+      _bundleError = 'Smart search download failed: ${_summarize(e)}';
+      _isBundleDownloading = false;
       notifyListeners();
-      try {
-        await embedder.downloadModel(onProgress: (_) => notifyListeners());
-      } catch (e) {
-        debugPrint('NutritionPresenter.downloadAiBundle: embedder failed: $e');
-        _bundleError = 'Smart search download failed: ${_summarize(e)}';
-        _isBundleDownloading = false;
-        _bundlePhase = 0;
-        notifyListeners();
-        return;
-      }
-      // Kick off semantic vector store + index build in the background.
-      await _semanticSearch?.init();
-      // ignore: unawaited_futures
-      _semanticSearch?.buildIndex();
+      return;
     }
 
-    // Phase 2 — LLM.
-    if (!_ai.isAvailable) {
-      _bundlePhase = 2;
-      notifyListeners();
-      try {
-        await _ai.downloadModel(onProgress: (_) => notifyListeners());
-      } catch (e) {
-        debugPrint('NutritionPresenter.downloadAiBundle: LLM failed: $e');
-        _bundleError = 'AI Coach download failed: ${_summarize(e)}';
-      }
-    }
+    // Kick off semantic vector store + index build in the background.
+    await _semanticSearch?.init();
+    // ignore: unawaited_futures
+    _semanticSearch?.buildIndex();
 
     _isBundleDownloading = false;
-    _bundlePhase = 0;
     notifyListeners();
   }
 
