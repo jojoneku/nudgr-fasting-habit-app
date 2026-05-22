@@ -396,3 +396,46 @@ jobs:
         run: |
           supabase functions deploy get-hf-token \
             --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+
+  deploy_lambda:
+    name: Deploy AI Coach Lambda
+    runs-on: ubuntu-latest
+    needs: [analyze_format, test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Detect changes to lambda_function.py
+        id: changes
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            if git diff --name-only HEAD~1 HEAD | grep -q '^lambda_function\.py$'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Configure AWS credentials
+        if: steps.changes.outputs.changed == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-southeast-1
+
+      - name: Package and deploy Lambda
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          zip lambda.zip lambda_function.py
+          aws lambda update-function-code \
+            --function-name ai-coach \
+            --zip-file fileb://lambda.zip \
+            --no-cli-pager
+          # Wait until the function is back to Active before exiting,
+          # so any follow-up calls (e.g. version publish) don't hit
+          # ResourceConflictException.
+          aws lambda wait function-updated \
+            --function-name ai-coach
