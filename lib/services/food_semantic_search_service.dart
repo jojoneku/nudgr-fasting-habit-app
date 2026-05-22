@@ -12,6 +12,7 @@ import '../models/index_progress.dart';
 import 'embedding_service.dart';
 import 'food_db_service.dart';
 import 'storage_service.dart';
+import 'vector_bundle_service.dart';
 
 /// Orchestrates RAG food search:
 ///   1. Manages the persistent on-device vector store (flutter_gemma's HNSW)
@@ -288,6 +289,137 @@ class FoodSemanticSearchService {
   void _publish(void Function(IndexProgress)? onProgress) {
     _progressController.add(_progress);
     onProgress?.call(_progress);
+  }
+
+  /// Fast-path index build from pre-computed vectors.
+  ///
+  /// Skips the embedding model entirely — vectors come from [bundleVectors]
+  /// (loaded via [VectorBundleService.loadVectors]). Only HNSW insertion +
+  /// food-DB metadata lookups are performed, which takes seconds vs 10+ min.
+  Future<void> buildIndexFromBundle({
+    required List<({String id, List<double> vector})> bundleVectors,
+    void Function(IndexProgress)? onProgress,
+  }) async {
+    if (_isIndexing) return;
+    if (!_isVectorStoreInitialized) await init();
+    _isIndexing = true;
+    try {
+      final total = bundleVectors.length;
+      _progress = IndexProgress(indexed: 0, total: total, isComplete: false);
+      _publish(onProgress);
+
+      const batchSize = 64;
+      var indexed = 0;
+      while (indexed < bundleVectors.length) {
+        final end = (indexed + batchSize).clamp(0, bundleVectors.length);
+        final batch = bundleVectors.sublist(indexed, end);
+        final ids = batch.map((e) => e.id).toList();
+        final entries = await _foodDb.getByIds(ids);
+        final byId = {for (final e in entries) e.id: e};
+
+        for (final item in batch) {
+          final entry = byId[item.id];
+          if (entry == null) continue;
+          await _plugin.addDocumentWithEmbedding(
+            id: entry.id,
+            content: _documentTextFor(entry),
+            embedding: item.vector,
+            metadata: jsonEncode(_metadataFor(entry)),
+          );
+        }
+
+        indexed = end;
+        _progress = _progress.copyWith(indexed: indexed, total: total);
+        await _storage.saveFoodIndexProgress(_progress);
+        _publish(onProgress);
+      }
+
+      _progress = _progress.copyWith(
+        isComplete: true,
+        completedAt: DateTime.now(),
+      );
+      await _storage.saveFoodIndexProgress(_progress);
+      _publish(onProgress);
+    } finally {
+      _isIndexing = false;
+    }
+  }
+
+  /// Developer tool: run a full [buildIndex] pass AND simultaneously write
+  /// every generated vector to [exportTo] as a reusable bundle.
+  ///
+  /// Upload the resulting file to GitHub Releases so users can skip the
+  /// slow on-device build in future installs.
+  Future<void> buildAndExportBundle({
+    required VectorBundleService exportTo,
+    int batchSize = 64,
+    void Function(IndexProgress)? onProgress,
+  }) async {
+    if (_isIndexing) return;
+    if (!_isVectorStoreInitialized) await init();
+    if (!_embedder.isReady) {
+      debugPrint('FoodSemanticSearchService: embedder not ready; skip export');
+      return;
+    }
+    _isIndexing = true;
+    final allVectors = <({String id, List<double> vector})>[];
+    try {
+      final total = await _foodDb.totalRowCount();
+      _progress = IndexProgress(indexed: 0, total: total, isComplete: false);
+      _publish(onProgress);
+
+      String? cursor;
+      while (true) {
+        final page = await _foodDb.getAllForIndex(
+          afterId: cursor,
+          limit: batchSize,
+        );
+        if (page.isEmpty) break;
+
+        final texts = page.map(_documentTextFor).toList();
+        final List<List<double>> vectors;
+        try {
+          vectors = await _embedder.embedBatch(texts);
+        } catch (e) {
+          debugPrint(
+              'FoodSemanticSearchService.buildAndExportBundle: embed failed: $e');
+          break;
+        }
+        if (vectors.length != page.length) break;
+
+        for (var i = 0; i < page.length; i++) {
+          final entry = page[i];
+          allVectors.add((id: entry.id, vector: vectors[i]));
+          await _plugin.addDocumentWithEmbedding(
+            id: entry.id,
+            content: texts[i],
+            embedding: vectors[i],
+            metadata: jsonEncode(_metadataFor(entry)),
+          );
+        }
+
+        cursor = page.last.id;
+        _progress = _progress.copyWith(
+          indexed: _progress.indexed + page.length,
+          lastFoodId: cursor,
+          total: total,
+        );
+        await _storage.saveFoodIndexProgress(_progress);
+        _publish(onProgress);
+        if (page.length < batchSize) break;
+      }
+
+      await exportTo.writeVectors(allVectors);
+
+      _progress = _progress.copyWith(
+        isComplete: true,
+        completedAt: DateTime.now(),
+      );
+      await _storage.saveFoodIndexProgress(_progress);
+      _publish(onProgress);
+    } finally {
+      _isIndexing = false;
+    }
   }
 
   Future<void> dispose() async {

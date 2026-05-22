@@ -30,6 +30,7 @@ import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/services/food_semantic_search_service.dart';
+import 'package:intermittent_fasting/services/vector_bundle_service.dart';
 import '../mocks.mocks.dart';
 
 void main() {
@@ -463,6 +464,19 @@ class _FakeSemanticSearch implements FoodSemanticSearchService {
   @override
   Future<void> rebuildIndex({
     int batchSize = 32,
+    void Function(IndexProgress)? onProgress,
+  }) async {}
+
+  @override
+  Future<void> buildIndexFromBundle({
+    required List<({String id, List<double> vector})> bundleVectors,
+    void Function(IndexProgress)? onProgress,
+  }) async {}
+
+  @override
+  Future<void> buildAndExportBundle({
+    required VectorBundleService exportTo,
+    int batchSize = 64,
     void Function(IndexProgress)? onProgress,
   }) async {}
 

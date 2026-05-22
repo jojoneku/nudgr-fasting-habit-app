@@ -713,6 +713,13 @@ class SettingsScreen extends StatelessWidget {
             await p.enableFoodSearch();
           },
         ),
+      FoodSearchStatus.bundleDownloading => (
+          'Downloading search index…',
+          '${p.vectorBundleDownloadProgress}% · ~49 MB',
+          Icons.cloud_download_outlined,
+          null,
+          null,
+        ),
       FoodSearchStatus.indexing => (
           'Indexing food database…',
           '${progress.indexed} / ${progress.total} '
@@ -783,6 +790,14 @@ class SettingsScreen extends StatelessWidget {
                         padding: const EdgeInsets.only(top: 6),
                         child: LinearProgressIndicator(
                           value: p.foodEmbedderDownloadProgress / 100.0,
+                          minHeight: 3,
+                        ),
+                      ),
+                    if (status == FoodSearchStatus.bundleDownloading)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: LinearProgressIndicator(
+                          value: p.vectorBundleDownloadProgress / 100.0,
                           minHeight: 3,
                         ),
                       ),
