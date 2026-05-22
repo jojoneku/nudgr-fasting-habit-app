@@ -202,6 +202,14 @@ jobs:
     name: Release — Build & Deploy APK
     runs-on: ubuntu-latest
     needs: [analyze_format, test]
+    # Serialize release builds. When two merges to main land in quick
+    # succession, both runs would otherwise race to create v<next>.<patch>:
+    # the earlier upload wins the release tag, the later (newer-code) upload
+    # silently skips, and the new commits never reach a released APK.
+    # cancel-in-progress: the latest commit always supersedes any in-flight build.
+    concurrency:
+      group: release-main
+      cancel-in-progress: true
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
