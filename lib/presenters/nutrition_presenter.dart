@@ -25,6 +25,7 @@ import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
 import '../services/notification_service.dart';
 import '../services/open_food_facts_service.dart';
+import '../services/vector_bundle_service.dart';
 import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
@@ -44,6 +45,7 @@ class NutritionPresenter extends ChangeNotifier {
   final FoodSemanticSearchService? _semanticSearch;
   final EmbeddingService? _embedder;
   final OpenFoodFactsService _barcodeLookup;
+  final VectorBundleService? _vectorBundle;
   final NotificationService _notifications;
   StreamSubscription<IndexProgress>? _indexProgressSub;
 
@@ -233,6 +235,7 @@ class NutritionPresenter extends ChangeNotifier {
     FoodSemanticSearchService? semanticSearch,
     EmbeddingService? embedder,
     OpenFoodFactsService? barcodeLookup,
+    VectorBundleService? vectorBundle,
     NotificationService? notifications,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
@@ -243,6 +246,7 @@ class NutritionPresenter extends ChangeNotifier {
         _semanticSearch = semanticSearch,
         _embedder = embedder,
         _barcodeLookup = barcodeLookup ?? OpenFoodFactsService(),
+        _vectorBundle = vectorBundle,
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     // Surface index progress to the UI without polling.
@@ -509,6 +513,8 @@ class NutritionPresenter extends ChangeNotifier {
     if (embedder.isDownloading) return FoodSearchStatus.downloading;
     if (!embedder.isInstalled) return FoodSearchStatus.notInstalled;
     if (!embedder.isReady) return FoodSearchStatus.loading;
+    if (_vectorBundle?.isDownloading ?? false)
+      return FoodSearchStatus.bundleDownloading;
     if (semantic.isIndexing) return FoodSearchStatus.indexing;
     if (semantic.isReady) return FoodSearchStatus.ready;
     return FoodSearchStatus.idle;
@@ -518,6 +524,7 @@ class NutritionPresenter extends ChangeNotifier {
       _semanticSearch?.progress ?? const IndexProgress.empty();
 
   int get foodEmbedderDownloadProgress => _embedder?.downloadProgress ?? 0;
+  int get vectorBundleDownloadProgress => _vectorBundle?.downloadProgress ?? 0;
 
   String? get foodEmbedderSizeLabel => _embedder?.modelSizeLabel;
 
@@ -554,6 +561,19 @@ class NutritionPresenter extends ChangeNotifier {
     if (!embedder.isReady) return; // download/load failed; status reflects it
     await semantic.init();
     // Build runs in the background — don't block the caller.
+    // ignore: unawaited_futures
+    semantic.buildIndex();
+    notifyListeners();
+  }
+
+  /// Resume or start the background index build if the embedder is ready.
+  /// Safe to call on every app launch — no-ops if already indexed or not ready.
+  Future<void> resumeFoodIndex() async {
+    final semantic = _semanticSearch;
+    final embedder = _embedder;
+    if (semantic == null || embedder == null) return;
+    if (!embedder.isReady) return;
+    if (semantic.isReady || semantic.isIndexing) return;
     // ignore: unawaited_futures
     semantic.buildIndex();
     notifyListeners();
@@ -2459,6 +2479,9 @@ enum FoodSearchStatus {
 
   /// Embedder installed but not yet loaded into memory.
   loading,
+
+  /// Pre-built vector bundle is downloading.
+  bundleDownloading,
 
   /// Embedder ready but no rows indexed yet.
   idle,

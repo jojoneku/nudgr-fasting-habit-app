@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -80,7 +79,7 @@ class VectorBundleService {
       _downloadProgress = 100;
       onProgress?.call(100);
     } catch (e) {
-      await partial?.delete().catchError((_) {});
+      await partial?.delete().catchError((_) => File(''));
       debugPrint('VectorBundleService.download failed: $e');
       rethrow;
     } finally {
@@ -96,7 +95,8 @@ class VectorBundleService {
 
     final magic = data.getUint32(offset, Endian.little);
     offset += 4;
-    if (magic != _magic) throw FormatException('Bad bundle magic: 0x${magic.toRadixString(16)}');
+    if (magic != _magic)
+      throw FormatException('Bad bundle magic: 0x${magic.toRadixString(16)}');
 
     final version = data.getUint32(offset, Endian.little);
     offset += 4;
