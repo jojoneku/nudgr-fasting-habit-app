@@ -1967,7 +1967,6 @@ class NutritionPresenter extends ChangeNotifier {
     );
   }
 
-
   /// Mark every item in a chat food message as a bad match. Captures one
   /// [FoodFeedbackKind.userDislike] entry per item so a curator sees both the
   /// raw query and what the matcher picked. The log entries themselves stay —
