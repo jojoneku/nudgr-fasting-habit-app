@@ -431,11 +431,11 @@ jobs:
         run: |
           zip lambda.zip lambda_function.py
           aws lambda update-function-code \
-            --function-name ai-coach \
+            --function-name food-coach-handler \
             --zip-file fileb://lambda.zip \
             --no-cli-pager
           # Wait until the function is back to Active before exiting,
           # so any follow-up calls (e.g. version publish) don't hit
           # ResourceConflictException.
           aws lambda wait function-updated \
-            --function-name ai-coach
+            --function-name food-coach-handler
