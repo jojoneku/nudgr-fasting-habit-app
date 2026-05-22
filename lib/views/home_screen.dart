@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
 import '../services/food_semantic_search_service.dart';
+import '../services/vector_bundle_service.dart';
 import '../services/health_service.dart';
 import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
@@ -56,6 +57,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final CloudAiCoachService _cloudAi;
   late final EmbeddingService _embedder;
   late final FoodSemanticSearchService _semanticSearch;
+  late final VectorBundleService _vectorBundle;
   late final HealthService _healthService;
   late final ActivityPresenter _activityPresenter;
   late final TreasuryDashboardPresenter _treasuryPresenter;
@@ -104,6 +106,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       foodDb: _foodDb,
       storage: _storage,
     );
+    _vectorBundle = VectorBundleService();
     _healthService = HealthService();
     _activityPresenter = ActivityPresenter(
       statsPresenter: _statsPresenter,
@@ -134,6 +137,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       cloudAi: _cloudAi,
       semanticSearch: _semanticSearch,
       embedder: _embedder,
+      vectorBundle: _vectorBundle,
     );
     _aiCoachPresenter = AiCoachPresenter(
       stats: _statsPresenter,
@@ -163,7 +167,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _semanticSearch.init();
       // Resume the index build in the background — never blocks UI.
       // ignore: unawaited_futures
-      _semanticSearch.buildIndex();
+      _nutritionPresenter?.resumeFoodIndex();
       await _syncQueue!.load(); // restore persisted queue before auth
       await AuthService.instance.init(); // init Supabase + restore session
       _authPresenter.init();
