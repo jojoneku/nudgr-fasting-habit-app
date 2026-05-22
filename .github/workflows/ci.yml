@@ -294,7 +294,8 @@ jobs:
             --build-number=${{ steps.meta.outputs.build_number }} \
             --build-name=${{ steps.meta.outputs.new_version }} \
             --dart-define=UPDATE_MANIFEST_URL=${{ steps.meta.outputs.manifest_url }} \
-            --dart-define=APP_VERSION=${{ steps.meta.outputs.new_version }}
+            --dart-define=APP_VERSION=${{ steps.meta.outputs.new_version }} \
+            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - name: Generate manifest.json
         run: |
