@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import '../models/habit_routine.dart';
 import '../models/quest.dart';
 import '../models/quest_achievement.dart';
+import '../models/notification_preferences.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import 'stats_presenter.dart';
@@ -30,6 +31,7 @@ class QuestPresenter extends ChangeNotifier {
   List<QuestAchievement> _achievements = [];
   DateTime? _lastPenaltyCheckDate;
   bool _disposed = false;
+  NotificationPreferences _notifPrefs = NotificationPreferences.defaults();
 
   final _random = Random();
 
@@ -47,6 +49,7 @@ class QuestPresenter extends ChangeNotifier {
 
   List<Quest> get quests => List.unmodifiable(_quests);
   List<HabitRoutine> get routines => List.unmodifiable(_routines);
+  List<QuestAchievement> get achievements => List.unmodifiable(_achievements);
   List<QuestAchievement> get unseenAchievements =>
       _achievements.where((a) => !a.seen).toList();
   bool get hasUnseenAchievements => _achievements.any((a) => !a.seen);
@@ -154,6 +157,7 @@ class QuestPresenter extends ChangeNotifier {
     _lastPenaltyCheckDate = await _storage.loadQuestPenaltyCheckDate();
     notifyListeners();
 
+    _notifPrefs = await _storage.loadNotificationPreferences();
     await _notifications.init();
     await checkMissedQuestsAndApplyPenalty();
     await _rescheduleAll();
@@ -286,7 +290,7 @@ class QuestPresenter extends ChangeNotifier {
     _quests.add(quest);
     notifyListeners();
     await _saveQuests();
-    if (quest.isEnabled) {
+    if (quest.isEnabled && _notifPrefs.questNotificationsEnabled) {
       // Notification scheduling can take seconds on Android (alarmClock mode +
       // exact-alarm permission round-trip). Don't block the UI on it.
       unawaited(_notifications.scheduleQuestNotifications(quest));
@@ -300,8 +304,9 @@ class QuestPresenter extends ChangeNotifier {
     _quests[idx] = quest;
     notifyListeners();
     await _saveQuests();
+    final prefs = await _storage.loadNotificationPreferences();
     unawaited(_notifications.cancelQuestNotifications(old).then((_) {
-      if (quest.isEnabled) {
+      if (quest.isEnabled && prefs.questNotificationsEnabled) {
         return _notifications.scheduleQuestNotifications(quest);
       }
       return null;
@@ -324,7 +329,10 @@ class QuestPresenter extends ChangeNotifier {
     _quests[idx] = quest;
     notifyListeners();
     if (isEnabled) {
-      await _notifications.scheduleQuestNotifications(quest);
+      final prefs = await _storage.loadNotificationPreferences();
+      if (prefs.questNotificationsEnabled) {
+        await _notifications.scheduleQuestNotifications(quest);
+      }
     } else {
       await _notifications.cancelQuestNotifications(_quests[idx]);
     }
@@ -460,10 +468,12 @@ class QuestPresenter extends ChangeNotifier {
       await _stats.modifyHp(-totalDamage);
       debugPrint(
           'QuestPresenter: Missed $missedCount quests. Applied $totalDamage damage.');
-      await _notifications.showSimpleNotification(
-        title: 'Penalty Applied',
-        body: 'You missed $missedCount quests. Took $totalDamage damage.',
-      );
+      if (_notifPrefs.questNotificationsEnabled) {
+        await _notifications.showSimpleNotification(
+          title: 'Penalty Applied',
+          body: 'You missed $missedCount quests. Took $totalDamage damage.',
+        );
+      }
     }
 
     notifyListeners();
@@ -550,6 +560,7 @@ class QuestPresenter extends ChangeNotifier {
   }
 
   Future<void> _rescheduleAll() async {
+    if (!_notifPrefs.questNotificationsEnabled) return;
     for (final quest in _quests) {
       if (quest.isEnabled) {
         await _notifications.scheduleQuestNotifications(quest);
@@ -558,6 +569,7 @@ class QuestPresenter extends ChangeNotifier {
   }
 
   void _scheduleStreakAtRiskIfNeeded() {
+    if (!_notifPrefs.streakAtRiskEnabled) return;
     for (final quest in todayOverdueQuests) {
       if (quest.streakCount > 3) {
         _notifications.scheduleStreakAtRiskNotification(
