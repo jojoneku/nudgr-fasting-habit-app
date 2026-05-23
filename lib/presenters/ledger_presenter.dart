@@ -232,8 +232,6 @@ class LedgerPresenter extends ChangeNotifier {
     return anyChanged ? result : null;
   }
 
-  bool _isWhiteOrNearWhite(String hex) => isDefaultWhite(hex);
-
   // --- Transaction CRUD ---
 
   Future<void> addTransaction(TransactionRecord txn) async {

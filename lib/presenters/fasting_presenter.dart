@@ -338,9 +338,9 @@ class FastingPresenter extends ChangeNotifier {
 
     if (durationHours >= fastingGoalHours) {
       xp = (50 + (durationHours * 10)).round();
-      // Overtime bonus: +5 XP per overtime hour
-      if (isOvertime) {
-        final overtimeHours = overtimeSeconds / 3600.0;
+      // Overtime bonus: +5 XP per overtime hour (checked before isFasting cleared).
+      if (durationHours > fastingGoalHours) {
+        final overtimeHours = durationHours - fastingGoalHours;
         xp += (overtimeHours * 5).round();
       }
       statsPresenter?.addXp(xp);

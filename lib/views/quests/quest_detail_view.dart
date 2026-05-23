@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/quest.dart';
-import '../../models/quest_achievement.dart';
 import '../../presenters/quest_presenter.dart';
 import '../../utils/app_spacing.dart';
 import '../../utils/app_text_styles.dart';
@@ -141,8 +140,7 @@ class QuestDetailView extends StatelessWidget {
   }
 
   Set<int> _unlockedMilestones(int questId) {
-    return presenter.quests
-        .expand((_) => <QuestAchievement>[])
+    return presenter.achievements
         .where((a) => a.questId == questId)
         .map((a) => a.streakMilestone)
         .toSet();

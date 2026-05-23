@@ -108,7 +108,7 @@ void main() {
   }
 
   group('semantic resolution', () {
-    test('high-confidence top hit short-circuits FTS5', () async {
+    test('high-confidence semantic wins when FTS5 finds nothing', () async {
       fakeSemantic.results = [
         FoodSearchCandidate(
           entry: yogurtEntry(),
@@ -116,9 +116,9 @@ void main() {
           source: SearchSource.semantic,
         ),
       ];
-      // FTS5 should NOT be called when semantic is high-confidence.
-      when(mockFoodDb.search(any))
-          .thenThrow(StateError('FTS5 should not be called'));
+      // FTS5 and semantic run in parallel (hybrid RRF). FTS5 returns nothing
+      // here so the semantic-only hit wins.
+      when(mockFoodDb.search(any)).thenAnswer((_) async => []);
 
       final presenter = buildPresenter(semantic: fakeSemantic);
       await Future<void>.delayed(Duration.zero);
@@ -174,8 +174,11 @@ void main() {
       expect(entries.first.name, 'Adobo, Chicken');
     });
 
-    test('mid-confidence + AI picks top via disambiguateFood', () async {
-      final candidates = [
+    test('RRF fuses semantic + FTS5; overlapping candidate wins', () async {
+      // Semantic returns yogurt (rank 0) + adobo (rank 1).
+      // FTS5 returns adobo (rank 0). Adobo appears in both channels and gets
+      // a higher combined RRF score, so it wins.
+      fakeSemantic.results = [
         FoodSearchCandidate(
           entry: yogurtEntry(),
           score: 0.65,
@@ -187,10 +190,7 @@ void main() {
           source: SearchSource.semantic,
         ),
       ];
-      fakeSemantic.results = candidates;
-      fakeAi.available = true;
-      fakeAi.disambiguation =
-          const FoodDisambiguation(foodId: 'fdc-2', confidence: 0.85);
+      when(mockFoodDb.search(any)).thenAnswer((_) async => [adoboEntry()]);
 
       final presenter = buildPresenter(semantic: fakeSemantic);
       await Future<void>.delayed(Duration.zero);
@@ -198,7 +198,6 @@ void main() {
       final entries = await presenter.parseFoodItemsForTemplate('adobo');
 
       expect(entries.first.name, 'Adobo, Chicken');
-      verifyNever(mockFoodDb.search(any));
     });
 
     test('mid-confidence + AI low-confidence falls through to FTS5', () async {
@@ -292,6 +291,8 @@ void main() {
         ),
       ];
 
+      when(mockFoodDb.search(any)).thenAnswer((_) async => []);
+
       final presenter = buildPresenter(semantic: fakeSemantic);
       await Future<void>.delayed(Duration.zero);
 
@@ -318,6 +319,7 @@ void main() {
           source: SearchSource.semantic,
         ),
       ];
+      when(mockFoodDb.search(any)).thenAnswer((_) async => []);
 
       final presenter = buildPresenter(semantic: fakeSemantic);
       await Future<void>.delayed(Duration.zero);

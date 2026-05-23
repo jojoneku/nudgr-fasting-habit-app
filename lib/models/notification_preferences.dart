@@ -11,6 +11,10 @@ class NotificationPreferences {
   final TimeOfDay weightReminderTime; // default 08:00
   final bool calorieGoalEnabled;
 
+  // ── Quests ─────────────────────────────────────────────────────────────────
+  final bool questNotificationsEnabled;
+  final bool streakAtRiskEnabled;
+
   // ── Finance ────────────────────────────────────────────────────────────────
   final bool billsReminderEnabled;
   final int billsReminderDayOfMonth; // 1–28, default 1
@@ -23,6 +27,8 @@ class NotificationPreferences {
     this.weightReminderEnabled = false,
     this.weightReminderTime = const TimeOfDay(hour: 8, minute: 0),
     this.calorieGoalEnabled = true,
+    this.questNotificationsEnabled = true,
+    this.streakAtRiskEnabled = true,
     this.billsReminderEnabled = true,
     this.billsReminderDayOfMonth = 1,
     this.budgetWarningEnabled = true,
@@ -40,6 +46,9 @@ class NotificationPreferences {
       weightReminderEnabled: json['weightReminderEnabled'] as bool? ?? false,
       weightReminderTime: TimeOfDay(hour: hourRaw, minute: minRaw),
       calorieGoalEnabled: json['calorieGoalEnabled'] as bool? ?? true,
+      questNotificationsEnabled:
+          json['questNotificationsEnabled'] as bool? ?? true,
+      streakAtRiskEnabled: json['streakAtRiskEnabled'] as bool? ?? true,
       billsReminderEnabled: json['billsReminderEnabled'] as bool? ?? true,
       billsReminderDayOfMonth:
           (json['billsReminderDayOfMonth'] as int? ?? 1).clamp(1, 28),
@@ -56,6 +65,8 @@ class NotificationPreferences {
         'weightReminderHour': weightReminderTime.hour,
         'weightReminderMinute': weightReminderTime.minute,
         'calorieGoalEnabled': calorieGoalEnabled,
+        'questNotificationsEnabled': questNotificationsEnabled,
+        'streakAtRiskEnabled': streakAtRiskEnabled,
         'billsReminderEnabled': billsReminderEnabled,
         'billsReminderDayOfMonth': billsReminderDayOfMonth,
         'budgetWarningEnabled': budgetWarningEnabled,
@@ -68,6 +79,8 @@ class NotificationPreferences {
     bool? weightReminderEnabled,
     TimeOfDay? weightReminderTime,
     bool? calorieGoalEnabled,
+    bool? questNotificationsEnabled,
+    bool? streakAtRiskEnabled,
     bool? billsReminderEnabled,
     int? billsReminderDayOfMonth,
     bool? budgetWarningEnabled,
@@ -80,6 +93,9 @@ class NotificationPreferences {
             weightReminderEnabled ?? this.weightReminderEnabled,
         weightReminderTime: weightReminderTime ?? this.weightReminderTime,
         calorieGoalEnabled: calorieGoalEnabled ?? this.calorieGoalEnabled,
+        questNotificationsEnabled:
+            questNotificationsEnabled ?? this.questNotificationsEnabled,
+        streakAtRiskEnabled: streakAtRiskEnabled ?? this.streakAtRiskEnabled,
         billsReminderEnabled: billsReminderEnabled ?? this.billsReminderEnabled,
         billsReminderDayOfMonth:
             billsReminderDayOfMonth ?? this.billsReminderDayOfMonth,

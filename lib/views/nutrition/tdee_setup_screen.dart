@@ -701,42 +701,6 @@ class _ReviewRow extends StatelessWidget {
   }
 }
 
-// ─── Macro Chip ───────────────────────────────────────────────────────────────
-
-class _MacroChip extends StatelessWidget {
-  final String label;
-  final String value;
-  const _MacroChip({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant, fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ─── Radio Tile ───────────────────────────────────────────────────────────────
 
 class _RadioTile<T> extends StatelessWidget {
