@@ -13,9 +13,6 @@ import '../widgets/refeeding_warning_sheet.dart';
 import '../widgets/system/system.dart';
 import 'history_tab.dart';
 
-// Quick-pick protocol hours shown in AppSegmentedControl.
-const _kQuickHours = [16, 18, 20, 24];
-
 class TimerTab extends StatefulWidget {
   final FastingPresenter presenter;
   const TimerTab({super.key, required this.presenter});
@@ -109,14 +106,6 @@ class _TimerTabState extends State<TimerTab> {
 
   bool get _showSkipButton =>
       _isEatingWindow && _hasEatingWindow && !presenter.isFasting;
-
-  int get _quickSelected => _kQuickHours.contains(presenter.fastingGoalHours)
-      ? presenter.fastingGoalHours
-      : _kQuickHours.first;
-
-  FastingProtocol? get _currentProtocol => FastingProtocol.all
-      .where((p) => p.hours == presenter.fastingGoalHours)
-      .firstOrNull;
 
   String _formatHMS(int totalSeconds) {
     final abs = totalSeconds.abs();

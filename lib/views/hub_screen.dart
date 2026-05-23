@@ -26,16 +26,13 @@ import 'nutrition/log_meal_sheet.dart';
 import 'nutrition/nutrition_screen.dart';
 import 'quests/quests_tab.dart';
 import 'settings_screen.dart';
-import 'stats_view.dart';
 import 'tabs/timer_tab.dart';
-import 'treasury/ledger/add_transaction_sheet.dart';
 import 'treasury/treasury_module_view.dart';
 import 'widgets/hub/activity_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
 import 'widgets/hub/nutrition_hub_card.dart';
 import 'widgets/hub/quests_hub_card.dart';
 import 'widgets/hub/treasury_hub_card.dart';
-import 'widgets/system/overlays/app_bottom_sheet.dart';
 import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
@@ -478,26 +475,6 @@ class _HubScreenState extends State<HubScreen>
     );
   }
 
-  void _pushStatsView(BuildContext context) {
-    final auth = widget.authPresenter;
-    if (auth == null) return;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => Scaffold(
-          body: StatsView(
-            presenter: widget.statsPresenter,
-            fastingPresenter: widget.fastingPresenter,
-            authPresenter: auth,
-            syncPresenter: widget.syncPresenter,
-            settingsPresenter: widget.settingsPresenter,
-            aiCoachPresenter: widget.aiCoachPresenter,
-          ),
-        ),
-      ),
-    );
-  }
-
   void _pushSettings(BuildContext context) {
     final auth = widget.authPresenter;
     if (auth == null) return;
@@ -546,16 +523,6 @@ class _HubScreenState extends State<HubScreen>
       final label = isCrit ? 'Critical! +$xp XP' : '+$xp XP';
       AppToast.success(context, '${quest.title} done · $label');
     }
-  }
-
-  void _showAddTransactionSheet(BuildContext context) {
-    final ledger = widget.ledgerPresenter;
-    if (ledger == null) return;
-    AppBottomSheet.show(
-      context: context,
-      title: 'Log Expense',
-      body: AddTransactionSheet(presenter: ledger),
-    );
   }
 }
 
