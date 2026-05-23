@@ -612,7 +612,7 @@ class SettingsScreen extends StatelessWidget {
 
     // Smart search entry point — embedder isn't installed yet.
     // (The on-device LLM is downloaded separately from the Nutrition screen.)
-    if (p.isAiBundleAvailable) {
+    if (p.isAiBundleDownloadable) {
       return AppGroupedListSection(
         title: 'AI Models',
         footer:

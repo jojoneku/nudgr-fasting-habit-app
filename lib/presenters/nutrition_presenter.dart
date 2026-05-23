@@ -49,12 +49,6 @@ class NutritionPresenter extends ChangeNotifier {
   final NotificationService _notifications;
   StreamSubscription<IndexProgress>? _indexProgressSub;
 
-  // Confidence thresholds — see docs/rag_food_search_spec.md for tuning notes.
-  static const double _semanticHighConfidence = 0.80;
-  static const double _semanticAcceptable = 0.55;
-  static const double _llmRerankConfidence = 0.70;
-  static const int _semanticTopK = 5;
-
   DailyNutritionLog _todayLog = DailyNutritionLog.empty('');
   NutritionGoals _goals = NutritionGoals.initial();
   List<DailyNutritionLog> _history = [];
@@ -68,6 +62,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   bool _proteinGoalMetToday = false;
   bool _calorieGoalNotifiedToday = false;
+  bool _overshootPenalizedToday = false;
   bool _isAiEstimating = false;
   AiMealEstimate? _lastEstimate;
   String? _aiEstimateError;
@@ -295,8 +290,10 @@ class NutritionPresenter extends ChangeNotifier {
   double get netCalorieProgress =>
       effectiveGoal > 0 ? (netCalories / effectiveGoal).clamp(0.0, 1.0) : 0.0;
 
-  bool get isCalorieGoalMet => todayCalories >= effectiveGoal;
-  bool get isOverGoal => todayCalories > effectiveGoal * 1.2;
+  bool get isCalorieGoalMet =>
+      effectiveGoal > 0 && todayCalories >= effectiveGoal;
+  bool get isOverGoal =>
+      effectiveGoal > 0 && todayCalories > effectiveGoal * 1.2;
 
   String get summaryLabel =>
       '${_calFmt.format(todayCalories)} / ${_calFmt.format(effectiveGoal)} kcal';
@@ -654,8 +651,9 @@ class NutritionPresenter extends ChangeNotifier {
     return 'Smart search · ${embedder?.modelSizeLabel ?? '~145 MB'}';
   }
 
-  /// Returns true when the embedder isn't installed yet.
-  bool get isAiBundleAvailable {
+  /// True when the embedder is wired in but not yet installed — i.e. the
+  /// download option should be shown to the user.
+  bool get isAiBundleDownloadable {
     final embedder = _embedder;
     if (embedder == null) return false;
     return !embedder.isInstalled;
@@ -683,9 +681,13 @@ class NutritionPresenter extends ChangeNotifier {
     }
 
     // Kick off semantic vector store + index build in the background.
-    await _semanticSearch?.init();
-    // ignore: unawaited_futures
-    _semanticSearch?.buildIndex();
+    // Use the pre-built bundle if available, same as enableFoodSearch.
+    final semantic = _semanticSearch;
+    if (semantic != null) {
+      await semantic.init();
+      // ignore: unawaited_futures
+      _startIndexFromBundleOrFallback(semantic, _vectorBundle);
+    }
 
     _isBundleDownloading = false;
     notifyListeners();
@@ -746,7 +748,8 @@ class NutritionPresenter extends ChangeNotifier {
   /// Log a food entry created from manual user input and add it to the chat feed.
   Future<void> addManualFoodEntry(FoodEntry entry) async {
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
-    await addFoodEntry(entry, MealSlot.meal);
+    await _ensureTodayLogFresh();
+    _todayLog = _todayLog.addEntry(entry, MealSlot.meal);
     final msg = ChatMessage(
       id: ChatMessage.generateId(),
       rawText: entry.name,
@@ -759,7 +762,15 @@ class NutritionPresenter extends ChangeNotifier {
     );
     _chatMessages.add(msg);
     notifyListeners();
-    await _persistChatMessages();
+    // Save log + chat atomically so a crash between them can't desync.
+    await Future.wait([
+      _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
+    await _updateLogStreak();
+    await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
   }
 
   Future<void> removeFoodEntry(String entryId, MealSlot slot) async {
@@ -769,6 +780,7 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   Future<void> addMealFromTemplate(FoodTemplate meal, MealSlot slot) async {
+    if (_isChatParsing) return; // avoid racing with an in-flight parse
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
     await _ensureTodayLogFresh();
     final entries = meal.entries
@@ -851,7 +863,9 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> updateGoals(NutritionGoals newGoals) async {
     _goals = newGoals;
+    _calorieGoalNotifiedToday = false;
     _proteinGoalMetToday = false;
+    _overshootPenalizedToday = false;
     notifyListeners();
     await _storage.saveNutritionGoals(newGoals);
     await _checkGoalMet();
@@ -1003,12 +1017,22 @@ class NutritionPresenter extends ChangeNotifier {
   }) async {
     final result = _lastParseResult;
     if (result == null) return;
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
 
-    for (var i = 0; i < result.items.length; i++) {
-      final entry =
-          overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]);
-      await addFoodEntry(entry, slot);
-    }
+    await _ensureTodayLogFresh();
+
+    final entries = [
+      for (var i = 0; i < result.items.length; i++)
+        overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]),
+    ];
+    _todayLog = _todayLog.addEntries(entries, slot);
+    notifyListeners();
+
+    await _storage.saveNutritionLog(_todayLog);
+    await _updateLogStreak();
+    await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
 
     _lastParseResult = null;
     _parsedDbMatches = [];
@@ -1123,58 +1147,18 @@ class NutritionPresenter extends ChangeNotifier {
     ParsedFoodItem item, {
     String? altName,
   }) async {
-    // Step 1 — semantic top-k.
-    final semanticHit = await _resolveViaSemantic(item.name);
-    if (semanticHit != null) return semanticHit;
-
-    // Step 2 — FTS5 fallback (existing behaviour).
-    return _resolveViaFts5(item.name, altName: altName);
-  }
-
-  /// Semantic search step. Returns null when not ready, low-confidence, or
-  /// the LLM rerank doesn't yield a confident pick.
-  Future<FoodDbEntry?> _resolveViaSemantic(String name) async {
-    final semantic = _semanticSearch;
-    if (semantic == null || !semantic.isReady) return null;
-
-    final List<FoodSearchCandidate> candidates;
-    try {
-      candidates = await semantic.search(name, k: _semanticTopK);
-    } catch (e) {
-      debugPrint('NutritionPresenter: semantic search failed: $e');
-      return null;
+    // Use the same hybrid RRF pipeline as the chat path for consistent quality.
+    final hybrid = await _hybridResolveItem(
+      name: item.name,
+      hyde: item.name, // NLP path has no HyDE — name serves both channels.
+    );
+    if (hybrid != null) return hybrid.pick;
+    // altName secondary FTS5 pass when hybrid found nothing (e.g. AI-normalised
+    // form like "milk powder" vs raw "bearbrand").
+    if (altName != null && altName.toLowerCase() != item.name.toLowerCase()) {
+      return _resolveViaFts5(item.name, altName: altName);
     }
-    if (candidates.isEmpty) return null;
-
-    // High-confidence top hit — ship it.
-    if (candidates.first.score >= _semanticHighConfidence) {
-      return candidates.first.entry;
-    }
-
-    // Below the "acceptable" floor — fall through to FTS5 entirely.
-    if (candidates.first.score < _semanticAcceptable) return null;
-
-    // Ambiguous band — ask the LLM to disambiguate. Cloud AI preferred;
-    // falls back to on-device. Bound at 5 s.
-    final disambiguator = (_cloudAi?.isAvailable ?? false)
-        ? _cloudAi!
-        : (_ai.isAvailable ? _ai : null);
-    if (disambiguator == null) return null;
-    try {
-      final pick = await disambiguator
-          .disambiguateFood(name, candidates)
-          .timeout(const Duration(seconds: 5));
-      if (pick == null || pick.confidence < _llmRerankConfidence) return null;
-
-      final hit = candidates.firstWhere(
-        (c) => c.entry.id == pick.foodId,
-        orElse: () => candidates.first,
-      );
-      return hit.entry;
-    } catch (e) {
-      debugPrint('NutritionPresenter: disambiguateFood failed: $e');
-      return null;
-    }
+    return null;
   }
 
   Future<FoodDbEntry?> _resolveViaFts5(String name, {String? altName}) async {
@@ -1330,6 +1314,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   /// Switch the viewed day. Loads that day's chat messages and nutrition log.
   Future<void> setSelectedDate(DateTime date) async {
+    if (_isChatParsing) return; // avoid desyncing log vs chat mid-parse
     _selectedDate = date;
     final dateKey = _dateFmt.format(date);
     final raw = await _storage.loadChatMessagesRaw(dateKey);
@@ -1572,18 +1557,51 @@ class NutritionPresenter extends ChangeNotifier {
             dictHit,
           );
         } else if (item.resolvedFoodId != null &&
-            item.resolverConfidence >= 0.6) {
+            item.resolverConfidence >= 0.70) {
           final hit = await _foodDb.getById(item.resolvedFoodId!);
           if (hit != null) {
             entry = hit.toFoodEntry(item.grams).copyWith(
+                  name: _formatDisplayName(item.name),
                   estimationSource: EstimationSource.localAi,
                   confidence: item.resolverConfidence,
                 );
           }
         }
 
-        // No DB hit + no dict hit → keyword bucket fallback. Qwen does not
-        // estimate macros itself in this tier (Plan 027 §2.1 pick-only).
+        // AI didn't resolve confidently — try hybrid RRF before keyword bucket.
+        // HyDE description improves semantic recall over the raw name alone.
+        List<ChatFoodAlternative> alts = const [];
+        if (entry == null) {
+          final hybrid = await _hybridResolveItem(
+            name: item.name,
+            hyde: item.hydeDescription.isNotEmpty
+                ? item.hydeDescription
+                : item.name,
+          );
+          if (hybrid != null) {
+            entry = hybrid.pick.toFoodEntry(item.grams).copyWith(
+                  name: _formatDisplayName(item.name),
+                  estimationSource: EstimationSource.localAi,
+                  confidence: hybrid.confidence,
+                );
+            if (hybrid.confidence < 0.6 && hybrid.alternatives.isNotEmpty) {
+              alts = hybrid.alternatives.take(2).map((e) {
+                final alt = e.toFoodEntry(item.grams);
+                return ChatFoodAlternative(
+                  name: alt.name,
+                  calories: alt.calories,
+                  protein: alt.protein,
+                  carbs: alt.carbs,
+                  fat: alt.fat,
+                  grams: alt.grams,
+                  estimationSource: EstimationSource.db,
+                );
+              }).toList();
+            }
+          }
+        }
+
+        // Last-ditch: keyword-bucket fallback when both AI and hybrid failed.
         if (entry == null) {
           final estKcal = _estimateCalories(item.name, item.grams);
           final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
@@ -1599,10 +1617,20 @@ class NutritionPresenter extends ChangeNotifier {
             confidence: 0.3,
             loggedAt: DateTime.now(),
           );
+          // Stale or missing food_id — record for curation backlog.
+          // ignore: unawaited_futures
+          _logFeedback(
+            kind: FoodFeedbackKind.fallbackMiss,
+            userQuery: item.name,
+            pickedName: item.name,
+            pickedDbId: item.resolvedFoodId,
+            estimationSource: EstimationSource.keywordDensity,
+            confidence: 0.3,
+          );
         }
 
         entries.add(entry);
-        altsList.add(const []);
+        altsList.add(alts);
       }
 
       // Plan 027 — collapse into one entry when AI flagged the input as a
@@ -1668,13 +1696,15 @@ class NutritionPresenter extends ChangeNotifier {
             dictHit,
           );
         } else if (item.resolvedFoodId != null &&
-            item.resolverConfidence >= 0.6) {
+            item.resolverConfidence >= 0.70) {
           // Cloud picked a DB candidate. Hydrate from DB for fresh macros.
           // Tag as cloudAi so the badge shows "Cloud" — the resolution was
           // cloud-driven even though the macros came from the DB row.
           final hit = await _foodDb.getById(item.resolvedFoodId!);
           if (hit != null) {
             entry = hit.toFoodEntry(item.grams).copyWith(
+                  // Preserve the user's phrasing, not the DB canonical name.
+                  name: _formatDisplayName(item.name),
                   estimationSource: EstimationSource.cloudAi,
                   confidence: item.resolverConfidence,
                 );
@@ -1704,7 +1734,9 @@ class NutritionPresenter extends ChangeNotifier {
             loggedAt: DateTime.now(),
           );
           // Auto-promote even AI estimates when the model was confident.
-          if (item.resolverConfidence >= 0.8 && m.calories > 0) {
+          if (item.resolverConfidence >= 0.8 &&
+              m.calories > 0 &&
+              item.grams > 0) {
             // ignore: unawaited_futures
             _personalDict.upsert(
               name: item.name,
@@ -1717,9 +1749,33 @@ class NutritionPresenter extends ChangeNotifier {
         }
 
         if (entry == null) {
-          // Neither cloud-resolved nor cloud-estimated nor in dict.
-          // Bail and let the on-device path try.
-          return null;
+          // DB lookup failed for the resolved food_id and no macro estimate
+          // was provided. Don't abort the whole parse — fall to keyword bucket
+          // so other items in a multi-item meal still commit correctly.
+          final estKcal = _estimateCalories(item.name, item.grams);
+          final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+          entry = FoodEntry(
+            id: FoodEntry.generateId(),
+            name: _formatDisplayName(item.name),
+            calories: estKcal,
+            protein: estProtein,
+            carbs: estCarbs,
+            fat: estFat,
+            grams: item.grams,
+            estimationSource: EstimationSource.keywordDensity,
+            confidence: 0.3,
+            loggedAt: DateTime.now(),
+          );
+          // Stale or missing food_id — record for curation backlog.
+          // ignore: unawaited_futures
+          _logFeedback(
+            kind: FoodFeedbackKind.fallbackMiss,
+            userQuery: item.name,
+            pickedName: item.name,
+            pickedDbId: item.resolvedFoodId,
+            estimationSource: EstimationSource.keywordDensity,
+            confidence: 0.3,
+          );
         }
 
         entries.add(entry);
@@ -1825,10 +1881,19 @@ class NutritionPresenter extends ChangeNotifier {
   /// fragment instead of being dominated by the first one.
   Future<List<FoodSearchCandidate>> _buildCandidatePool(String text) async {
     final fragments = _splitForCandidateRetrieval(text);
-    // Search the whole text + each distinct fragment (skip dupes of full text).
     final queries = <String>{text, ...fragments}.toList();
-    final searches = queries.map((q) => _foodDb.search(q)).toList();
-    final hitLists = await Future.wait(searches);
+    final hitLists = await Future.wait(queries.map(_foodDb.search));
+
+    // Re-sort each per-query result by specificity excess so generic entries
+    // (fewer extra words vs. the query) float above branded/regional variants
+    // before the round-robin interleave. Stable sort — BM25 order is preserved
+    // among candidates with the same excess score.
+    final sorted = [
+      for (var i = 0; i < hitLists.length; i++)
+        (List<FoodDbEntry>.from(hitLists[i])
+          ..sort((a, b) => _specificityExcess(a, queries[i])
+              .compareTo(_specificityExcess(b, queries[i])))),
+    ];
 
     // Round-robin: take position 0 from each list, then position 1, etc.
     // This guarantees fragment hits aren't squeezed out by a dominant
@@ -1836,9 +1901,9 @@ class NutritionPresenter extends ChangeNotifier {
     final seen = <String, FoodSearchCandidate>{};
     const maxTotal = 15;
     final maxDepth =
-        hitLists.fold<int>(0, (m, list) => list.length > m ? list.length : m);
+        sorted.fold<int>(0, (m, list) => list.length > m ? list.length : m);
     for (var depth = 0; depth < maxDepth; depth++) {
-      for (final list in hitLists) {
+      for (final list in sorted) {
         if (depth >= list.length) continue;
         final hit = list[depth];
         seen.putIfAbsent(
@@ -1855,6 +1920,24 @@ class NutritionPresenter extends ChangeNotifier {
     }
     return seen.values.toList();
   }
+
+  /// Ratio of words in [entry.name] that are NOT in [query], as a fraction of
+  /// total name words. 0.0 = all name words are in the query (generic match).
+  /// Rising toward 1.0 as extra content words dominate (over-specific).
+  static double _specificityExcess(FoodDbEntry entry, String query) {
+    final queryWords = _contentWords(query);
+    if (queryWords.isEmpty) return 0.0;
+    final nameWords = _contentWords(entry.name);
+    if (nameWords.isEmpty) return 0.0;
+    return nameWords.difference(queryWords).length / nameWords.length;
+  }
+
+  static Set<String> _contentWords(String s) => s
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9 ]'), ' ')
+      .split(' ')
+      .where((w) => w.length > 2)
+      .toSet();
 
   /// Shared commit path for both cloud and on-device branches. Adds
   /// entries to today's log, builds the chat message, persists, and runs
@@ -1939,6 +2022,7 @@ class NutritionPresenter extends ChangeNotifier {
     int itemIndex,
     int alternativeIndex,
   ) async {
+    if (_isChatParsing) return; // avoid racing with an in-flight parse
     final msgIdx = _chatMessages.indexWhere((m) => m.id == messageId);
     if (msgIdx == -1) return;
     final msg = _chatMessages[msgIdx];
@@ -2000,6 +2084,10 @@ class NutritionPresenter extends ChangeNotifier {
       _storage.saveNutritionLog(_todayLog),
       _persistChatMessages(),
     ]);
+    await _updateLogStreak();
+    await _checkGoalMet();
+    await _checkProteinGoalMet();
+    await _checkOvershoot();
 
     // Learn the swap so the same query next time goes straight to this entry.
     // ignore: unawaited_futures
@@ -2226,71 +2314,100 @@ class NutritionPresenter extends ChangeNotifier {
     final oldItem = msg.foodItems[itemIndex];
     final trimmed = newText.trim();
 
-    // Remove old food entry from today's log.
-    await removeFoodEntry(oldItem.entryId, msg.mealSlot);
+    _isChatParsing = true;
+    _chatParseError = null;
+    notifyListeners();
+    try {
+      // In-memory remove only — save is deferred until we have the replacement,
+      // so a cloud timeout or crash can't permanently drop the old entry.
+      _todayLog = _todayLog.removeEntry(oldItem.entryId, msg.mealSlot);
 
-    // Re-parse and look up in DB. Multi-item parse replaces the single slot.
-    final result = FoodNlpParser.parse(trimmed);
-    final List<FoodEntry> newEntries;
-    final List<FoodDbEntry?> dbMatches;
-    if (result.isNotEmpty) {
-      dbMatches = await _resolveDbMatches(result);
-      newEntries = [
-        for (var i = 0; i < result.items.length; i++)
-          _buildEntry(result.items[i], dbMatches[i]),
-      ];
-      // Teach the personal dict from each DB-resolved item.
-      for (var i = 0; i < newEntries.length; i++) {
-        if (dbMatches[i] != null) {
-          await _learnFromEntry(result.items[i].name, newEntries[i]);
+      // Cloud-first (same pipeline as initial logging), then legacy fallback.
+      final List<FoodEntry> newEntries;
+      final List<String> amountTexts;
+      List<List<ChatFoodAlternative>> altsList = const [];
+
+      final cloudResult = await _tryCloudParseFood(trimmed);
+      if (cloudResult != null && cloudResult.entries.isNotEmpty) {
+        newEntries = cloudResult.entries;
+        altsList = cloudResult.alts;
+        amountTexts = cloudResult.rawTexts.isNotEmpty
+            ? cloudResult.rawTexts
+            : newEntries.map((e) => e.name).toList();
+      } else {
+        // Legacy fallback: on-device NLP + resolver.
+        final result = FoodNlpParser.parse(trimmed);
+        if (result.isNotEmpty) {
+          final dbMatches = await _resolveDbMatches(result);
+          newEntries = [
+            for (var i = 0; i < result.items.length; i++)
+              _buildEntry(result.items[i], dbMatches[i]),
+          ];
+          for (var i = 0; i < newEntries.length; i++) {
+            if (dbMatches[i] != null) {
+              await _learnFromEntry(result.items[i].name, newEntries[i]);
+            }
+          }
+          amountTexts = result.items.map((it) => it.rawText).toList();
+        } else {
+          // Nothing parseable — preserve old macros under the new name.
+          newEntries = [
+            FoodEntry(
+              id: FoodEntry.generateId(),
+              name: _formatDisplayName(trimmed),
+              calories: oldItem.calories,
+              protein: oldItem.protein,
+              carbs: oldItem.carbs,
+              fat: oldItem.fat,
+              grams: oldItem.grams,
+              estimationSource: EstimationSource.userManual,
+              loggedAt: DateTime.now(),
+            ),
+          ];
+          amountTexts = [trimmed];
         }
       }
-    } else {
-      // NLP couldn't parse — keep oldItem's macros as a placeholder under the
-      // new name. Do NOT learn this into the dict: the macros aren't
-      // user-confirmed knowledge about the new food, just inherited from old.
-      dbMatches = const [null];
-      newEntries = [
-        FoodEntry(
-          id: FoodEntry.generateId(),
-          name: _formatDisplayName(trimmed),
-          calories: oldItem.calories,
-          protein: oldItem.protein,
-          carbs: oldItem.carbs,
-          fat: oldItem.fat,
-          grams: oldItem.grams,
-          estimationSource: EstimationSource.userManual,
-          loggedAt: DateTime.now(),
-        ),
+
+      // In-memory add all replacements. Bypasses the IF-Sync gate intentionally
+      // — editing an already-logged item should not be blocked by the eating window.
+      for (final e in newEntries) {
+        _todayLog = _todayLog.addEntry(e, msg.mealSlot);
+      }
+
+      // Atomic save: both removal and addition land together.
+      await _storage.saveNutritionLog(_todayLog);
+
+      final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
+      final replacementItems = [
+        for (var i = 0; i < newEntries.length; i++)
+          ChatFoodItem.fromFoodEntry(
+            newEntries[i],
+            amountText:
+                i < amountTexts.length ? amountTexts[i] : newEntries[i].name,
+            alternatives: i < altsList.length ? altsList[i] : const [],
+          ),
       ];
+      updatedItems.replaceRange(itemIndex, itemIndex + 1, replacementItems);
+      _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
+      await _persistChatMessages();
+      await _updateLogStreak();
+      await _checkGoalMet();
+      await _checkProteinGoalMet();
+      await _checkOvershoot();
+    } finally {
+      _isChatParsing = false;
+      notifyListeners();
     }
-
-    for (final e in newEntries) {
-      await addFoodEntry(e, msg.mealSlot);
-    }
-
-    final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
-    final replacementItems = [
-      for (var i = 0; i < newEntries.length; i++)
-        ChatFoodItem.fromFoodEntry(
-          newEntries[i],
-          amountText: result.isNotEmpty ? result.items[i].rawText : trimmed,
-        ),
-    ];
-    updatedItems.replaceRange(itemIndex, itemIndex + 1, replacementItems);
-    _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
-    notifyListeners();
-    await _persistChatMessages();
   }
 
   /// Persist a confirmed name → per-100g mapping to the personal dictionary.
   /// Skips entries that are not confident enough to cache:
   ///   • missing/zero grams (can't compute per-100g)
-  ///   • low confidence (`< 0.6`) — weak DB matches and AI estimates set this,
+  ///   • low confidence (`< 0.70`) — weak DB matches and AI estimates set this,
   ///     so the dict only ever caches reliable mappings.
   Future<void> _learnFromEntry(String name, FoodEntry e) async {
     if (e.grams == null || e.grams! <= 0) return;
-    if ((e.confidence ?? 1.0) < 0.6) return;
+    if ((e.confidence ?? 1.0) < 0.70) return;
     await _personalDict.upsert(
       name: name,
       kcalPer100g: e.calories * 100 / e.grams!,
@@ -2310,50 +2427,78 @@ class NutritionPresenter extends ChangeNotifier {
     final msg = _chatMessages[msgIdx];
 
     _isChatParsing = true;
+    _chatParseError = null;
     notifyListeners();
 
-    final updatedItems = <ChatFoodItem>[];
-    for (var i = 0; i < min(newTexts.length, msg.foodItems.length); i++) {
-      final oldItem = msg.foodItems[i];
-      final newText = newTexts[i].trim();
+    try {
+      final updatedItems = <ChatFoodItem>[];
+      for (var i = 0; i < min(newTexts.length, msg.foodItems.length); i++) {
+        final oldItem = msg.foodItems[i];
+        final newText = newTexts[i].trim();
 
-      // Swap in today's log: remove old, add new.
-      _todayLog = _todayLog.removeEntry(oldItem.entryId, msg.mealSlot);
-      final result = FoodNlpParser.parse(newText);
-      final FoodEntry newEntry;
-      if (result.isNotEmpty) {
-        final dbMatches = await _resolveDbMatches(result);
-        newEntry = _buildEntry(result.items.first, dbMatches.first);
-        if (dbMatches.first != null) {
-          await _learnFromEntry(result.items.first.name, newEntry);
+        // Swap in today's log: remove old, add new.
+        _todayLog = _todayLog.removeEntry(oldItem.entryId, msg.mealSlot);
+
+        // Cloud-first (same pipeline as initial logging), then legacy fallback.
+        FoodEntry newEntry;
+        String amountText = newText;
+
+        final cloudResult = await _tryCloudParseFood(newText);
+        if (cloudResult != null && cloudResult.entries.isNotEmpty) {
+          newEntry = cloudResult.entries.first;
+          amountText = cloudResult.rawTexts.isNotEmpty
+              ? cloudResult.rawTexts.first
+              : newEntry.name;
+        } else {
+          final result = FoodNlpParser.parse(newText);
+          if (result.isNotEmpty) {
+            final dbMatches = await _resolveDbMatches(result);
+            newEntry = _buildEntry(result.items.first, dbMatches.first);
+            if (dbMatches.first != null) {
+              await _learnFromEntry(result.items.first.name, newEntry);
+            }
+          } else {
+            // Nothing parseable — preserve old macros under the new name.
+            newEntry = FoodEntry(
+              id: FoodEntry.generateId(),
+              name: _formatDisplayName(newText),
+              calories: oldItem.calories,
+              protein: oldItem.protein,
+              carbs: oldItem.carbs,
+              fat: oldItem.fat,
+              grams: oldItem.grams,
+              estimationSource: EstimationSource.userManual,
+              loggedAt: DateTime.now(),
+            );
+          }
         }
-      } else {
-        newEntry = FoodEntry(
-          id: FoodEntry.generateId(),
-          name: _formatDisplayName(newText),
-          calories: oldItem.calories,
-          protein: oldItem.protein,
-          carbs: oldItem.carbs,
-          fat: oldItem.fat,
-          grams: oldItem.grams,
-          estimationSource: EstimationSource.userManual,
-          loggedAt: DateTime.now(),
-        );
-        // Same rationale as editChatFoodItem: don't learn placeholder macros.
+        _todayLog = _todayLog.addEntry(newEntry, msg.mealSlot);
+        updatedItems.add(ChatFoodItem.fromFoodEntry(
+          newEntry,
+          amountText: amountText,
+          alternatives: cloudResult != null && cloudResult.alts.isNotEmpty
+              ? cloudResult.alts[0]
+              : const [],
+        ));
       }
-      _todayLog = _todayLog.addEntry(newEntry, msg.mealSlot);
-      updatedItems
-          .add(ChatFoodItem.fromFoodEntry(newEntry, amountText: newText));
-    }
 
-    await _storage.saveNutritionLog(_todayLog);
-    _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
-    _isChatParsing = false;
-    notifyListeners();
-    await _persistChatMessages();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+      // Items beyond newTexts.length have no replacement — preserve them in
+      // both the chat and the log so they don't become orphaned entries.
+      for (var i = updatedItems.length; i < msg.foodItems.length; i++) {
+        updatedItems.add(msg.foodItems[i]);
+      }
+
+      await _storage.saveNutritionLog(_todayLog);
+      _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
+      await _persistChatMessages();
+      await _updateLogStreak();
+      await _checkGoalMet();
+      await _checkProteinGoalMet();
+      await _checkOvershoot();
+    } finally {
+      _isChatParsing = false;
+      notifyListeners();
+    }
   }
 
   Future<void> _persistChatMessages() async {
@@ -2371,8 +2516,9 @@ class NutritionPresenter extends ChangeNotifier {
     final now = DateTime.now();
     final today = _dateFmt.format(now);
     if (_todayLog.date == today) return;
-    final loggingTowardToday = _todayLog.date == _dateFmt.format(_selectedDate);
-    if (!loggingTowardToday) return; // user is intentionally on a past day
+    if (_dateFmt.format(_selectedDate) != today) {
+      return; // user is on a past day
+    }
     _todayLog = await _storage.loadNutritionLogForDate(today);
     _selectedDate = now;
     final raw = await _storage.loadChatMessagesRaw(today);
@@ -2401,8 +2547,11 @@ class NutritionPresenter extends ChangeNotifier {
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
     if (_disposed) return;
 
-    // Reset same-day calorie notification flag on new-day load.
-    _calorieGoalNotifiedToday = false;
+    // Restore same-day dedup flags from loaded state so app restarts mid-day
+    // don't re-fire notifications or re-apply HP penalties.
+    _calorieGoalNotifiedToday = _goalMetDate == todayKey;
+    _overshootPenalizedToday = isOverGoal;
+    _proteinGoalMetToday = isProteinGoalMet;
 
     // Apply notification preferences: schedule or cancel weight reminder.
     final notifPrefs = await _storage.loadNotificationPreferences();
@@ -2464,7 +2613,9 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> _checkOvershoot() async {
     if (!_goals.overshootPenaltyEnabled) return;
-    if (isOverGoal) await _statsPresenter.modifyHp(-5);
+    if (_overshootPenalizedToday || !isOverGoal) return;
+    _overshootPenalizedToday = true;
+    await _statsPresenter.modifyHp(-5);
   }
 
   Future<void> _updateLogStreak() async {

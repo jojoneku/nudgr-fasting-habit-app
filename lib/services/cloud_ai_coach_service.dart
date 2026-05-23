@@ -127,29 +127,10 @@ class CloudAiCoachService implements AiCoachService {
   Future<FoodParseResult?> parseFood(String description) async => null;
 
   // ── Extract food items ────────────────────────────────────────────────────
+  // Cloud path always uses parseFoodWithCandidates — this op is unreachable.
 
   @override
-  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async {
-    final result = await _call('extractFoodItems', {'text': text});
-    if (result == null) return null;
-    try {
-      final items = result['items'] as List<dynamic>;
-      return items
-          .cast<Map<String, dynamic>>()
-          .map(
-            (item) => ExtractedFoodItem(
-              name: item['name'] as String,
-              grams: (item['grams'] as num?)?.toDouble() ?? 100,
-              hydeDescription: (item['hyde'] as String?) ?? '',
-              rawText: item['name'] as String,
-            ),
-          )
-          .toList();
-    } catch (e) {
-      debugPrint('CloudAiCoachService.extractFoodItems parse error: $e');
-      return null;
-    }
-  }
+  Future<List<ExtractedFoodItem>?> extractFoodItems(String text) async => null;
 
   // ── Parse food with candidates (Plan 026) ────────────────────────────────
 
@@ -162,14 +143,27 @@ class CloudAiCoachService implements AiCoachService {
       'text': text,
       'candidates': candidates
           .take(15)
-          .map((c) => {'food_id': c.entry.id, 'name': c.entry.name})
+          .map((c) => {
+                'food_id': c.entry.id,
+                'name': c.entry.name,
+                'cal_per_100g': c.entry.caloriesPer100g,
+                if (c.entry.proteinPer100g != null)
+                  'protein_per_100g': c.entry.proteinPer100g,
+                if (c.entry.carbsPer100g != null)
+                  'carbs_per_100g': c.entry.carbsPer100g,
+                if (c.entry.fatPer100g != null)
+                  'fat_per_100g': c.entry.fatPer100g,
+              })
           .toList(),
     });
     if (result == null) return null;
     try {
-      final items = result['items'] as List<dynamic>;
-      final parsed = items.cast<Map<String, dynamic>>().map((item) {
-        final macrosJson = item['estimated_macros'] as Map<String, dynamic>?;
+      final rawItems = result['items'] as List<dynamic>;
+      final parsed = <ExtractedFoodItem>[];
+      for (final raw in rawItems.cast<Map<String, dynamic>>()) {
+        final name = (raw['name'] as String?) ?? '';
+        if (name.isEmpty) continue;
+        final macrosJson = raw['estimated_macros'] as Map<String, dynamic>?;
         final macros = macrosJson == null
             ? null
             : EstimatedMacros(
@@ -178,16 +172,21 @@ class CloudAiCoachService implements AiCoachService {
                 carbsG: (macrosJson['carbs_g'] as num?)?.toDouble() ?? 0,
                 fatG: (macrosJson['fat_g'] as num?)?.toDouble() ?? 0,
               );
-        return ExtractedFoodItem(
-          name: item['name'] as String,
-          grams: (item['grams'] as num?)?.toDouble() ?? 100,
-          hydeDescription: (item['hyde'] as String?) ?? '',
-          rawText: item['name'] as String,
-          resolvedFoodId: item['food_id'] as String?,
-          resolverConfidence: (item['confidence'] as num?)?.toDouble() ?? 0.0,
+        // For single-item parses, preserve the user's original phrasing
+        // (e.g. "100g plain fried chicken") as the chip label. For multi-item
+        // parses we have no per-item source span, so the AI-normalized name is
+        // the best we can do.
+        final rawText = rawItems.length == 1 ? text : name;
+        parsed.add(ExtractedFoodItem(
+          name: name,
+          grams: (raw['grams'] as num?)?.toDouble() ?? 100,
+          hydeDescription: (raw['hyde'] as String?) ?? '',
+          rawText: rawText,
+          resolvedFoodId: raw['food_id'] as String?,
+          resolverConfidence: (raw['confidence'] as num?)?.toDouble() ?? 0.0,
           estimatedMacros: macros,
-        );
-      }).toList();
+        ));
+      }
       return ParseFoodResult(
         items: parsed,
         intent: ParseFoodResult.intentFromJson(result['intent'] as String?),
