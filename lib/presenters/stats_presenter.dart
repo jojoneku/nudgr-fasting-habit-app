@@ -77,6 +77,7 @@ class StatsPresenter extends ChangeNotifier {
     int newHp = _stats.currentHp;
 
     // Level Up Logic
+    bool leveledUp = false;
     int requiredXp = (newLevel * newLevel) * 100;
     while (newXp >= requiredXp) {
       newXp -= requiredXp;
@@ -84,8 +85,9 @@ class StatsPresenter extends ChangeNotifier {
       newStatPoints += 3; // 3 points per level
       newHp = 100 + (_stats.attributes.vit * 10); // Full heal on level up
       requiredXp = (newLevel * newLevel) * 100;
-      showLevelUpDialog = true;
+      leveledUp = true;
     }
+    if (leveledUp) showLevelUpDialog = true;
 
     _stats = _stats.copyWith(
       currentXp: newXp,
@@ -98,7 +100,7 @@ class StatsPresenter extends ChangeNotifier {
     await _storageService.saveUserStats(_stats);
 
     // Fire achievement notifications after level-up.
-    if (showLevelUpDialog) {
+    if (leveledUp) {
       final prefs = await _storageService.loadNotificationPreferences();
       final newRank = rank;
       if (newRank != _previousRank && prefs.rankPromotionEnabled) {

@@ -584,10 +584,11 @@ class OnDeviceAiCoachService implements AiCoachService {
     try {
       final candidatesBlock = candidates.isEmpty
           ? '(no candidates — set food_id to null for every item)'
-          : candidates
-              .take(10)
-              .map((c) => '- id: ${c.entry.id}, name: ${c.entry.name}')
-              .join('\n');
+          : candidates.take(10).map((c) {
+              final slash = _expandSlashVariants(c.entry.name);
+              final suffix = slash.isNotEmpty ? '  [$slash]' : '';
+              return '- id: ${c.entry.id}, name: ${c.entry.name}$suffix';
+            }).join('\n');
 
       final prompt =
           '$_parseFoodWithCandidatesPrompt\n\nCandidates:\n$candidatesBlock\n\n'
@@ -610,6 +611,18 @@ class OnDeviceAiCoachService implements AiCoachService {
         await chat.session.close();
       } catch (_) {}
     }
+  }
+
+  /// Mirrors the Lambda's `_expand_slash_variants`. Expands "Afritada (Pork/Chicken)"
+  /// into "also matches: Afritada Pork, Afritada Chicken" so Qwen can match
+  /// user input like "Pork Afritada" against the DB canonical name.
+  static String _expandSlashVariants(String name) {
+    final m = RegExp(r'^(.+?)\s*\(([^)]+/[^)]+)\)\s*$').firstMatch(name.trim());
+    if (m == null) return '';
+    final base = m.group(1)!.trim();
+    final variants =
+        m.group(2)!.split('/').map((v) => v.trim()).where((v) => v.isNotEmpty);
+    return 'also matches: ${variants.map((v) => '$base $v').join(', ')}';
   }
 
   /// Parses Qwen's JSON output for the candidate-picking variant. Validates
@@ -660,7 +673,9 @@ class OnDeviceAiCoachService implements AiCoachService {
       if (name == null || name.isEmpty) continue;
       final grams = (item['grams'] as num?)?.toDouble() ?? 100;
       final hyde = (item['hyde'] as String?)?.trim() ?? name;
-      String? foodId = item['food_id'] as String?;
+      // Coerce defensively — Qwen sometimes outputs numeric ids for numeric-
+      // looking DB ids. Mirror the Lambda's `str(food_id)` coercion.
+      String? foodId = item['food_id']?.toString();
       if (foodId == 'null' || foodId == '') foodId = null;
       // Drop hallucinated ids — must appear in the candidate set we sent.
       if (foodId != null && !validIds.contains(foodId)) foodId = null;

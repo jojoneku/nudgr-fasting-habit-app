@@ -95,6 +95,14 @@ class _NotificationSettingsSheetState
     await _updatePrefs(_prefs.copyWith(calorieGoalEnabled: v));
   }
 
+  Future<void> _toggleQuestNotifications(bool v) async {
+    await _updatePrefs(_prefs.copyWith(questNotificationsEnabled: v));
+  }
+
+  Future<void> _toggleStreakAtRisk(bool v) async {
+    await _updatePrefs(_prefs.copyWith(streakAtRiskEnabled: v));
+  }
+
   Future<void> _toggleBillsReminder(bool v) async {
     await _updatePrefs(_prefs.copyWith(billsReminderEnabled: v));
     if (v) {
@@ -194,6 +202,26 @@ class _NotificationSettingsSheetState
                           const Text('Alert when you advance to a new rank'),
                       value: _prefs.rankPromotionEnabled,
                       onChanged: _toggleRankPromotion,
+                    ),
+                    const SizedBox(height: 16),
+
+                    // ── Quests ──────────────────────────────────────────────
+                    _SectionHeader(label: 'Quests'),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Quest reminders'),
+                      subtitle:
+                          const Text('Scheduled alerts for active quests'),
+                      value: _prefs.questNotificationsEnabled,
+                      onChanged: _toggleQuestNotifications,
+                    ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Streak-at-risk alerts'),
+                      subtitle: const Text(
+                          'Alert when an overdue quest could break your streak'),
+                      value: _prefs.streakAtRiskEnabled,
+                      onChanged: _toggleStreakAtRisk,
                     ),
                     const SizedBox(height: 16),
 

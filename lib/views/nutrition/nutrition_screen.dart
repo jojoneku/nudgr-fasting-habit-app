@@ -827,63 +827,6 @@ class _SmartSearchBanner extends StatelessWidget {
   }
 }
 
-/// Tiny pill above the chat input showing whether Cloud AI will handle the
-/// next food log. Hidden when cloud isn't configured at all (no endpoint).
-class _CloudStatusChip extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _CloudStatusChip({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (context, _) {
-        if (!presenter.isCloudAiConfigured) return const SizedBox.shrink();
-
-        final theme = Theme.of(context);
-        final active = presenter.isCloudAiAvailable;
-        final color =
-            active ? theme.colorScheme.primary : theme.colorScheme.outline;
-        final label = active ? 'Cloud AI' : 'Local only';
-        final icon = active ? Icons.cloud_outlined : Icons.cloud_off_outlined;
-
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: color.withValues(alpha: 0.30),
-                    width: 0.8,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(icon, size: 12, color: color),
-                    const SizedBox(width: 4),
-                    Text(
-                      label,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
-
 /// Plan 027 §3.2 — first-run modal. Shown when the user opens the chat
 /// input but neither cloud (signed in + toggle on) nor on-device Qwen is
 /// available, and the user hasn't skipped within the cool-down window.

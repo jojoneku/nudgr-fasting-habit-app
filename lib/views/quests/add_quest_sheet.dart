@@ -69,6 +69,54 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
 
   bool get _isEditing => widget.quest != null;
 
+  bool get _hasMoreOptions =>
+      _anchorCtrl.text.isNotEmpty ||
+      _minVersionCtrl.text.isNotEmpty ||
+      _selectedGroupId != null;
+
+  // ─── Time picker dialog ────────────────────────────────────────────────────
+
+  Future<void> _pickTime(BuildContext context) async {
+    TimeOfDay temp = _time;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Select time'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 200,
+          child: CupertinoTheme(
+            data: CupertinoThemeData(
+              brightness: Theme.of(ctx).brightness,
+              textTheme: const CupertinoTextThemeData(
+                dateTimePickerTextStyle: TextStyle(fontSize: 20),
+              ),
+            ),
+            child: CupertinoDatePicker(
+              mode: CupertinoDatePickerMode.time,
+              initialDateTime: DateTime(2024, 1, 1, _time.hour, _time.minute),
+              onDateTimeChanged: (dt) => temp = TimeOfDay.fromDateTime(dt),
+              use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              setState(() => _time = temp);
+              Navigator.pop(ctx);
+            },
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -88,11 +136,24 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          // Header
+          // ── Header ────────────────────────────────────────────────────
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Row(
               children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primaryContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.bolt,
+                    size: 18,
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     _isEditing ? 'Edit Quest' : 'New Quest',
@@ -114,51 +175,42 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Title ─────────────────────────────────────────────────
-                  AppSection(
-                    title: 'Title',
-                    child: AppTextField(
-                      controller: _titleCtrl,
-                      hint: 'e.g., Morning run',
-                      autofocus: !_isEditing,
-                      errorText: _titleError,
-                      textInputAction: TextInputAction.next,
-                      onChanged: (_) {
-                        if (_titleError != null) {
-                          setState(() => _titleError = null);
-                        }
-                      },
-                    ),
+                  // ── Title ───────────────────────────────────────────
+                  AppTextField(
+                    controller: _titleCtrl,
+                    hint: 'Quest title...',
+                    autofocus: !_isEditing,
+                    errorText: _titleError,
+                    textInputAction: TextInputAction.next,
+                    onChanged: (_) {
+                      if (_titleError != null) {
+                        setState(() => _titleError = null);
+                      }
+                    },
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
-                  // ── Schedule ──────────────────────────────────────────────
-                  AppSection(
-                    title: 'Schedule',
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _TimePicker(
-                            time: _time,
-                            onChanged: (t) => setState(() => _time = t),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: _ReminderDropdown(
-                            value: _reminderMinutes,
-                            onChanged: (v) =>
-                                setState(() => _reminderMinutes = v),
-                          ),
-                        ),
-                      ],
-                    ),
+                  // ── Schedule card ────────────────────────────────────
+                  _SectionLabel('Schedule'),
+                  const SizedBox(height: AppSpacing.xs),
+                  _ScheduleCard(
+                    time: _time,
+                    reminderMinutes: _reminderMinutes,
+                    onTimeTap: () => _pickTime(context),
+                    onReminderChanged: (v) =>
+                        setState(() => _reminderMinutes = v),
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
-                  // ── Recurrence ────────────────────────────────────────────
-                  AppSection(
-                    title: 'Recurrence',
+                  // ── Recurrence card ──────────────────────────────────
+                  _SectionLabel('Recurrence'),
+                  const SizedBox(height: AppSpacing.xs),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
@@ -176,7 +228,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                             ),
                             (
                               value: RecurrenceType.biweekly,
-                              label: 'Bi-weekly',
+                              label: 'Bi-wkly',
                               icon: null
                             ),
                             (
@@ -188,7 +240,9 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                           selected: _recurrenceType,
                           onChanged: (t) => setState(() {
                             _recurrenceType = t;
-                            if (t != RecurrenceType.daily) _isOneTime = false;
+                            if (t != RecurrenceType.daily) {
+                              _isOneTime = false;
+                            }
                           }),
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -198,42 +252,24 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
-                  // ── Trains attribute ──────────────────────────────────────
-                  AppSection(
-                    title: 'Trains attribute',
-                    child: _StatPicker(
-                      selected: _linkedStat,
-                      onChanged: (s) => setState(() => _linkedStat = s),
-                    ),
+                  // ── Trains attribute ─────────────────────────────────
+                  _SectionLabel('Trains attribute'),
+                  const SizedBox(height: AppSpacing.xs),
+                  _StatPicker(
+                    selected: _linkedStat,
+                    onChanged: (s) => setState(() => _linkedStat = s),
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
-                  // ── Notes ─────────────────────────────────────────────────
-                  AppSection(
-                    title: 'Notes',
-                    hint: 'Optional habit cue and minimum version',
-                    child: Column(
-                      children: [
-                        AppTextField(
-                          controller: _anchorCtrl,
-                          hint: 'Habit cue — e.g., After morning coffee...',
-                          textInputAction: TextInputAction.next,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        AppTextField(
-                          controller: _minVersionCtrl,
-                          hint: 'Minimum version — e.g., at least 5 push-ups',
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.mdGenerous),
-
-                  // ── Group ─────────────────────────────────────────────────
-                  _GroupPicker(
+                  // ── More options (collapsible) ───────────────────────
+                  _MoreOptionsExpansion(
+                    anchorCtrl: _anchorCtrl,
+                    minVersionCtrl: _minVersionCtrl,
                     groups: widget.presenter.routines,
                     selectedGroupId: _selectedGroupId,
-                    onChanged: (id) => setState(() => _selectedGroupId = id),
+                    initiallyExpanded: _hasMoreOptions,
+                    onGroupChanged: (id) =>
+                        setState(() => _selectedGroupId = id),
                     onCreateGroup: () async {
                       await Navigator.of(context).push(MaterialPageRoute(
                         builder: (_) =>
@@ -244,7 +280,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
-                  // ── Save button ───────────────────────────────────────────
+                  // ── Save ─────────────────────────────────────────────
                   AppPrimaryButton(
                     label: _isEditing ? 'Save Changes' : 'Add Quest',
                     isLoading: _isLoading,
@@ -330,7 +366,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     )),
                 Text(
-                  'Pick 1 (monthly) or 2 (twice/month)',
+                  'Pick 1–2 days',
                   style: AppTextStyles.labelSmall.copyWith(
                     color: Theme.of(context)
                         .colorScheme
@@ -423,112 +459,188 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
   }
 }
 
-// ─── Time picker ──────────────────────────────────────────────────────────────
+// ─── Section label ────────────────────────────────────────────────────────────
 
-class _TimePicker extends StatelessWidget {
-  const _TimePicker({required this.time, required this.onChanged});
-
-  final TimeOfDay time;
-  final ValueChanged<TimeOfDay> onChanged;
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      onTap: () => _pick(context),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(vertical: 12, horizontal: AppSpacing.md),
-        decoration: BoxDecoration(
-          border: Border.all(
-              color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.access_time, size: 15, color: theme.colorScheme.primary),
-            const SizedBox(width: AppSpacing.sm),
-            Text(time.format(context), style: AppTextStyles.bodyMedium),
-          ],
-        ),
+    return Text(
+      text.toUpperCase(),
+      style: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        letterSpacing: 0.8,
       ),
     );
   }
+}
 
-  Future<void> _pick(BuildContext context) async {
-    TimeOfDay temp = time;
-    await showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Select time'),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 200,
-          child: CupertinoTheme(
-            data: CupertinoThemeData(
-              brightness: Theme.of(ctx).brightness,
-              textTheme: const CupertinoTextThemeData(
-                dateTimePickerTextStyle: TextStyle(fontSize: 20),
+// ─── Schedule card ────────────────────────────────────────────────────────────
+
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({
+    required this.time,
+    required this.reminderMinutes,
+    required this.onTimeTap,
+    required this.onReminderChanged,
+  });
+
+  final TimeOfDay time;
+  final int? reminderMinutes;
+  final VoidCallback onTimeTap;
+  final ValueChanged<int?> onReminderChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          // Time row
+          InkWell(
+            onTap: onTimeTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md, vertical: 14),
+              child: Row(
+                children: [
+                  Icon(Icons.access_time_outlined, size: 18, color: cs.primary),
+                  const SizedBox(width: AppSpacing.md),
+                  Text('Time', style: theme.textTheme.bodyMedium),
+                  const Spacer(),
+                  Text(
+                    time.format(context),
+                    style:
+                        theme.textTheme.bodyMedium?.copyWith(color: cs.primary),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.chevron_right,
+                      size: 16, color: cs.onSurfaceVariant),
+                ],
               ),
             ),
-            child: CupertinoDatePicker(
-              mode: CupertinoDatePickerMode.time,
-              initialDateTime: DateTime(2024, 1, 1, time.hour, time.minute),
-              onDateTimeChanged: (dt) => temp = TimeOfDay.fromDateTime(dt),
-              use24hFormat: MediaQuery.of(context).alwaysUse24HourFormat,
+          ),
+          Divider(
+            height: 1,
+            indent: AppSpacing.md + 18 + AppSpacing.md,
+            endIndent: AppSpacing.md,
+            color: cs.outlineVariant,
+          ),
+          // Reminder row
+          Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md, vertical: 6),
+            child: Row(
+              children: [
+                Icon(Icons.notifications_none_outlined,
+                    size: 18, color: cs.primary),
+                const SizedBox(width: AppSpacing.md),
+                Text('Reminder', style: theme.textTheme.bodyMedium),
+                const Spacer(),
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: reminderMinutes,
+                    isDense: true,
+                    alignment: AlignmentDirectional.centerEnd,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(color: cs.onSurface),
+                    items: const [
+                      DropdownMenuItem(value: null, child: Text('No reminder')),
+                      DropdownMenuItem(value: 5, child: Text('5 min before')),
+                      DropdownMenuItem(value: 30, child: Text('30 min before')),
+                      DropdownMenuItem(value: 60, child: Text('1 hour before')),
+                    ],
+                    onChanged: onReminderChanged,
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(
-              onPressed: () {
-                onChanged(temp);
-                Navigator.pop(ctx);
-              },
-              child: const Text('OK')),
         ],
       ),
     );
   }
 }
 
-// ─── Reminder dropdown ────────────────────────────────────────────────────────
+// ─── More options expansion ───────────────────────────────────────────────────
 
-class _ReminderDropdown extends StatelessWidget {
-  const _ReminderDropdown({required this.value, required this.onChanged});
+class _MoreOptionsExpansion extends StatelessWidget {
+  const _MoreOptionsExpansion({
+    required this.anchorCtrl,
+    required this.minVersionCtrl,
+    required this.groups,
+    required this.selectedGroupId,
+    required this.initiallyExpanded,
+    required this.onGroupChanged,
+    required this.onCreateGroup,
+  });
 
-  final int? value;
-  final ValueChanged<int?> onChanged;
+  final TextEditingController anchorCtrl;
+  final TextEditingController minVersionCtrl;
+  final List<HabitRoutine> groups;
+  final String? selectedGroupId;
+  final bool initiallyExpanded;
+  final ValueChanged<String?> onGroupChanged;
+  final VoidCallback onCreateGroup;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        border:
-            Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.5)),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<int?>(
-          value: value,
-          isDense: true,
-          isExpanded: true,
-          style: AppTextStyles.bodyMedium
-              .copyWith(color: theme.colorScheme.onSurface),
-          items: const [
-            DropdownMenuItem(value: null, child: Text('No reminder')),
-            DropdownMenuItem(value: 5, child: Text('5 min before')),
-            DropdownMenuItem(value: 30, child: Text('30 min before')),
-            DropdownMenuItem(value: 60, child: Text('1 hour before')),
+    return Theme(
+      data: theme.copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        initiallyExpanded: initiallyExpanded,
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: EdgeInsets.zero,
+        shape: const Border(),
+        collapsedShape: const Border(),
+        title: Row(
+          children: [
+            Icon(Icons.tune_outlined,
+                size: 15, color: theme.colorScheme.onSurfaceVariant),
+            const SizedBox(width: 6),
+            Text(
+              'More options',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
-          onChanged: onChanged,
         ),
+        trailing: Icon(
+          Icons.expand_more,
+          size: 18,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        children: [
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
+            controller: anchorCtrl,
+            hint: 'Habit cue — e.g., After morning coffee...',
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppTextField(
+            controller: minVersionCtrl,
+            hint: 'Minimum version — e.g., at least 5 push-ups',
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _GroupPicker(
+            groups: groups,
+            selectedGroupId: selectedGroupId,
+            onChanged: onGroupChanged,
+            onCreateGroup: onCreateGroup,
+          ),
+        ],
       ),
     );
   }
@@ -791,53 +903,57 @@ class _GroupPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return AppSection(
-      title: 'Group',
-      hint: 'Optional',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _GroupOption(
-            label: 'No group',
-            subtitle: 'Standalone quest',
-            isSelected: selectedGroupId == null,
-            color: Theme.of(context).colorScheme.outline,
-            onTap: () => onChanged(null),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'GROUP',
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+            letterSpacing: 0.8,
           ),
-          if (groups.isNotEmpty) ...[
-            const SizedBox(height: AppSpacing.sm),
-            ...groups.map((g) {
-              final color =
-                  Color(int.parse(g.colorHex.replaceFirst('#', '0xFF')));
-              return Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: _GroupOption(
-                  label: g.name,
-                  subtitle:
-                      '${g.questIds.length} quest${g.questIds.length != 1 ? "s" : ""}',
-                  isSelected: selectedGroupId == g.id,
-                  color: color,
-                  onTap: () => onChanged(g.id),
-                ),
-              );
-            }),
-          ] else ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'No groups yet.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ],
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _GroupOption(
+          label: 'No group',
+          subtitle: 'Standalone quest',
+          isSelected: selectedGroupId == null,
+          color: theme.colorScheme.outline,
+          onTap: () => onChanged(null),
+        ),
+        if (groups.isNotEmpty) ...[
           const SizedBox(height: AppSpacing.sm),
-          TextButton.icon(
-            onPressed: onCreateGroup,
-            icon: const Icon(Icons.add_circle_outline, size: 16),
-            label: const Text('New Group'),
+          ...groups.map((g) {
+            final color =
+                Color(int.parse(g.colorHex.replaceFirst('#', '0xFF')));
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _GroupOption(
+                label: g.name,
+                subtitle:
+                    '${g.questIds.length} quest${g.questIds.length != 1 ? "s" : ""}',
+                isSelected: selectedGroupId == g.id,
+                color: color,
+                onTap: () => onChanged(g.id),
+              ),
+            );
+          }),
+        ] else ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'No groups yet.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
-      ),
+        const SizedBox(height: AppSpacing.sm),
+        TextButton.icon(
+          onPressed: onCreateGroup,
+          icon: const Icon(Icons.add_circle_outline, size: 16),
+          label: const Text('New Group'),
+        ),
+      ],
     );
   }
 }
