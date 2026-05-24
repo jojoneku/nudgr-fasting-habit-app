@@ -150,6 +150,9 @@ MockStorageService _makeStorage({
   when(s.loadFoodFeedback()).thenAnswer((_) async => []);
   when(s.loadWeightLog()).thenAnswer((_) async => []);
   when(s.saveWeightLog(any)).thenAnswer((_) async {});
+  when(s.loadBodyMeasurements()).thenAnswer((_) async => []);
+  when(s.loadMeasurementUnit()).thenAnswer((_) async => MeasurementUnit.metric);
+  when(s.loadLastRecompXpDate()).thenAnswer((_) async => null);
   when(s.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
   when(s.saveNutritionLog(any)).thenAnswer((_) async {});
   when(s.saveFoodFeedback(any)).thenAnswer((_) async {});

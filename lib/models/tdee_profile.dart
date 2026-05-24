@@ -20,11 +20,11 @@ class TdeeProfile {
   });
 
   String get goalDisplayName => switch (goal) {
-    'cut' => 'Cut',
-    'bulk' => 'Lean gain',
-    'recomp' => 'Recomp',
-    _ => 'Maintain',
-  };
+        'cut' => 'Cut',
+        'bulk' => 'Lean gain',
+        'recomp' => 'Recomp',
+        _ => 'Maintain',
+      };
 
   // Mifflin-St Jeor formula
   int get bmr {
