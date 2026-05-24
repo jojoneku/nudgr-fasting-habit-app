@@ -128,6 +128,11 @@ class _FastingAppState extends State<FastingApp> {
           return const IconThemeData(color: AppColors.textSecondary);
         }),
       ),
+      bottomSheetTheme: base.bottomSheetTheme.copyWith(
+        backgroundColor: AppColors.background,
+        modalBackgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+      ),
       snackBarTheme:
           const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       textTheme: AppTextStyles.textTheme.apply(
@@ -208,6 +213,11 @@ class _FastingAppState extends State<FastingApp> {
           }
           return const IconThemeData(color: AppColorsLight.textSecondary);
         }),
+      ),
+      bottomSheetTheme: base.bottomSheetTheme.copyWith(
+        backgroundColor: AppColorsLight.surface,
+        modalBackgroundColor: AppColorsLight.surface,
+        surfaceTintColor: Colors.transparent,
       ),
       snackBarTheme:
           const SnackBarThemeData(behavior: SnackBarBehavior.floating),

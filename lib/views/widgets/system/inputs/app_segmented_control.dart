@@ -8,16 +8,19 @@ class AppSegmentedControl<T> extends StatelessWidget {
     required this.selected,
     required this.onChanged,
     this.showSelectedIcon = false,
+    this.style,
   });
 
   final List<({T value, String label, IconData? icon})> segments;
   final T selected;
   final ValueChanged<T> onChanged;
   final bool showSelectedIcon;
+  final ButtonStyle? style;
 
   @override
   Widget build(BuildContext context) {
     return SegmentedButton<T>(
+      style: style,
       segments: segments
           .map((s) => ButtonSegment<T>(
                 value: s.value,

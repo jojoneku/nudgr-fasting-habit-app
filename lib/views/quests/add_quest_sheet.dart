@@ -70,9 +70,7 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
   bool get _isEditing => widget.quest != null;
 
   bool get _hasMoreOptions =>
-      _anchorCtrl.text.isNotEmpty ||
-      _minVersionCtrl.text.isNotEmpty ||
-      _selectedGroupId != null;
+      _anchorCtrl.text.isNotEmpty || _minVersionCtrl.text.isNotEmpty;
 
   // ─── Time picker dialog ────────────────────────────────────────────────────
 
@@ -176,6 +174,8 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Title ───────────────────────────────────────────
+                  _SectionLabel('Quest Title'),
+                  const SizedBox(height: AppSpacing.xs),
                   AppTextField(
                     controller: _titleCtrl,
                     hint: 'Quest title...',
@@ -207,36 +207,17 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   const SizedBox(height: AppSpacing.xs),
                   Container(
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHigh,
+                      color: theme.colorScheme.surfaceContainerLow,
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.5)),
                     ),
                     padding: const EdgeInsets.all(AppSpacing.md),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        AppSegmentedControl<RecurrenceType>(
-                          segments: const [
-                            (
-                              value: RecurrenceType.daily,
-                              label: 'Daily',
-                              icon: null
-                            ),
-                            (
-                              value: RecurrenceType.weekly,
-                              label: 'Weekly',
-                              icon: null
-                            ),
-                            (
-                              value: RecurrenceType.biweekly,
-                              label: 'Bi-wkly',
-                              icon: null
-                            ),
-                            (
-                              value: RecurrenceType.monthly,
-                              label: 'Monthly',
-                              icon: null
-                            ),
-                          ],
+                        _RecurrenceTabBar(
                           selected: _recurrenceType,
                           onChanged: (t) => setState(() {
                             _recurrenceType = t;
@@ -252,6 +233,23 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
+                  // ── Group ────────────────────────────────────────────
+                  _SectionLabel('Group'),
+                  const SizedBox(height: AppSpacing.xs),
+                  _GroupPicker(
+                    groups: widget.presenter.routines,
+                    selectedGroupId: _selectedGroupId,
+                    onChanged: (id) => setState(() => _selectedGroupId = id),
+                    onCreateGroup: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                        builder: (_) =>
+                            RoutineEditorView(presenter: widget.presenter),
+                      ));
+                      if (mounted) setState(() {});
+                    },
+                  ),
+                  const SizedBox(height: AppSpacing.mdGenerous),
+
                   // ── Trains attribute ─────────────────────────────────
                   _SectionLabel('Trains attribute'),
                   const SizedBox(height: AppSpacing.xs),
@@ -261,22 +259,11 @@ class _AddQuestSheetState extends State<AddQuestSheet> {
                   ),
                   const SizedBox(height: AppSpacing.mdGenerous),
 
-                  // ── More options (collapsible) ───────────────────────
+                  // ── Habit cues (collapsible) ─────────────────────────
                   _MoreOptionsExpansion(
                     anchorCtrl: _anchorCtrl,
                     minVersionCtrl: _minVersionCtrl,
-                    groups: widget.presenter.routines,
-                    selectedGroupId: _selectedGroupId,
                     initiallyExpanded: _hasMoreOptions,
-                    onGroupChanged: (id) =>
-                        setState(() => _selectedGroupId = id),
-                    onCreateGroup: () async {
-                      await Navigator.of(context).push(MaterialPageRoute(
-                        builder: (_) =>
-                            RoutineEditorView(presenter: widget.presenter),
-                      ));
-                      if (mounted) setState(() {});
-                    },
                   ),
                   const SizedBox(height: AppSpacing.lg),
 
@@ -497,75 +484,81 @@ class _ScheduleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    const vPad = EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: 14);
     return Container(
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
+        color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
       ),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          // Time row
-          InkWell(
-            onTap: onTimeTap,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md, vertical: 14),
-              child: Row(
-                children: [
-                  Icon(Icons.access_time_outlined, size: 18, color: cs.primary),
-                  const SizedBox(width: AppSpacing.md),
-                  Text('Time', style: theme.textTheme.bodyMedium),
-                  const Spacer(),
-                  Text(
-                    time.format(context),
-                    style:
-                        theme.textTheme.bodyMedium?.copyWith(color: cs.primary),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right,
-                      size: 16, color: cs.onSurfaceVariant),
-                ],
-              ),
-            ),
-          ),
-          Divider(
-            height: 1,
-            indent: AppSpacing.md + 18 + AppSpacing.md,
-            endIndent: AppSpacing.md,
-            color: cs.outlineVariant,
-          ),
-          // Reminder row
-          Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md, vertical: 6),
-            child: Row(
-              children: [
-                Icon(Icons.notifications_none_outlined,
-                    size: 18, color: cs.primary),
-                const SizedBox(width: AppSpacing.md),
-                Text('Reminder', style: theme.textTheme.bodyMedium),
-                const Spacer(),
-                DropdownButtonHideUnderline(
-                  child: DropdownButton<int?>(
-                    value: reminderMinutes,
-                    isDense: true,
-                    alignment: AlignmentDirectional.centerEnd,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(color: cs.onSurface),
-                    items: const [
-                      DropdownMenuItem(value: null, child: Text('No reminder')),
-                      DropdownMenuItem(value: 5, child: Text('5 min before')),
-                      DropdownMenuItem(value: 30, child: Text('30 min before')),
-                      DropdownMenuItem(value: 60, child: Text('1 hour before')),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ── Time (tappable) ─────────────────────────────────────
+            Expanded(
+              child: InkWell(
+                onTap: onTimeTap,
+                child: Padding(
+                  padding: vPad,
+                  child: Row(
+                    children: [
+                      Icon(Icons.access_time_outlined,
+                          size: 18, color: cs.primary),
+                      const SizedBox(width: 8),
+                      Text('Time', style: theme.textTheme.bodyMedium),
+                      const Spacer(),
+                      Text(
+                        time.format(context),
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      const SizedBox(width: 2),
+                      Icon(Icons.chevron_right,
+                          size: 16, color: cs.onSurfaceVariant),
                     ],
-                    onChanged: onReminderChanged,
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-        ],
+            Container(width: 1, color: cs.outlineVariant),
+            // ── Reminder dropdown ────────────────────────────────────
+            Expanded(
+              child: Padding(
+                padding: vPad,
+                child: Row(
+                  children: [
+                    Icon(Icons.notifications_none_outlined,
+                        size: 18, color: cs.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<int?>(
+                          value: reminderMinutes,
+                          isDense: true,
+                          isExpanded: true,
+                          style: theme.textTheme.bodyMedium
+                              ?.copyWith(color: cs.onSurface),
+                          items: const [
+                            DropdownMenuItem(
+                                value: null, child: Text('No reminder')),
+                            DropdownMenuItem(
+                                value: 5, child: Text('5 min before')),
+                            DropdownMenuItem(
+                                value: 30, child: Text('30 min before')),
+                            DropdownMenuItem(
+                                value: 60, child: Text('1 hr before')),
+                          ],
+                          onChanged: onReminderChanged,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -577,20 +570,12 @@ class _MoreOptionsExpansion extends StatelessWidget {
   const _MoreOptionsExpansion({
     required this.anchorCtrl,
     required this.minVersionCtrl,
-    required this.groups,
-    required this.selectedGroupId,
     required this.initiallyExpanded,
-    required this.onGroupChanged,
-    required this.onCreateGroup,
   });
 
   final TextEditingController anchorCtrl;
   final TextEditingController minVersionCtrl;
-  final List<HabitRoutine> groups;
-  final String? selectedGroupId;
   final bool initiallyExpanded;
-  final ValueChanged<String?> onGroupChanged;
-  final VoidCallback onCreateGroup;
 
   @override
   Widget build(BuildContext context) {
@@ -605,11 +590,11 @@ class _MoreOptionsExpansion extends StatelessWidget {
         collapsedShape: const Border(),
         title: Row(
           children: [
-            Icon(Icons.tune_outlined,
-                size: 15, color: theme.colorScheme.onSurfaceVariant),
+            Icon(Icons.edit_note_outlined,
+                size: 16, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 6),
             Text(
-              'More options',
+              'Habit cues',
               style: theme.textTheme.labelMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -633,13 +618,7 @@ class _MoreOptionsExpansion extends StatelessWidget {
             controller: minVersionCtrl,
             hint: 'Minimum version — e.g., at least 5 push-ups',
           ),
-          const SizedBox(height: AppSpacing.md),
-          _GroupPicker(
-            groups: groups,
-            selectedGroupId: selectedGroupId,
-            onChanged: onGroupChanged,
-            onCreateGroup: onCreateGroup,
-          ),
+          const SizedBox(height: AppSpacing.sm),
         ],
       ),
     );
@@ -852,35 +831,69 @@ class _StatPicker extends StatelessWidget {
     final label = stat != null ? linkedStatLabel(stat) : 'None';
     return Padding(
       padding: const EdgeInsets.only(right: AppSpacing.sm),
-      child: FilterChip(
-        selected: isSelected,
-        selectedColor: color.withValues(alpha: 0.2),
-        checkmarkColor: color,
-        side: BorderSide(
-            color: isSelected ? color : neutralColor.withValues(alpha: 0.4)),
-        label: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (stat != null) ...[
-              Icon(linkedStatIcon(stat),
-                  size: 13,
-                  color:
-                      isSelected ? color : theme.colorScheme.onSurfaceVariant),
-              const SizedBox(width: 4),
-            ],
-            Text(label,
-                style: TextStyle(
-                  color:
-                      isSelected ? color : theme.colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                )),
-          ],
+      child: ChipTheme(
+        data: ChipTheme.of(context).copyWith(
+          color: WidgetStateProperty.resolveWith((states) =>
+              states.contains(WidgetState.selected)
+                  ? color.withValues(alpha: 0.2)
+                  : theme.colorScheme.surfaceContainerLow),
+          surfaceTintColor: Colors.transparent,
         ),
-        onSelected: (_) => onChanged(stat),
-        padding: const EdgeInsets.symmetric(horizontal: 6),
-        visualDensity: VisualDensity.compact,
-        showCheckmark: false,
+        child: FilterChip(
+          selected: isSelected,
+          checkmarkColor: color,
+          side: BorderSide(
+              color: isSelected ? color : neutralColor.withValues(alpha: 0.4)),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (stat != null) ...[
+                Icon(linkedStatIcon(stat),
+                    size: 13,
+                    color: isSelected
+                        ? color
+                        : theme.colorScheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+              ],
+              Text(label,
+                  style: TextStyle(
+                    color:
+                        isSelected ? color : theme.colorScheme.onSurfaceVariant,
+                    fontSize: 12,
+                  )),
+            ],
+          ),
+          onSelected: (_) => onChanged(stat),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          visualDensity: VisualDensity.compact,
+          showCheckmark: false,
+        ),
       ),
+    );
+  }
+}
+
+// ─── Group picker ─────────────────────────────────────────────────────────────
+
+// ─── Recurrence tab bar ───────────────────────────────────────────────────────
+
+class _RecurrenceTabBar extends StatelessWidget {
+  const _RecurrenceTabBar({required this.selected, required this.onChanged});
+
+  final RecurrenceType selected;
+  final ValueChanged<RecurrenceType> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSegmentedControl<RecurrenceType>(
+      selected: selected,
+      onChanged: onChanged,
+      segments: const [
+        (value: RecurrenceType.daily, label: 'Daily', icon: null),
+        (value: RecurrenceType.weekly, label: 'Weekly', icon: null),
+        (value: RecurrenceType.biweekly, label: '2-Week', icon: null),
+        (value: RecurrenceType.monthly, label: 'Monthly', icon: null),
+      ],
     );
   }
 }
@@ -906,14 +919,6 @@ class _GroupPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'GROUP',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            letterSpacing: 0.8,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
         _GroupOption(
           label: 'No group',
           subtitle: 'Standalone quest',
@@ -938,14 +943,6 @@ class _GroupPicker extends StatelessWidget {
               ),
             );
           }),
-        ] else ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            'No groups yet.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
         ],
         const SizedBox(height: AppSpacing.sm),
         TextButton.icon(
