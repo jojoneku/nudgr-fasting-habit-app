@@ -1158,7 +1158,9 @@ class LocalStorageService extends StorageService {
   Future<MeasurementUnit> loadMeasurementUnit() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(StorageService.keyMeasurementUnit);
-    return raw == 'imperial' ? MeasurementUnit.imperial : MeasurementUnit.metric;
+    return raw == 'imperial'
+        ? MeasurementUnit.imperial
+        : MeasurementUnit.metric;
   }
 
   @override

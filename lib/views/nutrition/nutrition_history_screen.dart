@@ -127,8 +127,10 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
       GoalStatusLabel.notEnoughSurplus => (Icons.arrow_downward, cs.tertiary),
       GoalStatusLabel.lowProtein => (Icons.warning_amber_outlined, cs.tertiary),
       GoalStatusLabel.possibleRecomp => (Icons.auto_awesome_outlined, _gold),
-      GoalStatusLabel.needsMoreData =>
-        (Icons.hourglass_empty_outlined, cs.onSurfaceVariant),
+      GoalStatusLabel.needsMoreData => (
+          Icons.hourglass_empty_outlined,
+          cs.onSurfaceVariant
+        ),
     };
   }
 
@@ -153,7 +155,8 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: chipColor.withValues(alpha: 0.45), width: 1.5),
+        border:
+            Border.all(color: chipColor.withValues(alpha: 0.45), width: 1.5),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(11),
@@ -220,9 +223,7 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           Text(
-                            avg > 0
-                                ? NumberFormat('#,###').format(avg)
-                                : '—',
+                            avg > 0 ? NumberFormat('#,###').format(avg) : '—',
                             style: theme.textTheme.headlineMedium?.copyWith(
                               fontWeight: FontWeight.w800,
                               letterSpacing: -1,
@@ -466,8 +467,7 @@ class _CalorieTrendSection extends StatelessWidget {
                       color: isToday
                           ? primary
                           : theme.colorScheme.onSurfaceVariant,
-                      fontWeight:
-                          isToday ? FontWeight.w700 : FontWeight.normal,
+                      fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
                       fontSize: 10,
                     ),
                   ),
@@ -620,12 +620,10 @@ class _CalorieTrendPainter extends CustomPainter {
       final inBand = goalCalories > 0 &&
           cal >= goalCalories - 100 &&
           cal <= goalCalories + 100;
-      final topAlpha = inBand || (goalCalories > 0 && cal >= goalCalories)
-          ? 0.95
-          : 0.32;
-      final botAlpha = inBand || (goalCalories > 0 && cal >= goalCalories)
-          ? 0.25
-          : 0.08;
+      final topAlpha =
+          inBand || (goalCalories > 0 && cal >= goalCalories) ? 0.95 : 0.32;
+      final botAlpha =
+          inBand || (goalCalories > 0 && cal >= goalCalories) ? 0.25 : 0.08;
 
       final rect = Rect.fromLTWH(left, top, barW, barH);
       final rrect = RRect.fromRectAndCorners(
@@ -1000,7 +998,9 @@ class _SortPill extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? cs.primary.withValues(alpha: 0.15) : cs.surfaceContainerHighest,
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : cs.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: selected ? cs.primary : Colors.transparent,
@@ -1431,8 +1431,7 @@ class _DayCard extends StatelessWidget {
     final cal = log.totalCalories;
     final goalMet = goalCalories > 0 && cal >= goalCalories;
     final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
-    final ratio =
-        goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
+    final ratio = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
     final pct =
         goalCalories > 0 ? '${((cal / goalCalories) * 100).round()}%' : null;
     final entryCount = log.allEntries.length;

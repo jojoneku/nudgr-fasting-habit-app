@@ -82,8 +82,7 @@ class _Snapshot extends StatelessWidget {
             if (delta != null) ...[
               const SizedBox(width: 10),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: (isDown ? primary : theme.colorScheme.onSurfaceVariant)
                       .withValues(alpha: 0.12),
@@ -94,9 +93,8 @@ class _Snapshot extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: isDown
-                        ? primary
-                        : theme.colorScheme.onSurfaceVariant,
+                    color:
+                        isDown ? primary : theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
