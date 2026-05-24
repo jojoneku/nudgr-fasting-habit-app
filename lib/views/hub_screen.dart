@@ -29,10 +29,14 @@ import 'settings_screen.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/treasury_module_view.dart';
 import 'widgets/hub/activity_hub_card.dart';
+import 'widgets/hub/body_measurement_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
 import 'widgets/hub/nutrition_hub_card.dart';
 import 'widgets/hub/quests_hub_card.dart';
 import 'widgets/hub/treasury_hub_card.dart';
+import 'widgets/hub/weight_hub_card.dart';
+import 'nutrition/measurement_log_screen.dart';
+import 'nutrition/weight_log_screen.dart';
 import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
@@ -397,6 +401,18 @@ class _HubScreenState extends State<HubScreen>
             )
           : const SizedBox.shrink(),
       HubCardType.stats => const SizedBox.shrink(),
+      HubCardType.weightLog => widget.nutritionPresenter != null
+          ? WeightHubCard(
+              nutrition: widget.nutritionPresenter!,
+              onNavigate: () => _pushWeightLogScreen(context),
+            )
+          : const SizedBox.shrink(),
+      HubCardType.bodyMeasurements => widget.nutritionPresenter != null
+          ? BodyMeasurementHubCard(
+              nutrition: widget.nutritionPresenter!,
+              onNavigate: () => _pushBodyMeasurementScreen(context),
+            )
+          : const SizedBox.shrink(),
     };
   }
 
@@ -423,6 +439,24 @@ class _HubScreenState extends State<HubScreen>
         builder: (_) => NutritionScreen(
             presenter: n, aiCoachPresenter: widget.aiCoachPresenter),
       ),
+    );
+  }
+
+  void _pushWeightLogScreen(BuildContext context) {
+    final n = widget.nutritionPresenter;
+    if (n == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => WeightLogScreen(presenter: n)),
+    );
+  }
+
+  void _pushBodyMeasurementScreen(BuildContext context) {
+    final n = widget.nutritionPresenter;
+    if (n == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => MeasurementLogScreen(presenter: n)),
     );
   }
 

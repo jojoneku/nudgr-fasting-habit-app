@@ -23,6 +23,7 @@ import '../models/food_feedback.dart';
 import '../models/index_progress.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
+import '../models/body_measurement_entry.dart';
 import '../models/weight_entry.dart';
 
 abstract class StorageService {
@@ -69,6 +70,9 @@ abstract class StorageService {
   static const String kUseCloudAi = 'useCloudAi';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   static const String keyWeightLog = 'weightLog';
+  static const String keyBodyMeasurements = 'bodyMeasurements';
+  static const String keyMeasurementUnit = 'measurementUnit';
+  static const String keyLastRecompXpDate = 'bodyMeasurements.lastRecompXpDate';
   static const String keyNotificationPreferences = 'notification_preferences';
 
   //  User Stats
@@ -177,6 +181,14 @@ abstract class StorageService {
   //  Weight Log
   Future<void> saveWeightLog(List<WeightEntry> entries);
   Future<List<WeightEntry>> loadWeightLog();
+
+  //  Body Measurements
+  Future<void> saveBodyMeasurements(List<BodyMeasurementEntry> entries);
+  Future<List<BodyMeasurementEntry>> loadBodyMeasurements();
+  Future<void> saveMeasurementUnit(MeasurementUnit unit);
+  Future<MeasurementUnit> loadMeasurementUnit();
+  Future<void> saveLastRecompXpDate(DateTime date);
+  Future<DateTime?> loadLastRecompXpDate();
 
   //  Notification Preferences
   Future<void> saveNotificationPreferences(NotificationPreferences prefs);

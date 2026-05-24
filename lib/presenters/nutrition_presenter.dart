@@ -4,6 +4,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/ai_meal_estimate.dart';
+import '../models/body_measurement_entry.dart';
+import '../models/dashboard_status.dart';
 import '../models/chat_message.dart';
 import '../models/extracted_food_item.dart';
 import '../models/daily_nutrition_log.dart';
@@ -30,6 +32,7 @@ import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
 import '../services/storage_service.dart';
+import '../utils/body_fat_calculator.dart';
 import '../utils/exercise_nlp_parser.dart';
 import '../utils/food_match_scorer.dart';
 import '../utils/food_nlp_parser.dart';
@@ -69,6 +72,11 @@ class NutritionPresenter extends ChangeNotifier {
 
   // ── Weight log ───────────────────────────────────────────────────────────
   List<WeightEntry> _weightLog = const [];
+
+  // ── Body measurements ─────────────────────────────────────────────────────
+  List<BodyMeasurementEntry> _measurementLog = const [];
+  MeasurementUnit _measurementUnit = MeasurementUnit.metric;
+  DateTime? _lastRecompXpDate;
 
   // ── Personal food dictionary ──────────────────────────────────────────────
   late final PersonalFoodDictionary _personalDict;
@@ -274,6 +282,66 @@ class NutritionPresenter extends ChangeNotifier {
         _weightLog[_weightLog.length - 2].weightKg;
   }
 
+  // ── Body measurement getters ─────────────────────────────────────────────────
+
+  List<BodyMeasurementEntry> get measurementLog => _measurementLog;
+  BodyMeasurementEntry? get latestMeasurement =>
+      _measurementLog.isEmpty ? null : _measurementLog.last;
+
+  double? get waistDelta {
+    final waistEntries =
+        _measurementLog.where((e) => e.waistCm != null).toList();
+    if (waistEntries.length < 2) return null;
+    return waistEntries.last.waistCm! -
+        waistEntries[waistEntries.length - 2].waistCm!;
+  }
+
+  MeasurementTrendDirection get waistTrendDirection {
+    final entries = _measurementLog.where((e) => e.waistCm != null).toList();
+    if (entries.length < 4) return MeasurementTrendDirection.insufficient;
+    final recent =
+        entries.length >= 14 ? entries.sublist(entries.length - 14) : entries;
+    final half = recent.length ~/ 2;
+    final firstAvg =
+        recent.sublist(0, half).map((e) => e.waistCm!).reduce((a, b) => a + b) /
+            half;
+    final secondAvg =
+        recent.sublist(half).map((e) => e.waistCm!).reduce((a, b) => a + b) /
+            (recent.length - half);
+    final diff = secondAvg - firstAvg;
+    if (diff < -0.5) return MeasurementTrendDirection.down;
+    if (diff > 0.5) return MeasurementTrendDirection.up;
+    return MeasurementTrendDirection.stable;
+  }
+
+  MeasurementUnit get measurementUnit => _measurementUnit;
+
+  String formatMeasurement(double cm) {
+    if (_measurementUnit == MeasurementUnit.imperial) {
+      return '${(cm / 2.54).toStringAsFixed(1)} in';
+    }
+    return '${cm.toStringAsFixed(1)} cm';
+  }
+
+  double toStorageCm(double displayValue) =>
+      _measurementUnit == MeasurementUnit.imperial
+          ? displayValue * 2.54
+          : displayValue;
+
+  double? get estimatedBodyFatPercent {
+    final m = latestMeasurement;
+    final profile = _tdeeProfile;
+    if (m == null || profile == null) return null;
+    if (m.waistCm == null || m.neckCm == null) return null;
+    return estimateBodyFatPercent(
+      sex: profile.sex,
+      heightCm: profile.heightCm,
+      waistCm: m.waistCm!,
+      neckCm: m.neckCm!,
+      hipsCm: m.hipsCm,
+    );
+  }
+
   // ── Calorie getters ──────────────────────────────────────────────────────────
 
   int get todayCalories => _todayLog.totalCalories;
@@ -348,6 +416,255 @@ class NutritionPresenter extends ChangeNotifier {
 
   int get goalStreak => _goalStreak;
   int get logStreak => _logStreak;
+
+  // ── Dashboard analytics ──────────────────────────────────────────────────────
+
+  String? get activeGoal => _tdeeProfile?.goal;
+
+  String? get goalLabel => _tdeeProfile?.goalLabel;
+
+  int get sevenDayAvgCalories {
+    final days = history.take(7).where((l) => l.totalCalories > 0).toList();
+    if (days.isEmpty) return 0;
+    return (days.fold(0, (s, l) => s + l.totalCalories) / days.length).round();
+  }
+
+  double? get proteinHitRate7d {
+    final goal = _goals.proteinGrams;
+    if (goal == null || goal <= 0) return null;
+    final days = history.take(7).toList();
+    if (days.isEmpty) return null;
+    final hits = days.where((l) => l.totalProtein >= goal).length;
+    return hits / days.length;
+  }
+
+  double get loggingConsistency7d {
+    final days = history.take(7).toList();
+    if (days.isEmpty) return 0.0;
+    return days.where((l) => l.totalCalories > 0).length / days.length;
+  }
+
+  WeightTrendDirection get weightTrendDirection {
+    if (_weightLog.length < 4) return WeightTrendDirection.insufficient;
+    final entries = _weightLog.length >= 14
+        ? _weightLog.sublist(_weightLog.length - 14)
+        : _weightLog;
+    final half = entries.length ~/ 2;
+    final firstAvg =
+        entries.sublist(0, half).fold(0.0, (s, e) => s + e.weightKg) / half;
+    final secondAvg =
+        entries.sublist(half).fold(0.0, (s, e) => s + e.weightKg) /
+            (entries.length - half);
+    final delta = secondAvg - firstAvg;
+    if (delta < -0.1) return WeightTrendDirection.down;
+    if (delta > 0.1) return WeightTrendDirection.up;
+    return WeightTrendDirection.stable;
+  }
+
+  DashboardStatus get dashboardStatus {
+    final loggedDays = history.take(7).where((l) => l.totalCalories > 0).length;
+    if (loggedDays < 3) {
+      return const DashboardStatus(
+        label: GoalStatusLabel.needsMoreData,
+        headline: 'Needs more data',
+        detail: 'Log at least 3 days to see your goal status',
+      );
+    }
+
+    final profile = _tdeeProfile;
+    if (profile == null || _goals.mode != TrackingMode.standard) {
+      return DashboardStatus(
+        label: GoalStatusLabel.onTrack,
+        headline: 'Tracking active',
+        detail: '7-day avg $sevenDayAvgCalories kcal',
+      );
+    }
+
+    final avg = sevenDayAvgCalories;
+    final target = profile.targetCalories;
+    final phr = proteinHitRate7d;
+    final delta = avg - target;
+    final sign = delta >= 0 ? '+' : '';
+    final detail = '7-day avg $avg kcal · $sign$delta vs target';
+
+    return switch (profile.goal) {
+      'cut' => _cutStatus(avg, target, phr, detail),
+      'bulk' => _leanGainStatus(avg, target, phr, detail),
+      'recomp' => _recompStatus(avg, target, phr, detail),
+      _ => _maintainStatus(avg, target, phr, detail),
+    };
+  }
+
+  DashboardStatus _cutStatus(int avg, int target, double? phr, String detail) {
+    if (avg < target - 200) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooAggressive,
+        headline: 'Too aggressive',
+        detail: detail,
+      );
+    }
+    if (avg > target + 100) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooHigh,
+        headline: 'Too high',
+        detail: detail,
+      );
+    }
+    if (phr != null && phr < 0.5) {
+      return DashboardStatus(
+        label: GoalStatusLabel.lowProtein,
+        headline: 'Low protein',
+        detail: detail,
+      );
+    }
+    // possibleRecomp: in-band calories + stable weight + ≥14 entries
+    if (_weightLog.length >= 14 &&
+        weightTrendDirection == WeightTrendDirection.stable) {
+      final waist = waistTrendDirection;
+      if (waist == MeasurementTrendDirection.down) {
+        return const DashboardStatus(
+          label: GoalStatusLabel.possibleRecomp,
+          headline: 'Recomp confirmed',
+          detail:
+              'Waist trending down while weight holds — recomp confirmed. Keep going.',
+        );
+      }
+      if (waist == MeasurementTrendDirection.insufficient) {
+        return const DashboardStatus(
+          label: GoalStatusLabel.possibleRecomp,
+          headline: 'Possible recomp',
+          detail:
+              'Weight stable despite deficit — log body measurements to confirm recomp.',
+        );
+      }
+      return const DashboardStatus(
+        label: GoalStatusLabel.possibleRecomp,
+        headline: 'Possible recomp',
+        detail:
+            'Weight stable despite deficit — if you\'re training, this may be recomp. Body measurements would confirm.',
+      );
+    }
+    return DashboardStatus(
+      label: GoalStatusLabel.onTrack,
+      headline: 'On track',
+      detail: detail,
+    );
+  }
+
+  DashboardStatus _leanGainStatus(
+      int avg, int target, double? phr, String detail) {
+    if (avg < target - 100) {
+      return DashboardStatus(
+        label: GoalStatusLabel.notEnoughSurplus,
+        headline: 'Not enough surplus',
+        detail: detail,
+      );
+    }
+    if (avg > target + 200) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooHigh,
+        headline: 'Too high',
+        detail: detail,
+      );
+    }
+    if (phr != null && phr < 0.6) {
+      return DashboardStatus(
+        label: GoalStatusLabel.lowProtein,
+        headline: 'Low protein',
+        detail: detail,
+      );
+    }
+    return DashboardStatus(
+      label: GoalStatusLabel.onTrack,
+      headline: 'On track',
+      detail: detail,
+    );
+  }
+
+  DashboardStatus _recompStatus(
+      int avg, int target, double? phr, String detail) {
+    if (avg < target - 200) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooAggressive,
+        headline: 'Too aggressive',
+        detail: detail,
+      );
+    }
+    if (avg > target + 200) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooHigh,
+        headline: 'Too high',
+        detail: detail,
+      );
+    }
+    if (phr != null && phr < 0.65) {
+      return DashboardStatus(
+        label: GoalStatusLabel.lowProtein,
+        headline: 'Low protein',
+        detail: detail,
+      );
+    }
+    return DashboardStatus(
+      label: GoalStatusLabel.onTrack,
+      headline: 'On track',
+      detail: detail,
+    );
+  }
+
+  DashboardStatus _maintainStatus(
+      int avg, int target, double? phr, String detail) {
+    if (avg > target + 150) {
+      return DashboardStatus(
+        label: GoalStatusLabel.tooHigh,
+        headline: 'Too high',
+        detail: detail,
+      );
+    }
+    if (avg < target - 150) {
+      return DashboardStatus(
+        label: GoalStatusLabel.notEnoughSurplus,
+        headline: 'Too low',
+        detail: detail,
+      );
+    }
+    if (phr != null && phr < 0.4) {
+      return DashboardStatus(
+        label: GoalStatusLabel.lowProtein,
+        headline: 'Low protein',
+        detail: detail,
+      );
+    }
+    return DashboardStatus(
+      label: GoalStatusLabel.onTrack,
+      headline: 'On track',
+      detail: detail,
+    );
+  }
+
+  String get primaryKpiLabel => switch (activeGoal) {
+        'cut' => 'Average deficit',
+        'bulk' => 'Surplus adherence',
+        'recomp' => 'Calorie stability',
+        _ => 'Calorie stability',
+      };
+
+  String get secondaryKpiLabel => switch (activeGoal) {
+        'cut' => 'Protein compliance',
+        'bulk' => 'Protein support',
+        'recomp' => 'Protein compliance',
+        _ => 'Protein consistency',
+      };
+
+  String weightTrendLabel(WeightTrendDirection direction) =>
+      switch ((activeGoal, direction)) {
+        ('cut', WeightTrendDirection.down) => 'Trending down ↓',
+        ('cut', WeightTrendDirection.stable) => 'Weight stable',
+        ('cut', WeightTrendDirection.up) => 'Trending up ↑',
+        ('bulk', WeightTrendDirection.up) => 'Trending up ↑',
+        ('bulk', WeightTrendDirection.stable) => 'Weight stable',
+        ('bulk', WeightTrendDirection.down) => 'Trending down ↓',
+        _ => 'Weight stable',
+      };
 
   // ── Food library getters ─────────────────────────────────────────────────────
 
@@ -510,8 +827,9 @@ class NutritionPresenter extends ChangeNotifier {
     if (embedder.isDownloading) return FoodSearchStatus.downloading;
     if (!embedder.isInstalled) return FoodSearchStatus.notInstalled;
     if (!embedder.isReady) return FoodSearchStatus.loading;
-    if (_vectorBundle?.isDownloading ?? false)
+    if (_vectorBundle?.isDownloading ?? false) {
       return FoodSearchStatus.bundleDownloading;
+    }
     if (semantic.isIndexing) return FoodSearchStatus.indexing;
     if (semantic.isReady) return FoodSearchStatus.ready;
     return FoodSearchStatus.idle;
@@ -1329,6 +1647,47 @@ class NutritionPresenter extends ChangeNotifier {
     _weightLog = _weightLog.where((e) => e.id != id).toList();
     await _storage.saveWeightLog(_weightLog);
     notifyListeners();
+  }
+
+  // ── Body measurement mutations ────────────────────────────────────────────
+
+  Future<void> logMeasurement(BodyMeasurementEntry entry) async {
+    _measurementLog = [..._measurementLog, entry]
+      ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
+    await _storage.saveBodyMeasurements(_measurementLog);
+    await _checkRecompXp();
+    notifyListeners();
+  }
+
+  Future<void> deleteMeasurement(String id) async {
+    _measurementLog = _measurementLog.where((e) => e.id != id).toList();
+    await _storage.saveBodyMeasurements(_measurementLog);
+    notifyListeners();
+  }
+
+  Future<void> setMeasurementUnit(MeasurementUnit unit) async {
+    _measurementUnit = unit;
+    await _storage.saveMeasurementUnit(unit);
+    notifyListeners();
+  }
+
+  Future<void> _checkRecompXp() async {
+    if (activeGoal != 'cut') return;
+    if (waistTrendDirection != MeasurementTrendDirection.down) return;
+    if (weightTrendDirection != WeightTrendDirection.stable) return;
+    final now = DateTime.now();
+    if (_lastRecompXpDate != null &&
+        now.difference(_lastRecompXpDate!).inDays < 7) {
+      return;
+    }
+    _lastRecompXpDate = now;
+    await _storage.saveLastRecompXpDate(now);
+    await _statsPresenter.addXp(300);
+    await _notifications.showSimpleNotification(
+      title: 'Recomp confirmed',
+      body:
+          'Your waist is shrinking while weight holds steady. Keep going. +300 XP',
+    );
   }
 
   /// Maximum chat input length. Above this we reject — long pastes can blow
@@ -2540,6 +2899,9 @@ class NutritionPresenter extends ChangeNotifier {
       _storage.loadLogStreakDate().then((v) => _logStreakDate = v),
       _storage.loadFoodFeedback().then((v) => _feedback = v),
       _storage.loadWeightLog().then((v) => _weightLog = v),
+      _storage.loadBodyMeasurements().then((v) => _measurementLog = v),
+      _storage.loadMeasurementUnit().then((v) => _measurementUnit = v),
+      _storage.loadLastRecompXpDate().then((v) => _lastRecompXpDate = v),
       _personalDict.init(),
     ]);
     final todayKey = _dateFmt.format(DateTime.now());

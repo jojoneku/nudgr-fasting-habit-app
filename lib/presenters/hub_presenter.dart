@@ -4,7 +4,16 @@ import 'fasting_presenter.dart';
 import 'quest_presenter.dart';
 import 'treasury_dashboard_presenter.dart';
 
-enum HubCardType { fasting, nutrition, activity, treasury, quests, stats }
+enum HubCardType {
+  fasting,
+  nutrition,
+  activity,
+  treasury,
+  quests,
+  stats,
+  weightLog,
+  bodyMeasurements,
+}
 
 class HubPresenter extends ChangeNotifier {
   HubPresenter({
@@ -67,6 +76,8 @@ class HubPresenter extends ChangeNotifier {
           HubCardType.treasury,
           HubCardType.quests,
           HubCardType.fasting,
+          HubCardType.weightLog,
+          HubCardType.bodyMeasurements,
         ];
 
     final newOrder = [
