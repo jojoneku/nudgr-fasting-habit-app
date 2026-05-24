@@ -59,6 +59,10 @@ void main() {
     when(mockStorage.saveFoodFeedback(any)).thenAnswer((_) async {});
     when(mockStorage.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
     when(mockStorage.loadWeightLog()).thenAnswer((_) async => []);
+    when(mockStorage.loadBodyMeasurements()).thenAnswer((_) async => []);
+    when(mockStorage.loadMeasurementUnit())
+        .thenAnswer((_) async => MeasurementUnit.metric);
+    when(mockStorage.loadLastRecompXpDate()).thenAnswer((_) async => null);
 
     // Stats stubs
     when(mockStats.stats).thenReturn(UserStats.initial());

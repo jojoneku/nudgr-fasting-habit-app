@@ -1,5 +1,7 @@
 import 'meal_slot.dart';
 
+enum MeasurementUnit { metric, imperial }
+
 class NutritionGoals {
   final TrackingMode mode;
   final int dailyCalories; // used in simple mode; fallback in standard
