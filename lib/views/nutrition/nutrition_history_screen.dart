@@ -1,11 +1,12 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../app_colors.dart';
 import '../../models/daily_nutrition_log.dart';
+import '../../models/dashboard_status.dart';
 import '../../models/weight_entry.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
+import 'measurement_log_screen.dart';
 import 'weight_log_screen.dart';
 
 class NutritionHistoryScreen extends StatelessWidget {
@@ -48,8 +49,11 @@ class _HistoryBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
       children: [
+        _GoalStatusCard(presenter: presenter),
+        const SizedBox(height: 20),
         if (history.isNotEmpty) ...[
           _SummaryRow(
+            presenter: presenter,
             last7: _last7,
             goalCalories: goal,
             logStreak: presenter.logStreak,
@@ -59,7 +63,10 @@ class _HistoryBody extends StatelessWidget {
             days: _last14Chrono,
             goalCalories: goal,
             todayKey: _today,
+            activeGoal: presenter.activeGoal,
           ),
+          const SizedBox(height: 20),
+          _GoalChecksSection(presenter: presenter),
           const SizedBox(height: 20),
         ],
         if (_hasAnyMacros) ...[
@@ -73,16 +80,10 @@ class _HistoryBody extends StatelessWidget {
         ],
         _WeightSection(presenter: presenter),
         const SizedBox(height: 20),
+        _MeasurementSection(presenter: presenter),
+        const SizedBox(height: 20),
         if (history.isNotEmpty)
-          AppSection(
-            title: 'Recent Days',
-            child: Column(
-              children: history
-                  .take(14)
-                  .map((log) => _DayCard(log: log, goalCalories: goal))
-                  .toList(),
-            ),
-          )
+          _RecentDaysSection(history: history, goalCalories: goal)
         else
           const AppEmptyState(
             icon: Icons.restaurant_outlined,
@@ -94,60 +95,257 @@ class _HistoryBody extends StatelessWidget {
   }
 }
 
+// ─── Goal Status Card ─────────────────────────────────────────────────────────
+
+class _GoalStatusCard extends StatefulWidget {
+  final NutritionPresenter presenter;
+  const _GoalStatusCard({required this.presenter});
+
+  @override
+  State<_GoalStatusCard> createState() => _GoalStatusCardState();
+}
+
+class _GoalStatusCardState extends State<_GoalStatusCard> {
+  bool _chipVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _chipVisible = true);
+    });
+  }
+
+  static const _gold = Color(0xFFFFD700);
+
+  (IconData, Color) _chipStyle(BuildContext context, GoalStatusLabel label) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (label) {
+      GoalStatusLabel.onTrack => (Icons.check_circle_outline, cs.primary),
+      GoalStatusLabel.tooHigh => (Icons.arrow_upward, cs.error),
+      GoalStatusLabel.tooAggressive => (Icons.warning_amber_outlined, cs.error),
+      GoalStatusLabel.notEnoughSurplus => (Icons.arrow_downward, cs.tertiary),
+      GoalStatusLabel.lowProtein => (Icons.warning_amber_outlined, cs.tertiary),
+      GoalStatusLabel.possibleRecomp => (Icons.auto_awesome_outlined, _gold),
+      GoalStatusLabel.needsMoreData =>
+        (Icons.hourglass_empty_outlined, cs.onSurfaceVariant),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final presenter = widget.presenter;
+    final status = presenter.dashboardStatus;
+    final goalLabel = presenter.goalLabel;
+    final avg = presenter.sevenDayAvgCalories;
+    final target = presenter.effectiveGoal;
+    final isSimpleMode = presenter.activeGoal == null;
+
+    final (chipIcon, chipColor) = _chipStyle(context, status.label);
+
+    final delta = target > 0 ? avg - target : null;
+    final deltaText = delta == null
+        ? null
+        : '${delta >= 0 ? '+' : ''}${NumberFormat('#,###').format(delta)} kcal vs target';
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: chipColor.withValues(alpha: 0.45), width: 1.5),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(11),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Colored left accent bar
+              Container(width: 4, color: chipColor),
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Top row: goal label + status chip
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              goalLabel ?? 'Custom goal',
+                              style: theme.textTheme.labelMedium?.copyWith(
+                                color: cs.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          AnimatedOpacity(
+                            opacity: _chipVisible ? 1.0 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 9, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: chipColor.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(chipIcon, size: 12, color: chipColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    status.headline,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: chipColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Big average number
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            avg > 0
+                                ? NumberFormat('#,###').format(avg)
+                                : '—',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1,
+                              height: 1,
+                            ),
+                          ),
+                          if (avg > 0) ...[
+                            const SizedBox(width: 5),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                'kcal',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: cs.onSurfaceVariant,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '7-day average',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontSize: 11,
+                        ),
+                      ),
+                      if (deltaText != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          deltaText,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: chipColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                      if (isSimpleMode) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'Set up Standard Mode to unlock goal tracking.',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 // ─── Summary Row ──────────────────────────────────────────────────────────────
 
 class _SummaryRow extends StatelessWidget {
+  final NutritionPresenter presenter;
   final List<DailyNutritionLog> last7;
   final int goalCalories;
   final int logStreak;
+
   const _SummaryRow({
+    required this.presenter,
     required this.last7,
     required this.goalCalories,
     required this.logStreak,
   });
 
-  int get _avgCalories {
-    if (last7.isEmpty) return 0;
-    final total = last7.fold(0, (s, l) => s + l.totalCalories);
-    return (total / last7.length).round();
+  String get _tile1Value {
+    final avg = presenter.sevenDayAvgCalories;
+    final target = goalCalories;
+    if (target <= 0) return NumberFormat('#,###').format(avg);
+    final delta = avg - target;
+    final sign = delta > 0 ? '+' : '';
+    return '$sign${NumberFormat('#,###').format(delta)} kcal';
   }
 
-  int get _goalDays => goalCalories > 0
-      ? last7.where((l) => l.totalCalories >= goalCalories).length
-      : 0;
+  String get _tile2Value {
+    final rate = presenter.proteinHitRate7d;
+    if (rate == null) return '—';
+    final hits = (rate * math.min(last7.length, 7)).round();
+    return '$hits/7 days';
+  }
 
   @override
   Widget build(BuildContext context) {
-    final n = last7.length;
-    return Row(
-      children: [
-        Expanded(
-          child: _StatTile(
-            icon: Icons.local_fire_department_outlined,
-            value: NumberFormat('#,###').format(_avgCalories),
-            unit: 'kcal',
-            label: 'Daily avg',
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            child: _StatTile(
+              icon: Icons.local_fire_department_outlined,
+              value: _tile1Value,
+              label: presenter.primaryKpiLabel,
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatTile(
-            icon: Icons.emoji_events_outlined,
-            value: '$_goalDays/$n',
-            unit: 'days',
-            label: 'Goal met',
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatTile(
+              icon: Icons.emoji_events_outlined,
+              value: _tile2Value,
+              label: presenter.secondaryKpiLabel,
+            ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: _StatTile(
-            icon: Icons.whatshot_outlined,
-            value: '$logStreak',
-            unit: logStreak == 1 ? 'day' : 'days',
-            label: 'Log streak',
+          const SizedBox(width: 10),
+          Expanded(
+            child: _StatTile(
+              icon: Icons.whatshot_outlined,
+              value: '$logStreak',
+              label: 'Log streak',
+              unit: logStreak == 1 ? 'day' : 'days',
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -155,26 +353,27 @@ class _SummaryRow extends StatelessWidget {
 class _StatTile extends StatelessWidget {
   final IconData icon;
   final String value;
-  final String unit;
   final String label;
+  final String? unit;
   const _StatTile({
     required this.icon,
     required this.value,
-    required this.unit,
     required this.label,
+    this.unit,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final primary = theme.colorScheme.primary;
     return AppCard(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 12, 12, 14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: gold),
+            Icon(icon, size: 16, color: primary),
             const SizedBox(height: 8),
             Text(
               value,
@@ -182,23 +381,29 @@ class _StatTile extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 letterSpacing: -0.3,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 1),
-            Text(
-              unit,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: gold,
-                fontWeight: FontWeight.w600,
-                fontSize: 10,
+            if (unit != null && unit!.isNotEmpty) ...[
+              const SizedBox(height: 1),
+              Text(
+                unit!,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 10,
+                ),
               ),
-            ),
-            const SizedBox(height: 2),
+            ],
+            const SizedBox(height: 6),
             Text(
               label,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 10,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -210,19 +415,22 @@ class _StatTile extends StatelessWidget {
 // ─── Calorie Trend ────────────────────────────────────────────────────────────
 
 class _CalorieTrendSection extends StatelessWidget {
-  final List<DailyNutritionLog> days; // chronological
+  final List<DailyNutritionLog> days;
   final int goalCalories;
   final String todayKey;
+  final String? activeGoal;
+
   const _CalorieTrendSection({
     required this.days,
     required this.goalCalories,
     required this.todayKey,
+    required this.activeGoal,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final primary = theme.colorScheme.primary;
 
     return AppSection(
       title: 'Calorie Trend',
@@ -237,14 +445,15 @@ class _CalorieTrendSection extends StatelessWidget {
                 painter: _CalorieTrendPainter(
                   days: days,
                   goalCalories: goalCalories,
-                  barColor: gold,
+                  barColor: primary,
                   errorColor: theme.colorScheme.error,
+                  tertiaryColor: theme.colorScheme.tertiary,
                   todayKey: todayKey,
+                  activeGoal: activeGoal,
                 ),
               ),
             ),
             const SizedBox(height: 6),
-            // Day labels
             Row(
               children: days.map((log) {
                 final dt = DateTime.tryParse(log.date) ?? DateTime.now();
@@ -254,9 +463,11 @@ class _CalorieTrendSection extends StatelessWidget {
                     DateFormat('E').format(dt).substring(0, 1),
                     textAlign: TextAlign.center,
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color:
-                          isToday ? gold : theme.colorScheme.onSurfaceVariant,
-                      fontWeight: isToday ? FontWeight.w700 : FontWeight.normal,
+                      color: isToday
+                          ? primary
+                          : theme.colorScheme.onSurfaceVariant,
+                      fontWeight:
+                          isToday ? FontWeight.w700 : FontWeight.normal,
                       fontSize: 10,
                     ),
                   ),
@@ -264,15 +475,25 @@ class _CalorieTrendSection extends StatelessWidget {
               }).toList(),
             ),
             const SizedBox(height: 12),
-            // Legend
             Wrap(
               spacing: 14,
               runSpacing: 6,
               children: [
-                _LegendItem(color: gold, label: 'Goal met'),
+                _LegendItem(color: primary, label: 'On track'),
                 _LegendItem(
-                    color: gold.withValues(alpha: 0.35), label: 'Under'),
-                _LegendItem(color: theme.colorScheme.error, label: 'Over 120%'),
+                  color: primary.withValues(alpha: 0.35),
+                  label: 'Under',
+                ),
+                _LegendItem(
+                  color: theme.colorScheme.error,
+                  label: 'Over',
+                ),
+                if (goalCalories > 0)
+                  _LegendItem(
+                    color: primary.withValues(alpha: 0.10),
+                    label: 'Target band',
+                    isRect: true,
+                  ),
               ],
             ),
           ],
@@ -285,7 +506,12 @@ class _CalorieTrendSection extends StatelessWidget {
 class _LegendItem extends StatelessWidget {
   final Color color;
   final String label;
-  const _LegendItem({required this.color, required this.label});
+  final bool isRect;
+  const _LegendItem({
+    required this.color,
+    required this.label,
+    this.isRect = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -294,9 +520,13 @@ class _LegendItem extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 8,
+          width: isRect ? 14 : 8,
           height: 8,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: color,
+            shape: isRect ? BoxShape.rectangle : BoxShape.circle,
+            borderRadius: isRect ? BorderRadius.circular(2) : null,
+          ),
         ),
         const SizedBox(width: 5),
         Text(
@@ -316,14 +546,18 @@ class _CalorieTrendPainter extends CustomPainter {
   final int goalCalories;
   final Color barColor;
   final Color errorColor;
+  final Color tertiaryColor;
   final String todayKey;
+  final String? activeGoal;
 
   const _CalorieTrendPainter({
     required this.days,
     required this.goalCalories,
     required this.barColor,
     required this.errorColor,
+    required this.tertiaryColor,
     required this.todayKey,
+    required this.activeGoal,
   });
 
   @override
@@ -336,12 +570,22 @@ class _CalorieTrendPainter extends CustomPainter {
     );
     if (maxCal == 0) return;
 
-    final slotW = size.width / days.length;
-    final barW = (slotW * 0.52).clamp(4.0, 28.0);
+    double toY(double cal) =>
+        size.height * (1 - (cal.clamp(0, maxCal) / maxCal));
+
+    // Target band (±100 kcal around goal)
+    if (goalCalories > 0) {
+      final bandTop = toY((goalCalories + 100).toDouble());
+      final bandBot = toY((goalCalories - 100).toDouble());
+      canvas.drawRect(
+        Rect.fromLTRB(0, bandTop, size.width, bandBot),
+        Paint()..color = barColor.withValues(alpha: 0.10),
+      );
+    }
 
     // Goal line — dashed
     if (goalCalories > 0) {
-      final goalY = size.height * (1 - goalCalories / maxCal);
+      final goalY = toY(goalCalories.toDouble());
       final dashPaint = Paint()
         ..color = barColor.withValues(alpha: 0.45)
         ..strokeWidth = 1.0
@@ -359,6 +603,9 @@ class _CalorieTrendPainter extends CustomPainter {
       }
     }
 
+    final slotW = size.width / days.length;
+    final barW = (slotW * 0.52).clamp(4.0, 28.0);
+
     for (int i = 0; i < days.length; i++) {
       final cal = days[i].totalCalories.toDouble();
       if (cal <= 0) continue;
@@ -367,14 +614,18 @@ class _CalorieTrendPainter extends CustomPainter {
       final centerX = slotW * i + slotW / 2;
       final left = centerX - barW / 2;
       final top = size.height - barH;
-
-      final isGoalMet = goalCalories > 0 && cal >= goalCalories;
-      final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
       final isToday = days[i].date == todayKey;
 
-      final color = isOver ? errorColor : barColor;
-      final topAlpha = isGoalMet ? 0.95 : 0.32;
-      final botAlpha = isGoalMet ? 0.25 : 0.08;
+      final color = _barColor(cal.round(), goalCalories);
+      final inBand = goalCalories > 0 &&
+          cal >= goalCalories - 100 &&
+          cal <= goalCalories + 100;
+      final topAlpha = inBand || (goalCalories > 0 && cal >= goalCalories)
+          ? 0.95
+          : 0.32;
+      final botAlpha = inBand || (goalCalories > 0 && cal >= goalCalories)
+          ? 0.25
+          : 0.08;
 
       final rect = Rect.fromLTWH(left, top, barW, barH);
       final rrect = RRect.fromRectAndCorners(
@@ -383,7 +634,6 @@ class _CalorieTrendPainter extends CustomPainter {
         topRight: const Radius.circular(4),
       );
 
-      // Gradient fill
       final shader = LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
@@ -394,7 +644,6 @@ class _CalorieTrendPainter extends CustomPainter {
       ).createShader(rect);
       canvas.drawRRect(rrect, Paint()..shader = shader);
 
-      // Today: subtle bright outline
       if (isToday) {
         canvas.drawRRect(
           rrect,
@@ -405,8 +654,7 @@ class _CalorieTrendPainter extends CustomPainter {
         );
       }
 
-      // Goal-met dot on top
-      if (isGoalMet) {
+      if (goalCalories > 0 && cal >= goalCalories) {
         canvas.drawCircle(
           Offset(centerX, top - 4),
           2.5,
@@ -416,11 +664,360 @@ class _CalorieTrendPainter extends CustomPainter {
     }
   }
 
+  Color _barColor(int cal, int target) {
+    if (target <= 0) return barColor;
+    switch (activeGoal) {
+      case 'bulk':
+        if (cal > target + 200) return errorColor;
+        if (cal < target - 100) return tertiaryColor;
+        return barColor;
+      case 'maintain':
+        if (cal > target + 100 || cal < target - 100) return errorColor;
+        return barColor;
+      case 'cut':
+      case 'recomp':
+      default:
+        if (cal > target + 100) return errorColor;
+        return barColor;
+    }
+  }
+
   @override
   bool shouldRepaint(_CalorieTrendPainter old) =>
       old.days != days ||
       old.goalCalories != goalCalories ||
-      old.todayKey != todayKey;
+      old.todayKey != todayKey ||
+      old.activeGoal != activeGoal;
+}
+
+// ─── Goal Checks Section ──────────────────────────────────────────────────────
+
+class _GoalChecksSection extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _GoalChecksSection({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final phr = presenter.proteinHitRate7d;
+    final consistency = presenter.loggingConsistency7d;
+    final trendDir = presenter.weightTrendDirection;
+    final goal = presenter.activeGoal;
+
+    // Protein threshold by goal
+    final proteinThreshold = switch (goal) {
+      'cut' => 0.7,
+      'bulk' => 0.6,
+      'recomp' => 0.65,
+      _ => 0.4,
+    };
+    final proteinOk = phr != null && phr >= proteinThreshold;
+
+    // Weight trend icon + label
+    final (trendIcon, trendColor, trendLabel) =
+        _trendStyle(context, goal, trendDir);
+
+    String proteinValue;
+    if (phr == null) {
+      proteinValue = 'No protein goal set';
+    } else {
+      final hits = (phr * 7).round();
+      proteinValue = '$hits/7 days met';
+    }
+
+    final loggingHits = (consistency * 7).round();
+
+    return AppSection(
+      title: 'Goal Checks',
+      child: AppCard(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            children: [
+              _CheckRow(
+                icon: phr == null
+                    ? Icons.remove_circle_outline
+                    : proteinOk
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                iconColor: phr == null
+                    ? theme.colorScheme.onSurfaceVariant
+                    : proteinOk
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.onSurfaceVariant,
+                label: presenter.secondaryKpiLabel,
+                value: proteinValue,
+              ),
+              _CheckRow(
+                icon: consistency >= 5 / 7
+                    ? Icons.check_circle
+                    : Icons.radio_button_unchecked,
+                iconColor: consistency >= 5 / 7
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+                label: 'Logging streak',
+                value: '$loggingHits/7 days logged',
+              ),
+              _CheckRow(
+                icon: trendIcon,
+                iconColor: trendColor,
+                label: 'Weight trend',
+                value: trendLabel,
+                isLast: true,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (IconData, Color, String) _trendStyle(
+    BuildContext context,
+    String? goal,
+    WeightTrendDirection dir,
+  ) {
+    final cs = Theme.of(context).colorScheme;
+    if (dir == WeightTrendDirection.insufficient) {
+      return (
+        Icons.hourglass_empty_outlined,
+        cs.onSurfaceVariant,
+        'Not enough data — log weight in Weight Log',
+      );
+    }
+    if (goal == 'recomp' && dir == WeightTrendDirection.stable) {
+      return (
+        Icons.check_circle,
+        cs.primary,
+        'Weight holding — protein compliance is the key metric',
+      );
+    }
+    final label = switch ((goal, dir)) {
+      ('cut', WeightTrendDirection.down) => 'Trending down ↓',
+      ('cut', WeightTrendDirection.stable) => 'Weight stable',
+      ('cut', WeightTrendDirection.up) => 'Trending up ↑',
+      ('bulk', WeightTrendDirection.up) => 'Trending up ↑',
+      ('bulk', WeightTrendDirection.stable) => 'Weight stable',
+      ('bulk', WeightTrendDirection.down) => 'Trending down ↓',
+      _ => 'Weight stable',
+    };
+    final icon = switch ((goal, dir)) {
+      ('cut', WeightTrendDirection.down) => Icons.check_circle,
+      ('cut', WeightTrendDirection.stable) => Icons.auto_awesome_outlined,
+      ('cut', WeightTrendDirection.up) => Icons.error_outline,
+      ('bulk', WeightTrendDirection.up) => Icons.check_circle,
+      ('bulk', WeightTrendDirection.stable) => Icons.info_outline,
+      ('bulk', WeightTrendDirection.down) => Icons.error_outline,
+      _ => Icons.check_circle,
+    };
+    final color = switch ((goal, dir)) {
+      ('cut', WeightTrendDirection.up) => cs.error,
+      ('bulk', WeightTrendDirection.down) => cs.error,
+      ('cut', WeightTrendDirection.stable) => cs.tertiary,
+      ('bulk', WeightTrendDirection.stable) => cs.onSurfaceVariant,
+      _ => cs.primary,
+    };
+    return (icon, color, label);
+  }
+}
+
+class _CheckRow extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final bool isLast;
+
+  const _CheckRow({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 10, 16, isLast ? 10 : 0),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: iconColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontSize: 11,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Recent Days (paginated + sortable) ──────────────────────────────────────
+
+enum _DaySort { newest, oldest, calHigh, calLow }
+
+class _RecentDaysSection extends StatefulWidget {
+  final List<DailyNutritionLog> history;
+  final int goalCalories;
+  const _RecentDaysSection({
+    required this.history,
+    required this.goalCalories,
+  });
+
+  @override
+  State<_RecentDaysSection> createState() => _RecentDaysSectionState();
+}
+
+class _RecentDaysSectionState extends State<_RecentDaysSection> {
+  static const _pageSize = 7;
+  int _shown = _pageSize;
+  _DaySort _sort = _DaySort.newest;
+
+  List<DailyNutritionLog> get _sorted {
+    final list = List<DailyNutritionLog>.from(widget.history);
+    switch (_sort) {
+      case _DaySort.newest:
+        list.sort((a, b) => b.date.compareTo(a.date));
+      case _DaySort.oldest:
+        list.sort((a, b) => a.date.compareTo(b.date));
+      case _DaySort.calHigh:
+        list.sort((a, b) => b.totalCalories.compareTo(a.totalCalories));
+      case _DaySort.calLow:
+        list.sort((a, b) => a.totalCalories.compareTo(b.totalCalories));
+    }
+    return list;
+  }
+
+  void _setSort(_DaySort s) => setState(() {
+        _sort = s;
+        _shown = _pageSize;
+      });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final sorted = _sorted;
+    final visible = sorted.take(_shown).toList();
+    final hasMore = sorted.length > _shown;
+
+    return AppSection(
+      title: 'Recent Days',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Sort pills
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _SortPill(
+                  label: 'Newest',
+                  selected: _sort == _DaySort.newest,
+                  onTap: () => _setSort(_DaySort.newest),
+                ),
+                const SizedBox(width: 6),
+                _SortPill(
+                  label: 'Oldest',
+                  selected: _sort == _DaySort.oldest,
+                  onTap: () => _setSort(_DaySort.oldest),
+                ),
+                const SizedBox(width: 6),
+                _SortPill(
+                  label: 'Cal ↑',
+                  selected: _sort == _DaySort.calHigh,
+                  onTap: () => _setSort(_DaySort.calHigh),
+                ),
+                const SizedBox(width: 6),
+                _SortPill(
+                  label: 'Cal ↓',
+                  selected: _sort == _DaySort.calLow,
+                  onTap: () => _setSort(_DaySort.calLow),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...visible.map(
+            (log) => _DayCard(log: log, goalCalories: widget.goalCalories),
+          ),
+          if (hasMore)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => setState(() => _shown += _pageSize),
+                  child: Text(
+                    'Show ${math.min(_pageSize, sorted.length - _shown)} more',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: cs.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SortPill extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SortPill({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected ? cs.primary.withValues(alpha: 0.15) : cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? cs.primary : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+            color: selected ? cs.primary : cs.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Macro Averages ───────────────────────────────────────────────────────────
@@ -459,14 +1056,13 @@ class _MacroAveragesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
     final protein = _avgProtein;
     final carbs = _avgCarbs;
     final fat = _avgFat;
     final total = protein + carbs + fat;
 
     final proteinColor = theme.colorScheme.primary;
-    final carbsColor = gold;
+    final carbsColor = theme.colorScheme.secondary;
     final fatColor = theme.colorScheme.error;
 
     return AppSection(
@@ -476,7 +1072,6 @@ class _MacroAveragesSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Proportional macro bar
             if (total > 0) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(4),
@@ -502,7 +1097,6 @@ class _MacroAveragesSection extends StatelessWidget {
               ),
               const SizedBox(height: 14),
             ],
-            // Per-macro tiles
             Row(
               children: [
                 Expanded(
@@ -617,7 +1211,7 @@ class _WeightSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final primary = theme.colorScheme.primary;
     final recent = _recent;
     final delta = presenter.weightDelta;
 
@@ -654,7 +1248,6 @@ class _WeightSection extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Latest weight + delta
                   Row(
                     children: [
                       Text(
@@ -670,7 +1263,7 @@ class _WeightSection extends StatelessWidget {
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: (delta < 0
-                                    ? gold
+                                    ? primary
                                     : theme.colorScheme.onSurfaceVariant)
                                 .withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(20),
@@ -681,7 +1274,7 @@ class _WeightSection extends StatelessWidget {
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: delta < 0
-                                  ? gold
+                                  ? primary
                                   : theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
@@ -697,13 +1290,12 @@ class _WeightSection extends StatelessWidget {
                         size: const Size(double.infinity, 72),
                         painter: _WeightTrendPainter(
                           entries: recent,
-                          color: gold,
+                          color: primary,
                         ),
                       ),
                     ),
                   ],
                   const SizedBox(height: 12),
-                  // Recent entries list
                   ...recent.reversed.take(3).map(
                         (entry) => Padding(
                           padding: const EdgeInsets.only(bottom: 6),
@@ -776,7 +1368,6 @@ class _WeightTrendPainter extends CustomPainter {
       return Offset(x, toY(entries[i].weightKg));
     });
 
-    // Area fill under line
     final areaPath = Path()..moveTo(points[0].dx, points[0].dy);
     for (int i = 1; i < points.length; i++) {
       areaPath.lineTo(points[i].dx, points[i].dy);
@@ -799,7 +1390,6 @@ class _WeightTrendPainter extends CustomPainter {
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
 
-    // Line
     final linePath = Path()..moveTo(points[0].dx, points[0].dy);
     for (int i = 1; i < points.length; i++) {
       linePath.lineTo(points[i].dx, points[i].dy);
@@ -812,7 +1402,6 @@ class _WeightTrendPainter extends CustomPainter {
         ..style = PaintingStyle.stroke,
     );
 
-    // Dots — only first and last
     final dotPaint = Paint()..color = color;
     for (final pt in [points.first, points.last]) {
       canvas.drawCircle(pt, 3.5, dotPaint);
@@ -838,11 +1427,12 @@ class _DayCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final primary = theme.colorScheme.primary;
     final cal = log.totalCalories;
     final goalMet = goalCalories > 0 && cal >= goalCalories;
     final isOver = goalCalories > 0 && cal > goalCalories * 1.2;
-    final ratio = goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
+    final ratio =
+        goalCalories > 0 ? (cal / goalCalories).clamp(0.0, 1.5) : 0.0;
     final pct =
         goalCalories > 0 ? '${((cal / goalCalories) * 100).round()}%' : null;
     final entryCount = log.allEntries.length;
@@ -850,8 +1440,8 @@ class _DayCard extends StatelessWidget {
     final barColor = isOver
         ? theme.colorScheme.error
         : goalMet
-            ? gold
-            : gold.withValues(alpha: 0.35);
+            ? primary
+            : primary.withValues(alpha: 0.35);
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -889,7 +1479,7 @@ class _DayCard extends StatelessWidget {
                     Text(
                       '${_calFmt.format(cal)} kcal',
                       style: TextStyle(
-                        color: goalMet ? gold : theme.colorScheme.onSurface,
+                        color: goalMet ? primary : theme.colorScheme.onSurface,
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
                       ),
@@ -899,7 +1489,7 @@ class _DayCard extends StatelessWidget {
                       AppBadge(
                           text: pct ?? 'Over', color: theme.colorScheme.error)
                     else if (goalMet)
-                      AppBadge(text: 'Goal met', color: gold)
+                      AppBadge(text: 'Goal met', color: primary)
                     else
                       AppBadge(
                         text: pct ?? 'Logged',
@@ -910,7 +1500,6 @@ class _DayCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 10),
-            // Calorie progress bar
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
@@ -920,7 +1509,6 @@ class _DayCard extends StatelessWidget {
                 valueColor: AlwaysStoppedAnimation(barColor),
               ),
             ),
-            // Macro pills — only if available
             if (log.hasMacros) ...[
               const SizedBox(height: 9),
               Row(
@@ -934,7 +1522,7 @@ class _DayCard extends StatelessWidget {
                   _MacroPill(
                     label: 'C',
                     grams: log.totalCarbs.round(),
-                    color: gold,
+                    color: theme.colorScheme.secondary,
                   ),
                   const SizedBox(width: 6),
                   _MacroPill(
@@ -973,6 +1561,128 @@ class _MacroPill extends StatelessWidget {
           fontSize: 11,
           color: color,
           fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Measurement Section ──────────────────────────────────────────────────────
+
+class _MeasurementSection extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _MeasurementSection({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primary = theme.colorScheme.primary;
+    final latest = presenter.latestMeasurement;
+    final bf = presenter.estimatedBodyFatPercent;
+    final trend = presenter.waistTrendDirection;
+
+    return AppSection(
+      title: 'Body Measurements',
+      trailing: FilledButton.tonal(
+        style: FilledButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        ),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MeasurementLogScreen(presenter: presenter),
+          ),
+        ),
+        child: const Text('View all'),
+      ),
+      child: latest == null
+          ? AppCard(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                child: Center(
+                  child: Text(
+                    'Log a measurement to track body composition',
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            )
+          : AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      if (latest.waistCm != null)
+                        Text(
+                          'Waist ${presenter.formatMeasurement(latest.waistCm!)}',
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      const Spacer(),
+                      if (bf != null)
+                        _MeasChip(
+                          label: '~${bf.toStringAsFixed(0)} % BF',
+                          color: primary,
+                        ),
+                    ],
+                  ),
+                  if (trend != MeasurementTrendDirection.insufficient) ...[
+                    const SizedBox(height: 6),
+                    _MeasChip(
+                      label: _trendLabel(trend),
+                      color: trend == MeasurementTrendDirection.down
+                          ? primary
+                          : trend == MeasurementTrendDirection.up
+                              ? theme.colorScheme.error
+                              : theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Logged ${DateFormat('MMM d, yyyy').format(latest.loggedAt)}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  String _trendLabel(MeasurementTrendDirection d) => switch (d) {
+        MeasurementTrendDirection.down => 'Waist trending down ↓',
+        MeasurementTrendDirection.up => 'Waist trending up ↑',
+        MeasurementTrendDirection.stable => 'Waist stable →',
+        MeasurementTrendDirection.insufficient => '',
+      };
+}
+
+class _MeasChip extends StatelessWidget {
+  final String label;
+  final Color color;
+  const _MeasChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
         ),
       ),
     );

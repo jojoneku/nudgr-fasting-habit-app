@@ -29,6 +29,7 @@ import '../models/index_progress.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
+import '../models/body_measurement_entry.dart';
 import '../models/weight_entry.dart';
 import 'storage_service.dart';
 import 'sync_queue.dart';
@@ -1120,6 +1121,62 @@ class LocalStorageService extends StorageService {
     } catch (e) {
       debugPrint('LocalStorageService: Error loading weight log: $e');
       return [];
+    }
+  }
+
+  // ── Body Measurements ────────────────────────────────────────────────────────
+
+  @override
+  Future<void> saveBodyMeasurements(List<BodyMeasurementEntry> entries) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.keyBodyMeasurements,
+        jsonEncode(entries.map((e) => e.toJson()).toList()));
+  }
+
+  @override
+  Future<List<BodyMeasurementEntry>> loadBodyMeasurements() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyBodyMeasurements);
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => BodyMeasurementEntry.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading body measurements: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveMeasurementUnit(MeasurementUnit unit) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(StorageService.keyMeasurementUnit, unit.name);
+  }
+
+  @override
+  Future<MeasurementUnit> loadMeasurementUnit() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyMeasurementUnit);
+    return raw == 'imperial' ? MeasurementUnit.imperial : MeasurementUnit.metric;
+  }
+
+  @override
+  Future<void> saveLastRecompXpDate(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        StorageService.keyLastRecompXpDate, date.toIso8601String());
+  }
+
+  @override
+  Future<DateTime?> loadLastRecompXpDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(StorageService.keyLastRecompXpDate);
+    if (raw == null) return null;
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      return null;
     }
   }
 

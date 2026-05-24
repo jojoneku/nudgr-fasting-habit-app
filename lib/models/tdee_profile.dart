@@ -6,7 +6,7 @@ class TdeeProfile {
   final int ageYears;
   final String sex; // 'male' | 'female'
   final ActivityLevel activityLevel;
-  final String goal; // 'cut' | 'maintain' | 'bulk'
+  final String goal; // 'cut' | 'maintain' | 'bulk' | 'recomp'
   final int? calorieAdjustment; // when set, overrides goal-default delta
 
   const TdeeProfile({
@@ -18,6 +18,13 @@ class TdeeProfile {
     required this.goal,
     this.calorieAdjustment,
   });
+
+  String get goalDisplayName => switch (goal) {
+    'cut' => 'Cut',
+    'bulk' => 'Lean gain',
+    'recomp' => 'Recomp',
+    _ => 'Maintain',
+  };
 
   // Mifflin-St Jeor formula
   int get bmr {
@@ -33,6 +40,7 @@ class TdeeProfile {
     return switch (goal) {
       'cut' => tdee - 300,
       'bulk' => tdee + 250,
+      'recomp' => tdee,
       _ => tdee,
     };
   }
@@ -40,10 +48,9 @@ class TdeeProfile {
   /// Human-readable goal label, e.g. "Cut (−300 kcal)" or "Maintain".
   String get goalLabel {
     final delta = targetCalories - tdee;
-    if (delta == 0) return 'Maintain';
+    if (delta == 0) return goalDisplayName;
     final sign = delta > 0 ? '+' : '';
-    final base = goal == 'cut' ? 'Cut' : 'Bulk';
-    return '$base ($sign$delta kcal)';
+    return '$goalDisplayName ($sign$delta kcal)';
   }
 
   // Suggested macros derived from goal + body weight
@@ -54,6 +61,7 @@ class TdeeProfile {
     final multiplier = switch (goal) {
       'cut' => 2.2,
       'bulk' => 2.0,
+      'recomp' => 2.4,
       _ => 1.8, // maintain
     };
     return (weightKg * multiplier).round();
