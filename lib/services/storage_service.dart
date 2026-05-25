@@ -20,7 +20,6 @@ import '../models/finance/receivable.dart';
 import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/food_feedback.dart';
-import '../models/index_progress.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 import '../models/body_measurement_entry.dart';
@@ -65,8 +64,7 @@ abstract class StorageService {
   static const String keyPersonalFoodDict = 'personalFoodDict';
   static const String keyFinanceDictionary = 'finance.personalDict';
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
-  static const String keyFoodIndexProgress = 'nutrition.foodIndexProgress';
-  static const String kThemeMode = 'themeMode';
+static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   static const String keyWeightLog = 'weightLog';
@@ -172,11 +170,6 @@ abstract class StorageService {
   //  Food Matcher Feedback (telemetry — local-only) ─
   Future<void> saveFoodFeedback(List<FoodFeedback> entries);
   Future<List<FoodFeedback>> loadFoodFeedback();
-
-  //  Food Search Index (RAG) ─
-  Future<IndexProgress> loadFoodIndexProgress();
-  Future<void> saveFoodIndexProgress(IndexProgress progress);
-  Future<void> clearFoodIndexProgress();
 
   //  Weight Log
   Future<void> saveWeightLog(List<WeightEntry> entries);

@@ -17,17 +17,12 @@ import '../models/food_entry.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../models/food_template.dart';
-import '../models/index_progress.dart';
 import '../models/meal_slot.dart';
 import '../models/nutrition_goals.dart';
 import '../models/tdee_profile.dart';
 import '../services/ai_coach_service.dart';
-import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
-import '../services/food_semantic_search_service.dart';
 import '../services/notification_service.dart';
-import '../services/open_food_facts_service.dart';
-import '../services/vector_bundle_service.dart';
 import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
@@ -45,12 +40,7 @@ class NutritionPresenter extends ChangeNotifier {
   final StorageService _storage;
   final FoodDbService _foodDb;
   final AiCoachService _ai;
-  final FoodSemanticSearchService? _semanticSearch;
-  final EmbeddingService? _embedder;
-  final OpenFoodFactsService _barcodeLookup;
-  final VectorBundleService? _vectorBundle;
   final NotificationService _notifications;
-  StreamSubscription<IndexProgress>? _indexProgressSub;
 
   DailyNutritionLog _todayLog = DailyNutritionLog.empty('');
   NutritionGoals _goals = NutritionGoals.initial();
@@ -235,10 +225,6 @@ class NutritionPresenter extends ChangeNotifier {
     required FoodDbService foodDb,
     required AiCoachService aiCoach,
     AiCoachService? cloudAi,
-    FoodSemanticSearchService? semanticSearch,
-    EmbeddingService? embedder,
-    OpenFoodFactsService? barcodeLookup,
-    VectorBundleService? vectorBundle,
     NotificationService? notifications,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
@@ -246,22 +232,14 @@ class NutritionPresenter extends ChangeNotifier {
         _foodDb = foodDb,
         _ai = aiCoach,
         _cloudAi = cloudAi,
-        _semanticSearch = semanticSearch,
-        _embedder = embedder,
-        _barcodeLookup = barcodeLookup ?? OpenFoodFactsService(),
-        _vectorBundle = vectorBundle,
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
-    // Surface index progress to the UI without polling.
-    _indexProgressSub =
-        semanticSearch?.progressStream.listen((_) => notifyListeners());
     loadState();
   }
 
   @override
   void dispose() {
     _disposed = true;
-    _indexProgressSub?.cancel();
     super.dispose();
   }
 
@@ -816,209 +794,6 @@ class NutritionPresenter extends ChangeNotifier {
   AiMealEstimate? get lastEstimate => _lastEstimate;
   String? get aiEstimateError => _aiEstimateError;
 
-  // ── Smart food search (RAG) getters ──────────────────────────────────────────
-
-  /// Status enum surfaced to UI. Maps embedder + index state to a single value.
-  FoodSearchStatus get foodSearchStatus {
-    final embedder = _embedder;
-    final semantic = _semanticSearch;
-    if (embedder == null || semantic == null) return FoodSearchStatus.disabled;
-    if (embedder.isDeviceIncompatible) return FoodSearchStatus.failed;
-    if (embedder.isDownloading) return FoodSearchStatus.downloading;
-    if (!embedder.isInstalled) return FoodSearchStatus.notInstalled;
-    if (!embedder.isReady) return FoodSearchStatus.loading;
-    if (_vectorBundle?.isDownloading ?? false) {
-      return FoodSearchStatus.bundleDownloading;
-    }
-    if (semantic.isIndexing) return FoodSearchStatus.indexing;
-    if (semantic.isReady) return FoodSearchStatus.ready;
-    return FoodSearchStatus.idle;
-  }
-
-  IndexProgress get foodIndexProgress =>
-      _semanticSearch?.progress ?? const IndexProgress.empty();
-
-  int get foodEmbedderDownloadProgress => _embedder?.downloadProgress ?? 0;
-  int get vectorBundleDownloadProgress => _vectorBundle?.downloadProgress ?? 0;
-
-  String? get foodEmbedderSizeLabel => _embedder?.modelSizeLabel;
-
-  String? get foodEmbedderName => _embedder?.modelDisplayName;
-
-  bool get isFoodSearchAvailable =>
-      _embedder != null && _semanticSearch != null;
-
-  /// Download the embedder model + tokenizer, then build the index.
-  ///
-  /// Idempotent. Re-entry while a download is in flight is a no-op.
-  Future<void> enableFoodSearch() async {
-    final embedder = _embedder;
-    final semantic = _semanticSearch;
-    if (embedder == null || semantic == null) return;
-    if (embedder.isDownloading) return;
-
-    _bundleError = null;
-    notifyListeners(); // flip status to downloading
-    try {
-      if (!embedder.isInstalled) {
-        await embedder.downloadModel(onProgress: (_) => notifyListeners());
-      } else if (!embedder.isReady) {
-        await embedder.init();
-      }
-    } catch (e) {
-      debugPrint('NutritionPresenter.enableFoodSearch failed: $e');
-      _bundleError = 'Smart search download failed: ${_summarize(e)}';
-      notifyListeners();
-      return;
-    }
-    notifyListeners();
-
-    if (!embedder.isReady) return; // download/load failed; status reflects it
-    await semantic.init();
-
-    final bundle = _vectorBundle;
-    if (bundle != null && !await bundle.isDownloaded()) {
-      try {
-        await bundle.download(onProgress: (_) => notifyListeners());
-      } catch (e) {
-        debugPrint(
-            'enableFoodSearch: bundle download failed, falling back: $e');
-      }
-    }
-    notifyListeners();
-
-    // ignore: unawaited_futures
-    _startIndexFromBundleOrFallback(semantic, bundle);
-    notifyListeners();
-  }
-
-  /// Resume or start the background index build if the embedder is ready.
-  /// Safe to call on every app launch — no-ops if already indexed or not ready.
-  Future<void> resumeFoodIndex() async {
-    final semantic = _semanticSearch;
-    final embedder = _embedder;
-    if (semantic == null || embedder == null) return;
-    if (!embedder.isReady) return;
-    if (semantic.isReady || semantic.isIndexing) return;
-    // ignore: unawaited_futures
-    _startIndexFromBundleOrFallback(semantic, _vectorBundle);
-    notifyListeners();
-  }
-
-  /// Import vectors from the pre-built bundle into the HNSW store.
-  /// Falls back to on-device [buildIndex] if the bundle is absent or corrupt.
-  Future<void> _startIndexFromBundleOrFallback(
-    FoodSemanticSearchService semantic,
-    VectorBundleService? bundle,
-  ) async {
-    if (bundle != null && await bundle.isDownloaded()) {
-      try {
-        final vectors = await bundle.loadVectors();
-        await semantic.buildIndexFromBundle(bundleVectors: vectors);
-        return;
-      } catch (e) {
-        debugPrint('_startIndexFromBundleOrFallback: bundle parse failed: $e');
-      }
-    }
-    await semantic.buildIndex();
-  }
-
-  /// Wipe the vector index and rebuild from scratch. Used by Settings.
-  Future<void> rebuildFoodIndex() async {
-    final semantic = _semanticSearch;
-    if (semantic == null) return;
-    notifyListeners();
-    // ignore: unawaited_futures
-    semantic.rebuildIndex();
-  }
-
-  // ── Smart-search embedder download ────────────────────────────────────────
-  //
-  // Previously this also downloaded the on-device LLM (Qwen, 586 MB). That
-  // step is now invoked from the Nutrition screen instead, so Settings only
-  // exposes the embedder (~145 MB). Kept the `*AiBundle*` getter names for
-  // UI binding stability — they now refer just to the embedder phase.
-
-  /// True while the embedder download is in flight.
-  bool _isBundleDownloading = false;
-  String? _bundleError;
-
-  bool get isAiBundleDownloading => _isBundleDownloading;
-
-  /// Last download error message, or null if none / cleared.
-  /// Cleared automatically when a new download starts.
-  String? get aiBundleError => _bundleError;
-
-  /// Clear the surfaced error after the UI has shown it.
-  void clearAiBundleError() {
-    if (_bundleError == null) return;
-    _bundleError = null;
-    notifyListeners();
-  }
-
-  /// Embedder download percent (0–100). 0 when not downloading.
-  int get aiBundleProgress {
-    if (!_isBundleDownloading) return 0;
-    return _embedder?.downloadProgress ?? 0;
-  }
-
-  /// Human-readable phase label for the UI.
-  String get aiBundlePhaseLabel {
-    if (!_isBundleDownloading) return '';
-    final embedder = _embedder;
-    return 'Smart search · ${embedder?.modelSizeLabel ?? '~145 MB'}';
-  }
-
-  /// True when the embedder is wired in but not yet installed — i.e. the
-  /// download option should be shown to the user.
-  bool get isAiBundleDownloadable {
-    final embedder = _embedder;
-    if (embedder == null) return false;
-    return !embedder.isInstalled;
-  }
-
-  /// Download the embedder and build the semantic index. Idempotent —
-  /// returns immediately if already installed.
-  Future<void> downloadAiBundle() async {
-    if (_isBundleDownloading) return;
-    final embedder = _embedder;
-    if (embedder == null || embedder.isInstalled) return;
-
-    _isBundleDownloading = true;
-    _bundleError = null;
-    notifyListeners();
-
-    try {
-      await embedder.downloadModel(onProgress: (_) => notifyListeners());
-    } catch (e) {
-      debugPrint('NutritionPresenter.downloadAiBundle: embedder failed: $e');
-      _bundleError = 'Smart search download failed: ${_summarize(e)}';
-      _isBundleDownloading = false;
-      notifyListeners();
-      return;
-    }
-
-    // Kick off semantic vector store + index build in the background.
-    // Use the pre-built bundle if available, same as enableFoodSearch.
-    final semantic = _semanticSearch;
-    if (semantic != null) {
-      await semantic.init();
-      // ignore: unawaited_futures
-      _startIndexFromBundleOrFallback(semantic, _vectorBundle);
-    }
-
-    _isBundleDownloading = false;
-    notifyListeners();
-  }
-
-  /// Trim long stack traces / framework noise so the SnackBar stays readable.
-  String _summarize(Object e) {
-    final msg = e.toString();
-    final firstLine = msg.split('\n').first.trim();
-    return firstLine.length > 140
-        ? '${firstLine.substring(0, 140)}…'
-        : firstLine;
-  }
 
   // ── NLP parser getters ───────────────────────────────────────────────────────
 
@@ -1383,41 +1158,17 @@ class NutritionPresenter extends ChangeNotifier {
   /// alternatives and a confidence score derived from the gap between top-1
   /// and top-2 RRF scores. (Plan 022 §2.3 — replaces the old layered
   /// _resolveOneDbItem confidence-band logic.)
-  Future<_HybridMatch?> _hybridResolveItem({
-    required String name,
-    required String hyde,
-  }) async {
-    // Parallel: FTS5 on the user's `name`, semantic on the HyDE description.
-    final ftsFuture = _foodDb.search(name);
-    final semantic = _semanticSearch;
-    final semanticFuture =
-        (semantic != null && semantic.isReady && hyde.isNotEmpty)
-            ? semantic.search(hyde, k: 10).catchError((Object e) {
-                debugPrint('NutritionPresenter: semantic search failed: $e');
-                return const <FoodSearchCandidate>[];
-              })
-            : Future<List<FoodSearchCandidate>>.value(const []);
+  Future<_HybridMatch?> _hybridResolveItem({required String name}) async {
+    final ftsHits = await _foodDb.search(name);
+    if (ftsHits.isEmpty) return null;
 
-    final results = await Future.wait([ftsFuture, semanticFuture]);
-    final ftsHits = results[0] as List<FoodDbEntry>;
-    final semHits = results[1] as List<FoodSearchCandidate>;
-
-    if (ftsHits.isEmpty && semHits.isEmpty) return null;
-
-    // RRF fusion: score(entry) = Σ 1/(k + rank), with k=60 by convention.
     const rrfK = 60;
     final scores = <String, double>{};
     final byId = <String, FoodDbEntry>{};
-
     for (var i = 0; i < ftsHits.length; i++) {
       final id = ftsHits[i].id;
       scores[id] = (scores[id] ?? 0) + 1.0 / (rrfK + i + 1);
       byId.putIfAbsent(id, () => ftsHits[i]);
-    }
-    for (var i = 0; i < semHits.length; i++) {
-      final id = semHits[i].entry.id;
-      scores[id] = (scores[id] ?? 0) + 1.0 / (rrfK + i + 1);
-      byId.putIfAbsent(id, () => semHits[i].entry);
     }
 
     final ranked = scores.entries.toList()
@@ -1425,26 +1176,9 @@ class NutritionPresenter extends ChangeNotifier {
     final pick = byId[ranked.first.key]!;
     final runnerUps = ranked.skip(1).take(4).map((e) => byId[e.key]!).toList();
 
-    // Confidence model. Three independent signals, multiplied/added so weak
-    // matches genuinely fall below 0.6 and trigger the swap-chip UX.
-    //   (a) dominance over runner-up — the RRF dominance ratio, no clamp floor
-    //       (the previous floor of 0.5 made the gate unreachable)
-    //   (b) both-channel bonus — if the pick was hit by FTS AND semantic, +0.10
-    //   (c) word-boundary lexical bonus — every query word ≥3 chars appears as
-    //       a whole word in the entry name. Substring matches don't count, so
-    //       "red" no longer matches "layered" (the Sapin-Sapin / Red Rice case).
     final top1 = ranked.first.value;
     final top2 = ranked.length > 1 ? ranked[1].value : 0.0;
-    double confidence = top2 == 0
-        ? 0.55 // single hit — modest, intentionally below the 0.6 chip threshold
-        : top1 / (top1 + top2);
-
-    final pickId = pick.id;
-    final inFts = ftsHits.any((h) => h.id == pickId);
-    final inSem = semHits.any((h) => h.entry.id == pickId);
-    if (inFts && inSem) {
-      confidence += 0.10;
-    }
+    double confidence = top2 == 0 ? 0.55 : top1 / (top1 + top2);
 
     final qWords = SearchNormalize.wordTokens(name);
     final entryWords = SearchNormalize.wordTokens(pick.name);
@@ -1466,10 +1200,7 @@ class NutritionPresenter extends ChangeNotifier {
     String? altName,
   }) async {
     // Use the same hybrid RRF pipeline as the chat path for consistent quality.
-    final hybrid = await _hybridResolveItem(
-      name: item.name,
-      hyde: item.name, // NLP path has no HyDE — name serves both channels.
-    );
+    final hybrid = await _hybridResolveItem(name: item.name);
     if (hybrid != null) return hybrid.pick;
     // altName secondary FTS5 pass when hybrid found nothing (e.g. AI-normalised
     // form like "milk powder" vs raw "bearbrand").
@@ -1519,12 +1250,6 @@ class NutritionPresenter extends ChangeNotifier {
   FoodEntry _buildEntry(ParsedFoodItem parsed, FoodDbEntry? dbEntry) {
     if (dbEntry != null) {
       final base = dbEntry.toFoodEntry(parsed.grams);
-      // FTS5 hits already pass isLearnableMatch (gated in _resolveViaFts5).
-      // Semantic hits may NOT — the embedder finds meaning-similar foods even
-      // when wording differs ("red rice" → "Rice, brown, cooked" at 0.85).
-      // For those non-lexical matches we keep the user's typed name but
-      // borrow the DB's per-100g macros — best of both worlds: real nutrition
-      // data, faithful naming. The user logs what they said they ate.
       final isLexical = FoodMatchScorer.isLearnableMatch(dbEntry, parsed.name);
       final name = isLexical ? dbEntry.name : parsed.name;
       return base.copyWith(name: _formatDisplayName(name));
@@ -1806,11 +1531,7 @@ class NutritionPresenter extends ChangeNotifier {
         continue;
       }
 
-      // Hybrid FTS + semantic with RRF fusion.
-      final hybrid = await _hybridResolveItem(
-        name: item.name,
-        hyde: item.hydeDescription,
-      );
+      final hybrid = await _hybridResolveItem(name: item.name);
 
       if (hybrid != null) {
         final entry = hybrid.pick.toFoodEntry(item.grams).copyWith(
@@ -1931,12 +1652,7 @@ class NutritionPresenter extends ChangeNotifier {
         // HyDE description improves semantic recall over the raw name alone.
         List<ChatFoodAlternative> alts = const [];
         if (entry == null) {
-          final hybrid = await _hybridResolveItem(
-            name: item.name,
-            hyde: item.hydeDescription.isNotEmpty
-                ? item.hydeDescription
-                : item.name,
-          );
+          final hybrid = await _hybridResolveItem(name: item.name);
           if (hybrid != null) {
             entry = hybrid.pick.toFoodEntry(item.grams).copyWith(
                   name: _formatDisplayName(item.name),
@@ -2467,76 +2183,6 @@ class NutritionPresenter extends ChangeNotifier {
     );
   }
 
-  // ── Barcode scan ─────────────────────────────────────────────────────────────
-
-  /// Look up [barcode] against OpenFoodFacts. Returns the parsed result, or
-  /// null when OFF doesn't have the barcode / the entry lacks calories. Pure
-  /// I/O; the caller (UI) handles preview + confirm before logging.
-  Future<BarcodeLookupResult?> lookupBarcode(String barcode) async {
-    try {
-      return await _barcodeLookup.lookup(barcode);
-    } catch (e) {
-      debugPrint('NutritionPresenter.lookupBarcode failed: $e');
-      return null;
-    }
-  }
-
-  /// Log [result] as a chat row + nutrition entry at [grams]. Also caches the
-  /// product into [PersonalFoodDictionary] so future text searches like
-  /// "bear brand 33g" hit it instantly without another network round-trip.
-  Future<void> logScannedProduct(
-    BarcodeLookupResult result, {
-    required double grams,
-  }) async {
-    if (grams <= 0) return;
-    if (_isChatParsing) return;
-    _isChatParsing = true;
-    notifyListeners();
-
-    try {
-      final entry = result.entry.toFoodEntry(grams).copyWith(
-            estimationSource: EstimationSource.db,
-            confidence: 0.95,
-          );
-
-      // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
-      if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
-
-      await _ensureTodayLogFresh();
-      _todayLog = _todayLog.addEntries([entry], MealSlot.meal);
-
-      final msg = ChatMessage(
-        id: ChatMessage.generateId(),
-        rawText: '📷 ${result.displayName}',
-        timestamp: DateTime.now(),
-        kind: ChatMessageKind.food,
-        foodItems: [
-          ChatFoodItem.fromFoodEntry(entry,
-              amountText: '${grams.toStringAsFixed(0)}g')
-        ],
-        mealSlot: MealSlot.meal,
-      );
-      _chatMessages.add(msg);
-      notifyListeners();
-
-      await Future.wait([
-        _storage.saveNutritionLog(_todayLog),
-        _persistChatMessages(),
-      ]);
-      // Cache so the next "bear brand" text query also finds this product.
-      // ignore: unawaited_futures
-      _learnFromEntry(result.entry.name, entry);
-
-      await _updateLogStreak();
-      await _checkGoalMet();
-      await _checkProteinGoalMet();
-      await _checkOvershoot();
-    } finally {
-      _isChatParsing = false;
-      notifyListeners();
-    }
-  }
-
   /// Mark every item in a chat food message as a bad match. Captures one
   /// [FoodFeedbackKind.userDislike] entry per item so a curator sees both the
   /// raw query and what the matcher picked. The log entries themselves stay —
@@ -3003,36 +2649,6 @@ class NutritionPresenter extends ChangeNotifier {
       await _statsPresenter.addXp(80);
     }
   }
-}
-
-/// User-facing status of the smart food search (RAG) feature.
-enum FoodSearchStatus {
-  /// Services not wired (legacy build path).
-  disabled,
-
-  /// Embedder hardware/runtime not supported on this device.
-  failed,
-
-  /// Idle waiting for user to opt in.
-  notInstalled,
-
-  /// Embedder is downloading.
-  downloading,
-
-  /// Embedder installed but not yet loaded into memory.
-  loading,
-
-  /// Pre-built vector bundle is downloading.
-  bundleDownloading,
-
-  /// Embedder ready but no rows indexed yet.
-  idle,
-
-  /// Index build in progress.
-  indexing,
-
-  /// Fully ready — semantic search is live.
-  ready,
 }
 
 /// Result of [NutritionPresenter._hybridResolveItem]: the top-1 DB entry,

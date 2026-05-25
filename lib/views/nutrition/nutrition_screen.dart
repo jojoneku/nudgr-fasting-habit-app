@@ -11,7 +11,6 @@ import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
-import 'barcode_scanner_sheet.dart';
 import 'food_library_screen.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
@@ -121,7 +120,6 @@ class _NutritionBody extends StatelessWidget {
             _WeekStrip(presenter: presenter),
             _StatSection(presenter: presenter),
             Expanded(child: _ChatFeed(presenter: presenter)),
-            _SmartSearchBanner(presenter: presenter),
             _ChatInputBar(presenter: presenter),
           ],
         ),
@@ -746,83 +744,6 @@ class _EmptyChatState extends StatelessWidget {
       icon: Icons.chat_bubble_outline,
       title: isToday ? 'Log food or exercise below' : 'Nothing logged',
       iconSize: 40,
-    );
-  }
-}
-
-/// Subtle banner above the chat input. Rendered only when the smart-search
-/// feature is in a state worth surfacing (downloading, indexing, or active).
-/// Hidden in the steady-state "ready" mode after first-day usage to reduce
-/// chrome. Hidden entirely when the feature is unavailable / not opted in.
-class _SmartSearchBanner extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _SmartSearchBanner({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final status = presenter.foodSearchStatus;
-
-    final visible = status == FoodSearchStatus.downloading ||
-        status == FoodSearchStatus.indexing ||
-        status == FoodSearchStatus.loading;
-    if (!visible) return const SizedBox.shrink();
-
-    final progress = presenter.foodIndexProgress;
-    final (String label, double? value) = switch (status) {
-      FoodSearchStatus.downloading => (
-          'Downloading smart search… ${presenter.foodEmbedderDownloadProgress}%',
-          presenter.foodEmbedderDownloadProgress / 100.0,
-        ),
-      FoodSearchStatus.loading => (
-          'Loading smart search…',
-          null,
-        ),
-      FoodSearchStatus.indexing => (
-          'Indexing food database… ${progress.indexed} / ${progress.total}',
-          progress.fraction,
-        ),
-      _ => ('', null),
-    };
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.auto_awesome_outlined,
-            size: 16,
-            color: theme.colorScheme.primary,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  label,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                LinearProgressIndicator(
-                  value: value,
-                  minHeight: 2,
-                  backgroundColor:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -2047,15 +1968,6 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                     Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
                 onPressed: isToday ? () => _showTemplates(context) : null,
                 tooltip: 'Templates',
-                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-              ),
-              IconButton(
-                icon: Icon(Icons.qr_code_scanner, color: cs.onSurfaceVariant),
-                onPressed: isToday && !locked
-                    ? () => showBarcodeScanFlow(context,
-                        presenter: widget.presenter)
-                    : null,
-                tooltip: 'Scan barcode',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
               IconButton(
