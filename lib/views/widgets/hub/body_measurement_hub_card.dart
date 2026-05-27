@@ -84,8 +84,9 @@ class _Snapshot extends StatelessWidget {
                 ),
                 child: Text(
                   '~${bf.toStringAsFixed(0)} % BF',
-                  style: TextStyle(
-                    fontSize: 11,
+                  style: (theme.textTheme.labelSmall ??
+                          const TextStyle(fontSize: 11))
+                      .copyWith(
                     fontWeight: FontWeight.w600,
                     color: primary,
                   ),
