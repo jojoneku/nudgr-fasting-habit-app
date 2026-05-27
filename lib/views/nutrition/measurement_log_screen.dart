@@ -253,7 +253,8 @@ class _WaistTrendChart extends StatelessWidget {
                 painter: _MonthLabelPainter(
                   entries: waistPoints,
                   labels: labels,
-                  style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 10))
+                  style: (theme.textTheme.labelSmall ??
+                          const TextStyle(fontSize: 10))
                       .copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
@@ -450,8 +451,8 @@ class _BodyFatTrendChart extends StatelessWidget {
               Text(
                 'US Navy method',
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant
-                      .withValues(alpha: 0.5),
+                  color:
+                      theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -480,7 +481,8 @@ class _BodyFatTrendChart extends StatelessWidget {
                 painter: _BfMonthLabelPainter(
                   history: history,
                   labels: labels,
-                  style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 10))
+                  style: (theme.textTheme.labelSmall ??
+                          const TextStyle(fontSize: 10))
                       .copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
@@ -581,15 +583,14 @@ class _BfTrendPainter extends CustomPainter {
       );
     }
 
-    final points = List.generate(
-        history.length, (i) => Offset(toX(i), toY(values[i])));
+    final points =
+        List.generate(history.length, (i) => Offset(toX(i), toY(values[i])));
 
     final areaPath = Path()..moveTo(points[0].dx, points[0].dy);
     for (int i = 1; i < points.length; i++) {
       final cp1 =
           Offset((points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
-      final cp2 =
-          Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
+      final cp2 = Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
       areaPath.cubicTo(
           cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
     }
@@ -615,8 +616,7 @@ class _BfTrendPainter extends CustomPainter {
     for (int i = 1; i < points.length; i++) {
       final cp1 =
           Offset((points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
-      final cp2 =
-          Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
+      final cp2 = Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
       linePath.cubicTo(
           cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
     }
@@ -690,9 +690,12 @@ class _OtherSitesSummary extends StatelessWidget {
     final sites = <({String label, double cm})>[];
     if (latest.neckCm != null) sites.add((label: 'Neck', cm: latest.neckCm!));
     if (latest.hipsCm != null) sites.add((label: 'Hips', cm: latest.hipsCm!));
-    if (latest.chestCm != null) sites.add((label: 'Chest', cm: latest.chestCm!));
-    if (latest.bicepCm != null) sites.add((label: 'Bicep', cm: latest.bicepCm!));
-    if (latest.thighCm != null) sites.add((label: 'Thigh', cm: latest.thighCm!));
+    if (latest.chestCm != null)
+      sites.add((label: 'Chest', cm: latest.chestCm!));
+    if (latest.bicepCm != null)
+      sites.add((label: 'Bicep', cm: latest.bicepCm!));
+    if (latest.thighCm != null)
+      sites.add((label: 'Thigh', cm: latest.thighCm!));
     if (sites.isEmpty) return const SizedBox.shrink();
 
     return AppCard(
@@ -857,11 +860,16 @@ class _EntryRow extends StatelessWidget {
     final isDown = delta != null && delta < 0;
 
     final extraSites = <({String label, double cm})>[];
-    if (entry.neckCm != null) extraSites.add((label: 'Neck', cm: entry.neckCm!));
-    if (entry.hipsCm != null) extraSites.add((label: 'Hips', cm: entry.hipsCm!));
-    if (entry.chestCm != null) extraSites.add((label: 'Chest', cm: entry.chestCm!));
-    if (entry.bicepCm != null) extraSites.add((label: 'Bicep', cm: entry.bicepCm!));
-    if (entry.thighCm != null) extraSites.add((label: 'Thigh', cm: entry.thighCm!));
+    if (entry.neckCm != null)
+      extraSites.add((label: 'Neck', cm: entry.neckCm!));
+    if (entry.hipsCm != null)
+      extraSites.add((label: 'Hips', cm: entry.hipsCm!));
+    if (entry.chestCm != null)
+      extraSites.add((label: 'Chest', cm: entry.chestCm!));
+    if (entry.bicepCm != null)
+      extraSites.add((label: 'Bicep', cm: entry.bicepCm!));
+    if (entry.thighCm != null)
+      extraSites.add((label: 'Thigh', cm: entry.thighCm!));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -928,7 +936,8 @@ class _EntryRow extends StatelessWidget {
               ),
               child: Text(
                 '${delta >= 0 ? '+' : '−'}${presenter.formatMeasurement(delta.abs())}',
-                style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 11))
+                style: (theme.textTheme.labelSmall ??
+                        const TextStyle(fontSize: 11))
                     .copyWith(
                   fontWeight: FontWeight.w600,
                   color: isDown
@@ -1053,7 +1062,14 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
   }
 
   void _convertControllers(MeasurementUnit from, MeasurementUnit to) {
-    final ctrls = [_waistCtrl, _neckCtrl, _hipsCtrl, _chestCtrl, _bicepCtrl, _thighCtrl];
+    final ctrls = [
+      _waistCtrl,
+      _neckCtrl,
+      _hipsCtrl,
+      _chestCtrl,
+      _bicepCtrl,
+      _thighCtrl
+    ];
     for (final ctrl in ctrls) {
       final v = double.tryParse(ctrl.text.trim());
       if (v == null || v <= 0) continue;

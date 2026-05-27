@@ -880,7 +880,6 @@ class NutritionPresenter extends ChangeNotifier {
   AiMealEstimate? get lastEstimate => _lastEstimate;
   String? get aiEstimateError => _aiEstimateError;
 
-
   // ── NLP parser getters ───────────────────────────────────────────────────────
 
   bool get isParsing => _isParsing;

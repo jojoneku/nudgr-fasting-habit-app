@@ -64,7 +64,7 @@ abstract class StorageService {
   static const String keyPersonalFoodDict = 'personalFoodDict';
   static const String keyFinanceDictionary = 'finance.personalDict';
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
-static const String kThemeMode = 'themeMode';
+  static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   static const String keyWeightLog = 'weightLog';
