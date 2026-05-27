@@ -49,6 +49,8 @@ class BodyMeasurementEntry {
         'notes': notes,
       };
 
+  /// Note: nullable measurement fields cannot be explicitly cleared to null via
+  /// this method — use the constructor directly for that case.
   BodyMeasurementEntry copyWith({
     String? id,
     DateTime? loggedAt,

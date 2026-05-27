@@ -13,10 +13,7 @@ import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
 import '../services/auth_service.dart';
-import '../services/embedding_service.dart';
 import '../services/food_db_service.dart';
-import '../services/food_semantic_search_service.dart';
-import '../services/vector_bundle_service.dart';
 import '../services/health_service.dart';
 import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
@@ -55,9 +52,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final FoodDbService _foodDb;
   late final OnDeviceAiCoachService _onDeviceAi;
   late final CloudAiCoachService _cloudAi;
-  late final EmbeddingService _embedder;
-  late final FoodSemanticSearchService _semanticSearch;
-  late final VectorBundleService _vectorBundle;
   late final HealthService _healthService;
   late final ActivityPresenter _activityPresenter;
   late final TreasuryDashboardPresenter _treasuryPresenter;
@@ -98,15 +92,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     );
     _cloudAi.enabled = widget.settingsPresenter.useCloudAi;
     widget.settingsPresenter.addListener(_onSettingsChanged);
-    _embedder = EmbeddingService(
-      tokenProvider: remoteSecrets.getHuggingFaceToken,
-    );
-    _semanticSearch = FoodSemanticSearchService(
-      embedder: _embedder,
-      foodDb: _foodDb,
-      storage: _storage,
-    );
-    _vectorBundle = VectorBundleService();
     _healthService = HealthService();
     _activityPresenter = ActivityPresenter(
       statsPresenter: _statsPresenter,
@@ -135,9 +120,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       foodDb: _foodDb,
       aiCoach: _onDeviceAi,
       cloudAi: _cloudAi,
-      semanticSearch: _semanticSearch,
-      embedder: _embedder,
-      vectorBundle: _vectorBundle,
     );
     _aiCoachPresenter = AiCoachPresenter(
       stats: _statsPresenter,
@@ -162,12 +144,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _onDeviceAi.init(); // silently loads Qwen if already installed
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
 
-      // RAG: load embedder + vector store. Both no-op if model not installed.
-      await _embedder.init();
-      await _semanticSearch.init();
-      // Resume the index build in the background — never blocks UI.
-      // ignore: unawaited_futures
-      _nutritionPresenter?.resumeFoodIndex();
       await _syncQueue!.load(); // restore persisted queue before auth
       await AuthService.instance.init(); // init Supabase + restore session
       _authPresenter.init();
@@ -197,10 +173,6 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter.dispose();
     _installmentPresenter.dispose();
     _aiCoachPresenter.dispose();
-    // ignore: discarded_futures
-    _semanticSearch.dispose();
-    // ignore: discarded_futures
-    _embedder.dispose();
     _authPresenter.dispose();
     _hubPresenter.dispose();
     _syncService?.dispose();
