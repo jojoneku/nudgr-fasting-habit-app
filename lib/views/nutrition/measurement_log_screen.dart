@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/body_measurement_entry.dart';
@@ -35,9 +36,21 @@ class _MeasurementLogBody extends StatelessWidget {
     );
   }
 
+  void _openEditSheet(BuildContext context, BodyMeasurementEntry entry) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Edit Measurement',
+      trailing: const _MeasureHelpButton(),
+      body: _AddMeasurementSheet(presenter: presenter, initial: entry),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final entries = presenter.measurementLog;
+    final hasWaistChart = presenter.hasWaistChartData;
+    final hasBfChart = presenter.hasBodyFatChartData;
+    final hasExtraSites = presenter.hasMeasurementExtraSites;
 
     return AppPageScaffold(
       title: 'Body Measurements',
@@ -52,12 +65,27 @@ class _MeasurementLogBody extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
               children: [
                 _StatsRow(presenter: presenter),
+                if (hasWaistChart) ...[
+                  const SizedBox(height: 20),
+                  _WaistTrendChart(entries: entries),
+                ],
+                if (hasBfChart) ...[
+                  SizedBox(height: hasWaistChart ? 12 : 20),
+                  _BodyFatTrendChart(
+                    history: presenter.bodyFatHistory,
+                    bmiBf: presenter.bodyFatEstimates.bmi,
+                  ),
+                ],
+                if (hasExtraSites) ...[
+                  const SizedBox(height: 20),
+                  _OtherSitesSummary(entries: entries, presenter: presenter),
+                ],
                 const SizedBox(height: 20),
-                _WaistTrendChart(entries: entries),
-                const SizedBox(height: 20),
-                _OtherSitesSummary(entries: entries, presenter: presenter),
-                const SizedBox(height: 20),
-                _EntryList(entries: entries, presenter: presenter),
+                _EntryList(
+                  entries: entries,
+                  presenter: presenter,
+                  onEdit: (e) => _openEditSheet(context, e),
+                ),
               ],
             ),
     );
@@ -115,15 +143,7 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final entries = presenter.measurementLog;
-    final latest = presenter.latestMeasurement;
-    final waistEntries = entries.where((e) => e.waistCm != null).toList();
-    final latestWaist = latest?.waistCm;
-    final totalWaistChange = waistEntries.length >= 2
-        ? waistEntries.last.waistCm! - waistEntries.first.waistCm!
-        : null;
-    final bf = presenter.estimatedBodyFatPercent;
-
+    final latestWaist = presenter.latestMeasurement?.waistCm;
     return Row(
       children: [
         Expanded(
@@ -138,16 +158,14 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatTile(
             label: 'Total Change',
-            value: totalWaistChange != null
-                ? '${totalWaistChange >= 0 ? '+' : ''}${totalWaistChange.toStringAsFixed(1)} cm'
-                : '—',
+            value: presenter.waistTotalChangeLabel,
           ),
         ),
         const SizedBox(width: 10),
         Expanded(
           child: _StatTile(
             label: 'Est. Body Fat',
-            value: bf != null ? '~${bf.toStringAsFixed(0)} %' : '—',
+            value: presenter.bodyFatRangeLabel,
           ),
         ),
       ],
@@ -235,7 +253,8 @@ class _WaistTrendChart extends StatelessWidget {
                 painter: _MonthLabelPainter(
                   entries: waistPoints,
                   labels: labels,
-                  color: theme.colorScheme.onSurfaceVariant,
+                  style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 10))
+                      .copyWith(color: theme.colorScheme.onSurfaceVariant),
                 ),
               ),
             ),
@@ -266,6 +285,13 @@ class _MonthLabel {
   final int index;
   final String text;
   const _MonthLabel({required this.index, required this.text});
+
+  @override
+  bool operator ==(Object other) =>
+      other is _MonthLabel && other.index == index && other.text == text;
+
+  @override
+  int get hashCode => Object.hash(index, text);
 }
 
 class _WaistTrendPainter extends CustomPainter {
@@ -366,18 +392,17 @@ class _WaistTrendPainter extends CustomPainter {
 class _MonthLabelPainter extends CustomPainter {
   final List<BodyMeasurementEntry> entries;
   final List<_MonthLabel> labels;
-  final Color color;
+  final TextStyle style;
 
   const _MonthLabelPainter({
     required this.entries,
     required this.labels,
-    required this.color,
+    required this.style,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     if (entries.length < 2) return;
-    final style = TextStyle(fontSize: 10, color: color);
     for (final lbl in labels) {
       final x = size.width * lbl.index / (entries.length - 1);
       final span = TextSpan(text: lbl.text, style: style);
@@ -389,7 +414,264 @@ class _MonthLabelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_MonthLabelPainter old) => old.labels != labels;
+  bool shouldRepaint(_MonthLabelPainter old) =>
+      old.style != style || !listEquals(old.labels, labels);
+}
+
+// ─── Body Fat % Trend Chart ───────────────────────────────────────────────────
+
+class _BodyFatTrendChart extends StatelessWidget {
+  final List<({DateTime date, double bf})> history;
+  final double? bmiBf;
+  const _BodyFatTrendChart({required this.history, this.bmiBf});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    if (history.length < 2) return const SizedBox.shrink();
+
+    final labels = _buildMonthLabels(history);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Body Fat % Trend',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                'US Navy method',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.5),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 160,
+            child: CustomPaint(
+              size: const Size(double.infinity, 160),
+              painter: _BfTrendPainter(
+                history: history,
+                color: theme.colorScheme.tertiary,
+                gridColor:
+                    theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+                bmiBf: bmiBf,
+                bmiColor: theme.colorScheme.secondary.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+          if (labels.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SizedBox(
+              height: 16,
+              child: CustomPaint(
+                size: const Size(double.infinity, 16),
+                painter: _BfMonthLabelPainter(
+                  history: history,
+                  labels: labels,
+                  style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 10))
+                      .copyWith(color: theme.colorScheme.onSurfaceVariant),
+                ),
+              ),
+            ),
+          ],
+          if (bmiBf != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondary.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(1),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'BMI ref: ~${bmiBf!.toStringAsFixed(0)}%',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant
+                        .withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<_MonthLabel> _buildMonthLabels(
+      List<({DateTime date, double bf})> entries) {
+    if (entries.isEmpty) return [];
+    final result = <_MonthLabel>[];
+    final fmt = DateFormat('MMM');
+    int? lastMonth;
+    for (int i = 0; i < entries.length; i++) {
+      final m = entries[i].date.month;
+      if (m != lastMonth) {
+        result.add(_MonthLabel(index: i, text: fmt.format(entries[i].date)));
+        lastMonth = m;
+      }
+    }
+    return result;
+  }
+}
+
+class _BfTrendPainter extends CustomPainter {
+  final List<({DateTime date, double bf})> history;
+  final Color color;
+  final Color gridColor;
+  final double? bmiBf;
+  final Color bmiColor;
+
+  const _BfTrendPainter({
+    required this.history,
+    required this.color,
+    required this.gridColor,
+    this.bmiBf,
+    required this.bmiColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (history.length < 2) return;
+    final values = history.map((e) => e.bf).toList();
+    final minV = values.reduce(math.min);
+    final maxV = values.reduce(math.max);
+    final range = (maxV - minV).clamp(1.0, double.infinity);
+    final pad = range * 0.25;
+    final lo = minV - pad;
+    final hi = maxV + pad;
+
+    double toY(double v) => size.height * (1 - (v - lo) / (hi - lo));
+    double toX(int i) => size.width * i / (history.length - 1);
+
+    final gridPaint = Paint()
+      ..color = gridColor
+      ..strokeWidth = 0.5;
+    for (int g = 0; g <= 2; g++) {
+      final y = size.height * g / 2;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+
+    // BMI reference line
+    if (bmiBf != null) {
+      final bmiY = toY(bmiBf!).clamp(0.0, size.height);
+      canvas.drawLine(
+        Offset(0, bmiY),
+        Offset(size.width, bmiY),
+        Paint()
+          ..color = bmiColor
+          ..strokeWidth = 1.5
+          ..style = PaintingStyle.stroke,
+      );
+    }
+
+    final points = List.generate(
+        history.length, (i) => Offset(toX(i), toY(values[i])));
+
+    final areaPath = Path()..moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i < points.length; i++) {
+      final cp1 =
+          Offset((points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
+      final cp2 =
+          Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
+      areaPath.cubicTo(
+          cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
+    }
+    areaPath
+      ..lineTo(points.last.dx, size.height)
+      ..lineTo(points.first.dx, size.height)
+      ..close();
+
+    canvas.drawPath(
+      areaPath,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            color.withValues(alpha: 0.22),
+            color.withValues(alpha: 0.0),
+          ],
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
+    );
+
+    final linePath = Path()..moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i < points.length; i++) {
+      final cp1 =
+          Offset((points[i - 1].dx + points[i].dx) / 2, points[i - 1].dy);
+      final cp2 =
+          Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
+      linePath.cubicTo(
+          cp1.dx, cp1.dy, cp2.dx, cp2.dy, points[i].dx, points[i].dy);
+    }
+    canvas.drawPath(
+      linePath,
+      Paint()
+        ..color = color.withValues(alpha: 0.85)
+        ..strokeWidth = 2.0
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+
+    final dotFill = Paint()..color = color;
+    final dotBorder = Paint()
+      ..color = color.withValues(alpha: 0.3)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    for (final pt in [points.first, points.last]) {
+      canvas.drawCircle(pt, 4.5, dotBorder);
+      canvas.drawCircle(pt, 3.0, dotFill);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BfTrendPainter old) =>
+      old.history != history || old.color != color || old.bmiBf != bmiBf;
+}
+
+class _BfMonthLabelPainter extends CustomPainter {
+  final List<({DateTime date, double bf})> history;
+  final List<_MonthLabel> labels;
+  final TextStyle style;
+
+  const _BfMonthLabelPainter({
+    required this.history,
+    required this.labels,
+    required this.style,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (history.length < 2) return;
+    for (final lbl in labels) {
+      final x = size.width * lbl.index / (history.length - 1);
+      final span = TextSpan(text: lbl.text, style: style);
+      final tp = TextPainter(text: span, textDirection: ui.TextDirection.ltr)
+        ..layout();
+      tp.paint(canvas,
+          Offset((x - tp.width / 2).clamp(0.0, size.width - tp.width), 0));
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BfMonthLabelPainter old) =>
+      old.style != style || !listEquals(old.labels, labels);
 }
 
 // ─── Other Sites Summary ──────────────────────────────────────────────────────
@@ -404,42 +686,103 @@ class _OtherSitesSummary extends StatelessWidget {
     final theme = Theme.of(context);
     final latest = entries.isNotEmpty ? entries.last : null;
     if (latest == null) return const SizedBox.shrink();
-    final sites = <String>[];
-    if (latest.hipsCm != null) {
-      sites.add('Hips ${presenter.formatMeasurement(latest.hipsCm!)}');
-    }
-    if (latest.chestCm != null) {
-      sites.add('Chest ${presenter.formatMeasurement(latest.chestCm!)}');
-    }
-    if (latest.bicepCm != null) {
-      sites.add('Bicep ${presenter.formatMeasurement(latest.bicepCm!)}');
-    }
-    if (latest.thighCm != null) {
-      sites.add('Thigh ${presenter.formatMeasurement(latest.thighCm!)}');
-    }
+
+    final sites = <({String label, double cm})>[];
+    if (latest.neckCm != null) sites.add((label: 'Neck', cm: latest.neckCm!));
+    if (latest.hipsCm != null) sites.add((label: 'Hips', cm: latest.hipsCm!));
+    if (latest.chestCm != null) sites.add((label: 'Chest', cm: latest.chestCm!));
+    if (latest.bicepCm != null) sites.add((label: 'Bicep', cm: latest.bicepCm!));
+    if (latest.thighCm != null) sites.add((label: 'Thigh', cm: latest.thighCm!));
     if (sites.isEmpty) return const SizedBox.shrink();
 
     return AppCard(
-      child: ExpansionTile(
-        tilePadding: EdgeInsets.zero,
-        title: Text(
-          'Other Sites',
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Text(
-              sites.join('  ·  '),
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+          Text(
+            'Latest Measurements',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final s in sites)
+                _SiteTile(
+                  label: s.label,
+                  value: presenter.formatMeasurement(s.cm),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SiteTile extends StatelessWidget {
+  final String label;
+  final String value;
+  const _SiteTile({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 0.6,
+              fontSize: 9,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _SiteChip extends StatelessWidget {
+  final String label;
+  final String value;
+  const _SiteChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        '$label  $value',
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }
@@ -450,7 +793,9 @@ class _OtherSitesSummary extends StatelessWidget {
 class _EntryList extends StatelessWidget {
   final List<BodyMeasurementEntry> entries;
   final NutritionPresenter presenter;
-  const _EntryList({required this.entries, required this.presenter});
+  final void Function(BodyMeasurementEntry) onEdit;
+  const _EntryList(
+      {required this.entries, required this.presenter, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
@@ -476,6 +821,7 @@ class _EntryList extends StatelessWidget {
                 entry: reversed[i],
                 prev: i + 1 < reversed.length ? reversed[i + 1] : null,
                 presenter: presenter,
+                onEdit: () => onEdit(reversed[i]),
                 onDelete: () => presenter.deleteMeasurement(reversed[i].id),
               ),
             ],
@@ -490,12 +836,14 @@ class _EntryRow extends StatelessWidget {
   final BodyMeasurementEntry entry;
   final BodyMeasurementEntry? prev;
   final NutritionPresenter presenter;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _EntryRow({
     required this.entry,
     required this.prev,
     required this.presenter,
+    required this.onEdit,
     required this.onDelete,
   });
 
@@ -508,22 +856,12 @@ class _EntryRow extends StatelessWidget {
         (waist != null && prevWaist != null) ? waist - prevWaist : null;
     final isDown = delta != null && delta < 0;
 
-    final extraSites = <String>[];
-    if (entry.neckCm != null) {
-      extraSites.add('Neck ${presenter.formatMeasurement(entry.neckCm!)}');
-    }
-    if (entry.hipsCm != null) {
-      extraSites.add('Hips ${presenter.formatMeasurement(entry.hipsCm!)}');
-    }
-    if (entry.chestCm != null) {
-      extraSites.add('Chest ${presenter.formatMeasurement(entry.chestCm!)}');
-    }
-    if (entry.bicepCm != null) {
-      extraSites.add('Bicep ${presenter.formatMeasurement(entry.bicepCm!)}');
-    }
-    if (entry.thighCm != null) {
-      extraSites.add('Thigh ${presenter.formatMeasurement(entry.thighCm!)}');
-    }
+    final extraSites = <({String label, double cm})>[];
+    if (entry.neckCm != null) extraSites.add((label: 'Neck', cm: entry.neckCm!));
+    if (entry.hipsCm != null) extraSites.add((label: 'Hips', cm: entry.hipsCm!));
+    if (entry.chestCm != null) extraSites.add((label: 'Chest', cm: entry.chestCm!));
+    if (entry.bicepCm != null) extraSites.add((label: 'Bicep', cm: entry.bicepCm!));
+    if (entry.thighCm != null) extraSites.add((label: 'Thigh', cm: entry.thighCm!));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -534,14 +872,15 @@ class _EntryRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (waist != null)
+                if (waist != null) ...[
                   Text(
                     'Waist ${presenter.formatMeasurement(waist)}',
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                const SizedBox(height: 2),
+                  const SizedBox(height: 2),
+                ],
                 Text(
                   DateFormat('EEE, MMM d, yyyy').format(entry.loggedAt),
                   style: theme.textTheme.bodySmall?.copyWith(
@@ -549,17 +888,21 @@ class _EntryRow extends StatelessWidget {
                   ),
                 ),
                 if (extraSites.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    extraSites.join('  ·  '),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.7),
-                    ),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final s in extraSites)
+                        _SiteChip(
+                          label: s.label,
+                          value: presenter.formatMeasurement(s.cm),
+                        ),
+                    ],
                   ),
                 ],
                 if (entry.notes != null && entry.notes!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     entry.notes!,
                     style: theme.textTheme.bodySmall?.copyWith(
@@ -584,9 +927,9 @@ class _EntryRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '${delta >= 0 ? '+' : ''}${delta.toStringAsFixed(1)}',
-                style: TextStyle(
-                  fontSize: 11,
+                '${delta >= 0 ? '+' : '−'}${presenter.formatMeasurement(delta.abs())}',
+                style: (theme.textTheme.labelSmall ?? const TextStyle(fontSize: 11))
+                    .copyWith(
                   fontWeight: FontWeight.w600,
                   color: isDown
                       ? theme.colorScheme.primary
@@ -594,13 +937,19 @@ class _EntryRow extends StatelessWidget {
                 ),
               ),
             ),
-          GestureDetector(
-            onTap: () => _confirmDelete(context),
-            child: Icon(
-              Icons.delete_outline,
-              size: 18,
-              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-            ),
+          IconButton(
+            onPressed: onEdit,
+            icon: const Icon(Icons.edit_outlined, size: 18),
+            padding: const EdgeInsets.all(13),
+            constraints: const BoxConstraints(),
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+          ),
+          IconButton(
+            onPressed: () => _confirmDelete(context),
+            icon: const Icon(Icons.delete_outline, size: 18),
+            padding: const EdgeInsets.all(13),
+            constraints: const BoxConstraints(),
+            color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
         ],
       ),
@@ -615,7 +964,7 @@ class _EntryRow extends StatelessWidget {
         title: const Text('Delete entry?'),
         content: Text(
           waist != null
-              ? 'Waist ${waist.toStringAsFixed(1)} cm on '
+              ? 'Waist ${presenter.formatMeasurement(waist)} on '
                   '${DateFormat('EEE, MMM d, yyyy').format(entry.loggedAt)}'
               : DateFormat('EEE, MMM d, yyyy').format(entry.loggedAt),
         ),
@@ -641,7 +990,8 @@ class _EntryRow extends StatelessWidget {
 
 class _AddMeasurementSheet extends StatefulWidget {
   final NutritionPresenter presenter;
-  const _AddMeasurementSheet({required this.presenter});
+  final BodyMeasurementEntry? initial;
+  const _AddMeasurementSheet({required this.presenter, this.initial});
 
   @override
   State<_AddMeasurementSheet> createState() => _AddMeasurementSheetState();
@@ -656,16 +1006,65 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
   final _thighCtrl = TextEditingController();
   final _notesCtrl = TextEditingController();
   late DateTime _date;
+  late MeasurementUnit _lastUnit;
   bool _saving = false;
+  bool _expandExtra = false;
+
+  bool get _isEditing => widget.initial != null;
+
+  static String _toCm(double? cm, MeasurementUnit unit) {
+    if (cm == null || cm <= 0) return '';
+    final v = unit == MeasurementUnit.imperial ? cm / 2.54 : cm;
+    return v.toStringAsFixed(1);
+  }
 
   @override
   void initState() {
     super.initState();
-    _date = DateTime.now();
+    _lastUnit = widget.presenter.measurementUnit;
+    widget.presenter.addListener(_onPresenterChanged);
+    final initial = widget.initial;
+    if (initial != null) {
+      _date = initial.loggedAt;
+      final unit = widget.presenter.measurementUnit;
+      _waistCtrl.text = _toCm(initial.waistCm, unit);
+      _neckCtrl.text = _toCm(initial.neckCm, unit);
+      _hipsCtrl.text = _toCm(initial.hipsCm, unit);
+      _chestCtrl.text = _toCm(initial.chestCm, unit);
+      _bicepCtrl.text = _toCm(initial.bicepCm, unit);
+      _thighCtrl.text = _toCm(initial.thighCm, unit);
+      _notesCtrl.text = initial.notes ?? '';
+      _expandExtra = initial.neckCm != null ||
+          initial.hipsCm != null ||
+          initial.chestCm != null ||
+          initial.bicepCm != null ||
+          initial.thighCm != null ||
+          (initial.notes?.isNotEmpty ?? false);
+    } else {
+      _date = DateTime.now();
+    }
+  }
+
+  void _onPresenterChanged() {
+    final newUnit = widget.presenter.measurementUnit;
+    if (newUnit == _lastUnit) return;
+    _convertControllers(_lastUnit, newUnit);
+    setState(() => _lastUnit = newUnit);
+  }
+
+  void _convertControllers(MeasurementUnit from, MeasurementUnit to) {
+    final ctrls = [_waistCtrl, _neckCtrl, _hipsCtrl, _chestCtrl, _bicepCtrl, _thighCtrl];
+    for (final ctrl in ctrls) {
+      final v = double.tryParse(ctrl.text.trim());
+      if (v == null || v <= 0) continue;
+      final converted = from == MeasurementUnit.imperial ? v * 2.54 : v / 2.54;
+      ctrl.text = converted.toStringAsFixed(1);
+    }
   }
 
   @override
   void dispose() {
+    widget.presenter.removeListener(_onPresenterChanged);
     _waistCtrl.dispose();
     _neckCtrl.dispose();
     _hipsCtrl.dispose();
@@ -711,7 +1110,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
     if (!_canSave) return;
     setState(() => _saving = true);
     final entry = BodyMeasurementEntry(
-      id: BodyMeasurementEntry.generateId(),
+      id: widget.initial?.id ?? BodyMeasurementEntry.generateId(),
       loggedAt: _date,
       waistCm: _parse(_waistCtrl),
       neckCm: _parse(_neckCtrl),
@@ -721,7 +1120,11 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
       thighCm: _parse(_thighCtrl),
       notes: _notesCtrl.text.trim().isEmpty ? null : _notesCtrl.text.trim(),
     );
-    await widget.presenter.logMeasurement(entry);
+    if (_isEditing) {
+      await widget.presenter.updateMeasurement(entry);
+    } else {
+      await widget.presenter.logMeasurement(entry);
+    }
     if (mounted) Navigator.pop(context);
   }
 
@@ -780,6 +1183,7 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
           // "Add more" expandable
           ExpansionTile(
             tilePadding: EdgeInsets.zero,
+            initiallyExpanded: _expandExtra,
             title: Text(
               'Add more sites',
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -874,7 +1278,11 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
             width: double.infinity,
             child: FilledButton(
               onPressed: (_saving || !_canSave) ? null : _save,
-              child: Text(_saving ? 'Saving…' : 'Save'),
+              child: Text(_saving
+                  ? 'Saving…'
+                  : _isEditing
+                      ? 'Save Changes'
+                      : 'Save'),
             ),
           ),
         ],
@@ -946,7 +1354,7 @@ class _UnitPill extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: selected
               ? theme.colorScheme.primary
@@ -955,8 +1363,8 @@ class _UnitPill extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12,
+          style: (theme.textTheme.labelMedium ?? const TextStyle(fontSize: 12))
+              .copyWith(
             fontWeight: FontWeight.w600,
             color: selected
                 ? theme.colorScheme.onPrimary
@@ -1283,5 +1691,9 @@ class _BodyDiagramPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_BodyDiagramPainter old) =>
-      old.bodyColor != bodyColor || old.waistColor != waistColor;
+      old.bodyColor != bodyColor ||
+      old.waistColor != waistColor ||
+      old.neckColor != neckColor ||
+      old.otherColor != otherColor ||
+      old.hipColor != hipColor;
 }

@@ -27,7 +27,7 @@ import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
 import '../services/storage_service.dart';
-import '../utils/body_fat_calculator.dart';
+import '../utils/body_fat_calculator.dart' as bfcalc;
 import '../utils/exercise_nlp_parser.dart';
 import '../utils/food_match_scorer.dart';
 import '../utils/food_nlp_parser.dart';
@@ -306,18 +306,104 @@ class NutritionPresenter extends ChangeNotifier {
           ? displayValue * 2.54
           : displayValue;
 
-  double? get estimatedBodyFatPercent {
+  /// Both BF% estimates: US Navy (measurement-based) and BMI (profile-based).
+  ({double? navy, double? bmi}) get bodyFatEstimates {
     final m = latestMeasurement;
     final profile = _tdeeProfile;
-    if (m == null || profile == null) return null;
-    if (m.waistCm == null || m.neckCm == null) return null;
-    return estimateBodyFatPercent(
+    if (profile == null) return (navy: null, bmi: null);
+
+    double? navy;
+    if (m != null && m.waistCm != null && m.neckCm != null) {
+      navy = bfcalc.estimateBodyFatPercent(
+        sex: profile.sex,
+        heightCm: profile.heightCm,
+        waistCm: m.waistCm!,
+        neckCm: m.neckCm!,
+        hipsCm: m.hipsCm,
+      );
+    }
+
+    final bmi = bfcalc.estimateBodyFatPercentBmi(
       sex: profile.sex,
       heightCm: profile.heightCm,
-      waistCm: m.waistCm!,
-      neckCm: m.neckCm!,
-      hipsCm: m.hipsCm,
+      weightKg: profile.weightKg,
+      ageYears: profile.ageYears,
     );
+
+    return (navy: navy, bmi: bmi);
+  }
+
+  /// Average of Navy + BMI estimates; falls back to whichever is available.
+  double? get estimatedBodyFatPercent {
+    final est = bodyFatEstimates;
+    final navy = est.navy;
+    final bmi = est.bmi;
+    if (navy != null && bmi != null) return (navy + bmi) / 2;
+    return navy ?? bmi;
+  }
+
+  /// Per-entry Navy BF% history for the trend chart.
+  /// Only entries that have both waist and neck measurements are included.
+  List<({DateTime date, double bf})> get bodyFatHistory {
+    final profile = _tdeeProfile;
+    if (profile == null) return const [];
+    final result = <({DateTime date, double bf})>[];
+    for (final e in _measurementLog) {
+      if (e.waistCm == null || e.neckCm == null) continue;
+      final bf = bfcalc.estimateBodyFatPercent(
+        sex: profile.sex,
+        heightCm: profile.heightCm,
+        waistCm: e.waistCm!,
+        neckCm: e.neckCm!,
+        hipsCm: e.hipsCm,
+      );
+      if (bf != null) result.add((date: e.loggedAt, bf: bf));
+    }
+    return result;
+  }
+
+  bool get hasWaistChartData =>
+      _measurementLog.where((e) => e.waistCm != null).length >= 2;
+
+  bool get hasBodyFatChartData => bodyFatHistory.length >= 2;
+
+  bool get hasMeasurementExtraSites {
+    final m = latestMeasurement;
+    if (m == null) return false;
+    return m.neckCm != null ||
+        m.hipsCm != null ||
+        m.chestCm != null ||
+        m.bicepCm != null ||
+        m.thighCm != null;
+  }
+
+  double? get totalWaistChangeCm {
+    final entries = _measurementLog.where((e) => e.waistCm != null).toList();
+    if (entries.length < 2) return null;
+    return entries.last.waistCm! - entries.first.waistCm!;
+  }
+
+  /// Formatted total waist change ("−2.3 cm", "+1.0 in", or "—").
+  String get waistTotalChangeLabel {
+    final delta = totalWaistChangeCm;
+    if (delta == null) return '—';
+    final sign = delta >= 0 ? '+' : '−';
+    return '$sign${formatMeasurement(delta.abs())}';
+  }
+
+  /// Formatted body-fat range label ("12–15%", "~14%", or "—").
+  String get bodyFatRangeLabel {
+    final est = bodyFatEstimates;
+    final navy = est.navy;
+    final bmi = est.bmi;
+    if (navy != null && bmi != null) {
+      final lo = min(navy, bmi).toStringAsFixed(0);
+      final hi = max(navy, bmi).toStringAsFixed(0);
+      return lo == hi ? '~$lo%' : '$lo–$hi%';
+    } else if (navy != null || bmi != null) {
+      return '~${(navy ?? bmi)!.toStringAsFixed(0)}%';
+    }
+    return '—';
   }
 
   // ── Calorie getters ──────────────────────────────────────────────────────────
@@ -1381,6 +1467,15 @@ class NutritionPresenter extends ChangeNotifier {
       ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
     await _storage.saveBodyMeasurements(_measurementLog);
     await _checkRecompXp();
+    notifyListeners();
+  }
+
+  Future<void> updateMeasurement(BodyMeasurementEntry updated) async {
+    _measurementLog = [
+      for (final e in _measurementLog)
+        if (e.id == updated.id) updated else e,
+    ]..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
+    await _storage.saveBodyMeasurements(_measurementLog);
     notifyListeners();
   }
 
