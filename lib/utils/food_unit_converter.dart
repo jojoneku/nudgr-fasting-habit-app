@@ -104,6 +104,9 @@ class FoodUnitConverter {
     final u = unit.toLowerCase().trim();
 
     if (_exact.containsKey(u)) return quantity * _exact[u]!;
+    if (u == 'cup' || u == 'cups') {
+      return quantity * _cupVolume(foodName ?? '');
+    }
     if (_approximate.containsKey(u)) return quantity * _approximate[u]!;
     if (_pieceUnits.contains(u)) {
       return quantity * _pieceSize(foodName ?? '');
@@ -116,21 +119,42 @@ class FoodUnitConverter {
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
+  // Food-aware cup volumes (g per cup, 240 ml default).
+  static double _cupVolume(String name) {
+    final n = name.toLowerCase();
+    // Cooked rice is ~186g/cup (denser than water due to starch).
+    if (_has(n, ['rice', 'kanin'])) return 186.0;
+    // Dry oats are ~81g/cup.
+    if (_has(n, ['oat', 'oatmeal'])) return 81.0;
+    return 240.0;
+  }
+
   static double _pieceSize(String foodName) {
     final n = foodName.toLowerCase();
+    if (_has(n, ['kanin', 'sinaing'])) return 150.0;
     if (_has(n, ['pandesal', 'bread roll', 'monay', 'ensaymada'])) return 50.0;
     if (_has(n, ['loaf', 'tinapay'])) return 120.0;
+    // Must come before 'egg' — "eggplant".contains("egg") is true
+    if (_has(n, ['eggplant', 'talong', 'aubergine'])) return 100.0;
+    // Scrambled eggs = standard 2-egg serving before the 1-egg piece default
+    // Both word orders must be matched; substring check can't do order-independent
+    if (_has(n, ['scrambled egg', 'eggs scrambled'])) return 120.0;
     if (_has(n, ['egg', 'itlog', 'itlog na maalat', 'salted egg'])) return 60.0;
     if (_has(n, ['banana', 'saging', 'lakatan', 'latundan'])) return 120.0;
     if (_has(n, ['apple', 'orange', 'mango', 'mangga', 'pear'])) return 150.0;
     if (_has(n, ['cookie', 'biscuit', 'biskwit'])) return 15.0;
     if (_has(n, ['candy', 'kendi', 'gummy'])) return 10.0;
     if (_has(n, ['lollipop'])) return 12.0;
-    if (_has(n, ['tilapia', 'bangus', 'milkfish', 'dalagang bukid']))
+    if (_has(n, ['tilapia', 'bangus', 'milkfish', 'dalagang bukid'])) {
       return 150.0;
+    }
     if (_has(n, ['fish', 'isda'])) return 130.0;
-    if (_has(n, ['chicken leg', 'drumstick', 'chicken thigh', 'paa ng manok']))
+    if (_has(
+        n, ['chicken leg', 'drumstick', 'chicken thigh', 'paa ng manok'])) {
       return 120.0;
+    }
+    // "wing part" = full wing (flat+drumet) — heavier than a single wing
+    if (_has(n, ['wing part'])) return 110.0;
     if (_has(n, ['chicken wing', 'pakpak'])) return 60.0;
     if (_has(n, ['chicken', 'manok'])) return 100.0;
     if (_has(n, ['hotdog', 'sausage', 'longganisa', 'chorizo'])) return 40.0;
@@ -143,6 +167,8 @@ class FoodUnitConverter {
     if (_has(n, ['donut', 'doughnut'])) return 55.0;
     if (_has(n, ['cupcake', 'muffin'])) return 60.0;
     if (_has(n, ['chocolate', 'tsokolate'])) return 15.0;
+    if (_has(n, ['pansit', 'pancit'])) return 200.0;
+    if (_has(n, ['fries', 'french fry', 'french fries'])) return 70.0;
     return 100.0; // generic default
   }
 

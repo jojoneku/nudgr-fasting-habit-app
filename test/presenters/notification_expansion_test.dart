@@ -153,6 +153,8 @@ MockStorageService _makeStorage({
   when(s.loadBodyMeasurements()).thenAnswer((_) async => []);
   when(s.loadMeasurementUnit()).thenAnswer((_) async => MeasurementUnit.metric);
   when(s.loadLastRecompXpDate()).thenAnswer((_) async => null);
+  when(s.loadNutritionLogForDate(any))
+      .thenAnswer((_) async => DailyNutritionLog.empty('2026-05-27'));
   when(s.loadChatMessagesRaw(any)).thenAnswer((_) async => []);
   when(s.saveNutritionLog(any)).thenAnswer((_) async {});
   when(s.saveFoodFeedback(any)).thenAnswer((_) async {});
