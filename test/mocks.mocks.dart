@@ -45,7 +45,6 @@ import 'package:intermittent_fasting/models/food_parse_result.dart' as _i39;
 import 'package:intermittent_fasting/models/food_search_candidate.dart' as _i41;
 import 'package:intermittent_fasting/models/food_template.dart' as _i17;
 import 'package:intermittent_fasting/models/habit_routine.dart' as _i14;
-import 'package:intermittent_fasting/models/index_progress.dart' as _i7;
 import 'package:intermittent_fasting/models/notification_preferences.dart'
     as _i8;
 import 'package:intermittent_fasting/models/nutrition_goals.dart' as _i4;
@@ -131,16 +130,6 @@ class _FakeActivityLog_3 extends _i1.SmartFake implements _i5.ActivityLog {
 
 class _FakeActivityGoals_4 extends _i1.SmartFake implements _i6.ActivityGoals {
   _FakeActivityGoals_4(
-    Object parent,
-    Invocation parentInvocation,
-  ) : super(
-          parent,
-          parentInvocation,
-        );
-}
-
-class _FakeIndexProgress_5 extends _i1.SmartFake implements _i7.IndexProgress {
-  _FakeIndexProgress_5(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -967,42 +956,6 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
         returnValue:
             _i11.Future<List<_i29.FoodFeedback>>.value(<_i29.FoodFeedback>[]),
       ) as _i11.Future<List<_i29.FoodFeedback>>);
-
-  @override
-  _i11.Future<_i7.IndexProgress> loadFoodIndexProgress() => (super.noSuchMethod(
-        Invocation.method(
-          #loadFoodIndexProgress,
-          [],
-        ),
-        returnValue: _i11.Future<_i7.IndexProgress>.value(_FakeIndexProgress_5(
-          this,
-          Invocation.method(
-            #loadFoodIndexProgress,
-            [],
-          ),
-        )),
-      ) as _i11.Future<_i7.IndexProgress>);
-
-  @override
-  _i11.Future<void> saveFoodIndexProgress(_i7.IndexProgress? progress) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #saveFoodIndexProgress,
-          [progress],
-        ),
-        returnValue: _i11.Future<void>.value(),
-        returnValueForMissingStub: _i11.Future<void>.value(),
-      ) as _i11.Future<void>);
-
-  @override
-  _i11.Future<void> clearFoodIndexProgress() => (super.noSuchMethod(
-        Invocation.method(
-          #clearFoodIndexProgress,
-          [],
-        ),
-        returnValue: _i11.Future<void>.value(),
-        returnValueForMissingStub: _i11.Future<void>.value(),
-      ) as _i11.Future<void>);
 
   @override
   _i11.Future<void> saveWeightLog(List<_i30.WeightEntry>? entries) =>
