@@ -72,7 +72,11 @@ class NutritionPresenter extends ChangeNotifier {
   late final PersonalFoodDictionary _personalDict;
 
   // ── Calorie density buckets (keyword fallback for unknown foods) ─────────
+  // Order matters: first matching bucket wins. Specific dish keywords (sinigang,
+  // adobo) must appear BEFORE their ingredient keywords (baboy, chicken) so the
+  // dish context overrides the raw-ingredient density.
   static const _calorieBuckets = [
+    // ── Pure fat / condiments ──────────────────────────────────────────────
     (
       kcalPerG: 7.5,
       keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']
@@ -90,10 +94,18 @@ class NutritionPresenter extends ChangeNotifier {
         'buto'
       ]
     ),
+    // Fried/cured pork — before generic meat so "lechon kawali" beats "pork"
     (
-      kcalPerG: 3.5,
-      keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']
+      kcalPerG: 4.0,
+      keywords: ['lechon', 'kawali', 'chicharon', 'liempo', 'bagnet']
     ),
+    // Cured/processed meats — before generic meat (2.0) so "longganisa" beats "pork"
+    (
+      kcalPerG: 3.0,
+      keywords: ['longganisa', 'tocino', 'bacon', 'ham', 'salami', 'pepperoni']
+    ),
+    // Protein powder — before dairy so "whey protein" beats "cream"
+    (kcalPerG: 4.0, keywords: ['whey', 'casein']),
     (
       kcalPerG: 4.5,
       keywords: [
@@ -109,20 +121,95 @@ class NutritionPresenter extends ChangeNotifier {
       ]
     ),
     (
+      kcalPerG: 3.5,
+      keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']
+    ),
+    // Fried starchy foods — separate from generic chips/cake
+    (kcalPerG: 3.2, keywords: ['fries', 'churros']),
+    // Baked goods lighter than cake — before fruit so "banana muffin" → muffin, not banana
+    (kcalPerG: 3.0, keywords: ['muffin', 'brownie', 'waffle', 'pancake']),
+    // Bread and bread-like baked goods — higher density than cooked rice
+    (
+      kcalPerG: 2.3,
+      keywords: [
+        'bread',
+        'tinapay',
+        'pandesal',
+        'bun',
+        'toast',
+        'bagel',
+        'pita',
+        'ensaymada',
+        'monay',
+        'loaf'
+      ]
+    ),
+    // Stir-fried noodle dishes (dry) — denser than soup-based noodles
+    (kcalPerG: 2.0, keywords: ['pansit', 'pancit']),
+    // Rice porridge / congee — mostly water, much lighter than plain rice
+    (kcalPerG: 0.85, keywords: ['goto', 'lugaw']),
+    // Dry grain kernels — raw oats, granola (before cooked starch bucket)
+    (kcalPerG: 3.89, keywords: ['oat', 'granola']),
+    // ── Starchy carbs ─────────────────────────────────────────────────────
+    (
       kcalPerG: 1.3,
       keywords: [
         'rice',
         'pasta',
         'noodle',
         'spaghetti',
-        'bread',
         'flour',
-        'oat',
         'cereal',
         'kanin',
-        'bigas'
+        'bigas',
+        'sotanghon',
+        'mami',
+        'arroz'
       ]
     ),
+    // Purple yam — much denser than potato due to higher starch and sugar
+    (kcalPerG: 1.4, keywords: ['ube', 'ubi']),
+    // Root vegetables / tubers — denser than leafy veg, lighter than grains
+    (
+      kcalPerG: 0.8,
+      keywords: ['potato', 'camote', 'yam', 'cassava', 'kamote', 'gabi']
+    ),
+    // Legumes and soy — before generic protein so "tofu" doesn't fall to default
+    (
+      kcalPerG: 0.9,
+      keywords: [
+        'tofu',
+        'tokwa',
+        'monggo',
+        'bean',
+        'lentil',
+        'garbanzos',
+        'chickpea',
+        'edamame'
+      ]
+    ),
+    // Light fried rolls — before generic protein fallback
+    (kcalPerG: 1.0, keywords: ['lumpia', 'lumpiang']),
+    // Filipino clear soups — before meat/fish so "sinigang na baboy" → soup, not pork
+    (
+      kcalPerG: 0.65,
+      keywords: ['sinigang', 'tinola', 'nilaga', 'bulalo', 'sopas']
+    ),
+    // Filipino braised stews — before generic meat so "chicken adobo" → stew, not raw chicken
+    (
+      kcalPerG: 1.5,
+      keywords: [
+        'adobo',
+        'mechado',
+        'caldereta',
+        'afritada',
+        'menudo',
+        'pochero',
+        'dinuguan',
+        'kare'
+      ]
+    ),
+    // ── Proteins ──────────────────────────────────────────────────────────
     (
       kcalPerG: 2.0,
       keywords: [
@@ -157,7 +244,11 @@ class NutritionPresenter extends ChangeNotifier {
       ]
     ),
     (kcalPerG: 1.5, keywords: ['egg', 'itlog']),
-    (kcalPerG: 1.5, keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas']),
+    (
+      kcalPerG: 1.5,
+      keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas', 'kefir']
+    ),
+    // ── Vegetables / Fruits / Broths ──────────────────────────────────────
     (
       kcalPerG: 0.35,
       keywords: [
@@ -172,7 +263,16 @@ class NutritionPresenter extends ChangeNotifier {
         'gulay',
         'ampalaya',
         'talong',
-        'okra'
+        'eggplant',
+        'aubergine',
+        'okra',
+        'cucumber',
+        'pepino',
+        'pechay',
+        'onion',
+        'sibuyas',
+        'garlic',
+        'bawang'
       ]
     ),
     (
@@ -1414,11 +1514,122 @@ class NutritionPresenter extends ChangeNotifier {
   /// Matches keywords as whole words to avoid "eggplant" → egg or
   /// "milkshake" → milk false positives.
   int _estimateCalories(String name, double grams) {
-    final tokens = name
+    final raw = name
         .toLowerCase()
         .split(RegExp(r'[^a-z0-9ñ]+'))
         .where((t) => t.isNotEmpty)
         .toSet();
+    // Stem simple plurals so "eggs" matches "egg", "noodles" → "noodle", etc.
+    final tokens = {
+      ...raw,
+      ...raw
+          .where((t) => t.endsWith('s') && t.length > 3)
+          .map((t) => t.substring(0, t.length - 1)),
+    };
+    // ── Compound-food context overrides ─────────────────────────────────────
+    // These must come BEFORE the bucket loop so that a liquid/condiment modifier
+    // overrides the solid-ingredient bucket that would otherwise fire first.
+
+    // Coconut water — very dilute (~19 kcal/100ml); must beat coconut-milk bucket
+    if (tokens.contains('coconut') &&
+        tokens.intersection({'water', 'tubig', 'buko'}).isNotEmpty) {
+      return (grams * 0.19).round().clamp(1, 9999);
+    }
+
+    // Almond milk — unusually dilute (~15 kcal/100ml); checked before generic plant-milk
+    if (tokens.contains('almond') && tokens.contains('milk')) {
+      return (grams * 0.15).round().clamp(1, 9999);
+    }
+
+    // Coconut milk (full-fat) — very rich (~230 kcal/100ml)
+    if (tokens.contains('coconut') &&
+        tokens.intersection({'milk', 'gatas'}).isNotEmpty) {
+      return (grams * 2.3).round().clamp(1, 9999);
+    }
+
+    // Plant-based milks — lighter than their solid base (~35 kcal/100ml avg)
+    const plantBases = {
+      'oat',
+      'soy',
+      'rice',
+      'cashew',
+      'hemp',
+      'hazelnut',
+      'macadamia',
+    };
+    if ((tokens.contains('milk') || tokens.contains('gatas')) &&
+        tokens.intersection(plantBases).isNotEmpty) {
+      return (grams * 0.35).round().clamp(1, 9999);
+    }
+
+    // Clear broths and stocks — ~5 kcal/100ml (bones/meat flavour, not mass)
+    if (tokens
+        .intersection({'broth', 'sabaw', 'stock', 'bouillon'}).isNotEmpty) {
+      return (grams * 0.05).round().clamp(1, 9999);
+    }
+
+    // Thin condiments — fish sauce, soy sauce, vinegar, ketchup (~40 kcal/100ml)
+    // Exclude rich condiments that happen to contain "sauce" (peanut, cream, butter)
+    if (tokens.intersection({
+          'sauce',
+          'patis',
+          'toyo',
+          'vinegar',
+          'suka',
+          'catsup',
+          'ketchup'
+        }).isNotEmpty &&
+        tokens.intersection({
+          'peanut',
+          'cream',
+          'butter',
+          'mayo',
+          'coconut',
+          'hollandaise',
+          'bechamel'
+        }).isEmpty) {
+      return (grams * 0.4).round().clamp(1, 9999);
+    }
+
+    // Eggplant/talong — raw: 25 kcal/100g; fried absorbs oil to ~90 kcal/100g
+    if (tokens.intersection({'eggplant', 'talong', 'aubergine'}).isNotEmpty) {
+      return (grams * (tokens.contains('fried') ? 0.9 : 0.25))
+          .round()
+          .clamp(1, 9999);
+    }
+
+    // Other fried vegetables — oil absorption raises density ~3× vs raw
+    const firedVegTokens = {
+      'vegetable',
+      'broccoli',
+      'spinach',
+      'cabbage',
+      'carrot',
+      'kangkong',
+      'sitaw',
+      'gulay',
+      'ampalaya',
+      'okra',
+      'cucumber',
+      'pechay',
+    };
+    if (tokens.contains('fried') &&
+        tokens.intersection(firedVegTokens).isNotEmpty) {
+      return (grams * 0.9).round().clamp(1, 9999);
+    }
+
+    // Fried chicken / Chickenjoy — breading + frying raises density to ~2.9 kcal/g
+    if ((tokens.contains('fried') || tokens.contains('chickenjoy')) &&
+        tokens.intersection({'chicken', 'manok', 'chickenjoy'}).isNotEmpty) {
+      return (grams * 2.9).round().clamp(1, 9999);
+    }
+
+    // Scrambled eggs — standard serving is 2 eggs with butter; ~1.67 kcal/g
+    if (tokens.contains('scrambled') &&
+        tokens.intersection({'egg', 'itlog'}).isNotEmpty) {
+      return (grams * 1.67).round().clamp(1, 9999);
+    }
+
     for (final bucket in _calorieBuckets) {
       if (bucket.keywords.any(tokens.contains)) {
         return (grams * bucket.kcalPerG).round().clamp(1, 9999);
@@ -1844,12 +2055,66 @@ class NutritionPresenter extends ChangeNotifier {
           .timeout(const Duration(seconds: 25));
       if (extracted == null || extracted.items.isEmpty) return null;
 
+      // Mirror the on-device guards that live in OnDeviceAiCoachService.
+      // Cloud returns raw items; apply the same post-parse fixups here.
+      var items = extracted.items;
+
+      // Canonical-USDA guard: "Egg, Whole, Cooked, Scrambled" is one ingredient,
+      // not four. Cloud sometimes decomposes on commas despite prompt instructions.
+      if (items.length > 1 && _cloudLooksLikeCanonicalUsdaName(text)) {
+        final g = _cloudSingleItemExplicitGrams(text) ?? items.first.grams;
+        items = [
+          ExtractedFoodItem(
+            name: text.trim(),
+            grams: g,
+            hydeDescription: items.first.hydeDescription,
+            rawText: text,
+            resolvedFoodId: items.first.resolvedFoodId,
+            resolverConfidence: items.first.resolverConfidence,
+            estimatedMacros: items.first.estimatedMacros,
+          ),
+        ];
+      }
+
+      // Single-item explicit-gram reconciliation: user wrote "12g chocolate crinkle"
+      // but cloud returned 40g. Trust the user's gram count and scale macros.
+      if (items.length == 1) {
+        final userGrams = _cloudSingleItemExplicitGrams(text);
+        if (userGrams != null && userGrams > 0) {
+          final i = items.first;
+          if ((i.grams - userGrams).abs() / userGrams > 0.05) {
+            final ratio = userGrams / i.grams;
+            EstimatedMacros? scaledMacros;
+            if (i.estimatedMacros != null) {
+              final m = i.estimatedMacros!;
+              scaledMacros = EstimatedMacros(
+                calories: m.calories * ratio,
+                proteinG: m.proteinG * ratio,
+                carbsG: m.carbsG * ratio,
+                fatG: m.fatG * ratio,
+              );
+            }
+            items = [
+              ExtractedFoodItem(
+                name: i.name,
+                grams: userGrams,
+                hydeDescription: i.hydeDescription,
+                rawText: i.rawText,
+                resolvedFoodId: i.resolvedFoodId,
+                resolverConfidence: i.resolverConfidence,
+                estimatedMacros: scaledMacros,
+              ),
+            ];
+          }
+        }
+      }
+
       // IF-Sync gate runs at commit time, not here.
       final entries = <FoodEntry>[];
       final altsList = <List<ChatFoodAlternative>>[];
       final rawTexts = <String>[];
 
-      for (final item in extracted.items) {
+      for (final item in items) {
         rawTexts.add(item.rawText);
         FoodEntry? entry;
 
@@ -2044,13 +2309,49 @@ class NutritionPresenter extends ChangeNotifier {
         .toList();
   }
 
+  // Short brand tokens that FTS5 won't match because the DB uses the full name.
+  static const _brandAliases = <String, String>{
+    'mcdo': "mcdonald's",
+    'mcdonald': "mcdonald's",
+    'mcds': "mcdonald's",
+    'jbc': 'jollibee',
+    'jollibee': 'jollibee',
+    'bk': 'burger king',
+    'kfc': 'kfc',
+    'greenwich': 'greenwich',
+    'chowking': 'chowking',
+    'shakeys': "shakey's",
+    'shakey': "shakey's",
+    'mang inasal': 'mang inasal',
+    'manginasal': 'mang inasal',
+    'popeyes': "popeye's",
+    'popeye': "popeye's",
+  };
+
+  /// Returns [text] with short brand abbreviations expanded to their full name
+  /// so FTS can match the DB's canonical brand entries.
+  static String _expandBrandTokens(String text) {
+    var result = text.toLowerCase();
+    for (final entry in _brandAliases.entries) {
+      result = result.replaceAll(
+        RegExp('\\b${RegExp.escape(entry.key)}\\b', caseSensitive: false),
+        entry.value,
+      );
+    }
+    // Preserve original casing for non-alias words by returning the replaced
+    // lower-case version — FTS is case-insensitive so this is fine.
+    return result;
+  }
+
   /// Builds a deduped candidate pool by querying FTS over the whole text
   /// AND each ingredient fragment, then **round-robin** filling the final
   /// pool so multi-ingredient queries get representation from every
   /// fragment instead of being dominated by the first one.
   Future<List<FoodSearchCandidate>> _buildCandidatePool(String text) async {
-    final fragments = _splitForCandidateRetrieval(text);
-    final queries = <String>{text, ...fragments}.toList();
+    final expanded = _expandBrandTokens(text);
+    final fragments = _splitForCandidateRetrieval(expanded);
+    // Always include both original and brand-expanded forms so nothing is lost.
+    final queries = <String>{text, expanded, ...fragments}.toList();
     final hitLists = await Future.wait(queries.map(_foodDb.search));
 
     // Re-sort each per-query result by specificity excess so generic entries
@@ -2107,6 +2408,46 @@ class NutritionPresenter extends ChangeNotifier {
       .split(' ')
       .where((w) => w.length > 2)
       .toSet();
+
+  // ── Cloud post-parse guards (mirrors on_device_ai_coach_service.dart) ────
+
+  static double? _cloudSingleItemExplicitGrams(String text) {
+    final matches = RegExp(
+      r'(\d+(?:\.\d+)?)\s*(?:g|gm|gms|gram|grams)\b',
+      caseSensitive: false,
+    ).allMatches(text).toList();
+    if (matches.length != 1) return null;
+    return double.tryParse(matches.first.group(1)!);
+  }
+
+  static bool _cloudLooksLikeCanonicalUsdaName(String text) {
+    // Strip trailing gram weight before checking canonical form.
+    // "Egg, Whole, Cooked, Scrambled 100g" → "Egg, Whole, Cooked, Scrambled"
+    final stripped = text
+        .replaceAll(
+            RegExp(
+              r'\s+\d+(?:\.\d+)?\s*(?:g|gm|gms|gram|grams)\s*$',
+              caseSensitive: false,
+            ),
+            '')
+        .trim();
+    final lower = stripped.toLowerCase().trim();
+    if (lower.length > 40) return false;
+    if (lower.contains(' with ') ||
+        lower.contains(' and ') ||
+        lower.contains(' + ') ||
+        lower.contains(' plus ')) {
+      return false;
+    }
+    if (!lower.contains(',')) return false;
+    final parts = lower.split(',').map((p) => p.trim()).toList();
+    if (parts.length < 2) return false;
+    return parts.every((p) =>
+        p.isNotEmpty &&
+        !p.contains(' ') &&
+        p.length <= 14 &&
+        RegExp(r'^[a-z0-9%]+$').hasMatch(p));
+  }
 
   /// Shared commit path for both cloud and on-device branches. Adds
   /// entries to today's log, builds the chat message, persists, and runs

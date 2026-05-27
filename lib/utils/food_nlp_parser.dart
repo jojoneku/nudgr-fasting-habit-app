@@ -57,11 +57,15 @@ class FoodNlpParser {
       return const FoodParseResult(items: [], usedModel: false);
     }
 
-    final fragments = cleaned
-        .split(_splitter)
-        .map((f) => f.trim())
-        .where((f) => f.isNotEmpty)
-        .toList();
+    // USDA canonical names like "Egg, Whole, Cooked, Scrambled 100g" use
+    // commas as modifiers, not separators. Don't split them into 4 entries.
+    final fragments = _looksLikeUsdaCanonical(cleaned)
+        ? [cleaned]
+        : cleaned
+            .split(_splitter)
+            .map((f) => f.trim())
+            .where((f) => f.isNotEmpty)
+            .toList();
 
     final items = fragments
         .map(_parseFragment)
@@ -150,7 +154,11 @@ class FoodNlpParser {
       final name = _cleanName(quantityOnly.group(2)!);
       if (!_looksLikeUnit(name)) {
         // quantity ≥ 10 with no unit → assume grams
-        final grams = qty >= 10 ? qty : qty * 150.0;
+        // quantity < 10 → treat as piece count with food-aware piece size
+        final grams = qty >= 10
+            ? qty
+            : FoodUnitConverter.convert(qty, 'piece', foodName: name) ??
+                qty * 100.0;
         return ParsedFoodItem(
           rawText: fragment,
           name: name,
@@ -160,13 +168,15 @@ class FoodNlpParser {
       }
     }
 
-    // Fallback: just a food name → 100g default serving
+    // Fallback: just a food name → food-aware default serving (100g generic)
     final name = _cleanName(fragment);
     if (name.isNotEmpty) {
+      final grams =
+          FoodUnitConverter.convert(1, 'piece', foodName: name) ?? 100.0;
       return ParsedFoodItem(
         rawText: fragment,
         name: name,
-        grams: 100.0,
+        grams: grams,
         isEstimated: true,
       );
     }
@@ -180,6 +190,48 @@ class FoodNlpParser {
 
   static bool _looksLikeUnit(String word) =>
       FoodUnitConverter.knownUnits.contains(word.toLowerCase());
+
+  // Cooking/preparation modifier words that appear in USDA canonical names.
+  static const _usdaModifiers = {
+    'whole', 'raw', 'cooked', 'boiled', 'fried', 'scrambled', 'poached',
+    'baked', 'roasted', 'steamed', 'grilled', 'broiled', 'dried', 'dry',
+    'frozen', 'canned', 'salted', 'unsalted', 'sweetened', 'unsweetened',
+    'plain', 'lean', 'extra lean', 'fat free', 'low fat', 'reduced fat',
+    'boneless', 'skinless', 'ground', 'sliced', 'diced', 'chopped',
+    'minced', 'shredded', 'light', 'dark', 'white', 'brown',
+    // Grain/cereal processing terms
+    'rolled', 'instant', 'quick', 'old fashioned', 'uncooked', 'dehydrated',
+    'flaked', 'puffed', 'toasted', 'steel cut',
+  };
+
+  /// Returns true if [s] looks like a USDA-style canonical name where commas
+  /// are ingredient modifiers, not food separators.
+  /// e.g. "egg, whole, cooked, scrambled 100g" → true
+  /// but  "chicken, rice, vegetables" → false
+  static bool _looksLikeUsdaCanonical(String s) {
+    // Strip leading or trailing gram weight before checking modifier pattern.
+    // e.g. "10g oats, rolled, dry" → "oats, rolled, dry"
+    // e.g. "oats, rolled, dry, 10g" → "oats, rolled, dry"
+    var stripped = s
+        .replaceAll(
+          RegExp(r'^\d+(?:\.\d+)?\s*(?:g|gm|grams?)\s+', caseSensitive: false),
+          '',
+        )
+        .replaceAll(
+          RegExp(r'\s*,?\s*\d+(?:\.\d+)?\s*(?:g|gm|grams?)\s*$',
+              caseSensitive: false),
+          '',
+        )
+        .trim();
+    final parts = stripped
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .toList();
+    if (parts.length < 2) return false;
+    // Every part after the first must be a known culinary modifier word.
+    return parts.skip(1).every(_usdaModifiers.contains);
+  }
 
   // Pre-computed unit alternation string for regex patterns.
   static final String _unitPattern = () {

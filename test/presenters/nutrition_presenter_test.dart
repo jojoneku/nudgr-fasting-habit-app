@@ -63,6 +63,8 @@ void main() {
     when(mockStorage.loadMeasurementUnit())
         .thenAnswer((_) async => MeasurementUnit.metric);
     when(mockStorage.loadLastRecompXpDate()).thenAnswer((_) async => null);
+    when(mockStorage.loadNutritionLogForDate(any))
+        .thenAnswer((_) async => DailyNutritionLog.empty('2026-05-27'));
 
     // Stats stubs
     when(mockStats.stats).thenReturn(UserStats.initial());
