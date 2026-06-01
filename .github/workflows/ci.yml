@@ -414,11 +414,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Detect changes to lambda_function.py
+      - name: Detect changes to backend/ai-coach/
         id: changes
         run: |
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            if git diff --name-only HEAD~1 HEAD | grep -q '^lambda_function\.py$'; then
+            if git diff --name-only HEAD~1 HEAD | grep -q '^backend/ai-coach/'; then
               echo "changed=true" >> $GITHUB_OUTPUT
             else
               echo "changed=false" >> $GITHUB_OUTPUT
@@ -438,13 +438,17 @@ jobs:
       - name: Package and deploy Lambda
         if: steps.changes.outputs.changed == 'true'
         run: |
-          zip lambda.zip lambda_function.py
+          # Build the deployment package from the canonical source directory.
+          # lambda.zip is never committed — always built here from source.
+          cd backend/ai-coach
+          zip ../../lambda.zip lambda_function.py
+          cd ../..
           aws lambda update-function-code \
-            --function-name food-coach-handler \
+            --function-name ai-coach \
             --zip-file fileb://lambda.zip \
             --no-cli-pager
           # Wait until the function is back to Active before exiting,
           # so any follow-up calls (e.g. version publish) don't hit
           # ResourceConflictException.
           aws lambda wait function-updated \
-            --function-name food-coach-handler
+            --function-name ai-coach

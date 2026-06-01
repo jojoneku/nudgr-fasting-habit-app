@@ -2171,6 +2171,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
             resolvedFoodId: items.first.resolvedFoodId,
             resolverConfidence: items.first.resolverConfidence,
             estimatedMacros: items.first.estimatedMacros,
+            macroFallback: items.first.macroFallback,
           ),
         ];
       }
@@ -2202,6 +2203,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
                 resolvedFoodId: i.resolvedFoodId,
                 resolverConfidence: i.resolverConfidence,
                 estimatedMacros: scaledMacros,
+                macroFallback: i.macroFallback,
               ),
             ];
           }
@@ -2250,6 +2252,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         } else if (item.estimatedMacros != null) {
           // Cloud couldn't pick a DB candidate; use its open-ended estimate.
           final m = item.estimatedMacros!;
+          // Plan 034 SEV-3: when macroFallback is true the Lambda synthesised
+          // a generic ~2 kcal/g ratio (model forgot to return macros). Use the
+          // cloudAiFallback source so the UI shows 'Cloud~' in error colour,
+          // signalling the user that this figure is a rough approximation.
+          final source = item.macroFallback
+              ? EstimationSource.cloudAiFallback
+              : EstimationSource.cloudAi;
           entry = FoodEntry(
             id: FoodEntry.generateId(),
             name: _formatDisplayName(item.name),
@@ -2258,12 +2267,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
             carbs: m.carbsG,
             fat: m.fatG,
             grams: item.grams,
-            // Plan 027 §2.2 — cloud-estimated (no DB candidate) entries get
-            // the cloudAi badge so users can distinguish them from local AI
-            // estimates and from raw keyword fallbacks.
-            estimationSource: EstimationSource.cloudAi,
-            confidence:
-                item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
+            estimationSource: source,
+            confidence: item.macroFallback
+                ? 0.1
+                : (item.resolverConfidence > 0 ? item.resolverConfidence : 0.6),
             loggedAt: DateTime.now(),
           );
           // H2: do NOT auto-learn open cloud estimates into the personal dict.

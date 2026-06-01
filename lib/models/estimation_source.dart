@@ -9,6 +9,12 @@ enum EstimationSource {
   /// macros from its own knowledge for out-of-DB foods. Plan 027.
   cloudAi,
 
+  /// Cloud AI macro estimate that was synthesised from a generic ~2 kcal/g
+  /// ratio because the model failed to return macros. The figure is a rough
+  /// approximation — shown with a warning badge so users know to verify.
+  /// Plan 034 SEV-3.
+  cloudAiFallback,
+
   /// On-device AI (Qwen) either picked from DB candidates or estimated.
   /// Plan 027. Reserved for the on-device-parity work; legacy code may still
   /// use [aiPerItem] until migrated.
@@ -25,6 +31,7 @@ enum EstimationSource {
         EstimationSource.userManual ||
         EstimationSource.cloudAi =>
           true,
+        EstimationSource.cloudAiFallback ||
         EstimationSource.localAi ||
         EstimationSource.aiPerItem ||
         EstimationSource.keywordDensity =>
@@ -35,6 +42,7 @@ enum EstimationSource {
         EstimationSource.db => 'DB',
         EstimationSource.personalDict => 'You',
         EstimationSource.cloudAi => 'Cloud',
+        EstimationSource.cloudAiFallback => 'Cloud~',
         EstimationSource.localAi => 'Local AI',
         EstimationSource.aiPerItem => 'AI~',
         EstimationSource.keywordDensity => '~',
@@ -44,6 +52,7 @@ enum EstimationSource {
   static EstimationSource fromJson(String? value) => switch (value) {
         'personalDict' => EstimationSource.personalDict,
         'cloudAi' => EstimationSource.cloudAi,
+        'cloudAiFallback' => EstimationSource.cloudAiFallback,
         'localAi' => EstimationSource.localAi,
         'aiPerItem' => EstimationSource.aiPerItem,
         'keywordDensity' => EstimationSource.keywordDensity,
@@ -61,6 +70,7 @@ extension EstimationSourceColor on EstimationSource {
       EstimationSource.userManual =>
         cs.onSurfaceVariant,
       EstimationSource.cloudAi => cs.primary,
+      EstimationSource.cloudAiFallback => cs.error,
       EstimationSource.localAi => cs.tertiary,
       EstimationSource.aiPerItem => context.appColors.gold,
       EstimationSource.keywordDensity => cs.error,
