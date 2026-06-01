@@ -124,7 +124,6 @@ class LocalStorageService extends StorageService {
   @override
   Future<Map<String, dynamic>> loadState() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
 
     final isFasting = prefs.getBool(StorageService.keyIsFasting) ?? false;
     final startTimeStr = prefs.getString(StorageService.keyStartTime);
@@ -174,7 +173,6 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<Quest>> loadQuests() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.reload();
     final raw = prefs.getString(StorageService.keyQuests);
     if (raw == null) return [];
     try {
@@ -262,6 +260,17 @@ class LocalStorageService extends StorageService {
     final Map<String, dynamic> all =
         raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
     all[log.date] = log.toJson();
+
+    // Prune entries older than 90 days so the stored blob stays bounded.
+    final cutoff = DateTime.now().subtract(const Duration(days: 90));
+    all.removeWhere((key, _) {
+      try {
+        return DateTime.parse(key).isBefore(cutoff);
+      } catch (_) {
+        return false;
+      }
+    });
+
     await prefs.setString(StorageService.keyNutritionLogs, jsonEncode(all));
     _markDirty(SyncDomain.nutritionLog, log.date);
   }
