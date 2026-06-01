@@ -20,6 +20,8 @@ class _FastingAppState extends State<FastingApp> {
   late final LocalStorageService _storage;
   late final SettingsPresenter _settingsPresenter;
   late final UpdatePresenter _updatePresenter;
+  late final ThemeData _cachedDarkTheme;
+  late final ThemeData _cachedLightTheme;
 
   // Injected by CI via `--dart-define=APP_VERSION=${new_version}`. The fallback
   // only fires on local `flutter run` — production builds always set it.
@@ -34,6 +36,8 @@ class _FastingAppState extends State<FastingApp> {
     _storage = LocalStorageService();
     _settingsPresenter = SettingsPresenter(_storage);
     _settingsPresenter.init();
+    _cachedDarkTheme = _darkTheme();
+    _cachedLightTheme = _lightTheme();
 
     // Initialize update checker with manifest URL from dart-define
     const manifestUrl = String.fromEnvironment(
@@ -240,8 +244,8 @@ class _FastingAppState extends State<FastingApp> {
       builder: (context, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Nudgr',
-        theme: _lightTheme(),
-        darkTheme: _darkTheme(),
+        theme: _cachedLightTheme,
+        darkTheme: _cachedDarkTheme,
         themeMode: _settingsPresenter.themeMode,
         home: HomeScreen(
           settingsPresenter: _settingsPresenter,
