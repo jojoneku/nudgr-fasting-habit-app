@@ -5,21 +5,31 @@ import '../models/sync_queue_entry.dart';
 /// Tracks pending local writes to push to Supabase.
 /// Also stores per-domain timestamps for last-write-wins comparisons.
 /// Capped at 1000 entries; deduplicates by (domain, key) keeping latest op.
+///
+/// Keys are scoped to [userId] when provided via [load] so multiple users on
+/// the same device never share queue or timestamp state.
 class SyncQueue {
-  static const String _keyQueue = 'syncQueue';
-  static const String _keyTimestamps = 'syncTimestamps';
   static const int _maxEntries = 1000;
 
+  String? _userId;
   final List<SyncQueueEntry> _entries = [];
   final Map<String, DateTime> _timestamps = {};
   bool _loaded = false;
 
-  Future<void> load() async {
-    if (_loaded) return;
+  String get _queueKey =>
+      _userId != null ? 'u/$_userId/syncQueue' : 'syncQueue';
+  String get _timestampsKey =>
+      _userId != null ? 'u/$_userId/syncTimestamps' : 'syncTimestamps';
+
+  Future<void> load({String? userId}) async {
+    if (_loaded && _userId == userId) return;
+    _userId = userId;
     _loaded = true;
+    _entries.clear();
+    _timestamps.clear();
     final prefs = await SharedPreferences.getInstance();
 
-    final raw = prefs.getString(_keyQueue);
+    final raw = prefs.getString(_queueKey);
     if (raw != null) {
       try {
         for (final item in jsonDecode(raw) as List) {
@@ -34,7 +44,7 @@ class SyncQueue {
       } catch (_) {}
     }
 
-    final tsRaw = prefs.getString(_keyTimestamps);
+    final tsRaw = prefs.getString(_timestampsKey);
     if (tsRaw != null) {
       try {
         (jsonDecode(tsRaw) as Map<String, dynamic>).forEach((k, v) {
@@ -86,6 +96,15 @@ class SyncQueue {
     _persist();
   }
 
+  /// Clears all in-memory state on sign-out. Persisted prefs keys under the
+  /// user prefix are wiped by [LocalStorageService.clearUserData].
+  void clearAll() {
+    _entries.clear();
+    _timestamps.clear();
+    _loaded = false;
+    _userId = null;
+  }
+
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
     final list = _entries
@@ -96,12 +115,12 @@ class SyncQueue {
               'queuedAt': e.queuedAt.toIso8601String(),
             })
         .toList();
-    await prefs.setString(_keyQueue, jsonEncode(list));
+    await prefs.setString(_queueKey, jsonEncode(list));
   }
 
   Future<void> _persistTimestamps() async {
     final prefs = await SharedPreferences.getInstance();
     final map = _timestamps.map((k, v) => MapEntry(k, v.toIso8601String()));
-    await prefs.setString(_keyTimestamps, jsonEncode(map));
+    await prefs.setString(_timestampsKey, jsonEncode(map));
   }
 }
