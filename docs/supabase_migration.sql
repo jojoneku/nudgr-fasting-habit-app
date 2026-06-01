@@ -50,6 +50,22 @@ CREATE TABLE IF NOT EXISTS finance_records (
   PRIMARY KEY (user_id, table_name, record_id)
 );
 
+-- ── fasting_state (one row per user) ─────────────────────────────────────────
+-- Stores: isFasting, startTime, eatingStartTime, elapsedSeconds, history[]
+CREATE TABLE IF NOT EXISTS fasting_state (
+  user_id     UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  data        JSONB NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- ── user_quests (one row per user) ────────────────────────────────────────────
+-- Stores: quests[], achievements[], questPenaltyCheckDate
+CREATE TABLE IF NOT EXISTS user_quests (
+  user_id     UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  data        JSONB NOT NULL,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- =============================================================================
 -- Grant access to authenticated users
 -- =============================================================================
@@ -59,6 +75,8 @@ GRANT ALL ON public.user_collections TO authenticated;
 GRANT ALL ON public.nutrition_logs   TO authenticated;
 GRANT ALL ON public.activity_logs    TO authenticated;
 GRANT ALL ON public.finance_records  TO authenticated;
+GRANT ALL ON public.fasting_state    TO authenticated;
+GRANT ALL ON public.user_quests      TO authenticated;
 
 -- =============================================================================
 -- Row Level Security — each user can only access their own rows
@@ -69,6 +87,8 @@ ALTER TABLE user_collections   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE nutrition_logs     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE activity_logs      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE finance_records    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fasting_state      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_quests        ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "user_owns_row" ON user_profile
   USING (user_id = auth.uid())
@@ -87,6 +107,14 @@ CREATE POLICY "user_owns_row" ON activity_logs
   WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "user_owns_row" ON finance_records
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "user_owns_row" ON fasting_state
+  USING (user_id = auth.uid())
+  WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "user_owns_row" ON user_quests
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 

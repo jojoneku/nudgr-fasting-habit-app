@@ -186,7 +186,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _initSync(String userId) async {
-    if (_syncService != null) return;
+    if (_syncService != null) {
+      if (_currentUserId == userId) return; // already running for this user
+      _tearDownSync(); // different user signed in — tear down first
+    }
     _currentUserId = userId;
     _storage.setUserId(userId);
     await _syncQueue!.load(userId: userId);
