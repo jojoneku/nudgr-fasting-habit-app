@@ -175,7 +175,9 @@ class LocalStorageService extends StorageService {
         history = (jsonDecode(historyRaw) as List)
             .map((e) => FastingLog.fromJson(e))
             .toList();
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('LocalStorageService: failed to parse fasting history: $e');
+      }
     }
 
     return {

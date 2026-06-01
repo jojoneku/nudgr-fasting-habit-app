@@ -12,8 +12,9 @@ import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
-class LedgerPresenter extends ChangeNotifier {
+class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerPresenter(
     StorageService storage,
     StatsPresenter stats, {
@@ -113,7 +114,7 @@ class LedgerPresenter extends ChangeNotifier {
 
   void setSelectedDate(DateTime? d) {
     _selectedDate = d;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Steps the selected date by [delta] days. If no date is selected, anchors
@@ -131,7 +132,7 @@ class LedgerPresenter extends ChangeNotifier {
     _selectedDate = next;
     _selectedMonth =
         '${next.year.toString().padLeft(4, '0')}-${next.month.toString().padLeft(2, '0')}';
-    notifyListeners();
+    safeNotify();
   }
 
   double get filteredAccountBalance {
@@ -174,12 +175,12 @@ class LedgerPresenter extends ChangeNotifier {
   void setMonth(String month) {
     _selectedMonth = month;
     _selectedDate = null; // clear day filter when navigating months
-    notifyListeners();
+    safeNotify();
   }
 
   void setAccount(String? id) {
     _selectedAccountId = id;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Refreshes the account list from storage. Call this before showing any
@@ -187,14 +188,14 @@ class LedgerPresenter extends ChangeNotifier {
   /// or removed accounts since LedgerPresenter last loaded.
   Future<void> reloadAccounts() async {
     _accounts = await _storage.loadAccounts();
-    notifyListeners();
+    safeNotify();
   }
 
   // --- Load ---
 
   Future<void> load() async {
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
 
     _accounts = await _storage.loadAccounts();
     _categories = await _storage.loadFinanceCategories();
@@ -210,7 +211,7 @@ class LedgerPresenter extends ChangeNotifier {
     }
 
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Returns a new list with corrected colors if any category needed migration,
@@ -245,7 +246,7 @@ class LedgerPresenter extends ChangeNotifier {
     if (isFirstEver) await _stats.addXp(25);
     if (isFirstToday) await _stats.addXp(10);
 
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> addTransfer({
@@ -290,7 +291,7 @@ class LedgerPresenter extends ChangeNotifier {
     _applyBalanceDelta(fromAccountId, amount, TransactionType.outflow);
     _applyBalanceDelta(toAccountId, amount, TransactionType.inflow);
     await _saveAll();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> updateTransaction(TransactionRecord txn) async {
@@ -301,7 +302,7 @@ class LedgerPresenter extends ChangeNotifier {
       for (final t in _allTransactions) t.id == txn.id ? txn : t,
     ];
     await _saveAll();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> deleteTransaction(String id) async {
@@ -309,7 +310,7 @@ class LedgerPresenter extends ChangeNotifier {
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     await _saveAll();
-    notifyListeners();
+    safeNotify();
   }
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
@@ -319,7 +320,7 @@ class LedgerPresenter extends ChangeNotifier {
         ? [for (final a in _accounts) a.id == account.id ? account : a]
         : [..._accounts, account];
     await _storage.saveAccounts(_accounts);
-    notifyListeners();
+    safeNotify();
   }
 
   // --- Category CRUD ---
@@ -327,7 +328,7 @@ class LedgerPresenter extends ChangeNotifier {
   Future<void> addCategory(FinanceCategory category) async {
     _categories = [..._categories, category];
     await _storage.saveFinanceCategories(_categories);
-    notifyListeners();
+    safeNotify();
   }
 
   /// Throws [StateError('has_transactions')] if any transaction still
@@ -342,7 +343,7 @@ class LedgerPresenter extends ChangeNotifier {
     _categories = _categories.where((c) => c.id != id).toList();
     await _storage.saveFinanceCategories(_categories);
     await _financeDict.removeForCategory(id);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────
@@ -371,7 +372,7 @@ class LedgerPresenter extends ChangeNotifier {
       );
       if (preparse.hardError != null) {
         _chatHardError = preparse.hardError;
-        notifyListeners();
+        safeNotify();
         return;
       }
       _chatHardError = null;
@@ -387,7 +388,7 @@ class LedgerPresenter extends ChangeNotifier {
         draft: preparse.toDraft(),
         turnCount: 0,
       );
-      notifyListeners();
+      safeNotify();
       await _runClassifier(preparse);
     } else {
       // Reply turn — append, advance the AI.
@@ -401,7 +402,7 @@ class LedgerPresenter extends ChangeNotifier {
         turnCount: _chatState.turnCount + 1,
         clearLastStep: true,
       );
-      notifyListeners();
+      safeNotify();
       // Rebuild a preparse summary from the current draft for the prompt.
       final preparse = PreparseResult(
         rawInput: text,
@@ -459,7 +460,7 @@ class LedgerPresenter extends ChangeNotifier {
       _fallbackToForm(_chatState.draft, step.reason);
       return;
     }
-    notifyListeners();
+    safeNotify();
   }
 
   /// User tapped "Yes" on the resolving turn — commit + learn + reset.
@@ -480,7 +481,7 @@ class LedgerPresenter extends ChangeNotifier {
     final draft = step is StepResolved ? step.transaction : _chatState.draft;
     _pendingFormPrefill = draft;
     _chatState = const LedgerChatState.idle();
-    notifyListeners();
+    safeNotify();
   }
 
   /// User tapped Cancel — drop conversation, clear input. No commit, no learn.
@@ -488,26 +489,26 @@ class LedgerPresenter extends ChangeNotifier {
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
     _pendingFormPrefill = null;
-    notifyListeners();
+    safeNotify();
   }
 
   /// Called by the view after it consumes [pendingFormPrefill].
   void consumeFormPrefill() {
     if (_pendingFormPrefill == null) return;
     _pendingFormPrefill = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void clearChatHardError() {
     if (_chatHardError == null) return;
     _chatHardError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void clearLastCommittedSummary() {
     if (_lastCommittedSummary == null) return;
     _lastCommittedSummary = null;
-    notifyListeners();
+    safeNotify();
   }
 
   /// View calls this when the app backgrounds. We record the timestamp so
@@ -527,7 +528,7 @@ class LedgerPresenter extends ChangeNotifier {
     if (_chatState.phase == ChatPhase.idle) return;
     if (DateTime.now().difference(pausedAt) > _staleConversationThreshold) {
       _chatState = const LedgerChatState.idle();
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -569,7 +570,7 @@ class LedgerPresenter extends ChangeNotifier {
     _lastCommittedSummary = _summaryFor(draft);
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   String _summaryFor(ParsedTransaction draft) {
@@ -598,7 +599,7 @@ class LedgerPresenter extends ChangeNotifier {
   void _fallbackToForm(ParsedTransaction draft, String reason) {
     _pendingFormPrefill = draft;
     _chatState = const LedgerChatState.idle();
-    notifyListeners();
+    safeNotify();
   }
 
   /// Plan 026 §4 — description captured from raw input, capped at 60.

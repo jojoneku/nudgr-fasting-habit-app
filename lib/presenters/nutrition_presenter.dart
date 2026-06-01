@@ -33,8 +33,9 @@ import '../utils/food_match_scorer.dart';
 import '../utils/food_nlp_parser.dart';
 import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
+import '../utils/safe_notifier.dart';
 
-class NutritionPresenter extends ChangeNotifier {
+class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _statsPresenter;
   final FastingPresenter _fastingPresenter;
   final StorageService _storage;
@@ -308,8 +309,6 @@ class NutritionPresenter extends ChangeNotifier {
   List<ChatMessage> _chatMessages = [];
   bool _isChatParsing = false;
   String? _chatParseError;
-  bool _disposed = false;
-
   // ── Matcher feedback (telemetry, local-only) ─────────────────────────────
   // Loaded once from storage on init; appended to in-memory and persisted on
   // every event so the curation backlog survives app restarts.
@@ -335,12 +334,6 @@ class NutritionPresenter extends ChangeNotifier {
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     loadState();
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
   }
 
   // ── Core state ───────────────────────────────────────────────────────────────
@@ -947,12 +940,12 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> clearLearnedFoods() async {
     await _personalDict.clearAll();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> removeLearnedFood(String name) async {
     await _personalDict.remove(name);
-    notifyListeners();
+    safeNotify();
   }
 
   /// Plan 027 — let the user correct a learned food's per-100g macros when
@@ -972,7 +965,7 @@ class NutritionPresenter extends ChangeNotifier {
       carbsPer100g: carbsPer100g,
       fatPer100g: fatPer100g,
     );
-    notifyListeners();
+    safeNotify();
   }
 
   int get aiDownloadProgress => _ai.downloadProgress ?? 0;
@@ -1015,7 +1008,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
     await _ensureTodayLogFresh();
     _todayLog = _todayLog.addEntry(entry, slot);
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionLog(_todayLog);
     await _updateLogStreak();
     await _checkGoalMet();
@@ -1039,7 +1032,7 @@ class NutritionPresenter extends ChangeNotifier {
       mealSlot: MealSlot.meal,
     );
     _chatMessages.add(msg);
-    notifyListeners();
+    safeNotify();
     // Save log + chat atomically so a crash between them can't desync.
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -1053,7 +1046,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> removeFoodEntry(String entryId, MealSlot slot) async {
     _todayLog = _todayLog.removeEntry(entryId, slot);
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionLog(_todayLog);
   }
 
@@ -1094,7 +1087,7 @@ class NutritionPresenter extends ChangeNotifier {
       foodItems: entries.map((e) => ChatFoodItem.fromFoodEntry(e)).toList(),
     );
     _chatMessages.add(chatMsg);
-    notifyListeners();
+    safeNotify();
 
     // Persist log + chat together so a crash between them can't desync.
     await Future.wait([
@@ -1126,7 +1119,7 @@ class NutritionPresenter extends ChangeNotifier {
     );
     _weightLog = [..._weightLog, entry];
     await _storage.saveWeightLog(_weightLog);
-    notifyListeners();
+    safeNotify();
 
     // Cancel today's pending reminder; the recurring schedule fires again tomorrow.
     await _notifications.cancelWeightReminder();
@@ -1144,14 +1137,14 @@ class NutritionPresenter extends ChangeNotifier {
     _calorieGoalNotifiedToday = false;
     _proteinGoalMetToday = false;
     _overshootPenalizedToday = false;
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionGoals(newGoals);
     await _checkGoalMet();
   }
 
   Future<void> saveTdeeProfile(TdeeProfile profile) async {
     _tdeeProfile = profile;
-    notifyListeners();
+    safeNotify();
     await _storage.saveTdeeProfile(profile);
     await _checkGoalMet();
   }
@@ -1178,13 +1171,13 @@ class NutritionPresenter extends ChangeNotifier {
     } else {
       _library.add(template);
     }
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
   Future<void> deleteFoodTemplate(String templateId) async {
     _library.removeWhere((t) => t.id == templateId);
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1192,7 +1185,7 @@ class NutritionPresenter extends ChangeNotifier {
     final idx = _library.indexWhere((t) => t.id == templateId);
     if (idx == -1 || newName.trim().isEmpty) return;
     _library[idx] = _library[idx].copyWith(name: newName.trim());
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1200,7 +1193,7 @@ class NutritionPresenter extends ChangeNotifier {
     final idx = _library.indexWhere((t) => t.id == templateId);
     if (idx == -1) return;
     _library[idx] = _library[idx].copyWith(isPinned: !_library[idx].isPinned);
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1209,7 +1202,7 @@ class NutritionPresenter extends ChangeNotifier {
   /// No-op — kept for API compatibility. The shared Qwen model is initialised
   /// by [OnDeviceAiCoachService.init] in [AiCoachPresenter].
   Future<void> initAi() async {
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> estimateMeal(String description) async {
@@ -1217,7 +1210,7 @@ class NutritionPresenter extends ChangeNotifier {
     _isAiEstimating = true;
     _lastEstimate = null;
     _aiEstimateError = null;
-    notifyListeners();
+    safeNotify();
     try {
       _lastEstimate = await _ai.estimateMacros(description);
       if (_lastEstimate == null) {
@@ -1228,7 +1221,7 @@ class NutritionPresenter extends ChangeNotifier {
       _aiEstimateError = _errorMessage(e);
     } finally {
       _isAiEstimating = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -1250,13 +1243,13 @@ class NutritionPresenter extends ChangeNotifier {
       await addFoodEntry(entry, slot);
     }
     _lastEstimate = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void clearEstimate() {
     _lastEstimate = null;
     _aiEstimateError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Actions — NLP food parser ─────────────────────────────────────────────
@@ -1268,7 +1261,7 @@ class NutritionPresenter extends ChangeNotifier {
     _lastParseResult = null;
     _parsedDbMatches = [];
     _parseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final result = FoodNlpParser.parse(description);
@@ -1283,7 +1276,7 @@ class NutritionPresenter extends ChangeNotifier {
       _parseError = 'Failed to parse meal description.';
     } finally {
       _isParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -1304,7 +1297,7 @@ class NutritionPresenter extends ChangeNotifier {
         overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]),
     ];
     _todayLog = _todayLog.addEntries(entries, slot);
-    notifyListeners();
+    safeNotify();
 
     await _storage.saveNutritionLog(_todayLog);
     await _updateLogStreak();
@@ -1314,14 +1307,14 @@ class NutritionPresenter extends ChangeNotifier {
 
     _lastParseResult = null;
     _parsedDbMatches = [];
-    notifyListeners();
+    safeNotify();
   }
 
   void clearParseResult() {
     _lastParseResult = null;
     _parsedDbMatches = [];
     _parseError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   Future<List<FoodDbEntry?>> _resolveDbMatches(FoodParseResult result) async {
@@ -1640,13 +1633,13 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> downloadAiModel() async {
     if (isAiDownloading) return;
-    notifyListeners();
+    safeNotify();
     try {
       await _ai.downloadModel(onProgress: (_) => notifyListeners());
     } catch (_) {
       // Download failed — model remains unavailable; banner will stay visible.
     }
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Actions — chat feed ───────────────────────────────────────────────────────
@@ -1659,7 +1652,7 @@ class NutritionPresenter extends ChangeNotifier {
     final raw = await _storage.loadChatMessagesRaw(dateKey);
     _chatMessages = raw.map(ChatMessage.fromJson).toList();
     _todayLog = await _storage.loadNutritionLogForDate(dateKey);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Weight log mutations ──────────────────────────────────────────────────
@@ -1667,7 +1660,7 @@ class NutritionPresenter extends ChangeNotifier {
   Future<void> deleteWeight(String id) async {
     _weightLog = _weightLog.where((e) => e.id != id).toList();
     await _storage.saveWeightLog(_weightLog);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Body measurement mutations ────────────────────────────────────────────
@@ -1677,7 +1670,7 @@ class NutritionPresenter extends ChangeNotifier {
       ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
     await _storage.saveBodyMeasurements(_measurementLog);
     await _checkRecompXp();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> updateMeasurement(BodyMeasurementEntry updated) async {
@@ -1686,19 +1679,19 @@ class NutritionPresenter extends ChangeNotifier {
         if (e.id == updated.id) updated else e,
     ]..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
     await _storage.saveBodyMeasurements(_measurementLog);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> deleteMeasurement(String id) async {
     _measurementLog = _measurementLog.where((e) => e.id != id).toList();
     await _storage.saveBodyMeasurements(_measurementLog);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> setMeasurementUnit(MeasurementUnit unit) async {
     _measurementUnit = unit;
     await _storage.saveMeasurementUnit(unit);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _checkRecompXp() async {
@@ -1731,12 +1724,12 @@ class NutritionPresenter extends ChangeNotifier {
     if (trimmed.length > _maxChatInputLength) {
       _chatParseError =
           'Input too long ($_maxChatInputLength char limit). Split into smaller messages.';
-      notifyListeners();
+      safeNotify();
       return;
     }
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       if (ExerciseNlpParser.looksLikeExercise(trimmed)) {
@@ -1749,7 +1742,7 @@ class NutritionPresenter extends ChangeNotifier {
       debugPrint('NutritionPresenter: parseChat error: $e');
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -2482,7 +2475,7 @@ class NutritionPresenter extends ChangeNotifier {
       mealSlot: MealSlot.meal,
     );
     _chatMessages.add(msg);
-    notifyListeners();
+    safeNotify();
 
     // Persist log + chat together so a crash between them can't desync.
     await Future.wait([
@@ -2588,7 +2581,7 @@ class NutritionPresenter extends ChangeNotifier {
     final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
     updatedItems[itemIndex] = updatedItem;
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -2708,7 +2701,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     final updated = List<ChatFoodItem>.from(msg.foodItems)..removeAt(itemIndex);
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updated);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -2733,7 +2726,7 @@ class NutritionPresenter extends ChangeNotifier {
       }
     }
     _chatMessages.removeWhere((m) => m.id == messageId);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       if (msg.kind == ChatMessageKind.food)
@@ -2756,7 +2749,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
     try {
       // In-memory remove only — save is deferred until we have the replacement,
       // so a cloud timeout or crash can't permanently drop the old entry.
@@ -2836,7 +2829,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _checkOvershoot();
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -2868,7 +2861,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final updatedItems = <ChatFoodItem>[];
@@ -2937,7 +2930,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _checkOvershoot();
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -2988,7 +2981,7 @@ class NutritionPresenter extends ChangeNotifier {
     final todayKey = _dateFmt.format(DateTime.now());
     final rawChat = await _storage.loadChatMessagesRaw(todayKey);
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
-    if (_disposed) return;
+    if (isDisposed) return; // presenter was disposed during async load
 
     // Restore same-day dedup flags from loaded state so app restarts mid-day
     // don't re-fire notifications or re-apply HP penalties.
@@ -3005,7 +2998,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _notifications.cancelWeightReminder();
     }
 
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Internal RPG hooks ────────────────────────────────────────────────────────
@@ -3043,7 +3036,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     await _storage.saveNutritionStreak(_goalStreak);
     await _storage.saveNutritionGoalMetDate(today);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _checkProteinGoalMet() async {
@@ -3071,7 +3064,7 @@ class NutritionPresenter extends ChangeNotifier {
     await _onLogStreakUpdate();
     await _storage.saveLogStreak(_logStreak);
     await _storage.saveLogStreakDate(today);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _onLogStreakUpdate() async {

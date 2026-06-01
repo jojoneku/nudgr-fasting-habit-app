@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/sync_queue_entry.dart';
 
@@ -41,7 +42,9 @@ class SyncQueue {
             queuedAt: DateTime.parse(m['queuedAt'] as String),
           ));
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('SyncQueue: failed to restore pending queue: $e');
+      }
     }
 
     final tsRaw = prefs.getString(_timestampsKey);
@@ -50,7 +53,9 @@ class SyncQueue {
         (jsonDecode(tsRaw) as Map<String, dynamic>).forEach((k, v) {
           _timestamps[k] = DateTime.parse(v as String);
         });
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('SyncQueue: failed to restore timestamps: $e');
+      }
     }
   }
 
