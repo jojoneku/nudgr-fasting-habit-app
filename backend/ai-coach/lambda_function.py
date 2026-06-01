@@ -1,16 +1,103 @@
 import json
 import os
 import re
+from datetime import datetime, timedelta, timezone
 
 import boto3
+from botocore.exceptions import ClientError
 
+# ── Module-level AWS clients (connection reuse across warm invocations) ────────
 
 _bedrock = boto3.client("bedrock-runtime", region_name="ap-southeast-1")
-_MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
+_dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-1")
 
+_MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
+_DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
+_RATE_LIMIT_TABLE = os.environ.get("RATE_LIMIT_TABLE", "ai-coach-rate-limit")
+_MAX_TEXT_LEN = 500   # chars; guards prompt-size and injection blast radius
+_MAX_CANDIDATES = 15
+
+# Lazy-init table reference (avoids a describe-table call at import time).
+_rate_table = None
+
+
+def _get_rate_table():
+    global _rate_table
+    if _rate_table is None:
+        _rate_table = _dynamodb.Table(_RATE_LIMIT_TABLE)
+    return _rate_table
+
+
+# ── Auth ───────────────────────────────────────────────────────────────────────
+
+def _get_user_id(event):
+    """Extract `sub` from API Gateway HTTP API JWT authorizer claims.
+
+    API GW populates event['requestContext']['authorizer']['jwt']['claims']
+    after a successful JWT authorizer check. Returns None if the authorizer
+    didn't run (i.e. the request reached Lambda unauthenticated — shouldn't
+    happen in production but guards against mis-configured deployments).
+    """
+    try:
+        return event["requestContext"]["authorizer"]["jwt"]["claims"]["sub"]
+    except (KeyError, TypeError):
+        return None
+
+
+# ── Rate limiting ──────────────────────────────────────────────────────────────
+
+def _check_rate_limit(user_id):
+    """Atomically increment the per-user daily counter; return (allowed, count).
+
+    DynamoDB item key: "<yyyymmdd>#<user_id>"
+    TTL: set to 48 h past midnight UTC so items auto-expire.
+    Fails open (returns True) when DynamoDB is unreachable to avoid breaking
+    the app over a transient infra issue.
+    """
+    today = datetime.now(timezone.utc).strftime("%Y%m%d")
+    pk = f"{today}#{user_id}"
+    # TTL: 48 h past midnight of today (gives plenty of margin for clock skew).
+    expire_at = int(
+        (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+         + timedelta(days=2)).timestamp()
+    )
+    try:
+        resp = _get_rate_table().update_item(
+            Key={"pk": pk},
+            UpdateExpression="ADD #c :one SET #ttl = if_not_exists(#ttl, :ttl)",
+            ExpressionAttributeNames={"#c": "count", "#ttl": "ttl"},
+            ExpressionAttributeValues={":one": 1, ":ttl": expire_at},
+            ReturnValues="UPDATED_NEW",
+        )
+        count = int(resp["Attributes"]["count"])
+        return count <= _DAILY_CAP, count
+    except ClientError as e:
+        print(f"Rate limit DynamoDB error: {e}")
+        return True, 0  # fail open
+    except Exception as e:
+        print(f"Rate limit unexpected error: {e}")
+        return True, 0
+
+
+# ── Entry point ────────────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
     print(f"event: {json.dumps(event)}")
+
+    # Auth: API GW JWT authorizer must have verified the Supabase Bearer token.
+    # If user_id is None the authorizer did not run — reject defensively.
+    user_id = _get_user_id(event)
+    if not user_id:
+        return _resp(401, {"error": "unauthorized", "message": "Valid Bearer token required"})
+
+    # Per-user daily cap — prevents unbounded Bedrock billing.
+    allowed, count = _check_rate_limit(user_id)
+    if not allowed:
+        print(f"rate_limit_hit user={user_id} count={count} cap={_DAILY_CAP}")
+        return _resp(429, {
+            "error": "rate_limit_exceeded",
+            "message": f"Daily limit of {_DAILY_CAP} AI requests reached. Try again tomorrow.",
+        })
 
     try:
         body = json.loads(event.get("body") or "{}")
@@ -34,8 +121,10 @@ def lambda_handler(event, context):
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
 
 
+# ── Food ops ───────────────────────────────────────────────────────────────────
+
 def _disambiguate_food(payload):
-    query = payload.get("query", "").strip()
+    query = payload.get("query", "").strip()[:_MAX_TEXT_LEN]
     candidates = payload.get("candidates", [])
 
     if not query:
@@ -69,7 +158,7 @@ def _disambiguate_food(payload):
 
 
 def _extract_food_items(payload):
-    text = payload.get("text", "").strip()
+    text = payload.get("text", "").strip()[:_MAX_TEXT_LEN]
     if not text:
         return _resp(400, {"error": "missing_text"})
 
@@ -90,16 +179,17 @@ def _extract_food_items(payload):
 
 
 def _parse_food_with_candidates(payload):
-    """Plan 026 — single-call extract + resolve + estimate.
+    """Single-call extract + resolve + estimate (Plan 026).
 
     Takes the raw meal text plus a pre-fetched candidate pool from the
     client's FTS/alias-aware retrieval. Returns each extracted item with
     either:
       - food_id + confidence (when a candidate matches), OR
       - estimated_macros (when no candidate fits; Haiku estimates from
-        its own knowledge).
+        its own knowledge), plus macro_fallback=true when the estimate was
+        synthesised from a generic ratio rather than model output.
     """
-    text = (payload.get("text") or "").strip()
+    text = (payload.get("text") or "").strip()[:_MAX_TEXT_LEN]
     if not text:
         return _resp(400, {"error": "missing_text"})
 
@@ -129,7 +219,7 @@ def _parse_food_with_candidates(payload):
             suffix = f"  [{slash}]" if slash else ""
             return f"- id: {c.get('food_id', c.get('id', '?'))}, name: {name}{macro}{suffix}"
 
-        candidates_text = "\n".join(_fmt_candidate(c) for c in candidates[:15])
+        candidates_text = "\n".join(_fmt_candidate(c) for c in candidates[:_MAX_CANDIDATES])
         candidates_block = (
             "\n\nCandidate foods from the user's database (pick from these when one matches):\n"
             f"{candidates_text}\n"
@@ -217,16 +307,12 @@ def _emit_parse_food_response(parsed, original_text=""):
     items = normalized.get("items", [])
     resolved = sum(1 for i in items if i.get("food_id"))
     estimated = sum(1 for i in items if i.get("estimated_macros"))
-    fallback = sum(1 for i in items if i.get("_macro_fallback"))
+    fallback = sum(1 for i in items if i.get("macro_fallback"))
     intent = normalized.get("intent", "items_list")
-    # Structured cost-monitoring log line — picked up by CloudWatch Insights.
     print(
         f"cost_line op=parseFoodWithCandidates items={len(items)} "
         f"resolved={resolved} estimated={estimated} macro_fallback={fallback} intent={intent}"
     )
-    # Strip internal debug flag before returning to client.
-    for item in items:
-        item.pop("_macro_fallback", None)
     return _resp(200, normalized)
 
 
@@ -241,11 +327,27 @@ def _extract_single_explicit_grams(text):
     return None
 
 
+_MAX_CAL_PER_ITEM = 3000.0   # sanity ceiling for a single logged portion
+_MAX_MACRO_G = 500.0          # sanity ceiling for a single macro in grams
+
+
+def _clamp_macros(macros):
+    """Clamp estimated macro values to nutritionally plausible ranges."""
+    if macros is None:
+        return None
+    return {
+        "calories": max(0.0, min(float(macros.get("calories", 0)), _MAX_CAL_PER_ITEM)),
+        "protein_g": max(0.0, min(float(macros.get("protein_g", 0)), _MAX_MACRO_G)),
+        "carbs_g": max(0.0, min(float(macros.get("carbs_g", 0)), _MAX_MACRO_G)),
+        "fat_g": max(0.0, min(float(macros.get("fat_g", 0)), _MAX_MACRO_G)),
+    }
+
+
 def _normalize_parsed_items(parsed, original_text=""):
     """Coerce the model output into the response schema with safe defaults."""
     intent = parsed.get("intent")
     if intent not in ("single_dish", "items_list"):
-        intent = "items_list"  # safe default
+        intent = "items_list"
     items_in = parsed.get("items") or []
     items_out = []
     for it in items_in:
@@ -262,8 +364,7 @@ def _normalize_parsed_items(parsed, original_text=""):
         if food_id in ("", "null", None):
             food_id = None
         else:
-            # Haiku sometimes returns numeric ids when the source ids look
-            # numeric; the Dart side expects a string. Coerce defensively.
+            # Haiku sometimes returns numeric ids; the Dart side expects a string.
             food_id = str(food_id)
         try:
             confidence = float(it.get("confidence") or 0.0)
@@ -272,18 +373,19 @@ def _normalize_parsed_items(parsed, original_text=""):
         macros = it.get("estimated_macros")
         macro_fallback = False
         if macros is not None and isinstance(macros, dict):
-            macros = {
+            macros = _clamp_macros({
                 "calories": float(macros.get("calories") or 0),
                 "protein_g": float(macros.get("protein_g") or 0),
                 "carbs_g": float(macros.get("carbs_g") or 0),
                 "fat_g": float(macros.get("fat_g") or 0),
-            }
+            })
         else:
             macros = None
         # Safety net: model forgot estimated_macros despite prompt instruction.
-        # Synthesise a rough estimate so the client doesn't fall to keyword-density.
+        # Synthesise a rough ~2 kcal/g estimate and set macro_fallback so the
+        # client can warn the user that this figure is approximate.
         if food_id is None and macros is None:
-            kcal = round(grams * 2.0, 1)  # generic ~2 kcal/g average
+            kcal = round(grams * 2.0, 1)
             macros = {
                 "calories": kcal,
                 "protein_g": round(kcal * 0.15 / 4, 1),
@@ -298,7 +400,7 @@ def _normalize_parsed_items(parsed, original_text=""):
             "food_id": food_id,
             "confidence": confidence,
             "estimated_macros": macros,
-            "_macro_fallback": macro_fallback,  # stripped before response
+            "macro_fallback": macro_fallback,
         })
 
     # Single-item explicit-gram override: user wrote "12g crinkle" but model
@@ -308,7 +410,6 @@ def _normalize_parsed_items(parsed, original_text=""):
         if user_grams and user_grams > 0:
             item = items_out[0]
             if abs(item["grams"] - user_grams) / user_grams > 0.05:
-                # Rescale macros proportionally if they came from the model.
                 if item["estimated_macros"] and item["grams"] > 0:
                     ratio = user_grams / item["grams"]
                     m = item["estimated_macros"]
@@ -324,7 +425,7 @@ def _normalize_parsed_items(parsed, original_text=""):
 
 
 def _estimate_macros(payload):
-    description = payload.get("description", "").strip()
+    description = payload.get("description", "").strip()[:_MAX_TEXT_LEN]
     if not description:
         return _resp(400, {"error": "missing_description"})
 
@@ -348,6 +449,31 @@ def _estimate_macros(payload):
     )
 
 
+# ── Chat / respond ─────────────────────────────────────────────────────────────
+
+def _enforce_alternation(messages):
+    """Coalesce consecutive same-role turns; drop leading assistant messages.
+
+    Bedrock rejects message lists that start with 'assistant' or contain
+    two consecutive turns of the same role (ValidationException → 502).
+    """
+    if not messages:
+        return []
+    # Drop any leading assistant messages.
+    while messages and messages[0]["role"] == "assistant":
+        messages.pop(0)
+    if not messages:
+        return []
+    # Coalesce consecutive same-role turns by joining their content.
+    result = [dict(messages[0])]
+    for msg in messages[1:]:
+        if msg["role"] == result[-1]["role"]:
+            result[-1]["content"] += "\n" + msg["content"]
+        else:
+            result.append(dict(msg))
+    return result
+
+
 def _respond(payload):
     messages = payload.get("messages", [])
     ctx = payload.get("context", {})
@@ -355,8 +481,13 @@ def _respond(payload):
     if not messages:
         return _resp(400, {"error": "missing_messages"})
 
-    # Build system prompt from context
-    system_lines = ["You are an AI coach for an intermittent fasting app with an RPG theme (Solo Leveling aesthetic)."]
+    system_lines = [
+        "You are an AI coach for an intermittent fasting app with an RPG theme (Solo Leveling aesthetic).",
+        # Safety guardrail — must come early so later context doesn't override it.
+        "Important: never provide specific medical advice, diagnoses, medication dosages, "
+        "or treatment recommendations. For any medical concern, always refer the user to a "
+        "qualified healthcare professional.",
+    ]
     if ctx.get("isFasting"):
         elapsed = ctx.get("elapsedFastMinutes", 0)
         goal = ctx.get("fastingGoalHours", 16)
@@ -376,11 +507,15 @@ def _respond(payload):
     system_lines.append("Keep responses concise (2-3 sentences). Be encouraging and use light RPG language.")
     system_prompt = " ".join(system_lines)
 
-    bedrock_messages = [
+    raw_messages = [
         {"role": m["role"], "content": m.get("text", "")}
         for m in messages
         if m.get("text", "").strip()
     ]
+    bedrock_messages = _enforce_alternation(raw_messages)
+
+    if not bedrock_messages:
+        return _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
 
     try:
         raw = _bedrock.invoke_model(
@@ -401,6 +536,8 @@ def _respond(payload):
         print(f"Bedrock error (respond): {e}")
         return _resp(502, {"error": "bedrock_error", "message": str(e)})
 
+
+# ── Shared Bedrock helper ──────────────────────────────────────────────────────
 
 def _invoke_bedrock(*, prompt, max_tokens, parse_fn, fallback):
     """Shared Bedrock invocation with JSON fence stripping and error handling."""
