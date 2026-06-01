@@ -727,7 +727,7 @@ class OnDeviceAiCoachService implements AiCoachService {
     // Canonical-USDA-name guard: short comma-separated noun phrases like
     // "Oats, Rolled, Dry" or "Beef, Ground, 80% Lean" are ONE ingredient.
     // The decompose prompt was over-eager and split them into 3+ items each.
-    if (items.length > 1 && _looksLikeCanonicalUsdaName(original)) {
+    if (items.length > 1 && FoodNlpParser.looksLikeUsdaCanonical(original)) {
       final fallbackGrams =
           _singleItemExplicitGrams(original) ?? items.first.grams;
       return [
@@ -797,30 +797,6 @@ class OnDeviceAiCoachService implements AiCoachService {
     ).allMatches(text).toList();
     if (matches.length != 1) return null;
     return double.tryParse(matches.first.group(1)!);
-  }
-
-  /// True when the input looks like one canonical USDA-style name made of
-  /// comma-separated short modifiers — e.g. "Oats, Rolled, Dry" or "Beef,
-  /// Ground, 80% Lean". Used to suppress the decompose-on-comma prompt rule
-  /// for these single-ingredient inputs.
-  static bool _looksLikeCanonicalUsdaName(String text) {
-    final lower = text.toLowerCase().trim();
-    if (lower.length > 40) return false;
-    if (lower.contains(' with ') ||
-        lower.contains(' and ') ||
-        lower.contains(' + ') ||
-        lower.contains(' plus ')) {
-      return false;
-    }
-    if (!lower.contains(',')) return false;
-    final parts = lower.split(',').map((p) => p.trim()).toList();
-    if (parts.length < 2) return false;
-    // Each comma-separated part must be ONE short token (canonical descriptor).
-    return parts.every((p) =>
-        p.isNotEmpty &&
-        !p.contains(' ') &&
-        p.length <= 14 &&
-        RegExp(r'^[a-z0-9%]+$').hasMatch(p));
   }
 
   /// Extracts an explicit total like "200g total" / "150 grams altogether".

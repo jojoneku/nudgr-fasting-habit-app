@@ -380,7 +380,7 @@ class _HubScreenState extends State<HubScreen>
           ? NutritionHubCard(
               nutrition: widget.nutritionPresenter!,
               onNavigate: () => _pushNutritionScreen(context),
-              onLogMeal: () => _showLogMealSheet(context),
+              onLogMeal: () => _pushNutritionScreen(context),
             )
           : const SizedBox.shrink(),
       HubCardType.quests => QuestsHubCard(

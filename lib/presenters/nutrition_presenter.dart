@@ -80,14 +80,19 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   // Order matters: first matching bucket wins. Specific dish keywords (sinigang,
   // adobo) must appear BEFORE their ingredient keywords (baboy, chicken) so the
   // dish context overrides the raw-ingredient density.
+  //
+  // pR/cR/fR are energy fractions (must sum to 1.0):
+  //   protein_g = (kcal * pR) / 4   carbs_g = (kcal * cR) / 4   fat_g = (kcal * fR) / 9
   static const _calorieBuckets = [
     // ── Pure fat / condiments ──────────────────────────────────────────────
     (
       kcalPerG: 7.5,
+      pR: 0.00, cR: 0.02, fR: 0.98, // pure fat
       keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']
     ),
     (
       kcalPerG: 5.5,
+      pR: 0.14, cR: 0.14, fR: 0.72, // nuts: ~14/14/72
       keywords: [
         'nut',
         'almond',
@@ -102,17 +107,24 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     // Fried/cured pork — before generic meat so "lechon kawali" beats "pork"
     (
       kcalPerG: 4.0,
+      pR: 0.30, cR: 0.03, fR: 0.67, // high-fat pork
       keywords: ['lechon', 'kawali', 'chicharon', 'liempo', 'bagnet']
     ),
-    // Cured/processed meats — before generic meat (2.0) so "longganisa" beats "pork"
+    // Cured/processed meats — before generic meat so "longganisa" beats "pork"
     (
       kcalPerG: 3.0,
+      pR: 0.25, cR: 0.05, fR: 0.70, // bacon/sausage-like
       keywords: ['longganisa', 'tocino', 'bacon', 'ham', 'salami', 'pepperoni']
     ),
     // Protein powder — before dairy so "whey protein" beats "cream"
-    (kcalPerG: 4.0, keywords: ['whey', 'casein']),
+    (
+      kcalPerG: 4.0,
+      pR: 0.75, cR: 0.15, fR: 0.10, // high protein
+      keywords: ['whey', 'casein']
+    ),
     (
       kcalPerG: 4.5,
+      pR: 0.07, cR: 0.60, fR: 0.33, // baked sweets
       keywords: [
         'cake',
         'cookie',
@@ -127,15 +139,29 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     ),
     (
       kcalPerG: 3.5,
+      pR: 0.00, cR: 1.00, fR: 0.00, // pure carbs
       keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']
     ),
     // Fried starchy foods — separate from generic chips/cake
-    (kcalPerG: 3.2, keywords: ['fries', 'churros']),
-    // Baked goods lighter than cake — before fruit so "banana muffin" → muffin, not banana
-    (kcalPerG: 3.0, keywords: ['muffin', 'brownie', 'waffle', 'pancake']),
+    (
+      kcalPerG: 3.2,
+      pR: 0.05, cR: 0.57, fR: 0.38, // fried starch
+      keywords: ['fries', 'churros']
+    ),
+    // Baked goods lighter than cake — before fruit so "banana muffin" → muffin
+    (
+      kcalPerG: 3.0,
+      pR: 0.08,
+      cR: 0.58,
+      fR: 0.34,
+      keywords: ['muffin', 'brownie', 'waffle', 'pancake']
+    ),
     // Bread and bread-like baked goods — higher density than cooked rice
     (
       kcalPerG: 2.3,
+      pR: 0.12,
+      cR: 0.75,
+      fR: 0.13,
       keywords: [
         'bread',
         'tinapay',
@@ -150,14 +176,27 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       ]
     ),
     // Stir-fried noodle dishes (dry) — denser than soup-based noodles
-    (kcalPerG: 2.0, keywords: ['pansit', 'pancit']),
+    (
+      kcalPerG: 2.0,
+      pR: 0.12,
+      cR: 0.65,
+      fR: 0.23,
+      keywords: ['pansit', 'pancit']
+    ),
     // Rice porridge / congee — mostly water, much lighter than plain rice
-    (kcalPerG: 0.85, keywords: ['goto', 'lugaw']),
+    (kcalPerG: 0.85, pR: 0.10, cR: 0.80, fR: 0.10, keywords: ['goto', 'lugaw']),
     // Dry grain kernels — raw oats, granola (before cooked starch bucket)
-    (kcalPerG: 3.89, keywords: ['oat', 'granola']),
+    (
+      kcalPerG: 3.89,
+      pR: 0.13,
+      cR: 0.68,
+      fR: 0.19,
+      keywords: ['oat', 'granola']
+    ),
     // ── Starchy carbs ─────────────────────────────────────────────────────
     (
       kcalPerG: 1.3,
+      pR: 0.09, cR: 0.85, fR: 0.06, // rice/pasta profile
       keywords: [
         'rice',
         'pasta',
@@ -173,15 +212,19 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       ]
     ),
     // Purple yam — much denser than potato due to higher starch and sugar
-    (kcalPerG: 1.4, keywords: ['ube', 'ubi']),
+    (kcalPerG: 1.4, pR: 0.06, cR: 0.90, fR: 0.04, keywords: ['ube', 'ubi']),
     // Root vegetables / tubers — denser than leafy veg, lighter than grains
     (
       kcalPerG: 0.8,
+      pR: 0.08,
+      cR: 0.88,
+      fR: 0.04,
       keywords: ['potato', 'camote', 'yam', 'cassava', 'kamote', 'gabi']
     ),
     // Legumes and soy — before generic protein so "tofu" doesn't fall to default
     (
       kcalPerG: 0.9,
+      pR: 0.35, cR: 0.42, fR: 0.23, // moderate protein + carbs
       keywords: [
         'tofu',
         'tokwa',
@@ -194,15 +237,23 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       ]
     ),
     // Light fried rolls — before generic protein fallback
-    (kcalPerG: 1.0, keywords: ['lumpia', 'lumpiang']),
-    // Filipino clear soups — before meat/fish so "sinigang na baboy" → soup, not pork
+    (
+      kcalPerG: 1.0,
+      pR: 0.12,
+      cR: 0.55,
+      fR: 0.33,
+      keywords: ['lumpia', 'lumpiang']
+    ),
+    // Filipino clear soups — before meat/fish so "sinigang na baboy" → soup
     (
       kcalPerG: 0.65,
+      pR: 0.30, cR: 0.25, fR: 0.15, // mostly water + veg
       keywords: ['sinigang', 'tinola', 'nilaga', 'bulalo', 'sopas']
     ),
-    // Filipino braised stews — before generic meat so "chicken adobo" → stew, not raw chicken
+    // Filipino braised stews — before generic meat so "chicken adobo" → stew
     (
       kcalPerG: 1.5,
+      pR: 0.35, cR: 0.08, fR: 0.57, // protein + fat (less starch)
       keywords: [
         'adobo',
         'mechado',
@@ -217,6 +268,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     // ── Proteins ──────────────────────────────────────────────────────────
     (
       kcalPerG: 2.0,
+      pR: 0.55, cR: 0.00, fR: 0.45, // protein-dominant; no carbs in meat
       keywords: [
         'beef',
         'pork',
@@ -233,6 +285,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     ),
     (
       kcalPerG: 1.4,
+      pR: 0.65, cR: 0.00, fR: 0.35, // fish is very lean
       keywords: [
         'fish',
         'salmon',
@@ -248,14 +301,20 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         'hipon'
       ]
     ),
-    (kcalPerG: 1.5, keywords: ['egg', 'itlog']),
     (
       kcalPerG: 1.5,
+      pR: 0.35, cR: 0.05, fR: 0.60, // egg: protein + yolk fat
+      keywords: ['egg', 'itlog']
+    ),
+    (
+      kcalPerG: 1.5,
+      pR: 0.22, cR: 0.28, fR: 0.50, // dairy: mixed macro
       keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas', 'kefir']
     ),
     // ── Vegetables / Fruits / Broths ──────────────────────────────────────
     (
       kcalPerG: 0.35,
+      pR: 0.25, cR: 0.70, fR: 0.05, // mostly carbs + small protein
       keywords: [
         'vegetable',
         'salad',
@@ -282,6 +341,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     ),
     (
       kcalPerG: 0.6,
+      pR: 0.04, cR: 0.93, fR: 0.03, // fruit: almost pure carbs
       keywords: [
         'fruit',
         'apple',
@@ -295,7 +355,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         'prutas'
       ]
     ),
-    (kcalPerG: 0.5, keywords: ['broth', 'sabaw', 'soup']),
+    (
+      kcalPerG: 0.5,
+      pR: 0.25, cR: 0.15, fR: 0.10, // broth: dilute protein
+      keywords: ['broth', 'sabaw', 'soup']
+    ),
   ];
 
   // ── NLP parser state ─────────────────────────────────────────────────────
@@ -1450,7 +1514,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     final estimatedKcal = _estimateCalories(parsed.name, parsed.grams);
-    final (estProtein, estCarbs, estFat) = _macrosFromCalories(estimatedKcal);
+    final (pR, cR, fR) = _bucketMacroRatios(parsed.name);
+    final (estProtein, estCarbs, estFat) =
+        _macrosFromCalories(estimatedKcal, pR: pR, cR: cR, fR: fR);
     return FoodEntry(
       id: FoodEntry.generateId(),
       name: _formatDisplayName(parsed.name),
@@ -1468,13 +1534,35 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   /// Coarse macro split (15% P / 50% C / 35% F) used when neither the food DB
   /// nor the on-device AI returned macros. Better than logging zero so the
   /// user's daily macro totals stay informative.
-  (double, double, double) _macrosFromCalories(int calories) {
+  ///
+  /// [pR]/[cR]/[fR] are the energy fractions for protein, carbs, fat.
+  /// Defaults to the generic 15/50/35 split when no bucket-specific profile
+  /// is supplied. Callers that know the food category should pass the bucket
+  /// ratios from [_bucketMacroRatios] for accuracy.
+  (double, double, double) _macrosFromCalories(
+    int calories, {
+    double pR = 0.15,
+    double cR = 0.50,
+    double fR = 0.35,
+  }) {
     if (calories <= 0) return (0.0, 0.0, 0.0);
     return (
-      double.parse(((calories * 0.15) / 4).toStringAsFixed(1)),
-      double.parse(((calories * 0.50) / 4).toStringAsFixed(1)),
-      double.parse(((calories * 0.35) / 9).toStringAsFixed(1)),
+      double.parse(((calories * pR) / 4).toStringAsFixed(1)),
+      double.parse(((calories * cR) / 4).toStringAsFixed(1)),
+      double.parse(((calories * fR) / 9).toStringAsFixed(1)),
     );
+  }
+
+  /// Returns the per-bucket energy-fraction profile (pR, cR, fR) for [name].
+  /// Falls back to the generic 15/50/35 split when no bucket keyword matches.
+  (double, double, double) _bucketMacroRatios(String name) {
+    final tokens = name.toLowerCase().split(RegExp(r'\W+')).toSet();
+    for (final bucket in _calorieBuckets) {
+      if (bucket.keywords.any(tokens.contains)) {
+        return (bucket.pR, bucket.cR, bucket.fR);
+      }
+    }
+    return (0.15, 0.50, 0.35); // generic fallback
   }
 
   /// Title-cases food names so they render nicely in the chat feed.
@@ -1880,7 +1968,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
       // Last-ditch: keyword-density estimate with macro split-from-calories.
       final estKcal = _estimateCalories(item.name, item.grams);
-      final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+      final (bpR, bcR, bfR) = _bucketMacroRatios(item.name);
+      final (estProtein, estCarbs, estFat) =
+          _macrosFromCalories(estKcal, pR: bpR, cR: bcR, fR: bfR);
       entries.add(FoodEntry(
         id: FoodEntry.generateId(),
         name: _formatDisplayName(item.name),
@@ -2070,7 +2160,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
       // Canonical-USDA guard: "Egg, Whole, Cooked, Scrambled" is one ingredient,
       // not four. Cloud sometimes decomposes on commas despite prompt instructions.
-      if (items.length > 1 && _cloudLooksLikeCanonicalUsdaName(text)) {
+      if (items.length > 1 && FoodNlpParser.looksLikeUsdaCanonical(text)) {
         final g = _cloudSingleItemExplicitGrams(text) ?? items.first.grams;
         items = [
           ExtractedFoodItem(
@@ -2176,19 +2266,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
                 item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
             loggedAt: DateTime.now(),
           );
-          // Auto-promote even AI estimates when the model was confident.
-          if (item.resolverConfidence >= 0.8 &&
-              m.calories > 0 &&
-              item.grams > 0) {
-            // ignore: unawaited_futures
-            _personalDict.upsert(
-              name: item.name,
-              kcalPer100g: m.calories / (item.grams / 100.0),
-              proteinPer100g: m.proteinG / (item.grams / 100.0),
-              carbsPer100g: m.carbsG / (item.grams / 100.0),
-              fatPer100g: m.fatG / (item.grams / 100.0),
-            );
-          }
+          // H2: do NOT auto-learn open cloud estimates into the personal dict.
+          // A single hallucinated estimate would bypass the DB permanently.
+          // Only DB-resolved picks (with a confirmed food_id) may auto-learn
+          // — see the learnFromEntry path at _learnFromEntry.
         }
 
         if (entry == null) {
@@ -2427,35 +2508,6 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     ).allMatches(text).toList();
     if (matches.length != 1) return null;
     return double.tryParse(matches.first.group(1)!);
-  }
-
-  static bool _cloudLooksLikeCanonicalUsdaName(String text) {
-    // Strip trailing gram weight before checking canonical form.
-    // "Egg, Whole, Cooked, Scrambled 100g" → "Egg, Whole, Cooked, Scrambled"
-    final stripped = text
-        .replaceAll(
-            RegExp(
-              r'\s+\d+(?:\.\d+)?\s*(?:g|gm|gms|gram|grams)\s*$',
-              caseSensitive: false,
-            ),
-            '')
-        .trim();
-    final lower = stripped.toLowerCase().trim();
-    if (lower.length > 40) return false;
-    if (lower.contains(' with ') ||
-        lower.contains(' and ') ||
-        lower.contains(' + ') ||
-        lower.contains(' plus ')) {
-      return false;
-    }
-    if (!lower.contains(',')) return false;
-    final parts = lower.split(',').map((p) => p.trim()).toList();
-    if (parts.length < 2) return false;
-    return parts.every((p) =>
-        p.isNotEmpty &&
-        !p.contains(' ') &&
-        p.length <= 14 &&
-        RegExp(r'^[a-z0-9%]+$').hasMatch(p));
   }
 
   /// Shared commit path for both cloud and on-device branches. Adds
