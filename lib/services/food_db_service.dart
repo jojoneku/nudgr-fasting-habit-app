@@ -211,19 +211,16 @@ class FoodDbService {
   }
 
   Future<List<FoodDbEntry>> _searchLike(String dense) async {
-    final prefix = await _db!.rawQuery(
+    // Prefix LIKE (`dense%`) is index-servable — fast.
+    // The old `%dense%` contains-scan was a full 14k-row scan with no index.
+    // Dropped: the fuzzy-rerank path (Damerau–Levenshtein) already covers the
+    // one-edit typo cases that contained-search was meant to catch.
+    final rows = await _db!.rawQuery(
       'SELECT id, name, category, cal, protein, carbs, fat, aliases '
       'FROM foods WHERE name_norm LIKE ? LIMIT 20',
       ['$dense%'],
     );
-    if (prefix.length >= 20) return prefix.map(FoodDbEntry.fromRow).toList();
-
-    final contains = await _db!.rawQuery(
-      'SELECT id, name, category, cal, protein, carbs, fat, aliases '
-      'FROM foods WHERE name_norm LIKE ? AND name_norm NOT LIKE ? LIMIT ?',
-      ['%$dense%', '$dense%', 20 - prefix.length],
-    );
-    return [...prefix, ...contains].map(FoodDbEntry.fromRow).toList();
+    return rows.map(FoodDbEntry.fromRow).toList();
   }
 }
 

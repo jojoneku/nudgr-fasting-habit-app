@@ -49,6 +49,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   TdeeProfile? _tdeeProfile;
   List<FoodTemplate> _library = [];
 
+  // Memoized getters — cleared automatically on every safeNotify().
+  List<FoodTemplate>? _savedTemplatesCache;
+  List<FoodTemplate>? _recentFoodsCache;
+
   int _goalStreak = 0; // consecutive days calorie goal met
   String? _goalMetDate; // last date calorie goal was met
   int _logStreak = 0; // consecutive days with ≥1 entry
@@ -334,6 +338,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     loadState();
+  }
+
+  @override
+  void safeNotify() {
+    _savedTemplatesCache = null;
+    _recentFoodsCache = null;
+    super.safeNotify();
   }
 
   // ── Core state ───────────────────────────────────────────────────────────────
@@ -825,7 +836,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Food library getters ─────────────────────────────────────────────────────
 
-  List<FoodTemplate> get savedTemplates {
+  List<FoodTemplate> get savedTemplates =>
+      _savedTemplatesCache ??= _computeSavedTemplates();
+
+  List<FoodTemplate> _computeSavedTemplates() {
     final sorted = List<FoodTemplate>.from(_library);
     sorted.sort((a, b) {
       if (a.isPinned == b.isPinned) return 0;
@@ -834,7 +848,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     return List.unmodifiable(sorted);
   }
 
-  List<FoodTemplate> get recentFoods {
+  List<FoodTemplate> get recentFoods =>
+      _recentFoodsCache ??= _computeRecentFoods();
+
+  List<FoodTemplate> _computeRecentFoods() {
     final seen = <String>{};
     final recent = <FoodTemplate>[];
     for (final slot in MealSlot.values) {
@@ -849,7 +866,6 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         }
       }
     }
-    // Also pull from history if recent list is short
     for (final log in _history) {
       if (recent.length >= 10) break;
       for (final entry in log.allEntries.reversed) {

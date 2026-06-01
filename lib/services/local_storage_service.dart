@@ -41,6 +41,12 @@ class LocalStorageService extends StorageService {
   /// `u/$_userId/` to prevent cross-user data leakage on shared devices.
   String? _userId;
 
+  // In-memory ID caches so finance save methods don't re-decode the full blob
+  // just to compute the sync-queue diff. Populated by the matching load() call
+  // and updated on each save. Cleared when the user namespace changes.
+  Set<String>? _cachedTransactionIds;
+  Set<String>? _cachedAccountIds;
+
   /// Scopes a prefs key to the current user. Device-level keys (theme, etc.)
   /// bypass this and use the base constant directly.
   String _k(String base) => _userId != null ? 'u/$_userId/$base' : base;
@@ -64,6 +70,8 @@ class LocalStorageService extends StorageService {
     }
     _userId = null;
     _syncQueue = null;
+    _cachedTransactionIds = null;
+    _cachedAccountIds = null;
   }
 
   /// Fired by SyncService after pullAll() — lets home_screen reload presenters.
@@ -86,6 +94,22 @@ class LocalStorageService extends StorageService {
     if (!_applyingRemote) {
       _syncQueue?.markDirty(domain, key, op: op);
       onDirty?.call();
+    }
+  }
+
+  /// Lightweight helper: reads a JSON array from [key] and extracts only the
+  /// `id` field of each object. Used to seed the in-memory ID caches without
+  /// deserializing full model objects.
+  Future<Set<String>> _loadIdSetFromKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(key));
+    if (raw == null) return {};
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => (e as Map<String, dynamic>)['id'] as String)
+          .toSet();
+    } catch (_) {
+      return {};
     }
   }
 
@@ -694,11 +718,10 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveAccounts(List<FinancialAccount> accounts) async {
     if (!_applyingRemote) {
-      final existing = await loadAccounts();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(accounts.map((e) => e.id).toSet());
+      final newIds = accounts.map((e) => e.id).toSet();
+      final oldIds = _cachedAccountIds ??
+          await _loadIdSetFromKey(StorageService.keyFinancialAccounts);
+      final removed = oldIds.difference(newIds);
       for (final id in removed) {
         _syncQueue?.markDirty(SyncDomain.financeRecord, 'finance_accounts/$id',
             op: SyncOp.delete);
@@ -707,6 +730,7 @@ class LocalStorageService extends StorageService {
         _syncQueue?.markDirty(
             SyncDomain.financeRecord, 'finance_accounts/${a.id}');
       }
+      _cachedAccountIds = newIds;
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_k(StorageService.keyFinancialAccounts),
@@ -717,11 +741,16 @@ class LocalStorageService extends StorageService {
   Future<List<FinancialAccount>> loadAccounts() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_k(StorageService.keyFinancialAccounts));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedAccountIds = {};
+      return [];
+    }
     try {
-      return (jsonDecode(raw) as List)
+      final list = (jsonDecode(raw) as List)
           .map((e) => FinancialAccount.fromJson(e as Map<String, dynamic>))
           .toList();
+      _cachedAccountIds = list.map((e) => e.id).toSet();
+      return list;
     } catch (e) {
       debugPrint('LocalStorageService: Error loading accounts: $e');
       return [];
@@ -731,11 +760,13 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveTransactions(List<TransactionRecord> transactions) async {
     if (!_applyingRemote) {
-      final existing = await loadTransactions();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(transactions.map((e) => e.id).toSet());
+      final newIds = transactions.map((e) => e.id).toSet();
+      // Use in-memory cache to avoid a full re-decode just for the diff.
+      // On the very first save in a session _cachedTransactionIds is null —
+      // fall back to a lightweight ID-only parse (no full object construction).
+      final oldIds = _cachedTransactionIds ??
+          await _loadIdSetFromKey(StorageService.keyTransactions);
+      final removed = oldIds.difference(newIds);
       for (final id in removed) {
         _syncQueue?.markDirty(
             SyncDomain.financeRecord, 'finance_transactions/$id',
@@ -745,6 +776,7 @@ class LocalStorageService extends StorageService {
         _syncQueue?.markDirty(
             SyncDomain.financeRecord, 'finance_transactions/${t.id}');
       }
+      _cachedTransactionIds = newIds;
     }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_k(StorageService.keyTransactions),
@@ -755,11 +787,16 @@ class LocalStorageService extends StorageService {
   Future<List<TransactionRecord>> loadTransactions() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_k(StorageService.keyTransactions));
-    if (raw == null) return [];
+    if (raw == null) {
+      _cachedTransactionIds = {};
+      return [];
+    }
     try {
-      return (jsonDecode(raw) as List)
+      final list = (jsonDecode(raw) as List)
           .map((e) => TransactionRecord.fromJson(e as Map<String, dynamic>))
           .toList();
+      _cachedTransactionIds = list.map((e) => e.id).toSet();
+      return list;
     } catch (e) {
       debugPrint('LocalStorageService: Error loading transactions: $e');
       return [];

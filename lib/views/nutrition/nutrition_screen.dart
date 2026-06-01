@@ -29,12 +29,11 @@ class NutritionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (context, _) => _NutritionBody(
-        presenter: presenter,
-        aiCoachPresenter: aiCoachPresenter,
-      ),
+    // No ListenableBuilder here — the Scaffold and AppBar are static.
+    // Each body section has its own scoped ListenableBuilder (see _NutritionBody).
+    return _NutritionBody(
+      presenter: presenter,
+      aiCoachPresenter: aiCoachPresenter,
     );
   }
 }
@@ -117,10 +116,24 @@ class _NutritionBody extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _WeekStrip(presenter: presenter),
-            _StatSection(presenter: presenter),
-            Expanded(child: _ChatFeed(presenter: presenter)),
-            _ChatInputBar(presenter: presenter),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _WeekStrip(presenter: presenter),
+            ),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _StatSection(presenter: presenter),
+            ),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: presenter,
+                builder: (_, __) => _ChatFeed(presenter: presenter),
+              ),
+            ),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _ChatInputBar(presenter: presenter),
+            ),
           ],
         ),
       ),
