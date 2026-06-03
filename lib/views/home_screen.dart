@@ -67,6 +67,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   SyncPresenter? _syncPresenter;
   SyncQueue? _syncQueue;
   NutritionPresenter? _nutritionPresenter;
+  String? _currentUserId;
 
   @override
   void initState() {
@@ -186,6 +187,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
   Future<void> _initSync(String userId) async {
     if (_syncService != null) return;
+    _currentUserId = userId;
+    _storage.setUserId(userId);
+    await _syncQueue!.load(userId: userId);
     _syncService = SyncService(
       supabase: Supabase.instance.client,
       storage: _storage,
@@ -207,12 +211,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   void _tearDownSync() {
+    final userId = _currentUserId;
+    _currentUserId = null;
     _storage.onDirty = null;
     _storage.onRemoteDataApplied = null;
     _syncService?.dispose();
     _syncPresenter?.dispose();
     _syncService = null;
     _syncPresenter = null;
+    // Wipe all user-scoped prefs and reset the in-memory sync queue so a
+    // subsequent sign-in by a different user starts from a clean slate.
+    if (userId != null) {
+      _storage.clearUserData();
+    }
+    _syncQueue?.clearAll();
     if (mounted) setState(() {});
   }
 
