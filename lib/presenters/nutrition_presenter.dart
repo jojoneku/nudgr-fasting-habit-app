@@ -21,6 +21,7 @@ import '../models/meal_slot.dart';
 import '../models/nutrition_goals.dart';
 import '../models/tdee_profile.dart';
 import '../services/ai_coach_service.dart';
+import '../services/cloud_ai_coach_service.dart';
 import '../services/food_db_service.dart';
 import '../services/notification_service.dart';
 import '../models/personal_food_entry.dart';
@@ -1111,8 +1112,21 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       final result =
           await cloud.parseFoodWithCandidates('1 cup of rice', candidates);
       sw.stop();
-      if (result == null)
-        return 'parseFoodWithCandidates returned null  (${sw.elapsedMilliseconds}ms)';
+      if (result == null) {
+        // High-signal diagnostic: show the raw HTTP response so we can
+        // tell whether this is auth (401), rate-limit (429), or server error.
+        String ping = '';
+        if (cloud is CloudAiCoachService) {
+          ping = await cloud.debugPing('parseFoodWithCandidates', {
+            'text': '1 cup of rice',
+            'candidates': candidates
+                .take(3)
+                .map((c) => {'food_id': c.entry.id, 'name': c.entry.name})
+                .toList(),
+          });
+        }
+        return 'null (${sw.elapsedMilliseconds}ms)\n$ping';
+      }
       final items =
           result.items.map((i) => '${i.name} (${i.grams}g)').join(', ');
       return '✓ ${sw.elapsedMilliseconds}ms\n$items';

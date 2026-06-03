@@ -89,6 +89,29 @@ class CloudAiCoachService implements AiCoachService {
     }
   }
 
+  /// Returns a raw diagnostic string: HTTP status + first 200 chars of body.
+  /// Only used by [NutritionPresenter.debugTestCloudAi].
+  Future<String> debugPing(String op, Map<String, dynamic> payload) async {
+    if (!isAvailable) {
+      return 'isAvailable=false  token=${tokenProvider() != null}';
+    }
+    try {
+      final response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: _headers,
+            body: jsonEncode({'op': op, 'payload': payload}),
+          )
+          .timeout(const Duration(seconds: _timeoutSeconds));
+      final body = response.body.length > 200
+          ? '${response.body.substring(0, 200)}…'
+          : response.body;
+      return 'HTTP ${response.statusCode}: $body';
+    } catch (e) {
+      return 'error: $e';
+    }
+  }
+
   // ── Respond (chat) ────────────────────────────────────────────────────────
 
   @override

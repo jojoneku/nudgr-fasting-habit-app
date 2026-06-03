@@ -5,6 +5,7 @@ on:
     branches: [main, dev, 'release-version-bump-*']
   push:
     branches: [main, dev, hotfix]
+  workflow_dispatch:
 
 jobs:
   analyze_format:
