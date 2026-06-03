@@ -4,9 +4,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
-  AuthService._();
-  static final AuthService instance = AuthService._();
-
   GoogleSignIn? _googleSignIn;
 
   /// Initialises Supabase. Call once at app startup before any auth checks.

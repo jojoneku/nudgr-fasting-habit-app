@@ -29,12 +29,11 @@ class NutritionScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: presenter,
-      builder: (context, _) => _NutritionBody(
-        presenter: presenter,
-        aiCoachPresenter: aiCoachPresenter,
-      ),
+    // No ListenableBuilder here — the Scaffold and AppBar are static.
+    // Each body section has its own scoped ListenableBuilder (see _NutritionBody).
+    return _NutritionBody(
+      presenter: presenter,
+      aiCoachPresenter: aiCoachPresenter,
     );
   }
 }
@@ -117,10 +116,24 @@ class _NutritionBody extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _WeekStrip(presenter: presenter),
-            _StatSection(presenter: presenter),
-            Expanded(child: _ChatFeed(presenter: presenter)),
-            _ChatInputBar(presenter: presenter),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _WeekStrip(presenter: presenter),
+            ),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _StatSection(presenter: presenter),
+            ),
+            Expanded(
+              child: ListenableBuilder(
+                listenable: presenter,
+                builder: (_, __) => _ChatFeed(presenter: presenter),
+              ),
+            ),
+            ListenableBuilder(
+              listenable: presenter,
+              builder: (_, __) => _ChatInputBar(presenter: presenter),
+            ),
           ],
         ),
       ),
@@ -256,8 +269,9 @@ class _WeekStripState extends State<_WeekStrip> {
                   selectedDate: widget.presenter.selectedDate,
                   weekStart: _weekStart,
                   onSelected: (day) {
-                    if (!day.isAfter(today))
+                    if (!day.isAfter(today)) {
                       widget.presenter.setSelectedDate(day);
+                    }
                   },
                 ),
               ),
@@ -1488,7 +1502,7 @@ class _FoodItemDisplay extends StatelessWidget {
               ),
               const SizedBox(width: 4),
             ],
-            if (!item.estimationSource.isTrusted) ...[
+            if (item.estimationSource.showBadge) ...[
               Tooltip(
                 message: _sourceTooltip(item.estimationSource),
                 child: _NutriBadge(
@@ -1548,8 +1562,14 @@ class _FoodItemDisplay extends StatelessWidget {
   }
 
   String _sourceTooltip(EstimationSource s) => switch (s) {
+        EstimationSource.cloudAi => 'Matched by Cloud AI (Bedrock)',
+        EstimationSource.cloudAiFallback =>
+          'Cloud AI estimate — macros are approximate',
+        EstimationSource.localAi => 'Matched by on-device AI',
         EstimationSource.aiPerItem => 'AI estimate',
         EstimationSource.keywordDensity => 'Rough estimate from keyword match',
+        EstimationSource.personalDict => 'From your learned foods',
+        EstimationSource.userManual => 'Manually set by you',
         _ => '',
       };
 }

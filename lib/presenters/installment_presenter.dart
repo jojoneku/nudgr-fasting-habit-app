@@ -9,11 +9,12 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 // Auto-created system category for installment payments.
 const _installmentCategoryId = '__installment__';
 
-class InstallmentPresenter extends ChangeNotifier {
+class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   InstallmentPresenter(
       StorageService storage, LedgerPresenter ledger, StatsPresenter stats)
       : _storage = storage,
@@ -38,7 +39,7 @@ class InstallmentPresenter extends ChangeNotifier {
 
   void setMonth(String month) {
     _selectedMonth = month;
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Installment views ────────────────────────────────────────────────────────
@@ -80,10 +81,10 @@ class InstallmentPresenter extends ChangeNotifier {
 
   Future<void> load() async {
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
     _installments = await _storage.loadInstallments();
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -91,7 +92,7 @@ class InstallmentPresenter extends ChangeNotifier {
   Future<void> addInstallment(Installment i) async {
     _installments = [..._installments, i];
     await _storage.saveInstallments(_installments);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> updateInstallment(Installment i) async {
@@ -99,7 +100,7 @@ class InstallmentPresenter extends ChangeNotifier {
       for (final inst in _installments) inst.id == i.id ? i : inst
     ];
     await _storage.saveInstallments(_installments);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> deleteInstallment(String id) async {
@@ -110,7 +111,7 @@ class InstallmentPresenter extends ChangeNotifier {
     }
     _installments = _installments.where((i) => i.id != id).toList();
     await _storage.saveInstallments(_installments);
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Mark paid / unpaid ───────────────────────────────────────────────────────
@@ -145,7 +146,7 @@ class InstallmentPresenter extends ChangeNotifier {
     );
     if (allDuePaid && dueThisMonth.isNotEmpty) await _stats.addXp(20);
 
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> markUnpaid(String installmentId) async {
@@ -154,7 +155,7 @@ class InstallmentPresenter extends ChangeNotifier {
       orElse: () => throw StateError('no_txn'),
     );
     await _ledger.deleteTransaction(txn.id);
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────

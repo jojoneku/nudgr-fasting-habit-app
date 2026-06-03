@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -71,7 +70,7 @@ class SettingsScreen extends StatelessWidget {
                   if (nutritionPresenter != null) _foodLearningSection(context),
                   _dataSection(context),
                   _aboutSection(context),
-                  if (kDebugMode) _developerSection(context),
+                  _developerSection(context),
                 ],
               ),
             ),
@@ -654,6 +653,31 @@ class SettingsScreen extends StatelessWidget {
             }
           },
         ),
+        // TEMP — remove once cloud AI is verified working in prod
+        if (nutritionPresenter != null)
+          AppListTile(
+            insetGrouped: true,
+            leading: const AppIconBadge(icon: Icons.cloud),
+            title: const Text('Test Cloud AI (Bedrock)'),
+            subtitle: const Text('Parses "1 cup of rice" via cloud tier'),
+            onTap: () async {
+              final result = await nutritionPresenter!.debugTestCloudAi();
+              if (!context.mounted) return;
+              showDialog<void>(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('Cloud AI result'),
+                  content: SelectableText(result),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
       ],
     );
   }

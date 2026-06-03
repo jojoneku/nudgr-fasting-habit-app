@@ -10,10 +10,11 @@ import '../presenters/stats_presenter.dart';
 import '../services/ai_coach_service.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
+import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
 
-class AiCoachPresenter extends ChangeNotifier {
+class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _stats;
   final FastingPresenter _fasting;
   final NutritionPresenter? _nutrition;
@@ -66,7 +67,7 @@ class AiCoachPresenter extends ChangeNotifier {
     _entryPoint = entryPoint;
     _messages.clear();
     _errorMessage = null;
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Send ──────────────────────────────────────────────────────────────────
@@ -78,12 +79,12 @@ class AiCoachPresenter extends ChangeNotifier {
     _messages.add(userMsg);
     _errorMessage = null;
     _isResponding = true;
-    notifyListeners();
+    safeNotify();
 
     // Add streaming placeholder for assistant.
     final assistantMsg = AiChatMessage.assistantStreaming();
     _messages.add(assistantMsg);
-    notifyListeners();
+    safeNotify();
 
     try {
       final context = _buildContext();
@@ -94,9 +95,10 @@ class AiCoachPresenter extends ChangeNotifier {
         context: context,
         isThinking: _isThinkingEnabled,
       )) {
+        if (isDisposed) break; // sheet dismissed mid-stream — stop updating
         buffer.write(token);
         _updateLastMessage(buffer.toString(), isStreaming: true);
-        notifyListeners();
+        safeNotify();
       }
 
       _updateLastMessage(buffer.toString(), isStreaming: false);
@@ -107,7 +109,7 @@ class AiCoachPresenter extends ChangeNotifier {
     } finally {
       _isResponding = false;
       _trimHistory();
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -139,14 +141,14 @@ class AiCoachPresenter extends ChangeNotifier {
     if (_service is! OnDeviceAiCoachService) {
       _service = OnDeviceAiCoachService();
     }
-    notifyListeners();
+    safeNotify();
     try {
       await _service.downloadModel(onProgress: (_) => notifyListeners());
     } catch (e) {
       _errorMessage = 'Download failed. Check your connection and try again.';
       debugPrint('AiCoachPresenter.downloadModel error: $e');
     }
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Tier ─────────────────────────────────────────────────────────────────
@@ -154,7 +156,7 @@ class AiCoachPresenter extends ChangeNotifier {
   void setTier(AiCoachTier tier) {
     if (_activeTier == tier) return;
     _activeTier = tier;
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Clear ─────────────────────────────────────────────────────────────────
@@ -162,17 +164,22 @@ class AiCoachPresenter extends ChangeNotifier {
   void clearHistory() {
     _messages.clear();
     _errorMessage = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void clearError() {
     _errorMessage = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void toggleThinking() {
     _isThinkingEnabled = !_isThinkingEnabled;
-    notifyListeners();
+    safeNotify();
+  }
+
+  @override
+  void dispose() {
+    super.dispose(); // SafeNotifier.dispose() → _disposed = true
   }
 
   // ── Internals ─────────────────────────────────────────────────────────────
@@ -182,7 +189,7 @@ class AiCoachPresenter extends ChangeNotifier {
     await svc.init();
     _service = svc;
     _isInitializing = false;
-    notifyListeners();
+    safeNotify();
   }
 
   AiCoachContext _buildContext() {

@@ -21,8 +21,8 @@ import 'ai_coach_service.dart';
 ///   flutter run --dart-define=AI_COACH_ENDPOINT=https://xxxx.execute-api.amazonaws.com/v1/coach
 ///
 /// [tokenProvider] must return the current Supabase JWT (may be null when
-/// signed out). The Lambda's JWT authorizer rejects calls without a valid
-/// Bearer token, so all ops become no-ops when the token is absent.
+/// signed out). The API Gateway JWT authorizer rejects unauthenticated calls
+/// with 401, so all ops become no-ops when the token is absent.
 class CloudAiCoachService implements AiCoachService {
   static const _endpoint = String.fromEnvironment('AI_COACH_ENDPOINT');
   static const _timeoutSeconds = 30;
@@ -185,6 +185,7 @@ class CloudAiCoachService implements AiCoachService {
           resolvedFoodId: raw['food_id'] as String?,
           resolverConfidence: (raw['confidence'] as num?)?.toDouble() ?? 0.0,
           estimatedMacros: macros,
+          macroFallback: raw['macro_fallback'] as bool? ?? false,
         ));
       }
       return ParseFoodResult(

@@ -14,8 +14,9 @@ import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dar
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
-class BillsReceivablesPresenter extends ChangeNotifier {
+class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   BillsReceivablesPresenter(
     StorageService storage,
     LedgerPresenter ledger,
@@ -110,7 +111,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   Future<void> setMonth(String month) async {
     _selectedMonth = month;
     await _autoGenerateRecurringIfNeeded(month);
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
       await _notifications.cancelBillsReminder();
     }
 
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── Bill CRUD ────────────────────────────────────────────────────────────────
@@ -136,21 +137,21 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   Future<void> addBill(Bill bill) async {
     _allBills = [..._allBills, bill];
     await _storage.saveBills(_allBills);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
   Future<void> updateBill(Bill bill) async {
     _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
     await _storage.saveBills(_allBills);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
   Future<void> deleteBill(String id) async {
     _allBills = _allBills.where((b) => b.id != id).toList();
     await _storage.saveBills(_allBills);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -179,7 +180,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
     ));
     await _storage.saveBills(_allBills);
     await _checkAllBillsPaidXp();
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -188,7 +189,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   Future<void> addReceivable(Receivable receivable) async {
     _allReceivables = [..._allReceivables, receivable];
     await _storage.saveReceivables(_allReceivables);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -197,14 +198,14 @@ class BillsReceivablesPresenter extends ChangeNotifier {
       for (final r in _allReceivables) r.id == receivable.id ? receivable : r,
     ];
     await _storage.saveReceivables(_allReceivables);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
   Future<void> deleteReceivable(String id) async {
     _allReceivables = _allReceivables.where((r) => r.id != id).toList();
     await _storage.saveReceivables(_allReceivables);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -232,7 +233,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
       transactionId: txn.id,
     ));
     await _storage.saveReceivables(_allReceivables);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -241,7 +242,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
   Future<void> addBudgetedExpense(BudgetedExpense expense) async {
     _allExpenses = [..._allExpenses, expense];
     await _storage.saveBudgetedExpenses(_allExpenses);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -250,14 +251,14 @@ class BillsReceivablesPresenter extends ChangeNotifier {
       for (final e in _allExpenses) e.id == expense.id ? expense : e,
     ];
     await _storage.saveBudgetedExpenses(_allExpenses);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
   Future<void> deleteBudgetedExpense(String id) async {
     _allExpenses = _allExpenses.where((e) => e.id != id).toList();
     await _storage.saveBudgetedExpenses(_allExpenses);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 
@@ -283,7 +284,7 @@ class BillsReceivablesPresenter extends ChangeNotifier {
       transactionId: txn.id,
     ));
     await _storage.saveBudgetedExpenses(_allExpenses);
-    notifyListeners();
+    safeNotify();
     await _notifyDependents();
   }
 

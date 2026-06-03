@@ -27,14 +27,16 @@ import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
 import '../services/personal_food_dictionary.dart';
 import '../services/storage_service.dart';
-import '../utils/body_fat_calculator.dart' as bfcalc;
+import '../utils/body_composition_calculator.dart';
+import '../utils/calorie_density_estimator.dart' as cde;
 import '../utils/exercise_nlp_parser.dart';
 import '../utils/food_match_scorer.dart';
 import '../utils/food_nlp_parser.dart';
 import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
+import '../utils/safe_notifier.dart';
 
-class NutritionPresenter extends ChangeNotifier {
+class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _statsPresenter;
   final FastingPresenter _fastingPresenter;
   final StorageService _storage;
@@ -47,6 +49,10 @@ class NutritionPresenter extends ChangeNotifier {
   List<DailyNutritionLog> _history = [];
   TdeeProfile? _tdeeProfile;
   List<FoodTemplate> _library = [];
+
+  // Memoized getters — cleared automatically on every safeNotify().
+  List<FoodTemplate>? _savedTemplatesCache;
+  List<FoodTemplate>? _recentFoodsCache;
 
   int _goalStreak = 0; // consecutive days calorie goal met
   String? _goalMetDate; // last date calorie goal was met
@@ -71,227 +77,7 @@ class NutritionPresenter extends ChangeNotifier {
   // ── Personal food dictionary ──────────────────────────────────────────────
   late final PersonalFoodDictionary _personalDict;
 
-  // ── Calorie density buckets (keyword fallback for unknown foods) ─────────
-  // Order matters: first matching bucket wins. Specific dish keywords (sinigang,
-  // adobo) must appear BEFORE their ingredient keywords (baboy, chicken) so the
-  // dish context overrides the raw-ingredient density.
-  static const _calorieBuckets = [
-    // ── Pure fat / condiments ──────────────────────────────────────────────
-    (
-      kcalPerG: 7.5,
-      keywords: ['oil', 'butter', 'ghee', 'lard', 'margarine', 'mantika']
-    ),
-    (
-      kcalPerG: 5.5,
-      keywords: [
-        'nut',
-        'almond',
-        'peanut',
-        'cashew',
-        'pistachio',
-        'walnut',
-        'seed',
-        'buto'
-      ]
-    ),
-    // Fried/cured pork — before generic meat so "lechon kawali" beats "pork"
-    (
-      kcalPerG: 4.0,
-      keywords: ['lechon', 'kawali', 'chicharon', 'liempo', 'bagnet']
-    ),
-    // Cured/processed meats — before generic meat (2.0) so "longganisa" beats "pork"
-    (
-      kcalPerG: 3.0,
-      keywords: ['longganisa', 'tocino', 'bacon', 'ham', 'salami', 'pepperoni']
-    ),
-    // Protein powder — before dairy so "whey protein" beats "cream"
-    (kcalPerG: 4.0, keywords: ['whey', 'casein']),
-    (
-      kcalPerG: 4.5,
-      keywords: [
-        'cake',
-        'cookie',
-        'biscuit',
-        'pastry',
-        'donut',
-        'chocolate',
-        'candy',
-        'chips',
-        'cracker'
-      ]
-    ),
-    (
-      kcalPerG: 3.5,
-      keywords: ['sugar', 'syrup', 'honey', 'jam', 'jelly', 'asukal']
-    ),
-    // Fried starchy foods — separate from generic chips/cake
-    (kcalPerG: 3.2, keywords: ['fries', 'churros']),
-    // Baked goods lighter than cake — before fruit so "banana muffin" → muffin, not banana
-    (kcalPerG: 3.0, keywords: ['muffin', 'brownie', 'waffle', 'pancake']),
-    // Bread and bread-like baked goods — higher density than cooked rice
-    (
-      kcalPerG: 2.3,
-      keywords: [
-        'bread',
-        'tinapay',
-        'pandesal',
-        'bun',
-        'toast',
-        'bagel',
-        'pita',
-        'ensaymada',
-        'monay',
-        'loaf'
-      ]
-    ),
-    // Stir-fried noodle dishes (dry) — denser than soup-based noodles
-    (kcalPerG: 2.0, keywords: ['pansit', 'pancit']),
-    // Rice porridge / congee — mostly water, much lighter than plain rice
-    (kcalPerG: 0.85, keywords: ['goto', 'lugaw']),
-    // Dry grain kernels — raw oats, granola (before cooked starch bucket)
-    (kcalPerG: 3.89, keywords: ['oat', 'granola']),
-    // ── Starchy carbs ─────────────────────────────────────────────────────
-    (
-      kcalPerG: 1.3,
-      keywords: [
-        'rice',
-        'pasta',
-        'noodle',
-        'spaghetti',
-        'flour',
-        'cereal',
-        'kanin',
-        'bigas',
-        'sotanghon',
-        'mami',
-        'arroz'
-      ]
-    ),
-    // Purple yam — much denser than potato due to higher starch and sugar
-    (kcalPerG: 1.4, keywords: ['ube', 'ubi']),
-    // Root vegetables / tubers — denser than leafy veg, lighter than grains
-    (
-      kcalPerG: 0.8,
-      keywords: ['potato', 'camote', 'yam', 'cassava', 'kamote', 'gabi']
-    ),
-    // Legumes and soy — before generic protein so "tofu" doesn't fall to default
-    (
-      kcalPerG: 0.9,
-      keywords: [
-        'tofu',
-        'tokwa',
-        'monggo',
-        'bean',
-        'lentil',
-        'garbanzos',
-        'chickpea',
-        'edamame'
-      ]
-    ),
-    // Light fried rolls — before generic protein fallback
-    (kcalPerG: 1.0, keywords: ['lumpia', 'lumpiang']),
-    // Filipino clear soups — before meat/fish so "sinigang na baboy" → soup, not pork
-    (
-      kcalPerG: 0.65,
-      keywords: ['sinigang', 'tinola', 'nilaga', 'bulalo', 'sopas']
-    ),
-    // Filipino braised stews — before generic meat so "chicken adobo" → stew, not raw chicken
-    (
-      kcalPerG: 1.5,
-      keywords: [
-        'adobo',
-        'mechado',
-        'caldereta',
-        'afritada',
-        'menudo',
-        'pochero',
-        'dinuguan',
-        'kare'
-      ]
-    ),
-    // ── Proteins ──────────────────────────────────────────────────────────
-    (
-      kcalPerG: 2.0,
-      keywords: [
-        'beef',
-        'pork',
-        'chicken',
-        'turkey',
-        'lamb',
-        'meat',
-        'manok',
-        'baboy',
-        'baka',
-        'hotdog',
-        'sausage'
-      ]
-    ),
-    (
-      kcalPerG: 1.4,
-      keywords: [
-        'fish',
-        'salmon',
-        'tuna',
-        'tilapia',
-        'bangus',
-        'sardine',
-        'shrimp',
-        'crab',
-        'squid',
-        'seafood',
-        'isda',
-        'hipon'
-      ]
-    ),
-    (kcalPerG: 1.5, keywords: ['egg', 'itlog']),
-    (
-      kcalPerG: 1.5,
-      keywords: ['milk', 'cheese', 'yogurt', 'cream', 'gatas', 'kefir']
-    ),
-    // ── Vegetables / Fruits / Broths ──────────────────────────────────────
-    (
-      kcalPerG: 0.35,
-      keywords: [
-        'vegetable',
-        'salad',
-        'broccoli',
-        'spinach',
-        'cabbage',
-        'carrot',
-        'kangkong',
-        'sitaw',
-        'gulay',
-        'ampalaya',
-        'talong',
-        'eggplant',
-        'aubergine',
-        'okra',
-        'cucumber',
-        'pepino',
-        'pechay',
-        'onion',
-        'sibuyas',
-        'garlic',
-        'bawang'
-      ]
-    ),
-    (
-      kcalPerG: 0.6,
-      keywords: [
-        'fruit',
-        'apple',
-        'banana',
-        'mango',
-        'orange',
-        'grape',
-        'watermelon',
-        'saging',
-        'mangga',
-        'prutas'
-      ]
-    ),
-    (kcalPerG: 0.5, keywords: ['broth', 'sabaw', 'soup']),
-  ];
+  // ── Calorie density estimation — see lib/utils/calorie_density_estimator.dart
 
   // ── NLP parser state ─────────────────────────────────────────────────────
   bool _isParsing = false;
@@ -308,8 +94,6 @@ class NutritionPresenter extends ChangeNotifier {
   List<ChatMessage> _chatMessages = [];
   bool _isChatParsing = false;
   String? _chatParseError;
-  bool _disposed = false;
-
   // ── Matcher feedback (telemetry, local-only) ─────────────────────────────
   // Loaded once from storage on init; appended to in-memory and persisted on
   // every event so the curation backlog survives app restarts.
@@ -338,9 +122,10 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   @override
-  void dispose() {
-    _disposed = true;
-    super.dispose();
+  void safeNotify() {
+    _savedTemplatesCache = null;
+    _recentFoodsCache = null;
+    super.safeNotify();
   }
 
   // ── Core state ───────────────────────────────────────────────────────────────
@@ -354,11 +139,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   List<WeightEntry> get weightLog => _weightLog;
   WeightEntry? get latestWeight => _weightLog.isEmpty ? null : _weightLog.last;
-  double? get weightDelta {
-    if (_weightLog.length < 2) return null;
-    return _weightLog.last.weightKg -
-        _weightLog[_weightLog.length - 2].weightKg;
-  }
+  double? get weightDelta => BodyCompositionCalculator.weightDelta(_weightLog);
 
   // ── Body measurement getters ─────────────────────────────────────────────────
 
@@ -366,31 +147,11 @@ class NutritionPresenter extends ChangeNotifier {
   BodyMeasurementEntry? get latestMeasurement =>
       _measurementLog.isEmpty ? null : _measurementLog.last;
 
-  double? get waistDelta {
-    final waistEntries =
-        _measurementLog.where((e) => e.waistCm != null).toList();
-    if (waistEntries.length < 2) return null;
-    return waistEntries.last.waistCm! -
-        waistEntries[waistEntries.length - 2].waistCm!;
-  }
+  double? get waistDelta =>
+      BodyCompositionCalculator.waistDelta(_measurementLog);
 
-  MeasurementTrendDirection get waistTrendDirection {
-    final entries = _measurementLog.where((e) => e.waistCm != null).toList();
-    if (entries.length < 4) return MeasurementTrendDirection.insufficient;
-    final recent =
-        entries.length >= 14 ? entries.sublist(entries.length - 14) : entries;
-    final half = recent.length ~/ 2;
-    final firstAvg =
-        recent.sublist(0, half).map((e) => e.waistCm!).reduce((a, b) => a + b) /
-            half;
-    final secondAvg =
-        recent.sublist(half).map((e) => e.waistCm!).reduce((a, b) => a + b) /
-            (recent.length - half);
-    final diff = secondAvg - firstAvg;
-    if (diff < -0.5) return MeasurementTrendDirection.down;
-    if (diff > 0.5) return MeasurementTrendDirection.up;
-    return MeasurementTrendDirection.stable;
-  }
+  MeasurementTrendDirection get waistTrendDirection =>
+      BodyCompositionCalculator.waistTrend(_measurementLog);
 
   MeasurementUnit get measurementUnit => _measurementUnit;
 
@@ -407,81 +168,40 @@ class NutritionPresenter extends ChangeNotifier {
           : displayValue;
 
   /// Both BF% estimates: US Navy (measurement-based) and BMI (profile-based).
-  ({double? navy, double? bmi}) get bodyFatEstimates {
-    final m = latestMeasurement;
-    final profile = _tdeeProfile;
-    if (profile == null) return (navy: null, bmi: null);
-
-    double? navy;
-    if (m != null && m.waistCm != null && m.neckCm != null) {
-      navy = bfcalc.estimateBodyFatPercent(
-        sex: profile.sex,
-        heightCm: profile.heightCm,
-        waistCm: m.waistCm!,
-        neckCm: m.neckCm!,
-        hipsCm: m.hipsCm,
+  ({double? navy, double? bmi}) get bodyFatEstimates =>
+      BodyCompositionCalculator.bodyFatEstimates(
+        profile: _tdeeProfile,
+        latest: latestMeasurement,
       );
-    }
-
-    final bmi = bfcalc.estimateBodyFatPercentBmi(
-      sex: profile.sex,
-      heightCm: profile.heightCm,
-      weightKg: profile.weightKg,
-      ageYears: profile.ageYears,
-    );
-
-    return (navy: navy, bmi: bmi);
-  }
 
   /// Average of Navy + BMI estimates; falls back to whichever is available.
-  double? get estimatedBodyFatPercent {
-    final est = bodyFatEstimates;
-    final navy = est.navy;
-    final bmi = est.bmi;
-    if (navy != null && bmi != null) return (navy + bmi) / 2;
-    return navy ?? bmi;
-  }
+  double? get estimatedBodyFatPercent =>
+      BodyCompositionCalculator.estimatedBodyFatPercent(
+        profile: _tdeeProfile,
+        latest: latestMeasurement,
+      );
 
   /// Per-entry Navy BF% history for the trend chart.
   /// Only entries that have both waist and neck measurements are included.
-  List<({DateTime date, double bf})> get bodyFatHistory {
-    final profile = _tdeeProfile;
-    if (profile == null) return const [];
-    final result = <({DateTime date, double bf})>[];
-    for (final e in _measurementLog) {
-      if (e.waistCm == null || e.neckCm == null) continue;
-      final bf = bfcalc.estimateBodyFatPercent(
-        sex: profile.sex,
-        heightCm: profile.heightCm,
-        waistCm: e.waistCm!,
-        neckCm: e.neckCm!,
-        hipsCm: e.hipsCm,
+  List<({DateTime date, double bf})> get bodyFatHistory =>
+      BodyCompositionCalculator.bodyFatHistory(
+        profile: _tdeeProfile,
+        measurementLog: _measurementLog,
       );
-      if (bf != null) result.add((date: e.loggedAt, bf: bf));
-    }
-    return result;
-  }
 
   bool get hasWaistChartData =>
-      _measurementLog.where((e) => e.waistCm != null).length >= 2;
+      BodyCompositionCalculator.hasWaistChartData(_measurementLog);
 
-  bool get hasBodyFatChartData => bodyFatHistory.length >= 2;
+  bool get hasBodyFatChartData => BodyCompositionCalculator.hasBodyFatChartData(
+        profile: _tdeeProfile,
+        measurementLog: _measurementLog,
+      );
 
-  bool get hasMeasurementExtraSites {
-    final m = latestMeasurement;
-    if (m == null) return false;
-    return m.neckCm != null ||
-        m.hipsCm != null ||
-        m.chestCm != null ||
-        m.bicepCm != null ||
-        m.thighCm != null;
-  }
+  bool get hasMeasurementExtraSites =>
+      BodyCompositionCalculator.hasMeasurementExtraSites(latestMeasurement);
 
-  double? get totalWaistChangeCm {
-    final entries = _measurementLog.where((e) => e.waistCm != null).toList();
-    if (entries.length < 2) return null;
-    return entries.last.waistCm! - entries.first.waistCm!;
-  }
+  double? get totalWaistChangeCm =>
+      BodyCompositionCalculator.totalWaistChangeCm(_measurementLog);
 
   /// Formatted total waist change ("−2.3 cm", "+1.0 in", or "—").
   String get waistTotalChangeLabel {
@@ -492,19 +212,10 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   /// Formatted body-fat range label ("12–15%", "~14%", or "—").
-  String get bodyFatRangeLabel {
-    final est = bodyFatEstimates;
-    final navy = est.navy;
-    final bmi = est.bmi;
-    if (navy != null && bmi != null) {
-      final lo = min(navy, bmi).toStringAsFixed(0);
-      final hi = max(navy, bmi).toStringAsFixed(0);
-      return lo == hi ? '~$lo%' : '$lo–$hi%';
-    } else if (navy != null || bmi != null) {
-      return '~${(navy ?? bmi)!.toStringAsFixed(0)}%';
-    }
-    return '—';
-  }
+  String get bodyFatRangeLabel => BodyCompositionCalculator.bodyFatRangeLabel(
+        profile: _tdeeProfile,
+        latest: latestMeasurement,
+      );
 
   // ── Calorie getters ──────────────────────────────────────────────────────────
 
@@ -587,252 +298,44 @@ class NutritionPresenter extends ChangeNotifier {
 
   String? get goalLabel => _tdeeProfile?.goalLabel;
 
-  int get sevenDayAvgCalories {
-    final days = history.take(7).where((l) => l.totalCalories > 0).toList();
-    if (days.isEmpty) return 0;
-    return (days.fold(0, (s, l) => s + l.totalCalories) / days.length).round();
-  }
+  int get sevenDayAvgCalories =>
+      BodyCompositionCalculator.sevenDayAvgCalories(history);
 
-  double? get proteinHitRate7d {
-    final goal = _goals.proteinGrams;
-    if (goal == null || goal <= 0) return null;
-    final days = history.take(7).toList();
-    if (days.isEmpty) return null;
-    final hits = days.where((l) => l.totalProtein >= goal).length;
-    return hits / days.length;
-  }
+  double? get proteinHitRate7d => BodyCompositionCalculator.proteinHitRate7d(
+        goals: _goals,
+        history: history,
+      );
 
-  double get loggingConsistency7d {
-    final days = history.take(7).toList();
-    if (days.isEmpty) return 0.0;
-    return days.where((l) => l.totalCalories > 0).length / days.length;
-  }
+  double get loggingConsistency7d =>
+      BodyCompositionCalculator.loggingConsistency7d(history);
 
-  WeightTrendDirection get weightTrendDirection {
-    if (_weightLog.length < 4) return WeightTrendDirection.insufficient;
-    final entries = _weightLog.length >= 14
-        ? _weightLog.sublist(_weightLog.length - 14)
-        : _weightLog;
-    final half = entries.length ~/ 2;
-    final firstAvg =
-        entries.sublist(0, half).fold(0.0, (s, e) => s + e.weightKg) / half;
-    final secondAvg =
-        entries.sublist(half).fold(0.0, (s, e) => s + e.weightKg) /
-            (entries.length - half);
-    final delta = secondAvg - firstAvg;
-    if (delta < -0.1) return WeightTrendDirection.down;
-    if (delta > 0.1) return WeightTrendDirection.up;
-    return WeightTrendDirection.stable;
-  }
+  WeightTrendDirection get weightTrendDirection =>
+      BodyCompositionCalculator.weightTrend(_weightLog);
 
-  DashboardStatus get dashboardStatus {
-    final loggedDays = history.take(7).where((l) => l.totalCalories > 0).length;
-    if (loggedDays < 3) {
-      return const DashboardStatus(
-        label: GoalStatusLabel.needsMoreData,
-        headline: 'Needs more data',
-        detail: 'Log at least 3 days to see your goal status',
+  DashboardStatus get dashboardStatus =>
+      BodyCompositionCalculator.dashboardStatus(
+        history: history,
+        profile: _tdeeProfile,
+        goals: _goals,
+        weightLog: _weightLog,
+        measurementLog: _measurementLog,
       );
-    }
 
-    final profile = _tdeeProfile;
-    if (profile == null || _goals.mode != TrackingMode.standard) {
-      return DashboardStatus(
-        label: GoalStatusLabel.onTrack,
-        headline: 'Tracking active',
-        detail: '7-day avg $sevenDayAvgCalories kcal',
-      );
-    }
+  String get primaryKpiLabel =>
+      BodyCompositionCalculator.primaryKpiLabel(activeGoal);
 
-    final avg = sevenDayAvgCalories;
-    final target = profile.targetCalories;
-    final phr = proteinHitRate7d;
-    final delta = avg - target;
-    final sign = delta >= 0 ? '+' : '';
-    final detail = '7-day avg $avg kcal · $sign$delta vs target';
-
-    return switch (profile.goal) {
-      'cut' => _cutStatus(avg, target, phr, detail),
-      'bulk' => _leanGainStatus(avg, target, phr, detail),
-      'recomp' => _recompStatus(avg, target, phr, detail),
-      _ => _maintainStatus(avg, target, phr, detail),
-    };
-  }
-
-  DashboardStatus _cutStatus(int avg, int target, double? phr, String detail) {
-    if (avg < target - 200) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooAggressive,
-        headline: 'Too aggressive',
-        detail: detail,
-      );
-    }
-    if (avg > target + 100) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooHigh,
-        headline: 'Too high',
-        detail: detail,
-      );
-    }
-    if (phr != null && phr < 0.5) {
-      return DashboardStatus(
-        label: GoalStatusLabel.lowProtein,
-        headline: 'Low protein',
-        detail: detail,
-      );
-    }
-    // possibleRecomp: in-band calories + stable weight + ≥14 entries
-    if (_weightLog.length >= 14 &&
-        weightTrendDirection == WeightTrendDirection.stable) {
-      final waist = waistTrendDirection;
-      if (waist == MeasurementTrendDirection.down) {
-        return const DashboardStatus(
-          label: GoalStatusLabel.possibleRecomp,
-          headline: 'Recomp confirmed',
-          detail:
-              'Waist trending down while weight holds — recomp confirmed. Keep going.',
-        );
-      }
-      if (waist == MeasurementTrendDirection.insufficient) {
-        return const DashboardStatus(
-          label: GoalStatusLabel.possibleRecomp,
-          headline: 'Possible recomp',
-          detail:
-              'Weight stable despite deficit — log body measurements to confirm recomp.',
-        );
-      }
-      return const DashboardStatus(
-        label: GoalStatusLabel.possibleRecomp,
-        headline: 'Possible recomp',
-        detail:
-            'Weight stable despite deficit — if you\'re training, this may be recomp. Body measurements would confirm.',
-      );
-    }
-    return DashboardStatus(
-      label: GoalStatusLabel.onTrack,
-      headline: 'On track',
-      detail: detail,
-    );
-  }
-
-  DashboardStatus _leanGainStatus(
-      int avg, int target, double? phr, String detail) {
-    if (avg < target - 100) {
-      return DashboardStatus(
-        label: GoalStatusLabel.notEnoughSurplus,
-        headline: 'Not enough surplus',
-        detail: detail,
-      );
-    }
-    if (avg > target + 200) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooHigh,
-        headline: 'Too high',
-        detail: detail,
-      );
-    }
-    if (phr != null && phr < 0.6) {
-      return DashboardStatus(
-        label: GoalStatusLabel.lowProtein,
-        headline: 'Low protein',
-        detail: detail,
-      );
-    }
-    return DashboardStatus(
-      label: GoalStatusLabel.onTrack,
-      headline: 'On track',
-      detail: detail,
-    );
-  }
-
-  DashboardStatus _recompStatus(
-      int avg, int target, double? phr, String detail) {
-    if (avg < target - 200) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooAggressive,
-        headline: 'Too aggressive',
-        detail: detail,
-      );
-    }
-    if (avg > target + 200) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooHigh,
-        headline: 'Too high',
-        detail: detail,
-      );
-    }
-    if (phr != null && phr < 0.65) {
-      return DashboardStatus(
-        label: GoalStatusLabel.lowProtein,
-        headline: 'Low protein',
-        detail: detail,
-      );
-    }
-    return DashboardStatus(
-      label: GoalStatusLabel.onTrack,
-      headline: 'On track',
-      detail: detail,
-    );
-  }
-
-  DashboardStatus _maintainStatus(
-      int avg, int target, double? phr, String detail) {
-    if (avg > target + 150) {
-      return DashboardStatus(
-        label: GoalStatusLabel.tooHigh,
-        headline: 'Too high',
-        detail: detail,
-      );
-    }
-    if (avg < target - 150) {
-      return DashboardStatus(
-        label: GoalStatusLabel.notEnoughSurplus,
-        headline: 'Too low',
-        detail: detail,
-      );
-    }
-    if (phr != null && phr < 0.4) {
-      return DashboardStatus(
-        label: GoalStatusLabel.lowProtein,
-        headline: 'Low protein',
-        detail: detail,
-      );
-    }
-    return DashboardStatus(
-      label: GoalStatusLabel.onTrack,
-      headline: 'On track',
-      detail: detail,
-    );
-  }
-
-  String get primaryKpiLabel => switch (activeGoal) {
-        'cut' => 'Average deficit',
-        'bulk' => 'Surplus adherence',
-        'recomp' => 'Calorie stability',
-        _ => 'Calorie stability',
-      };
-
-  String get secondaryKpiLabel => switch (activeGoal) {
-        'cut' => 'Protein compliance',
-        'bulk' => 'Protein support',
-        'recomp' => 'Protein compliance',
-        _ => 'Protein consistency',
-      };
+  String get secondaryKpiLabel =>
+      BodyCompositionCalculator.secondaryKpiLabel(activeGoal);
 
   String weightTrendLabel(WeightTrendDirection direction) =>
-      switch ((activeGoal, direction)) {
-        ('cut', WeightTrendDirection.down) => 'Trending down ↓',
-        ('cut', WeightTrendDirection.stable) => 'Weight stable',
-        ('cut', WeightTrendDirection.up) => 'Trending up ↑',
-        ('bulk', WeightTrendDirection.up) => 'Trending up ↑',
-        ('bulk', WeightTrendDirection.stable) => 'Weight stable',
-        ('bulk', WeightTrendDirection.down) => 'Trending down ↓',
-        _ => 'Weight stable',
-      };
+      BodyCompositionCalculator.weightTrendLabel(activeGoal, direction);
 
   // ── Food library getters ─────────────────────────────────────────────────────
 
-  List<FoodTemplate> get savedTemplates {
+  List<FoodTemplate> get savedTemplates =>
+      _savedTemplatesCache ??= _computeSavedTemplates();
+
+  List<FoodTemplate> _computeSavedTemplates() {
     final sorted = List<FoodTemplate>.from(_library);
     sorted.sort((a, b) {
       if (a.isPinned == b.isPinned) return 0;
@@ -841,7 +344,10 @@ class NutritionPresenter extends ChangeNotifier {
     return List.unmodifiable(sorted);
   }
 
-  List<FoodTemplate> get recentFoods {
+  List<FoodTemplate> get recentFoods =>
+      _recentFoodsCache ??= _computeRecentFoods();
+
+  List<FoodTemplate> _computeRecentFoods() {
     final seen = <String>{};
     final recent = <FoodTemplate>[];
     for (final slot in MealSlot.values) {
@@ -856,7 +362,6 @@ class NutritionPresenter extends ChangeNotifier {
         }
       }
     }
-    // Also pull from history if recent list is short
     for (final log in _history) {
       if (recent.length >= 10) break;
       for (final entry in log.allEntries.reversed) {
@@ -947,12 +452,12 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> clearLearnedFoods() async {
     await _personalDict.clearAll();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> removeLearnedFood(String name) async {
     await _personalDict.remove(name);
-    notifyListeners();
+    safeNotify();
   }
 
   /// Plan 027 — let the user correct a learned food's per-100g macros when
@@ -972,7 +477,7 @@ class NutritionPresenter extends ChangeNotifier {
       carbsPer100g: carbsPer100g,
       fatPer100g: fatPer100g,
     );
-    notifyListeners();
+    safeNotify();
   }
 
   int get aiDownloadProgress => _ai.downloadProgress ?? 0;
@@ -1015,7 +520,7 @@ class NutritionPresenter extends ChangeNotifier {
     if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
     await _ensureTodayLogFresh();
     _todayLog = _todayLog.addEntry(entry, slot);
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionLog(_todayLog);
     await _updateLogStreak();
     await _checkGoalMet();
@@ -1039,7 +544,7 @@ class NutritionPresenter extends ChangeNotifier {
       mealSlot: MealSlot.meal,
     );
     _chatMessages.add(msg);
-    notifyListeners();
+    safeNotify();
     // Save log + chat atomically so a crash between them can't desync.
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -1053,7 +558,7 @@ class NutritionPresenter extends ChangeNotifier {
 
   Future<void> removeFoodEntry(String entryId, MealSlot slot) async {
     _todayLog = _todayLog.removeEntry(entryId, slot);
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionLog(_todayLog);
   }
 
@@ -1094,7 +599,7 @@ class NutritionPresenter extends ChangeNotifier {
       foodItems: entries.map((e) => ChatFoodItem.fromFoodEntry(e)).toList(),
     );
     _chatMessages.add(chatMsg);
-    notifyListeners();
+    safeNotify();
 
     // Persist log + chat together so a crash between them can't desync.
     await Future.wait([
@@ -1126,7 +631,7 @@ class NutritionPresenter extends ChangeNotifier {
     );
     _weightLog = [..._weightLog, entry];
     await _storage.saveWeightLog(_weightLog);
-    notifyListeners();
+    safeNotify();
 
     // Cancel today's pending reminder; the recurring schedule fires again tomorrow.
     await _notifications.cancelWeightReminder();
@@ -1144,14 +649,14 @@ class NutritionPresenter extends ChangeNotifier {
     _calorieGoalNotifiedToday = false;
     _proteinGoalMetToday = false;
     _overshootPenalizedToday = false;
-    notifyListeners();
+    safeNotify();
     await _storage.saveNutritionGoals(newGoals);
     await _checkGoalMet();
   }
 
   Future<void> saveTdeeProfile(TdeeProfile profile) async {
     _tdeeProfile = profile;
-    notifyListeners();
+    safeNotify();
     await _storage.saveTdeeProfile(profile);
     await _checkGoalMet();
   }
@@ -1178,13 +683,13 @@ class NutritionPresenter extends ChangeNotifier {
     } else {
       _library.add(template);
     }
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
   Future<void> deleteFoodTemplate(String templateId) async {
     _library.removeWhere((t) => t.id == templateId);
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1192,7 +697,7 @@ class NutritionPresenter extends ChangeNotifier {
     final idx = _library.indexWhere((t) => t.id == templateId);
     if (idx == -1 || newName.trim().isEmpty) return;
     _library[idx] = _library[idx].copyWith(name: newName.trim());
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1200,7 +705,7 @@ class NutritionPresenter extends ChangeNotifier {
     final idx = _library.indexWhere((t) => t.id == templateId);
     if (idx == -1) return;
     _library[idx] = _library[idx].copyWith(isPinned: !_library[idx].isPinned);
-    notifyListeners();
+    safeNotify();
     await _storage.saveFoodLibrary(_library);
   }
 
@@ -1209,7 +714,7 @@ class NutritionPresenter extends ChangeNotifier {
   /// No-op — kept for API compatibility. The shared Qwen model is initialised
   /// by [OnDeviceAiCoachService.init] in [AiCoachPresenter].
   Future<void> initAi() async {
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> estimateMeal(String description) async {
@@ -1217,7 +722,7 @@ class NutritionPresenter extends ChangeNotifier {
     _isAiEstimating = true;
     _lastEstimate = null;
     _aiEstimateError = null;
-    notifyListeners();
+    safeNotify();
     try {
       _lastEstimate = await _ai.estimateMacros(description);
       if (_lastEstimate == null) {
@@ -1228,7 +733,7 @@ class NutritionPresenter extends ChangeNotifier {
       _aiEstimateError = _errorMessage(e);
     } finally {
       _isAiEstimating = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -1250,13 +755,13 @@ class NutritionPresenter extends ChangeNotifier {
       await addFoodEntry(entry, slot);
     }
     _lastEstimate = null;
-    notifyListeners();
+    safeNotify();
   }
 
   void clearEstimate() {
     _lastEstimate = null;
     _aiEstimateError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Actions — NLP food parser ─────────────────────────────────────────────
@@ -1268,7 +773,7 @@ class NutritionPresenter extends ChangeNotifier {
     _lastParseResult = null;
     _parsedDbMatches = [];
     _parseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final result = FoodNlpParser.parse(description);
@@ -1283,7 +788,7 @@ class NutritionPresenter extends ChangeNotifier {
       _parseError = 'Failed to parse meal description.';
     } finally {
       _isParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -1304,7 +809,7 @@ class NutritionPresenter extends ChangeNotifier {
         overrides[i] ?? _buildEntry(result.items[i], _parsedDbMatches[i]),
     ];
     _todayLog = _todayLog.addEntries(entries, slot);
-    notifyListeners();
+    safeNotify();
 
     await _storage.saveNutritionLog(_todayLog);
     await _updateLogStreak();
@@ -1314,14 +819,14 @@ class NutritionPresenter extends ChangeNotifier {
 
     _lastParseResult = null;
     _parsedDbMatches = [];
-    notifyListeners();
+    safeNotify();
   }
 
   void clearParseResult() {
     _lastParseResult = null;
     _parsedDbMatches = [];
     _parseError = null;
-    notifyListeners();
+    safeNotify();
   }
 
   Future<List<FoodDbEntry?>> _resolveDbMatches(FoodParseResult result) async {
@@ -1440,8 +945,10 @@ class NutritionPresenter extends ChangeNotifier {
       return base.copyWith(name: _formatDisplayName(name));
     }
 
-    final estimatedKcal = _estimateCalories(parsed.name, parsed.grams);
-    final (estProtein, estCarbs, estFat) = _macrosFromCalories(estimatedKcal);
+    final estimatedKcal = cde.estimateKcal(parsed.name, parsed.grams);
+    final (pR, cR, fR) = cde.bucketMacroRatios(parsed.name);
+    final (estProtein, estCarbs, estFat) =
+        cde.macrosFromCalories(estimatedKcal, pR: pR, cR: cR, fR: fR);
     return FoodEntry(
       id: FoodEntry.generateId(),
       name: _formatDisplayName(parsed.name),
@@ -1457,17 +964,6 @@ class NutritionPresenter extends ChangeNotifier {
   }
 
   /// Coarse macro split (15% P / 50% C / 35% F) used when neither the food DB
-  /// nor the on-device AI returned macros. Better than logging zero so the
-  /// user's daily macro totals stay informative.
-  (double, double, double) _macrosFromCalories(int calories) {
-    if (calories <= 0) return (0.0, 0.0, 0.0);
-    return (
-      double.parse(((calories * 0.15) / 4).toStringAsFixed(1)),
-      double.parse(((calories * 0.50) / 4).toStringAsFixed(1)),
-      double.parse(((calories * 0.35) / 9).toStringAsFixed(1)),
-    );
-  }
-
   /// Title-cases food names so they render nicely in the chat feed.
   ///
   /// "red rice"                   → "Red Rice"
@@ -1510,143 +1006,15 @@ class NutritionPresenter extends ChangeNotifier {
     );
   }
 
-  /// Last-resort calorie estimate from keyword density buckets.
-  /// Matches keywords as whole words to avoid "eggplant" → egg or
-  /// "milkshake" → milk false positives.
-  int _estimateCalories(String name, double grams) {
-    final raw = name
-        .toLowerCase()
-        .split(RegExp(r'[^a-z0-9ñ]+'))
-        .where((t) => t.isNotEmpty)
-        .toSet();
-    // Stem simple plurals so "eggs" matches "egg", "noodles" → "noodle", etc.
-    final tokens = {
-      ...raw,
-      ...raw
-          .where((t) => t.endsWith('s') && t.length > 3)
-          .map((t) => t.substring(0, t.length - 1)),
-    };
-    // ── Compound-food context overrides ─────────────────────────────────────
-    // These must come BEFORE the bucket loop so that a liquid/condiment modifier
-    // overrides the solid-ingredient bucket that would otherwise fire first.
-
-    // Coconut water — very dilute (~19 kcal/100ml); must beat coconut-milk bucket
-    if (tokens.contains('coconut') &&
-        tokens.intersection({'water', 'tubig', 'buko'}).isNotEmpty) {
-      return (grams * 0.19).round().clamp(1, 9999);
-    }
-
-    // Almond milk — unusually dilute (~15 kcal/100ml); checked before generic plant-milk
-    if (tokens.contains('almond') && tokens.contains('milk')) {
-      return (grams * 0.15).round().clamp(1, 9999);
-    }
-
-    // Coconut milk (full-fat) — very rich (~230 kcal/100ml)
-    if (tokens.contains('coconut') &&
-        tokens.intersection({'milk', 'gatas'}).isNotEmpty) {
-      return (grams * 2.3).round().clamp(1, 9999);
-    }
-
-    // Plant-based milks — lighter than their solid base (~35 kcal/100ml avg)
-    const plantBases = {
-      'oat',
-      'soy',
-      'rice',
-      'cashew',
-      'hemp',
-      'hazelnut',
-      'macadamia',
-    };
-    if ((tokens.contains('milk') || tokens.contains('gatas')) &&
-        tokens.intersection(plantBases).isNotEmpty) {
-      return (grams * 0.35).round().clamp(1, 9999);
-    }
-
-    // Clear broths and stocks — ~5 kcal/100ml (bones/meat flavour, not mass)
-    if (tokens
-        .intersection({'broth', 'sabaw', 'stock', 'bouillon'}).isNotEmpty) {
-      return (grams * 0.05).round().clamp(1, 9999);
-    }
-
-    // Thin condiments — fish sauce, soy sauce, vinegar, ketchup (~40 kcal/100ml)
-    // Exclude rich condiments that happen to contain "sauce" (peanut, cream, butter)
-    if (tokens.intersection({
-          'sauce',
-          'patis',
-          'toyo',
-          'vinegar',
-          'suka',
-          'catsup',
-          'ketchup'
-        }).isNotEmpty &&
-        tokens.intersection({
-          'peanut',
-          'cream',
-          'butter',
-          'mayo',
-          'coconut',
-          'hollandaise',
-          'bechamel'
-        }).isEmpty) {
-      return (grams * 0.4).round().clamp(1, 9999);
-    }
-
-    // Eggplant/talong — raw: 25 kcal/100g; fried absorbs oil to ~90 kcal/100g
-    if (tokens.intersection({'eggplant', 'talong', 'aubergine'}).isNotEmpty) {
-      return (grams * (tokens.contains('fried') ? 0.9 : 0.25))
-          .round()
-          .clamp(1, 9999);
-    }
-
-    // Other fried vegetables — oil absorption raises density ~3× vs raw
-    const firedVegTokens = {
-      'vegetable',
-      'broccoli',
-      'spinach',
-      'cabbage',
-      'carrot',
-      'kangkong',
-      'sitaw',
-      'gulay',
-      'ampalaya',
-      'okra',
-      'cucumber',
-      'pechay',
-    };
-    if (tokens.contains('fried') &&
-        tokens.intersection(firedVegTokens).isNotEmpty) {
-      return (grams * 0.9).round().clamp(1, 9999);
-    }
-
-    // Fried chicken / Chickenjoy — breading + frying raises density to ~2.9 kcal/g
-    if ((tokens.contains('fried') || tokens.contains('chickenjoy')) &&
-        tokens.intersection({'chicken', 'manok', 'chickenjoy'}).isNotEmpty) {
-      return (grams * 2.9).round().clamp(1, 9999);
-    }
-
-    // Scrambled eggs — standard serving is 2 eggs with butter; ~1.67 kcal/g
-    if (tokens.contains('scrambled') &&
-        tokens.intersection({'egg', 'itlog'}).isNotEmpty) {
-      return (grams * 1.67).round().clamp(1, 9999);
-    }
-
-    for (final bucket in _calorieBuckets) {
-      if (bucket.keywords.any(tokens.contains)) {
-        return (grams * bucket.kcalPerG).round().clamp(1, 9999);
-      }
-    }
-    return (grams * 1.5).round().clamp(1, 9999);
-  }
-
   Future<void> downloadAiModel() async {
     if (isAiDownloading) return;
-    notifyListeners();
+    safeNotify();
     try {
       await _ai.downloadModel(onProgress: (_) => notifyListeners());
     } catch (_) {
       // Download failed — model remains unavailable; banner will stay visible.
     }
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Actions — chat feed ───────────────────────────────────────────────────────
@@ -1659,7 +1027,7 @@ class NutritionPresenter extends ChangeNotifier {
     final raw = await _storage.loadChatMessagesRaw(dateKey);
     _chatMessages = raw.map(ChatMessage.fromJson).toList();
     _todayLog = await _storage.loadNutritionLogForDate(dateKey);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Weight log mutations ──────────────────────────────────────────────────
@@ -1667,7 +1035,7 @@ class NutritionPresenter extends ChangeNotifier {
   Future<void> deleteWeight(String id) async {
     _weightLog = _weightLog.where((e) => e.id != id).toList();
     await _storage.saveWeightLog(_weightLog);
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Body measurement mutations ────────────────────────────────────────────
@@ -1677,7 +1045,7 @@ class NutritionPresenter extends ChangeNotifier {
       ..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
     await _storage.saveBodyMeasurements(_measurementLog);
     await _checkRecompXp();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> updateMeasurement(BodyMeasurementEntry updated) async {
@@ -1686,19 +1054,19 @@ class NutritionPresenter extends ChangeNotifier {
         if (e.id == updated.id) updated else e,
     ]..sort((a, b) => a.loggedAt.compareTo(b.loggedAt));
     await _storage.saveBodyMeasurements(_measurementLog);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> deleteMeasurement(String id) async {
     _measurementLog = _measurementLog.where((e) => e.id != id).toList();
     await _storage.saveBodyMeasurements(_measurementLog);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> setMeasurementUnit(MeasurementUnit unit) async {
     _measurementUnit = unit;
     await _storage.saveMeasurementUnit(unit);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _checkRecompXp() async {
@@ -1724,6 +1092,36 @@ class NutritionPresenter extends ChangeNotifier {
   /// up AI prompt budgets and stall parsing for tens of seconds.
   static const int _maxChatInputLength = 500;
 
+  // ── Debug / dev tools ────────────────────────────────────────────────────
+  // REMOVE before any production audit — only called from kDebugMode tiles.
+
+  /// Fires a minimal cloud-parse call and returns a human-readable summary
+  /// of what came back (tier hit, items, latency). Safe to call standalone —
+  /// does not mutate any presenter state.
+  Future<String> debugTestCloudAi() async {
+    final cloud = _cloudAi;
+    if (cloud == null) return 'cloudAi not injected';
+    if (!cloud.isAvailable) {
+      return 'isAvailable=false  '
+          '(endpoint=${cloud.runtimeType}, enabled=${cloud.isAvailable})';
+    }
+    final sw = Stopwatch()..start();
+    try {
+      final candidates = await _buildCandidatePool('1 cup of rice');
+      final result =
+          await cloud.parseFoodWithCandidates('1 cup of rice', candidates);
+      sw.stop();
+      if (result == null)
+        return 'parseFoodWithCandidates returned null  (${sw.elapsedMilliseconds}ms)';
+      final items =
+          result.items.map((i) => '${i.name} (${i.grams}g)').join(', ');
+      return '✓ ${sw.elapsedMilliseconds}ms\n$items';
+    } catch (e) {
+      sw.stop();
+      return 'error after ${sw.elapsedMilliseconds}ms:\n$e';
+    }
+  }
+
   /// Parse [text] as food or exercise, add to the chat feed, and persist.
   Future<void> parseChat(String text) async {
     final trimmed = text.trim();
@@ -1731,12 +1129,12 @@ class NutritionPresenter extends ChangeNotifier {
     if (trimmed.length > _maxChatInputLength) {
       _chatParseError =
           'Input too long ($_maxChatInputLength char limit). Split into smaller messages.';
-      notifyListeners();
+      safeNotify();
       return;
     }
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       if (ExerciseNlpParser.looksLikeExercise(trimmed)) {
@@ -1749,7 +1147,7 @@ class NutritionPresenter extends ChangeNotifier {
       debugPrint('NutritionPresenter: parseChat error: $e');
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -1870,8 +1268,10 @@ class NutritionPresenter extends ChangeNotifier {
       }
 
       // Last-ditch: keyword-density estimate with macro split-from-calories.
-      final estKcal = _estimateCalories(item.name, item.grams);
-      final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+      final estKcal = cde.estimateKcal(item.name, item.grams);
+      final (bpR, bcR, bfR) = cde.bucketMacroRatios(item.name);
+      final (estProtein, estCarbs, estFat) =
+          cde.macrosFromCalories(estKcal, pR: bpR, cR: bcR, fR: bfR);
       entries.add(FoodEntry(
         id: FoodEntry.generateId(),
         name: _formatDisplayName(item.name),
@@ -1983,8 +1383,9 @@ class NutritionPresenter extends ChangeNotifier {
 
         // Last-ditch: keyword-bucket fallback when both AI and hybrid failed.
         if (entry == null) {
-          final estKcal = _estimateCalories(item.name, item.grams);
-          final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+          final estKcal = cde.estimateKcal(item.name, item.grams);
+          final (estProtein, estCarbs, estFat) =
+              cde.macrosFromCalories(estKcal);
           entry = FoodEntry(
             id: FoodEntry.generateId(),
             name: _formatDisplayName(item.name),
@@ -2061,7 +1462,7 @@ class NutritionPresenter extends ChangeNotifier {
 
       // Canonical-USDA guard: "Egg, Whole, Cooked, Scrambled" is one ingredient,
       // not four. Cloud sometimes decomposes on commas despite prompt instructions.
-      if (items.length > 1 && _cloudLooksLikeCanonicalUsdaName(text)) {
+      if (items.length > 1 && FoodNlpParser.looksLikeUsdaCanonical(text)) {
         final g = _cloudSingleItemExplicitGrams(text) ?? items.first.grams;
         items = [
           ExtractedFoodItem(
@@ -2072,6 +1473,7 @@ class NutritionPresenter extends ChangeNotifier {
             resolvedFoodId: items.first.resolvedFoodId,
             resolverConfidence: items.first.resolverConfidence,
             estimatedMacros: items.first.estimatedMacros,
+            macroFallback: items.first.macroFallback,
           ),
         ];
       }
@@ -2103,6 +1505,7 @@ class NutritionPresenter extends ChangeNotifier {
                 resolvedFoodId: i.resolvedFoodId,
                 resolverConfidence: i.resolverConfidence,
                 estimatedMacros: scaledMacros,
+                macroFallback: i.macroFallback,
               ),
             ];
           }
@@ -2151,6 +1554,13 @@ class NutritionPresenter extends ChangeNotifier {
         } else if (item.estimatedMacros != null) {
           // Cloud couldn't pick a DB candidate; use its open-ended estimate.
           final m = item.estimatedMacros!;
+          // Plan 034 SEV-3: when macroFallback is true the Lambda synthesised
+          // a generic ~2 kcal/g ratio (model forgot to return macros). Use the
+          // cloudAiFallback source so the UI shows 'Cloud~' in error colour,
+          // signalling the user that this figure is a rough approximation.
+          final source = item.macroFallback
+              ? EstimationSource.cloudAiFallback
+              : EstimationSource.cloudAi;
           entry = FoodEntry(
             id: FoodEntry.generateId(),
             name: _formatDisplayName(item.name),
@@ -2159,35 +1569,25 @@ class NutritionPresenter extends ChangeNotifier {
             carbs: m.carbsG,
             fat: m.fatG,
             grams: item.grams,
-            // Plan 027 §2.2 — cloud-estimated (no DB candidate) entries get
-            // the cloudAi badge so users can distinguish them from local AI
-            // estimates and from raw keyword fallbacks.
-            estimationSource: EstimationSource.cloudAi,
-            confidence:
-                item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
+            estimationSource: source,
+            confidence: item.macroFallback
+                ? 0.1
+                : (item.resolverConfidence > 0 ? item.resolverConfidence : 0.6),
             loggedAt: DateTime.now(),
           );
-          // Auto-promote even AI estimates when the model was confident.
-          if (item.resolverConfidence >= 0.8 &&
-              m.calories > 0 &&
-              item.grams > 0) {
-            // ignore: unawaited_futures
-            _personalDict.upsert(
-              name: item.name,
-              kcalPer100g: m.calories / (item.grams / 100.0),
-              proteinPer100g: m.proteinG / (item.grams / 100.0),
-              carbsPer100g: m.carbsG / (item.grams / 100.0),
-              fatPer100g: m.fatG / (item.grams / 100.0),
-            );
-          }
+          // H2: do NOT auto-learn open cloud estimates into the personal dict.
+          // A single hallucinated estimate would bypass the DB permanently.
+          // Only DB-resolved picks (with a confirmed food_id) may auto-learn
+          // — see the learnFromEntry path at _learnFromEntry.
         }
 
         if (entry == null) {
           // DB lookup failed for the resolved food_id and no macro estimate
           // was provided. Don't abort the whole parse — fall to keyword bucket
           // so other items in a multi-item meal still commit correctly.
-          final estKcal = _estimateCalories(item.name, item.grams);
-          final (estProtein, estCarbs, estFat) = _macrosFromCalories(estKcal);
+          final estKcal = cde.estimateKcal(item.name, item.grams);
+          final (estProtein, estCarbs, estFat) =
+              cde.macrosFromCalories(estKcal);
           entry = FoodEntry(
             id: FoodEntry.generateId(),
             name: _formatDisplayName(item.name),
@@ -2420,35 +1820,6 @@ class NutritionPresenter extends ChangeNotifier {
     return double.tryParse(matches.first.group(1)!);
   }
 
-  static bool _cloudLooksLikeCanonicalUsdaName(String text) {
-    // Strip trailing gram weight before checking canonical form.
-    // "Egg, Whole, Cooked, Scrambled 100g" → "Egg, Whole, Cooked, Scrambled"
-    final stripped = text
-        .replaceAll(
-            RegExp(
-              r'\s+\d+(?:\.\d+)?\s*(?:g|gm|gms|gram|grams)\s*$',
-              caseSensitive: false,
-            ),
-            '')
-        .trim();
-    final lower = stripped.toLowerCase().trim();
-    if (lower.length > 40) return false;
-    if (lower.contains(' with ') ||
-        lower.contains(' and ') ||
-        lower.contains(' + ') ||
-        lower.contains(' plus ')) {
-      return false;
-    }
-    if (!lower.contains(',')) return false;
-    final parts = lower.split(',').map((p) => p.trim()).toList();
-    if (parts.length < 2) return false;
-    return parts.every((p) =>
-        p.isNotEmpty &&
-        !p.contains(' ') &&
-        p.length <= 14 &&
-        RegExp(r'^[a-z0-9%]+$').hasMatch(p));
-  }
-
   /// Shared commit path for both cloud and on-device branches. Adds
   /// entries to today's log, builds the chat message, persists, and runs
   /// streak/goal checks.
@@ -2482,7 +1853,7 @@ class NutritionPresenter extends ChangeNotifier {
       mealSlot: MealSlot.meal,
     );
     _chatMessages.add(msg);
-    notifyListeners();
+    safeNotify();
 
     // Persist log + chat together so a crash between them can't desync.
     await Future.wait([
@@ -2588,7 +1959,7 @@ class NutritionPresenter extends ChangeNotifier {
     final updatedItems = List<ChatFoodItem>.from(msg.foodItems);
     updatedItems[itemIndex] = updatedItem;
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -2708,7 +2079,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     final updated = List<ChatFoodItem>.from(msg.foodItems)..removeAt(itemIndex);
     _chatMessages[msgIdx] = msg.copyWithFoodItems(updated);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       _storage.saveNutritionLog(_todayLog),
@@ -2733,7 +2104,7 @@ class NutritionPresenter extends ChangeNotifier {
       }
     }
     _chatMessages.removeWhere((m) => m.id == messageId);
-    notifyListeners();
+    safeNotify();
 
     await Future.wait([
       if (msg.kind == ChatMessageKind.food)
@@ -2756,7 +2127,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
     try {
       // In-memory remove only — save is deferred until we have the replacement,
       // so a cloud timeout or crash can't permanently drop the old entry.
@@ -2836,7 +2207,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _checkOvershoot();
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -2868,7 +2239,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     _isChatParsing = true;
     _chatParseError = null;
-    notifyListeners();
+    safeNotify();
 
     try {
       final updatedItems = <ChatFoodItem>[];
@@ -2937,7 +2308,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _checkOvershoot();
     } finally {
       _isChatParsing = false;
-      notifyListeners();
+      safeNotify();
     }
   }
 
@@ -2988,7 +2359,7 @@ class NutritionPresenter extends ChangeNotifier {
     final todayKey = _dateFmt.format(DateTime.now());
     final rawChat = await _storage.loadChatMessagesRaw(todayKey);
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
-    if (_disposed) return;
+    if (isDisposed) return; // presenter was disposed during async load
 
     // Restore same-day dedup flags from loaded state so app restarts mid-day
     // don't re-fire notifications or re-apply HP penalties.
@@ -3005,7 +2376,7 @@ class NutritionPresenter extends ChangeNotifier {
       await _notifications.cancelWeightReminder();
     }
 
-    notifyListeners();
+    safeNotify();
   }
 
   // ── Internal RPG hooks ────────────────────────────────────────────────────────
@@ -3043,7 +2414,7 @@ class NutritionPresenter extends ChangeNotifier {
 
     await _storage.saveNutritionStreak(_goalStreak);
     await _storage.saveNutritionGoalMetDate(today);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _checkProteinGoalMet() async {
@@ -3071,7 +2442,7 @@ class NutritionPresenter extends ChangeNotifier {
     await _onLogStreakUpdate();
     await _storage.saveLogStreak(_logStreak);
     await _storage.saveLogStreakDate(today);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> _onLogStreakUpdate() async {

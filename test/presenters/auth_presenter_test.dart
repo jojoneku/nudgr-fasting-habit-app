@@ -47,6 +47,7 @@ class _FakeAuthService extends Fake implements AuthService {
     if (_signInError != null) throw _signInError;
     _isSignedIn = true;
     _userId = _userId ?? 'test-uid';
+    _authController.add(AuthState(AuthChangeEvent.signedIn, null));
   }
 
   @override
@@ -54,6 +55,7 @@ class _FakeAuthService extends Fake implements AuthService {
     signOutCalled = true;
     _isSignedIn = false;
     _userId = null;
+    _authController.add(AuthState(AuthChangeEvent.signedOut, null));
   }
 
   void close() => _authController.close();
@@ -89,8 +91,9 @@ void main() {
         auth,
         onFirstSignIn: (id) => receivedId = id,
       );
+      presenter.init(); // subscribe to auth stream
 
-      await presenter.signInWithGoogle();
+      await presenter.signInWithGoogle(); // fake emits signedIn event
 
       expect(receivedId, 'test-uid');
     });
@@ -175,13 +178,17 @@ void main() {
 
   group('signOut', () {
     test('fires onSignOut callback', () async {
+      // Must start signed in so _lastKnownUserId is set by init(); only then
+      // does a signedOut event from the stream trigger the callback.
+      auth = _FakeAuthService(isSignedIn: true, userId: 'test-uid');
       bool signedOut = false;
       final presenter = _buildPresenter(
         auth,
         onSignOut: () => signedOut = true,
       );
+      presenter.init(); // seeds _lastKnownUserId = 'test-uid'
 
-      await presenter.signOut();
+      await presenter.signOut(); // fake emits signedOut event
 
       expect(signedOut, isTrue);
     });

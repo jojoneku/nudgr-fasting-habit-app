@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'
+    show AuthChangeEvent, AuthState;
 
 import '../services/auth_service.dart';
 
@@ -16,6 +17,7 @@ class AuthPresenter extends ChangeNotifier {
   final VoidCallback? onSignOut;
 
   StreamSubscription<AuthState>? _authSub;
+  String? _lastKnownUserId;
   bool _isLoading = false;
   String? _error;
 
@@ -36,19 +38,19 @@ class AuthPresenter extends ChangeNotifier {
   /// Call from AppShell.initState (after Supabase.initialize) to silently
   /// restore a cached session and subscribe to future auth changes.
   void init() {
+    // Seed from any already-restored session so token-refresh events for the
+    // existing user don't look like a new sign-in.
+    _lastKnownUserId = _auth.currentUserId;
     _authSub = _auth.authStateChanges.listen((state) {
-      if (kDebugMode &&
-          (state.event == AuthChangeEvent.tokenRefreshed ||
-              state.event == AuthChangeEvent.signedIn)) {
-        final token = state.session?.accessToken;
-        if (token != null) {
-          debugPrint('🔑 JWT [${state.event.name}] (copy all parts):');
-          const chunk = 800;
-          for (var i = 0; i < token.length; i += chunk) {
-            debugPrint(token.substring(i, (i + chunk).clamp(0, token.length)));
-          }
-          debugPrint('🔑 END JWT');
-        }
+      final newUserId =
+          state.event == AuthChangeEvent.signedOut ? null : _auth.currentUserId;
+      if (newUserId != null && newUserId != _lastKnownUserId) {
+        _lastKnownUserId = newUserId;
+        onFirstSignIn?.call(newUserId);
+      } else if (state.event == AuthChangeEvent.signedOut &&
+          _lastKnownUserId != null) {
+        _lastKnownUserId = null;
+        onSignOut?.call();
       }
       notifyListeners();
     });
@@ -63,27 +65,10 @@ class AuthPresenter extends ChangeNotifier {
     _error = null;
     notifyListeners();
 
-    final wasSignedIn = isSignedIn;
     try {
       await _auth.signInWithGoogle();
-      if (kDebugMode) {
-        try {
-          final token =
-              Supabase.instance.client.auth.currentSession?.accessToken;
-          if (token != null) {
-            debugPrint('🔑 JWT for AWS test (copy all parts):');
-            const chunk = 800;
-            for (var i = 0; i < token.length; i += chunk) {
-              debugPrint(
-                  token.substring(i, (i + chunk).clamp(0, token.length)));
-            }
-            debugPrint('🔑 END JWT');
-          }
-        } catch (_) {}
-      }
-      if (!wasSignedIn && userId != null) {
-        onFirstSignIn?.call(userId!);
-      }
+      // onFirstSignIn is fired by the auth stream listener in init() when it
+      // observes a new userId, so no explicit call needed here.
     } catch (e) {
       _error = _friendlyError(e);
     } finally {
@@ -94,8 +79,7 @@ class AuthPresenter extends ChangeNotifier {
 
   Future<void> signOut() async {
     await _auth.signOut();
-    onSignOut?.call();
-    // authStateChanges stream triggers notifyListeners via _authSub
+    // onSignOut and notifyListeners are fired by the auth stream listener
   }
 
   void clearError() {
