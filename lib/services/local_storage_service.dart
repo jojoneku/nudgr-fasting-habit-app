@@ -56,7 +56,85 @@ class LocalStorageService extends StorageService {
 
   /// Sets the active user ID so all subsequent reads/writes are namespaced.
   /// Called in [AppShell._initSync] immediately after sign-in.
-  void setUserId(String userId) => _userId = userId;
+  ///
+  /// Awaits the one-time key migration so callers can safely reload presenters
+  /// from the scoped namespace immediately after this returns.
+  Future<void> setUserId(String userId) async {
+    _userId = userId;
+    await _migrateUnscopedKeys(userId);
+  }
+
+  /// One-time migration from the old unscoped key layout to `u/$userId/…`.
+  /// Skips keys that already have a scoped value, so it is safe to call on
+  /// every sign-in — subsequent calls after the first are nearly instant.
+  Future<void> _migrateUnscopedKeys(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final prefix = 'u/$userId/';
+    for (final base in _kUserDataKeys) {
+      final scoped = '$prefix$base';
+      if (prefs.containsKey(scoped)) continue; // already migrated
+      if (!prefs.containsKey(base)) continue; // nothing to migrate
+      final val = prefs.get(base);
+      if (val is String) {
+        await prefs.setString(scoped, val);
+      } else if (val is int) {
+        await prefs.setInt(scoped, val);
+      } else if (val is bool) {
+        await prefs.setBool(scoped, val);
+      } else if (val is double) {
+        await prefs.setDouble(scoped, val);
+      }
+      await prefs.remove(base);
+    }
+  }
+
+  /// All user-data keys that are scoped via [_k]. Device-level keys
+  /// (kThemeMode, kUseCloudAi, kAiPromptSkippedAt) are intentionally excluded.
+  static const List<String> _kUserDataKeys = [
+    StorageService.keyIsFasting,
+    StorageService.keyStartTime,
+    StorageService.keyEatingStartTime,
+    StorageService.keyElapsedSeconds,
+    StorageService.keyFastingGoalHours,
+    StorageService.keyHistory,
+    StorageService.keyQuests,
+    StorageService.keyUserStats,
+    StorageService.keyLastPenaltyCheckDate,
+    StorageService.keyQuestRoutines,
+    StorageService.keyQuestAchievements,
+    StorageService.keyQuestPenaltyCheckDate,
+    StorageService.keyNutritionLogs,
+    StorageService.keyNutritionGoals,
+    StorageService.keyNutritionStreak,
+    StorageService.keyNutritionGoalMetDate,
+    StorageService.keyTdeeProfile,
+    StorageService.keyFoodLibrary,
+    StorageService.keyLogStreak,
+    StorageService.keyLogStreakDate,
+    StorageService.keyActivityLogs,
+    StorageService.keyActivityGoals,
+    StorageService.keyActivityGoalMetDate,
+    StorageService.keyActivityStreak,
+    StorageService.keyPreferredStepsSource,
+    StorageService.keyChatMessages,
+    StorageService.keyFinancialAccounts,
+    StorageService.keyTransactions,
+    StorageService.keyFinanceCategories,
+    StorageService.keyBudgets,
+    StorageService.keyBudgetedExpenses,
+    StorageService.keyBills,
+    StorageService.keyReceivables,
+    StorageService.keyMonthlySummaries,
+    StorageService.keyInstallments,
+    StorageService.keyPersonalFoodDict,
+    StorageService.keyFinanceDictionary,
+    StorageService.keyFoodFeedback,
+    StorageService.keyWeightLog,
+    StorageService.keyBodyMeasurements,
+    StorageService.keyMeasurementUnit,
+    StorageService.keyLastRecompXpDate,
+    StorageService.keyNotificationPreferences,
+  ];
 
   /// Removes all `u/$userId/` prefixed prefs keys and resets the user
   /// namespace. Called by [AppShell._tearDownSync] on sign-out.

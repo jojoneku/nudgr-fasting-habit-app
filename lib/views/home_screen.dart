@@ -193,7 +193,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _tearDownSync(); // different user signed in — tear down first
     }
     _currentUserId = userId;
-    _storage.setUserId(userId);
+    // Await migration so scoped keys are populated before presenters reload.
+    await _storage.setUserId(userId);
+    // Reload all presenters from the now-correct scoped namespace.
+    // This covers the startup race where constructors read bare keys before
+    // the user namespace was known, as well as user-switch scenarios.
+    _reloadAll();
     try {
       await _syncQueue!.load(userId: userId);
       _syncService = SyncService(
@@ -257,10 +262,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   void _reloadAll() {
+    _statsPresenter.loadStats();
     _fastingPresenter.loadState();
     _questPresenter.reload();
     _activityPresenter.loadState();
     _nutritionPresenter?.loadState();
+    _ledgerPresenter.load();
+    _treasuryPresenter.load();
+    _budgetPresenter.load();
+    _billsPresenter.load();
+    _historyPresenter.load();
+    _installmentPresenter.load();
   }
 
   @override
