@@ -208,6 +208,10 @@ class FoodNlpParser {
   /// are ingredient modifiers, not food separators.
   /// e.g. "egg, whole, cooked, scrambled 100g" → true
   /// but  "chicken, rice, vegetables" → false
+  /// Public entry point so on_device_ai_coach_service and nutrition_presenter
+  /// can use the same logic instead of maintaining their own copies.
+  static bool looksLikeUsdaCanonical(String s) => _looksLikeUsdaCanonical(s);
+
   static bool _looksLikeUsdaCanonical(String s) {
     // Strip leading or trailing gram weight before checking modifier pattern.
     // e.g. "10g oats, rolled, dry" → "oats, rolled, dry"
@@ -223,7 +227,9 @@ class FoodNlpParser {
           '',
         )
         .trim();
+    // Lowercase before checking so "Whole" matches "whole" in _usdaModifiers.
     final parts = stripped
+        .toLowerCase()
         .split(',')
         .map((p) => p.trim())
         .where((p) => p.isNotEmpty)

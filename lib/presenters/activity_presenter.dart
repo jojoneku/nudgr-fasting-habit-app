@@ -6,8 +6,9 @@ import '../models/tdee_profile.dart';
 import '../services/health_service.dart';
 import '../services/storage_service.dart';
 import 'stats_presenter.dart';
+import '../utils/safe_notifier.dart';
 
-class ActivityPresenter extends ChangeNotifier {
+class ActivityPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _statsPresenter;
   final HealthService _healthService;
   final StorageService _storage;
@@ -131,7 +132,7 @@ class ActivityPresenter extends ChangeNotifier {
 
   Future<void> loadState() async {
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
 
     try {
       _todayLog = await _storage.loadTodayActivityLog();
@@ -149,7 +150,7 @@ class ActivityPresenter extends ChangeNotifier {
     }
 
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
 
     // Backfill historical data if permission already granted (e.g. returning user).
     // Safe to call every launch — skips days already in storage.
@@ -162,7 +163,7 @@ class ActivityPresenter extends ChangeNotifier {
     if (!_isHealthConnectAvailable || !_hasHealthPermission) return;
 
     _isLoading = true;
-    notifyListeners();
+    safeNotify();
 
     try {
       await _healthService
@@ -192,7 +193,7 @@ class ActivityPresenter extends ChangeNotifier {
     }
 
     _isLoading = false;
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> setManualSteps(int steps) async {
@@ -203,24 +204,24 @@ class ActivityPresenter extends ChangeNotifier {
     );
     await _storage.saveActivityLog(_todayLog);
     _checkGoalMet();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> updateGoals(ActivityGoals goals) async {
     _goals = goals;
     await _storage.saveActivityGoals(goals);
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> requestHealthPermission() async {
     if (!_isHealthConnectAvailable || _isConnecting) return;
     _isConnecting = true;
     _healthPermissionDenied = false;
-    notifyListeners();
+    safeNotify();
     _hasHealthPermission = await _healthService.requestPermissions();
     _isConnecting = false;
     if (!_hasHealthPermission) _healthPermissionDenied = true;
-    notifyListeners();
+    safeNotify();
     if (_hasHealthPermission) {
       await syncFromHealthConnect();
       await backfillHistory();
@@ -237,7 +238,7 @@ class ActivityPresenter extends ChangeNotifier {
     final had = _hasHealthPermission;
     _hasHealthPermission = await _healthService.hasPermissions();
     _healthPermissionDenied = false;
-    notifyListeners();
+    safeNotify();
     if (_hasHealthPermission && !had) {
       await syncFromHealthConnect();
       await backfillHistory();
@@ -247,13 +248,13 @@ class ActivityPresenter extends ChangeNotifier {
   Future<void> loadStepSources() async {
     if (!_isHealthConnectAvailable || !_hasHealthPermission) return;
     _stepSources = await _healthService.readStepSources();
-    notifyListeners();
+    safeNotify();
   }
 
   Future<void> setPreferredStepsSource(String? sourceId) async {
     _preferredStepsSourceId = sourceId;
     await _storage.savePreferredStepsSource(sourceId);
-    notifyListeners();
+    safeNotify();
     await clearAndRebackfill();
   }
 
@@ -262,7 +263,7 @@ class ActivityPresenter extends ChangeNotifier {
     if (!_isHealthConnectAvailable || !_hasHealthPermission) return;
     await _storage.clearActivityHistory();
     _history = [];
-    notifyListeners();
+    safeNotify();
     await backfillHistory(days: 365);
   }
 
@@ -274,7 +275,7 @@ class ActivityPresenter extends ChangeNotifier {
     if (_isBackfilling) return;
 
     _isBackfilling = true;
-    notifyListeners();
+    safeNotify();
 
     try {
       final existingKeys = await _storage.loadActivityLogKeys();
@@ -322,7 +323,7 @@ class ActivityPresenter extends ChangeNotifier {
     }
 
     _isBackfilling = false;
-    notifyListeners();
+    safeNotify();
   }
 
   // ─── RPG hook ─────────────────────────────────────────────────────────────

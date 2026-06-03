@@ -44,6 +44,11 @@ class ExtractedFoodItem {
   /// has something to log even for out-of-DB foods.
   final EstimatedMacros? estimatedMacros;
 
+  /// True when [estimatedMacros] was synthesised from a generic ~2 kcal/g
+  /// ratio because the model failed to return macros. The values are rough
+  /// approximations — the UI should flag them as unverified estimates.
+  final bool macroFallback;
+
   const ExtractedFoodItem({
     required this.name,
     required this.grams,
@@ -52,6 +57,7 @@ class ExtractedFoodItem {
     this.resolvedFoodId,
     this.resolverConfidence = 0.0,
     this.estimatedMacros,
+    this.macroFallback = false,
   });
 }
 

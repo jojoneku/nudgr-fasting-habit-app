@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/user_stats.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../utils/safe_notifier.dart';
 
-class StatsPresenter extends ChangeNotifier {
+class StatsPresenter extends ChangeNotifier with SafeNotifier {
   final StorageService _storageService;
   final NotificationService _notifications;
   UserStats _stats = UserStats.initial();
@@ -28,12 +29,12 @@ class StatsPresenter extends ChangeNotifier {
   Future<void> loadStats() async {
     _stats = await _storageService.loadUserStats();
     _previousRank = rank;
-    notifyListeners();
+    safeNotify();
   }
 
   void dismissLevelUp() {
     showLevelUpDialog = false;
-    notifyListeners();
+    safeNotify();
   }
 
   // --- Getters ---
@@ -62,7 +63,7 @@ class StatsPresenter extends ChangeNotifier {
 
   Future<void> updateName(String newName) async {
     _stats = _stats.copyWith(name: newName);
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 
@@ -96,7 +97,7 @@ class StatsPresenter extends ChangeNotifier {
       currentHp: newHp,
     );
 
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
 
     // Fire achievement notifications after level-up.
@@ -119,7 +120,7 @@ class StatsPresenter extends ChangeNotifier {
     if (newHp < 0) newHp = 0;
 
     _stats = _stats.copyWith(currentHp: newHp);
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 
@@ -158,19 +159,19 @@ class StatsPresenter extends ChangeNotifier {
     // If VIT increased, current HP stays same but max increases (handled by getter)
     // Optionally heal slightly? No, keep it strict.
 
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 
   Future<void> incrementStreak() async {
     _stats = _stats.copyWith(streak: _stats.streak + 1);
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 
   Future<void> resetStreak() async {
     _stats = _stats.copyWith(streak: 0);
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 
@@ -205,7 +206,7 @@ class StatsPresenter extends ChangeNotifier {
     _stats = _stats.copyWith(
       attributes: (str: str, vit: vit, agi: agi, intl: intl, sen: sen),
     );
-    notifyListeners();
+    safeNotify();
     await _storageService.saveUserStats(_stats);
   }
 }

@@ -45,6 +45,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
+  late final AuthService _authService;
   late final LocalStorageService _storage;
   late final StatsPresenter _statsPresenter;
   late final FastingPresenter _fastingPresenter;
@@ -72,6 +73,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _authService = AuthService();
     _storage = LocalStorageService();
     _syncQueue = SyncQueue();
     _statsPresenter = StatsPresenter(_storage);
@@ -89,7 +91,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
     _cloudAi = CloudAiCoachService(
-      tokenProvider: () => AuthService.instance.currentAccessToken,
+      tokenProvider: () => _authService.currentAccessToken,
     );
     _cloudAi.enabled = widget.settingsPresenter.useCloudAi;
     widget.settingsPresenter.addListener(_onSettingsChanged);
@@ -129,7 +131,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       service: _onDeviceAi,
     );
     _authPresenter = AuthPresenter(
-      AuthService.instance,
+      _authService,
       onFirstSignIn: (userId) => _initSync(userId),
       onSignOut: _tearDownSync,
     );
@@ -146,7 +148,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
 
       await _syncQueue!.load(); // restore persisted queue before auth
-      await AuthService.instance.init(); // init Supabase + restore session
+      await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
@@ -186,28 +188,54 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   }
 
   Future<void> _initSync(String userId) async {
-    if (_syncService != null) return;
+    if (_syncService != null) {
+      if (_currentUserId == userId) return; // already running for this user
+      _tearDownSync(); // different user signed in — tear down first
+    }
     _currentUserId = userId;
     _storage.setUserId(userId);
-    await _syncQueue!.load(userId: userId);
-    _syncService = SyncService(
-      supabase: Supabase.instance.client,
-      storage: _storage,
-      queue: _syncQueue!,
-      userId: userId,
-    );
-    _syncPresenter = SyncPresenter(_syncService!, _authPresenter);
-    _storage.setSyncQueue(_syncQueue!);
-    _storage.onRemoteDataApplied = _reloadAll;
-    _storage.onDirty = _syncService!.schedulePush;
-    await _syncService!.init();
-    // Pull cloud data first so a fresh install (cleared SharedPrefs) never
-    // overwrites existing cloud data with empty local state in pushAll().
-    await _syncService!.pullAll();
-    // Flush queued offline changes, then do the once-per-device initial push.
-    await _syncService!.pushPending();
-    await _syncService!.pushAll();
-    if (mounted) setState(() {});
+    try {
+      await _syncQueue!.load(userId: userId);
+      _syncService = SyncService(
+        supabase: Supabase.instance.client,
+        storage: _storage,
+        queue: _syncQueue!,
+        userId: userId,
+      );
+      _syncPresenter = SyncPresenter(_syncService!, _authPresenter);
+      _storage.setSyncQueue(_syncQueue!);
+      _storage.onRemoteDataApplied = _reloadAll;
+      _storage.onDirty = _syncService!.schedulePush;
+      await _syncService!.init();
+      // Pull cloud data first so a fresh install never overwrites cloud data.
+      await _syncService!.pullAll();
+      // Flush queued offline changes, then do the once-per-device initial push.
+      await _syncService!.pushPending();
+      await _syncService!.pushAll();
+      if (mounted) setState(() {});
+    } catch (e) {
+      debugPrint('AppShell: _initSync failed for $userId: $e');
+      // Null out so a retry attempt can re-enter (skip the early-return guard).
+      _storage.onDirty = null;
+      _storage.onRemoteDataApplied = null;
+      _syncService?.dispose();
+      _syncPresenter?.dispose();
+      _syncService = null;
+      _syncPresenter = null;
+      _currentUserId = null;
+      if (mounted) {
+        setState(() {});
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Sync failed. Tap retry or pull to refresh.'),
+            action: SnackBarAction(
+              label: 'Retry',
+              onPressed: () => _initSync(userId),
+            ),
+          ),
+        );
+      }
+    }
   }
 
   void _tearDownSync() {
