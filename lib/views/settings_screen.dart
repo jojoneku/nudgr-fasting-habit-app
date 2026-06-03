@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -71,7 +70,7 @@ class SettingsScreen extends StatelessWidget {
                   if (nutritionPresenter != null) _foodLearningSection(context),
                   _dataSection(context),
                   _aboutSection(context),
-                  if (kDebugMode) _developerSection(context),
+                  _developerSection(context),
                 ],
               ),
             ),
