@@ -37,8 +37,34 @@ class LocalStorageService extends StorageService {
   SyncQueue? _syncQueue;
   bool _applyingRemote = false;
 
+  /// The signed-in user ID. All user-data prefs keys are prefixed with
+  /// `u/$_userId/` to prevent cross-user data leakage on shared devices.
+  String? _userId;
+
+  /// Scopes a prefs key to the current user. Device-level keys (theme, etc.)
+  /// bypass this and use the base constant directly.
+  String _k(String base) => _userId != null ? 'u/$_userId/$base' : base;
+
   /// Called once SyncService is ready (after auth).
   void setSyncQueue(SyncQueue queue) => _syncQueue = queue;
+
+  /// Sets the active user ID so all subsequent reads/writes are namespaced.
+  /// Called in [AppShell._initSync] immediately after sign-in.
+  void setUserId(String userId) => _userId = userId;
+
+  /// Removes all `u/$userId/` prefixed prefs keys and resets the user
+  /// namespace. Called by [AppShell._tearDownSync] on sign-out.
+  Future<void> clearUserData() async {
+    if (_userId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final prefix = 'u/$_userId/';
+    for (final key
+        in prefs.getKeys().where((k) => k.startsWith(prefix)).toList()) {
+      await prefs.remove(key);
+    }
+    _userId = null;
+    _syncQueue = null;
+  }
 
   /// Fired by SyncService after pullAll() — lets home_screen reload presenters.
   VoidCallback? onRemoteDataApplied;
@@ -69,7 +95,7 @@ class LocalStorageService extends StorageService {
   Future<void> saveUserStats(UserStats stats) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyUserStats, jsonEncode(stats.toJson()));
+        _k(StorageService.keyUserStats), jsonEncode(stats.toJson()));
     debugPrint('LocalStorageService: UserStats saved. Level=${stats.level}');
     _markDirty(SyncDomain.userProfile, 'default');
   }
@@ -77,7 +103,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<UserStats> loadUserStats() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyUserStats);
+    final raw = prefs.getString(_k(StorageService.keyUserStats));
     if (raw != null) {
       try {
         return UserStats.fromJson(jsonDecode(raw));
@@ -101,26 +127,27 @@ class LocalStorageService extends StorageService {
     DateTime? lastPenaltyCheckDate,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(StorageService.keyIsFasting, isFasting);
+    await prefs.setBool(_k(StorageService.keyIsFasting), isFasting);
     if (startTime != null) {
       await prefs.setString(
-          StorageService.keyStartTime, startTime.toIso8601String());
+          _k(StorageService.keyStartTime), startTime.toIso8601String());
     } else {
-      await prefs.remove(StorageService.keyStartTime);
+      await prefs.remove(_k(StorageService.keyStartTime));
     }
     if (eatingStartTime != null) {
-      await prefs.setString(
-          StorageService.keyEatingStartTime, eatingStartTime.toIso8601String());
+      await prefs.setString(_k(StorageService.keyEatingStartTime),
+          eatingStartTime.toIso8601String());
     } else {
-      await prefs.remove(StorageService.keyEatingStartTime);
+      await prefs.remove(_k(StorageService.keyEatingStartTime));
     }
     if (lastPenaltyCheckDate != null) {
-      await prefs.setString(StorageService.keyLastPenaltyCheckDate,
+      await prefs.setString(_k(StorageService.keyLastPenaltyCheckDate),
           lastPenaltyCheckDate.toIso8601String());
     }
-    await prefs.setInt(StorageService.keyElapsedSeconds, elapsedSeconds);
-    await prefs.setInt(StorageService.keyFastingGoalHours, fastingGoalHours);
-    await prefs.setString(StorageService.keyHistory,
+    await prefs.setInt(_k(StorageService.keyElapsedSeconds), elapsedSeconds);
+    await prefs.setInt(
+        _k(StorageService.keyFastingGoalHours), fastingGoalHours);
+    await prefs.setString(_k(StorageService.keyHistory),
         jsonEncode(history.map((e) => e.toJson()).toList()));
     debugPrint('LocalStorageService: State saved. isFasting=$isFasting');
     _markDirty(SyncDomain.fastingState, 'default');
@@ -130,18 +157,19 @@ class LocalStorageService extends StorageService {
   Future<Map<String, dynamic>> loadState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final isFasting = prefs.getBool(StorageService.keyIsFasting) ?? false;
-    final startTimeStr = prefs.getString(StorageService.keyStartTime);
+    final isFasting = prefs.getBool(_k(StorageService.keyIsFasting)) ?? false;
+    final startTimeStr = prefs.getString(_k(StorageService.keyStartTime));
     final eatingStartTimeStr =
-        prefs.getString(StorageService.keyEatingStartTime);
+        prefs.getString(_k(StorageService.keyEatingStartTime));
     final lastPenaltyStr =
-        prefs.getString(StorageService.keyLastPenaltyCheckDate);
-    final elapsedSeconds = prefs.getInt(StorageService.keyElapsedSeconds) ?? 0;
+        prefs.getString(_k(StorageService.keyLastPenaltyCheckDate));
+    final elapsedSeconds =
+        prefs.getInt(_k(StorageService.keyElapsedSeconds)) ?? 0;
     final fastingGoalHours =
-        prefs.getInt(StorageService.keyFastingGoalHours) ?? 16;
+        prefs.getInt(_k(StorageService.keyFastingGoalHours)) ?? 16;
 
     List<FastingLog> history = [];
-    final historyRaw = prefs.getString(StorageService.keyHistory);
+    final historyRaw = prefs.getString(_k(StorageService.keyHistory));
     if (historyRaw != null) {
       try {
         history = (jsonDecode(historyRaw) as List)
@@ -169,7 +197,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveQuests(List<Quest> quests) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyQuests,
+    await prefs.setString(_k(StorageService.keyQuests),
         jsonEncode(quests.map((e) => e.toJson()).toList()));
     debugPrint('LocalStorageService: Quests saved (${quests.length} items)');
     _markDirty(SyncDomain.userQuests, 'default');
@@ -178,7 +206,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<Quest>> loadQuests() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyQuests);
+    final raw = prefs.getString(_k(StorageService.keyQuests));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -193,7 +221,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveRoutines(List<HabitRoutine> routines) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyQuestRoutines,
+    await prefs.setString(_k(StorageService.keyQuestRoutines),
         jsonEncode(routines.map((r) => r.toJson()).toList()));
     _markDirty(SyncDomain.userCollections, 'default');
   }
@@ -201,7 +229,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<HabitRoutine>> loadRoutines() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyQuestRoutines);
+    final raw = prefs.getString(_k(StorageService.keyQuestRoutines));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -216,7 +244,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveAchievements(List<QuestAchievement> achievements) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyQuestAchievements,
+    await prefs.setString(_k(StorageService.keyQuestAchievements),
         jsonEncode(achievements.map((a) => a.toJson()).toList()));
     _markDirty(SyncDomain.userQuests, 'default');
   }
@@ -224,7 +252,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<QuestAchievement>> loadAchievements() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyQuestAchievements);
+    final raw = prefs.getString(_k(StorageService.keyQuestAchievements));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -240,14 +268,14 @@ class LocalStorageService extends StorageService {
   Future<void> saveQuestPenaltyCheckDate(DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyQuestPenaltyCheckDate, date.toIso8601String());
+        _k(StorageService.keyQuestPenaltyCheckDate), date.toIso8601String());
     _markDirty(SyncDomain.userQuests, 'default');
   }
 
   @override
   Future<DateTime?> loadQuestPenaltyCheckDate() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyQuestPenaltyCheckDate);
+    final raw = prefs.getString(_k(StorageService.keyQuestPenaltyCheckDate));
     if (raw == null) return null;
     try {
       return DateTime.parse(raw);
@@ -261,7 +289,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveNutritionLog(DailyNutritionLog log) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyNutritionLogs);
+    final raw = prefs.getString(_k(StorageService.keyNutritionLogs));
     final Map<String, dynamic> all =
         raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
     all[log.date] = log.toJson();
@@ -276,7 +304,7 @@ class LocalStorageService extends StorageService {
       }
     });
 
-    await prefs.setString(StorageService.keyNutritionLogs, jsonEncode(all));
+    await prefs.setString(_k(StorageService.keyNutritionLogs), jsonEncode(all));
     _markDirty(SyncDomain.nutritionLog, log.date);
   }
 
@@ -295,7 +323,7 @@ class LocalStorageService extends StorageService {
 
   DailyNutritionLog _loadNutritionLogForKey(
       SharedPreferences prefs, String key) {
-    final raw = prefs.getString(StorageService.keyNutritionLogs);
+    final raw = prefs.getString(_k(StorageService.keyNutritionLogs));
     if (raw != null) {
       try {
         final Map<String, dynamic> all =
@@ -314,7 +342,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<DailyNutritionLog>> loadNutritionHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyNutritionLogs);
+    final raw = prefs.getString(_k(StorageService.keyNutritionLogs));
     if (raw == null) return [];
     try {
       final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
@@ -336,14 +364,14 @@ class LocalStorageService extends StorageService {
   Future<void> saveNutritionGoals(NutritionGoals goals) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyNutritionGoals, jsonEncode(goals.toJson()));
+        _k(StorageService.keyNutritionGoals), jsonEncode(goals.toJson()));
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<NutritionGoals> loadNutritionGoals() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyNutritionGoals);
+    final raw = prefs.getString(_k(StorageService.keyNutritionGoals));
     if (raw != null) {
       try {
         return NutritionGoals.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -357,41 +385,41 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveNutritionStreak(int streak) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(StorageService.keyNutritionStreak, streak);
+    await prefs.setInt(_k(StorageService.keyNutritionStreak), streak);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<int> loadNutritionStreak() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(StorageService.keyNutritionStreak) ?? 0;
+    return prefs.getInt(_k(StorageService.keyNutritionStreak)) ?? 0;
   }
 
   @override
   Future<void> saveNutritionGoalMetDate(String date) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyNutritionGoalMetDate, date);
+    await prefs.setString(_k(StorageService.keyNutritionGoalMetDate), date);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<String?> loadNutritionGoalMetDate() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(StorageService.keyNutritionGoalMetDate);
+    return prefs.getString(_k(StorageService.keyNutritionGoalMetDate));
   }
 
   @override
   Future<void> saveTdeeProfile(TdeeProfile profile) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyTdeeProfile, jsonEncode(profile.toJson()));
+        _k(StorageService.keyTdeeProfile), jsonEncode(profile.toJson()));
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<TdeeProfile?> loadTdeeProfile() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyTdeeProfile);
+    final raw = prefs.getString(_k(StorageService.keyTdeeProfile));
     if (raw == null) return null;
     try {
       return TdeeProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -404,7 +432,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveFoodLibrary(List<FoodTemplate> templates) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyFoodLibrary,
+    await prefs.setString(_k(StorageService.keyFoodLibrary),
         jsonEncode(templates.map((t) => t.toJson()).toList()));
     _markDirty(SyncDomain.userCollections, 'default');
   }
@@ -412,7 +440,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<FoodTemplate>> loadFoodLibrary() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyFoodLibrary);
+    final raw = prefs.getString(_k(StorageService.keyFoodLibrary));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -427,27 +455,27 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveLogStreak(int streak) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(StorageService.keyLogStreak, streak);
+    await prefs.setInt(_k(StorageService.keyLogStreak), streak);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<int> loadLogStreak() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(StorageService.keyLogStreak) ?? 0;
+    return prefs.getInt(_k(StorageService.keyLogStreak)) ?? 0;
   }
 
   @override
   Future<void> saveLogStreakDate(String date) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyLogStreakDate, date);
+    await prefs.setString(_k(StorageService.keyLogStreakDate), date);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<String?> loadLogStreakDate() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(StorageService.keyLogStreakDate);
+    return prefs.getString(_k(StorageService.keyLogStreakDate));
   }
 
   // ── Activity ─────────────────────────────────────────────────────────────────
@@ -455,11 +483,11 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveActivityLog(ActivityLog log) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     final Map<String, dynamic> all =
         raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
     all[log.date] = log.toJson();
-    await prefs.setString(StorageService.keyActivityLogs, jsonEncode(all));
+    await prefs.setString(_k(StorageService.keyActivityLogs), jsonEncode(all));
     _markDirty(SyncDomain.activityLog, log.date);
   }
 
@@ -467,7 +495,7 @@ class LocalStorageService extends StorageService {
   Future<ActivityLog> loadTodayActivityLog() async {
     final prefs = await SharedPreferences.getInstance();
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     if (raw != null) {
       try {
         final Map<String, dynamic> all =
@@ -485,7 +513,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<ActivityLog>> loadActivityHistory() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     if (raw == null) return [];
     try {
       final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
@@ -505,7 +533,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<Set<String>> loadActivityLogKeys() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     if (raw == null) return {};
     try {
       return (jsonDecode(raw) as Map<String, dynamic>).keys.toSet();
@@ -518,13 +546,13 @@ class LocalStorageService extends StorageService {
   Future<void> clearActivityHistory() async {
     final prefs = await SharedPreferences.getInstance();
     final todayKey = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     if (raw == null) return;
     try {
       final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
       final todayEntry = all[todayKey];
       await prefs.setString(
-        StorageService.keyActivityLogs,
+        _k(StorageService.keyActivityLogs),
         jsonEncode(todayEntry != null ? {todayKey: todayEntry} : {}),
       );
     } catch (e) {
@@ -536,13 +564,13 @@ class LocalStorageService extends StorageService {
   Future<void> saveActivityLogs(List<ActivityLog> logs) async {
     if (logs.isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyActivityLogs);
+    final raw = prefs.getString(_k(StorageService.keyActivityLogs));
     final Map<String, dynamic> all =
         raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
     for (final log in logs) {
       all[log.date] = log.toJson();
     }
-    await prefs.setString(StorageService.keyActivityLogs, jsonEncode(all));
+    await prefs.setString(_k(StorageService.keyActivityLogs), jsonEncode(all));
     if (!_applyingRemote) {
       for (final log in logs) {
         _syncQueue?.markDirty(SyncDomain.activityLog, log.date);
@@ -554,14 +582,14 @@ class LocalStorageService extends StorageService {
   Future<void> saveActivityGoals(ActivityGoals goals) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyActivityGoals, jsonEncode(goals.toJson()));
+        _k(StorageService.keyActivityGoals), jsonEncode(goals.toJson()));
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<ActivityGoals> loadActivityGoals() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyActivityGoals);
+    final raw = prefs.getString(_k(StorageService.keyActivityGoals));
     if (raw != null) {
       try {
         return ActivityGoals.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -575,16 +603,17 @@ class LocalStorageService extends StorageService {
   @override
   Future<String?> loadPreferredStepsSource() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(StorageService.keyPreferredStepsSource);
+    return prefs.getString(_k(StorageService.keyPreferredStepsSource));
   }
 
   @override
   Future<void> savePreferredStepsSource(String? sourceId) async {
     final prefs = await SharedPreferences.getInstance();
     if (sourceId == null) {
-      await prefs.remove(StorageService.keyPreferredStepsSource);
+      await prefs.remove(_k(StorageService.keyPreferredStepsSource));
     } else {
-      await prefs.setString(StorageService.keyPreferredStepsSource, sourceId);
+      await prefs.setString(
+          _k(StorageService.keyPreferredStepsSource), sourceId);
     }
     _markDirty(SyncDomain.userProfile, 'default');
   }
@@ -592,27 +621,27 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveActivityGoalMetDate(String date) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyActivityGoalMetDate, date);
+    await prefs.setString(_k(StorageService.keyActivityGoalMetDate), date);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<String?> loadActivityGoalMetDate() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(StorageService.keyActivityGoalMetDate);
+    return prefs.getString(_k(StorageService.keyActivityGoalMetDate));
   }
 
   @override
   Future<void> saveActivityStreak(int streak) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(StorageService.keyActivityStreak, streak);
+    await prefs.setInt(_k(StorageService.keyActivityStreak), streak);
     _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
   Future<int> loadActivityStreak() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(StorageService.keyActivityStreak) ?? 0;
+    return prefs.getInt(_k(StorageService.keyActivityStreak)) ?? 0;
   }
 
   // ── Chat ─────────────────────────────────────────────────────────────────────
@@ -620,7 +649,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveChatMessages(String date, List<dynamic> messages) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyChatMessages);
+    final raw = prefs.getString(_k(StorageService.keyChatMessages));
     final Map<String, dynamic> all =
         raw != null ? jsonDecode(raw) as Map<String, dynamic> : {};
     all[date] = messages.map((m) {
@@ -637,14 +666,14 @@ class LocalStorageService extends StorageService {
         all.remove(key);
       }
     }
-    await prefs.setString(StorageService.keyChatMessages, jsonEncode(all));
+    await prefs.setString(_k(StorageService.keyChatMessages), jsonEncode(all));
     _markDirty(SyncDomain.nutritionLog, date);
   }
 
   @override
   Future<List<Map<String, dynamic>>> loadChatMessagesRaw(String date) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyChatMessages);
+    final raw = prefs.getString(_k(StorageService.keyChatMessages));
     if (raw == null) return [];
     try {
       final Map<String, dynamic> all = jsonDecode(raw) as Map<String, dynamic>;
@@ -678,14 +707,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyFinancialAccounts,
+    await prefs.setString(_k(StorageService.keyFinancialAccounts),
         jsonEncode(accounts.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<FinancialAccount>> loadAccounts() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyFinancialAccounts);
+    final raw = prefs.getString(_k(StorageService.keyFinancialAccounts));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -716,14 +745,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyTransactions,
+    await prefs.setString(_k(StorageService.keyTransactions),
         jsonEncode(transactions.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<TransactionRecord>> loadTransactions() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyTransactions);
+    final raw = prefs.getString(_k(StorageService.keyTransactions));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -754,14 +783,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyFinanceCategories,
+    await prefs.setString(_k(StorageService.keyFinanceCategories),
         jsonEncode(categories.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<FinanceCategory>> loadFinanceCategories() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyFinanceCategories);
+    final raw = prefs.getString(_k(StorageService.keyFinanceCategories));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -791,14 +820,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyBudgets,
+    await prefs.setString(_k(StorageService.keyBudgets),
         jsonEncode(budgets.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<Budget>> loadBudgets() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyBudgets);
+    final raw = prefs.getString(_k(StorageService.keyBudgets));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -829,14 +858,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyBudgetedExpenses,
+    await prefs.setString(_k(StorageService.keyBudgetedExpenses),
         jsonEncode(expenses.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<BudgetedExpense>> loadBudgetedExpenses() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyBudgetedExpenses);
+    final raw = prefs.getString(_k(StorageService.keyBudgetedExpenses));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -866,14 +895,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyBills,
+    await prefs.setString(_k(StorageService.keyBills),
         jsonEncode(bills.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<Bill>> loadBills() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyBills);
+    final raw = prefs.getString(_k(StorageService.keyBills));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -904,14 +933,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyReceivables,
+    await prefs.setString(_k(StorageService.keyReceivables),
         jsonEncode(receivables.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<Receivable>> loadReceivables() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyReceivables);
+    final raw = prefs.getString(_k(StorageService.keyReceivables));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -942,14 +971,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyInstallments,
+    await prefs.setString(_k(StorageService.keyInstallments),
         jsonEncode(installments.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<Installment>> loadInstallments() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyInstallments);
+    final raw = prefs.getString(_k(StorageService.keyInstallments));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -980,14 +1009,14 @@ class LocalStorageService extends StorageService {
       }
     }
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyMonthlySummaries,
+    await prefs.setString(_k(StorageService.keyMonthlySummaries),
         jsonEncode(summaries.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<MonthlySummary>> loadMonthlySummaries() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyMonthlySummaries);
+    final raw = prefs.getString(_k(StorageService.keyMonthlySummaries));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1004,7 +1033,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> savePersonalDict(List<PersonalFoodEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyPersonalFoodDict,
+    await prefs.setString(_k(StorageService.keyPersonalFoodDict),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
     _markDirty(SyncDomain.userCollections, 'default');
   }
@@ -1012,7 +1041,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<PersonalFoodEntry>> loadPersonalDict() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyPersonalFoodDict);
+    final raw = prefs.getString(_k(StorageService.keyPersonalFoodDict));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1029,7 +1058,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveFinanceDictionary(List<FinanceDictEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyFinanceDictionary,
+    await prefs.setString(_k(StorageService.keyFinanceDictionary),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
     _markDirty(SyncDomain.userCollections, 'default');
   }
@@ -1037,7 +1066,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<FinanceDictEntry>> loadFinanceDictionary() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyFinanceDictionary);
+    final raw = prefs.getString(_k(StorageService.keyFinanceDictionary));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1061,7 +1090,7 @@ class LocalStorageService extends StorageService {
         : entries;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-      StorageService.keyFoodFeedback,
+      _k(StorageService.keyFoodFeedback),
       jsonEncode(capped.map((e) => e.toJson()).toList()),
     );
   }
@@ -1069,7 +1098,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<List<FoodFeedback>> loadFoodFeedback() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyFoodFeedback);
+    final raw = prefs.getString(_k(StorageService.keyFoodFeedback));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1081,21 +1110,19 @@ class LocalStorageService extends StorageService {
     }
   }
 
-  // ── Export / Import ──────────────────────────────────────────────────────────
-
   // ── Weight Log ───────────────────────────────────────────────────────────────
 
   @override
   Future<void> saveWeightLog(List<WeightEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyWeightLog,
+    await prefs.setString(_k(StorageService.keyWeightLog),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<WeightEntry>> loadWeightLog() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyWeightLog);
+    final raw = prefs.getString(_k(StorageService.keyWeightLog));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1112,14 +1139,14 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveBodyMeasurements(List<BodyMeasurementEntry> entries) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyBodyMeasurements,
+    await prefs.setString(_k(StorageService.keyBodyMeasurements),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
   }
 
   @override
   Future<List<BodyMeasurementEntry>> loadBodyMeasurements() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyBodyMeasurements);
+    final raw = prefs.getString(_k(StorageService.keyBodyMeasurements));
     if (raw == null) return [];
     try {
       return (jsonDecode(raw) as List)
@@ -1134,13 +1161,13 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveMeasurementUnit(MeasurementUnit unit) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageService.keyMeasurementUnit, unit.name);
+    await prefs.setString(_k(StorageService.keyMeasurementUnit), unit.name);
   }
 
   @override
   Future<MeasurementUnit> loadMeasurementUnit() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyMeasurementUnit);
+    final raw = prefs.getString(_k(StorageService.keyMeasurementUnit));
     return raw == 'imperial'
         ? MeasurementUnit.imperial
         : MeasurementUnit.metric;
@@ -1150,13 +1177,13 @@ class LocalStorageService extends StorageService {
   Future<void> saveLastRecompXpDate(DateTime date) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
-        StorageService.keyLastRecompXpDate, date.toIso8601String());
+        _k(StorageService.keyLastRecompXpDate), date.toIso8601String());
   }
 
   @override
   Future<DateTime?> loadLastRecompXpDate() async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(StorageService.keyLastRecompXpDate);
+    final raw = prefs.getString(_k(StorageService.keyLastRecompXpDate));
     if (raw == null) return null;
     try {
       return DateTime.parse(raw);
@@ -1165,15 +1192,7 @@ class LocalStorageService extends StorageService {
     }
   }
 
-  @override
-  Future<String> exportAllData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final allData = <String, dynamic>{};
-    for (final key in prefs.getKeys()) {
-      allData[key] = prefs.get(key);
-    }
-    return jsonEncode(allData);
-  }
+  // ── Theme (device-level, not user-scoped) ────────────────────────────────────
 
   @override
   Future<void> saveThemeMode(String mode) async {
@@ -1193,14 +1212,14 @@ class LocalStorageService extends StorageService {
   Future<void> saveNotificationPreferences(
       NotificationPreferences prefs) async {
     final sp = await SharedPreferences.getInstance();
-    await sp.setString(
-        StorageService.keyNotificationPreferences, jsonEncode(prefs.toJson()));
+    await sp.setString(_k(StorageService.keyNotificationPreferences),
+        jsonEncode(prefs.toJson()));
   }
 
   @override
   Future<NotificationPreferences> loadNotificationPreferences() async {
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(StorageService.keyNotificationPreferences);
+    final raw = sp.getString(_k(StorageService.keyNotificationPreferences));
     if (raw == null) return NotificationPreferences.defaults();
     try {
       return NotificationPreferences.fromJson(
@@ -1211,6 +1230,8 @@ class LocalStorageService extends StorageService {
       return NotificationPreferences.defaults();
     }
   }
+
+  // ── Device-level AI flags (not user-scoped) ──────────────────────────────────
 
   @override
   Future<void> saveUseCloudAi(bool value) async {
@@ -1240,24 +1261,56 @@ class LocalStorageService extends StorageService {
     return prefs.getInt(StorageService.kAiPromptSkippedAt);
   }
 
+  // ── Export / Import ──────────────────────────────────────────────────────────
+
+  /// Exports only the current user's data. Keys are stripped of the
+  /// `u/$userId/` prefix so the export format is stable across user IDs.
+  @override
+  Future<String> exportAllData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final allData = <String, dynamic>{};
+    if (_userId != null) {
+      final prefix = 'u/$_userId/';
+      for (final key in prefs.getKeys()) {
+        if (key.startsWith(prefix)) {
+          allData[key.substring(prefix.length)] = prefs.get(key);
+        }
+      }
+    } else {
+      for (final key in prefs.getKeys()) {
+        allData[key] = prefs.get(key);
+      }
+    }
+    return jsonEncode(allData);
+  }
+
+  /// Imports data into the current user's namespace, replacing only that
+  /// user's keys (does not touch other users' data or device-level keys).
   @override
   Future<void> importAllData(String jsonString) async {
     final prefs = await SharedPreferences.getInstance();
     try {
       final Map<String, dynamic> data = jsonDecode(jsonString);
-      await prefs.clear();
+      if (_userId != null) {
+        final prefix = 'u/$_userId/';
+        for (final key
+            in prefs.getKeys().where((k) => k.startsWith(prefix)).toList()) {
+          await prefs.remove(key);
+        }
+      }
       for (final key in data.keys) {
+        final storageKey = _k(key);
         final value = data[key];
         if (value is bool) {
-          await prefs.setBool(key, value);
+          await prefs.setBool(storageKey, value);
         } else if (value is int) {
-          await prefs.setInt(key, value);
+          await prefs.setInt(storageKey, value);
         } else if (value is double) {
-          await prefs.setDouble(key, value);
+          await prefs.setDouble(storageKey, value);
         } else if (value is String) {
-          await prefs.setString(key, value);
+          await prefs.setString(storageKey, value);
         } else if (value is List) {
-          await prefs.setStringList(key, List<String>.from(value));
+          await prefs.setStringList(storageKey, List<String>.from(value));
         }
       }
       debugPrint('LocalStorageService: Import successful.');
