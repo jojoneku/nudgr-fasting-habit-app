@@ -45,6 +45,7 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
+  late final AuthService _authService;
   late final LocalStorageService _storage;
   late final StatsPresenter _statsPresenter;
   late final FastingPresenter _fastingPresenter;
@@ -72,6 +73,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    _authService = AuthService();
     _storage = LocalStorageService();
     _syncQueue = SyncQueue();
     _statsPresenter = StatsPresenter(_storage);
@@ -89,7 +91,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       tokenProvider: remoteSecrets.getHuggingFaceToken,
     );
     _cloudAi = CloudAiCoachService(
-      tokenProvider: () => AuthService.instance.currentAccessToken,
+      tokenProvider: () => _authService.currentAccessToken,
     );
     _cloudAi.enabled = widget.settingsPresenter.useCloudAi;
     widget.settingsPresenter.addListener(_onSettingsChanged);
@@ -129,7 +131,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       service: _onDeviceAi,
     );
     _authPresenter = AuthPresenter(
-      AuthService.instance,
+      _authService,
       onFirstSignIn: (userId) => _initSync(userId),
       onSignOut: _tearDownSync,
     );
@@ -146,7 +148,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
 
       await _syncQueue!.load(); // restore persisted queue before auth
-      await AuthService.instance.init(); // init Supabase + restore session
+      await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
