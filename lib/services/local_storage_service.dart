@@ -1281,7 +1281,7 @@ class LocalStorageService extends StorageService {
   @override
   Future<bool> loadUseCloudAi() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(StorageService.kUseCloudAi) ?? false;
+    return prefs.getBool(StorageService.kUseCloudAi) ?? true;
   }
 
   @override

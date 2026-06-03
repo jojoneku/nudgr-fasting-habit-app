@@ -25,6 +25,13 @@ enum EstimationSource {
   keywordDensity,
   userManual;
 
+  /// Whether a badge should be shown on the food log item for this source.
+  /// DB is the silent baseline; everything else is worth surfacing.
+  bool get showBadge => switch (this) {
+        EstimationSource.db => false,
+        _ => true,
+      };
+
   bool get isTrusted => switch (this) {
         EstimationSource.db ||
         EstimationSource.personalDict ||
