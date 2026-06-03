@@ -661,8 +661,7 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Test Cloud AI (Bedrock)'),
             subtitle: const Text('Parses "1 cup of rice" via cloud tier'),
             onTap: () async {
-              final result =
-                  await nutritionPresenter!.debugTestCloudAi();
+              final result = await nutritionPresenter!.debugTestCloudAi();
               if (!context.mounted) return;
               showDialog<void>(
                 context: context,

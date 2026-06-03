@@ -1108,11 +1108,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     final sw = Stopwatch()..start();
     try {
       final candidates = await _buildCandidatePool('1 cup of rice');
-      final result = await cloud.parseFoodWithCandidates(
-          '1 cup of rice', candidates);
+      final result =
+          await cloud.parseFoodWithCandidates('1 cup of rice', candidates);
       sw.stop();
-      if (result == null) return 'parseFoodWithCandidates returned null  (${sw.elapsedMilliseconds}ms)';
-      final items = result.items.map((i) => '${i.name} (${i.grams}g)').join(', ');
+      if (result == null)
+        return 'parseFoodWithCandidates returned null  (${sw.elapsedMilliseconds}ms)';
+      final items =
+          result.items.map((i) => '${i.name} (${i.grams}g)').join(', ');
       return '✓ ${sw.elapsedMilliseconds}ms\n$items';
     } catch (e) {
       sw.stop();
