@@ -1092,6 +1092,34 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   /// up AI prompt budgets and stall parsing for tens of seconds.
   static const int _maxChatInputLength = 500;
 
+  // ── Debug / dev tools ────────────────────────────────────────────────────
+  // REMOVE before any production audit — only called from kDebugMode tiles.
+
+  /// Fires a minimal cloud-parse call and returns a human-readable summary
+  /// of what came back (tier hit, items, latency). Safe to call standalone —
+  /// does not mutate any presenter state.
+  Future<String> debugTestCloudAi() async {
+    final cloud = _cloudAi;
+    if (cloud == null) return 'cloudAi not injected';
+    if (!cloud.isAvailable) {
+      return 'isAvailable=false  '
+          '(endpoint=${cloud.runtimeType}, enabled=${cloud.isAvailable})';
+    }
+    final sw = Stopwatch()..start();
+    try {
+      final candidates = await _buildCandidatePool('1 cup of rice');
+      final result = await cloud.parseFoodWithCandidates(
+          '1 cup of rice', candidates);
+      sw.stop();
+      if (result == null) return 'parseFoodWithCandidates returned null  (${sw.elapsedMilliseconds}ms)';
+      final items = result.items.map((i) => '${i.name} (${i.grams}g)').join(', ');
+      return '✓ ${sw.elapsedMilliseconds}ms\n$items';
+    } catch (e) {
+      sw.stop();
+      return 'error after ${sw.elapsedMilliseconds}ms:\n$e';
+    }
+  }
+
   /// Parse [text] as food or exercise, add to the chat feed, and persist.
   Future<void> parseChat(String text) async {
     final trimmed = text.trim();
