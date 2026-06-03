@@ -7,7 +7,14 @@ Parameters:
     Type: String
     Description: >
       Supabase project reference ID (the subdomain before .supabase.co).
-      Used to construct the JWT authorizer issuer URL.
+      Used to construct the JWT authorizer issuer URL and the rate-limit RPC URL.
+  SupabaseAnonKey:
+    Type: String
+    NoEcho: true
+    Description: >
+      Supabase anon (public) API key. Sent as the PostgREST `apikey` header when
+      calling the increment_ai_usage rate-limit RPC. Not secret — already shipped
+      in the client app — but marked NoEcho to keep it out of CloudFormation logs.
   DailyCap:
     Type: Number
     Default: 100
@@ -23,26 +30,13 @@ Globals:
         BEDROCK_MODEL_ID: anthropic.claude-haiku-20240307-v1:0
         MAX_TOKENS: '1024'
         DAILY_CAP: !Ref DailyCap
-        RATE_LIMIT_TABLE: !Ref RateLimitTable
+        SUPABASE_URL: !Sub 'https://${SupabaseProjectRef}.supabase.co'
+        SUPABASE_ANON_KEY: !Ref SupabaseAnonKey
 
 Resources:
-  # ── Rate limiting store ──────────────────────────────────────────────────────
-  RateLimitTable:
-    Type: AWS::DynamoDB::Table
-    Properties:
-      TableName: ai-coach-rate-limit
-      BillingMode: PAY_PER_REQUEST
-      AttributeDefinitions:
-        - AttributeName: pk
-          AttributeType: S
-      KeySchema:
-        - AttributeName: pk
-          KeyType: HASH
-      TimeToLiveSpecification:
-        AttributeName: ttl
-        Enabled: true
-
   # ── Lambda function ──────────────────────────────────────────────────────────
+  # Rate limiting is enforced via the Supabase `increment_ai_usage` RPC (see
+  # docs/supabase_migration.sql) — no AWS-side datastore needed.
   AiCoachFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -56,11 +50,6 @@ Resources:
                 - bedrock:InvokeModel
               Resource: !Sub >-
                 arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-haiku-20240307-v1:0
-            - Effect: Allow
-              Action:
-                - dynamodb:UpdateItem
-                - dynamodb:GetItem
-              Resource: !GetAtt RateLimitTable.Arn
       Events:
         CoachPost:
           Type: HttpApi
@@ -103,7 +92,3 @@ Outputs:
   AiCoachFunctionArn:
     Description: AI Coach Lambda function ARN
     Value: !GetAtt AiCoachFunction.Arn
-
-  RateLimitTableName:
-    Description: DynamoDB rate limit table name
-    Value: !Ref RateLimitTable

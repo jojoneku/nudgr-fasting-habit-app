@@ -130,3 +130,48 @@ CREATE INDEX IF NOT EXISTS idx_activity_logs_user_date
 
 CREATE INDEX IF NOT EXISTS idx_finance_records_user_table
   ON finance_records (user_id, table_name);
+
+-- =============================================================================
+-- AI Coach rate limiting (Plan 034 SEV-1 / Plan 036)
+-- Per-user daily cap on Bedrock calls. The AI Coach Lambda forwards the user's
+-- Bearer token to the increment_ai_usage() RPC over HTTPS (PostgREST); RLS +
+-- SECURITY DEFINER ensure a caller can only ever bump their OWN counter.
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS ai_coach_rate_limit (
+  user_id  UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  day      DATE NOT NULL DEFAULT CURRENT_DATE,
+  count    INT  NOT NULL DEFAULT 0,
+  PRIMARY KEY (user_id, day)
+);
+
+-- Lock the table down: no direct client access. Only the SECURITY DEFINER
+-- function below may read/write it (it runs as the table owner).
+ALTER TABLE ai_coach_rate_limit ENABLE ROW LEVEL SECURITY;
+
+-- Atomically increment the calling user's counter for today and return the new
+-- value. auth.uid() comes from the forwarded JWT, so the caller cannot touch
+-- another user's row. Callers can only ever increase their own usage.
+CREATE OR REPLACE FUNCTION increment_ai_usage()
+  RETURNS INT
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+AS $$
+DECLARE
+  new_count INT;
+BEGIN
+  INSERT INTO ai_coach_rate_limit (user_id, day, count)
+  VALUES (auth.uid(), CURRENT_DATE, 1)
+  ON CONFLICT (user_id, day) DO UPDATE
+    SET count = ai_coach_rate_limit.count + 1
+  RETURNING count INTO new_count;
+  RETURN new_count;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION increment_ai_usage() TO authenticated;
+
+-- Optional housekeeping: drop counters older than 7 days. Run periodically
+-- (pg_cron) or ignore — the table stays tiny (one row per user per active day).
+-- DELETE FROM ai_coach_rate_limit WHERE day < CURRENT_DATE - INTERVAL '7 days';

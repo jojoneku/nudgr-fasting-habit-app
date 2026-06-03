@@ -1,31 +1,20 @@
 import json
 import os
 import re
-from datetime import datetime, timedelta, timezone
+import urllib.request
 
 import boto3
-from botocore.exceptions import ClientError
 
-# ── Module-level AWS clients (connection reuse across warm invocations) ────────
+# ── Module-level clients/config (reused across warm invocations) ───────────────
 
 _bedrock = boto3.client("bedrock-runtime", region_name="ap-southeast-1")
-_dynamodb = boto3.resource("dynamodb", region_name="ap-southeast-1")
 
 _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 _DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
-_RATE_LIMIT_TABLE = os.environ.get("RATE_LIMIT_TABLE", "ai-coach-rate-limit")
+_SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+_SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 _MAX_TEXT_LEN = 500   # chars; guards prompt-size and injection blast radius
 _MAX_CANDIDATES = 15
-
-# Lazy-init table reference (avoids a describe-table call at import time).
-_rate_table = None
-
-
-def _get_rate_table():
-    global _rate_table
-    if _rate_table is None:
-        _rate_table = _dynamodb.Table(_RATE_LIMIT_TABLE)
-    return _rate_table
 
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
@@ -44,39 +33,50 @@ def _get_user_id(event):
         return None
 
 
+def _get_bearer_token(event):
+    """Return the raw Bearer token from the Authorization header, or ''.
+
+    API Gateway HTTP API lowercases header names; fall back to the capitalised
+    form defensively.
+    """
+    headers = event.get("headers") or {}
+    auth = headers.get("authorization") or headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
 # ── Rate limiting ──────────────────────────────────────────────────────────────
 
-def _check_rate_limit(user_id):
-    """Atomically increment the per-user daily counter; return (allowed, count).
+def _check_rate_limit(token):
+    """Atomically increment the caller's daily counter; return (allowed, count).
 
-    DynamoDB item key: "<yyyymmdd>#<user_id>"
-    TTL: set to 48 h past midnight UTC so items auto-expire.
-    Fails open (returns True) when DynamoDB is unreachable to avoid breaking
-    the app over a transient infra issue.
+    Calls the Supabase `increment_ai_usage` RPC over HTTPS (PostgREST),
+    forwarding the user's Bearer token. The SECURITY DEFINER function derives
+    the user from auth.uid(), so a caller can only ever bump their own counter.
+
+    Fails open (returns True) on transport/Supabase errors or when rate
+    limiting isn't configured, so a transient infra issue never bricks the app.
     """
-    today = datetime.now(timezone.utc).strftime("%Y%m%d")
-    pk = f"{today}#{user_id}"
-    # TTL: 48 h past midnight of today (gives plenty of margin for clock skew).
-    expire_at = int(
-        (datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-         + timedelta(days=2)).timestamp()
+    if not _SUPABASE_URL or not _SUPABASE_ANON_KEY or not token:
+        return True, 0  # not configured / no token → fail open
+    req = urllib.request.Request(
+        f"{_SUPABASE_URL}/rest/v1/rpc/increment_ai_usage",
+        data=b"{}",
+        method="POST",
+        headers={
+            "Content-Type": "application/json",
+            "apikey": _SUPABASE_ANON_KEY,
+            "Authorization": f"Bearer {token}",
+        },
     )
     try:
-        resp = _get_rate_table().update_item(
-            Key={"pk": pk},
-            UpdateExpression="ADD #c :one SET #ttl = if_not_exists(#ttl, :ttl)",
-            ExpressionAttributeNames={"#c": "count", "#ttl": "ttl"},
-            ExpressionAttributeValues={":one": 1, ":ttl": expire_at},
-            ReturnValues="UPDATED_NEW",
-        )
-        count = int(resp["Attributes"]["count"])
-        return count <= _DAILY_CAP, count
-    except ClientError as e:
-        print(f"Rate limit DynamoDB error: {e}")
-        return True, 0  # fail open
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            count = int(json.loads(resp.read()))
+            return count <= _DAILY_CAP, count
     except Exception as e:
-        print(f"Rate limit unexpected error: {e}")
-        return True, 0
+        print(f"Rate limit RPC error: {e}")
+        return True, 0  # fail open
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
@@ -91,7 +91,7 @@ def lambda_handler(event, context):
         return _resp(401, {"error": "unauthorized", "message": "Valid Bearer token required"})
 
     # Per-user daily cap — prevents unbounded Bedrock billing.
-    allowed, count = _check_rate_limit(user_id)
+    allowed, count = _check_rate_limit(_get_bearer_token(event))
     if not allowed:
         print(f"rate_limit_hit user={user_id} count={count} cap={_DAILY_CAP}")
         return _resp(429, {
