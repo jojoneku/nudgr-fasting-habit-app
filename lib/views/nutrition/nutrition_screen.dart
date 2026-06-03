@@ -269,8 +269,9 @@ class _WeekStripState extends State<_WeekStrip> {
                   selectedDate: widget.presenter.selectedDate,
                   weekStart: _weekStart,
                   onSelected: (day) {
-                    if (!day.isAfter(today))
+                    if (!day.isAfter(today)) {
                       widget.presenter.setSelectedDate(day);
+                    }
                   },
                 ),
               ),
