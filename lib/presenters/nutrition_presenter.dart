@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -23,6 +24,8 @@ import '../models/tdee_profile.dart';
 import '../services/ai_coach_service.dart';
 import '../services/cloud_ai_coach_service.dart';
 import '../services/food_db_service.dart';
+import '../services/food_photo_store.dart';
+import '../services/image_compressor.dart';
 import '../services/notification_service.dart';
 import '../models/personal_food_entry.dart';
 import '../models/weight_entry.dart';
@@ -90,6 +93,12 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   // ── Cloud AI (optional upgrade tier for disambiguation) ──────────────────
   final AiCoachService? _cloudAi;
 
+  // ── Photo food logging (Plan 029) ─────────────────────────────────────────
+  final ImageCompressor _imageCompressor;
+  final FoodPhotoStore _photoStore;
+  bool _isPhotoParsing = false;
+  String? _photoParseError;
+
   // ── Chat + exercise state ─────────────────────────────────────────────────
   DateTime _selectedDate = DateTime.now();
   List<ChatMessage> _chatMessages = [];
@@ -111,12 +120,16 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     required AiCoachService aiCoach,
     AiCoachService? cloudAi,
     NotificationService? notifications,
+    ImageCompressor? imageCompressor,
+    FoodPhotoStore? photoStore,
   })  : _statsPresenter = statsPresenter,
         _fastingPresenter = fastingPresenter,
         _storage = storage,
         _foodDb = foodDb,
         _ai = aiCoach,
         _cloudAi = cloudAi,
+        _imageCompressor = imageCompressor ?? const ImageCompressor(),
+        _photoStore = photoStore ?? FoodPhotoStore(),
         _notifications = notifications ?? NotificationService() {
     _personalDict = PersonalFoodDictionary(storage);
     loadState();
@@ -1165,6 +1178,159 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  // ── Photo food logging (Plan 029) ─────────────────────────────────────────
+
+  /// True while a photo is being compressed + analysed by the vision endpoint.
+  bool get isPhotoParsing => _isPhotoParsing;
+
+  /// User-facing error from the last photo parse, or null. Cleared on the next
+  /// [parsePhoto] call.
+  String? get photoParseError => _photoParseError;
+
+  void clearPhotoParseError() {
+    if (_photoParseError == null) return;
+    _photoParseError = null;
+    safeNotify();
+  }
+
+  /// Resolve a stored thumbnail's docs-relative path to an absolute file path
+  /// for display, or null if missing. Exposed for the chat-row widget.
+  Future<String?> resolvePhotoThumbnail(String relativePath) =>
+      _photoStore.absolutePath(relativePath);
+
+  /// Log a meal from a photo (+ optional [caption]). Compresses the image,
+  /// sends it to the cloud vision endpoint, and commits the detected items
+  /// through the same pipeline as text logging.
+  ///
+  /// Photo items are tagged [EstimationSource.photoAi] and are NEVER promoted
+  /// into the personal dictionary (§0.2) — vision estimates are the least
+  /// verified input, so they must not silently bypass the DB. The whole flow
+  /// is disposal-safe (§0.4): dismissing the sheet mid-call must not notify a
+  /// disposed presenter.
+  Future<void> parsePhoto(Uint8List imageBytes, {String? caption}) async {
+    if (_isPhotoParsing) return;
+    final cloud = _cloudAi;
+    if (cloud == null || !cloud.isAvailable) {
+      _photoParseError =
+          'Photo logging needs Cloud AI. Enable it in Settings and sign in.';
+      safeNotify();
+      return;
+    }
+
+    _isPhotoParsing = true;
+    _photoParseError = null;
+    safeNotify();
+
+    try {
+      final upload = await _imageCompressor.compressForUpload(imageBytes);
+      if (isDisposed) return;
+
+      final result = await cloud
+          .parseFoodFromImage(upload, 'image/jpeg', caption)
+          .timeout(const Duration(seconds: 35));
+      if (isDisposed) return;
+
+      switch (result.status) {
+        case PhotoParseStatus.unavailable:
+          _photoParseError =
+              'Photo logging needs Cloud AI. Enable it in Settings and sign in.';
+          return;
+        case PhotoParseStatus.rateLimited:
+          _photoParseError =
+              'Daily AI limit reached. Photo logging resets tomorrow.';
+          return;
+        case PhotoParseStatus.noFood:
+          _photoParseError = "Couldn't spot any food in that photo. "
+              'Try another shot or describe it in text.';
+          return;
+        case PhotoParseStatus.failed:
+          _photoParseError = "Couldn't analyse this photo. "
+              'Check your connection and try again.';
+          return;
+        case PhotoParseStatus.ok:
+          break;
+      }
+
+      // Build a log entry per detected item. food_id is always null for photo,
+      // so macros come from the vision estimate. Tagged photoAi → shown as an
+      // estimate and excluded from personal-dict auto-learn.
+      final entries = <FoodEntry>[];
+      final altsList = <List<ChatFoodAlternative>>[];
+      final rawTexts = <String>[];
+      for (final item in result.items) {
+        final m = item.estimatedMacros;
+        entries.add(FoodEntry(
+          id: FoodEntry.generateId(),
+          name: _formatDisplayName(item.name),
+          calories:
+              m?.calories.round() ?? cde.estimateKcal(item.name, item.grams),
+          protein: m?.proteinG,
+          carbs: m?.carbsG,
+          fat: m?.fatG,
+          grams: item.grams,
+          estimationSource: EstimationSource.photoAi,
+          confidence:
+              item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
+          loggedAt: DateTime.now(),
+        ));
+        altsList.add(const []);
+        rawTexts.add(item.name);
+      }
+      if (entries.isEmpty) {
+        _photoParseError = "Couldn't spot any food in that photo. "
+            'Try another shot or describe it in text.';
+        return;
+      }
+
+      final captionLabel = (caption != null && caption.trim().isNotEmpty)
+          ? caption.trim()
+          : 'Photo meal';
+
+      var commitEntries = entries;
+      var commitAlts = altsList;
+      var commitRaw = rawTexts;
+      if (result.intent == ParseIntent.singleDish && entries.length > 1) {
+        final combined = _combineEntriesAsOneDish(entries, captionLabel);
+        commitEntries = [combined];
+        commitAlts = const [[]];
+        commitRaw = [captionLabel];
+      }
+
+      // Persist a thumbnail for the chat row. Best-effort — a failed thumbnail
+      // must not block logging the meal.
+      String? thumbPath;
+      try {
+        final thumbBytes = await _imageCompressor.makeThumbnail(imageBytes);
+        if (isDisposed) return;
+        thumbPath = await _photoStore.saveThumbnail(
+            thumbBytes, ChatMessage.generateId());
+      } catch (e) {
+        debugPrint('NutritionPresenter: thumbnail save failed: $e');
+      }
+      if (isDisposed) return;
+
+      await _commitFoodChat(
+        captionLabel,
+        commitEntries,
+        commitAlts,
+        commitRaw,
+        photoThumbnailPath: thumbPath,
+      );
+    } on TimeoutException {
+      if (isDisposed) return;
+      _photoParseError = 'Photo analysis timed out. Please try again.';
+    } catch (e) {
+      if (isDisposed) return;
+      _photoParseError = "Couldn't analyse this photo. Please try again.";
+      debugPrint('NutritionPresenter: parsePhoto error: $e');
+    } finally {
+      if (!isDisposed) {
+        _isPhotoParsing = false;
+        safeNotify();
+      }
+    }
+  }
+
   Future<void> _parseChatAsFood(String text) async {
     // Plan 026/027 — tiered single-call pipeline.
     //   Path A (cloud, Plan 026): Bedrock single call extracts + resolves +
@@ -1670,6 +1836,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       EstimationSource.personalDict: 0,
       EstimationSource.userManual: 0,
       EstimationSource.cloudAi: 1,
+      EstimationSource.photoAi: 2,
       EstimationSource.localAi: 2,
       EstimationSource.aiPerItem: 2,
       EstimationSource.keywordDensity: 3,
@@ -1841,10 +2008,18 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     String text,
     List<FoodEntry> entries,
     List<List<ChatFoodAlternative>> altsList,
-    List<String> rawTexts,
-  ) async {
+    List<String> rawTexts, {
+    String? photoThumbnailPath,
+  }) async {
     // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    if (_goals.ifSyncEnabled && !isEatingWindowOpen) {
+      // The thumbnail was saved before the gate; don't leak it.
+      if (photoThumbnailPath != null) {
+        // ignore: unawaited_futures
+        _photoStore.delete(photoThumbnailPath);
+      }
+      return;
+    }
 
     // Refresh today's log if midnight crossed mid-parse.
     await _ensureTodayLogFresh();
@@ -1865,6 +2040,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
           ),
       ],
       mealSlot: MealSlot.meal,
+      photoThumbnailPath: photoThumbnailPath,
     );
     _chatMessages.add(msg);
     safeNotify();
@@ -2119,6 +2295,12 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
     _chatMessages.removeWhere((m) => m.id == messageId);
     safeNotify();
+
+    // Delete the photo thumbnail file alongside the row (§0.4).
+    if (msg.photoThumbnailPath != null) {
+      // ignore: unawaited_futures
+      _photoStore.delete(msg.photoThumbnailPath!);
+    }
 
     await Future.wait([
       if (msg.kind == ChatMessageKind.food)

@@ -15,6 +15,11 @@ enum EstimationSource {
   /// Plan 034 SEV-3.
   cloudAiFallback,
 
+  /// Cloud vision estimate from a food photo (Plan 029). Never DB-resolved —
+  /// the macros are the model's portion estimate from the image. Treated as
+  /// an estimate (not trusted) so it never auto-learns into the personal dict.
+  photoAi,
+
   /// On-device AI (Qwen) either picked from DB candidates or estimated.
   /// Plan 027. Reserved for the on-device-parity work; legacy code may still
   /// use [aiPerItem] until migrated.
@@ -39,6 +44,7 @@ enum EstimationSource {
         EstimationSource.cloudAi =>
           true,
         EstimationSource.cloudAiFallback ||
+        EstimationSource.photoAi ||
         EstimationSource.localAi ||
         EstimationSource.aiPerItem ||
         EstimationSource.keywordDensity =>
@@ -50,6 +56,7 @@ enum EstimationSource {
         EstimationSource.personalDict => 'You',
         EstimationSource.cloudAi => 'Cloud',
         EstimationSource.cloudAiFallback => 'Cloud~',
+        EstimationSource.photoAi => 'Photo',
         EstimationSource.localAi => 'Local AI',
         EstimationSource.aiPerItem => 'AI~',
         EstimationSource.keywordDensity => '~',
@@ -60,6 +67,7 @@ enum EstimationSource {
         'personalDict' => EstimationSource.personalDict,
         'cloudAi' => EstimationSource.cloudAi,
         'cloudAiFallback' => EstimationSource.cloudAiFallback,
+        'photoAi' => EstimationSource.photoAi,
         'localAi' => EstimationSource.localAi,
         'aiPerItem' => EstimationSource.aiPerItem,
         'keywordDensity' => EstimationSource.keywordDensity,
@@ -78,6 +86,7 @@ extension EstimationSourceColor on EstimationSource {
         cs.onSurfaceVariant,
       EstimationSource.cloudAi => cs.primary,
       EstimationSource.cloudAiFallback => cs.error,
+      EstimationSource.photoAi => cs.primary,
       EstimationSource.localAi => cs.tertiary,
       EstimationSource.aiPerItem => context.appColors.gold,
       EstimationSource.keywordDensity => cs.error,

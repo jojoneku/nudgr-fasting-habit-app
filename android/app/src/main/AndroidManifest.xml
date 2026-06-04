@@ -18,6 +18,11 @@
          Store listing isn't restricted to camera-equipped devices. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Photo food logging: gallery picker on Android 13+ (Photo Picker needs no
+         permission, but image_picker's legacy path on older OSes does). -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
     <application
         android:label="@string/app_name"
         android:name="${applicationName}"

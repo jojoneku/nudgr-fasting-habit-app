@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 // Presenter-level state machine tests for the chat-logging flow (Plan 026 §7).
 // Uses a FakeAiCoachService that replays a scripted sequence of
@@ -73,6 +75,14 @@ class FakeAiCoachService implements AiCoachService {
     List<FoodSearchCandidate> candidates,
   ) async =>
       null;
+
+  @override
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
+  ) async =>
+      const PhotoParseResult(PhotoParseStatus.unavailable);
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;

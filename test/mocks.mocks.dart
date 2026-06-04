@@ -4,11 +4,12 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _i11;
+import 'dart:typed_data' as _i41;
 import 'dart:ui' as _i48;
 
 import 'package:flutter/material.dart' as _i35;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
-    as _i9;
+    as _i8;
 import 'package:intermittent_fasting/models/activity_goals.dart' as _i6;
 import 'package:intermittent_fasting/models/activity_log.dart' as _i5;
 import 'package:intermittent_fasting/models/ai_chat_message.dart' as _i37;
@@ -18,7 +19,7 @@ import 'package:intermittent_fasting/models/ai_parsed_food.dart' as _i43;
 import 'package:intermittent_fasting/models/body_measurement_entry.dart'
     as _i31;
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart' as _i3;
-import 'package:intermittent_fasting/models/extracted_food_item.dart' as _i40;
+import 'package:intermittent_fasting/models/extracted_food_item.dart' as _i9;
 import 'package:intermittent_fasting/models/fasting_log.dart' as _i12;
 import 'package:intermittent_fasting/models/fasting_phase.dart' as _i50;
 import 'package:intermittent_fasting/models/finance/bill.dart' as _i23;
@@ -42,11 +43,11 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart'
 import 'package:intermittent_fasting/models/food_db_entry.dart' as _i46;
 import 'package:intermittent_fasting/models/food_feedback.dart' as _i29;
 import 'package:intermittent_fasting/models/food_parse_result.dart' as _i39;
-import 'package:intermittent_fasting/models/food_search_candidate.dart' as _i41;
+import 'package:intermittent_fasting/models/food_search_candidate.dart' as _i40;
 import 'package:intermittent_fasting/models/food_template.dart' as _i17;
 import 'package:intermittent_fasting/models/habit_routine.dart' as _i14;
 import 'package:intermittent_fasting/models/notification_preferences.dart'
-    as _i8;
+    as _i7;
 import 'package:intermittent_fasting/models/nutrition_goals.dart' as _i4;
 import 'package:intermittent_fasting/models/personal_food_entry.dart' as _i27;
 import 'package:intermittent_fasting/models/quest.dart' as _i13;
@@ -138,9 +139,9 @@ class _FakeActivityGoals_4 extends _i1.SmartFake implements _i6.ActivityGoals {
         );
 }
 
-class _FakeNotificationPreferences_6 extends _i1.SmartFake
-    implements _i8.NotificationPreferences {
-  _FakeNotificationPreferences_6(
+class _FakeNotificationPreferences_5 extends _i1.SmartFake
+    implements _i7.NotificationPreferences {
+  _FakeNotificationPreferences_5(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -149,9 +150,20 @@ class _FakeNotificationPreferences_6 extends _i1.SmartFake
         );
 }
 
-class _FakeFlutterLocalNotificationsPlugin_7 extends _i1.SmartFake
-    implements _i9.FlutterLocalNotificationsPlugin {
-  _FakeFlutterLocalNotificationsPlugin_7(
+class _FakeFlutterLocalNotificationsPlugin_6 extends _i1.SmartFake
+    implements _i8.FlutterLocalNotificationsPlugin {
+  _FakeFlutterLocalNotificationsPlugin_6(
+    Object parent,
+    Invocation parentInvocation,
+  ) : super(
+          parent,
+          parentInvocation,
+        );
+}
+
+class _FakePhotoParseResult_7 extends _i1.SmartFake
+    implements _i9.PhotoParseResult {
+  _FakePhotoParseResult_7(
     Object parent,
     Invocation parentInvocation,
   ) : super(
@@ -1043,7 +1055,7 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
 
   @override
   _i11.Future<void> saveNotificationPreferences(
-          _i8.NotificationPreferences? prefs) =>
+          _i7.NotificationPreferences? prefs) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveNotificationPreferences,
@@ -1054,21 +1066,21 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
       ) as _i11.Future<void>);
 
   @override
-  _i11.Future<_i8.NotificationPreferences> loadNotificationPreferences() =>
+  _i11.Future<_i7.NotificationPreferences> loadNotificationPreferences() =>
       (super.noSuchMethod(
         Invocation.method(
           #loadNotificationPreferences,
           [],
         ),
-        returnValue: _i11.Future<_i8.NotificationPreferences>.value(
-            _FakeNotificationPreferences_6(
+        returnValue: _i11.Future<_i7.NotificationPreferences>.value(
+            _FakeNotificationPreferences_5(
           this,
           Invocation.method(
             #loadNotificationPreferences,
             [],
           ),
         )),
-      ) as _i11.Future<_i8.NotificationPreferences>);
+      ) as _i11.Future<_i7.NotificationPreferences>);
 
   @override
   _i11.Future<void> saveThemeMode(String? mode) => (super.noSuchMethod(
@@ -1369,14 +1381,14 @@ class MockNotificationService extends _i1.Mock
   }
 
   @override
-  _i9.FlutterLocalNotificationsPlugin get flutterLocalNotificationsPlugin =>
+  _i8.FlutterLocalNotificationsPlugin get flutterLocalNotificationsPlugin =>
       (super.noSuchMethod(
         Invocation.getter(#flutterLocalNotificationsPlugin),
-        returnValue: _FakeFlutterLocalNotificationsPlugin_7(
+        returnValue: _FakeFlutterLocalNotificationsPlugin_6(
           this,
           Invocation.getter(#flutterLocalNotificationsPlugin),
         ),
-      ) as _i9.FlutterLocalNotificationsPlugin);
+      ) as _i8.FlutterLocalNotificationsPlugin);
 
   @override
   _i11.Future<void> init() => (super.noSuchMethod(
@@ -1793,19 +1805,19 @@ class MockAiCoachService extends _i1.Mock implements _i36.AiCoachService {
       ) as _i11.Future<_i39.FoodParseResult?>);
 
   @override
-  _i11.Future<List<_i40.ExtractedFoodItem>?> extractFoodItems(String? text) =>
+  _i11.Future<List<_i9.ExtractedFoodItem>?> extractFoodItems(String? text) =>
       (super.noSuchMethod(
         Invocation.method(
           #extractFoodItems,
           [text],
         ),
-        returnValue: _i11.Future<List<_i40.ExtractedFoodItem>?>.value(),
-      ) as _i11.Future<List<_i40.ExtractedFoodItem>?>);
+        returnValue: _i11.Future<List<_i9.ExtractedFoodItem>?>.value(),
+      ) as _i11.Future<List<_i9.ExtractedFoodItem>?>);
 
   @override
-  _i11.Future<_i40.ParseFoodResult?> parseFoodWithCandidates(
+  _i11.Future<_i9.ParseFoodResult?> parseFoodWithCandidates(
     String? text,
-    List<_i41.FoodSearchCandidate>? candidates,
+    List<_i40.FoodSearchCandidate>? candidates,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1815,8 +1827,37 @@ class MockAiCoachService extends _i1.Mock implements _i36.AiCoachService {
             candidates,
           ],
         ),
-        returnValue: _i11.Future<_i40.ParseFoodResult?>.value(),
-      ) as _i11.Future<_i40.ParseFoodResult?>);
+        returnValue: _i11.Future<_i9.ParseFoodResult?>.value(),
+      ) as _i11.Future<_i9.ParseFoodResult?>);
+
+  @override
+  _i11.Future<_i9.PhotoParseResult> parseFoodFromImage(
+    _i41.Uint8List? imageBytes,
+    String? mimeType,
+    String? caption,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #parseFoodFromImage,
+          [
+            imageBytes,
+            mimeType,
+            caption,
+          ],
+        ),
+        returnValue:
+            _i11.Future<_i9.PhotoParseResult>.value(_FakePhotoParseResult_7(
+          this,
+          Invocation.method(
+            #parseFoodFromImage,
+            [
+              imageBytes,
+              mimeType,
+              caption,
+            ],
+          ),
+        )),
+      ) as _i11.Future<_i9.PhotoParseResult>);
 
   @override
   _i11.Future<_i42.AiMealEstimate?> estimateMacros(String? description) =>
@@ -1853,7 +1894,7 @@ class MockAiCoachService extends _i1.Mock implements _i36.AiCoachService {
   @override
   _i11.Future<_i36.FoodDisambiguation?> disambiguateFood(
     String? userQuery,
-    List<_i41.FoodSearchCandidate>? candidates,
+    List<_i40.FoodSearchCandidate>? candidates,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -2075,6 +2116,13 @@ class MockStatsPresenter extends _i1.Mock implements _i47.StatsPresenter {
       ) as bool);
 
   @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   _i11.Future<void> loadStats() => (super.noSuchMethod(
         Invocation.method(
           #loadStats,
@@ -2194,6 +2242,15 @@ class MockStatsPresenter extends _i1.Mock implements _i47.StatsPresenter {
   void notifyListeners() => super.noSuchMethod(
         Invocation.method(
           #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
           [],
         ),
         returnValueForMissingStub: null,
@@ -2775,6 +2832,13 @@ class MockActivityPresenter extends _i1.Mock implements _i51.ActivityPresenter {
       ) as bool);
 
   @override
+  bool get isDisposed => (super.noSuchMethod(
+        Invocation.getter(#isDisposed),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
   double? caloriesBurned(_i5.ActivityLog? log) => (super.noSuchMethod(
         Invocation.method(
           #caloriesBurned,
@@ -2927,6 +2991,15 @@ class MockActivityPresenter extends _i1.Mock implements _i51.ActivityPresenter {
   void notifyListeners() => super.noSuchMethod(
         Invocation.method(
           #notifyListeners,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void safeNotify() => super.noSuchMethod(
+        Invocation.method(
+          #safeNotify,
           [],
         ),
         returnValueForMissingStub: null,
