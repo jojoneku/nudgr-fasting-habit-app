@@ -421,6 +421,28 @@ def _normalize_parsed_items(parsed, original_text=""):
                     }
                 item["grams"] = user_grams
 
+    # Single-dish explicit-TOTAL override: "150g eggs with sardines" means the
+    # whole dish is 150g, not 150g of eggs plus a default portion of sardines.
+    # When a single_dish has one explicit weight in the text, rescale every
+    # ingredient's grams (and AI-estimated macros) so they sum to that total.
+    # DB-resolved items recompute their macros from grams client-side.
+    if intent == "single_dish" and len(items_out) > 1 and original_text:
+        total_grams = _extract_single_explicit_grams(original_text)
+        if total_grams and total_grams > 0:
+            current_sum = sum(i["grams"] for i in items_out)
+            if current_sum > 0 and abs(current_sum - total_grams) / total_grams > 0.05:
+                scale = total_grams / current_sum
+                for i in items_out:
+                    i["grams"] = round(i["grams"] * scale, 1)
+                    m = i.get("estimated_macros")
+                    if m:
+                        i["estimated_macros"] = {
+                            "calories": round(m["calories"] * scale, 1),
+                            "protein_g": round(m["protein_g"] * scale, 1),
+                            "carbs_g": round(m["carbs_g"] * scale, 1),
+                            "fat_g": round(m["fat_g"] * scale, 1),
+                        }
+
     return {"intent": intent, "items": items_out}
 
 
