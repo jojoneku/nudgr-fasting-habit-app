@@ -95,7 +95,6 @@ class CloudAiCoachService implements AiCoachService {
     if (!isAvailable) {
       return 'isAvailable=false  token=${tokenProvider() != null}';
     }
-    final tokenInfo = _tokenDiagnostic();
     try {
       final response = await http
           .post(
@@ -107,39 +106,9 @@ class CloudAiCoachService implements AiCoachService {
       final body = response.body.length > 200
           ? '${response.body.substring(0, 200)}…'
           : response.body;
-      return 'HTTP ${response.statusCode}: $body\n$tokenInfo';
+      return 'HTTP ${response.statusCode}: $body';
     } catch (e) {
-      return 'error: $e\n$tokenInfo';
-    }
-  }
-
-  /// Debug-only: decode the JWT header + the claims the API Gateway authorizer
-  /// checks (alg, kid, iss, aud, exp). Never decodes or logs the signature.
-  String _tokenDiagnostic() {
-    final token = tokenProvider();
-    if (token == null) return 'token=null';
-    final parts = token.split('.');
-    if (parts.length != 3) return 'token malformed (parts=${parts.length})';
-    String decodeSeg(String seg) {
-      var s = seg.replaceAll('-', '+').replaceAll('_', '/');
-      while (s.length % 4 != 0) {
-        s += '=';
-      }
-      return utf8.decode(base64.decode(s));
-    }
-
-    try {
-      final header = jsonDecode(decodeSeg(parts[0])) as Map<String, dynamic>;
-      final claims = jsonDecode(decodeSeg(parts[1])) as Map<String, dynamic>;
-      final exp = claims['exp'];
-      final expStr = exp is int
-          ? DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true)
-              .toIso8601String()
-          : '$exp';
-      return 'token: alg=${header['alg']} kid=${header['kid']} '
-          'iss=${claims['iss']} aud=${claims['aud']} exp=$expStr';
-    } catch (e) {
-      return 'token decode error: $e';
+      return 'error: $e';
     }
   }
 
