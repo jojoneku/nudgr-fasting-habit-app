@@ -582,6 +582,50 @@ class LocalStorageService extends StorageService {
     return prefs.getString(_k(StorageService.keyLogStreakDate));
   }
 
+  @override
+  Future<Set<String>> loadCalorieGoalCreditedDates() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(
+                _k(StorageService.keyCalorieGoalCreditedDates)) ??
+            const [])
+        .toSet();
+  }
+
+  @override
+  Future<void> saveCalorieGoalCreditedDates(Set<String> dates) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _k(StorageService.keyCalorieGoalCreditedDates), dates.toList());
+  }
+
+  @override
+  Future<Set<String>> loadProteinGoalCreditedDates() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(
+                _k(StorageService.keyProteinGoalCreditedDates)) ??
+            const [])
+        .toSet();
+  }
+
+  @override
+  Future<void> saveProteinGoalCreditedDates(Set<String> dates) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _k(StorageService.keyProteinGoalCreditedDates), dates.toList());
+  }
+
+  @override
+  Future<int> loadStreakMilestonePaid() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_k(StorageService.keyStreakMilestonePaid)) ?? 0;
+  }
+
+  @override
+  Future<void> saveStreakMilestonePaid(int milestone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_k(StorageService.keyStreakMilestonePaid), milestone);
+  }
+
   // ── Activity ─────────────────────────────────────────────────────────────────
 
   @override
