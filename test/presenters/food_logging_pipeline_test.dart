@@ -111,6 +111,14 @@ Future<NutritionPresenter> _makePresenter({
   when(storage.loadNutritionGoalMetDate()).thenAnswer((_) async => null);
   when(storage.loadLogStreak()).thenAnswer((_) async => 0);
   when(storage.loadLogStreakDate()).thenAnswer((_) async => null);
+  when(storage.loadCalorieGoalCreditedDates())
+      .thenAnswer((_) async => <String>{});
+  when(storage.loadProteinGoalCreditedDates())
+      .thenAnswer((_) async => <String>{});
+  when(storage.loadStreakMilestonePaid()).thenAnswer((_) async => 0);
+  when(storage.saveCalorieGoalCreditedDates(any)).thenAnswer((_) async {});
+  when(storage.saveProteinGoalCreditedDates(any)).thenAnswer((_) async {});
+  when(storage.saveStreakMilestonePaid(any)).thenAnswer((_) async {});
   when(storage.saveNutritionLog(any)).thenAnswer((_) async {});
   when(storage.saveNutritionGoals(any)).thenAnswer((_) async {});
   when(storage.saveNutritionStreak(any)).thenAnswer((_) async {});
