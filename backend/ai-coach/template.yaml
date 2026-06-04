@@ -65,6 +65,10 @@ Resources:
       Name: ai-coach-api
       Auth:
         Authorizers:
+          # IMPORTANT: the Supabase project's JWT signing key MUST be RSA (RS256).
+          # API Gateway's native HTTP API JWT authorizer cannot validate ES256/ECDSA
+          # tokens — an ECC signing key makes every otherwise-valid token 401 with
+          # {"message":"Unauthorized"} (Supabase Dashboard → Auth → JWT Keys).
           SupabaseJWT:
             JwtConfiguration:
               issuer: !Sub 'https://${SupabaseProjectRef}.supabase.co/auth/v1'
