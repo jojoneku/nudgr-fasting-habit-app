@@ -147,6 +147,12 @@ MockStorageService _makeStorage({
   when(s.loadNutritionGoalMetDate()).thenAnswer((_) async => null);
   when(s.loadLogStreak()).thenAnswer((_) async => 0);
   when(s.loadLogStreakDate()).thenAnswer((_) async => null);
+  when(s.loadCalorieGoalCreditedDates()).thenAnswer((_) async => <String>{});
+  when(s.loadProteinGoalCreditedDates()).thenAnswer((_) async => <String>{});
+  when(s.loadStreakMilestonePaid()).thenAnswer((_) async => 0);
+  when(s.saveCalorieGoalCreditedDates(any)).thenAnswer((_) async {});
+  when(s.saveProteinGoalCreditedDates(any)).thenAnswer((_) async {});
+  when(s.saveStreakMilestonePaid(any)).thenAnswer((_) async {});
   when(s.loadFoodFeedback()).thenAnswer((_) async => []);
   when(s.loadWeightLog()).thenAnswer((_) async => []);
   when(s.saveWeightLog(any)).thenAnswer((_) async {});
