@@ -289,6 +289,14 @@ def _parse_food_with_candidates(payload):
         "'Beef, Ground, 80% Lean' are ONE single ingredient (comma = modifier, not separator). "
         "Do NOT decompose them into multiple items.\n"
         "7. PRECISION — round to one decimal place.\n"
+        "8. TOTAL vs PER-INGREDIENT WEIGHT — decide what a stated weight refers to:\n"
+        "   - A weight at the START of the text, before a composite dish "
+        "(e.g. '150g eggs with sardines', '200g chicken adobo with rice'), is the TOTAL "
+        "cooked weight of the WHOLE dish. Split it across the ingredients so their grams "
+        "SUM to that number (e.g. 150g total → eggs 90g + sardines 60g).\n"
+        "   - A weight attached to a SPECIFIC ingredient (e.g. 'eggs with 100g sardines', "
+        "'30g cheese on toast', 'coffee with 10g sugar') applies ONLY to that ingredient. "
+        "Estimate the other ingredients normally — do NOT rescale them to match it.\n"
         "\n"
         "Reply with ONLY valid JSON, no markdown, no commentary:\n"
         '{"intent": "single_dish" | "items_list", "items": [...]}\n'
@@ -420,28 +428,6 @@ def _normalize_parsed_items(parsed, original_text=""):
                         "fat_g": round(m["fat_g"] * ratio, 1),
                     }
                 item["grams"] = user_grams
-
-    # Single-dish explicit-TOTAL override: "150g eggs with sardines" means the
-    # whole dish is 150g, not 150g of eggs plus a default portion of sardines.
-    # When a single_dish has one explicit weight in the text, rescale every
-    # ingredient's grams (and AI-estimated macros) so they sum to that total.
-    # DB-resolved items recompute their macros from grams client-side.
-    if intent == "single_dish" and len(items_out) > 1 and original_text:
-        total_grams = _extract_single_explicit_grams(original_text)
-        if total_grams and total_grams > 0:
-            current_sum = sum(i["grams"] for i in items_out)
-            if current_sum > 0 and abs(current_sum - total_grams) / total_grams > 0.05:
-                scale = total_grams / current_sum
-                for i in items_out:
-                    i["grams"] = round(i["grams"] * scale, 1)
-                    m = i.get("estimated_macros")
-                    if m:
-                        i["estimated_macros"] = {
-                            "calories": round(m["calories"] * scale, 1),
-                            "protein_g": round(m["protein_g"] * scale, 1),
-                            "carbs_g": round(m["carbs_g"] * scale, 1),
-                            "fat_g": round(m["fat_g"] * scale, 1),
-                        }
 
     return {"intent": intent, "items": items_out}
 
