@@ -15,6 +15,8 @@ import '../models/quest.dart';
 import '../models/quest_achievement.dart';
 import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
+import '../models/weight_entry.dart';
+import '../models/body_measurement_entry.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budget.dart';
 import '../models/finance/installment.dart';
@@ -158,6 +160,11 @@ class SyncService {
       'activityStreak': await _storage.loadActivityStreak(),
       'activityGoalMetDate': await _storage.loadActivityGoalMetDate(),
       'preferredStepsSource': await _storage.loadPreferredStepsSource(),
+      'weightLog':
+          (await _storage.loadWeightLog()).map((e) => e.toJson()).toList(),
+      'bodyMeasurements': (await _storage.loadBodyMeasurements())
+          .map((e) => e.toJson())
+          .toList(),
     };
     await _supabase.from('user_profile').upsert({
       'user_id': _userId,
@@ -414,6 +421,18 @@ class SyncService {
       if (data['preferredStepsSource'] != null)
         await _storage
             .savePreferredStepsSource(data['preferredStepsSource'] as String?);
+      if (data['weightLog'] != null) {
+        await _storage.saveWeightLog([
+          for (final e in data['weightLog'] as List)
+            WeightEntry.fromJson(e as Map<String, dynamic>),
+        ]);
+      }
+      if (data['bodyMeasurements'] != null) {
+        await _storage.saveBodyMeasurements([
+          for (final e in data['bodyMeasurements'] as List)
+            BodyMeasurementEntry.fromJson(e as Map<String, dynamic>),
+        ]);
+      }
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
   }
