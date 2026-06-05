@@ -113,6 +113,16 @@ void main() {
     when(mockStorage.saveNutritionGoalMetDate(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreak(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreakDate(any)).thenAnswer((_) async {});
+    when(mockStorage.loadCalorieGoalCreditedDates())
+        .thenAnswer((_) async => <String>{});
+    when(mockStorage.loadProteinGoalCreditedDates())
+        .thenAnswer((_) async => <String>{});
+    when(mockStorage.loadStreakMilestonePaid()).thenAnswer((_) async => 0);
+    when(mockStorage.saveCalorieGoalCreditedDates(any))
+        .thenAnswer((_) async {});
+    when(mockStorage.saveProteinGoalCreditedDates(any))
+        .thenAnswer((_) async {});
+    when(mockStorage.saveStreakMilestonePaid(any)).thenAnswer((_) async {});
     when(mockStorage.loadPersonalDict()).thenAnswer((_) async => []);
     when(mockStorage.savePersonalDict(any)).thenAnswer((_) async {});
     when(mockStorage.loadFoodFeedback()).thenAnswer((_) async => []);
