@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
@@ -59,6 +61,23 @@ abstract class AiCoachService {
   Future<ParseFoodResult?> parseFoodWithCandidates(
     String text,
     List<FoodSearchCandidate> candidates,
+  );
+
+  /// Parse a food photo (+ optional caption) into log items (Plan 029).
+  ///
+  /// Vision-only: the model identifies every food on the plate and estimates
+  /// each portion + macros in one pass. Items always have a null `food_id`
+  /// (no DB candidate pool) and populated `estimatedMacros`. The returned
+  /// [PhotoParseResult.status] distinguishes a successful parse from
+  /// "no food in image", the per-user daily cap, an unavailable service, and
+  /// a generic failure — the caller surfaces each differently.
+  ///
+  /// Only the cloud tier implements this; on-device and null tiers return
+  /// [PhotoParseStatus.unavailable].
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
   );
 
   /// Estimate calories and macros for a natural-language food description.

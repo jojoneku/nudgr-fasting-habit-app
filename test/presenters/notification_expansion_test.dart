@@ -14,6 +14,7 @@
 //  11.  budgetWarningEnabled=false → no warning called
 
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter_test/flutter_test.dart';
@@ -89,6 +90,14 @@ class _NoOpAiCoach implements AiCoachService {
     List<FoodSearchCandidate> candidates,
   ) async =>
       null;
+
+  @override
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
+  ) async =>
+      const PhotoParseResult(PhotoParseStatus.unavailable);
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;

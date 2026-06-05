@@ -96,3 +96,39 @@ class ParseFoodResult {
         : ParseIntent.itemsList;
   }
 }
+
+/// Outcome of [AiCoachService.parseFoodFromImage] (Plan 029). Unlike the text
+/// path, photo parsing has distinct non-error terminal states the UI must
+/// surface (no food detected, daily cap reached) — hence a status enum rather
+/// than a nullable return.
+enum PhotoParseStatus {
+  /// At least one food item was detected. [PhotoParseResult.items] is non-empty.
+  ok,
+
+  /// The model reported the image contains no food (pet, person, empty plate).
+  noFood,
+
+  /// The server rejected the call with the per-user daily cap (HTTP 429).
+  rateLimited,
+
+  /// No cloud vision service is configured/available (signed out, no endpoint,
+  /// on-device tier). The caller should prompt the user to enable Cloud AI.
+  unavailable,
+
+  /// Network error, malformed response, or a Bedrock failure.
+  failed,
+}
+
+/// Result of a photo food-logging parse. Carries the detected [items] (always
+/// `food_id`-less, macro-estimated) and the combine-vs-split [intent].
+class PhotoParseResult {
+  final PhotoParseStatus status;
+  final List<ExtractedFoodItem> items;
+  final ParseIntent intent;
+
+  const PhotoParseResult(
+    this.status, {
+    this.items = const [],
+    this.intent = ParseIntent.itemsList,
+  });
+}
