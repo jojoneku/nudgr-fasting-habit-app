@@ -1278,6 +1278,7 @@ class LocalStorageService extends StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_k(StorageService.keyWeightLog),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
+    _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
@@ -1302,6 +1303,7 @@ class LocalStorageService extends StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_k(StorageService.keyBodyMeasurements),
         jsonEncode(entries.map((e) => e.toJson()).toList()));
+    _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override

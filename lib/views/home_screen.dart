@@ -190,7 +190,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   Future<void> _initSync(String userId) async {
     if (_syncService != null) {
       if (_currentUserId == userId) return; // already running for this user
-      _tearDownSync(); // different user signed in — tear down first
+      await _tearDownSync(); // different user signed in — tear down first
     }
     _currentUserId = userId;
     // Await migration so scoped keys are populated before presenters reload.
@@ -243,21 +243,38 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     }
   }
 
-  void _tearDownSync() {
+  Future<void> _tearDownSync() async {
     final userId = _currentUserId;
     _currentUserId = null;
+
+    // Flush unsynced local changes to the cloud BEFORE wiping local data, so a
+    // sign-out can never destroy un-uploaded records (e.g. weight/body logs).
+    // If the push can't fully complete (offline / error), we KEEP local data
+    // intact — it stays under the user's own `u/$id/` scope (invisible to any
+    // other user) and re-syncs on the next launch — rather than being lost.
+    final svc = _syncService;
+    var flushed = true;
+    if (userId != null && svc != null) {
+      try {
+        await svc.pushPending();
+      } catch (_) {}
+      flushed = (_syncQueue?.pendingCount ?? 0) == 0;
+    }
+
     _storage.onDirty = null;
     _storage.onRemoteDataApplied = null;
-    _syncService?.dispose();
+    svc?.dispose();
     _syncPresenter?.dispose();
     _syncService = null;
     _syncPresenter = null;
-    // Wipe all user-scoped prefs and reset the in-memory sync queue so a
-    // subsequent sign-in by a different user starts from a clean slate.
-    if (userId != null) {
+
+    // Only wipe once everything is safely uploaded. Skipping the wipe when a
+    // flush didn't complete is safe: user-scoping keeps a later signed-in user
+    // from ever seeing this data.
+    if (userId != null && flushed) {
       _storage.clearUserData();
+      _syncQueue?.clearAll();
     }
-    _syncQueue?.clearAll();
     if (mounted) setState(() {});
   }
 
