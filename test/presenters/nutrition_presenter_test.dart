@@ -54,6 +54,16 @@ void main() {
     when(mockStorage.saveNutritionGoalMetDate(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreak(any)).thenAnswer((_) async {});
     when(mockStorage.saveLogStreakDate(any)).thenAnswer((_) async {});
+    when(mockStorage.loadCalorieGoalCreditedDates())
+        .thenAnswer((_) async => <String>{});
+    when(mockStorage.loadProteinGoalCreditedDates())
+        .thenAnswer((_) async => <String>{});
+    when(mockStorage.loadStreakMilestonePaid()).thenAnswer((_) async => 0);
+    when(mockStorage.saveCalorieGoalCreditedDates(any))
+        .thenAnswer((_) async {});
+    when(mockStorage.saveProteinGoalCreditedDates(any))
+        .thenAnswer((_) async {});
+    when(mockStorage.saveStreakMilestonePaid(any)).thenAnswer((_) async {});
     when(mockStorage.loadPersonalDict()).thenAnswer((_) async => []);
     when(mockStorage.loadFoodFeedback()).thenAnswer((_) async => []);
     when(mockStorage.saveFoodFeedback(any)).thenAnswer((_) async {});
@@ -271,6 +281,103 @@ void main() {
       await presenter.addFoodEntry(entry, MealSlot.meal);
       await presenter.removeFoodEntry(entry.id, MealSlot.meal);
       expect(presenter.todayCalories, 0);
+    });
+  });
+
+  // ── Backdated (past-day) logging — Plan 037 ──────────────────────────────────
+
+  group('backdated logging', () {
+    const pastKey = '2026-05-27';
+
+    NutritionPresenter build() {
+      final p = NutritionPresenter(
+        statsPresenter: mockStats,
+        fastingPresenter: mockFasting,
+        storage: mockStorage,
+        foodDb: MockFoodDbService(),
+        aiCoach: mockAi,
+      );
+      return p;
+    }
+
+    setUp(() {
+      // Echo the requested date so _todayLog.date matches the selected day.
+      when(mockStorage.loadNutritionLogForDate(any)).thenAnswer((inv) async =>
+          DailyNutritionLog.empty(inv.positionalArguments[0] as String));
+    });
+
+    test('past-day logging is allowed even while currently fasting', () async {
+      when(mockFasting.isFasting).thenReturn(true);
+      when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
+          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+      presenter = build();
+      await Future.delayed(Duration.zero);
+
+      // Today + fasting + ifSync → gated, nothing logged.
+      await presenter.addFoodEntry(makeEntry(calories: 500), MealSlot.meal);
+      expect(presenter.todayCalories, 0);
+
+      // Past day → allowed despite currently fasting.
+      await presenter.setSelectedDate(DateTime.parse(pastKey));
+      await presenter.addFoodEntry(makeEntry(calories: 500), MealSlot.meal);
+      expect(presenter.todayCalories, 500);
+    });
+
+    test('past-day goal XP is awarded once, with no IF-sync bonus', () async {
+      when(mockStorage.loadNutritionGoals()).thenAnswer((_) async =>
+          NutritionGoals(dailyCalories: 2000, ifSyncEnabled: true));
+      presenter = build();
+      await Future.delayed(Duration.zero);
+
+      await presenter.setSelectedDate(DateTime.parse(pastKey));
+      await presenter.addFoodEntry(makeEntry(calories: 2000), MealSlot.meal);
+      // Re-opening / adding to the same already-credited day must not re-award.
+      await presenter.addFoodEntry(makeEntry(calories: 100), MealSlot.meal);
+
+      verify(mockStats.addXp(30)).called(1);
+      verifyNever(mockStats.addXp(10)); // IF-sync bonus dropped for backfills
+    });
+
+    test('backfilling a gap day repairs the log streak', () async {
+      when(mockStorage.loadNutritionHistory()).thenAnswer((_) async => [
+            DailyNutritionLog.empty('2026-05-25')
+                .addEntry(makeEntry(calories: 500), MealSlot.meal),
+            DailyNutritionLog.empty('2026-05-27')
+                .addEntry(makeEntry(calories: 500), MealSlot.meal),
+          ]);
+      presenter = build();
+      await Future.delayed(Duration.zero);
+
+      // Backfill the missing middle day (2026-05-26).
+      await presenter.setSelectedDate(DateTime.parse('2026-05-26'));
+      await presenter.addFoodEntry(makeEntry(calories: 500), MealSlot.meal);
+
+      // 25 → 26 → 27 now contiguous → run ending at the latest logged day = 3.
+      expect(presenter.logStreak, 3);
+    });
+
+    test('no goal-met notification fires for a past day', () async {
+      final mockNotifs = MockNotificationService();
+      when(mockNotifs.showCalorieGoalNotification(any, any))
+          .thenAnswer((_) async {});
+      when(mockNotifs.scheduleWeightReminder(any)).thenAnswer((_) async {});
+      when(mockNotifs.cancelWeightReminder()).thenAnswer((_) async {});
+      when(mockStorage.loadNutritionGoals())
+          .thenAnswer((_) async => NutritionGoals(dailyCalories: 2000));
+      presenter = NutritionPresenter(
+        statsPresenter: mockStats,
+        fastingPresenter: mockFasting,
+        storage: mockStorage,
+        foodDb: MockFoodDbService(),
+        aiCoach: mockAi,
+        notifications: mockNotifs,
+      );
+      await Future.delayed(Duration.zero);
+
+      await presenter.setSelectedDate(DateTime.parse(pastKey));
+      await presenter.addFoodEntry(makeEntry(calories: 2000), MealSlot.meal);
+
+      verifyNever(mockNotifs.showCalorieGoalNotification(any, any));
     });
   });
 }

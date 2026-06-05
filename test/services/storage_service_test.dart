@@ -4,6 +4,12 @@ import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/models/activity_log.dart';
 import 'package:intermittent_fasting/models/activity_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
+import 'package:intermittent_fasting/models/weight_entry.dart';
+import 'package:intermittent_fasting/models/body_measurement_entry.dart';
+import 'package:intermittent_fasting/models/sync_queue_entry.dart';
+import 'package:intermittent_fasting/models/nutrition_goals.dart';
+import 'package:intermittent_fasting/models/food_feedback.dart';
+import 'package:intermittent_fasting/services/sync_queue.dart';
 
 void main() {
   late LocalStorageService svc;
@@ -83,6 +89,86 @@ void main() {
       final loaded = await svc.loadUserStats();
       expect(loaded.level, 5);
       expect(loaded.currentXp, 200);
+    });
+  });
+
+  // ── Weight / body measurements sync coverage ─────────────────────────────────
+  // Regression guard: these were local-only and silently lost on sign-out.
+  // They must now mark the userProfile domain dirty so they reach the cloud.
+
+  group('StorageService — weight & body sync', () {
+    test('saveWeightLog marks userProfile dirty for sync', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveWeightLog([
+        WeightEntry(id: 'w1', weightKg: 72.5, loggedAt: DateTime(2026, 6, 1)),
+      ]);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('saveBodyMeasurements marks userProfile dirty for sync', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveBodyMeasurements([
+        BodyMeasurementEntry(
+            id: 'b1', loggedAt: DateTime(2026, 6, 1), waistCm: 80),
+      ]);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('weight log round-trips through storage', () async {
+      await svc.saveWeightLog([
+        WeightEntry(id: 'w1', weightKg: 70, loggedAt: DateTime(2026, 5, 30)),
+      ]);
+      final loaded = await svc.loadWeightLog();
+      expect(loaded.length, 1);
+      expect(loaded.first.weightKg, 70);
+    });
+
+    test('measurementUnit marks userProfile dirty for sync', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveMeasurementUnit(MeasurementUnit.imperial);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('calorie-goal credit ledger marks userProfile dirty for sync',
+        () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveCalorieGoalCreditedDates({'2026-06-01'});
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('food feedback marks userCollections dirty for sync', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveFoodFeedback([
+        FoodFeedback(
+          id: 'f1',
+          timestamp: DateTime(2026, 6, 1),
+          kind: FoodFeedbackKind.userDislike,
+          userQuery: 'rice',
+          pickedName: 'White rice',
+          estimationSource: 'db',
+        ),
+      ]);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userCollections),
+        true,
+      );
     });
   });
 }

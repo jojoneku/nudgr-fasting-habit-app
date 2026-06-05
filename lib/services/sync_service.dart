@@ -15,6 +15,10 @@ import '../models/quest.dart';
 import '../models/quest_achievement.dart';
 import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
+import '../models/weight_entry.dart';
+import '../models/body_measurement_entry.dart';
+import '../models/food_feedback.dart';
+import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budget.dart';
 import '../models/finance/installment.dart';
@@ -158,6 +162,19 @@ class SyncService {
       'activityStreak': await _storage.loadActivityStreak(),
       'activityGoalMetDate': await _storage.loadActivityGoalMetDate(),
       'preferredStepsSource': await _storage.loadPreferredStepsSource(),
+      'weightLog':
+          (await _storage.loadWeightLog()).map((e) => e.toJson()).toList(),
+      'bodyMeasurements': (await _storage.loadBodyMeasurements())
+          .map((e) => e.toJson())
+          .toList(),
+      'measurementUnit': (await _storage.loadMeasurementUnit()).name,
+      'lastRecompXpDate':
+          (await _storage.loadLastRecompXpDate())?.toIso8601String(),
+      'calorieGoalCreditedDates':
+          (await _storage.loadCalorieGoalCreditedDates()).toList(),
+      'proteinGoalCreditedDates':
+          (await _storage.loadProteinGoalCreditedDates()).toList(),
+      'streakMilestonePaid': await _storage.loadStreakMilestonePaid(),
     };
     await _supabase.from('user_profile').upsert({
       'user_id': _userId,
@@ -220,6 +237,11 @@ class SyncService {
           (await _storage.loadFoodLibrary()).map((e) => e.toJson()).toList(),
       'personalDict':
           (await _storage.loadPersonalDict()).map((e) => e.toJson()).toList(),
+      'foodFeedback':
+          (await _storage.loadFoodFeedback()).map((e) => e.toJson()).toList(),
+      'financeDictionary': (await _storage.loadFinanceDictionary())
+          .map((e) => e.toJson())
+          .toList(),
     };
     await _supabase.from('user_collections').upsert({
       'user_id': _userId,
@@ -414,6 +436,40 @@ class SyncService {
       if (data['preferredStepsSource'] != null)
         await _storage
             .savePreferredStepsSource(data['preferredStepsSource'] as String?);
+      if (data['weightLog'] != null) {
+        await _storage.saveWeightLog([
+          for (final e in data['weightLog'] as List)
+            WeightEntry.fromJson(e as Map<String, dynamic>),
+        ]);
+      }
+      if (data['bodyMeasurements'] != null) {
+        await _storage.saveBodyMeasurements([
+          for (final e in data['bodyMeasurements'] as List)
+            BodyMeasurementEntry.fromJson(e as Map<String, dynamic>),
+        ]);
+      }
+      if (data['measurementUnit'] != null) {
+        await _storage.saveMeasurementUnit(
+            MeasurementUnit.values.byName(data['measurementUnit'] as String));
+      }
+      if (data['lastRecompXpDate'] != null) {
+        await _storage.saveLastRecompXpDate(
+            DateTime.parse(data['lastRecompXpDate'] as String));
+      }
+      if (data['calorieGoalCreditedDates'] != null) {
+        await _storage.saveCalorieGoalCreditedDates({
+          for (final d in data['calorieGoalCreditedDates'] as List) d as String,
+        });
+      }
+      if (data['proteinGoalCreditedDates'] != null) {
+        await _storage.saveProteinGoalCreditedDates({
+          for (final d in data['proteinGoalCreditedDates'] as List) d as String,
+        });
+      }
+      if (data['streakMilestonePaid'] != null) {
+        await _storage
+            .saveStreakMilestonePaid(data['streakMilestonePaid'] as int);
+      }
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
   }
@@ -531,6 +587,16 @@ class SyncService {
       if (data['personalDict'] != null) {
         await _storage.savePersonalDict((data['personalDict'] as List)
             .map((e) => PersonalFoodEntry.fromJson(e as Map<String, dynamic>))
+            .toList());
+      }
+      if (data['foodFeedback'] != null) {
+        await _storage.saveFoodFeedback((data['foodFeedback'] as List)
+            .map((e) => FoodFeedback.fromJson(e as Map<String, dynamic>))
+            .toList());
+      }
+      if (data['financeDictionary'] != null) {
+        await _storage.saveFinanceDictionary((data['financeDictionary'] as List)
+            .map((e) => FinanceDictEntry.fromJson(e as Map<String, dynamic>))
             .toList());
       }
     });

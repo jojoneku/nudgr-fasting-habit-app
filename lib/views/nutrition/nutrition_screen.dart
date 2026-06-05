@@ -2052,6 +2052,9 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     final locked = widget.presenter.goals.ifSyncEnabled &&
         !widget.presenter.isEatingWindowOpen;
     final isToday = widget.presenter.isSelectedDateToday;
+    // The fasting "lock" is a now-only concept — past days can always be
+    // backfilled (Plan 037). canLog drives every input affordance.
+    final canLog = isToday ? !locked : true;
 
     final cs = Theme.of(context).colorScheme;
     final showSuggestions =
@@ -2070,14 +2073,13 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               IconButton(
                 icon:
                     Icon(Icons.grid_view_outlined, color: cs.onSurfaceVariant),
-                onPressed: isToday ? () => _showTemplates(context) : null,
+                onPressed: canLog ? () => _showTemplates(context) : null,
                 tooltip: 'Templates',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
               IconButton(
                 icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
-                onPressed:
-                    isToday && !locked ? () => _showManualAdd(context) : null,
+                onPressed: canLog ? () => _showManualAdd(context) : null,
                 tooltip: 'Add manually',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
@@ -2100,13 +2102,13 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                   child: TextField(
                     controller: _ctrl,
                     focusNode: _focus,
-                    enabled: isToday && !locked,
+                    enabled: canLog,
                     style: TextStyle(color: cs.onSurface, fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: locked
-                          ? 'Fasting — logging paused'
-                          : !isToday
-                              ? 'View only — select today to log'
+                      hintText: !isToday
+                          ? 'Log food for ${DateFormat.MMMd().format(widget.presenter.selectedDate)}…'
+                          : locked
+                              ? 'Fasting — logging paused'
                               : 'Log food or exercise…',
                       hintStyle:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
@@ -2121,21 +2123,18 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               ),
               const SizedBox(width: 4),
               GestureDetector(
-                onTap: isToday && !locked ? _send : null,
+                onTap: canLog ? _send : null,
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: isToday && !locked
-                        ? cs.primary
-                        : cs.surfaceContainerHigh,
+                    color: canLog ? cs.primary : cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(22),
                   ),
                   child: Icon(
                     Icons.arrow_upward,
-                    color:
-                        isToday && !locked ? cs.onPrimary : cs.onSurfaceVariant,
+                    color: canLog ? cs.onPrimary : cs.onSurfaceVariant,
                     size: 20,
                   ),
                 ),

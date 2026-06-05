@@ -46,6 +46,12 @@ abstract class StorageService {
   static const String keyFoodLibrary = 'foodLibrary';
   static const String keyLogStreak = 'nutritionLogStreak';
   static const String keyLogStreakDate = 'nutritionLogStreakDate';
+  // Per-day credit ledgers — idempotency for retroactive (backdated) XP.
+  static const String keyCalorieGoalCreditedDates =
+      'nutrition.calorieGoalCreditedDates';
+  static const String keyProteinGoalCreditedDates =
+      'nutrition.proteinGoalCreditedDates';
+  static const String keyStreakMilestonePaid = 'nutrition.streakMilestonePaid';
   static const String keyActivityLogs = 'activityLogs';
   static const String keyActivityGoals = 'activityGoals';
   static const String keyActivityGoalMetDate = 'activityGoalMetDate';
@@ -118,6 +124,12 @@ abstract class StorageService {
   Future<int> loadLogStreak();
   Future<void> saveLogStreakDate(String date);
   Future<String?> loadLogStreakDate();
+  Future<Set<String>> loadCalorieGoalCreditedDates();
+  Future<void> saveCalorieGoalCreditedDates(Set<String> dates);
+  Future<Set<String>> loadProteinGoalCreditedDates();
+  Future<void> saveProteinGoalCreditedDates(Set<String> dates);
+  Future<int> loadStreakMilestonePaid();
+  Future<void> saveStreakMilestonePaid(int milestone);
 
   // ─ Activity
   Future<void> saveActivityLog(ActivityLog log);

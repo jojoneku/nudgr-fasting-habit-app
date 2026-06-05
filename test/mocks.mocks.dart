@@ -528,6 +528,68 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
       ) as _i11.Future<String?>);
 
   @override
+  _i11.Future<Set<String>> loadCalorieGoalCreditedDates() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadCalorieGoalCreditedDates,
+          [],
+        ),
+        returnValue: _i11.Future<Set<String>>.value(<String>{}),
+      ) as _i11.Future<Set<String>>);
+
+  @override
+  _i11.Future<void> saveCalorieGoalCreditedDates(Set<String>? dates) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveCalorieGoalCreditedDates,
+          [dates],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<Set<String>> loadProteinGoalCreditedDates() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadProteinGoalCreditedDates,
+          [],
+        ),
+        returnValue: _i11.Future<Set<String>>.value(<String>{}),
+      ) as _i11.Future<Set<String>>);
+
+  @override
+  _i11.Future<void> saveProteinGoalCreditedDates(Set<String>? dates) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveProteinGoalCreditedDates,
+          [dates],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<int> loadStreakMilestonePaid() => (super.noSuchMethod(
+        Invocation.method(
+          #loadStreakMilestonePaid,
+          [],
+        ),
+        returnValue: _i11.Future<int>.value(0),
+      ) as _i11.Future<int>);
+
+  @override
+  _i11.Future<void> saveStreakMilestonePaid(int? milestone) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveStreakMilestonePaid,
+          [milestone],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
   _i11.Future<void> saveActivityLog(_i5.ActivityLog? log) =>
       (super.noSuchMethod(
         Invocation.method(

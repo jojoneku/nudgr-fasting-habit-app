@@ -61,9 +61,16 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   int _goalStreak = 0; // consecutive days calorie goal met
   String? _goalMetDate; // last date calorie goal was met
   int _logStreak = 0; // consecutive days with ≥1 entry
-  String? _logStreakDate; // last date an entry was logged
+  String? _logStreakDate; // latest date an entry was logged
 
-  bool _proteinGoalMetToday = false;
+  // Per-day credit ledgers — keep retroactive (backdated) XP idempotent so a
+  // backfill → edit → re-backfill can never pay twice. See Plan 037.
+  Set<String> _calorieGoalCreditedDates = {};
+  Set<String> _proteinGoalCreditedDates = {};
+  // Highest log-streak milestone (7/14/30) already paid for the CURRENT run;
+  // reset to 0 when the run shrinks below it so a fresh run can earn it again.
+  int _streakMilestonePaid = 0;
+
   bool _calorieGoalNotifiedToday = false;
   bool _overshootPenalizedToday = false;
   bool _isAiEstimating = false;
@@ -531,20 +538,25 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   // ── Actions — entries ────────────────────────────────────────────────────────
 
   Future<void> addFoodEntry(FoodEntry entry, MealSlot slot) async {
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    // IF-Sync gate is a "now" concept — only blocks logging on TODAY. Past-day
+    // backfills are always allowed even while currently fasting (Plan 037).
+    if (isSelectedDateToday && _goals.ifSyncEnabled && !isEatingWindowOpen) {
+      return;
+    }
     await _ensureTodayLogFresh();
     _todayLog = _todayLog.addEntry(entry, slot);
     safeNotify();
     await _storage.saveNutritionLog(_todayLog);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
   }
 
   /// Log a food entry created from manual user input and add it to the chat feed.
   Future<void> addManualFoodEntry(FoodEntry entry) async {
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    // IF-Sync gate is a "now" concept — only blocks logging on TODAY. Past-day
+    // backfills are always allowed even while currently fasting (Plan 037).
+    if (isSelectedDateToday && _goals.ifSyncEnabled && !isEatingWindowOpen) {
+      return;
+    }
     await _ensureTodayLogFresh();
     _todayLog = _todayLog.addEntry(entry, MealSlot.meal);
     final msg = ChatMessage(
@@ -564,10 +576,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _storage.saveNutritionLog(_todayLog),
       _persistChatMessages(),
     ]);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
   }
 
   Future<void> removeFoodEntry(String entryId, MealSlot slot) async {
@@ -578,7 +587,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addMealFromTemplate(FoodTemplate meal, MealSlot slot) async {
     if (_isChatParsing) return; // avoid racing with an in-flight parse
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    // IF-Sync gate is a "now" concept — only blocks logging on TODAY. Past-day
+    // backfills are always allowed even while currently fasting (Plan 037).
+    if (isSelectedDateToday && _goals.ifSyncEnabled && !isEatingWindowOpen) {
+      return;
+    }
     await _ensureTodayLogFresh();
     final entries = meal.entries
         .map((e) => e.copyWith())
@@ -620,10 +633,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _storage.saveNutritionLog(_todayLog),
       _persistChatMessages(),
     ]);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
   }
 
   // ── Actions — weight log ─────────────────────────────────────────────────────
@@ -661,18 +671,19 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> updateGoals(NutritionGoals newGoals) async {
     _goals = newGoals;
     _calorieGoalNotifiedToday = false;
-    _proteinGoalMetToday = false;
     _overshootPenalizedToday = false;
     safeNotify();
     await _storage.saveNutritionGoals(newGoals);
-    await _checkGoalMet();
+    await _awardCalorieGoalIfUncredited(_dateFmt.format(DateTime.now()),
+        isToday: true);
   }
 
   Future<void> saveTdeeProfile(TdeeProfile profile) async {
     _tdeeProfile = profile;
     safeNotify();
     await _storage.saveTdeeProfile(profile);
-    await _checkGoalMet();
+    await _awardCalorieGoalIfUncredited(_dateFmt.format(DateTime.now()),
+        isToday: true);
   }
 
   // ── Actions — food library ────────────────────────────────────────────────────
@@ -814,7 +825,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   }) async {
     final result = _lastParseResult;
     if (result == null) return;
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) return;
+    // IF-Sync gate is a "now" concept — only blocks logging on TODAY. Past-day
+    // backfills are always allowed even while currently fasting (Plan 037).
+    if (isSelectedDateToday && _goals.ifSyncEnabled && !isEatingWindowOpen) {
+      return;
+    }
 
     await _ensureTodayLogFresh();
 
@@ -826,10 +841,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     await _storage.saveNutritionLog(_todayLog);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
 
     _lastParseResult = null;
     _parsedDbMatches = [];
@@ -2011,8 +2023,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     List<String> rawTexts, {
     String? photoThumbnailPath,
   }) async {
-    // IF-Sync gate: drop the entry if user is fasting and ifSync is enabled.
-    if (_goals.ifSyncEnabled && !isEatingWindowOpen) {
+    // IF-Sync gate is a "now" concept — only blocks logging on TODAY. Past-day
+    // backfills are always allowed even while currently fasting (Plan 037).
+    if (isSelectedDateToday && _goals.ifSyncEnabled && !isEatingWindowOpen) {
       // The thumbnail was saved before the gate; don't leak it.
       if (photoThumbnailPath != null) {
         // ignore: unawaited_futures
@@ -2050,10 +2063,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _storage.saveNutritionLog(_todayLog),
       _persistChatMessages(),
     ]);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
   }
 
   Future<void> _parseChatAsExercise(String text) async {
@@ -2155,10 +2165,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _storage.saveNutritionLog(_todayLog),
       _persistChatMessages(),
     ]);
-    await _updateLogStreak();
-    await _checkGoalMet();
-    await _checkProteinGoalMet();
-    await _checkOvershoot();
+    await _applyLogSideEffects(_todayLog.date);
 
     // Learn the swap so the same query next time goes straight to this entry.
     // ignore: unawaited_futures
@@ -2397,10 +2404,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       updatedItems.replaceRange(itemIndex, itemIndex + 1, replacementItems);
       _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
       await _persistChatMessages();
-      await _updateLogStreak();
-      await _checkGoalMet();
-      await _checkProteinGoalMet();
-      await _checkOvershoot();
+      await _applyLogSideEffects(_todayLog.date);
     } finally {
       _isChatParsing = false;
       safeNotify();
@@ -2498,10 +2502,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       await _storage.saveNutritionLog(_todayLog);
       _chatMessages[msgIdx] = msg.copyWithFoodItems(updatedItems);
       await _persistChatMessages();
-      await _updateLogStreak();
-      await _checkGoalMet();
-      await _checkProteinGoalMet();
-      await _checkOvershoot();
+      await _applyLogSideEffects(_todayLog.date);
     } finally {
       _isChatParsing = false;
       safeNotify();
@@ -2545,6 +2546,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _storage.loadNutritionGoalMetDate().then((v) => _goalMetDate = v),
       _storage.loadLogStreak().then((v) => _logStreak = v),
       _storage.loadLogStreakDate().then((v) => _logStreakDate = v),
+      _storage
+          .loadCalorieGoalCreditedDates()
+          .then((v) => _calorieGoalCreditedDates = v),
+      _storage
+          .loadProteinGoalCreditedDates()
+          .then((v) => _proteinGoalCreditedDates = v),
+      _storage.loadStreakMilestonePaid().then((v) => _streakMilestonePaid = v),
       _storage.loadFoodFeedback().then((v) => _feedback = v),
       _storage.loadWeightLog().then((v) => _weightLog = v),
       _storage.loadBodyMeasurements().then((v) => _measurementLog = v),
@@ -2561,7 +2569,30 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     // don't re-fire notifications or re-apply HP penalties.
     _calorieGoalNotifiedToday = _goalMetDate == todayKey;
     _overshootPenalizedToday = isOverGoal;
-    _proteinGoalMetToday = isProteinGoalMet;
+
+    // Seed retro-credit guards on first run after this feature ships (the
+    // ledger keys are brand new → empty for existing installs). Without this,
+    // the first commit could re-pay XP already earned before the upgrade.
+    if (_calorieGoalCreditedDates.isEmpty && _goalMetDate != null) {
+      _calorieGoalCreditedDates = {_goalMetDate!};
+      await _storage.saveCalorieGoalCreditedDates(_calorieGoalCreditedDates);
+    }
+    if (_proteinGoalCreditedDates.isEmpty && isProteinGoalMet) {
+      _proteinGoalCreditedDates = {todayKey};
+      await _storage.saveProteinGoalCreditedDates(_proteinGoalCreditedDates);
+    }
+    if (_streakMilestonePaid == 0 && _logStreak > 0) {
+      _streakMilestonePaid = _logStreak >= 30
+          ? 30
+          : _logStreak >= 14
+              ? 14
+              : _logStreak >= 7
+                  ? 7
+                  : 0;
+      if (_streakMilestonePaid > 0) {
+        await _storage.saveStreakMilestonePaid(_streakMilestonePaid);
+      }
+    }
 
     // Apply notification preferences: schedule or cancel weight reminder.
     final notifPrefs = await _storage.loadNotificationPreferences();
@@ -2577,13 +2608,52 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Internal RPG hooks ────────────────────────────────────────────────────────
 
-  Future<void> _checkGoalMet() async {
-    final today = _dateFmt.format(DateTime.now());
-    if (isCalorieGoalMet && _goalMetDate != today) {
-      await _onCalorieGoalMet(today);
+  /// Single date-aware entry point for all commit side effects. [dateKey] is
+  /// the day the entry was logged to (today or a backfilled past day). For
+  /// past days we grant retroactive XP + streak credit but never fire toasts,
+  /// notifications, or HP penalties (those are "now" concepts). See Plan 037.
+  Future<void> _applyLogSideEffects(String dateKey) async {
+    final isToday = dateKey == _dateFmt.format(DateTime.now());
+    await _recomputeLogStreak();
+    await _awardCalorieGoalIfUncredited(dateKey, isToday: isToday);
+    await _awardProteinGoalIfUncredited(dateKey, isToday: isToday);
+    if (isToday) await _checkOvershoot();
+  }
+
+  /// Awards the +30 calorie-goal XP once per day (idempotent via the ledger),
+  /// for today or a backfilled past day. The IF-Sync bonus, goal streak, VIT
+  /// stat, and notification are today-only.
+  Future<void> _awardCalorieGoalIfUncredited(String dateKey,
+      {required bool isToday}) async {
+    if (!isCalorieGoalMet) return;
+
+    if (!_calorieGoalCreditedDates.contains(dateKey)) {
+      await _statsPresenter.addXp(30);
+      // IF-Sync bonus is an eating-window reward — today only (Plan 037 §2).
+      if (isToday && _goals.ifSyncEnabled) {
+        await _statsPresenter.addXp(10);
+      }
+      _calorieGoalCreditedDates = {..._calorieGoalCreditedDates, dateKey};
+      await _storage.saveCalorieGoalCreditedDates(_calorieGoalCreditedDates);
     }
-    // Fire calorie-goal notification once per day when user first hits the goal.
-    if (isCalorieGoalMet && !_calorieGoalNotifiedToday) {
+
+    if (!isToday) {
+      safeNotify();
+      return;
+    }
+
+    // Goal streak + VIT stat: today only, once per day.
+    if (_goalMetDate != dateKey) {
+      final yesterday =
+          _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
+      _goalStreak = (_goalMetDate == yesterday) ? _goalStreak + 1 : 1;
+      _goalMetDate = dateKey;
+      if (_goalStreak % 7 == 0) await _statsPresenter.awardStat('vit');
+      await _storage.saveNutritionStreak(_goalStreak);
+      await _storage.saveNutritionGoalMetDate(dateKey);
+    }
+    // Fire calorie-goal notification once per day on first hit.
+    if (!_calorieGoalNotifiedToday) {
       final prefs = await _storage.loadNotificationPreferences();
       if (prefs.calorieGoalEnabled) {
         _calorieGoalNotifiedToday = true;
@@ -2591,34 +2661,20 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
             todayCalories, effectiveGoal);
       }
     }
-  }
-
-  Future<void> _onCalorieGoalMet(String today) async {
-    await _statsPresenter.addXp(30);
-
-    // IF-Sync bonus: +10 XP when logging was locked to eating window
-    if (_goals.ifSyncEnabled) {
-      await _statsPresenter.addXp(10);
-    }
-
-    final yesterday =
-        _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
-    _goalStreak = (_goalMetDate == yesterday) ? _goalStreak + 1 : 1;
-    _goalMetDate = today;
-
-    if (_goalStreak % 7 == 0) await _statsPresenter.awardStat('vit');
-
-    await _storage.saveNutritionStreak(_goalStreak);
-    await _storage.saveNutritionGoalMetDate(today);
     safeNotify();
   }
 
-  Future<void> _checkProteinGoalMet() async {
-    if (_goals.proteinGrams == null) return;
-    if (_proteinGoalMetToday || !isProteinGoalMet) return;
-    _proteinGoalMetToday = true;
+  /// Awards the +15 protein-goal XP once per day (idempotent via the ledger).
+  /// The permanent STR stat point is today-only to keep the stat economy tied
+  /// to live actions.
+  Future<void> _awardProteinGoalIfUncredited(String dateKey,
+      {required bool isToday}) async {
+    if (_goals.proteinGrams == null || !isProteinGoalMet) return;
+    if (_proteinGoalCreditedDates.contains(dateKey)) return;
     await _statsPresenter.addXp(15);
-    await _statsPresenter.awardStat('str');
+    if (isToday) await _statsPresenter.awardStat('str');
+    _proteinGoalCreditedDates = {..._proteinGoalCreditedDates, dateKey};
+    await _storage.saveProteinGoalCreditedDates(_proteinGoalCreditedDates);
   }
 
   Future<void> _checkOvershoot() async {
@@ -2628,28 +2684,66 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     await _statsPresenter.modifyHp(-5);
   }
 
-  Future<void> _updateLogStreak() async {
-    final today = _dateFmt.format(DateTime.now());
-    if (_logStreakDate == today) return; // already counted today
-    final yesterday =
-        _dateFmt.format(DateTime.now().subtract(const Duration(days: 1)));
-    _logStreak = (_logStreakDate == yesterday) ? _logStreak + 1 : 1;
-    _logStreakDate = today;
-    await _onLogStreakUpdate();
-    await _storage.saveLogStreak(_logStreak);
-    await _storage.saveLogStreakDate(today);
-    safeNotify();
-  }
+  /// Recomputes the log streak as the longest consecutive run of days with at
+  /// least one entry, ending at the most recent logged day (Plan 037 §3) — so
+  /// backfilling a forgotten day can repair/extend a broken streak. Milestone
+  /// XP (7/14/30) is paid once per run via [_streakMilestonePaid].
+  Future<void> _recomputeLogStreak() async {
+    // loadNutritionHistory() is authoritative (reads the persisted blob) and
+    // excludes today, so add today's log explicitly. The just-committed day is
+    // already persisted, so it's reflected here.
+    final history = await _storage.loadNutritionHistory();
+    final logged = <String>{
+      for (final log in history)
+        if (log.allEntries.isNotEmpty) log.date,
+    };
+    final todayKey = _dateFmt.format(DateTime.now());
+    final todayLog = _todayLog.date == todayKey
+        ? _todayLog
+        : await _storage.loadNutritionLogForDate(todayKey);
+    if (todayLog.allEntries.isNotEmpty) logged.add(todayKey);
+    if (_todayLog.allEntries.isNotEmpty) logged.add(_todayLog.date);
 
-  Future<void> _onLogStreakUpdate() async {
-    // Award INT XP at 7/14/30-day milestones
-    if (_logStreak == 7) {
-      await _statsPresenter.addXp(20);
-    } else if (_logStreak == 14) {
-      await _statsPresenter.addXp(40);
-    } else if (_logStreak == 30) {
-      await _statsPresenter.addXp(80);
+    if (logged.isEmpty) {
+      _logStreak = 0;
+      _logStreakDate = null;
+      await _storage.saveLogStreak(0);
+      safeNotify();
+      return;
     }
+
+    final latest =
+        logged.map(DateTime.parse).reduce((a, b) => a.isAfter(b) ? a : b);
+    var run = 0;
+    var cursor = latest;
+    while (logged.contains(_dateFmt.format(cursor))) {
+      run++;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    _logStreak = run;
+    _logStreakDate = _dateFmt.format(latest);
+
+    // Reset the milestone marker when a new (shorter) run starts, so the next
+    // run can earn the milestone again; never re-pay within the same run.
+    if (_logStreak < _streakMilestonePaid) {
+      _streakMilestonePaid = 0;
+      await _storage.saveStreakMilestonePaid(0);
+    }
+    for (final m in const [7, 14, 30]) {
+      if (_logStreak >= m && _streakMilestonePaid < m) {
+        await _statsPresenter.addXp(m == 7
+            ? 20
+            : m == 14
+                ? 40
+                : 80);
+        _streakMilestonePaid = m;
+        await _storage.saveStreakMilestonePaid(m);
+      }
+    }
+
+    await _storage.saveLogStreak(_logStreak);
+    await _storage.saveLogStreakDate(_logStreakDate!);
+    safeNotify();
   }
 }
 
