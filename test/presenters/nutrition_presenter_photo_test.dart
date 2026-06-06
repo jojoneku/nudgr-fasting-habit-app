@@ -232,6 +232,37 @@ void main() {
       expect(presenter.photoParseError, contains('Cloud AI'));
       expect(presenter.chatMessages, isEmpty);
     });
+
+    test('only a network error blames the connection', () async {
+      when(mockCloud.parseFoodFromImage(any, any, any)).thenAnswer((_) async =>
+          const PhotoParseResult(PhotoParseStatus.networkError,
+              detail: 'SocketException'));
+      final presenter = buildPresenter();
+      await Future.delayed(Duration.zero);
+
+      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+
+      expect(presenter.photoParseError, contains('connection'));
+      expect(presenter.chatMessages, isEmpty);
+    });
+
+    test('a server error does NOT blame the connection and shows the code',
+        () async {
+      // The regression that shipped: a backend failure (here HTTP 400) was
+      // reported as "check your connection". It must not be anymore.
+      when(mockCloud.parseFoodFromImage(any, any, any)).thenAnswer((_) async =>
+          const PhotoParseResult(PhotoParseStatus.serverError,
+              httpStatus: 400, detail: 'unsupported_op'));
+      final presenter = buildPresenter();
+      await Future.delayed(Duration.zero);
+
+      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+
+      expect(presenter.photoParseError, isNotNull);
+      expect(presenter.photoParseError, isNot(contains('connection')));
+      expect(presenter.photoParseError, contains('400'));
+      expect(presenter.chatMessages, isEmpty);
+    });
   });
 }
 

@@ -1242,6 +1242,15 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
           .timeout(const Duration(seconds: 35));
       if (isDisposed) return;
 
+      // Log the real outcome before mapping to a user message — the detail
+      // (HTTP code / body snippet / exception) is the only breadcrumb we get
+      // from a release build that has no attached console.
+      if (result.status != PhotoParseStatus.ok) {
+        debugPrint('NutritionPresenter: parsePhoto status=${result.status.name}'
+            '${result.httpStatus != null ? ' http=${result.httpStatus}' : ''}'
+            '${result.detail != null ? ' detail=${result.detail}' : ''}');
+      }
+
       switch (result.status) {
         case PhotoParseStatus.unavailable:
           _photoParseError =
@@ -1255,9 +1264,21 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
           _photoParseError = "Couldn't spot any food in that photo. "
               'Try another shot or describe it in text.';
           return;
-        case PhotoParseStatus.failed:
-          _photoParseError = "Couldn't analyse this photo. "
+        case PhotoParseStatus.networkError:
+          // The only case where the connection is actually suspect.
+          _photoParseError = "Couldn't reach the photo analyser. "
               'Check your connection and try again.';
+          return;
+        case PhotoParseStatus.serverError:
+          // Connection is fine; the backend failed. Be honest, and include the
+          // code so a report is actionable.
+          _photoParseError = 'Photo analysis is temporarily unavailable'
+              '${result.httpStatus != null ? ' (error ${result.httpStatus})' : ''}'
+              '. Please try again in a bit.';
+          return;
+        case PhotoParseStatus.failed:
+          _photoParseError = "Couldn't read the photo analysis. "
+              'Please try again.';
           return;
         case PhotoParseStatus.ok:
           break;
