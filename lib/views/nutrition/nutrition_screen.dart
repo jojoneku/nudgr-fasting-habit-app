@@ -2086,8 +2086,10 @@ class _ChatInputBarState extends State<_ChatInputBar> {
               IconButton(
                 icon: Icon(Icons.photo_camera_outlined,
                     color: cs.onSurfaceVariant),
-                onPressed:
-                    isToday && !locked ? () => _openPhotoSheet(context) : null,
+                // Photo logging backfills past days too — parsePhoto commits to
+                // the selected date via the same path as text (Plan 037). Gate
+                // on canLog like the other inputs, not isToday.
+                onPressed: canLog ? () => _openPhotoSheet(context) : null,
                 tooltip: 'Log from photo',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
