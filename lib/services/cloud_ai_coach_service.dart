@@ -250,8 +250,10 @@ class CloudAiCoachService implements AiCoachService {
           )
           .timeout(const Duration(seconds: _timeoutSeconds));
     } catch (e) {
-      debugPrint('CloudAiCoachService[parseFoodFromImage] error: $e');
-      return const PhotoParseResult(PhotoParseStatus.failed);
+      // Transport-level failure: no connection, DNS, or the request timed out
+      // before any response. This is the genuine "check your connection" case.
+      debugPrint('CloudAiCoachService[parseFoodFromImage] network error: $e');
+      return PhotoParseResult(PhotoParseStatus.networkError, detail: '$e');
     }
 
     // The server enforces the per-user daily cap (Plan 034 SEV-1) and returns
@@ -260,9 +262,18 @@ class CloudAiCoachService implements AiCoachService {
       return const PhotoParseResult(PhotoParseStatus.rateLimited);
     }
     if (response.statusCode != 200) {
+      // Reached the backend, but it errored (5xx, auth, unhandled op, …). The
+      // connection is fine — do NOT tell the user to check it.
+      final bodySnippet = response.body.length > 300
+          ? '${response.body.substring(0, 300)}…'
+          : response.body;
       debugPrint('CloudAiCoachService[parseFoodFromImage] '
-          'HTTP ${response.statusCode}: ${response.body}');
-      return const PhotoParseResult(PhotoParseStatus.failed);
+          'server error HTTP ${response.statusCode}: $bodySnippet');
+      return PhotoParseResult(
+        PhotoParseStatus.serverError,
+        httpStatus: response.statusCode,
+        detail: bodySnippet,
+      );
     }
 
     try {
@@ -281,8 +292,9 @@ class CloudAiCoachService implements AiCoachService {
         intent: ParseFoodResult.intentFromJson(intentStr),
       );
     } catch (e) {
+      // 200 OK but the body wasn't the JSON shape we expected.
       debugPrint('CloudAiCoachService.parseFoodFromImage parse error: $e');
-      return const PhotoParseResult(PhotoParseStatus.failed);
+      return PhotoParseResult(PhotoParseStatus.failed, detail: '$e');
     }
   }
 

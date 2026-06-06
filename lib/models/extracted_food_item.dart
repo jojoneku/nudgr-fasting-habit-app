@@ -115,7 +115,18 @@ enum PhotoParseStatus {
   /// on-device tier). The caller should prompt the user to enable Cloud AI.
   unavailable,
 
-  /// Network error, malformed response, or a Bedrock failure.
+  /// The request never reached the server — no connection, DNS failure, or a
+  /// transport-level timeout. This is the only status that warrants a
+  /// "check your connection" message.
+  networkError,
+
+  /// The server was reached but returned an error response (non-2xx, not 429),
+  /// e.g. a 5xx, an auth failure, or an unhandled op. The user's connection is
+  /// fine; the backend is the problem. See [PhotoParseResult.httpStatus].
+  serverError,
+
+  /// The server replied 200 but the body couldn't be understood (malformed or
+  /// empty JSON, missing fields).
   failed,
 }
 
@@ -126,9 +137,20 @@ class PhotoParseResult {
   final List<ExtractedFoodItem> items;
   final ParseIntent intent;
 
+  /// Diagnostic detail for logging only — an exception message or an HTTP body
+  /// snippet. NEVER shown to the user verbatim.
+  final String? detail;
+
+  /// The HTTP status code when [status] is [PhotoParseStatus.serverError];
+  /// null otherwise. Surfaced (as a code, not the body) so a confused user can
+  /// quote it in a bug report.
+  final int? httpStatus;
+
   const PhotoParseResult(
     this.status, {
     this.items = const [],
     this.intent = ParseIntent.itemsList,
+    this.detail,
+    this.httpStatus,
   });
 }
