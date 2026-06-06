@@ -423,6 +423,17 @@ class OnDeviceAiCoachService implements AiCoachService {
     return FoodParseResult(items: items, usedModel: true);
   }
 
+  // ── Parse food from image (Plan 029) ──────────────────────────────────────
+  // No on-device vision model in V1 — photo logging is cloud-only.
+
+  @override
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
+  ) async =>
+      const PhotoParseResult(PhotoParseStatus.unavailable);
+
   // ── Estimate macros ───────────────────────────────────────────────────────
 
   @override

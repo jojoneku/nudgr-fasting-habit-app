@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/ai_meal_estimate.dart';
@@ -46,6 +48,14 @@ class NullAiCoachService implements AiCoachService {
     List<FoodSearchCandidate> candidates,
   ) async =>
       null;
+
+  @override
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
+  ) async =>
+      const PhotoParseResult(PhotoParseStatus.unavailable);
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;

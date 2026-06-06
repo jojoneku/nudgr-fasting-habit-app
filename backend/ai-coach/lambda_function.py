@@ -16,6 +16,11 @@ _SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 _MAX_TEXT_LEN = 500   # chars; guards prompt-size and injection blast radius
 _MAX_CANDIDATES = 15
 
+# Vision (parseFoodFromImage). The client resizes to 1024px JPEG q80, which is
+# well under 1 MB; the base64 cap below is a generous abuse guard, not a target.
+_MAX_IMAGE_B64_LEN = 8_000_000   # ~6 MB decoded image
+_ALLOWED_IMAGE_MIME = ("image/jpeg", "image/png", "image/webp")
+
 
 # ── Auth ───────────────────────────────────────────────────────────────────────
 
@@ -115,6 +120,8 @@ def lambda_handler(event, context):
         return _estimate_macros(payload)
     if op == "parseFoodWithCandidates":
         return _parse_food_with_candidates(payload)
+    if op == "parseFoodFromImage":
+        return _parse_food_from_image(payload)
     if op == "respond":
         return _respond(payload)
 
@@ -308,6 +315,127 @@ def _parse_food_with_candidates(payload):
         parse_fn=lambda parsed: _emit_parse_food_response(parsed, original_text=text),
         fallback={"intent": "items_list", "items": []},
     )
+
+
+def _parse_food_from_image(payload):
+    """Vision parse (Plan 029): a food photo + optional caption → items.
+
+    Returns the SAME shape as parseFoodWithCandidates so the client commit
+    pipeline is reused unchanged. Differences from the text op:
+      - No candidate pool. The vision model identifies + estimates in one pass.
+      - food_id is ALWAYS null (no DB lookup). estimated_macros is REQUIRED.
+      - intent may also be "no_food" when the image contains no food.
+    """
+    image_b64 = (payload.get("image_base64") or "").strip()
+    if not image_b64:
+        return _resp(400, {"error": "missing_image", "message": "payload.image_base64 is required"})
+    if len(image_b64) > _MAX_IMAGE_B64_LEN:
+        return _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+
+    mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
+    if mime not in _ALLOWED_IMAGE_MIME:
+        mime = "image/jpeg"
+
+    caption = (payload.get("caption") or "").strip()[:_MAX_TEXT_LEN]
+    caption_block = (
+        f'\nThe user added this caption — treat it as authoritative, overriding '
+        f'what you see when they conflict:\n"{caption}"\n'
+        if caption else ""
+    )
+
+    prompt = (
+        "You are a nutrition vision assistant. Identify every food and drink in "
+        "this photo and estimate the portion and macros for each.\n"
+        f"{caption_block}"
+        "\nFor each item, output one object with these fields:\n"
+        '  "name": short food name (recognise Filipino dishes by sight)\n'
+        '  "grams": estimated portion in grams, judged from plate area, utensils, '
+        "and garnish for scale\n"
+        '  "hyde": short descriptive phrase for later search (e.g. "cooked white rice, steamed, plain")\n'
+        '  "food_id": ALWAYS null for this op\n'
+        '  "confidence": 0.0 to 1.0 — how sure you are of the identification\n'
+        '  "estimated_macros": REQUIRED, never null. Object: '
+        '{"calories": number, "protein_g": number, "carbs_g": number, "fat_g": number} '
+        "for the WHOLE stated portion (not per 100g)\n"
+        "\n"
+        'At the top level set "intent" to one of:\n'
+        '  "no_food" — the image contains no food/drink (person, pet, document, '
+        "blurry, empty plate). Return an empty items list.\n"
+        '  "single_dish" — ONE composite dish the user is logging as a unit; the '
+        "client combines the ingredients into one entry.\n"
+        '  "meal" — a plate/spread of SEPARATE items, each logged on its own row. '
+        "This is the default for a normal photographed meal.\n"
+        "\n"
+        "Rules:\n"
+        "1. DECOMPOSE a composite plate into its ingredients (adobo + rice + "
+        "cucumber → 3 items), same as the text logger. But keep a canonically "
+        "named single dish (sinigang, kare-kare) as one item.\n"
+        "2. ESTIMATE macros from your nutrition knowledge. Sanity check: "
+        "calories ≈ protein_g×4 + carbs_g×4 + fat_g×9.\n"
+        "3. PORTIONS — a typical rice cup is ~150–200g cooked; a chicken thigh "
+        "~110–130g; a glass of drink ~240g. Use visible scale cues to refine.\n"
+        "4. PRECISION — round to one decimal place.\n"
+        "5. If you genuinely cannot tell what a food is, still log it with your "
+        "best name + a low confidence; do NOT drop it.\n"
+        "\n"
+        "Reply with ONLY valid JSON, no markdown, no commentary:\n"
+        '{"intent": "no_food" | "single_dish" | "meal", "items": [...]}\n'
+    )
+
+    try:
+        raw = _bedrock.invoke_model(
+            modelId=_MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 1024,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mime,
+                                "data": image_b64,
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }],
+            }),
+        )
+        result = json.loads(raw["body"].read())
+        text = result["content"][0]["text"].strip()
+        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text).strip()
+        parsed = json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f"Vision response not valid JSON: {e}")
+        return _resp(200, {"intent": "no_food", "items": [], "reason": "unparseable response"})
+    except Exception as e:
+        print(f"Bedrock error (parseFoodFromImage): {e}")
+        return _resp(502, {"error": "bedrock_error", "message": str(e)})
+
+    if parsed.get("intent") == "no_food":
+        print("cost_line op=parseFoodFromImage items=0 intent=no_food")
+        return _resp(200, {"intent": "no_food", "items": []})
+
+    normalized = _normalize_parsed_items(parsed)
+    # food_id is meaningless for a photo — there were no candidates to pick from.
+    for it in normalized["items"]:
+        it["food_id"] = None
+    # Preserve the vision-specific intents the text normaliser doesn't know
+    # ("meal" collapses to "items_list" there, which is the behaviour we want).
+    items = normalized["items"]
+    fallback = sum(1 for i in items if i.get("macro_fallback"))
+    print(
+        f"cost_line op=parseFoodFromImage items={len(items)} "
+        f"macro_fallback={fallback} intent={normalized['intent']} "
+        f"caption={'y' if caption else 'n'}"
+    )
+    return _resp(200, normalized)
 
 
 def _emit_parse_food_response(parsed, original_text=""):

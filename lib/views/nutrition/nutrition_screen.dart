@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +13,7 @@ import '../../models/meal_slot.dart';
 import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/nutrition_presenter.dart';
 import 'food_library_screen.dart';
+import 'food_photo_sheet.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
 import '../widgets/system/system.dart';
@@ -1092,13 +1094,27 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(14, 10, 14, 6),
-            child: Text(
-              message.rawText,
-              style: TextStyle(
-                color: cs.onSurfaceVariant.withValues(alpha: 0.7),
-                fontSize: 11,
-                fontStyle: FontStyle.italic,
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                if (message.isPhoto) ...[
+                  _PhotoThumbnail(
+                    presenter: widget.presenter,
+                    relativePath: message.photoThumbnailPath!,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(
+                  child: Text(
+                    message.rawText,
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                      fontSize: 11,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           Divider(height: 1, color: cs.outlineVariant),
@@ -1133,6 +1149,70 @@ class _FoodAnalysisCardState extends State<_FoodAnalysisCard> {
             onCancel: _cancel,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small tappable thumbnail shown on a photo-logged chat row (Plan 029 §0.4).
+/// Resolves the docs-relative path asynchronously; falls back to a camera glyph
+/// while loading or if the file is missing.
+class _PhotoThumbnail extends StatelessWidget {
+  final NutritionPresenter presenter;
+  final String relativePath;
+  const _PhotoThumbnail({required this.presenter, required this.relativePath});
+
+  static const double _size = 32;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    Widget placeholder() => Container(
+          width: _size,
+          height: _size,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(Icons.photo_camera_outlined,
+              size: 16, color: cs.onSurfaceVariant),
+        );
+
+    return FutureBuilder<String?>(
+      future: presenter.resolvePhotoThumbnail(relativePath),
+      builder: (context, snap) {
+        final path = snap.data;
+        if (path == null) return placeholder();
+        return GestureDetector(
+          onTap: () => _showFull(context, path),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.file(
+              File(path),
+              width: _size,
+              height: _size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => placeholder(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showFull(BuildContext context, String path) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(16),
+        child: GestureDetector(
+          onTap: () => Navigator.of(ctx).pop(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.file(File(path), fit: BoxFit.contain),
+          ),
+        ),
       ),
     );
   }
@@ -1963,6 +2043,10 @@ class _ChatInputBarState extends State<_ChatInputBar> {
     );
   }
 
+  void _openPhotoSheet(BuildContext context) {
+    showFoodPhotoSheet(context, widget.presenter);
+  }
+
   @override
   Widget build(BuildContext context) {
     final locked = widget.presenter.goals.ifSyncEnabled &&
@@ -1997,6 +2081,14 @@ class _ChatInputBarState extends State<_ChatInputBar> {
                 icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
                 onPressed: canLog ? () => _showManualAdd(context) : null,
                 tooltip: 'Add manually',
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              ),
+              IconButton(
+                icon: Icon(Icons.photo_camera_outlined,
+                    color: cs.onSurfaceVariant),
+                onPressed:
+                    isToday && !locked ? () => _openPhotoSheet(context) : null,
+                tooltip: 'Log from photo',
                 constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
               Expanded(

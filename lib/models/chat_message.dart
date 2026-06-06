@@ -196,6 +196,12 @@ class ChatMessage {
   // exercise
   final ExerciseEntry? exerciseEntry;
 
+  /// Plan 029 — when this food message was logged from a photo, the path to its
+  /// thumbnail JPEG RELATIVE to the app documents dir (e.g. `food_photos/x.jpg`).
+  /// Null for text- and exercise-logged messages. Stored as a file reference,
+  /// not inline base64, to keep the persisted chat blob small (§0.4).
+  final String? photoThumbnailPath;
+
   const ChatMessage({
     required this.id,
     required this.rawText,
@@ -204,7 +210,11 @@ class ChatMessage {
     this.foodItems = const [],
     this.mealSlot = MealSlot.meal,
     this.exerciseEntry,
+    this.photoThumbnailPath,
   });
+
+  /// Whether this message was logged from a photo.
+  bool get isPhoto => photoThumbnailPath != null;
 
   static String generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
@@ -229,6 +239,7 @@ class ChatMessage {
           ? ExerciseEntry.fromJson(
               json['exerciseEntry'] as Map<String, dynamic>)
           : null,
+      photoThumbnailPath: json['photoThumbnailPath'] as String?,
     );
   }
 
@@ -240,6 +251,8 @@ class ChatMessage {
         'foodItems': foodItems.map((f) => f.toJson()).toList(),
         'mealSlot': mealSlot.jsonKey,
         'exerciseEntry': exerciseEntry?.toJson(),
+        if (photoThumbnailPath != null)
+          'photoThumbnailPath': photoThumbnailPath,
       };
 
   ChatMessage copyWithFoodItems(List<ChatFoodItem> items) => ChatMessage(
@@ -250,5 +263,6 @@ class ChatMessage {
         foodItems: items,
         mealSlot: mealSlot,
         exerciseEntry: exerciseEntry,
+        photoThumbnailPath: photoThumbnailPath,
       );
 }

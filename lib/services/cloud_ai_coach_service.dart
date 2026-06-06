@@ -221,6 +221,101 @@ class CloudAiCoachService implements AiCoachService {
     }
   }
 
+  // ── Parse food from image (Plan 029) ──────────────────────────────────────
+
+  @override
+  Future<PhotoParseResult> parseFoodFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? caption,
+  ) async {
+    if (!isAvailable) {
+      return const PhotoParseResult(PhotoParseStatus.unavailable);
+    }
+
+    final payload = <String, dynamic>{
+      'image_base64': base64Encode(imageBytes),
+      'mime_type': mimeType,
+      if (caption != null && caption.trim().isNotEmpty)
+        'caption': caption.trim(),
+    };
+
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: _headers,
+            body: jsonEncode({'op': 'parseFoodFromImage', 'payload': payload}),
+          )
+          .timeout(const Duration(seconds: _timeoutSeconds));
+    } catch (e) {
+      debugPrint('CloudAiCoachService[parseFoodFromImage] error: $e');
+      return const PhotoParseResult(PhotoParseStatus.failed);
+    }
+
+    // The server enforces the per-user daily cap (Plan 034 SEV-1) and returns
+    // 429 when it's reached — surface that distinctly so the UI can explain it.
+    if (response.statusCode == 429) {
+      return const PhotoParseResult(PhotoParseStatus.rateLimited);
+    }
+    if (response.statusCode != 200) {
+      debugPrint('CloudAiCoachService[parseFoodFromImage] '
+          'HTTP ${response.statusCode}: ${response.body}');
+      return const PhotoParseResult(PhotoParseStatus.failed);
+    }
+
+    try {
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      final intentStr = result['intent'] as String?;
+      if (intentStr == 'no_food') {
+        return const PhotoParseResult(PhotoParseStatus.noFood);
+      }
+      final items = _photoItemsFromJson(result['items'] as List<dynamic>?);
+      if (items.isEmpty) {
+        return const PhotoParseResult(PhotoParseStatus.noFood);
+      }
+      return PhotoParseResult(
+        PhotoParseStatus.ok,
+        items: items,
+        intent: ParseFoodResult.intentFromJson(intentStr),
+      );
+    } catch (e) {
+      debugPrint('CloudAiCoachService.parseFoodFromImage parse error: $e');
+      return const PhotoParseResult(PhotoParseStatus.failed);
+    }
+  }
+
+  /// Map the Lambda's `items` array into [ExtractedFoodItem]s. Photo items
+  /// always carry a null `food_id` and a populated macro estimate.
+  List<ExtractedFoodItem> _photoItemsFromJson(List<dynamic>? rawItems) {
+    final parsed = <ExtractedFoodItem>[];
+    for (final raw in (rawItems ?? const []).cast<Map<String, dynamic>>()) {
+      final name = (raw['name'] as String?) ?? '';
+      if (name.isEmpty) continue;
+      final macrosJson = raw['estimated_macros'] as Map<String, dynamic>?;
+      final macros = macrosJson == null
+          ? null
+          : EstimatedMacros(
+              calories: (macrosJson['calories'] as num?)?.toDouble() ?? 0,
+              proteinG: (macrosJson['protein_g'] as num?)?.toDouble() ?? 0,
+              carbsG: (macrosJson['carbs_g'] as num?)?.toDouble() ?? 0,
+              fatG: (macrosJson['fat_g'] as num?)?.toDouble() ?? 0,
+            );
+      parsed.add(ExtractedFoodItem(
+        name: name,
+        grams: (raw['grams'] as num?)?.toDouble() ?? 100,
+        hydeDescription: (raw['hyde'] as String?) ?? '',
+        rawText: name,
+        resolvedFoodId: null, // photo items never resolve to a DB row
+        resolverConfidence: (raw['confidence'] as num?)?.toDouble() ?? 0.0,
+        estimatedMacros: macros,
+        macroFallback: raw['macro_fallback'] as bool? ?? false,
+      ));
+    }
+    return parsed;
+  }
+
   // ── Estimate macros ───────────────────────────────────────────────────────
 
   @override
