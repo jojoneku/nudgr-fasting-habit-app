@@ -21,6 +21,7 @@ import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/grocery/cart_item.dart';
 import '../models/grocery/remembered_price.dart';
+import '../models/grocery/saved_trip.dart';
 import '../models/food_feedback.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
@@ -84,6 +85,7 @@ abstract class StorageService {
   static const String keyGroceryCart = 'grocery_cart';
   static const String keyGroceryPriceMemory = 'grocery_price_memory';
   static const String keyGroceryBudget = 'grocery_budget';
+  static const String keyGroceryTripHistory = 'grocery_trip_history';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -212,6 +214,8 @@ abstract class StorageService {
   Future<List<RememberedPrice>> loadGroceryPriceMemory();
   Future<void> saveGroceryBudget(double? budget);
   Future<double?> loadGroceryBudget();
+  Future<void> saveGroceryTripHistory(List<SavedTrip> trips);
+  Future<List<SavedTrip>> loadGroceryTripHistory();
 
   //  Theme
   Future<void> saveThemeMode(String mode);

@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
+import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/grocery/add_cart_item_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+
+final _tripDateFmt = DateFormat('MMM d · h:mm a');
 
 /// Live grocery running-total screen (Plan 038). Add items + quantities while
 /// shopping; the header shows an honest total breakdown so a budget shopper
@@ -38,12 +42,28 @@ class GroceryCartView extends StatelessWidget {
     );
   }
 
+  void _showHistorySheet(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Trip history',
+      body: _TripHistorySheet(presenter: presenter),
+    );
+  }
+
+  void _showCheckoutSheet(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Finish trip',
+      body: _CheckoutSheet(presenter: presenter),
+    );
+  }
+
   Future<void> _confirmClear(BuildContext context) async {
     final ok = await AppConfirmDialog.confirm(
       context: context,
       title: 'Clear cart?',
-      body: 'Removes all items from this trip. Your remembered prices are '
-          'kept for next time.',
+      body: 'Removes all items from this trip without saving it. Your '
+          'remembered prices are kept.',
       confirmLabel: 'Clear',
       isDestructive: true,
     );
@@ -63,6 +83,7 @@ class GroceryCartView extends StatelessWidget {
                 _CartSummaryHeader(
                   presenter: presenter,
                   onEditBudget: () => _showSetBudgetSheet(context),
+                  onShowHistory: () => _showHistorySheet(context),
                 ),
                 Expanded(
                   child: presenter.isEmpty
@@ -76,6 +97,7 @@ class GroceryCartView extends StatelessWidget {
                 _BottomBar(
                   presenter: presenter,
                   onAdd: () => _showAddSheet(context),
+                  onFinish: () => _showCheckoutSheet(context),
                   onClear: () => _confirmClear(context),
                 ),
               ],
@@ -92,9 +114,13 @@ class GroceryCartView extends StatelessWidget {
 class _CartSummaryHeader extends StatelessWidget {
   final GroceryCartPresenter presenter;
   final VoidCallback onEditBudget;
+  final VoidCallback onShowHistory;
 
-  const _CartSummaryHeader(
-      {required this.presenter, required this.onEditBudget});
+  const _CartSummaryHeader({
+    required this.presenter,
+    required this.onEditBudget,
+    required this.onShowHistory,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -117,14 +143,26 @@ class _CartSummaryHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'RUNNING TOTAL',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: cs.onSurfaceVariant,
-              letterSpacing: 1.5,
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'RUNNING TOTAL',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              if (presenter.hasTripHistory)
+                IconButton(
+                  visualDensity: VisualDensity.compact,
+                  tooltip: 'Trip history',
+                  onPressed: onShowHistory,
+                  icon: const Icon(Icons.history),
+                ),
+            ],
           ),
-          const SizedBox(height: AppSpacing.xs),
           Text(
             formatPeso(presenter.grandTotal),
             style: theme.textTheme.displaySmall?.copyWith(
@@ -148,30 +186,19 @@ class _BreakdownLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final parts = <Widget>[];
-
-    parts.add(_chip(
-      context,
-      '${formatPeso(presenter.confirmedTotal)} confirmed',
-      cs.onSurfaceVariant,
-    ));
+    final cs = Theme.of(context).colorScheme;
+    final parts = <Widget>[
+      _chip(context, '${formatPeso(presenter.confirmedTotal)} confirmed',
+          cs.onSurfaceVariant),
+    ];
     if (presenter.hasEstimates) {
-      parts.add(_chip(
-        context,
-        '~${formatPeso(presenter.estimatedTotal)} est',
-        cs.secondary,
-      ));
+      parts.add(_chip(context, '~${formatPeso(presenter.estimatedTotal)} est',
+          cs.secondary));
     }
     if (presenter.unpricedCount > 0) {
-      parts.add(_chip(
-        context,
-        '${presenter.unpricedCount} unpriced',
-        cs.error,
-      ));
+      parts
+          .add(_chip(context, '${presenter.unpricedCount} unpriced', cs.error));
     }
-
     return Wrap(
         spacing: AppSpacing.sm, runSpacing: AppSpacing.xs, children: parts);
   }
@@ -206,8 +233,8 @@ class _BudgetRow extends StatelessWidget {
       );
     }
 
+    final over = presenter.isOverBudget;
     final remaining = presenter.budgetRemaining ?? 0;
-    final over = remaining < 0;
     return InkWell(
       onTap: onEditBudget,
       borderRadius: BorderRadius.circular(8),
@@ -281,16 +308,17 @@ class _CartItemTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final suffix = item.unit.priceSuffix;
 
     final String subtitle;
     final Color subtitleColor;
     switch (item.priceState) {
       case PriceState.confirmed:
-        subtitle = '${formatPeso(item.unitPrice!)} each';
+        subtitle = '${formatPeso(item.unitPrice!)} $suffix';
         subtitleColor = cs.onSurfaceVariant;
         break;
       case PriceState.remembered:
-        subtitle = '~${formatPeso(item.unitPrice!)} each · tap to confirm';
+        subtitle = '~${formatPeso(item.unitPrice!)} $suffix · tap to confirm';
         subtitleColor = cs.secondary;
         break;
       case PriceState.unknown:
@@ -337,6 +365,7 @@ class _CartItemTile extends StatelessWidget {
               ),
               _QuantityStepper(
                 quantity: item.quantity,
+                unit: item.unit,
                 onChanged: (q) => presenter.updateQuantity(item.id, q),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -361,37 +390,46 @@ class _CartItemTile extends StatelessWidget {
   }
 }
 
-/// −/+ stepper shared by the cart tiles.
+/// −/+ stepper for the cart tiles. Steps by the unit's natural increment.
 class _QuantityStepper extends StatelessWidget {
   final double quantity;
+  final ItemUnit unit;
   final ValueChanged<double> onChanged;
 
-  const _QuantityStepper({required this.quantity, required this.onChanged});
-
-  String get _label => quantity == quantity.truncateToDouble()
-      ? quantity.toInt().toString()
-      : quantity.toString();
+  const _QuantityStepper({
+    required this.quantity,
+    required this.unit,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final step = unit.step;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         IconButton(
           visualDensity: VisualDensity.compact,
-          // Disabled at 1 — removal is intentional (swipe), not an accidental
-          // extra tap on the minus button.
-          onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
+          // Disabled at one step — removal is intentional (swipe), not an
+          // accidental extra tap on the minus button.
+          onPressed: quantity > step ? () => onChanged(quantity - step) : null,
           icon: const Icon(Icons.remove_circle_outline),
         ),
         Container(
-          constraints: const BoxConstraints(minWidth: 24),
+          constraints: const BoxConstraints(minWidth: 52),
           alignment: Alignment.center,
-          child: Text(_label, style: Theme.of(context).textTheme.titleMedium),
+          child: Text(
+            unit.quantityLabel(quantity),
+            style: Theme.of(context)
+                .textTheme
+                .titleSmall
+                ?.copyWith(color: cs.onSurface),
+          ),
         ),
         IconButton(
           visualDensity: VisualDensity.compact,
-          onPressed: () => onChanged(quantity + 1),
+          onPressed: () => onChanged(quantity + step),
           icon: const Icon(Icons.add_circle_outline),
         ),
       ],
@@ -435,17 +473,20 @@ class _EmptyCart extends StatelessWidget {
 class _BottomBar extends StatelessWidget {
   final GroceryCartPresenter presenter;
   final VoidCallback onAdd;
+  final VoidCallback onFinish;
   final VoidCallback onClear;
 
   const _BottomBar({
     required this.presenter,
     required this.onAdd,
+    required this.onFinish,
     required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final empty = presenter.isEmpty;
     return Container(
       padding: const EdgeInsets.fromLTRB(
           AppSpacing.md, AppSpacing.sm, AppSpacing.md, AppSpacing.md),
@@ -455,30 +496,45 @@ class _BottomBar extends StatelessWidget {
           top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
         ),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(
-            child: AppPrimaryButton(
-              label: 'Add item',
-              leading: Icons.add,
-              onPressed: onAdd,
+          if (!empty) ...[
+            AppPrimaryButton(
+              label: 'Finish trip',
+              leading: Icons.check_circle_outline,
+              onPressed: onFinish,
             ),
-          ),
-          if (!presenter.isEmpty) ...[
-            const SizedBox(width: AppSpacing.sm),
-            IconButton.outlined(
-              tooltip: 'Clear cart',
-              onPressed: onClear,
-              icon: const Icon(Icons.delete_sweep_outlined),
-            ),
+            const SizedBox(height: AppSpacing.sm),
           ],
+          Row(
+            children: [
+              Expanded(
+                child: AppPrimaryButton(
+                  label: 'Add item',
+                  leading: Icons.add,
+                  variant:
+                      empty ? AppButtonVariant.filled : AppButtonVariant.tonal,
+                  onPressed: onAdd,
+                ),
+              ),
+              if (!empty) ...[
+                const SizedBox(width: AppSpacing.sm),
+                IconButton.outlined(
+                  tooltip: 'Clear cart',
+                  onPressed: onClear,
+                  icon: const Icon(Icons.delete_sweep_outlined),
+                ),
+              ],
+            ],
+          ),
         ],
       ),
     );
   }
 }
 
-// ── Mini forms ───────────────────────────────────────────────────────────────
+// ── Set price / budget sheets ──────────────────────────────────────────────────
 
 class _SetPriceSheet extends StatefulWidget {
   final GroceryCartPresenter presenter;
@@ -521,7 +577,7 @@ class _SetPriceSheetState extends State<_SetPriceSheet> {
       children: [
         AppTextField(
           controller: _controller,
-          label: 'Unit price',
+          label: 'Price ${widget.item.unit.priceSuffix}',
           prefix: const Text('₱ '),
           autofocus: true,
           keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -585,6 +641,192 @@ class _SetBudgetSheetState extends State<_SetBudgetSheet> {
         const SizedBox(height: AppSpacing.lg),
         AppPrimaryButton(label: 'Save budget', onPressed: _save),
       ],
+    );
+  }
+}
+
+// ── Checkout sheet ───────────────────────────────────────────────────────────
+
+class _CheckoutSheet extends StatefulWidget {
+  final GroceryCartPresenter presenter;
+
+  const _CheckoutSheet({required this.presenter});
+
+  @override
+  State<_CheckoutSheet> createState() => _CheckoutSheetState();
+}
+
+class _CheckoutSheetState extends State<_CheckoutSheet> {
+  bool _logToLedger = false;
+  String? _accountId;
+  String? _categoryId;
+
+  @override
+  void initState() {
+    super.initState();
+    final accounts = widget.presenter.ledgerAccounts;
+    if (accounts.isNotEmpty) _accountId = accounts.first.id;
+  }
+
+  bool get _canLog =>
+      widget.presenter.canPostToLedger &&
+      widget.presenter.ledgerAccounts.isNotEmpty;
+
+  Future<void> _finish() async {
+    final post = _logToLedger && _canLog && _accountId != null;
+    await widget.presenter.checkout(
+      postToLedger: post,
+      accountId: _accountId,
+      categoryId: _categoryId,
+    );
+    if (mounted) {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(post ? 'Trip saved & logged to ledger' : 'Trip saved'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.presenter;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final accounts = p.ledgerAccounts;
+    final categories = p.ledgerCategories;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(formatPeso(p.grandTotal),
+            style: theme.textTheme.headlineMedium
+                ?.copyWith(fontWeight: FontWeight.bold)),
+        const SizedBox(height: AppSpacing.xs),
+        _BreakdownLine(presenter: p),
+        if (p.unpricedCount > 0) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '${p.unpricedCount} item(s) have no price and aren\'t counted in '
+            'the total.',
+            style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+          ),
+        ],
+        if (_canLog) ...[
+          const SizedBox(height: AppSpacing.md),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Log to ledger as an expense'),
+            value: _logToLedger,
+            onChanged: (v) => setState(() => _logToLedger = v),
+          ),
+          if (_logToLedger) ...[
+            DropdownButtonFormField<String>(
+              initialValue: _accountId,
+              decoration: const InputDecoration(labelText: 'Account'),
+              items: [
+                for (final a in accounts)
+                  DropdownMenuItem(value: a.id, child: Text(a.name)),
+              ],
+              onChanged: (v) => setState(() => _accountId = v),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            DropdownButtonFormField<String>(
+              initialValue: _categoryId,
+              decoration:
+                  const InputDecoration(labelText: 'Category (optional)'),
+              items: [
+                const DropdownMenuItem(value: null, child: Text('None')),
+                for (final c in categories)
+                  DropdownMenuItem(value: c.id, child: Text(c.name)),
+              ],
+              onChanged: (v) => setState(() => _categoryId = v),
+            ),
+          ],
+        ],
+        const SizedBox(height: AppSpacing.lg),
+        AppPrimaryButton(
+          label: _logToLedger && _canLog ? 'Finish & log' : 'Finish trip',
+          leading: Icons.check_circle_outline,
+          onPressed: _finish,
+        ),
+      ],
+    );
+  }
+}
+
+// ── Trip history ───────────────────────────────────────────────────────────────
+
+class _TripHistorySheet extends StatelessWidget {
+  final GroceryCartPresenter presenter;
+
+  const _TripHistorySheet({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final trips = presenter.tripHistory;
+
+    if (trips.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Text('No saved trips yet.',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: cs.onSurfaceVariant)),
+      );
+    }
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        itemCount: trips.length,
+        separatorBuilder: (_, __) => const Divider(height: 1),
+        itemBuilder: (context, i) {
+          final trip = trips[i];
+          return ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(formatPeso(trip.total),
+                style: theme.textTheme.titleMedium),
+            subtitle: Text(
+              '${_tripDateFmt.format(trip.savedAt)} · ${trip.itemCount} item(s)'
+              '${trip.postedToLedger ? ' · logged' : ''}',
+              style: theme.textTheme.bodySmall,
+            ),
+            trailing: TextButton(
+              onPressed: () async {
+                await presenter.repeatTrip(trip.id);
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Items added to your cart'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Repeat'),
+            ),
+            onLongPress: () async {
+              final ok = await AppConfirmDialog.confirm(
+                context: context,
+                title: 'Delete trip?',
+                body: 'Removes this trip from history.',
+                confirmLabel: 'Delete',
+                isDestructive: true,
+              );
+              if (ok) await presenter.deleteTrip(trip.id);
+            },
+          );
+        },
+      ),
     );
   }
 }

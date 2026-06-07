@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
@@ -20,20 +21,26 @@ class AddCartItemSheet extends StatefulWidget {
 class _AddCartItemSheetState extends State<AddCartItemSheet> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
-  double _quantity = 1;
+  final _qtyController = TextEditingController(text: '1');
+  ItemUnit _unit = ItemUnit.piece;
   RememberedPrice? _remembered;
 
   @override
   void dispose() {
     _nameController.dispose();
     _priceController.dispose();
+    _qtyController.dispose();
     super.dispose();
   }
 
   void _onNameChanged(String value) {
     final match = widget.presenter.lookup(name: value);
     if (match?.key != _remembered?.key) {
-      setState(() => _remembered = match);
+      setState(() {
+        _remembered = match;
+        // Pre-select the unit we last used for this item.
+        if (match != null) _unit = match.unit;
+      });
     }
   }
 
@@ -42,11 +49,13 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
   Future<void> _submit() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
+    final qty = double.tryParse(_qtyController.text.trim());
     final price = double.tryParse(_priceController.text.trim());
     await widget.presenter.addItem(
       name: name,
-      quantity: _quantity,
+      quantity: (qty == null || qty <= 0) ? 1 : qty,
       unitPrice: price,
+      unit: _unit,
     );
     if (mounted) Navigator.of(context).pop();
   }
@@ -76,8 +85,8 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
               const SizedBox(width: 6),
               Expanded(
                 child: Text(
-                  'Last paid ${formatPeso(hint.lastPrice)} — leave price blank '
-                  'to use this estimate',
+                  'Last paid ${formatPeso(hint.lastPrice)} ${hint.unit.priceSuffix}'
+                  ' — leave price blank to use this estimate',
                   style: Theme.of(context)
                       .textTheme
                       .bodySmall
@@ -88,75 +97,51 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
           ),
         ],
         const SizedBox(height: AppSpacing.md),
-        Row(
+        Text('Unit', style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: AppSpacing.xs),
+        Wrap(
+          spacing: AppSpacing.sm,
           children: [
-            Text('Quantity', style: Theme.of(context).textTheme.bodyLarge),
-            const Spacer(),
-            _QuantityStepper(
-              quantity: _quantity,
-              onChanged: (q) => setState(() => _quantity = q),
-            ),
+            for (final u in ItemUnit.values)
+              ChoiceChip(
+                label: Text(u.label),
+                selected: _unit == u,
+                onSelected: (_) => setState(() => _unit = u),
+              ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        AppTextField(
-          controller: _priceController,
-          label: 'Unit price (optional)',
-          hint: hint != null
-              ? 'Blank → ${formatPeso(hint.lastPrice)} estimate'
-              : 'Blank → added as unpriced',
-          prefix: const Text('₱ '),
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _submit(),
+        Row(
+          children: [
+            Expanded(
+              child: AppTextField(
+                controller: _qtyController,
+                label: 'Quantity',
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.next,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppTextField(
+                controller: _priceController,
+                label: 'Price (optional)',
+                hint: 'per ${_unit.label}',
+                prefix: const Text('₱ '),
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: AppSpacing.lg),
         AppPrimaryButton(
           label: 'Add to cart',
           leading: Icons.add_shopping_cart,
           onPressed: _canSubmit ? _submit : null,
-        ),
-      ],
-    );
-  }
-}
-
-/// Reusable −/+ stepper for quantities. Touch targets are full IconButton size
-/// (≥48px) to satisfy the 44px minimum.
-class _QuantityStepper extends StatelessWidget {
-  final double quantity;
-  final ValueChanged<double> onChanged;
-
-  const _QuantityStepper({required this.quantity, required this.onChanged});
-
-  String get _label => quantity == quantity.truncateToDouble()
-      ? quantity.toInt().toString()
-      : quantity.toString();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton.filledTonal(
-          onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
-          icon: const Icon(Icons.remove),
-        ),
-        Container(
-          constraints: const BoxConstraints(minWidth: 44),
-          alignment: Alignment.center,
-          child: Text(
-            _label,
-            style: Theme.of(context)
-                .textTheme
-                .titleMedium
-                ?.copyWith(color: cs.onSurface),
-          ),
-        ),
-        IconButton.filledTonal(
-          onPressed: () => onChanged(quantity + 1),
-          icon: const Icon(Icons.add),
         ),
       ],
     );

@@ -118,7 +118,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter = TreasuryHistoryPresenter(_storage);
     _installmentPresenter =
         InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
-    _groceryCartPresenter = GroceryCartPresenter(_storage);
+    _groceryCartPresenter =
+        GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,

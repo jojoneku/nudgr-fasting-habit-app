@@ -39,9 +39,14 @@ The total is always presented as a **breakdown** — `₱X confirmed · ~₱Y es
 - **Persistence:** `StorageService` keys `grocery_cart`, `grocery_price_memory`, `grocery_budget` — user-scoped via `_k(userId)`. The active cart and budget are local-only (transient); the **price memory syncs** to the cloud (folded into the `userCollections` blob), so it backs up and survives sign-out / restores on re-login.
 - **Key normalization:** `RememberedPrice.keyFor()` → `barcode:<code>` or `name:<lowercased, space-collapsed>`.
 
+## ✅ Also shipped (units, checkout, trip history)
+
+- **Quantity units** — each item has an `ItemUnit` (pc/pack/kg/g/L/mL); price is shown per unit ("each" or "/kg"), the stepper increments by the unit's natural step, and the remembered price restores the unit.
+- **Checkout** — "Finish trip" saves a `SavedTrip` snapshot to history, optionally posts the total to the Ledger as an outflow (account/category picker), then clears the cart.
+- **Trip history** — past trips are saved (synced via `userCollections`); a trip can be reviewed, repeated (re-adds its items, re-priced from current memory), or deleted.
+
 ## ⛔ Out of Scope (follow-up PRs)
 
-- On-device OCR price capture (Phase 2) — `google_mlkit_text_recognition`, reads shelf tags. No external API.
-- Optional barcode scan as a local memory key (Phase 2).
-- Checkout → post total to Ledger as an outflow (Phase 3).
+- On-device OCR price capture — `google_mlkit_text_recognition`, reads shelf tags. No external API. (Own PR — native deps + device testing.)
+- Optional barcode scan as a local memory key.
 - Community shared price database — see [grocery_community_prices_spec.md](grocery_community_prices_spec.md) (draft, not approved).

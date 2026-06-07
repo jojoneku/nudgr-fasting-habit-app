@@ -10,6 +10,8 @@ import 'package:intermittent_fasting/models/sync_queue_entry.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/models/food_feedback.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
+import 'package:intermittent_fasting/models/grocery/cart_item.dart';
+import 'package:intermittent_fasting/models/grocery/saved_trip.dart';
 import 'package:intermittent_fasting/services/sync_queue.dart';
 
 void main() {
@@ -209,8 +211,42 @@ void main() {
       await svc.saveGroceryBudget(500);
       expect(queue.entries, isEmpty);
     });
+
+    test('trip history round-trips and marks userCollections dirty', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      final trip = SavedTrip(
+        id: 't1',
+        savedAt: DateTime(2026, 6, 1, 14, 30),
+        items: [
+          CartItem(
+            id: 'i1',
+            name: 'Milk',
+            quantity: 1,
+            unitPrice: 58,
+            priceState: PriceState.confirmed,
+            addedAt: _epoch,
+          ),
+        ],
+        confirmedTotal: 58,
+        estimatedTotal: 0,
+        unpricedCount: 0,
+      );
+      await svc.saveGroceryTripHistory([trip]);
+
+      final loaded = await svc.loadGroceryTripHistory();
+      expect(loaded, hasLength(1));
+      expect(loaded.first.total, 58);
+      expect(loaded.first.items.single.name, 'Milk');
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userCollections),
+        true,
+      );
+    });
   });
 }
+
+final _epoch = DateTime.fromMillisecondsSinceEpoch(0);
 
 String _todayKey() {
   final now = DateTime.now();

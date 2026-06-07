@@ -1,3 +1,5 @@
+import 'item_unit.dart';
+
 /// A learned price for an item the user has bought before. The price-memory is
 /// a `Map<String, RememberedPrice>` keyed by [key]; on the next trip an item's
 /// price auto-fills from here so the running total is accurate with no re-entry.
@@ -14,6 +16,9 @@ class RememberedPrice {
   final String displayName;
 
   final double lastPrice;
+
+  /// Unit the [lastPrice] applies to, so re-adding restores the right unit.
+  final ItemUnit unit;
   final DateTime lastSeen;
 
   /// How many times this item has been confirmed — lets the UI rank frequent
@@ -27,6 +32,7 @@ class RememberedPrice {
     required this.displayName,
     required this.lastPrice,
     required this.lastSeen,
+    this.unit = ItemUnit.piece,
     this.timesSeen = 1,
     this.barcode,
   });
@@ -45,6 +51,7 @@ class RememberedPrice {
   RememberedPrice copyWith({
     String? displayName,
     double? lastPrice,
+    ItemUnit? unit,
     DateTime? lastSeen,
     int? timesSeen,
     String? barcode,
@@ -53,6 +60,7 @@ class RememberedPrice {
       key: key,
       displayName: displayName ?? this.displayName,
       lastPrice: lastPrice ?? this.lastPrice,
+      unit: unit ?? this.unit,
       lastSeen: lastSeen ?? this.lastSeen,
       timesSeen: timesSeen ?? this.timesSeen,
       barcode: barcode ?? this.barcode,
@@ -64,6 +72,9 @@ class RememberedPrice {
       key: json['key'] as String,
       displayName: json['displayName'] as String,
       lastPrice: (json['lastPrice'] as num).toDouble(),
+      unit: ItemUnit.values.byName(
+        json['unit'] as String? ?? ItemUnit.piece.name,
+      ),
       lastSeen: DateTime.tryParse(json['lastSeen'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
       timesSeen: (json['timesSeen'] as num?)?.toInt() ?? 1,
@@ -75,6 +86,7 @@ class RememberedPrice {
         'key': key,
         'displayName': displayName,
         'lastPrice': lastPrice,
+        'unit': unit.name,
         'lastSeen': lastSeen.toIso8601String(),
         'timesSeen': timesSeen,
         'barcode': barcode,

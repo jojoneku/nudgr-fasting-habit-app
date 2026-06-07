@@ -51,11 +51,13 @@ A budget shopping companion: while at the grocery, add items (manual first; OCR 
 ### Phase 1 — MVP (this PR): manual entry + price memory + running total + budget
 Fully offline, zero network. The complete usable feature.
 
-### Phase 2 — On-device OCR price capture (follow-up)
-`google_mlkit_text_recognition` + camera → read price off shelf tag → fill `unitPrice` as `confirmed`. Optional barcode as a **local memory key only** (no external product DB). No network, no Open Foods.
+### ✅ Also shipped — quantity units, checkout, trip history
+- **Quantity units** — `ItemUnit` (pc/pack/kg/g/L/mL) on `CartItem` + `RememberedPrice`; per-unit price display, unit-aware stepper.
+- **Ledger checkout** — `checkout(postToLedger: true)` creates a `TransactionRecord` outflow for `grandTotal`, saves a `SavedTrip`, then clears the cart.
+- **Trip history** — `SavedTrip` snapshots synced via `userCollections`; review / repeat (re-priced from memory) / delete.
 
-### Phase 3 — Ledger integration (follow-up)
-`checkout(postToLedger: true)` → create a `TransactionRecord` outflow for `grandTotal` against a chosen account, then `clearCart()`.
+### Phase 2 — On-device OCR price capture (follow-up, separate PR)
+`google_mlkit_text_recognition` + camera → read price off shelf tag → fill `unitPrice` as `confirmed`. Optional barcode as a **local memory key only** (no external product DB). No network, no Open Foods. Separate PR due to native deps + device-only testing.
 
 ---
 
