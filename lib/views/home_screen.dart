@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
@@ -22,6 +25,7 @@ import '../services/local_storage_service.dart';
 import '../services/remote_secrets_service.dart';
 import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
+import '../services/widget_bridge_service.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
@@ -71,6 +75,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   SyncQueue? _syncQueue;
   NutritionPresenter? _nutritionPresenter;
   String? _currentUserId;
+  WidgetBridgeService? _widgetBridge;
+  final ValueNotifier<WidgetRoute?> _deepLinkRoute = ValueNotifier(null);
+  StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
   void initState() {
@@ -161,6 +168,18 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         // onFirstSignIn callback handles sync init if user signs in.
         await LoginView.show(context, _authPresenter);
       }
+
+      // Home-screen widget deep-links: a tap on a glance widget routes the app
+      // to the matching screen (both while running and from a cold start).
+      _widgetClickSub = HomeWidget.widgetClicked.listen((uri) {
+        final route = WidgetBridgeService.parseLaunchUri(uri);
+        if (route != null) _deepLinkRoute.value = route;
+      });
+      try {
+        final launchUri = await HomeWidget.initiallyLaunchedFromHomeWidget();
+        final route = WidgetBridgeService.parseLaunchUri(launchUri);
+        if (route != null) _deepLinkRoute.value = route;
+      } catch (_) {}
     });
   }
 
@@ -185,6 +204,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _hubPresenter.dispose();
     _syncService?.dispose();
     _syncPresenter?.dispose();
+    _widgetBridge?.detach();
+    _widgetClickSub?.cancel();
+    _deepLinkRoute.dispose();
     super.dispose();
   }
 
@@ -204,6 +226,19 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // This covers the startup race where constructors read bare keys before
     // the user namespace was known, as well as user-switch scenarios.
     _reloadAll();
+
+    // Wire the home-screen widget bridge to the now-scoped presenters. Persist
+    // the user id so the inline-action background isolate can re-scope storage.
+    await _storage.saveWidgetLastUserId(userId);
+    _widgetBridge ??= WidgetBridgeService(
+      storage: _storage,
+      fasting: _fastingPresenter,
+      ledger: _ledgerPresenter,
+      quests: _questPresenter,
+      nutrition: _nutritionPresenter,
+    );
+    _widgetBridge!.attach();
+    await _widgetBridge!.drainPendingActions();
     try {
       await _syncQueue!.load(userId: userId);
       _syncService = SyncService(
@@ -280,6 +315,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _storage.clearUserData();
       _syncQueue?.clearAll();
     }
+
+    // Clear the home-screen widgets so a second account on a shared device never
+    // sees the signed-out user's data.
+    _widgetBridge?.detach();
+    await _widgetBridge?.clearForSignOut();
+
     if (mounted) setState(() {});
   }
 
@@ -296,6 +337,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter.load();
     _installmentPresenter.load();
     _groceryCartPresenter.load();
+    // Refresh the home-screen widgets after a (re)load — e.g. once cloud data
+    // has been pulled in.
+    _widgetBridge?.pushSnapshot();
   }
 
   @override
@@ -308,6 +352,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _fastingPresenter.loadState();
       _syncService?.pushPending();
       _syncService?.pullIfStale();
+      // Apply any widget-tap actions queued while the app was backgrounded,
+      // then refresh the widgets.
+      _widgetBridge?.drainPendingActions();
     }
   }
 
@@ -334,6 +381,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           syncPresenter: _syncPresenter,
           settingsPresenter: widget.settingsPresenter,
           updatePresenter: widget.updatePresenter,
+          deepLinkRoute: _deepLinkRoute,
         ),
         if (widget.updatePresenter != null)
           Positioned(

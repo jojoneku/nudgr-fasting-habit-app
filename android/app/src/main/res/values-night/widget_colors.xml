@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home-screen widget palette (Plan 039) — DARK mode (Solo Leveling RPG default).
+  Mirrors AppColors in lib/app_colors.dart. Keep in sync when tokens change.
+-->
+<resources>
+    <color name="widget_bg">#FF131A26</color>
+    <color name="widget_bg_stroke">#22FFFFFF</color>
+    <color name="widget_on_surface">#FFFFFFFF</color>
+    <color name="widget_on_surface_variant">#FF9E9E9E</color>
+    <color name="widget_accent">#FF00BCD4</color>
+    <color name="widget_accent_on">#FF06121A</color>
+    <color name="widget_purple">#FFAB47BC</color>
+    <color name="widget_gold">#FFFFC107</color>
+    <color name="widget_urgent">#FFFF5252</color>
+    <color name="widget_track">#33FFFFFF</color>
+</resources>

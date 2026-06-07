@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fasting widget config (Plan 039). The Chronometer ticks natively, so no OS
+     update period is needed; the app pushes data changes via home_widget. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="2"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_fasting"
+    android:previewLayout="@layout/widget_fasting"
+    android:updatePeriodMillis="0" />
