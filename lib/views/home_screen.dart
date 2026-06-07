@@ -294,6 +294,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _billsPresenter.load();
     _historyPresenter.load();
     _installmentPresenter.load();
+    _groceryCartPresenter.load();
   }
 
   @override
