@@ -167,6 +167,13 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         // New/unauthenticated session — show welcome screen.
         // onFirstSignIn callback handles sync init if user signs in.
         await LoginView.show(context, _authPresenter);
+        // If the user chose "Log in later" (guest mode), still wire the
+        // home-screen widgets so they reflect local data — sign-in only adds
+        // cloud sync, not whether widgets work.
+        if (mounted && !_authPresenter.isSignedIn) {
+          _reloadAll();
+          await _setupWidgetBridge();
+        }
       }
 
       // Home-screen widget deep-links: a tap on a glance widget routes the app
@@ -230,15 +237,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Wire the home-screen widget bridge to the now-scoped presenters. Persist
     // the user id so the inline-action background isolate can re-scope storage.
     await _storage.saveWidgetLastUserId(userId);
-    _widgetBridge ??= WidgetBridgeService(
-      storage: _storage,
-      fasting: _fastingPresenter,
-      ledger: _ledgerPresenter,
-      quests: _questPresenter,
-      nutrition: _nutritionPresenter,
-    );
-    _widgetBridge!.attach();
-    await _widgetBridge!.drainPendingActions();
+    await _setupWidgetBridge();
     try {
       await _syncQueue!.load(userId: userId);
       _syncService = SyncService(
@@ -322,6 +321,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     await _widgetBridge?.clearForSignOut();
 
     if (mounted) setState(() {});
+  }
+
+  /// Creates (once), attaches, and does the authoritative initial push of the
+  /// home-screen widget bridge. Safe to call from both the signed-in and guest
+  /// ("Log in later") paths — [WidgetBridgeService.attach] is idempotent.
+  Future<void> _setupWidgetBridge() async {
+    _widgetBridge ??= WidgetBridgeService(
+      storage: _storage,
+      fasting: _fastingPresenter,
+      ledger: _ledgerPresenter,
+      quests: _questPresenter,
+      nutrition: _nutritionPresenter,
+    );
+    _widgetBridge!.attach();
+    await _widgetBridge!.drainPendingActions();
   }
 
   void _reloadAll() {
