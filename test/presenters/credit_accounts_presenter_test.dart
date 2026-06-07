@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
@@ -148,6 +149,49 @@ void main() {
       final gcash = ledger.accounts.firstWhere((a) => a.id == 'gcash');
       expect(gcash.balance, 2000); // cash down
       expect(cc.balance, 2000); // debt down
+    });
+  });
+
+  group('LedgerPresenter — chat description cleaning', () {
+    late MockStorageService storage;
+    late MockStatsPresenter stats;
+    late LedgerPresenter ledger;
+
+    setUp(() {
+      storage = MockStorageService();
+      stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts())
+          .thenAnswer((_) async => [_bank('gcash', 1000)]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => [
+            FinanceCategory(
+              id: 'food',
+              name: 'Food',
+              type: CategoryType.expense,
+              icon: 'tag',
+              colorHex: '#FFFFFF',
+            ),
+          ]);
+      when(storage.loadTransactions()).thenAnswer((_) async => []);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(storage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(stats.addXp(any)).thenAnswer((_) async {});
+      when(stats.stats).thenReturn(UserStats.initial());
+      // No AI → fully-resolved input commits straight through _commitParsed.
+      ledger = LedgerPresenter(storage, stats);
+    });
+
+    test('strips amount + account from the stored description', () async {
+      await _waitForLoad(ledger);
+      await ledger.sendChatInput('-500 food gcash');
+      expect(ledger.allTransactions, hasLength(1));
+      final desc = ledger.allTransactions.first.description;
+      expect(desc, isNot(contains('500')));
+      expect(desc.toLowerCase(), isNot(contains('gcash')));
+      expect(desc.toLowerCase(), contains('food'));
     });
   });
 
