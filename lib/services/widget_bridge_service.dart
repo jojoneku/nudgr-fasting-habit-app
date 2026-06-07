@@ -210,39 +210,41 @@ class WidgetBridgeService {
   /// never in the background isolate.
   Future<void> drainPendingActions() async {
     final actions = await storage.loadWidgetPendingActions();
-    if (actions.isEmpty) return;
-    // Clear first so a crash mid-drain can't double-apply.
-    await storage.saveWidgetPendingActions([]);
-
-    for (final token in actions) {
-      final parts = token.split('|');
-      final action = parts.isNotEmpty ? parts[0] : '';
-      final ts = parts.length > 1 ? int.tryParse(parts[1]) : null;
-      try {
-        switch (action) {
-          case 'startfast':
-            if (!fasting.isFasting) {
-              await fasting.startFast();
-              if (ts != null && fasting.startTime != null) {
-                fasting.startTime = DateTime.fromMillisecondsSinceEpoch(ts);
-                fasting.elapsedSeconds =
-                    DateTime.now().difference(fasting.startTime!).inSeconds;
-                await fasting.saveState();
+    if (actions.isNotEmpty) {
+      // Clear first so a crash mid-drain can't double-apply.
+      await storage.saveWidgetPendingActions([]);
+      for (final token in actions) {
+        final parts = token.split('|');
+        final action = parts.isNotEmpty ? parts[0] : '';
+        final ts = parts.length > 1 ? int.tryParse(parts[1]) : null;
+        try {
+          switch (action) {
+            case 'startfast':
+              if (!fasting.isFasting) {
+                await fasting.startFast();
+                if (ts != null && fasting.startTime != null) {
+                  fasting.startTime = DateTime.fromMillisecondsSinceEpoch(ts);
+                  fasting.elapsedSeconds =
+                      DateTime.now().difference(fasting.startTime!).inSeconds;
+                  await fasting.saveState();
+                }
               }
-            }
-            break;
-          case 'stopfast':
-            if (fasting.isFasting) await fasting.stopFast();
-            break;
-          case 'completequest':
-            final id = parts.length > 2 ? int.tryParse(parts[2]) : null;
-            if (id != null) await quests.completeQuest(id);
-            break;
+              break;
+            case 'stopfast':
+              if (fasting.isFasting) await fasting.stopFast();
+              break;
+            case 'completequest':
+              final id = parts.length > 2 ? int.tryParse(parts[2]) : null;
+              if (id != null) await quests.completeQuest(id);
+              break;
+          }
+        } catch (e) {
+          debugPrint('WidgetBridgeService: drain "$action" failed: $e');
         }
-      } catch (e) {
-        debugPrint('WidgetBridgeService: drain "$action" failed: $e');
       }
     }
+    // Always refresh the widgets — this is also the authoritative initial push
+    // on sign-in and the refresh on every app foreground.
     await pushSnapshot();
   }
 
