@@ -74,6 +74,54 @@
                 android:value=".MainActivity"/>
         </activity>
 
+        <!-- ── Home-screen widgets (Plan 039) ──────────────────────────────
+             Each provider renders a denormalized snapshot the app pushes via
+             home_widget. See docs/android_widgets_spec.md. -->
+        <receiver android:name=".FastingWidgetProvider" android:exported="true"
+            android:label="@string/widget_fasting_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_fasting_info" />
+        </receiver>
+        <receiver android:name=".FoodWidgetProvider" android:exported="true"
+            android:label="@string/widget_food_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_food_info" />
+        </receiver>
+        <receiver android:name=".ExpenseWidgetProvider" android:exported="true"
+            android:label="@string/widget_expense_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_expense_info" />
+        </receiver>
+        <receiver android:name=".WeightQuestWidgetProvider" android:exported="true"
+            android:label="@string/widget_weight_quest_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/widget_weight_quest_info" />
+        </receiver>
+
+        <!-- home_widget interactive-action plumbing (inline start/end fast,
+             complete quest). The background callback runs in a headless isolate. -->
+        <receiver android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.BACKGROUND" />
+            </intent-filter>
+        </receiver>
+        <service android:name="es.antonborri.home_widget.HomeWidgetBackgroundService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

@@ -21,6 +21,7 @@ import '../presenters/sync_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
 import '../presenters/update_presenter.dart';
+import '../services/widget_bridge_service.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
 import 'nutrition/log_meal_sheet.dart';
@@ -63,6 +64,7 @@ class HubScreen extends StatefulWidget {
     this.syncPresenter,
     required this.settingsPresenter,
     this.updatePresenter,
+    this.deepLinkRoute,
   });
 
   final HubPresenter hubPresenter;
@@ -84,6 +86,10 @@ class HubScreen extends StatefulWidget {
   final SettingsPresenter settingsPresenter;
   final UpdatePresenter? updatePresenter;
 
+  /// Set by [AppShell] when a home-screen widget is tapped; the hub consumes it
+  /// and navigates to the matching screen.
+  final ValueNotifier<WidgetRoute?>? deepLinkRoute;
+
   @override
   State<HubScreen> createState() => _HubScreenState();
 }
@@ -100,12 +106,41 @@ class _HubScreenState extends State<HubScreen>
       vsync: this,
       duration: const Duration(milliseconds: 260),
     );
+    widget.deepLinkRoute?.addListener(_handleDeepLink);
+    // A deep-link may already be pending from a cold start.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
   }
 
   @override
   void dispose() {
+    widget.deepLinkRoute?.removeListener(_handleDeepLink);
     _fabCtrl.dispose();
     super.dispose();
+  }
+
+  /// Navigates to the screen a tapped home-screen widget points to.
+  void _handleDeepLink() {
+    final notifier = widget.deepLinkRoute;
+    final route = notifier?.value;
+    if (route == null || !mounted) return;
+    notifier!.value = null; // consume so it fires once
+    switch (route) {
+      case WidgetRoute.fasting:
+        _pushTimerTab(context);
+        break;
+      case WidgetRoute.foodLog:
+        _pushNutritionScreen(context);
+        break;
+      case WidgetRoute.expenseAdd:
+        _pushTreasuryScreen(context);
+        break;
+      case WidgetRoute.weightLog:
+        _pushWeightLogScreen(context);
+        break;
+      case WidgetRoute.quests:
+        _pushQuestsTab(context);
+        break;
+    }
   }
 
   void _toggleFab() {

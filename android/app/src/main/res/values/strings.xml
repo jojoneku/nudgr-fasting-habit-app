@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">Nudgr</string>
+    <!-- Home-screen widget picker labels (Plan 039) -->
+    <string name="widget_fasting_label">Nudgr — Fasting Timer</string>
+    <string name="widget_food_label">Nudgr — Food Log</string>
+    <string name="widget_expense_label">Nudgr — Expenses</string>
+    <string name="widget_weight_quest_label">Nudgr — Weight &amp; Quests</string>
 </resources>
