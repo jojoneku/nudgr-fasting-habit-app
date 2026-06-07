@@ -308,7 +308,13 @@ class _CartItemTile extends StatelessWidget {
         color: cs.errorContainer,
         child: Icon(Icons.delete_outline, color: cs.onErrorContainer),
       ),
-      onDismissed: (_) => presenter.removeItem(item.id),
+      // Remove via the data model (awaited) rather than onDismissed, so the
+      // row leaves the tree on the rebuild — avoids the "dismissed Dismissible
+      // still in the tree" assertion when the persist write spans a frame.
+      confirmDismiss: (_) async {
+        await presenter.removeItem(item.id);
+        return true;
+      },
       child: InkWell(
         onTap: onSetPrice,
         child: Padding(
@@ -373,7 +379,9 @@ class _QuantityStepper extends StatelessWidget {
       children: [
         IconButton(
           visualDensity: VisualDensity.compact,
-          onPressed: () => onChanged(quantity - 1),
+          // Disabled at 1 — removal is intentional (swipe), not an accidental
+          // extra tap on the minus button.
+          onPressed: quantity > 1 ? () => onChanged(quantity - 1) : null,
           icon: const Icon(Icons.remove_circle_outline),
         ),
         Container(

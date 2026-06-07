@@ -120,6 +120,20 @@ void main() {
       expect(p.isOverBudget, isTrue);
     });
 
+    test('totals round to centavos so an exact-budget cart is not over',
+        () async {
+      final p = await build();
+      await p.setBudget(100);
+      // 33.33 + 33.33 + 33.34 = 100.00 — drifts past 100 in raw double math.
+      await p.addItem(name: 'A', unitPrice: 33.33);
+      await p.addItem(name: 'B', unitPrice: 33.33);
+      await p.addItem(name: 'C', unitPrice: 33.34);
+
+      expect(p.grandTotal, 100.0);
+      expect(p.isOverBudget, isFalse);
+      expect(p.budgetRemaining, 0.0);
+    });
+
     test('clearCart empties items but retains price memory', () async {
       final p = await build();
       await p.addItem(name: 'Bread', unitPrice: 45);

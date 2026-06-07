@@ -36,18 +36,22 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Running-total breakdown ──────────────────────────────────────────────────
 
+  /// Rounds a peso amount to whole centavos, so summing doubles never drifts
+  /// (e.g. 100.00000001) and budget comparisons stay exact at the boundary.
+  double _toCents(double v) => (v * 100).roundToDouble() / 100;
+
   /// Sum of line totals for items whose price the user has confirmed.
-  double get confirmedTotal => _items
+  double get confirmedTotal => _toCents(_items
       .where((i) => i.priceState == PriceState.confirmed)
-      .fold(0.0, (sum, i) => sum + i.lineTotal);
+      .fold(0.0, (sum, i) => sum + i.lineTotal));
 
   /// Sum of line totals for items priced from memory (shown as estimates).
-  double get estimatedTotal => _items
+  double get estimatedTotal => _toCents(_items
       .where((i) => i.priceState == PriceState.remembered)
-      .fold(0.0, (sum, i) => sum + i.lineTotal);
+      .fold(0.0, (sum, i) => sum + i.lineTotal));
 
   /// Confirmed + estimated — the running spend so far.
-  double get grandTotal => confirmedTotal + estimatedTotal;
+  double get grandTotal => _toCents(confirmedTotal + estimatedTotal);
 
   /// Items added without any price; excluded from the total and surfaced so the
   /// user knows the figure is incomplete.
