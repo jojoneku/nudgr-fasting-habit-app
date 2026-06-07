@@ -36,7 +36,7 @@ The total is always presented as a **breakdown** — `₱X confirmed · ~₱Y es
 ## 🛠 Technical Notes
 
 - **Presenter:** `GroceryCartPresenter extends ChangeNotifier with SafeNotifier`. Constructor-injected `StorageService`. Totals via `fold`; auto-fill via `lookup()`; all RPG-free math lives here.
-- **Persistence:** `StorageService` keys `grocery_cart`, `grocery_price_memory`, `grocery_budget` — user-scoped via `_k(userId)`. Local-only for now (cloud sync of price memory is a future enhancement).
+- **Persistence:** `StorageService` keys `grocery_cart`, `grocery_price_memory`, `grocery_budget` — user-scoped via `_k(userId)`. The active cart and budget are local-only (transient); the **price memory syncs** to the cloud (folded into the `userCollections` blob), so it backs up and survives sign-out / restores on re-login.
 - **Key normalization:** `RememberedPrice.keyFor()` → `barcode:<code>` or `name:<lowercased, space-collapsed>`.
 
 ## ⛔ Out of Scope (follow-up PRs)
@@ -44,4 +44,4 @@ The total is always presented as a **breakdown** — `₱X confirmed · ~₱Y es
 - On-device OCR price capture (Phase 2) — `google_mlkit_text_recognition`, reads shelf tags. No external API.
 - Optional barcode scan as a local memory key (Phase 2).
 - Checkout → post total to Ledger as an outflow (Phase 3).
-- Cloud sync of price memory.
+- Community shared price database — see [grocery_community_prices_spec.md](grocery_community_prices_spec.md) (draft, not approved).

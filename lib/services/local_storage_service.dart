@@ -1367,9 +1367,10 @@ class LocalStorageService extends StorageService {
   }
 
   // ── Grocery Cart (Plan 038) ──────────────────────────────────────────────────
-  // Local-only for now (no SyncDomain). Keys are user-scoped via [_k] so they
-  // are cleared on sign-out like other user data; cloud sync of price memory is
-  // a future enhancement.
+  // Keys are user-scoped via [_k]. The active cart and budget are local-only
+  // (transient per-trip state). The learned price memory IS synced — folded
+  // into the userCollections blob — so it backs up to the cloud and survives
+  // sign-out / restores on re-login.
 
   @override
   Future<void> saveGroceryCart(List<CartItem> items) async {
@@ -1402,6 +1403,8 @@ class LocalStorageService extends StorageService {
       _k(StorageService.keyGroceryPriceMemory),
       jsonEncode(prices.map((e) => e.toJson()).toList()),
     );
+    // Synced as part of the userCollections blob (no dedicated table needed).
+    _markDirty(SyncDomain.userCollections, 'default');
   }
 
   @override

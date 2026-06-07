@@ -73,7 +73,7 @@ Fully offline, zero network. The complete usable feature.
 | Missing price tag (common in PH) | `unknown` state — item added with qty, surfaced in "N unpriced"; never blocks total. |
 | App killed mid-shop | Active cart persisted on every mutation; reloads on launch. |
 | Quantity types (0.5 kg) | `quantity` is `double`; unit label deferred. |
-| Sign-out wipes local data | Price memory is local-only for now (not synced) → lost on sign-out. Cloud sync of price memory is a future enhancement. |
+| Sign-out wipes local data | Price memory **syncs** (folded into the `userCollections` blob) → flushed to cloud before `clearUserData` and restored on re-login. Active cart + budget stay local (transient). |
 
 ---
 
