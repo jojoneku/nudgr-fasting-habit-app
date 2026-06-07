@@ -1,9 +1,16 @@
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
+import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
+import 'package:intermittent_fasting/models/grocery/saved_trip.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 /// Owns the active grocery cart and the learned price memory (Plan 038).
@@ -14,16 +21,32 @@ import 'package:intermittent_fasting/utils/safe_notifier.dart';
 /// the spend. Prices come entirely from the user: entered once, then auto-filled
 /// from [_priceMemory] on the next trip. There is no external price API.
 class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
-  GroceryCartPresenter(this._storage) {
+  GroceryCartPresenter(this._storage, {LedgerPresenter? ledger})
+      : _ledger = ledger {
     load();
   }
 
   final StorageService _storage;
 
+  /// Optional — only needed to post a finished trip to the Ledger. The cart
+  /// works fully without it.
+  final LedgerPresenter? _ledger;
+
   bool _isLoading = true;
   final List<CartItem> _items = [];
   final Map<String, RememberedPrice> _priceMemory = {};
+  final List<SavedTrip> _tripHistory = [];
   double? _budget;
+
+  /// Whether checkout can offer "log to Ledger" (a ledger was injected).
+  bool get canPostToLedger => _ledger != null;
+  List<SavedTrip> get tripHistory => List.unmodifiable(_tripHistory);
+  bool get hasTripHistory => _tripHistory.isNotEmpty;
+
+  /// Accounts/categories surfaced for the checkout "log to Ledger" picker.
+  /// Empty when no ledger is wired.
+  List<FinancialAccount> get ledgerAccounts => _ledger?.accounts ?? const [];
+  List<FinanceCategory> get ledgerCategories => _ledger?.categories ?? const [];
 
   // ── Public state ───────────────────────────────────────────────────────────
 
@@ -72,12 +95,16 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     final cart = await _storage.loadGroceryCart();
     final memory = await _storage.loadGroceryPriceMemory();
     final budget = await _storage.loadGroceryBudget();
+    final history = await _storage.loadGroceryTripHistory();
     _items
       ..clear()
       ..addAll(cart);
     _priceMemory
       ..clear()
       ..addEntries(memory.map((p) => MapEntry(p.key, p)));
+    _tripHistory
+      ..clear()
+      ..addAll(history);
     _budget = budget;
     _isLoading = false;
     safeNotify();
@@ -105,6 +132,7 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     double quantity = 1,
     double? unitPrice,
     String? barcode,
+    ItemUnit unit = ItemUnit.piece,
     ItemSource source = ItemSource.manual,
   }) async {
     final trimmed = name.trim();
@@ -131,16 +159,21 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
       unitPrice: price,
       priceState: state,
       source: source,
+      unit: unit,
       barcode: barcode,
       addedAt: DateTime.now(),
     ));
 
-    await _persistCart();
-    if (state == PriceState.confirmed) {
-      _rememberPrice(name: trimmed, barcode: barcode, price: price!);
-      await _persistMemory();
+    // Optimistic: update memory + notify first so the UI repaints instantly;
+    // persistence (encode + prefs write) runs after the paint.
+    final remember = state == PriceState.confirmed;
+    if (remember) {
+      _rememberPrice(
+          name: trimmed, barcode: barcode, price: price!, unit: unit);
     }
     safeNotify();
+    await _persistCart();
+    if (remember) await _persistMemory();
   }
 
   /// Sets a new quantity; a quantity of zero or less removes the item.
@@ -149,8 +182,8 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     final idx = _items.indexWhere((i) => i.id == id);
     if (idx == -1) return;
     _items[idx] = _items[idx].copyWith(quantity: quantity);
-    await _persistCart();
     safeNotify();
+    await _persistCart();
   }
 
   /// Confirms (or overwrites) a price. Always updates price memory so the next
@@ -161,30 +194,103 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     final item = _items[idx];
     _items[idx] =
         item.copyWith(unitPrice: price, priceState: PriceState.confirmed);
-    _rememberPrice(name: item.name, barcode: item.barcode, price: price);
+    _rememberPrice(
+        name: item.name, barcode: item.barcode, price: price, unit: item.unit);
+    safeNotify();
     await _persistCart();
     await _persistMemory();
-    safeNotify();
   }
 
   Future<void> removeItem(String id) async {
     _items.removeWhere((i) => i.id == id);
-    await _persistCart();
     safeNotify();
+    await _persistCart();
   }
 
   /// Sets the optional spending cap. A non-positive value clears it.
   Future<void> setBudget(double? amount) async {
     _budget = (amount != null && amount <= 0) ? null : amount;
-    await _storage.saveGroceryBudget(_budget);
     safeNotify();
+    await _storage.saveGroceryBudget(_budget);
   }
 
   /// Empties the cart (price memory and budget are retained for the next trip).
   Future<void> clearCart() async {
     _items.clear();
-    await _persistCart();
     safeNotify();
+    await _persistCart();
+  }
+
+  // ── Checkout & trip history ──────────────────────────────────────────────────
+
+  /// Finishes the current trip: optionally posts the total to the Ledger as an
+  /// outflow, saves a snapshot to trip history, then clears the cart. Returns
+  /// the saved trip, or null if the cart was empty.
+  Future<SavedTrip?> checkout({
+    bool postToLedger = false,
+    String? accountId,
+    String? categoryId,
+    String description = 'Groceries',
+  }) async {
+    if (_items.isEmpty) return null;
+    final now = DateTime.now();
+
+    final posted =
+        postToLedger && _ledger != null && accountId != null && grandTotal > 0;
+    // Capture totals before clearing the cart (they read _items).
+    final amount = grandTotal;
+    final trip = SavedTrip(
+      id: _generateId(),
+      savedAt: now,
+      items: List.of(_items),
+      confirmedTotal: confirmedTotal,
+      estimatedTotal: estimatedTotal,
+      unpricedCount: unpricedCount,
+      postedToLedger: posted,
+    );
+
+    // Optimistic: record the trip + empty the cart in memory and repaint, then
+    // post to the ledger / persist in the background.
+    _tripHistory.insert(0, trip);
+    _items.clear();
+    safeNotify();
+
+    if (posted) {
+      await _ledger.addTransaction(TransactionRecord(
+        id: _generateId(),
+        date: now,
+        accountId: accountId,
+        categoryId: categoryId ?? '',
+        amount: amount,
+        type: TransactionType.outflow,
+        description: description,
+        month: toMonthKey(now),
+      ));
+    }
+    await _persistHistory();
+    await _persistCart();
+    return trip;
+  }
+
+  /// Re-adds a past trip's items to the current cart, re-pricing each from
+  /// current memory (so prices reflect today, not the old snapshot).
+  Future<void> repeatTrip(String tripId) async {
+    final idx = _tripHistory.indexWhere((t) => t.id == tripId);
+    if (idx == -1) return;
+    for (final item in _tripHistory[idx].items) {
+      await addItem(
+        name: item.name,
+        quantity: item.quantity,
+        unit: item.unit,
+        barcode: item.barcode,
+      );
+    }
+  }
+
+  Future<void> deleteTrip(String tripId) async {
+    _tripHistory.removeWhere((t) => t.id == tripId);
+    safeNotify();
+    await _persistHistory();
   }
 
   // ── Internals ────────────────────────────────────────────────────────────────
@@ -193,6 +299,7 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     required String name,
     String? barcode,
     required double price,
+    required ItemUnit unit,
   }) {
     final key = RememberedPrice.keyFor(barcode: barcode, name: name);
     final existing = _priceMemory[key];
@@ -200,6 +307,7 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
       key: key,
       displayName: name.trim(),
       lastPrice: price,
+      unit: unit,
       lastSeen: DateTime.now(),
       timesSeen: (existing?.timesSeen ?? 0) + 1,
       barcode: barcode,
@@ -210,6 +318,9 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> _persistMemory() =>
       _storage.saveGroceryPriceMemory(_priceMemory.values.toList());
+
+  Future<void> _persistHistory() =>
+      _storage.saveGroceryTripHistory(_tripHistory);
 
   String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';

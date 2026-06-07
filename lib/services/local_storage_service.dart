@@ -26,6 +26,7 @@ import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
 import '../models/grocery/cart_item.dart';
 import '../models/grocery/remembered_price.dart';
+import '../models/grocery/saved_trip.dart';
 import '../models/food_feedback.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
@@ -139,6 +140,7 @@ class LocalStorageService extends StorageService {
     StorageService.keyGroceryCart,
     StorageService.keyGroceryPriceMemory,
     StorageService.keyGroceryBudget,
+    StorageService.keyGroceryTripHistory,
   ];
 
   /// Removes all `u/$userId/` prefixed prefs keys and resets the user
@@ -1437,6 +1439,32 @@ class LocalStorageService extends StorageService {
   Future<double?> loadGroceryBudget() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getDouble(_k(StorageService.keyGroceryBudget));
+  }
+
+  @override
+  Future<void> saveGroceryTripHistory(List<SavedTrip> trips) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _k(StorageService.keyGroceryTripHistory),
+      jsonEncode(trips.map((e) => e.toJson()).toList()),
+    );
+    // Synced as part of the userCollections blob, like price memory.
+    _markDirty(SyncDomain.userCollections, 'default');
+  }
+
+  @override
+  Future<List<SavedTrip>> loadGroceryTripHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyGroceryTripHistory));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => SavedTrip.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error parsing trip history: $e');
+      return [];
+    }
   }
 
   // ── Theme (device-level, not user-scoped) ────────────────────────────────────
