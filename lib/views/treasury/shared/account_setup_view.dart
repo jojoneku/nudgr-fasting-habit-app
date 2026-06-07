@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -60,11 +61,16 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
   final _goalTargetController = TextEditingController();
+  final _creditLimitController = TextEditingController();
+  final _financeRateController = TextEditingController();
 
   AccountCategory _category = AccountCategory.bank;
   String _selectedColor = _colorOptions[0];
   DateTime? _maturityDate;
   String? _linkedAccountId;
+  int? _statementDay;
+  int? _paymentDueDay;
+  String? _creditBrand;
   bool _isSubmitting = false;
 
   List<AccountCategory> get _availableCategories =>
@@ -75,6 +81,15 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
   bool get _isCustodian => _category == AccountCategory.custodian;
+  // Liability categories carry credit details (limit, statement/due dates, rate).
+  bool get _isCredit =>
+      _category == AccountCategory.creditCard ||
+      _category == AccountCategory.creditLine ||
+      _category == AccountCategory.bnpl;
+
+  /// The opening "balance" field means *amount owed* for credit accounts.
+  String get _balanceLabel =>
+      _isCredit ? 'Current Balance Owed' : 'Opening Balance';
 
   @override
   void initState() {
@@ -97,7 +112,31 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       if (existing.goalTarget != null) {
         _goalTargetController.text = existing.goalTarget!.toStringAsFixed(2);
       }
+      if (existing.creditLimit != null) {
+        _creditLimitController.text = existing.creditLimit!.toStringAsFixed(2);
+      }
+      if (existing.financeChargeRate != null) {
+        // Stored as a fraction (0.03); edited as a percent (3).
+        _financeRateController.text =
+            (existing.financeChargeRate! * 100).toStringAsFixed(2);
+      }
+      _statementDay = existing.statementDay;
+      _paymentDueDay = existing.paymentDueDay;
+      _creditBrand = existing.creditBrand;
     }
+  }
+
+  /// Applies a brand preset's defaults into the editable fields. The user can
+  /// still override the finance rate afterwards.
+  void _applyBrand(String? key) {
+    setState(() {
+      _creditBrand = key;
+      final preset = creditBrandPresetByKey(key);
+      if (preset != null) {
+        _financeRateController.text =
+            (preset.monthlyFinanceRate * 100).toStringAsFixed(2);
+      }
+    });
   }
 
   @override
@@ -105,6 +144,8 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     _nameController.dispose();
     _balanceController.dispose();
     _goalTargetController.dispose();
+    _creditLimitController.dispose();
+    _financeRateController.dispose();
     super.dispose();
   }
 
@@ -133,6 +174,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
           ? double.tryParse(_goalTargetController.text.replaceAll(',', ''))
           : null;
 
+      final creditLimit = _isCredit && _creditLimitController.text.isNotEmpty
+          ? double.tryParse(_creditLimitController.text.replaceAll(',', ''))
+          : null;
+      final financeRatePercent = _isCredit
+          ? double.tryParse(_financeRateController.text.replaceAll(',', ''))
+          : null;
+
       final account = FinancialAccount(
         id: id,
         name: _nameController.text.trim(),
@@ -145,6 +193,15 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
             _category == AccountCategory.custodian ? _linkedAccountId : null,
+        creditLimit: creditLimit,
+        statementDay: _isCredit ? _statementDay : null,
+        paymentDueDay: _isCredit ? _paymentDueDay : null,
+        // Stored as a fraction; entered as a percent.
+        financeChargeRate:
+            (financeRatePercent != null && financeRatePercent > 0)
+                ? financeRatePercent / 100
+                : null,
+        creditBrand: _isCredit ? _creditBrand : null,
       );
 
       if (widget.existing != null) {
@@ -224,7 +281,10 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             formKey: _formKey,
             nameController: _nameController,
             balanceController: _balanceController,
+            balanceLabel: _balanceLabel,
             goalTargetController: _goalTargetController,
+            creditLimitController: _creditLimitController,
+            financeRateController: _financeRateController,
             availableCategories: _availableCategories,
             category: _category,
             onCategoryChanged: (c) => setState(() => _category = c!),
@@ -236,9 +296,16 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             onLinkedAccountChanged: (id) =>
                 setState(() => _linkedAccountId = id),
             liquidAccounts: widget.presenter.liquidAccounts,
+            statementDay: _statementDay,
+            onStatementDayChanged: (d) => setState(() => _statementDay = d),
+            paymentDueDay: _paymentDueDay,
+            onPaymentDueDayChanged: (d) => setState(() => _paymentDueDay = d),
+            creditBrand: _creditBrand,
+            onBrandChanged: _applyBrand,
             isGoal: _isGoal,
             isTimeDeposit: _isTimeDeposit,
             isCustodian: _isCustodian,
+            isCredit: _isCredit,
             isEdit: isEdit,
             isSubmitting: _isSubmitting,
             onSubmit: _submit,
@@ -256,7 +323,10 @@ class _AccountSetupForm extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final TextEditingController nameController;
   final TextEditingController balanceController;
+  final String balanceLabel;
   final TextEditingController goalTargetController;
+  final TextEditingController creditLimitController;
+  final TextEditingController financeRateController;
   final List<AccountCategory> availableCategories;
   final AccountCategory category;
   final ValueChanged<AccountCategory?> onCategoryChanged;
@@ -267,9 +337,16 @@ class _AccountSetupForm extends StatelessWidget {
   final String? linkedAccountId;
   final ValueChanged<String?> onLinkedAccountChanged;
   final List<FinancialAccount> liquidAccounts;
+  final int? statementDay;
+  final ValueChanged<int?> onStatementDayChanged;
+  final int? paymentDueDay;
+  final ValueChanged<int?> onPaymentDueDayChanged;
+  final String? creditBrand;
+  final ValueChanged<String?> onBrandChanged;
   final bool isGoal;
   final bool isTimeDeposit;
   final bool isCustodian;
+  final bool isCredit;
   final bool isEdit;
   final bool isSubmitting;
   final VoidCallback onSubmit;
@@ -279,7 +356,10 @@ class _AccountSetupForm extends StatelessWidget {
     required this.formKey,
     required this.nameController,
     required this.balanceController,
+    required this.balanceLabel,
     required this.goalTargetController,
+    required this.creditLimitController,
+    required this.financeRateController,
     required this.availableCategories,
     required this.category,
     required this.onCategoryChanged,
@@ -290,9 +370,16 @@ class _AccountSetupForm extends StatelessWidget {
     required this.linkedAccountId,
     required this.onLinkedAccountChanged,
     required this.liquidAccounts,
+    required this.statementDay,
+    required this.onStatementDayChanged,
+    required this.paymentDueDay,
+    required this.onPaymentDueDayChanged,
+    required this.creditBrand,
+    required this.onBrandChanged,
     required this.isGoal,
     required this.isTimeDeposit,
     required this.isCustodian,
+    required this.isCredit,
     required this.isEdit,
     required this.isSubmitting,
     required this.onSubmit,
@@ -341,8 +428,8 @@ class _AccountSetupForm extends StatelessWidget {
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
                           ],
-                          decoration: const InputDecoration(
-                            labelText: 'Opening Balance',
+                          decoration: InputDecoration(
+                            labelText: balanceLabel,
                             prefixText: '₱ ',
                           ),
                         ),
@@ -395,6 +482,19 @@ class _AccountSetupForm extends StatelessWidget {
                 accounts: liquidAccounts,
                 selectedId: linkedAccountId,
                 onChanged: onLinkedAccountChanged,
+              ),
+              const SizedBox(height: 12),
+            ],
+            if (isCredit) ...[
+              _CreditDetailsCard(
+                creditLimitController: creditLimitController,
+                financeRateController: financeRateController,
+                statementDay: statementDay,
+                onStatementDayChanged: onStatementDayChanged,
+                paymentDueDay: paymentDueDay,
+                onPaymentDueDayChanged: onPaymentDueDayChanged,
+                creditBrand: creditBrand,
+                onBrandChanged: onBrandChanged,
               ),
               const SizedBox(height: 12),
             ],
@@ -643,6 +743,146 @@ class _MaturityDateRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Credit-only details: limit, statement/due day, finance rate, brand preset.
+class _CreditDetailsCard extends StatelessWidget {
+  final TextEditingController creditLimitController;
+  final TextEditingController financeRateController;
+  final int? statementDay;
+  final ValueChanged<int?> onStatementDayChanged;
+  final int? paymentDueDay;
+  final ValueChanged<int?> onPaymentDueDayChanged;
+  final String? creditBrand;
+  final ValueChanged<String?> onBrandChanged;
+
+  const _CreditDetailsCard({
+    required this.creditLimitController,
+    required this.financeRateController,
+    required this.statementDay,
+    required this.onStatementDayChanged,
+    required this.paymentDueDay,
+    required this.onPaymentDueDayChanged,
+    required this.creditBrand,
+    required this.onBrandChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      header: Text(
+        'Credit details',
+        style:
+            theme.textTheme.labelMedium?.copyWith(color: cs.onSurfaceVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Brand preset — seeds the finance rate when picked.
+          DropdownButtonFormField<String?>(
+            initialValue: creditBrand,
+            decoration: const InputDecoration(
+              labelText: 'Card type (optional)',
+              helperText: 'Pick a card to prefill its finance rate',
+            ),
+            items: [
+              DropdownMenuItem<String?>(
+                value: null,
+                child: Text('— Manual —',
+                    style: TextStyle(color: cs.onSurfaceVariant)),
+              ),
+              ...kCreditBrandPresets.map(
+                (p) => DropdownMenuItem<String?>(
+                    value: p.key, child: Text(p.label)),
+              ),
+            ],
+            onChanged: onBrandChanged,
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: creditLimitController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+            ],
+            decoration: const InputDecoration(
+              labelText: 'Credit Limit',
+              prefixText: '₱ ',
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _DayOfMonthDropdown(
+                  label: 'Statement day',
+                  value: statementDay,
+                  onChanged: onStatementDayChanged,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _DayOfMonthDropdown(
+                  label: 'Due day',
+                  value: paymentDueDay,
+                  onChanged: onPaymentDueDayChanged,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: financeRateController,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
+            ],
+            decoration: const InputDecoration(
+              labelText: 'Monthly finance rate',
+              suffixText: '% / mo',
+              helperText: 'Interest on unpaid balance (BSP cap 3%)',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Dropdown for choosing a day of month (1–28, to stay valid in February).
+class _DayOfMonthDropdown extends StatelessWidget {
+  final String label;
+  final int? value;
+  final ValueChanged<int?> onChanged;
+
+  const _DayOfMonthDropdown({
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<int?>(
+      initialValue: value,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: label),
+      items: [
+        DropdownMenuItem<int?>(
+          value: null,
+          child: Text('—',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
+        ),
+        for (int d = 1; d <= 28; d++)
+          DropdownMenuItem<int?>(value: d, child: Text('$d')),
+      ],
+      onChanged: onChanged,
     );
   }
 }

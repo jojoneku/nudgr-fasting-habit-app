@@ -8,6 +8,7 @@ import '../presenters/ai_coach_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/grocery_cart_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
@@ -65,6 +66,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final BudgetPresenter _budgetPresenter;
   late final TreasuryHistoryPresenter _historyPresenter;
   late final InstallmentPresenter _installmentPresenter;
+  late final GroceryCartPresenter _groceryCartPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
   late final AuthPresenter _authPresenter;
   late HubPresenter _hubPresenter;
@@ -123,6 +125,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _historyPresenter = TreasuryHistoryPresenter(_storage);
     _installmentPresenter =
         InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
+    _groceryCartPresenter =
+        GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
     _nutritionPresenter = NutritionPresenter(
       statsPresenter: _statsPresenter,
       fastingPresenter: _fastingPresenter,
@@ -194,6 +198,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _budgetPresenter.dispose();
     _historyPresenter.dispose();
     _installmentPresenter.dispose();
+    _groceryCartPresenter.dispose();
     _aiCoachPresenter.dispose();
     _authPresenter.dispose();
     _hubPresenter.dispose();
@@ -331,6 +336,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _billsPresenter.load();
     _historyPresenter.load();
     _installmentPresenter.load();
+    _groceryCartPresenter.load();
     // Refresh the home-screen widgets after a (re)load — e.g. once cloud data
     // has been pulled in.
     _widgetBridge?.pushSnapshot();
@@ -370,6 +376,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           budgetPresenter: _budgetPresenter,
           historyPresenter: _historyPresenter,
           installmentPresenter: _installmentPresenter,
+          groceryCartPresenter: _groceryCartPresenter,
           authPresenter: _authPresenter,
           syncPresenter: _syncPresenter,
           settingsPresenter: widget.settingsPresenter,

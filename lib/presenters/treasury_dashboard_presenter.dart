@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -8,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class DailySpend {
@@ -70,6 +72,51 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   List<FinancialAccount> get liabilityAccounts =>
       _accounts.where((a) => a.isActive && a.isLiability).toList();
+
+  /// Credit accounts (cards / lines / BNPL) for the dedicated Credit section.
+  /// Same set as [liabilityAccounts] today; named for the section that renders
+  /// remaining limit + current payable per row.
+  List<FinancialAccount> get creditAccounts => liabilityAccounts;
+
+  /// Total owed across all credit accounts (sum of current payables).
+  double get totalCreditOwed =>
+      creditAccounts.fold(0.0, (sum, a) => sum + a.currentPayable);
+
+  /// Total remaining credit across accounts that have a limit set.
+  double get totalCreditAvailable =>
+      creditAccounts.fold(0.0, (sum, a) => sum + (a.availableCredit ?? 0));
+
+  /// Next payment-due label for a credit account and whether it's imminent
+  /// (within 3 days). Returns null when the account has no due day configured.
+  /// Rolls to next month once this month's due day has passed.
+  ({String label, bool imminent})? creditDueInfo(FinancialAccount a) {
+    final day = a.paymentDueDay;
+    if (day == null) return null;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    var due = DateTime(now.year, now.month, day);
+    if (due.isBefore(today)) due = DateTime(now.year, now.month + 1, day);
+    final diff = due.difference(today).inDays;
+    final label = diff == 0
+        ? 'Due today'
+        : diff == 1
+            ? 'Due tomorrow'
+            : 'Due in $diff days';
+    return (label: label, imminent: diff <= 3);
+  }
+
+  /// Estimated minimum amount due for a credit account, using its brand preset
+  /// (or BSP-default rates). Null when nothing is owed. Display-only — finance
+  /// charges are not auto-posted to the balance.
+  double? creditMinimumDue(FinancialAccount a) {
+    if (!a.isLiability || a.currentPayable <= 0) return null;
+    final preset = creditBrandPresetByKey(a.creditBrand);
+    return computeMinimumDue(
+      balance: a.currentPayable,
+      minPaymentRate: preset?.minPaymentRate ?? 0.0357,
+      minPaymentFloor: preset?.minPaymentFloor ?? 850,
+    );
+  }
 
   List<FinancialAccount> get goalAccounts => _accounts
       .where((a) => a.isActive && a.category == AccountCategory.goal)
@@ -333,16 +380,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   Future<void> addAccount(FinancialAccount account) async {
     _accounts = [..._accounts, account];
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
     _accounts = [
       for (final a in _accounts) a.id == account.id ? account : a,
     ];
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   /// Throws [StateError('has_sub_accounts')] if the account has sub-accounts.
@@ -357,8 +404,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final hasBills = _bills.any((b) => b.accountId == id);
     if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   Future<void> load() async {

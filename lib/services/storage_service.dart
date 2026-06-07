@@ -19,6 +19,9 @@ import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/finance_dict_entry.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/grocery/cart_item.dart';
+import '../models/grocery/remembered_price.dart';
+import '../models/grocery/saved_trip.dart';
 import '../models/food_feedback.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
@@ -83,6 +86,11 @@ abstract class StorageService {
   static const String keyMeasurementUnit = 'measurementUnit';
   static const String keyLastRecompXpDate = 'bodyMeasurements.lastRecompXpDate';
   static const String keyNotificationPreferences = 'notification_preferences';
+  // Grocery cart (Plan 038) — active shopping cart + learned price memory.
+  static const String keyGroceryCart = 'grocery_cart';
+  static const String keyGroceryPriceMemory = 'grocery_price_memory';
+  static const String keyGroceryBudget = 'grocery_budget';
+  static const String keyGroceryTripHistory = 'grocery_trip_history';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -203,6 +211,16 @@ abstract class StorageService {
   //  Notification Preferences
   Future<void> saveNotificationPreferences(NotificationPreferences prefs);
   Future<NotificationPreferences> loadNotificationPreferences();
+
+  //  Grocery Cart (Plan 038)
+  Future<void> saveGroceryCart(List<CartItem> items);
+  Future<List<CartItem>> loadGroceryCart();
+  Future<void> saveGroceryPriceMemory(List<RememberedPrice> prices);
+  Future<List<RememberedPrice>> loadGroceryPriceMemory();
+  Future<void> saveGroceryBudget(double? budget);
+  Future<double?> loadGroceryBudget();
+  Future<void> saveGroceryTripHistory(List<SavedTrip> trips);
+  Future<List<SavedTrip>> loadGroceryTripHistory();
 
   //  Theme
   Future<void> saveThemeMode(String mode);

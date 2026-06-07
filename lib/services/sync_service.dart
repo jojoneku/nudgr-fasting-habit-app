@@ -9,6 +9,8 @@ import '../models/activity_log.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
 import '../models/food_template.dart';
+import '../models/grocery/remembered_price.dart';
+import '../models/grocery/saved_trip.dart';
 import '../models/habit_routine.dart';
 import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
@@ -240,6 +242,12 @@ class SyncService {
       'foodFeedback':
           (await _storage.loadFoodFeedback()).map((e) => e.toJson()).toList(),
       'financeDictionary': (await _storage.loadFinanceDictionary())
+          .map((e) => e.toJson())
+          .toList(),
+      'groceryPriceMemory': (await _storage.loadGroceryPriceMemory())
+          .map((e) => e.toJson())
+          .toList(),
+      'groceryTripHistory': (await _storage.loadGroceryTripHistory())
           .map((e) => e.toJson())
           .toList(),
     };
@@ -598,6 +606,18 @@ class SyncService {
         await _storage.saveFinanceDictionary((data['financeDictionary'] as List)
             .map((e) => FinanceDictEntry.fromJson(e as Map<String, dynamic>))
             .toList());
+      }
+      if (data['groceryPriceMemory'] != null) {
+        await _storage.saveGroceryPriceMemory(
+            (data['groceryPriceMemory'] as List)
+                .map((e) => RememberedPrice.fromJson(e as Map<String, dynamic>))
+                .toList());
+      }
+      if (data['groceryTripHistory'] != null) {
+        await _storage.saveGroceryTripHistory(
+            (data['groceryTripHistory'] as List)
+                .map((e) => SavedTrip.fromJson(e as Map<String, dynamic>))
+                .toList());
       }
     });
     _queue.setTimestamp(SyncDomain.userCollections, 'default',

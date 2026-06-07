@@ -241,12 +241,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
     _allTransactions = [..._allTransactions, txn];
     _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    // Optimistic: repaint with the new transaction before the encode+write.
+    safeNotify();
     await _saveAll();
 
     if (isFirstEver) await _stats.addXp(25);
     if (isFirstToday) await _stats.addXp(10);
-
-    safeNotify();
   }
 
   Future<void> addTransfer({
@@ -290,8 +290,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = [..._allTransactions, outflow, inflow];
     _applyBalanceDelta(fromAccountId, amount, TransactionType.outflow);
     _applyBalanceDelta(toAccountId, amount, TransactionType.inflow);
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   Future<void> updateTransaction(TransactionRecord txn) async {
@@ -301,16 +301,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = [
       for (final t in _allTransactions) t.id == txn.id ? txn : t,
     ];
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   Future<void> deleteTransaction(String id) async {
     final txn = _allTransactions.firstWhere((t) => t.id == id);
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
@@ -319,16 +319,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _accounts = exists
         ? [for (final a in _accounts) a.id == account.id ? account : a]
         : [..._accounts, account];
-    await _storage.saveAccounts(_accounts);
     safeNotify();
+    await _storage.saveAccounts(_accounts);
   }
 
   // --- Category CRUD ---
 
   Future<void> addCategory(FinanceCategory category) async {
     _categories = [..._categories, category];
-    await _storage.saveFinanceCategories(_categories);
     safeNotify();
+    await _storage.saveFinanceCategories(_categories);
   }
 
   /// Throws [StateError('has_transactions')] if any transaction still
@@ -341,9 +341,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final inUse = _allTransactions.any((t) => t.categoryId == id);
     if (inUse) throw StateError('has_transactions');
     _categories = _categories.where((c) => c.id != id).toList();
+    safeNotify();
     await _storage.saveFinanceCategories(_categories);
     await _financeDict.removeForCategory(id);
-    safeNotify();
   }
 
   // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────
@@ -545,7 +545,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       return;
     }
     final now = DateTime.now();
-    final description = _truncateDescription(draft.description);
+    final description = _truncateDescription(_cleanDescription(draft));
     if (draft.type == TransactionType.transfer) {
       await addTransfer(
         fromAccountId: draft.accountId!,
@@ -608,6 +608,49 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return trimmed.length <= 60 ? trimmed : trimmed.substring(0, 60);
   }
 
+  /// Strips the parsed amount, account name(s), and parser connector/verb words
+  /// out of the raw input so the stored description is just what the user
+  /// actually described (e.g. "-500 jollibee gcash" → "jollibee"). Falls back to
+  /// the category name when nothing descriptive remains.
+  String _cleanDescription(ParsedTransaction draft) {
+    var s = draft.description.trim();
+    if (s.isEmpty) return s;
+
+    // Amount token (optional ₱/p prefix, optional sign, thousands commas).
+    s = s.replaceAll(
+      RegExp(r'(?<=^|\s)[₱p]?[+-]?\d[\d,]*(?:\.\d+)?(?=\s|$)',
+          caseSensitive: false),
+      ' ',
+    );
+
+    // Account names for both legs (case-insensitive, handles multi-word names).
+    for (final id in [draft.accountId, draft.transferToAccountId]) {
+      if (id == null) continue;
+      final name =
+          _accounts.where((a) => a.id == id).map((a) => a.name).firstOrNull;
+      if (name != null && name.trim().isNotEmpty) {
+        s = s.replaceAll(
+            RegExp(RegExp.escape(name), caseSensitive: false), ' ');
+      }
+    }
+
+    // Parser connector / verb words that carry no description meaning.
+    s = s.replaceAll(
+      RegExp(r'\b(?:from|to|transfer|paid|pay|settle)\b', caseSensitive: false),
+      ' ',
+    );
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+
+    if (s.isEmpty) {
+      final cat = _categories
+          .where((c) => c.id == draft.categoryId)
+          .map((c) => c.name)
+          .firstOrNull;
+      return cat ?? '';
+    }
+    return s;
+  }
+
   /// Transfers still need a categoryId per the data model. Picks the first
   /// expense category; if none exists, picks any category. Caller has already
   /// validated that at least one category exists for the transfer path.
@@ -637,7 +680,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // while external inflows/outflows on a sub correctly hit both accounts.
     final account = _accounts.where((a) => a.id == accountId).firstOrNull;
     final parentId = account?.parentAccountId;
-    final delta = type == TransactionType.inflow ? amount : -amount;
+    // Asset accounts: inflow raises the balance, outflow lowers it.
+    // Liability accounts (credit card / credit line / BNPL): balance = debt
+    // owed, so the sign inverts — spending (outflow) raises the debt and paying
+    // it down (inflow) lowers it. This matches the user's mental model and keeps
+    // net-worth math correct. Liabilities are always top-level (no parent) and
+    // sub-accounts are always assets, so deriving the sign from this account
+    // also yields the right delta for its parent leg.
+    final base = type == TransactionType.inflow ? amount : -amount;
+    final delta = (account?.isLiability ?? false) ? -base : base;
 
     _accounts = [
       for (final a in _accounts)

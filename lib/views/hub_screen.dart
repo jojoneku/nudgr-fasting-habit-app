@@ -9,6 +9,7 @@ import '../presenters/auth_presenter.dart';
 import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/grocery_cart_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
@@ -58,6 +59,7 @@ class HubScreen extends StatefulWidget {
     this.budgetPresenter,
     this.historyPresenter,
     this.installmentPresenter,
+    this.groceryCartPresenter,
     this.authPresenter,
     this.syncPresenter,
     required this.settingsPresenter,
@@ -78,6 +80,7 @@ class HubScreen extends StatefulWidget {
   final BudgetPresenter? budgetPresenter;
   final TreasuryHistoryPresenter? historyPresenter;
   final InstallmentPresenter? installmentPresenter;
+  final GroceryCartPresenter? groceryCartPresenter;
   final AuthPresenter? authPresenter;
   final SyncPresenter? syncPresenter;
   final SettingsPresenter settingsPresenter;
@@ -523,12 +526,14 @@ class _HubScreenState extends State<HubScreen>
     final budget = widget.budgetPresenter;
     final history = widget.historyPresenter;
     final installments = widget.installmentPresenter;
+    final groceryCart = widget.groceryCartPresenter;
     if (dash == null ||
         ledger == null ||
         bills == null ||
         budget == null ||
         history == null ||
-        installments == null) return;
+        installments == null ||
+        groceryCart == null) return;
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -539,6 +544,7 @@ class _HubScreenState extends State<HubScreen>
           budgetPresenter: budget,
           historyPresenter: history,
           installmentPresenter: installments,
+          groceryCartPresenter: groceryCart,
         ),
       ),
     );

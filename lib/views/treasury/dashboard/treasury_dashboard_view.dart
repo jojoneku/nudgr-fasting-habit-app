@@ -141,8 +141,8 @@ class _DashboardScrollBody extends StatelessWidget {
             onAdd: onAddGoalSavings,
           ),
           const SizedBox(height: 16),
-          if (presenter.liabilityAccounts.isNotEmpty)
-            _LiabilitiesCard(presenter: presenter, onEdit: onEditAccount),
+          if (presenter.creditAccounts.isNotEmpty)
+            _CreditSection(presenter: presenter, onEdit: onEditAccount),
           if (presenter.custodianAccounts.isNotEmpty) ...[
             const SizedBox(height: 16),
             _HeldFundsCard(presenter: presenter, onEdit: onEditAccount),
@@ -274,81 +274,137 @@ class _GoalSection extends StatelessWidget {
   }
 }
 
-class _LiabilitiesCard extends StatelessWidget {
+/// Dedicated Credit section — one row card per credit account showing the
+/// current payable, a remaining-credit utilization meter, and the due date.
+class _CreditSection extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final ValueChanged<FinancialAccount> onEdit;
 
-  const _LiabilitiesCard({required this.presenter, required this.onEdit});
+  const _CreditSection({required this.presenter, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final liabilities = presenter.liabilityAccounts;
+    final accounts = presenter.creditAccounts;
 
-    return AppCard(
-      variant: AppCardVariant.elevated,
-      padding: EdgeInsets.zero,
-      child: ExpansionTile(
-        leading: AppIconBadge(
-            icon: Icons.credit_card_outlined, color: colorScheme.error),
-        title: Text(
-          'LIABILITIES',
-          style: theme.textTheme.labelMedium?.copyWith(
-            letterSpacing: 1.0,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: AppNumberDisplay(
-          value: formatPeso(presenter.totalLiabilities),
-          size: AppNumberSize.body,
-          color: colorScheme.error,
-        ),
-        iconColor: colorScheme.onSurfaceVariant,
-        collapsedIconColor: colorScheme.onSurfaceVariant,
+    return AppSection(
+      title: 'Credit',
+      trailing: Text(
+        'Owe ${formatPeso(presenter.totalCreditOwed)}',
+        style: theme.textTheme.labelMedium?.copyWith(color: colorScheme.error),
+      ),
+      child: Column(
         children: [
-          for (final account in liabilities)
-            _LiabilityListTile(
-              account: account,
+          for (int i = 0; i < accounts.length; i++) ...[
+            _CreditAccountCard(
+              account: accounts[i],
+              dueInfo: presenter.creditDueInfo(accounts[i]),
+              minimumDue: presenter.creditMinimumDue(accounts[i]),
               onTap: () {
                 HapticFeedback.selectionClick();
-                onEdit(account);
+                onEdit(accounts[i]);
               },
             ),
+            if (i < accounts.length - 1) const SizedBox(height: 8),
+          ],
         ],
       ),
     );
   }
 }
 
-class _LiabilityListTile extends StatelessWidget {
+class _CreditAccountCard extends StatelessWidget {
   final FinancialAccount account;
+  final ({String label, bool imminent})? dueInfo;
+  final double? minimumDue;
   final VoidCallback onTap;
 
-  const _LiabilityListTile({required this.account, required this.onTap});
+  const _CreditAccountCard({
+    required this.account,
+    required this.dueInfo,
+    required this.minimumDue,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
+    final utilization = account.utilization;
+    final available = account.availableCredit;
 
-    return AppListTile(
+    return AppCard(
+      variant: AppCardVariant.outlined,
       onTap: onTap,
-      title: Text(
-        account.name,
-        style: theme.textTheme.bodyMedium,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppNumberDisplay(
-            value: formatPeso(account.balance),
-            size: AppNumberSize.body,
-            color: colorScheme.error,
+          Row(
+            children: [
+              Icon(Icons.credit_card_outlined, color: cs.error, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  account.name,
+                  style: theme.textTheme.titleSmall,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Owe',
+                      style: theme.textTheme.labelSmall
+                          ?.copyWith(color: cs.onSurfaceVariant)),
+                  AppNumberDisplay(
+                    value: formatPeso(account.currentPayable),
+                    size: AppNumberSize.body,
+                    color: cs.error,
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          Icon(Icons.chevron_right,
-              color: colorScheme.onSurfaceVariant, size: 16),
+          if (utilization != null) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: utilization.clamp(0.0, 1.0),
+                minHeight: 6,
+                backgroundColor: cs.surfaceContainerHighest,
+                color: utilization >= 0.9 ? cs.error : cs.primary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '${formatPeso(available ?? 0)} of ${formatPeso(account.creditLimit ?? 0)} available',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+          if (dueInfo != null) ...[
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Icon(Icons.event_outlined,
+                    size: 14,
+                    color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text(
+                  minimumDue != null
+                      ? '${dueInfo!.label} · min ${formatPeso(minimumDue!)}'
+                      : dueInfo!.label,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
+                    fontWeight:
+                        dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
