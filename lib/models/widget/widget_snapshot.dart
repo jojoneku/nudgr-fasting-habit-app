@@ -120,8 +120,4 @@ class WidgetSnapshot {
         'w_next_quest_id': '$nextQuestId',
         'w_has_urgent': hasUrgentQuest,
       };
-
-  /// The widget-data keys, used to clear the snapshot on sign-out.
-  static List<String> get dataKeys =>
-      WidgetSnapshot.empty().toWidgetData().keys.toList();
 }
