@@ -164,13 +164,16 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
       addedAt: DateTime.now(),
     ));
 
-    await _persistCart();
-    if (state == PriceState.confirmed) {
+    // Optimistic: update memory + notify first so the UI repaints instantly;
+    // persistence (encode + prefs write) runs after the paint.
+    final remember = state == PriceState.confirmed;
+    if (remember) {
       _rememberPrice(
           name: trimmed, barcode: barcode, price: price!, unit: unit);
-      await _persistMemory();
     }
     safeNotify();
+    await _persistCart();
+    if (remember) await _persistMemory();
   }
 
   /// Sets a new quantity; a quantity of zero or less removes the item.
@@ -179,8 +182,8 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     final idx = _items.indexWhere((i) => i.id == id);
     if (idx == -1) return;
     _items[idx] = _items[idx].copyWith(quantity: quantity);
-    await _persistCart();
     safeNotify();
+    await _persistCart();
   }
 
   /// Confirms (or overwrites) a price. Always updates price memory so the next
@@ -193,29 +196,29 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
         item.copyWith(unitPrice: price, priceState: PriceState.confirmed);
     _rememberPrice(
         name: item.name, barcode: item.barcode, price: price, unit: item.unit);
+    safeNotify();
     await _persistCart();
     await _persistMemory();
-    safeNotify();
   }
 
   Future<void> removeItem(String id) async {
     _items.removeWhere((i) => i.id == id);
-    await _persistCart();
     safeNotify();
+    await _persistCart();
   }
 
   /// Sets the optional spending cap. A non-positive value clears it.
   Future<void> setBudget(double? amount) async {
     _budget = (amount != null && amount <= 0) ? null : amount;
-    await _storage.saveGroceryBudget(_budget);
     safeNotify();
+    await _storage.saveGroceryBudget(_budget);
   }
 
   /// Empties the cart (price memory and budget are retained for the next trip).
   Future<void> clearCart() async {
     _items.clear();
-    await _persistCart();
     safeNotify();
+    await _persistCart();
   }
 
   // ── Checkout & trip history ──────────────────────────────────────────────────
@@ -234,19 +237,8 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
 
     final posted =
         postToLedger && _ledger != null && accountId != null && grandTotal > 0;
-    if (posted) {
-      await _ledger.addTransaction(TransactionRecord(
-        id: _generateId(),
-        date: now,
-        accountId: accountId,
-        categoryId: categoryId ?? '',
-        amount: grandTotal,
-        type: TransactionType.outflow,
-        description: description,
-        month: toMonthKey(now),
-      ));
-    }
-
+    // Capture totals before clearing the cart (they read _items).
+    final amount = grandTotal;
     final trip = SavedTrip(
       id: _generateId(),
       savedAt: now,
@@ -256,12 +248,27 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
       unpricedCount: unpricedCount,
       postedToLedger: posted,
     );
-    _tripHistory.insert(0, trip);
-    await _persistHistory();
 
+    // Optimistic: record the trip + empty the cart in memory and repaint, then
+    // post to the ledger / persist in the background.
+    _tripHistory.insert(0, trip);
     _items.clear();
-    await _persistCart();
     safeNotify();
+
+    if (posted) {
+      await _ledger.addTransaction(TransactionRecord(
+        id: _generateId(),
+        date: now,
+        accountId: accountId,
+        categoryId: categoryId ?? '',
+        amount: amount,
+        type: TransactionType.outflow,
+        description: description,
+        month: toMonthKey(now),
+      ));
+    }
+    await _persistHistory();
+    await _persistCart();
     return trip;
   }
 
@@ -282,8 +289,8 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> deleteTrip(String tripId) async {
     _tripHistory.removeWhere((t) => t.id == tripId);
-    await _persistHistory();
     safeNotify();
+    await _persistHistory();
   }
 
   // ── Internals ────────────────────────────────────────────────────────────────
