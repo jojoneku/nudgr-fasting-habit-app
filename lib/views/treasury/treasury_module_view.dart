@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -8,6 +9,7 @@ import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart'
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
 import 'package:intermittent_fasting/views/treasury/budget/budget_view.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/treasury_dashboard_view.dart';
+import 'package:intermittent_fasting/views/treasury/grocery/grocery_cart_view.dart';
 import 'package:intermittent_fasting/views/treasury/history/treasury_history_view.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/ledger_view.dart';
 
@@ -18,6 +20,7 @@ class TreasuryModuleView extends StatefulWidget {
   final BudgetPresenter budgetPresenter;
   final TreasuryHistoryPresenter historyPresenter;
   final InstallmentPresenter installmentPresenter;
+  final GroceryCartPresenter groceryCartPresenter;
 
   const TreasuryModuleView({
     super.key,
@@ -27,13 +30,14 @@ class TreasuryModuleView extends StatefulWidget {
     required this.budgetPresenter,
     required this.historyPresenter,
     required this.installmentPresenter,
+    required this.groceryCartPresenter,
   });
 
   @override
   State<TreasuryModuleView> createState() => _TreasuryModuleViewState();
 
   // Tab count — keep in sync with the TabBar/TabBarView below.
-  static const int tabCount = 5;
+  static const int tabCount = 6;
 }
 
 class _TreasuryModuleViewState extends State<TreasuryModuleView>
@@ -75,6 +79,9 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         break;
       case 4:
         widget.historyPresenter.load();
+        break;
+      case 5:
+        widget.groceryCartPresenter.load();
         break;
     }
   }
@@ -119,6 +126,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),
             Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
             Tab(icon: Icon(Icons.history_outlined), text: 'History'),
+            Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Cart'),
           ],
         ),
       ),
@@ -134,6 +142,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
           ),
           BudgetView(presenter: widget.budgetPresenter),
           TreasuryHistoryView(presenter: widget.historyPresenter),
+          GroceryCartView(presenter: widget.groceryCartPresenter),
         ],
       ),
     );

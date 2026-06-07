@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/body_measurement_entry.dart';
 import 'package:intermittent_fasting/models/sync_queue_entry.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/models/food_feedback.dart';
+import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
 import 'package:intermittent_fasting/services/sync_queue.dart';
 
 void main() {
@@ -169,6 +170,44 @@ void main() {
         queue.entries.any((e) => e.domain == SyncDomain.userCollections),
         true,
       );
+    });
+  });
+
+  // ── Grocery (Plan 038) ────────────────────────────────────────────────────────
+
+  group('StorageService — grocery', () {
+    RememberedPrice price() => RememberedPrice(
+          key: RememberedPrice.keyFor(name: 'milk'),
+          displayName: 'Milk',
+          lastPrice: 58,
+          lastSeen: DateTime(2026, 6, 1),
+          timesSeen: 2,
+        );
+
+    test('price memory round-trips through storage', () async {
+      await svc.saveGroceryPriceMemory([price()]);
+      final loaded = await svc.loadGroceryPriceMemory();
+      expect(loaded, hasLength(1));
+      expect(loaded.first.displayName, 'Milk');
+      expect(loaded.first.lastPrice, 58);
+    });
+
+    test('saving price memory marks userCollections dirty for sync', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveGroceryPriceMemory([price()]);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userCollections),
+        true,
+      );
+    });
+
+    test('active cart is local-only (does not mark dirty)', () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveGroceryCart([]);
+      await svc.saveGroceryBudget(500);
+      expect(queue.entries, isEmpty);
     });
   });
 }
