@@ -129,8 +129,22 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       await _notifications.cancelBillsReminder();
     }
 
+    // Snapshot closed credit statements into bills, reconcile paid-off cards,
+    // and (re)schedule per-account due-date reminders.
+    await _autoGenerateCreditStatements(_selectedMonth);
+    await _syncCreditDueReminders(prefs.billsReminderEnabled);
+
     safeNotify();
   }
+
+  /// Marker stored in [Bill.paymentNote] so auto-generated credit statements are
+  /// distinguishable from user-created bills (e.g. excluded from the recurring
+  /// auto-copy guard).
+  static const String _autoStatementMarker = '__auto_statement__';
+
+  bool _isAutoStatement(Bill b) =>
+      b.billType == BillType.creditCard &&
+      b.paymentNote == _autoStatementMarker;
 
   // ─── Bill CRUD ────────────────────────────────────────────────────────────────
 
@@ -162,21 +176,44 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     DateTime? paidDate,
   }) async {
     final bill = _allBills.firstWhere((b) => b.id == billId);
-    final txn = _buildOutflowTxn(
-      id: _generateId(),
-      amount: paidAmount,
-      accountId: accountId,
-      categoryId: bill.categoryId,
-      description: bill.name,
-      date: paidDate ?? DateTime.now(),
-      billId: bill.id,
-    );
-    await _ledger.addTransaction(txn);
+    final date = paidDate ?? DateTime.now();
+
+    // Paying a credit-card statement is a *transfer*: cash leaves the funding
+    // account and the card's owed balance goes down. A plain outflow would
+    // shrink cash without clearing the debt, so route these through addTransfer.
+    final card =
+        _ledger.accounts.where((a) => a.id == bill.accountId).firstOrNull;
+    String? txnId;
+    if (bill.billType == BillType.creditCard &&
+        card != null &&
+        card.isLiability &&
+        accountId != bill.accountId) {
+      await _ledger.addTransfer(
+        fromAccountId: accountId,
+        toAccountId: bill.accountId!,
+        amount: paidAmount,
+        categoryId: bill.categoryId,
+        description: bill.name,
+        date: date,
+      );
+    } else {
+      final txn = _buildOutflowTxn(
+        id: _generateId(),
+        amount: paidAmount,
+        accountId: accountId,
+        categoryId: bill.categoryId,
+        description: bill.name,
+        date: date,
+        billId: bill.id,
+      );
+      await _ledger.addTransaction(txn);
+      txnId = txn.id;
+    }
     _updateBill(bill.copyWith(
       isPaid: true,
-      paidDate: paidDate ?? DateTime.now(),
+      paidDate: date,
       paidAmount: paidAmount,
-      transactionId: txn.id,
+      transactionId: txnId,
     ));
     await _storage.saveBills(_allBills);
     await _checkAllBillsPaidXp();
@@ -366,8 +403,98 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _autoGenerateRecurringReceivables(month);
   }
 
+  /// Snapshots a closed credit statement into a bill (once per account/month)
+  /// and reconciles auto-statements that have since been paid off. Runs only for
+  /// the current real month — never backfills history.
+  Future<void> _autoGenerateCreditStatements(String month) async {
+    if (month != toMonthKey(DateTime.now())) return;
+    final now = DateTime.now();
+    final categoryId = _defaultCreditCategoryId();
+    var changed = false;
+
+    final creditAccounts = _ledger.accounts.where((a) =>
+        a.isActive &&
+        a.isLiability &&
+        a.statementDay != null &&
+        a.paymentDueDay != null);
+
+    for (final a in creditAccounts) {
+      final matches = _allBills
+          .where((b) =>
+              _isAutoStatement(b) && b.accountId == a.id && b.month == month)
+          .toList();
+      final existing = matches.isEmpty ? null : matches.first;
+
+      // Reconcile: a fully paid-off card clears its outstanding statement.
+      if (existing != null && !existing.isPaid && a.currentPayable <= 0) {
+        _updateBill(existing.copyWith(
+          isPaid: true,
+          paidDate: now,
+          paidAmount: existing.amount,
+        ));
+        changed = true;
+        continue;
+      }
+      if (existing != null) continue;
+
+      // Generate only once the statement day has passed and a balance is owed.
+      if (now.day < a.statementDay!.clamp(1, 28)) continue;
+      if (a.currentPayable <= 0) continue;
+      if (categoryId == null) continue; // need a valid category for a bill
+
+      _allBills = [
+        ..._allBills,
+        Bill(
+          id: _generateId(),
+          name: '${a.name} statement',
+          billType: BillType.creditCard,
+          amount: a.currentPayable,
+          dueDay: a.paymentDueDay!.clamp(1, 28),
+          month: month,
+          categoryId: categoryId,
+          accountId: a.id,
+          paymentNote: _autoStatementMarker,
+        ),
+      ];
+      changed = true;
+    }
+
+    if (changed) await _storage.saveBills(_allBills);
+  }
+
+  /// (Re)schedules or cancels per-account payment-due reminders, respecting the
+  /// global bills-reminder toggle.
+  Future<void> _syncCreditDueReminders(bool enabled) async {
+    final creditAccounts = _ledger.accounts
+        .where((a) => a.isActive && a.isLiability && a.paymentDueDay != null);
+    for (final a in creditAccounts) {
+      if (enabled) {
+        await _notifications.scheduleCreditDueReminder(
+          accountId: a.id,
+          accountName: a.name,
+          dueDay: a.paymentDueDay!,
+        );
+      } else {
+        await _notifications.cancelCreditDueReminder(a.id);
+      }
+    }
+  }
+
+  /// First expense category (or any category) to satisfy [Bill.categoryId];
+  /// null when the user has no categories yet.
+  String? _defaultCreditCategoryId() {
+    final cats = _ledger.categories;
+    if (cats.isEmpty) return null;
+    final expense = cats.where((c) => c.type == CategoryType.expense).toList();
+    return (expense.isEmpty ? cats.first : expense.first).id;
+  }
+
   Future<void> _autoGenerateRecurringBills(String month) async {
-    final existing = _allBills.where((b) => b.month == month).toList();
+    // Auto-generated credit statements don't count as "user already has bills",
+    // otherwise a closed statement would suppress recurring-bill copies.
+    final existing = _allBills
+        .where((b) => b.month == month && !_isAutoStatement(b))
+        .toList();
     if (existing.isNotEmpty) return;
 
     final prev = previousMonth(month);
