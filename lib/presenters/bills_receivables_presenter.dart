@@ -136,22 +136,22 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addBill(Bill bill) async {
     _allBills = [..._allBills, bill];
-    await _storage.saveBills(_allBills);
     safeNotify();
+    await _storage.saveBills(_allBills);
     await _notifyDependents();
   }
 
   Future<void> updateBill(Bill bill) async {
     _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
-    await _storage.saveBills(_allBills);
     safeNotify();
+    await _storage.saveBills(_allBills);
     await _notifyDependents();
   }
 
   Future<void> deleteBill(String id) async {
     _allBills = _allBills.where((b) => b.id != id).toList();
-    await _storage.saveBills(_allBills);
     safeNotify();
+    await _storage.saveBills(_allBills);
     await _notifyDependents();
   }
 
@@ -178,9 +178,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       paidAmount: paidAmount,
       transactionId: txn.id,
     ));
+    safeNotify();
     await _storage.saveBills(_allBills);
     await _checkAllBillsPaidXp();
-    safeNotify();
     await _notifyDependents();
   }
 
@@ -188,8 +188,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addReceivable(Receivable receivable) async {
     _allReceivables = [..._allReceivables, receivable];
-    await _storage.saveReceivables(_allReceivables);
     safeNotify();
+    await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
   }
 
@@ -197,15 +197,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allReceivables = [
       for (final r in _allReceivables) r.id == receivable.id ? receivable : r,
     ];
-    await _storage.saveReceivables(_allReceivables);
     safeNotify();
+    await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
   }
 
   Future<void> deleteReceivable(String id) async {
     _allReceivables = _allReceivables.where((r) => r.id != id).toList();
-    await _storage.saveReceivables(_allReceivables);
     safeNotify();
+    await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
   }
 
@@ -232,8 +232,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       receivedAmount: receivedAmount,
       transactionId: txn.id,
     ));
-    await _storage.saveReceivables(_allReceivables);
     safeNotify();
+    await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
   }
 
@@ -241,8 +241,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addBudgetedExpense(BudgetedExpense expense) async {
     _allExpenses = [..._allExpenses, expense];
-    await _storage.saveBudgetedExpenses(_allExpenses);
     safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 
@@ -250,15 +250,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allExpenses = [
       for (final e in _allExpenses) e.id == expense.id ? expense : e,
     ];
-    await _storage.saveBudgetedExpenses(_allExpenses);
     safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 
   Future<void> deleteBudgetedExpense(String id) async {
     _allExpenses = _allExpenses.where((e) => e.id != id).toList();
-    await _storage.saveBudgetedExpenses(_allExpenses);
     safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 
@@ -283,8 +283,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       spentAmount: paidAmount,
       transactionId: txn.id,
     ));
-    await _storage.saveBudgetedExpenses(_allExpenses);
     safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 

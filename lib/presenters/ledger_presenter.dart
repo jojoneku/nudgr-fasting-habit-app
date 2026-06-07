@@ -241,12 +241,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
     _allTransactions = [..._allTransactions, txn];
     _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    // Optimistic: repaint with the new transaction before the encode+write.
+    safeNotify();
     await _saveAll();
 
     if (isFirstEver) await _stats.addXp(25);
     if (isFirstToday) await _stats.addXp(10);
-
-    safeNotify();
   }
 
   Future<void> addTransfer({
@@ -290,8 +290,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = [..._allTransactions, outflow, inflow];
     _applyBalanceDelta(fromAccountId, amount, TransactionType.outflow);
     _applyBalanceDelta(toAccountId, amount, TransactionType.inflow);
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   Future<void> updateTransaction(TransactionRecord txn) async {
@@ -301,16 +301,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = [
       for (final t in _allTransactions) t.id == txn.id ? txn : t,
     ];
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   Future<void> deleteTransaction(String id) async {
     final txn = _allTransactions.firstWhere((t) => t.id == id);
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
-    await _saveAll();
     safeNotify();
+    await _saveAll();
   }
 
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
@@ -319,16 +319,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _accounts = exists
         ? [for (final a in _accounts) a.id == account.id ? account : a]
         : [..._accounts, account];
-    await _storage.saveAccounts(_accounts);
     safeNotify();
+    await _storage.saveAccounts(_accounts);
   }
 
   // --- Category CRUD ---
 
   Future<void> addCategory(FinanceCategory category) async {
     _categories = [..._categories, category];
-    await _storage.saveFinanceCategories(_categories);
     safeNotify();
+    await _storage.saveFinanceCategories(_categories);
   }
 
   /// Throws [StateError('has_transactions')] if any transaction still
@@ -341,9 +341,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final inUse = _allTransactions.any((t) => t.categoryId == id);
     if (inUse) throw StateError('has_transactions');
     _categories = _categories.where((c) => c.id != id).toList();
+    safeNotify();
     await _storage.saveFinanceCategories(_categories);
     await _financeDict.removeForCategory(id);
-    safeNotify();
   }
 
   // ── Chat-logging state machine (Plan 026 §7) ────────────────────────────────

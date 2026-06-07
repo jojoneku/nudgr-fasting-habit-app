@@ -333,16 +333,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   Future<void> addAccount(FinancialAccount account) async {
     _accounts = [..._accounts, account];
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
     _accounts = [
       for (final a in _accounts) a.id == account.id ? account : a,
     ];
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   /// Throws [StateError('has_sub_accounts')] if the account has sub-accounts.
@@ -357,8 +357,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final hasBills = _bills.any((b) => b.accountId == id);
     if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();
-    await _storage.saveAccounts(_accounts);
     notifyListeners();
+    await _storage.saveAccounts(_accounts);
   }
 
   Future<void> load() async {
