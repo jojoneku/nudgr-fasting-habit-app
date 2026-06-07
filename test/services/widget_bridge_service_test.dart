@@ -11,10 +11,11 @@ void main() {
   group('WidgetSnapshot mapping', () {
     test('empty() is signed-out with sentinel values', () {
       final data = WidgetSnapshot.empty().toWidgetData();
+      // Bools transport as bools; numbers as Strings (home_widget codec safety).
       expect(data['w_signed_in'], false);
       expect(data['w_is_fasting'], false);
-      expect(data['w_food_protein_goal'], -1);
-      expect(data['w_next_quest_id'], -1);
+      expect(data['w_food_protein_goal'], '-1');
+      expect(data['w_next_quest_id'], '-1');
     });
 
     test('toWidgetData exposes every key the native providers read', () {
@@ -72,8 +73,8 @@ void main() {
       final d = snap.toWidgetData();
       expect(d['w_signed_in'], true);
       expect(d['w_fast_phase'], 'Ketone Mode');
-      expect(d['w_food_cals'], 1200);
-      expect(d['w_next_quest_id'], 7);
+      expect(d['w_food_cals'], '1200');
+      expect(d['w_next_quest_id'], '7');
       expect(d['w_has_urgent'], true);
     });
   });

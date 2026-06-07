@@ -26,7 +26,7 @@ class ExpenseWidgetProvider : HomeWidgetProvider() {
                 )
             )
 
-            val signedIn = widgetData.getBoolean("w_signed_in", false)
+            val signedIn = widgetData.wBool("w_signed_in")
             if (!signedIn) {
                 views.setViewVisibility(R.id.expense_signin, View.VISIBLE)
                 views.setTextViewText(R.id.expense_month, "—")
@@ -36,8 +36,8 @@ class ExpenseWidgetProvider : HomeWidgetProvider() {
             }
 
             views.setViewVisibility(R.id.expense_signin, View.GONE)
-            val month = widgetData.getString("w_expense_month", "") ?: ""
-            val today = widgetData.getString("w_expense_today", "") ?: ""
+            val month = widgetData.wStr("w_expense_month")
+            val today = widgetData.wStr("w_expense_today")
             views.setTextViewText(R.id.expense_month, month)
             views.setTextViewText(R.id.expense_today, if (today.isNotEmpty()) "Today $today" else "")
             appWidgetManager.updateAppWidget(id, views)

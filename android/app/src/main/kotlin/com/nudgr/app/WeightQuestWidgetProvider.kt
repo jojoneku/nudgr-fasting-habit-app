@@ -38,7 +38,7 @@ class WeightQuestWidgetProvider : HomeWidgetProvider() {
                 )
             )
 
-            val signedIn = widgetData.getBoolean("w_signed_in", false)
+            val signedIn = widgetData.wBool("w_signed_in")
             if (!signedIn) {
                 views.setViewVisibility(R.id.weight_quest_signin, View.VISIBLE)
                 views.setViewVisibility(R.id.weight_pane, View.GONE)
@@ -51,15 +51,15 @@ class WeightQuestWidgetProvider : HomeWidgetProvider() {
             views.setViewVisibility(R.id.weight_pane, View.VISIBLE)
             views.setViewVisibility(R.id.quest_pane, View.VISIBLE)
 
-            val weight = widgetData.getString("w_weight", "") ?: ""
-            val weightDelta = widgetData.getString("w_weight_delta", "") ?: ""
+            val weight = widgetData.wStr("w_weight")
+            val weightDelta = widgetData.wStr("w_weight_delta")
             views.setTextViewText(R.id.weight_value, if (weight.isNotEmpty()) weight else "—")
             views.setTextViewText(R.id.weight_delta, weightDelta)
 
-            val done = widgetData.getLong("w_quests_done", 0L)
-            val total = widgetData.getLong("w_quests_total", 0L)
-            val next = widgetData.getString("w_next_quest", "") ?: ""
-            val nextId = widgetData.getLong("w_next_quest_id", -1L)
+            val done = widgetData.wLong("w_quests_done")
+            val total = widgetData.wLong("w_quests_total")
+            val next = widgetData.wStr("w_next_quest")
+            val nextId = widgetData.wLong("w_next_quest_id", -1L)
             views.setTextViewText(R.id.quest_count, "$done/$total")
             views.setTextViewText(R.id.quest_next, if (next.isNotEmpty()) next else "All done")
 

@@ -29,8 +29,8 @@ class FastingWidgetProvider : HomeWidgetProvider() {
         for (id in appWidgetIds) {
             val views = RemoteViews(context.packageName, R.layout.widget_fasting)
 
-            val signedIn = widgetData.getBoolean("w_signed_in", false)
-            val isFasting = widgetData.getBoolean("w_is_fasting", false)
+            val signedIn = widgetData.wBool("w_signed_in")
+            val isFasting = widgetData.wBool("w_is_fasting")
 
             // Card tap → open the fasting screen.
             views.setOnClickPendingIntent(
@@ -63,12 +63,12 @@ class FastingWidgetProvider : HomeWidgetProvider() {
             }
 
             views.setViewVisibility(R.id.fasting_signin, View.GONE)
-            val streak = widgetData.getLong("w_fast_streak", 0L)
+            val streak = widgetData.wLong("w_fast_streak")
 
             if (isFasting) {
-                val startMillis = widgetData.getLong("w_fast_start_millis", 0L)
-                val goalHours = widgetData.getLong("w_fast_goal_hours", 16L)
-                val phase = widgetData.getString("w_fast_phase", "") ?: ""
+                val startMillis = widgetData.wLong("w_fast_start_millis")
+                val goalHours = widgetData.wLong("w_fast_goal_hours", 16L)
+                val phase = widgetData.wStr("w_fast_phase")
 
                 // Chronometer counts up from the fast start, ticking on its own.
                 val base = SystemClock.elapsedRealtime() -

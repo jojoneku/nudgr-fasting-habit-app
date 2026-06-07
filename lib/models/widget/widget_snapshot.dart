@@ -92,26 +92,32 @@ class WidgetSnapshot {
   /// Flat key→value map written to `home_widget` prefs (one `saveWidgetData`
   /// call per entry). Keys are mirrored verbatim in the native providers — keep
   /// them in sync with `*WidgetProvider.kt`.
+  ///
+  /// Numbers are transported as **Strings** on purpose: the home_widget plugin
+  /// stores a Dart `int` via `putInt` and has no `Long` branch, so epoch-millis
+  /// values (which exceed 32-bit range) fail to save and small ints can't be
+  /// read back with `getLong`. Strings sidestep the codec ambiguity entirely;
+  /// the Kotlin providers parse them. Bools round-trip safely as bools.
   Map<String, Object?> toWidgetData() => {
         'w_signed_in': signedIn,
         'w_is_fasting': isFasting,
-        'w_fast_start_millis': fastStartMillis,
-        'w_target_millis': targetMillis,
-        'w_fast_goal_hours': fastingGoalHours,
-        'w_fast_streak': currentStreak,
+        'w_fast_start_millis': '$fastStartMillis',
+        'w_target_millis': '$targetMillis',
+        'w_fast_goal_hours': '$fastingGoalHours',
+        'w_fast_streak': '$currentStreak',
         'w_fast_phase': fastPhaseLabel,
-        'w_food_cals': todayCalories,
-        'w_food_goal': calorieGoal,
-        'w_food_protein': proteinGrams,
-        'w_food_protein_goal': proteinGoal,
+        'w_food_cals': '$todayCalories',
+        'w_food_goal': '$calorieGoal',
+        'w_food_protein': '$proteinGrams',
+        'w_food_protein_goal': '$proteinGoal',
         'w_expense_month': monthOutflowLabel,
         'w_expense_today': todayOutflowLabel,
         'w_weight': latestWeightLabel,
         'w_weight_delta': weightDeltaLabel,
-        'w_quests_done': questsDoneToday,
-        'w_quests_total': questsTotalToday,
+        'w_quests_done': '$questsDoneToday',
+        'w_quests_total': '$questsTotalToday',
         'w_next_quest': nextQuestLabel,
-        'w_next_quest_id': nextQuestId,
+        'w_next_quest_id': '$nextQuestId',
         'w_has_urgent': hasUrgentQuest,
       };
 

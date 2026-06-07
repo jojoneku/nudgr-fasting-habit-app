@@ -265,12 +265,13 @@ class WidgetBridgeService {
       await prefs.setStringList(StorageService.kWidgetPendingActions, queue);
 
       // Optimistic snapshot so the fasting widget responds immediately.
+      // Numbers go as Strings to match WidgetSnapshot.toWidgetData (see note there).
       if (action == 'startfast') {
         await HomeWidget.saveWidgetData('w_is_fasting', true);
-        await HomeWidget.saveWidgetData('w_fast_start_millis', now);
+        await HomeWidget.saveWidgetData('w_fast_start_millis', '$now');
       } else if (action == 'stopfast') {
         await HomeWidget.saveWidgetData('w_is_fasting', false);
-        await HomeWidget.saveWidgetData('w_fast_start_millis', 0);
+        await HomeWidget.saveWidgetData('w_fast_start_millis', '0');
       }
       await HomeWidget.updateWidget(
           qualifiedAndroidName: 'com.nudgr.app.FastingWidgetProvider');

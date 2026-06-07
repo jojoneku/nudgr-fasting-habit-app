@@ -26,7 +26,7 @@ class FoodWidgetProvider : HomeWidgetProvider() {
                 )
             )
 
-            val signedIn = widgetData.getBoolean("w_signed_in", false)
+            val signedIn = widgetData.wBool("w_signed_in")
             if (!signedIn) {
                 views.setViewVisibility(R.id.food_signin, View.VISIBLE)
                 views.setTextViewText(R.id.food_calories, "—")
@@ -37,10 +37,10 @@ class FoodWidgetProvider : HomeWidgetProvider() {
             }
 
             views.setViewVisibility(R.id.food_signin, View.GONE)
-            val cals = widgetData.getLong("w_food_cals", 0L)
-            val goal = widgetData.getLong("w_food_goal", 0L)
-            val protein = widgetData.getLong("w_food_protein", 0L)
-            val proteinGoal = widgetData.getLong("w_food_protein_goal", -1L)
+            val cals = widgetData.wLong("w_food_cals")
+            val goal = widgetData.wLong("w_food_goal")
+            val protein = widgetData.wLong("w_food_protein")
+            val proteinGoal = widgetData.wLong("w_food_protein_goal", -1L)
 
             views.setTextViewText(
                 R.id.food_calories,
