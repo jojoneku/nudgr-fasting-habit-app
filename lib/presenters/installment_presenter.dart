@@ -91,16 +91,16 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addInstallment(Installment i) async {
     _installments = [..._installments, i];
-    await _storage.saveInstallments(_installments);
     safeNotify();
+    await _storage.saveInstallments(_installments);
   }
 
   Future<void> updateInstallment(Installment i) async {
     _installments = [
       for (final inst in _installments) inst.id == i.id ? i : inst
     ];
-    await _storage.saveInstallments(_installments);
     safeNotify();
+    await _storage.saveInstallments(_installments);
   }
 
   Future<void> deleteInstallment(String id) async {
@@ -110,8 +110,8 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       await _ledger.deleteTransaction(txn.id);
     }
     _installments = _installments.where((i) => i.id != id).toList();
-    await _storage.saveInstallments(_installments);
     safeNotify();
+    await _storage.saveInstallments(_installments);
   }
 
   // ─── Mark paid / unpaid ───────────────────────────────────────────────────────

@@ -281,9 +281,10 @@ class BudgetPresenter extends ChangeNotifier {
       );
       _allBudgets = [..._allBudgets, newBudget];
     }
+    // Optimistic: repaint before persisting.
+    notifyListeners();
     await _storage.saveBudgets(_allBudgets);
     await _checkBudgetNotExceededXp();
-    notifyListeners();
   }
 
   Future<void> removeBudget(String categoryId) async {
@@ -291,8 +292,8 @@ class BudgetPresenter extends ChangeNotifier {
         .where(
             (b) => !(b.categoryId == categoryId && b.month == _selectedMonth))
         .toList();
-    await _storage.saveBudgets(_allBudgets);
     notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
   }
 
   // ─── Load ─────────────────────────────────────────────────────────────────────
@@ -306,8 +307,8 @@ class BudgetPresenter extends ChangeNotifier {
       return;
     }
     _categories = [..._categories, category];
-    await _storage.saveFinanceCategories(_categories);
     notifyListeners();
+    await _storage.saveFinanceCategories(_categories);
   }
 
   Future<void> load() async {
