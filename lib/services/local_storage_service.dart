@@ -24,6 +24,8 @@ import '../models/finance/financial_account.dart';
 import '../models/finance/monthly_summary.dart';
 import '../models/finance/receivable.dart';
 import '../models/finance/transaction_record.dart';
+import '../models/grocery/cart_item.dart';
+import '../models/grocery/remembered_price.dart';
 import '../models/food_feedback.dart';
 import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
@@ -134,6 +136,9 @@ class LocalStorageService extends StorageService {
     StorageService.keyMeasurementUnit,
     StorageService.keyLastRecompXpDate,
     StorageService.keyNotificationPreferences,
+    StorageService.keyGroceryCart,
+    StorageService.keyGroceryPriceMemory,
+    StorageService.keyGroceryBudget,
   ];
 
   /// Removes all `u/$userId/` prefixed prefs keys and resets the user
@@ -1359,6 +1364,76 @@ class LocalStorageService extends StorageService {
     } catch (_) {
       return null;
     }
+  }
+
+  // ── Grocery Cart (Plan 038) ──────────────────────────────────────────────────
+  // Local-only for now (no SyncDomain). Keys are user-scoped via [_k] so they
+  // are cleared on sign-out like other user data; cloud sync of price memory is
+  // a future enhancement.
+
+  @override
+  Future<void> saveGroceryCart(List<CartItem> items) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _k(StorageService.keyGroceryCart),
+      jsonEncode(items.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  @override
+  Future<List<CartItem>> loadGroceryCart() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyGroceryCart));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => CartItem.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error parsing grocery cart: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveGroceryPriceMemory(List<RememberedPrice> prices) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      _k(StorageService.keyGroceryPriceMemory),
+      jsonEncode(prices.map((e) => e.toJson()).toList()),
+    );
+  }
+
+  @override
+  Future<List<RememberedPrice>> loadGroceryPriceMemory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyGroceryPriceMemory));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => RememberedPrice.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error parsing price memory: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveGroceryBudget(double? budget) async {
+    final prefs = await SharedPreferences.getInstance();
+    final key = _k(StorageService.keyGroceryBudget);
+    if (budget == null) {
+      await prefs.remove(key);
+    } else {
+      await prefs.setDouble(key, budget);
+    }
+  }
+
+  @override
+  Future<double?> loadGroceryBudget() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(_k(StorageService.keyGroceryBudget));
   }
 
   // ── Theme (device-level, not user-scoped) ────────────────────────────────────
