@@ -637,7 +637,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // while external inflows/outflows on a sub correctly hit both accounts.
     final account = _accounts.where((a) => a.id == accountId).firstOrNull;
     final parentId = account?.parentAccountId;
-    final delta = type == TransactionType.inflow ? amount : -amount;
+    // Asset accounts: inflow raises the balance, outflow lowers it.
+    // Liability accounts (credit card / credit line / BNPL): balance = debt
+    // owed, so the sign inverts — spending (outflow) raises the debt and paying
+    // it down (inflow) lowers it. This matches the user's mental model and keeps
+    // net-worth math correct. Liabilities are always top-level (no parent) and
+    // sub-accounts are always assets, so deriving the sign from this account
+    // also yields the right delta for its parent leg.
+    final base = type == TransactionType.inflow ? amount : -amount;
+    final delta = (account?.isLiability ?? false) ? -base : base;
 
     _accounts = [
       for (final a in _accounts)

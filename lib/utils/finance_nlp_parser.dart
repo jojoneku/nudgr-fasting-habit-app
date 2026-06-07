@@ -61,6 +61,13 @@ PreparseResult preparseFinanceInput({
   final transfer = _tryTransfer(normalized, activeAccounts);
   if (transfer != null) return transfer.copyWith(rawInput: raw);
 
+  // Pattern A2 — pay a credit account ("paid bpi cc 5000 from gcash"). Resolves
+  // to a transfer that tops up (pays down) the credit account. Only fires when a
+  // liability account is the clear target; otherwise falls through to amounts so
+  // ordinary "pay jeepney 20" stays an expense.
+  final payCredit = _tryPayCredit(normalized, activeAccounts);
+  if (payCredit != null) return payCredit.copyWith(rawInput: raw);
+
   // Patterns B + C — signed / unsigned amount
   return _tryAmount(
     raw: raw,
@@ -166,6 +173,86 @@ PreparseResult? _tryTransfer(
     unresolvedTokens: const [],
     ambiguousAccountTokens: ambiguous,
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pattern A2 — pay a credit account
+// ─────────────────────────────────────────────────────────────────────────────
+
+PreparseResult? _tryPayCredit(
+    String normalized, List<FinancialAccount> accounts) {
+  final verbRe = RegExp(r'\b(?:paid|pay|settle)\b');
+  if (!verbRe.hasMatch(normalized)) return null;
+
+  // Exactly one amount, else let other patterns / the AI handle it.
+  final amounts = RegExp(r'(?<=^|\s)(\d+(?:\.\d+)?)(?=\s|$)')
+      .allMatches(normalized)
+      .toList();
+  if (amounts.length != 1) return null;
+  final amount = double.tryParse(amounts.first.group(1)!);
+  if (amount == null || amount <= 0) return null;
+
+  // "from <account>" splits the credit target (left) from the funder (right).
+  final fromIdx = normalized.indexOf(' from ');
+  final targetText =
+      fromIdx >= 0 ? normalized.substring(0, fromIdx) : normalized;
+  final funderText = fromIdx >= 0 ? normalized.substring(fromIdx + 6) : '';
+
+  // The payment only makes sense if a liability account is the clear target.
+  final toId = _matchAccountInText(targetText, accounts, liability: true);
+  if (toId == null) return null;
+
+  // Funder is optional here — if absent/unresolved, the AI clarifies which
+  // account to pay from before committing.
+  final fromId = funderText.trim().isNotEmpty
+      ? _matchAccountInText(funderText, accounts, liability: false)
+      : null;
+  if (fromId == toId) return null;
+
+  return PreparseResult(
+    rawInput: '',
+    amount: amount,
+    type: TransactionType.transfer,
+    accountId: fromId,
+    transferToAccountId: toId,
+  );
+}
+
+/// Finds an account whose [FinancialAccount.isLiability] equals [liability] that
+/// is named within [text]. Prefers the longest full-name substring (handles
+/// multi-word names like "BPI CC"), then falls back to per-token prefix matches.
+String? _matchAccountInText(
+  String text,
+  List<FinancialAccount> accounts, {
+  required bool liability,
+}) {
+  final pool = accounts.where((a) => a.isLiability == liability).toList();
+  final lower = text.toLowerCase();
+
+  String? bestId;
+  var bestLen = 0;
+  for (final a in pool) {
+    final name = a.name.toLowerCase();
+    if (name.isNotEmpty && lower.contains(name) && name.length > bestLen) {
+      bestId = a.id;
+      bestLen = name.length;
+    }
+  }
+  if (bestId != null) return bestId;
+
+  for (final tok in lower.split(RegExp(r'\s+'))) {
+    if (tok.length < _minAccountPrefixLength) continue;
+    for (final a in pool) {
+      for (final word in a.name.toLowerCase().split(RegExp(r'\s+'))) {
+        if (word == tok) return a.id;
+        if (word.length >= _minAccountPrefixLength &&
+            (word.startsWith(tok) || tok.startsWith(word))) {
+          return a.id;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

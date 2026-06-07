@@ -62,6 +62,13 @@ class FinancialAccount {
   final DateTime? maturityDate; // only used when category == timeDeposit
   final String?
       linkedAccountId; // custodian only: the liquid account where these funds physically live
+  // Liability-only credit fields (creditCard / creditLine / bnpl). All nullable
+  // so stored accounts from older versions deserialize unchanged.
+  final double? creditLimit; // total approved limit
+  final int? statementDay; // 1–28, day of month the statement closes
+  final int? paymentDueDay; // 1–28, day of month payment is due
+  final double? financeChargeRate; // monthly NOMINAL rate, e.g. 0.03 = 3%
+  final String? creditBrand; // preset key, e.g. 'bpi_rewards'; null = manual
   final DateTime updatedAt;
 
   FinancialAccount({
@@ -77,6 +84,11 @@ class FinancialAccount {
     this.goalTarget,
     this.maturityDate,
     this.linkedAccountId,
+    this.creditLimit,
+    this.statementDay,
+    this.paymentDueDay,
+    this.financeChargeRate,
+    this.creditBrand,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -98,6 +110,21 @@ class FinancialAccount {
   // balance = funds held for others — excluded from net worth and liquid cash
   bool get isCustodian => category == AccountCategory.custodian;
 
+  // --- Credit getters (meaningful only when isLiability) ---
+
+  /// What you currently owe on this card/line. Zero for non-liability accounts.
+  double get currentPayable => isLiability ? balance : 0;
+
+  /// Limit minus what's owed. Null when no limit is set or not a liability.
+  double? get availableCredit =>
+      (isLiability && creditLimit != null) ? creditLimit! - balance : null;
+
+  /// Owed / limit as a 0..1 ratio for the utilization meter. Null when no limit.
+  double? get utilization =>
+      (isLiability && creditLimit != null && creditLimit! > 0)
+          ? balance / creditLimit!
+          : null;
+
   factory FinancialAccount.fromJson(Map<String, dynamic> json) {
     return FinancialAccount(
       id: json['id'] as String,
@@ -114,6 +141,11 @@ class FinancialAccount {
           ? DateTime.parse(json['maturityDate'] as String)
           : null,
       linkedAccountId: json['linkedAccountId'] as String?,
+      creditLimit: (json['creditLimit'] as num?)?.toDouble(),
+      statementDay: (json['statementDay'] as num?)?.toInt(),
+      paymentDueDay: (json['paymentDueDay'] as num?)?.toInt(),
+      financeChargeRate: (json['financeChargeRate'] as num?)?.toDouble(),
+      creditBrand: json['creditBrand'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -132,6 +164,11 @@ class FinancialAccount {
         'goalTarget': goalTarget,
         'maturityDate': maturityDate?.toIso8601String(),
         'linkedAccountId': linkedAccountId,
+        'creditLimit': creditLimit,
+        'statementDay': statementDay,
+        'paymentDueDay': paymentDueDay,
+        'financeChargeRate': financeChargeRate,
+        'creditBrand': creditBrand,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -147,6 +184,11 @@ class FinancialAccount {
     double? goalTarget,
     DateTime? maturityDate,
     String? linkedAccountId,
+    double? creditLimit,
+    int? statementDay,
+    int? paymentDueDay,
+    double? financeChargeRate,
+    String? creditBrand,
     DateTime? updatedAt,
   }) {
     return FinancialAccount(
@@ -162,6 +204,11 @@ class FinancialAccount {
       goalTarget: goalTarget ?? this.goalTarget,
       maturityDate: maturityDate ?? this.maturityDate,
       linkedAccountId: linkedAccountId ?? this.linkedAccountId,
+      creditLimit: creditLimit ?? this.creditLimit,
+      statementDay: statementDay ?? this.statementDay,
+      paymentDueDay: paymentDueDay ?? this.paymentDueDay,
+      financeChargeRate: financeChargeRate ?? this.financeChargeRate,
+      creditBrand: creditBrand ?? this.creditBrand,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
