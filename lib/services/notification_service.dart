@@ -42,6 +42,8 @@ class NotificationService {
   static const int notifIdWeightReminder = 510;
   static const int notifIdCalorieGoal = 511;
   static const int notifIdBillsReminder = 600;
+  // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
+  static const int notifIdCreditDueBase = 620;
 
   // Budget warnings: stable int in 601–640 range
   static int _budgetWarningId(String budgetId) =>
@@ -984,6 +986,60 @@ class NotificationService {
   Future<void> cancelBillsReminder() async {
     if (!_isInitialized) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
+  }
+
+  /// Stable notification id for a credit account's due reminder, derived from
+  /// its id so re-scheduling replaces the prior one rather than stacking.
+  int _creditDueId(String accountId) =>
+      notifIdCreditDueBase + (accountId.hashCode.abs() % 100);
+
+  /// Schedule a monthly reminder on a credit account's payment [dueDay] at 9 AM.
+  Future<void> scheduleCreditDueReminder({
+    required String accountId,
+    required String accountName,
+    required int dueDay,
+  }) async {
+    if (!_isInitialized) return;
+    final id = _creditDueId(accountId);
+    await flutterLocalNotificationsPlugin.cancel(id);
+
+    final day = dueDay.clamp(1, 28);
+    final scheduled = _nextInstanceOfMonthDay(day, 9, 0);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdFinance,
+      channelNameFinance,
+      channelDescription: 'Bill reminders and budget-over-limit warnings',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: false,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        'Credit payment due',
+        '$accountName payment is due today. Settle it in Treasury.',
+        scheduled,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+      );
+    } catch (e) {
+      debugPrint(
+          'NotificationService: Error scheduling credit due reminder: $e');
+    }
+  }
+
+  Future<void> cancelCreditDueReminder(String accountId) async {
+    if (!_isInitialized) return;
+    await flutterLocalNotificationsPlugin.cancel(_creditDueId(accountId));
   }
 
   Future<void> showBudgetWarning(
