@@ -1,4 +1,4 @@
-# Plan 039 — Optimistic UI Rollout
+# Plan 041 — Optimistic UI Rollout
 
 **Status:** Finance/Treasury done (this PR). App-wide rollout = light backlog below.
 
