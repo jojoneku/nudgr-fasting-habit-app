@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Home-screen widget palette (Plan 039) — LIGHT mode.
+  RemoteViews cannot read Flutter's Theme.of(context), so these mirror
+  AppColorsLight in lib/app_colors.dart. Keep the two in sync when tokens change.
+  Dark-mode overrides live in res/values-night/widget_colors.xml.
+-->
+<resources>
+    <color name="widget_bg">#FFFFFFFF</color>
+    <color name="widget_bg_stroke">#1A000000</color>
+    <color name="widget_on_surface">#FF212121</color>
+    <color name="widget_on_surface_variant">#FF616161</color>
+    <color name="widget_accent">#FF0097A7</color>
+    <color name="widget_accent_on">#FFFFFFFF</color>
+    <color name="widget_purple">#FF7B1FA2</color>
+    <color name="widget_gold">#FFB8860B</color>
+    <color name="widget_urgent">#FFD32F2F</color>
+    <color name="widget_track">#1F000000</color>
+</resources>

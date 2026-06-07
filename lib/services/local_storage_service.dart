@@ -1375,6 +1375,40 @@ class LocalStorageService extends StorageService {
     return prefs.getString(StorageService.kThemeMode);
   }
 
+  // ── Home-screen widget bridge (device-level, unscoped, never synced) ─────────
+
+  @override
+  Future<void> saveWidgetLastUserId(String? userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (userId == null) {
+      await prefs.remove(StorageService.kWidgetLastUserId);
+    } else {
+      await prefs.setString(StorageService.kWidgetLastUserId, userId);
+    }
+  }
+
+  @override
+  Future<String?> loadWidgetLastUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(StorageService.kWidgetLastUserId);
+  }
+
+  @override
+  Future<void> saveWidgetPendingActions(List<String> actions) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (actions.isEmpty) {
+      await prefs.remove(StorageService.kWidgetPendingActions);
+    } else {
+      await prefs.setStringList(StorageService.kWidgetPendingActions, actions);
+    }
+  }
+
+  @override
+  Future<List<String>> loadWidgetPendingActions() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(StorageService.kWidgetPendingActions) ?? [];
+  }
+
   // ── Notification Preferences ─────────────────────────────────────────────────
 
   @override

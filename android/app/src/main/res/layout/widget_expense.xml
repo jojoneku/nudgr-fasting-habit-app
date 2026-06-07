@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Expense glance widget (Plan 039). Taps deep-link to the treasury ledger. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/expense_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_card_bg"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="SPENT THIS MONTH"
+        android:textColor="@color/widget_on_surface_variant"
+        android:textSize="11sp"
+        android:letterSpacing="0.10"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/expense_month"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/widget_on_surface"
+        android:textSize="28sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/expense_today"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:textColor="@color/widget_on_surface_variant"
+        android:textSize="12sp" />
+
+    <TextView
+        android:id="@+id/expense_signin"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:text="Open the app to sign in"
+        android:textColor="@color/widget_on_surface_variant"
+        android:textSize="12sp"
+        android:visibility="gone" />
+</LinearLayout>

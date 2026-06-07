@@ -73,6 +73,11 @@ abstract class StorageService {
   static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
+  // Home-screen widget bridge — DEVICE-LEVEL / UNSCOPED keys. They must survive
+  // without a userId so the headless isolate (which has no auth session) can
+  // re-scope storage and queue inline actions. See docs/android_widgets_spec.md.
+  static const String kWidgetLastUserId = 'widget.lastUserId';
+  static const String kWidgetPendingActions = 'widget.pendingActions';
   static const String keyWeightLog = 'weightLog';
   static const String keyBodyMeasurements = 'bodyMeasurements';
   static const String keyMeasurementUnit = 'measurementUnit';
@@ -211,6 +216,15 @@ abstract class StorageService {
   //  timestamp when the user last skipped; null when they've never skipped.
   Future<void> saveAiPromptSkippedAt(int? msSinceEpoch);
   Future<int?> loadAiPromptSkippedAt();
+
+  //  Home-screen widget bridge (device-level / unscoped) ─
+  //  Last signed-in user id, so the headless inline-action isolate can re-scope.
+  Future<void> saveWidgetLastUserId(String? userId);
+  Future<String?> loadWidgetLastUserId();
+  //  Inline-action queue: tokens recorded by the widget tap (background isolate),
+  //  drained and applied through the real presenters on next app foreground.
+  Future<void> saveWidgetPendingActions(List<String> actions);
+  Future<List<String>> loadWidgetPendingActions();
 
   //  Export / Import ─
   Future<String> exportAllData();
