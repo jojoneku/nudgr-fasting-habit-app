@@ -171,7 +171,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         // home-screen widgets so they reflect local data — sign-in only adds
         // cloud sync, not whether widgets work.
         if (mounted && !_authPresenter.isSignedIn) {
-          _reloadAll();
+          await _reloadAll();
           await _setupWidgetBridge();
         }
       }
@@ -232,7 +232,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     // Reload all presenters from the now-correct scoped namespace.
     // This covers the startup race where constructors read bare keys before
     // the user namespace was known, as well as user-switch scenarios.
-    _reloadAll();
+    // Awaited so the widget-bridge push below sees loaded data, not defaults.
+    await _reloadAll();
 
     // Wire the home-screen widget bridge to the now-scoped presenters. Persist
     // the user id so the inline-action background isolate can re-scope storage.
@@ -338,19 +339,31 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     await _widgetBridge!.drainPendingActions();
   }
 
-  void _reloadAll() {
-    _statsPresenter.loadStats();
-    _fastingPresenter.loadState();
-    _questPresenter.reload();
-    _activityPresenter.loadState();
-    _nutritionPresenter?.loadState();
-    _ledgerPresenter.load();
-    _treasuryPresenter.load();
-    _budgetPresenter.load();
-    _billsPresenter.load();
-    _historyPresenter.load();
-    _installmentPresenter.load();
-    _groceryCartPresenter.load();
+  Future<void> _reloadAll() async {
+    // Await the loads so callers (and the home-screen widget push below) see
+    // loaded data, not the presenters' empty construction-time defaults. Each
+    // load is isolated so one failure can't abort the others or sync setup.
+    final loads = <Future<void>>[
+      _statsPresenter.loadStats(),
+      _fastingPresenter.loadState(),
+      _questPresenter.reload(),
+      _activityPresenter.loadState(),
+      if (_nutritionPresenter != null) _nutritionPresenter!.loadState(),
+      _ledgerPresenter.load(),
+      _treasuryPresenter.load(),
+      _budgetPresenter.load(),
+      _billsPresenter.load(),
+      _historyPresenter.load(),
+      _installmentPresenter.load(),
+      _groceryCartPresenter.load(),
+    ];
+    await Future.wait(loads.map((f) async {
+      try {
+        await f;
+      } catch (e) {
+        debugPrint('AppShell._reloadAll: presenter load failed: $e');
+      }
+    }));
     // Refresh the home-screen widgets after a (re)load — e.g. once cloud data
     // has been pulled in.
     _widgetBridge?.pushSnapshot();
