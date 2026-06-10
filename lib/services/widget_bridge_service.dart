@@ -49,7 +49,8 @@ class WidgetBridgeService {
     'com.nudgr.app.FastingWidgetProvider',
     'com.nudgr.app.FoodWidgetProvider',
     'com.nudgr.app.ExpenseWidgetProvider',
-    'com.nudgr.app.WeightQuestWidgetProvider',
+    'com.nudgr.app.WeightWidgetProvider',
+    'com.nudgr.app.QuestWidgetProvider',
   ];
 
   Timer? _debounce;
