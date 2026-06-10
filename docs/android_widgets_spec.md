@@ -120,8 +120,10 @@ unavailable here (CLAUDE.md rule #7 governs Flutter widgets, not RemoteViews).
   - **Fasting** — 2×1 (Chronometer + Start/End) and 2×2 (adds ring, phase, streak).
   - **Food** — calories/goal progress bar + protein chip; tap → `nudgr://food`.
   - **Expense** — month spend (large) + today spend; tap → `nudgr://expense`.
-  - **Weight + Quests** — 2×2: latest weight + delta (→ `nudgr://weight`); quests done/total + next
-    quest, urgent state in accent; optional inline ✓ complete-next.
+  - **Weight** — 2×2: latest weight + delta; tap → `nudgr://weight`.
+  - **Quests** — 2×2: quests done/total + next quest (→ `nudgr://quests`), urgent state in accent;
+    inline ✓ complete-next. (Originally shipped combined with Weight; split into two widgets so each
+    can be placed/sized independently.)
 - **Micro-animations:** native widgets don't animate; in-app screens reached via deep-link keep the
   existing 150–300ms transitions.
 
