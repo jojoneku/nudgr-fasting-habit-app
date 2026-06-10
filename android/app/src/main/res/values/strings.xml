@@ -4,5 +4,6 @@
     <string name="widget_fasting_label">Nudgr — Fasting Timer</string>
     <string name="widget_food_label">Nudgr — Food Log</string>
     <string name="widget_expense_label">Nudgr — Expenses</string>
-    <string name="widget_weight_quest_label">Nudgr — Weight &amp; Quests</string>
+    <string name="widget_weight_label">Nudgr — Weight</string>
+    <string name="widget_quest_label">Nudgr — Quests</string>
 </resources>

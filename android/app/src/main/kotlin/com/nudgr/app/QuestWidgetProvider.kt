@@ -11,11 +11,11 @@ import es.antonborri.home_widget.HomeWidgetLaunchIntent
 import es.antonborri.home_widget.HomeWidgetProvider
 
 /**
- * Weight + Quests glance widget (Plan 039). The weight pane deep-links to the
- * weight log; the quest pane to quests, with an inline ✓ that completes the next
- * quest via a background action.
+ * Quests glance widget. Shows today's done/total and the next quest, with an
+ * inline ✓ that completes it via a background action (queued + applied on next
+ * app foreground); the card deep-links to quests.
  */
-class WeightQuestWidgetProvider : HomeWidgetProvider() {
+class QuestWidgetProvider : HomeWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -23,16 +23,10 @@ class WeightQuestWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         for (id in appWidgetIds) {
-            val views = RemoteViews(context.packageName, R.layout.widget_weight_quest)
+            val views = RemoteViews(context.packageName, R.layout.widget_quest)
 
             views.setOnClickPendingIntent(
-                R.id.weight_pane,
-                HomeWidgetLaunchIntent.getActivity(
-                    context, MainActivity::class.java, Uri.parse("nudgr://weight")
-                )
-            )
-            views.setOnClickPendingIntent(
-                R.id.quest_count,
+                R.id.quest_root,
                 HomeWidgetLaunchIntent.getActivity(
                     context, MainActivity::class.java, Uri.parse("nudgr://quests")
                 )
@@ -40,21 +34,16 @@ class WeightQuestWidgetProvider : HomeWidgetProvider() {
 
             val signedIn = widgetData.wBool("w_signed_in")
             if (!signedIn) {
-                views.setViewVisibility(R.id.weight_quest_signin, View.VISIBLE)
-                views.setViewVisibility(R.id.weight_pane, View.GONE)
-                views.setViewVisibility(R.id.quest_pane, View.GONE)
+                views.setViewVisibility(R.id.quest_signin, View.VISIBLE)
+                views.setViewVisibility(R.id.quest_count, View.GONE)
+                views.setViewVisibility(R.id.quest_next_row, View.GONE)
                 appWidgetManager.updateAppWidget(id, views)
                 continue
             }
 
-            views.setViewVisibility(R.id.weight_quest_signin, View.GONE)
-            views.setViewVisibility(R.id.weight_pane, View.VISIBLE)
-            views.setViewVisibility(R.id.quest_pane, View.VISIBLE)
-
-            val weight = widgetData.wStr("w_weight")
-            val weightDelta = widgetData.wStr("w_weight_delta")
-            views.setTextViewText(R.id.weight_value, if (weight.isNotEmpty()) weight else "—")
-            views.setTextViewText(R.id.weight_delta, weightDelta)
+            views.setViewVisibility(R.id.quest_signin, View.GONE)
+            views.setViewVisibility(R.id.quest_count, View.VISIBLE)
+            views.setViewVisibility(R.id.quest_next_row, View.VISIBLE)
 
             val done = widgetData.wLong("w_quests_done")
             val total = widgetData.wLong("w_quests_total")
