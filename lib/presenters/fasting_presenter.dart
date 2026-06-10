@@ -127,6 +127,18 @@ class FastingPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Rebases an active fast onto [start] — e.g. honoring the moment the user
+  /// tapped Start on the home-screen widget when the queued action is applied
+  /// on the next app foreground. Persists, then re-runs [loadState] so the
+  /// ticker and the fasting timer notification re-derive from the new start.
+  Future<void> rebaseStartTime(DateTime start) async {
+    if (!isFasting || startTime == null) return;
+    startTime = start;
+    elapsedSeconds = DateTime.now().difference(start).inSeconds;
+    await saveState();
+    await loadState();
+  }
+
   Future<void> saveState() async {
     debugPrint(
         'FastingPresenter: Saving state - isFasting: $isFasting, startTime: $startTime, eatingStartTime: $eatingStartTime');

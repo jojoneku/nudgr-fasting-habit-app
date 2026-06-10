@@ -54,6 +54,7 @@ class WidgetBridgeService {
 
   Timer? _debounce;
   bool _attached = false;
+  Map<String, Object?>? _lastPushed;
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -84,8 +85,16 @@ class WidgetBridgeService {
   // ── Snapshot push ────────────────────────────────────────────────────────────
 
   /// Builds the current snapshot and pushes it to every native provider.
+  ///
+  /// Skips the write when nothing changed since the last push: the fasting
+  /// ticker notifies every second while a fast/eating window is live, and
+  /// re-pushing an identical snapshot would spam 20+ channel writes plus four
+  /// provider broadcasts each second (elapsed time ticks natively via the
+  /// widget Chronometer, so it is not part of the snapshot).
   Future<void> pushSnapshot() async {
-    await _write(_build());
+    final data = _build().toWidgetData();
+    if (_lastPushed != null && mapEquals(_lastPushed, data)) return;
+    await _write(data);
   }
 
   /// Clears the snapshot on sign-out so a second account on a shared device never
@@ -93,18 +102,21 @@ class WidgetBridgeService {
   Future<void> clearForSignOut() async {
     await storage.saveWidgetLastUserId(null);
     await storage.saveWidgetPendingActions([]);
-    await _write(WidgetSnapshot.empty());
+    await _write(WidgetSnapshot.empty().toWidgetData());
   }
 
-  Future<void> _write(WidgetSnapshot snapshot) async {
+  Future<void> _write(Map<String, Object?> data) async {
     try {
-      for (final entry in snapshot.toWidgetData().entries) {
+      for (final entry in data.entries) {
         await HomeWidget.saveWidgetData(entry.key, entry.value);
       }
       for (final provider in _providers) {
         await HomeWidget.updateWidget(qualifiedAndroidName: provider);
       }
+      _lastPushed = data;
     } catch (e) {
+      // Leave _lastPushed unset so the next notify retries the full write.
+      _lastPushed = null;
       debugPrint('WidgetBridgeService: push failed: $e');
     }
   }
@@ -222,11 +234,9 @@ class WidgetBridgeService {
             case 'startfast':
               if (!fasting.isFasting) {
                 await fasting.startFast();
-                if (ts != null && fasting.startTime != null) {
-                  fasting.startTime = DateTime.fromMillisecondsSinceEpoch(ts);
-                  fasting.elapsedSeconds =
-                      DateTime.now().difference(fasting.startTime!).inSeconds;
-                  await fasting.saveState();
+                if (ts != null) {
+                  await fasting
+                      .rebaseStartTime(DateTime.fromMillisecondsSinceEpoch(ts));
                 }
               }
               break;
