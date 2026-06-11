@@ -215,7 +215,13 @@ class _NutritionSettingsSheetState extends State<_NutritionSettingsSheet> {
                   // ── Standard: TDEE card + fasting lock ──────────────────
                   // Macros come from the TDEE wizard — no duplicate field here.
                   if (isStandard) ...[
-                    _TdeeCard(presenter: widget.presenter),
+                    // Rebuild when the wizard saves a new profile, so the
+                    // target-calories number is fresh on return.
+                    ListenableBuilder(
+                      listenable: widget.presenter,
+                      builder: (_, __) =>
+                          _TdeeCard(presenter: widget.presenter),
+                    ),
                     const SizedBox(height: 20),
                     _ToggleRow(
                       label: 'Lock logging during fast',
