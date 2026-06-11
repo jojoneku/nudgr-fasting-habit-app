@@ -134,17 +134,9 @@ class _HeaderActions extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          tooltip: 'Previous month',
-          onPressed: () =>
-              presenter.setMonth(previousMonth(presenter.selectedMonth)),
-        ),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          tooltip: 'Next month',
-          onPressed: () =>
-              presenter.setMonth(nextMonth(presenter.selectedMonth)),
+        WebMonthSwitcher(
+          monthKey: presenter.selectedMonth,
+          onChanged: presenter.setMonth,
         ),
         const SizedBox(width: WebInsets.sm),
         FilledButton.icon(

@@ -70,9 +70,12 @@ class _WebBillsPageState extends State<WebBillsPage> {
                   installmentPresenter: widget.installmentPresenter,
                 ),
               ),
-              _MonthNavigator(
-                month: widget.presenter.selectedMonth,
-                onChanged: _setMonth,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: WebMonthSwitcher(
+                  monthKey: widget.presenter.selectedMonth,
+                  onChanged: _setMonth,
+                ),
               ),
               const SizedBox(height: WebInsets.lg),
               _KpiStrip(
@@ -117,37 +120,6 @@ class _WebBillsPageState extends State<WebBillsPage> {
           ),
         );
       },
-    );
-  }
-}
-
-// ─── Month navigator ────────────────────────────────────────────────────────
-
-class _MonthNavigator extends StatelessWidget {
-  final String month;
-  final ValueChanged<String> onChanged;
-
-  const _MonthNavigator({required this.month, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        IconButton(
-          icon: const Icon(Icons.chevron_left),
-          onPressed: () => onChanged(previousMonth(month)),
-          tooltip: 'Previous month',
-        ),
-        Text(monthLabel(month),
-            style: theme.textTheme.titleMedium
-                ?.copyWith(fontWeight: FontWeight.w600)),
-        IconButton(
-          icon: const Icon(Icons.chevron_right),
-          onPressed: () => onChanged(nextMonth(month)),
-          tooltip: 'Next month',
-        ),
-      ],
     );
   }
 }

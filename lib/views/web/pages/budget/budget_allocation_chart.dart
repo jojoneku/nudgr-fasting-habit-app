@@ -123,17 +123,33 @@ class BudgetAllocationChart extends StatelessWidget {
                     barRods: [
                       BarChartRodData(
                         toY: bars[i].allocated,
-                        color: cs.primary,
-                        width: 14,
-                        borderRadius: BorderRadius.circular(4),
+                        width: 18,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(5)),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: [
+                            cs.primary.withValues(alpha: 0.65),
+                            cs.primary
+                          ],
+                        ),
                       ),
                       BarChartRodData(
                         toY: bars[i].spent,
-                        color: bars[i].spent > bars[i].allocated
-                            ? cs.error
-                            : cs.secondary,
-                        width: 14,
-                        borderRadius: BorderRadius.circular(4),
+                        width: 18,
+                        borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(5)),
+                        gradient: LinearGradient(
+                          begin: Alignment.bottomCenter,
+                          end: Alignment.topCenter,
+                          colors: bars[i].spent > bars[i].allocated
+                              ? [cs.error.withValues(alpha: 0.65), cs.error]
+                              : [
+                                  cs.secondary.withValues(alpha: 0.65),
+                                  cs.secondary
+                                ],
+                        ),
                       ),
                     ],
                   ),
