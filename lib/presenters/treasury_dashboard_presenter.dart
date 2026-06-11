@@ -40,6 +40,25 @@ class AffordVerdict {
   });
 }
 
+/// A flattened account-balance row for the web dashboard accounts table.
+/// Liquid rows show [balance] and the [held]-for-others slice; credit rows
+/// show the current payable as [balance] and the available limit as [yours].
+class DashboardAccountRow {
+  final String name;
+  final double balance;
+  final double held;
+  final double yours;
+  final bool isCredit;
+
+  const DashboardAccountRow({
+    required this.name,
+    required this.balance,
+    required this.held,
+    required this.yours,
+    required this.isCredit,
+  });
+}
+
 class TreasuryDashboardPresenter extends ChangeNotifier {
   TreasuryDashboardPresenter(StorageService storage, [LedgerPresenter? ledger])
       : _storage = storage,
@@ -267,6 +286,31 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       spareAfter: spareAfter,
       accountShortfall: accountShortfall,
     );
+  }
+
+  /// Flattened account-balance rows for the web dashboard accounts table —
+  /// liquid accounts (balance / held / yours) followed by credit accounts
+  /// (payable / available limit). Assembly lives here, not in `build()`.
+  List<DashboardAccountRow> get dashboardAccountRows {
+    final held = heldAmountByAccountId;
+    return [
+      for (final a in liquidAccounts)
+        DashboardAccountRow(
+          name: a.name,
+          balance: a.balance,
+          held: held[a.id] ?? 0.0,
+          yours: a.balance - (held[a.id] ?? 0.0),
+          isCredit: false,
+        ),
+      for (final a in creditAccounts)
+        DashboardAccountRow(
+          name: a.name,
+          balance: a.currentPayable,
+          held: 0.0,
+          yours: a.availableCredit ?? 0.0,
+          isCredit: true,
+        ),
+    ];
   }
 
   List<FinancialAccount> get custodianAccounts =>

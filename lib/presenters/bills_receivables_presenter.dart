@@ -16,6 +16,10 @@ import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
+/// Lifecycle status of a bill relative to today — drives the web status badge
+/// so the view never computes due-date conditionals in `build` (Rule 1).
+enum BillStatus { paid, overdue, dueSoon, unpaid }
+
 class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   BillsReceivablesPresenter(
     StorageService storage,
@@ -100,6 +104,44 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   double get totalReceived => receivables
       .where((r) => r.isReceived)
       .fold(0.0, (sum, r) => sum + (r.receivedAmount ?? r.amount));
+
+  /// Outstanding (not-yet-received) receivable amount for the selected month —
+  /// the web KPI strip's "Pending receivables".
+  double get totalReceivablesPending =>
+      receivables.where((r) => !r.isReceived).fold(0.0, (s, r) => s + r.amount);
+
+  // ─── Web helpers (Plan 050-C) ─────────────────────────────────────────────────
+
+  /// Total still-owed bills + budgeted expenses for the selected month — the web
+  /// KPI strip's "Unpaid bills".
+  double get totalUnpaidObligations =>
+      totalBillsPending +
+      budgetedExpenses
+          .where((e) => !e.isPaid)
+          .fold(0.0, (s, e) => s + e.allocatedAmount);
+
+  /// Human-readable account name for [accountId] (e.g. the bill's funding
+  /// account), or null when unset/unknown. Keeps account lookups out of `build`.
+  String? accountName(String? accountId) {
+    if (accountId == null) return null;
+    final match = accounts.where((a) => a.id == accountId).firstOrNull;
+    return match?.name;
+  }
+
+  /// Lifecycle status of a bill relative to today, used to drive the web status
+  /// badge without conditionals in `build`.
+  BillStatus billStatus(Bill bill) {
+    if (bill.isPaid) return BillStatus.paid;
+    final now = DateTime.now();
+    final dueDay = bill.dueDay.clamp(1, 28);
+    // Only compare day-of-month against today for the current month — past or
+    // future months have no meaningful "overdue/due-soon" relative to now.
+    if (bill.month == toMonthKey(now)) {
+      if (now.day > dueDay) return BillStatus.overdue;
+      if (dueDay - now.day <= 5) return BillStatus.dueSoon;
+    }
+    return BillStatus.unpaid;
+  }
 
   // ─── Budgeted Expense getters ─────────────────────────────────────────────────
 

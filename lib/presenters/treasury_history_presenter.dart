@@ -38,6 +38,75 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
+  /// True when there are no closed-month summaries to display yet.
+  bool get hasNoSummaries => _summaries.isEmpty;
+
+  // ─── Web derived data (Plan 050-E) ─────────────────────────────────────────────
+
+  /// Summaries ordered oldest → newest, for left-to-right chart plotting.
+  List<MonthlySummary> get summariesChronological {
+    final sorted = [..._summaries];
+    sorted.sort((a, b) => a.month.compareTo(b.month));
+    return sorted;
+  }
+
+  /// Savings rate for a summary = net savings / total inflow. Returns 0 when
+  /// there was no inflow that month.
+  double savingsRate(MonthlySummary s) {
+    if (s.totalInflow <= 0) return 0;
+    return s.netSavings / s.totalInflow;
+  }
+
+  /// Trend points for the net-cash-flow chart, oldest → newest. Each point
+  /// carries the parallel inflow / outflow so the view can plot multiple series
+  /// without doing any math in `build()`.
+  List<HistoryTrendPoint> get trendPoints {
+    final chrono = summariesChronological;
+    return [
+      for (var i = 0; i < chrono.length; i++)
+        HistoryTrendPoint(
+          index: i.toDouble(),
+          month: chrono[i].month,
+          net: chrono[i].netSavings,
+          inflow: chrono[i].totalInflow,
+          outflow: chrono[i].totalOutflow,
+        ),
+    ];
+  }
+
+  /// Largest absolute value across net / inflow / outflow — used by the view to
+  /// set the chart's vertical bounds without scanning the list in `build()`.
+  double get trendMaxMagnitude {
+    var maxMag = 0.0;
+    for (final s in _summaries) {
+      maxMag = [
+        maxMag,
+        s.netSavings.abs(),
+        s.totalInflow.abs(),
+        s.totalOutflow.abs(),
+      ].reduce((a, b) => a > b ? a : b);
+    }
+    return maxMag == 0 ? 1 : maxMag;
+  }
+
+  /// Average monthly net savings across all closed months (0 when none).
+  double get averageNetSavings {
+    if (_summaries.isEmpty) return 0;
+    final total = _summaries.fold(0.0, (s, m) => s + m.netSavings);
+    return total / _summaries.length;
+  }
+
+  /// Average savings rate across all closed months (0 when none).
+  double get averageSavingsRate {
+    if (_summaries.isEmpty) return 0;
+    final total = _summaries.fold(0.0, (s, m) => s + savingsRate(m));
+    return total / _summaries.length;
+  }
+
+  /// Net savings summed across every closed month.
+  double get cumulativeNetSavings =>
+      _summaries.fold(0.0, (s, m) => s + m.netSavings);
+
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
   Future<void> load() async {
@@ -134,4 +203,27 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     }
     return result;
   }
+}
+
+/// A single plotted point in the History trend chart (Plan 050-E). Pre-computed
+/// in [TreasuryHistoryPresenter.trendPoints] so the view does zero math.
+class HistoryTrendPoint {
+  /// Zero-based x position (oldest = 0).
+  final double index;
+
+  /// 'YYYY-MM' month key for this point.
+  final String month;
+
+  /// Net savings (inflow − outflow) for the month.
+  final double net;
+  final double inflow;
+  final double outflow;
+
+  const HistoryTrendPoint({
+    required this.index,
+    required this.month,
+    required this.net,
+    required this.inflow,
+    required this.outflow,
+  });
 }
