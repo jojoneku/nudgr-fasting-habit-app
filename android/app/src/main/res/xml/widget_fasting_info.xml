@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Fasting widget config (Plan 039). The Chronometer ticks natively, so no OS
-     update period is needed; the app pushes data changes via home_widget. -->
+<!-- Fasting widget config (Plan 039). The Chronometer ticks natively; the app
+     pushes data changes via home_widget. The 30-min update period (the OS
+     minimum) is a backstop so the progress bar keeps advancing while the app
+     process is dead. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:minWidth="250dp"
     android:minHeight="110dp"
@@ -10,4 +12,4 @@
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/widget_fasting"
     android:previewLayout="@layout/widget_fasting"
-    android:updatePeriodMillis="0" />
+    android:updatePeriodMillis="1800000" />

@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetLaunchIntent
@@ -22,34 +23,49 @@ class WeightWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         for (id in appWidgetIds) {
-            val views = RemoteViews(context.packageName, R.layout.widget_weight)
-
-            views.setOnClickPendingIntent(
-                R.id.weight_root,
-                HomeWidgetLaunchIntent.getActivity(
-                    context, MainActivity::class.java, Uri.parse("nudgr://weight")
-                )
-            )
-
-            val signedIn = widgetData.wBool("w_signed_in")
-            if (!signedIn) {
-                views.setViewVisibility(R.id.weight_signin, View.VISIBLE)
-                views.setViewVisibility(R.id.weight_value, View.GONE)
-                views.setViewVisibility(R.id.weight_delta, View.GONE)
-                appWidgetManager.updateAppWidget(id, views)
-                continue
+            // A throwing render would leave the widget silently stuck on its
+            // last state until the next push — log and keep the others alive.
+            try {
+                render(context, appWidgetManager, id, widgetData)
+            } catch (e: Exception) {
+                Log.e("WeightWidget", "render failed", e)
             }
-
-            views.setViewVisibility(R.id.weight_signin, View.GONE)
-            views.setViewVisibility(R.id.weight_value, View.VISIBLE)
-            views.setViewVisibility(R.id.weight_delta, View.VISIBLE)
-
-            val weight = widgetData.wStr("w_weight")
-            val weightDelta = widgetData.wStr("w_weight_delta")
-            views.setTextViewText(R.id.weight_value, if (weight.isNotEmpty()) weight else "—")
-            views.setTextViewText(R.id.weight_delta, weightDelta)
-
-            appWidgetManager.updateAppWidget(id, views)
         }
+    }
+
+    private fun render(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        id: Int,
+        widgetData: SharedPreferences
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.widget_weight)
+
+        views.setOnClickPendingIntent(
+            R.id.weight_root,
+            HomeWidgetLaunchIntent.getActivity(
+                context, MainActivity::class.java, Uri.parse("nudgr://weight")
+            )
+        )
+
+        val signedIn = widgetData.wBool("w_signed_in")
+        if (!signedIn) {
+            views.setViewVisibility(R.id.weight_signin, View.VISIBLE)
+            views.setViewVisibility(R.id.weight_value, View.GONE)
+            views.setViewVisibility(R.id.weight_delta, View.GONE)
+            appWidgetManager.updateAppWidget(id, views)
+            return
+        }
+
+        views.setViewVisibility(R.id.weight_signin, View.GONE)
+        views.setViewVisibility(R.id.weight_value, View.VISIBLE)
+        views.setViewVisibility(R.id.weight_delta, View.VISIBLE)
+
+        val weight = widgetData.wStr("w_weight")
+        val weightDelta = widgetData.wStr("w_weight_delta")
+        views.setTextViewText(R.id.weight_value, if (weight.isNotEmpty()) weight else "—")
+        views.setTextViewText(R.id.weight_delta, weightDelta)
+
+        appWidgetManager.updateAppWidget(id, views)
     }
 }

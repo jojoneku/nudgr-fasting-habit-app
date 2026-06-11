@@ -4,6 +4,7 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
@@ -23,48 +24,74 @@ class QuestWidgetProvider : HomeWidgetProvider() {
         widgetData: SharedPreferences
     ) {
         for (id in appWidgetIds) {
-            val views = RemoteViews(context.packageName, R.layout.widget_quest)
+            // A throwing render would leave the widget silently stuck on its
+            // last state until the next push — log and keep the others alive.
+            try {
+                render(context, appWidgetManager, id, widgetData)
+            } catch (e: Exception) {
+                Log.e("QuestWidget", "render failed", e)
+            }
+        }
+    }
 
+    private fun render(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        id: Int,
+        widgetData: SharedPreferences
+    ) {
+        val views = RemoteViews(context.packageName, R.layout.widget_quest)
+
+        views.setOnClickPendingIntent(
+            R.id.quest_root,
+            HomeWidgetLaunchIntent.getActivity(
+                context, MainActivity::class.java, Uri.parse("nudgr://quests")
+            )
+        )
+
+        val signedIn = widgetData.wBool("w_signed_in")
+        if (!signedIn) {
+            views.setViewVisibility(R.id.quest_signin, View.VISIBLE)
+            views.setViewVisibility(R.id.quest_count, View.GONE)
+            views.setViewVisibility(R.id.quest_next_row, View.GONE)
+            appWidgetManager.updateAppWidget(id, views)
+            return
+        }
+
+        views.setViewVisibility(R.id.quest_signin, View.GONE)
+        views.setViewVisibility(R.id.quest_count, View.VISIBLE)
+        views.setViewVisibility(R.id.quest_next_row, View.VISIBLE)
+
+        // Today's quest set is generated in-app; after midnight the snapshot
+        // describes yesterday, so its counts/next-quest (and the inline ✓,
+        // which carries yesterday's quest id) must not render.
+        if (!widgetData.wIsToday()) {
+            views.setTextViewText(R.id.quest_count, "—")
+            views.setTextViewText(R.id.quest_next, "Open app to refresh")
+            views.setViewVisibility(R.id.btn_quest_done, View.GONE)
+            appWidgetManager.updateAppWidget(id, views)
+            return
+        }
+
+        val done = widgetData.wLong("w_quests_done")
+        val total = widgetData.wLong("w_quests_total")
+        val next = widgetData.wStr("w_next_quest")
+        val nextId = widgetData.wLong("w_next_quest_id", -1L)
+        views.setTextViewText(R.id.quest_count, "$done/$total")
+        views.setTextViewText(R.id.quest_next, if (next.isNotEmpty()) next else "All done")
+
+        if (nextId >= 0) {
+            views.setViewVisibility(R.id.btn_quest_done, View.VISIBLE)
             views.setOnClickPendingIntent(
-                R.id.quest_root,
-                HomeWidgetLaunchIntent.getActivity(
-                    context, MainActivity::class.java, Uri.parse("nudgr://quests")
+                R.id.btn_quest_done,
+                HomeWidgetBackgroundIntent.getBroadcast(
+                    context, Uri.parse("nudgr://completequest?id=$nextId")
                 )
             )
-
-            val signedIn = widgetData.wBool("w_signed_in")
-            if (!signedIn) {
-                views.setViewVisibility(R.id.quest_signin, View.VISIBLE)
-                views.setViewVisibility(R.id.quest_count, View.GONE)
-                views.setViewVisibility(R.id.quest_next_row, View.GONE)
-                appWidgetManager.updateAppWidget(id, views)
-                continue
-            }
-
-            views.setViewVisibility(R.id.quest_signin, View.GONE)
-            views.setViewVisibility(R.id.quest_count, View.VISIBLE)
-            views.setViewVisibility(R.id.quest_next_row, View.VISIBLE)
-
-            val done = widgetData.wLong("w_quests_done")
-            val total = widgetData.wLong("w_quests_total")
-            val next = widgetData.wStr("w_next_quest")
-            val nextId = widgetData.wLong("w_next_quest_id", -1L)
-            views.setTextViewText(R.id.quest_count, "$done/$total")
-            views.setTextViewText(R.id.quest_next, if (next.isNotEmpty()) next else "All done")
-
-            if (nextId >= 0) {
-                views.setViewVisibility(R.id.btn_quest_done, View.VISIBLE)
-                views.setOnClickPendingIntent(
-                    R.id.btn_quest_done,
-                    HomeWidgetBackgroundIntent.getBroadcast(
-                        context, Uri.parse("nudgr://completequest?id=$nextId")
-                    )
-                )
-            } else {
-                views.setViewVisibility(R.id.btn_quest_done, View.GONE)
-            }
-
-            appWidgetManager.updateAppWidget(id, views)
+        } else {
+            views.setViewVisibility(R.id.btn_quest_done, View.GONE)
         }
+
+        appWidgetManager.updateAppWidget(id, views)
     }
 }

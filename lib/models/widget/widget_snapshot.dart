@@ -13,6 +13,12 @@
 class WidgetSnapshot {
   final bool signedIn;
 
+  /// Local calendar day ('yyyy-MM-dd') the snapshot was built on. Day-scoped
+  /// values (today's calories/quests/spend) go stale once midnight passes
+  /// without the app running; the native providers compare this against the
+  /// device date and blank those values instead of showing yesterday's.
+  final String snapshotDate;
+
   // Fasting
   final bool isFasting;
   final int fastStartMillis; // epoch ms; 0 when not fasting (Chronometer base)
@@ -44,6 +50,7 @@ class WidgetSnapshot {
 
   const WidgetSnapshot({
     required this.signedIn,
+    this.snapshotDate = '',
     required this.isFasting,
     required this.fastStartMillis,
     required this.targetMillis,
@@ -100,6 +107,7 @@ class WidgetSnapshot {
   /// the Kotlin providers parse them. Bools round-trip safely as bools.
   Map<String, Object?> toWidgetData() => {
         'w_signed_in': signedIn,
+        'w_date': snapshotDate,
         'w_is_fasting': isFasting,
         'w_fast_start_millis': '$fastStartMillis',
         'w_target_millis': '$targetMillis',
