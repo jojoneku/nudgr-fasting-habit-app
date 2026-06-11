@@ -185,29 +185,7 @@ class _KpiStrip extends StatelessWidget {
         icon: Icons.credit_score_outlined,
       ),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final stack = constraints.maxWidth < 640;
-        if (stack) {
-          return Column(
-            children: [
-              for (final t in tiles) ...[
-                t,
-                if (t != tiles.last) const SizedBox(height: WebInsets.md),
-              ],
-            ],
-          );
-        }
-        return Row(
-          children: [
-            for (var i = 0; i < tiles.length; i++) ...[
-              Expanded(child: tiles[i]),
-              if (i != tiles.length - 1) const SizedBox(width: WebInsets.md),
-            ],
-          ],
-        );
-      },
-    );
+    return WebStatGrid(tiles: tiles);
   }
 }
 

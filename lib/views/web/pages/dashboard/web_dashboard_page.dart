@@ -48,25 +48,14 @@ class WebDashboardPage extends StatelessWidget {
   }
 }
 
-/// A flowing strip of KPI tiles that each take a bounded width and wrap.
+/// A strip of KPI tiles laid out in balanced full rows (no card left hanging
+/// alone on the last row) via [WebStatGrid].
 class _StatStrip extends StatelessWidget {
   final List<Widget> tiles;
   const _StatStrip({required this.tiles});
 
   @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: WebInsets.lg,
-      runSpacing: WebInsets.lg,
-      children: [
-        for (final tile in tiles)
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: 220, maxWidth: 320),
-            child: tile,
-          ),
-      ],
-    );
-  }
+  Widget build(BuildContext context) => WebStatGrid(tiles: tiles);
 }
 
 class _PositionStrip extends StatelessWidget {

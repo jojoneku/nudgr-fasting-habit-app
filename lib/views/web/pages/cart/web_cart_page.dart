@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
 import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
-import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 import '../../widgets/web_widgets.dart';
@@ -121,20 +120,7 @@ class _StatStrip extends StatelessWidget {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final cols = constraints.maxWidth >= 900 ? 4 : 2;
-        const gap = WebInsets.lg;
-        final tileWidth = (constraints.maxWidth - gap * (cols - 1)) / cols;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final t in tiles) SizedBox(width: tileWidth, child: t),
-          ],
-        );
-      },
-    );
+    return WebStatGrid(tiles: tiles);
   }
 }
 

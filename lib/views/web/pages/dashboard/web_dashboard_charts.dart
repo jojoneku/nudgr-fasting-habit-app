@@ -44,7 +44,7 @@ class ExpenseByCategoryDonut extends StatelessWidget {
         PieChartSectionData(
           value: slices[i].$2,
           color: color,
-          radius: 46,
+          radius: 58,
           showTitle: false,
         ),
       );
@@ -55,15 +55,15 @@ class ExpenseByCategoryDonut extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         SizedBox(
-          height: 180,
+          height: 200,
           child: Stack(
             alignment: Alignment.center,
             children: [
               PieChart(
                 PieChartData(
                   sections: sections,
-                  centerSpaceRadius: 48,
-                  sectionsSpace: 2,
+                  centerSpaceRadius: 56,
+                  sectionsSpace: 3,
                   startDegreeOffset: -90,
                 ),
               ),
@@ -114,31 +114,41 @@ class Last30DaySpendChart extends StatelessWidget {
     }
 
     final maxY = days.fold<double>(0, (m, d) => d.amount > m ? d.amount : m);
-    final groups = <BarChartGroupData>[];
-    for (var i = 0; i < days.length; i++) {
-      groups.add(
-        BarChartGroupData(
-          x: i,
-          barRods: [
-            BarChartRodData(
-              toY: days[i].amount,
-              color: cs.primary,
-              width: 5,
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(2)),
-            ),
-          ],
-        ),
-      );
-    }
+    final spots = <FlSpot>[
+      for (var i = 0; i < days.length; i++)
+        FlSpot(i.toDouble(), days[i].amount),
+    ];
 
     return SizedBox(
-      height: 180,
-      child: BarChart(
-        BarChartData(
-          maxY: maxY <= 0 ? 1 : maxY * 1.15,
-          barGroups: groups,
-          alignment: BarChartAlignment.spaceBetween,
+      height: 200,
+      child: LineChart(
+        LineChartData(
+          minX: 0,
+          maxX: (days.length - 1).toDouble(),
+          minY: 0,
+          maxY: maxY <= 0 ? 1 : maxY * 1.2,
+          lineBarsData: [
+            LineChartBarData(
+              spots: spots,
+              isCurved: true,
+              curveSmoothness: 0.32,
+              preventCurveOverShooting: true,
+              color: cs.primary,
+              barWidth: 2.5,
+              dotData: const FlDotData(show: false),
+              belowBarData: BarAreaData(
+                show: true,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    cs.primary.withValues(alpha: 0.32),
+                    cs.primary.withValues(alpha: 0.02),
+                  ],
+                ),
+              ),
+            ),
+          ],
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
@@ -149,17 +159,17 @@ class Last30DaySpendChart extends StatelessWidget {
             ),
           ),
           borderData: FlBorderData(show: false),
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
+          lineTouchData: LineTouchData(
+            touchTooltipData: LineTouchTooltipData(
               getTooltipColor: (_) => cs.inverseSurface,
-              getTooltipItem: (group, _, rod, __) {
-                final d = days[group.x];
-                return BarTooltipItem(
-                  '${d.date.month}/${d.date.day}\n${formatPeso(rod.toY)}',
+              getTooltipItems: (spots) => spots.map((s) {
+                final d = days[s.x.toInt()];
+                return LineTooltipItem(
+                  '${d.date.month}/${d.date.day}\n${formatPeso(s.y)}',
                   theme.textTheme.labelSmall!
                       .copyWith(color: cs.onInverseSurface),
                 );
-              },
+              }).toList(),
             ),
           ),
           titlesData: FlTitlesData(
@@ -245,17 +255,25 @@ class BudgetByGroupChart extends StatelessWidget {
           barRods: [
             BarChartRodData(
               toY: allocated[g] ?? 0,
-              color: cs.primary,
-              width: 12,
+              width: 18,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(3)),
+                  const BorderRadius.vertical(top: Radius.circular(5)),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [cs.primary.withValues(alpha: 0.65), cs.primary],
+              ),
             ),
             BarChartRodData(
               toY: spent[g] ?? 0,
-              color: cs.tertiary,
-              width: 12,
+              width: 18,
               borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(3)),
+                  const BorderRadius.vertical(top: Radius.circular(5)),
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [cs.tertiary.withValues(alpha: 0.65), cs.tertiary],
+              ),
             ),
           ],
         ),

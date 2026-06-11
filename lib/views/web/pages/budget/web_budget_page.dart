@@ -196,23 +196,7 @@ class _StatStrip extends StatelessWidget {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        const gap = WebInsets.lg;
-        final width = (constraints.maxWidth - gap * 3) / 4;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
-            for (final tile in tiles)
-              SizedBox(
-                width: width < 180 ? constraints.maxWidth : width,
-                child: tile,
-              ),
-          ],
-        );
-      },
-    );
+    return WebStatGrid(tiles: tiles);
   }
 }
 

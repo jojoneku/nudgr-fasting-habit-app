@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../widgets/web_widgets.dart';
+import 'history_matrix.dart';
 import 'history_trend_chart.dart';
 import 'month_detail_dialog.dart';
 
@@ -32,6 +33,10 @@ class WebHistoryPage extends StatelessWidget {
               ),
               _KpiStrip(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
+              _MonthMatrixCard(presenter: presenter),
+              const SizedBox(height: WebInsets.xl),
+              _CategoryMatrixCard(presenter: presenter),
+              const SizedBox(height: WebInsets.xl),
               _TrendCard(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
               _SummaryTableCard(presenter: presenter),
@@ -60,7 +65,7 @@ class _KpiStrip extends StatelessWidget {
     final tiles = <Widget>[
       WebStatTile(
         label: 'Cumulative net',
-        value: _signedPeso(cumulative),
+        value: formatPesoSigned(cumulative),
         valueColor: _toneColor(cs, cumulative),
         sub: '$monthCount closed ${monthCount == 1 ? 'month' : 'months'}',
         icon: Icons.savings_outlined,
@@ -68,32 +73,58 @@ class _KpiStrip extends StatelessWidget {
       ),
       WebStatTile(
         label: 'Avg net / month',
-        value: _signedPeso(avgNet),
+        value: formatPesoSigned(avgNet),
         valueColor: _toneColor(cs, avgNet),
         icon: Icons.trending_up,
       ),
       WebStatTile(
         label: 'Avg savings rate',
-        value: _percent(avgRate),
+        value: formatPercent(avgRate),
         valueColor: _toneColor(cs, avgRate),
         icon: Icons.percent,
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final perRow = constraints.maxWidth < 720 ? 1 : tiles.length;
-        const spacing = WebInsets.lg;
-        final tileWidth =
-            (constraints.maxWidth - spacing * (perRow - 1)) / perRow;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final t in tiles) SizedBox(width: tileWidth, child: t),
-          ],
-        );
-      },
+    return WebStatGrid(tiles: tiles);
+  }
+}
+
+// ─── Sheet-parity matrices ──────────────────────────────────────────────────
+
+class _MonthMatrixCard extends StatelessWidget {
+  final TreasuryHistoryPresenter presenter;
+  const _MonthMatrixCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final columns = presenter.monthMatrix;
+    return WebCard(
+      title: 'Monthly summary',
+      description:
+          'Income, expenses, net, savings rate, and cumulative — per month.',
+      child: columns.isEmpty
+          ? const _EmptyHint(text: 'Log transactions to build your history.')
+          : MonthMatrixTable(columns: columns),
+    );
+  }
+}
+
+class _CategoryMatrixCard extends StatelessWidget {
+  final TreasuryHistoryPresenter presenter;
+  const _CategoryMatrixCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = presenter.categoryMatrix;
+    return WebCard(
+      title: 'Spending by category',
+      description: 'Every category, month by month.',
+      child: rows.isEmpty
+          ? const _EmptyHint(text: 'No categorized spending yet.')
+          : CategoryMatrixTable(
+              months: presenter.activeMonths,
+              rows: rows,
+            ),
     );
   }
 }
@@ -219,7 +250,7 @@ class _NetText extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Text(
-      _signedPeso(value),
+      formatPesoSigned(value),
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: _toneColor(cs, value),
             fontWeight: FontWeight.w600,
@@ -239,7 +270,7 @@ class _RateBadge extends StatelessWidget {
         : (rate >= 0.2 ? WebBadgeTone.success : WebBadgeTone.neutral);
     return Align(
       alignment: Alignment.centerRight,
-      child: WebBadge(_percent(rate), tone: tone),
+      child: WebBadge(formatPercent(rate), tone: tone),
     );
   }
 }
@@ -265,12 +296,5 @@ class _EmptyHint extends StatelessWidget {
 }
 
 // ─── Pure formatting helpers ──────────────────────────────────────────────────
-
-String _signedPeso(double v) {
-  final prefix = v < 0 ? '−' : '+';
-  return '$prefix${formatPeso(v.abs())}';
-}
-
-String _percent(double ratio) => '${(ratio * 100).toStringAsFixed(0)}%';
 
 Color _toneColor(ColorScheme cs, double v) => v < 0 ? cs.error : cs.tertiary;
