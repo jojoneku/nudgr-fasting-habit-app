@@ -30,7 +30,16 @@ widget process (and the headless isolate that runs inline actions) has **no user
 The fasting elapsed/remaining time is rendered with a **native Android `Chronometer`** bound to
 `fastStartMillis` / `targetMillis`. It ticks on its own with the Flutter process killed — the same
 mechanism the existing persistent fasting notification uses. All other glance numbers are static
-until the app next refreshes the snapshot (acceptable for MVP; no background polling).
+until the app next refreshes the snapshot, with two backstops (no background polling):
+
+- **30-min OS re-render** (`updatePeriodMillis="1800000"`, the system minimum) on the fasting,
+  food, quest, and expense widgets — recomputes time-derived rendering (fasting progress %,
+  day-rollover check) from the stored snapshot while the app process is dead.
+- **Day-rollover staleness guard**: the snapshot carries its build date (`w_date`, local
+  `yyyy-MM-dd`). When a provider renders on a later day, day-scoped values reset instead of
+  showing yesterday's numbers — food calories/protein render `0` (true for the new day), the
+  expense "Today" line hides, and the quest widget shows `—` / "Open app to refresh" with the
+  inline ✓ hidden (its quest id belongs to yesterday). A missing `w_date` counts as fresh.
 
 ### Inline-action safety rule
 A widget tap performs an **inline action** only if it is purely local (no network, no AI, no rich
@@ -43,6 +52,7 @@ categorisation — **deep-links** into the app instead.
 // HomeWidget.saveWidgetData<T>()). All formatting/calculation done in Dart; native side renders.
 class WidgetSnapshot {
   final bool signedIn;             // false → every widget shows the "Sign in" empty state
+  final String snapshotDate;       // 'yyyy-MM-dd' build day — day-rollover staleness guard
 
   // Fasting
   final bool isFasting;
