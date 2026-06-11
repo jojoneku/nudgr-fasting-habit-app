@@ -35,7 +35,13 @@ class FastingPresenter extends ChangeNotifier {
     await loadState();
 
     await _notificationService.init();
-    await _notificationService.requestPermissions();
+    // Apply the persisted master switch before anything schedules, and don't
+    // prompt for permissions the user has notifications turned off anyway.
+    final notifPrefs = await _storageService.loadNotificationPreferences();
+    await _notificationService.setMasterEnabled(notifPrefs.masterEnabled);
+    if (notifPrefs.masterEnabled) {
+      await _notificationService.requestPermissions();
+    }
     await _rescheduleActiveAlarms();
 
     debugPrint('FastingPresenter: Initialization complete');
@@ -439,11 +445,23 @@ class FastingPresenter extends ChangeNotifier {
     await saveState();
   }
 
-  Future<void> testNotification() async {
-    await _notificationService.requestPermissions();
+  /// Sends the test notifications and reports what actually happened, so the
+  /// settings screen can stop claiming success when the system has the app
+  /// blocked or the in-app master switch is off.
+  Future<NotificationTestResult> testNotification() async {
+    if (!_notificationService.masterEnabled) {
+      return NotificationTestResult.disabledInApp;
+    }
+    final granted = await _notificationService.requestPermissions();
+    if (!granted) return NotificationTestResult.blockedBySystem;
     // Fire all types of notifications to verify channels
     await _notificationService.testAllChannels();
+    return NotificationTestResult.sent;
   }
+
+  /// Re-arms the fasting/eating alarms for the current state. Used when the
+  /// notification master switch is turned back on mid-fast.
+  Future<void> rearmAlarms() => _rescheduleActiveAlarms();
 
   Future<void> addTestData() async {
     final now = DateTime.now();
