@@ -150,6 +150,7 @@ class WidgetBridgeService {
 
     return WidgetSnapshot(
       signedIn: true,
+      snapshotDate: todayKey,
       isFasting: isFasting,
       fastStartMillis: startMillis,
       targetMillis: targetMillis,

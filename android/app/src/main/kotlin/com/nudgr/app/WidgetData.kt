@@ -1,6 +1,9 @@
 package com.nudgr.app
 
 import android.content.SharedPreferences
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 /**
  * Widget-data accessors (Plan 039). Numeric snapshot values are transported as
@@ -43,3 +46,18 @@ fun SharedPreferences.wBool(key: String, def: Boolean = false): Boolean =
         is String -> v.equals("true", ignoreCase = true)
         else -> def
     }
+
+/**
+ * True when the snapshot was pushed on the current local calendar day.
+ * Day-scoped values (today's calories, quests done, today's spend) go stale
+ * once midnight passes without the app running — providers render their reset
+ * state instead of yesterday's numbers when this is false. A missing date
+ * (snapshot from a pre-`w_date` build, or the signed-out empty snapshot)
+ * counts as fresh so those keep rendering as before.
+ */
+fun SharedPreferences.wIsToday(): Boolean {
+    val pushed = wStr("w_date")
+    if (pushed.isEmpty()) return true
+    val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
+    return pushed == today
+}

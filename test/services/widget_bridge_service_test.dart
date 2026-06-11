@@ -13,6 +13,8 @@ void main() {
       final data = WidgetSnapshot.empty().toWidgetData();
       // Bools transport as bools; numbers as Strings (home_widget codec safety).
       expect(data['w_signed_in'], false);
+      // Empty snapshot has no date — providers treat that as fresh.
+      expect(data['w_date'], '');
       expect(data['w_is_fasting'], false);
       expect(data['w_food_protein_goal'], '-1');
       expect(data['w_next_quest_id'], '-1');
@@ -24,6 +26,7 @@ void main() {
         keys,
         containsAll(<String>[
           'w_signed_in',
+          'w_date',
           'w_is_fasting',
           'w_fast_start_millis',
           'w_target_millis',
@@ -50,6 +53,7 @@ void main() {
     test('carries populated values verbatim', () {
       const snap = WidgetSnapshot(
         signedIn: true,
+        snapshotDate: '2026-06-11',
         isFasting: true,
         fastStartMillis: 1000,
         targetMillis: 2000,
@@ -72,6 +76,7 @@ void main() {
       );
       final d = snap.toWidgetData();
       expect(d['w_signed_in'], true);
+      expect(d['w_date'], '2026-06-11');
       expect(d['w_fast_phase'], 'Ketone Mode');
       expect(d['w_food_cals'], '1200');
       expect(d['w_next_quest_id'], '7');
