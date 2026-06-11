@@ -1,0 +1,11 @@
+/// Barrel for the Treasury web design system (Plan 050). Import this from any
+/// web page to get the full shadcn-inspired kit.
+library;
+
+export '../design/web_breakpoints.dart';
+export 'web_badge.dart';
+export 'web_card.dart';
+export 'web_data_table.dart';
+export 'web_section.dart';
+export 'web_shell.dart';
+export 'web_stat_tile.dart';
