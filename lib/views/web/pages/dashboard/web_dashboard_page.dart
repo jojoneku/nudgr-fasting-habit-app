@@ -191,31 +191,16 @@ class _VisualsRow extends StatelessWidget {
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // Three across on wide desktops, otherwise stack to full width.
-        final wide = constraints.maxWidth >= 900;
-        if (!wide) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (var i = 0; i < cards.length; i++) ...[
-                if (i > 0) const SizedBox(height: WebInsets.lg),
-                cards[i],
-              ],
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            for (var i = 0; i < cards.length; i++) ...[
-              if (i > 0) const SizedBox(width: WebInsets.lg),
-              Expanded(child: cards[i]),
-            ],
-          ],
-        );
-      },
+    // One chart per row, full width — keeps card heights independent (the
+    // category donut is taller than the others) and gives each chart room.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(height: WebInsets.lg),
+          cards[i],
+        ],
+      ],
     );
   }
 }

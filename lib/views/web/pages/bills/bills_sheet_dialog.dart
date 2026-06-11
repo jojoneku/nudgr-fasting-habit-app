@@ -4,29 +4,17 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
-import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
+import '../../widgets/web_widgets.dart';
 
-/// Presents one of the existing mobile add/edit sheets inside a centered,
-/// width-constrained dialog so the web page can reuse them verbatim (Plan
-/// 050-C, house rule #4). The sheets build with `MainAxisSize.min`, so the
-/// dialog hugs their content height.
+/// Presents one of the existing mobile add/edit sheets inside the shared
+/// [WebDialog] so the web page can reuse them verbatim (Plan 050-C, house rule
+/// #4). The sheets build with `MainAxisSize.min`, so the scrollable dialog hugs
+/// their content height.
 Future<void> showBillsDialog(BuildContext context, Widget sheet) {
-  return showDialog<void>(
-    context: context,
-    builder: (_) => Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
-        child: SingleChildScrollView(child: sheet),
-      ),
-    ),
-  );
+  return showWebDialog<void>(context: context, maxWidth: 520, child: sheet);
 }
 
 /// Opens the Add/Edit Bill sheet as a web dialog. Pass [existing] to edit.

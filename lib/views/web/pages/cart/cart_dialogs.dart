@@ -7,63 +7,17 @@ import 'package:intermittent_fasting/views/treasury/grocery/add_cart_item_sheet.
 
 import '../../widgets/web_widgets.dart';
 
-/// Centered modal scaffold for the Cart page dialogs — a [WebCard]-styled
-/// surface inside a [Dialog], constrained to a sensible desktop width.
-class _CartDialogShell extends StatelessWidget {
-  final String title;
-  final Widget child;
-  const _CartDialogShell({required this.title, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Dialog(
-      backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.all(WebInsets.xl),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 460),
-        child: WebCard(
-          onSurface: true,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(title,
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700)),
-                  ),
-                  IconButton(
-                    tooltip: 'Close',
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: WebInsets.lg),
-              child,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 /// Opens the shared mobile [AddCartItemSheet] as a desktop dialog. The sheet
 /// already pops itself on submit, so this resolves when the user is done.
 Future<void> showAddCartItemDialog(
   BuildContext context,
   GroceryCartPresenter presenter,
 ) {
-  return showDialog<void>(
+  return showWebDialog<void>(
     context: context,
-    builder: (_) => _CartDialogShell(
-      title: 'Add item',
-      child: AddCartItemSheet(presenter: presenter),
-    ),
+    title: 'Add item',
+    maxWidth: 460,
+    child: AddCartItemSheet(presenter: presenter),
   );
 }
 
@@ -74,12 +28,11 @@ Future<void> showEditCartItemDialog(
   GroceryCartPresenter presenter,
   CartItem item,
 ) {
-  return showDialog<void>(
+  return showWebDialog<void>(
     context: context,
-    builder: (_) => _CartDialogShell(
-      title: 'Edit · ${item.name}',
-      child: _EditCartItemForm(presenter: presenter, item: item),
-    ),
+    title: 'Edit · ${item.name}',
+    maxWidth: 460,
+    child: _EditCartItemForm(presenter: presenter, item: item),
   );
 }
 
@@ -214,12 +167,11 @@ Future<void> showSetBudgetDialog(
   BuildContext context,
   GroceryCartPresenter presenter,
 ) {
-  return showDialog<void>(
+  return showWebDialog<void>(
     context: context,
-    builder: (_) => _CartDialogShell(
-      title: 'Trip budget',
-      child: _SetBudgetForm(presenter: presenter),
-    ),
+    title: 'Trip budget',
+    maxWidth: 460,
+    child: _SetBudgetForm(presenter: presenter),
   );
 }
 
@@ -288,12 +240,11 @@ Future<bool> showCheckoutDialog(
   BuildContext context,
   GroceryCartPresenter presenter,
 ) async {
-  final done = await showDialog<bool>(
+  final done = await showWebDialog<bool>(
     context: context,
-    builder: (_) => _CartDialogShell(
-      title: 'Finish trip',
-      child: _CheckoutForm(presenter: presenter),
-    ),
+    title: 'Finish trip',
+    maxWidth: 460,
+    child: _CheckoutForm(presenter: presenter),
   );
   return done ?? false;
 }

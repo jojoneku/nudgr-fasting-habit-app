@@ -14,54 +14,13 @@ Future<void> showLedgerTransactionDialog({
   TransactionRecord? existing,
 }) {
   final isEdit = existing != null;
-  return showDialog<void>(
+  // AddTransactionSheet fills height and manages its own scroll, so the dialog
+  // must NOT wrap it in a scroll view (scrollable: false).
+  return showWebDialog<void>(
     context: context,
-    builder: (context) {
-      final cs = Theme.of(context).colorScheme;
-      return Dialog(
-        backgroundColor: cs.surfaceContainerHigh,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadii.lg),
-        ),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 720),
-          child: Padding(
-            padding: const EdgeInsets.all(WebInsets.xl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        isEdit ? 'Edit transaction' : 'Log transaction',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      tooltip: 'Close',
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: WebInsets.md),
-                // AddTransactionSheet is a Flexible-wrapped Column already.
-                Flexible(
-                  child: AddTransactionSheet(
-                    presenter: presenter,
-                    existing: existing,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    },
+    title: isEdit ? 'Edit transaction' : 'Log transaction',
+    maxWidth: 480,
+    scrollable: false,
+    child: AddTransactionSheet(presenter: presenter, existing: existing),
   );
 }

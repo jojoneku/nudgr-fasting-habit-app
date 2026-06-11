@@ -10,11 +10,12 @@ Future<T?> showWebDialog<T>({
   required Widget child,
   String? title,
   double maxWidth = 560,
+  bool scrollable = true,
 }) {
   return showDialog<T>(
     context: context,
-    builder: (context) =>
-        WebDialog(title: title, maxWidth: maxWidth, child: child),
+    builder: (context) => WebDialog(
+        title: title, maxWidth: maxWidth, scrollable: scrollable, child: child),
   );
 }
 
@@ -23,11 +24,17 @@ class WebDialog extends StatelessWidget {
   final String? title;
   final double maxWidth;
 
+  /// When true (default) the body is wrapped in a scroll view — right for
+  /// min-size sheets. Set false for sheets that fill height and manage their
+  /// own scroll internally (they'd overflow inside a scroll view).
+  final bool scrollable;
+
   const WebDialog({
     super.key,
     required this.child,
     this.title,
     this.maxWidth = 560,
+    this.scrollable = true,
   });
 
   @override
@@ -71,13 +78,13 @@ class WebDialog extends StatelessWidget {
                 ),
               ),
             Flexible(
-              child: SingleChildScrollView(
+              child: Padding(
                 padding: EdgeInsets.fromLTRB(
                     WebInsets.xl,
                     title == null ? WebInsets.xl : 0,
                     WebInsets.xl,
                     WebInsets.xl),
-                child: child,
+                child: scrollable ? SingleChildScrollView(child: child) : child,
               ),
             ),
           ],
