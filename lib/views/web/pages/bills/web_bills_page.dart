@@ -9,9 +9,6 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../widgets/web_widgets.dart';
-import 'bills_detail_pane.dart';
-import 'bills_selection.dart';
-import 'bills_sheet_dialog.dart';
 
 /// Web Bills & Receivables page (Plan 050-C).
 ///
@@ -27,32 +24,6 @@ class WebBillsPage extends StatelessWidget {
     required this.presenter,
     required this.installmentPresenter,
   });
-
-  @override
-  State<WebBillsPage> createState() => _WebBillsPageState();
-}
-
-class _WebBillsPageState extends State<WebBillsPage> {
-  BillsSelection? _selection;
-
-  /// Width below which the right detail pane stacks under the tables.
-  static const double _twoPaneMin = 1080;
-
-  @override
-  void initState() {
-    super.initState();
-    widget.presenter.load();
-    widget.installmentPresenter.load();
-  }
-
-  void _setMonth(String month) {
-    widget.presenter.setMonth(month);
-    widget.installmentPresenter.setMonth(month);
-    setState(() => _selection = null);
-  }
-
-  void _select(BillsSelection selection) =>
-      setState(() => _selection = selection);
 
   @override
   Widget build(BuildContext context) {

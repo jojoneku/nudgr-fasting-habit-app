@@ -216,14 +216,7 @@ class _BodyRowState<T> extends State<_BodyRow<T>> {
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
                     child: DefaultTextStyle.merge(
-                      // Tabular figures on numeric columns so digits line up
-                      // vertically across rows (money should never jitter).
-                      style: c.numeric
-                          ? theme.textTheme.bodyMedium?.copyWith(
-                              fontFeatures: const [
-                                  FontFeature.tabularFigures()
-                                ])
-                          : theme.textTheme.bodyMedium,
+                      style: theme.textTheme.bodyMedium,
                       child: c.cell(context, widget.row),
                     ),
                   ),
