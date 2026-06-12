@@ -127,6 +127,8 @@ void main() {
       when(mockStorage.loadBudgets()).thenAnswer((_) async => []);
       when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => []);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(mockStorage.loadMonthlySummaries()).thenAnswer((_) async => []);
+      when(mockStorage.saveMonthlySummaries(any)).thenAnswer((_) async {});
       when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
       presenter = TreasuryDashboardPresenter(mockStorage);
     });

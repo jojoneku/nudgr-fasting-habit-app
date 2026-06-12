@@ -14,6 +14,12 @@ class MonthlySummary {
   final double netSavings; // inflow - outflow
   final double endingCash; // sum of all liquid account balances at close
   final Map<String, double> accountSnapshots; // accountId → balance
+
+  /// Net worth at month close (assets − held − liabilities). Nullable for
+  /// backward compatibility: summaries closed before this field existed (and
+  /// those reconstructed from a legacy import) may not have it, in which case
+  /// consumers fall back to reconstructing from [accountSnapshots].
+  final double? netWorth;
   final Map<String, double> categorySpend; // categoryId → total spent
   final DateTime updatedAt;
 
@@ -32,6 +38,7 @@ class MonthlySummary {
     required this.endingCash,
     required this.accountSnapshots,
     required this.categorySpend,
+    this.netWorth,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -49,6 +56,7 @@ class MonthlySummary {
       receivableCount: json['receivableCount'] as int,
       netSavings: (json['netSavings'] as num).toDouble(),
       endingCash: (json['endingCash'] as num).toDouble(),
+      netWorth: (json['netWorth'] as num?)?.toDouble(),
       accountSnapshots: Map<String, double>.from(
         (json['accountSnapshots'] as Map<String, dynamic>).map(
           (k, v) => MapEntry(k, (v as num).toDouble()),
@@ -77,6 +85,7 @@ class MonthlySummary {
         'receivableCount': receivableCount,
         'netSavings': netSavings,
         'endingCash': endingCash,
+        'netWorth': netWorth,
         'accountSnapshots': accountSnapshots,
         'categorySpend': categorySpend,
         'updatedAt': updatedAt.toIso8601String(),

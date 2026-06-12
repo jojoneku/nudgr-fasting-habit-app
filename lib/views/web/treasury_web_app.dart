@@ -19,28 +19,36 @@ import '../app_theme.dart';
 import '../treasury/treasury_module_view.dart';
 import 'pages/bills/web_bills_page.dart';
 import 'pages/budget/web_budget_page.dart';
-import 'pages/cart/web_cart_page.dart';
 import 'pages/dashboard/web_dashboard_page.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
+import 'pages/setup/web_setup_page.dart';
 import 'web_login_view.dart';
 import 'widgets/web_widgets.dart';
 
+/// App-level theme mode for the web companion. Lifted out of the widget tree so
+/// the shell's topbar toggle can flip light/dark without prop-threading through
+/// the stateful composition root. Defaults to the dark Solo-Leveling identity.
+final ValueNotifier<ThemeMode> webThemeMode = ValueNotifier(ThemeMode.dark);
+
 /// Root of the Treasury web companion (Plan 042). Reuses the mobile dark/light
 /// identity from [buildDarkTheme]/[buildLightTheme]; defaults to the dark
-/// Solo-Leveling theme on web.
+/// Solo-Leveling theme on web, toggleable from the shell topbar.
 class TreasuryWebApp extends StatelessWidget {
   const TreasuryWebApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: 'Treasury',
-      theme: buildLightTheme(),
-      darkTheme: buildDarkTheme(),
-      themeMode: ThemeMode.dark,
-      home: const TreasuryWebShell(),
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: webThemeMode,
+      builder: (context, mode, _) => MaterialApp(
+        debugShowCheckedModeBanner: false,
+        title: 'Treasury',
+        theme: buildLightTheme(),
+        darkTheme: buildDarkTheme(),
+        themeMode: mode,
+        home: const TreasuryWebShell(),
+      ),
     );
   }
 }
@@ -247,6 +255,18 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
         debugPrint('TreasuryWebShell._reloadAll: presenter load failed: $e');
       }
     }));
+
+    // Seed the legacy Jan–May history ONCE, strictly after every presenter has
+    // finished loading + persisting monthly summaries — running it inside
+    // dashboard.load() raced TreasuryHistoryPresenter over the same storage key
+    // (last writer wins, dropping the backfill). Then reload history so its
+    // page reflects the seeded months immediately.
+    try {
+      await _treasuryPresenter.backfillHistoricalSummariesOnce();
+      await _historyPresenter.load();
+    } catch (e) {
+      debugPrint('TreasuryWebShell._reloadAll: history backfill failed: $e');
+    }
   }
 
   @override
@@ -314,7 +334,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
     WebDestination(icon: Icons.receipt_long_outlined, label: 'Bills'),
     WebDestination(icon: Icons.pie_chart_outline, label: 'Budget'),
     WebDestination(icon: Icons.history_outlined, label: 'History'),
-    WebDestination(icon: Icons.shopping_cart_outlined, label: 'Cart'),
+    WebDestination(icon: Icons.settings_outlined, label: 'Setup & Accounts'),
   ];
 
   /// Reload the focused page's presenter so cross-page mutations show up
@@ -333,7 +353,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       case 4:
         widget.historyPresenter.load();
       case 5:
-        widget.groceryCartPresenter.load();
+        widget.dashPresenter.load();
     }
   }
 
@@ -351,7 +371,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       case 4:
         return WebHistoryPage(presenter: widget.historyPresenter);
       case 5:
-        return WebCartPage(presenter: widget.groceryCartPresenter);
+        return WebSetupPage(presenter: widget.dashPresenter);
       case 0:
       default:
         return WebDashboardPage(presenter: widget.dashPresenter);
@@ -389,7 +409,39 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
             ],
           ),
           footer: _SignOutFooter(authPresenter: widget.authPresenter),
+          topBar: Row(
+            children: [
+              Text(_destinations[_index].label,
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              const _ThemeToggle(),
+            ],
+          ),
           body: _page(_index),
+        );
+      },
+    );
+  }
+}
+
+/// Sun/moon button in the shell topbar that flips [webThemeMode] — mirrors the
+/// theme toggle in the reference design (see `light.png`).
+class _ThemeToggle extends StatelessWidget {
+  const _ThemeToggle();
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: webThemeMode,
+      builder: (context, mode, _) {
+        final isDark = mode == ThemeMode.dark;
+        return IconButton(
+          tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+          icon: Icon(
+              isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined),
+          onPressed: () =>
+              webThemeMode.value = isDark ? ThemeMode.light : ThemeMode.dark,
         );
       },
     );
