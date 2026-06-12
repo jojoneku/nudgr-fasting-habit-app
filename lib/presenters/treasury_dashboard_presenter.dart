@@ -5,12 +5,14 @@ import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/utils/treasury_history_backfill.dart';
 
 class DailySpend {
   final DateTime date;
@@ -78,6 +80,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<Budget> _budgets = [];
   List<BudgetedExpense> _budgetedExpenses = [];
   List<FinanceCategory> _categories = [];
+  List<MonthlySummary> _summaries = [];
   String _currentMonth = toMonthKey(DateTime.now());
 
   // --- Public state ---
@@ -456,6 +459,183 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     return days.reduce((a, b) => a.amount >= b.amount ? a : b).date;
   }
 
+  // --- Monthly trends (net worth / income vs expenses) ---
+
+  /// The last [n] month keys ending at [_currentMonth], oldest → newest.
+  List<String> _lastNMonthKeys(int n) {
+    final keys = <String>[];
+    var k = _currentMonth;
+    for (var i = 0; i < n; i++) {
+      keys.add(k);
+      k = previousMonth(k);
+    }
+    return keys.reversed.toList();
+  }
+
+  MonthlySummary? _summaryFor(String month) =>
+      _summaries.where((s) => s.month == month).firstOrNull;
+
+  /// Reconstructs net worth from a stored month-end account snapshot using the
+  /// *current* account roles (asset / liability / custodian), which are stable
+  /// over time. Mirrors the live [netWorth] formula: top-level assets minus
+  /// money held for others minus liabilities. Accounts no longer present are
+  /// skipped rather than mis-signed.
+  double _netWorthFromSnapshot(Map<String, double> snapshot) {
+    double assets = 0, custodian = 0, liabilities = 0;
+    snapshot.forEach((id, balance) {
+      final acc = _accounts.where((a) => a.id == id).firstOrNull;
+      if (acc == null) return;
+      if (acc.isLiability) {
+        liabilities += balance;
+      } else if (acc.isCustodian) {
+        custodian += balance;
+      } else if (acc.parentAccountId == null) {
+        assets += balance;
+      }
+    });
+    return assets - custodian - liabilities;
+  }
+
+  /// Net worth at each of the last [months] month-ends, oldest → newest. The
+  /// in-progress current month uses the live [netWorth]; closed months are
+  /// reconstructed from their stored snapshots. Months without a usable
+  /// snapshot are omitted, so an account with little history yields a short
+  /// (or single-point) series the UI can choose to render as an empty state.
+  List<({String label, double value})> netWorthTrend({int months = 6}) {
+    final result = <({String label, double value})>[];
+    for (final key in _lastNMonthKeys(months)) {
+      final label = monthShortLabel(key);
+      if (key == _currentMonth) {
+        result.add((label: label, value: netWorth));
+      } else {
+        final summary = _summaryFor(key);
+        if (summary == null) continue;
+        // Prefer the stored net worth (set at close or via the legacy import);
+        // fall back to reconstructing from the account snapshot.
+        final value = summary.netWorth ??
+            (summary.accountSnapshots.isEmpty
+                ? null
+                : _netWorthFromSnapshot(summary.accountSnapshots));
+        if (value == null) continue;
+        result.add((label: label, value: value));
+      }
+    }
+    return result;
+  }
+
+  /// Income vs expenses for the last [months] months, oldest → newest. The
+  /// current month uses live totals; closed months come from their summary.
+  /// Months with no summary are omitted.
+  List<({String label, double income, double expense})> incomeExpenseTrend(
+      {int months = 6}) {
+    final result = <({String label, double income, double expense})>[];
+    for (final key in _lastNMonthKeys(months)) {
+      final label = monthShortLabel(key);
+      if (key == _currentMonth) {
+        result.add((
+          label: label,
+          income: monthTotalInflow,
+          expense: monthTotalOutflow,
+        ));
+      } else {
+        final summary = _summaryFor(key);
+        if (summary == null) continue;
+        result.add((
+          label: label,
+          income: summary.totalInflow,
+          expense: summary.totalOutflow,
+        ));
+      }
+    }
+    return result;
+  }
+
+  // --- One-time historical backfill (legacy spreadsheet import) ---
+
+  /// Seeds [MonthlySummary] records for the closed months in
+  /// [kTreasuryHistoryBackfill2026] (Jan–May 2026) so the trends and History
+  /// page show real history. Idempotent and safe:
+  ///  • runs only when real account data exists (a fresh/empty install never
+  ///    inherits this history),
+  ///  • skips any month that already has a summary (never clobbers real data),
+  ///  • reconstructs each month-end net worth by walking the live [netWorth]
+  ///    back through the monthly net-cash-flows.
+  /// Called at the end of [load]; after the first successful run the
+  /// already-present guard short-circuits it.
+  Future<void> backfillHistoricalSummariesOnce() async {
+    if (!hasAccounts) return;
+    final existingMonths = _summaries.map((s) => s.month).toSet();
+    final missing = kTreasuryHistoryBackfill2026
+        .where((m) => !existingMonths.contains(m.month))
+        .toList();
+    if (missing.isEmpty) return;
+
+    // Net cash flow per month: backfill values for the closed months, plus a
+    // fallback to any already-closed summary (e.g. once June auto-closes).
+    double flowFor(String month) {
+      for (final m in kTreasuryHistoryBackfill2026) {
+        if (m.month == month) return m.net;
+      }
+      return _summaryFor(month)?.netSavings ?? 0.0;
+    }
+
+    // Reconstruct month-end net worth by walking back from the live current
+    // month: end-of-prev-month = end-of-this-month − this-month's net flow.
+    final nwEnd = <String, double>{};
+    final earliest = missing
+        .map((m) => m.month)
+        .reduce((a, b) => a.compareTo(b) < 0 ? a : b);
+    var cursor = _currentMonth;
+    var nw = netWorth;
+    var flow = monthNetCashFlow; // live current-month flow
+    var guard = 0;
+    while (cursor.compareTo(earliest) > 0 && guard++ < 240) {
+      nw -= flow;
+      final prev = previousMonth(cursor);
+      nwEnd[prev] = nw;
+      cursor = prev;
+      flow = flowFor(prev);
+    }
+
+    // Map category names → ids (normalized: lowercase, spaces stripped).
+    String norm(String s) => s.toLowerCase().replaceAll(' ', '');
+    final idByName = {for (final c in _categories) norm(c.name): c.id};
+
+    final added = <MonthlySummary>[];
+    for (final m in missing) {
+      final categorySpend = <String, double>{};
+      m.categorySpendByName.forEach((name, amount) {
+        final id = idByName[norm(name)];
+        if (id != null) categorySpend[id] = amount;
+      });
+      final monthNetWorth = nwEnd[m.month];
+      added.add(MonthlySummary(
+        month: m.month,
+        totalInflow: m.income,
+        totalOutflow: m.expenses,
+        totalBills: 0,
+        totalBillsPaid: 0,
+        billCount: 0,
+        billsPaidCount: 0,
+        totalReceivables: 0,
+        totalReceived: 0,
+        receivableCount: 0,
+        netSavings: m.net,
+        // True month-end liquid cash isn't recoverable from the legacy summary,
+        // so endingCash mirrors the reconstructed net worth for these months.
+        endingCash: monthNetWorth ?? 0,
+        netWorth: monthNetWorth,
+        accountSnapshots: const {},
+        categorySpend: categorySpend,
+      ));
+    }
+
+    final merged = [..._summaries, ...added];
+    await _storage.saveMonthlySummaries(merged);
+    _summaries = merged;
+    notifyListeners();
+  }
+
   // --- Account CRUD ---
 
   Future<void> addAccount(FinancialAccount account) async {
@@ -499,9 +679,14 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _budgets = await _storage.loadBudgets();
     _budgetedExpenses = await _storage.loadBudgetedExpenses();
     _categories = await _storage.loadFinanceCategories();
+    _summaries = await _storage.loadMonthlySummaries();
     _currentMonth = toMonthKey(DateTime.now());
 
     _isLoading = false;
     notifyListeners();
+    // NOTE: the legacy backfill is NOT run here — load() runs concurrently with
+    // TreasuryHistoryPresenter.load() (both persist monthly summaries), so the
+    // composition root runs backfillHistoricalSummariesOnce() AFTER all
+    // presenters have loaded, to avoid a last-writer-wins race over the key.
   }
 }
