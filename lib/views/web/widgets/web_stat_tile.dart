@@ -36,6 +36,8 @@ class WebStatTile extends StatelessWidget {
         ?.copyWith(
       fontWeight: FontWeight.w700,
       color: valueColor ?? cs.onSurface,
+      // Tabular figures so values keep an even rhythm and align with the grid.
+      fontFeatures: const [FontFeature.tabularFigures()],
     );
 
     return WebCard(
@@ -51,9 +53,14 @@ class WebStatTile extends StatelessWidget {
                 const SizedBox(width: WebInsets.sm),
               ],
               Expanded(
-                child: Text(label,
-                    style: theme.textTheme.labelMedium
-                        ?.copyWith(color: cs.onSurfaceVariant),
+                // Normalize label presentation here (one source of truth) so
+                // every KPI strip reads uniformly regardless of caller casing.
+                child: Text(label.toUpperCase(),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
                     overflow: TextOverflow.ellipsis),
               ),
             ],
