@@ -6,6 +6,8 @@ import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../../../utils/app_radii.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_afford_checker.dart';
+import 'web_dashboard_charts.dart';
 
 /// Web Dashboard page (Plan 050-A) — desktop redesign mirroring the Claude
 /// Design "Treasury Dashboard" reference. All numbers come from
@@ -1013,6 +1015,145 @@ class _EmptyState extends StatelessWidget {
             ),
           ],
         ),
+      ],
+    );
+  }
+}
+
+class _VisualsRow extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  const _VisualsRow({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = <Widget>[
+      WebCard(
+        title: 'Expenses by category',
+        description: 'Where this month went.',
+        child: ExpenseByCategoryDonut(
+          slices: presenter.categorySpendThisMonth,
+        ),
+      ),
+      WebCard(
+        title: 'Last 30 days',
+        description: 'Daily spending.',
+        child: Last30DaySpendChart(days: presenter.lastNDaysSpending(30)),
+      ),
+      WebCard(
+        title: 'Budget by group',
+        description: 'Allocated vs spent.',
+        child: BudgetByGroupChart(
+          allocated: presenter.budgetAllocatedByGroup,
+          spent: presenter.budgetSpentByGroup,
+        ),
+      ),
+    ];
+
+    // One chart per row, full width — keeps card heights independent (the
+    // category donut is taller than the others) and gives each chart room.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(height: WebInsets.lg),
+          cards[i],
+        ],
+      ],
+    );
+  }
+}
+
+class _AccountsTable extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  const _AccountsTable({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    return WebCard(
+      title: 'Accounts',
+      description: 'Balances, money held for others, and credit available.',
+      child: WebDataTable<DashboardAccountRow>(
+        rows: presenter.dashboardAccountRows,
+        emptyLabel: 'No accounts yet.',
+        columns: [
+          WebColumn<DashboardAccountRow>(
+            label: 'Account',
+            flex: 3,
+            cell: (context, row) => _AccountNameCell(row: row),
+          ),
+          WebColumn<DashboardAccountRow>(
+            label: 'Balance',
+            numeric: true,
+            flex: 2,
+            cell: (context, row) => Text(formatPeso(row.balance)),
+          ),
+          WebColumn<DashboardAccountRow>(
+            label: 'Held',
+            numeric: true,
+            flex: 2,
+            cell: (context, row) => _HeldCell(row: row),
+          ),
+          WebColumn<DashboardAccountRow>(
+            label: 'Yours',
+            numeric: true,
+            flex: 2,
+            cell: (context, row) => _YoursCell(row: row),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AccountNameCell extends StatelessWidget {
+  final DashboardAccountRow row;
+  const _AccountNameCell({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(row.name, overflow: TextOverflow.ellipsis),
+        ),
+        if (row.isCredit) ...[
+          const SizedBox(width: WebInsets.sm),
+          const WebBadge('Credit', tone: WebBadgeTone.info),
+        ],
+      ],
+    );
+  }
+}
+
+class _HeldCell extends StatelessWidget {
+  final DashboardAccountRow row;
+  const _HeldCell({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    if (row.isCredit || row.held <= 0) {
+      return Text('—', style: TextStyle(color: cs.onSurfaceVariant));
+    }
+    return Text(formatPeso(row.held),
+        style: TextStyle(color: cs.onSurfaceVariant));
+  }
+}
+
+class _YoursCell extends StatelessWidget {
+  final DashboardAccountRow row;
+  const _YoursCell({required this.row});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final label =
+        row.isCredit ? '${formatPeso(row.yours)} avail' : formatPeso(row.yours);
+    return Text(
+      label,
+      style: TextStyle(
+        fontWeight: FontWeight.w600,
+        color: row.isCredit ? cs.tertiary : cs.onSurface,
       ),
     );
   }

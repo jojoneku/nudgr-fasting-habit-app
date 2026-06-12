@@ -4,6 +4,9 @@ import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../widgets/web_widgets.dart';
+import 'history_matrix.dart';
+import 'history_trend_chart.dart';
+import 'month_detail_dialog.dart';
 
 /// Web History page (Plan 050-E).
 ///

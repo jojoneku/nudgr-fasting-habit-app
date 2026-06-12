@@ -35,6 +35,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
   String? _selectedAccountId;
+  String? _selectedCategoryId;
 
   List<FinancialAccount> _accounts = [];
   List<FinanceCategory> _categories = [];
@@ -58,6 +59,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   bool get isLoading => _isLoading;
   String get selectedMonth => _selectedMonth;
   String? get selectedAccountId => _selectedAccountId;
+
+  /// Optional category filter for the web table view. Null = all categories.
+  /// Independent of the chat view, which doesn't filter by category.
+  String? get selectedCategoryId => _selectedCategoryId;
   List<FinancialAccount> get accounts => _accounts;
   List<FinanceCategory> get categories => _categories;
   List<TransactionRecord> get allTransactions =>
@@ -170,6 +175,51 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return {for (final k in sortedKeys) k: grouped[k]!};
   }
 
+  // --- Web table view (Plan 050-B) ---
+
+  /// Detailed-records rows for the web table, scoped to [selectedMonth],
+  /// [selectedAccountId], and [selectedCategoryId]. Each row carries a running
+  /// balance accumulated chronologically (oldest → newest) within the current
+  /// filter, then the list is returned newest-first for display.
+  ///
+  /// The running balance is signed by transaction direction (inflow adds,
+  /// outflow subtracts) and reflects the order transactions occurred within the
+  /// filtered scope — it is purely derived, never persisted.
+  List<({TransactionRecord txn, double runningBalance})>
+      get ledgerRowsForMonth {
+    var txns = _filteredTransactions;
+    if (_selectedCategoryId != null) {
+      txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
+    }
+
+    // Accumulate chronologically (oldest first) so the running balance reads as
+    // a true ledger; stable on date then id to keep same-day order deterministic.
+    final chronological = [...txns]..sort((a, b) {
+        final byDate = a.date.compareTo(b.date);
+        return byDate != 0 ? byDate : a.id.compareTo(b.id);
+      });
+
+    final rows = <({TransactionRecord txn, double runningBalance})>[];
+    var balance = 0.0;
+    for (final t in chronological) {
+      balance += t.type == TransactionType.inflow ? t.amount : -t.amount;
+      rows.add((txn: t, runningBalance: balance));
+    }
+
+    // Display newest-first.
+    return rows.reversed.toList();
+  }
+
+  /// Inflow subtotal for the current table filter (month/account/category).
+  double get tableInflow => ledgerRowsForMonth
+      .where((r) => r.txn.type == TransactionType.inflow)
+      .fold(0.0, (sum, r) => sum + r.txn.amount);
+
+  /// Outflow subtotal for the current table filter (month/account/category).
+  double get tableOutflow => ledgerRowsForMonth
+      .where((r) => r.txn.type == TransactionType.outflow)
+      .fold(0.0, (sum, r) => sum + r.txn.amount);
+
   // --- Filter controls ---
 
   void setMonth(String month) {
@@ -180,6 +230,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   void setAccount(String? id) {
     _selectedAccountId = id;
+    safeNotify();
+  }
+
+  /// Sets the table-view category filter. Null clears it (all categories).
+  void setCategoryFilter(String? id) {
+    _selectedCategoryId = id;
     safeNotify();
   }
 

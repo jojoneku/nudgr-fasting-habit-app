@@ -10,6 +10,19 @@ String formatPeso(double amount) {
   return '₱${formatter.format(amount)}';
 }
 
+/// Like [formatPeso] but with an explicit leading sign and the minus rendered
+/// as a typographic '−' before the peso symbol. e.g. 3904 → '+₱3,904.00',
+/// -2000 → '−₱2,000.00', 0 → '₱0.00'.
+String formatPesoSigned(double amount) {
+  if (amount == 0) return formatPeso(0);
+  final sign = amount > 0 ? '+' : '−';
+  return '$sign${formatPeso(amount.abs())}';
+}
+
+/// Formats a 0..1 [fraction] as a percentage. e.g. 0.316 → '32%'.
+String formatPercent(double fraction, {int decimals = 0}) =>
+    '${(fraction * 100).toStringAsFixed(decimals)}%';
+
 /// Formats [amount] compactly with at most one decimal place.
 /// e.g. 1200 → '₱1.2k', 51000 → '₱51k', 1200000 → '₱1.2M'
 String formatPesoCompact(double amount) {

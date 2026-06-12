@@ -9,4 +9,4 @@
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/widget_food"
     android:previewLayout="@layout/widget_food"
-    android:updatePeriodMillis="0" />
+    android:updatePeriodMillis="1800000" />

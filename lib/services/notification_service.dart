@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
+import 'package:flutter/services.dart' show MethodChannel, PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -10,6 +11,19 @@ import '../models/quest.dart';
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
   // Handle background notification tap
+}
+
+/// Outcome of the settings-screen "Test Notification" action, so the UI can
+/// tell the user what actually happened instead of always claiming success.
+enum NotificationTestResult {
+  /// Test notifications were dispatched — they should appear in the shade.
+  sent,
+
+  /// The in-app master switch is off; nothing was sent.
+  disabledInApp,
+
+  /// Android has notifications blocked/denied for this app; nothing was sent.
+  blockedBySystem,
 }
 
 class NotificationService {
@@ -45,15 +59,74 @@ class NotificationService {
   // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
   static const int notifIdCreditDueBase = 620;
 
-  // Budget warnings: stable int in 601–640 range
+  // Budget warnings: stable int in 560–599. Must stay disjoint from the
+  // credit-due range above — both derive ids from a hash, and the previous
+  // 601–640 range overlapped 620–719, letting a budget warning and a credit
+  // reminder collide on one id and silently replace/cancel each other.
+  // (Safe to move: budget warnings are immediate show() notifications, not
+  // persisted alarms, so no stale scheduled ids are left behind.)
   static int _budgetWarningId(String budgetId) =>
-      budgetId.hashCode.abs() % 40 + 601;
+      budgetId.hashCode.abs() % 40 + 560;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
+  /// In-app master switch (mirrors NotificationPreferences.masterEnabled).
+  /// Loaded by FastingPresenter at startup and flipped from the notification
+  /// settings sheet. Every schedule/show method no-ops while this is false;
+  /// cancel methods stay live so turning the switch off can clear alarms.
+  bool _masterEnabled = true;
+  bool get masterEnabled => _masterEnabled;
+
+  /// Opens Android's per-app notification settings (for when notifications
+  /// are blocked at the OS level and the in-app prompt can no longer appear).
+  static const MethodChannel _systemSettingsChannel =
+      MethodChannel('com.nudgr.app/system_settings');
+
+  Future<void> setMasterEnabled(bool enabled) async {
+    _masterEnabled = enabled;
+    if (!enabled) {
+      await cancelAll();
+    }
+  }
+
+  /// Whether Android currently allows this app to post notifications at all
+  /// (POST_NOTIFICATIONS granted and the app/channel not blocked).
+  Future<bool> areNotificationsEnabled() async {
+    if (kIsWeb || !_isInitialized) return false;
+    final android =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.areNotificationsEnabled() ?? false;
+  }
+
+  /// Whether the "Alarms & reminders" special access is granted (needed for
+  /// alarm-clock-mode scheduling to fire at exact times).
+  Future<bool> canScheduleExactAlarms() async {
+    if (kIsWeb || !_isInitialized) return false;
+    final android =
+        flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    return await android?.canScheduleExactNotifications() ?? false;
+  }
+
+  Future<void> openSystemNotificationSettings() async {
+    if (kIsWeb) return;
+    try {
+      await _systemSettingsChannel.invokeMethod('openNotificationSettings');
+    } on PlatformException catch (e) {
+      debugPrint('NotificationService: openNotificationSettings failed: $e');
+    }
+  }
+
   Future<void> init() async {
+    // Web has no local-notification platform channel (Plan 042). Returning
+    // early leaves `_isInitialized` false, so every schedule/show/cancel method
+    // below — all already guarded by `if (!_isInitialized) return;` — becomes a
+    // safe no-op. This keeps Stats/Budget/Bills presenters constructible on web
+    // with zero call-site changes.
+    if (kIsWeb) return;
     if (_isInitialized) return;
 
     try {
@@ -88,8 +161,12 @@ class NotificationService {
       debugPrint('NotificationService: Error initializing timezones: $e');
     }
 
+    // NOTE: must stay in sync with res/raw/keep.xml. Release builds run the
+    // resource shrinker (isShrinkResources), which cannot see Dart-string
+    // resource references — an icon not listed in keep.xml gets stripped and
+    // every notification fails with invalid_icon in release builds only.
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@drawable/ic_notification');
 
     const InitializationSettings initializationSettings =
         InitializationSettings(
@@ -211,7 +288,13 @@ class NotificationService {
     debugPrint('NotificationService: Initialized');
   }
 
-  Future<void> requestPermissions() async {
+  /// Requests the POST_NOTIFICATIONS + exact-alarm permissions. Returns
+  /// whether the app can actually post notifications afterwards, so callers
+  /// can surface a "blocked by system" state instead of failing silently
+  /// (Android stops showing the prompt after it has been denied).
+  Future<bool> requestPermissions() async {
+    if (kIsWeb) return false;
+    await init(); // self-heal: no-op when already initialized
     final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
         flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
@@ -224,6 +307,11 @@ class NotificationService {
     // Also request exact alarm permission for reliable scheduling on Android 12+
     // This is required for exact alarms (timers, habits) to fire at precise times.
     await androidImplementation?.requestExactAlarmsPermission();
+
+    if (granted != null) return granted;
+    // Older Androids (<13) have no runtime permission — fall back to the
+    // effective enabled state.
+    return await androidImplementation?.areNotificationsEnabled() ?? false;
   }
 
   /// Helper to convert a target DateTime (Local) to a TZDateTime (Relative to now)
@@ -349,6 +437,7 @@ class NotificationService {
   }
 
   Future<void> testAllChannels() async {
+    await init(); // self-heal: no-op when already initialized
     debugPrint('NotificationService: Testing ALL channels');
 
     // 1. Simulating "Fasting Phase Complete" (Milestone)
@@ -418,6 +507,7 @@ class NotificationService {
   }
 
   Future<void> showFastingTimerNotification(DateTime endTime) async {
+    if (!_isInitialized || !_masterEnabled) return;
     debugPrint(
         'NotificationService: Showing fasting timer notification. Ends at $endTime');
     // Ensure eating timer is cancelled
@@ -456,6 +546,7 @@ class NotificationService {
   }
 
   Future<void> showEatingTimerNotification(DateTime endTime) async {
+    if (!_isInitialized || !_masterEnabled) return;
     debugPrint(
         'NotificationService: Showing eating timer notification. Ends at $endTime');
     // Ensure fasting timer is cancelled
@@ -502,6 +593,7 @@ class NotificationService {
   }
 
   Future<void> scheduleQuestNotifications(Quest quest) async {
+    if (!_isInitialized || !_masterEnabled) return;
     debugPrint(
         'NotificationService: Scheduling quest notifications for ${quest.title}');
 
@@ -816,7 +908,7 @@ class NotificationService {
   // ── RPG Achievement notifications ────────────────────────────────────────────
 
   Future<void> showLevelUpNotification(int level, String rank) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdAchievements,
@@ -839,7 +931,7 @@ class NotificationService {
 
   Future<void> showRankPromotionNotification(
       String fromRank, String toRank) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdAchievements,
@@ -871,7 +963,7 @@ class NotificationService {
   /// Schedule a daily weight-log reminder at [time]. Fires daily via
   /// [DateTimeComponents.time] — persists across app restarts automatically.
   Future<void> scheduleWeightReminder(TimeOfDay time) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
 
     final now = tz.TZDateTime.now(tz.local);
@@ -919,7 +1011,7 @@ class NotificationService {
   }
 
   Future<void> showCalorieGoalNotification(int calories, int goal) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       channelIdMilestones,
@@ -945,7 +1037,7 @@ class NotificationService {
   /// Schedule a monthly bills reminder on [dayOfMonth] at 9 AM via
   /// [DateTimeComponents.dayOfMonthAndTime].
   Future<void> scheduleBillsReminder(int dayOfMonth) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
 
     final day = dayOfMonth.clamp(1, 28);
@@ -999,7 +1091,7 @@ class NotificationService {
     required String accountName,
     required int dueDay,
   }) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     final id = _creditDueId(accountId);
     await flutterLocalNotificationsPlugin.cancel(id);
 
@@ -1049,7 +1141,7 @@ class NotificationService {
     double limit,
     int thresholdPercent,
   ) async {
-    if (!_isInitialized) return;
+    if (!_isInitialized || !_masterEnabled) return;
     final id = _budgetWarningId(budgetId);
     final spentLabel = spent.toStringAsFixed(0);
     final limitLabel = limit.toStringAsFixed(0);
@@ -1119,6 +1211,8 @@ class NotificationService {
     required String channelId,
     required String channelName,
   }) async {
+    // Central backstop: every scheduled notification funnels through here.
+    if (!_isInitialized || !_masterEnabled) return;
     final now = tz.TZDateTime.now(tz.local);
 
     // Check if scheduled date is significantly in the past (e.g. > 5 mins ago)

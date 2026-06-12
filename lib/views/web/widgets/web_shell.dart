@@ -123,7 +123,7 @@ class WebShell extends StatelessWidget {
   }
 }
 
-class _RailItem extends StatefulWidget {
+class _RailItem extends StatelessWidget {
   final WebDestination destination;
   final bool selected;
   final VoidCallback onTap;
@@ -134,62 +134,53 @@ class _RailItem extends StatefulWidget {
   });
 
   @override
-  State<_RailItem> createState() => _RailItemState();
-}
-
-class _RailItemState extends State<_RailItem> {
-  bool _hover = false;
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final selected = widget.selected;
     final fg = selected ? cs.primary : cs.onSurfaceVariant;
+    final radius = BorderRadius.circular(10);
 
-    Color? bg;
-    if (selected) {
-      bg = cs.primary.withValues(alpha: 0.12);
-    } else if (_hover) {
-      bg = cs.onSurface.withValues(alpha: 0.05);
-    }
-
+    // InkWell (over a transparent Material) gives keyboard focus, Enter/Space
+    // activation, a focus ring, hover, and a press ripple for free — the bare
+    // GestureDetector this replaced had none of those.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: WebInsets.xs),
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        onEnter: (_) => setState(() => _hover = true),
-        onExit: (_) => setState(() => _hover = false),
-        child: GestureDetector(
-          onTap: widget.onTap,
-          behavior: HitTestBehavior.opaque,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 150),
-            padding: const EdgeInsets.symmetric(
-                horizontal: WebInsets.md, vertical: WebInsets.md),
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected
-                      ? (widget.destination.selectedIcon ??
-                          widget.destination.icon)
-                      : widget.destination.icon,
-                  size: 20,
-                  color: fg,
-                ),
-                const SizedBox(width: WebInsets.md),
-                Text(
-                  widget.destination.label,
-                  style: theme.textTheme.bodyMedium?.copyWith(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: destination.label,
+        child: Material(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: radius,
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            hoverColor: cs.onSurface.withValues(alpha: 0.05),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: WebInsets.md, vertical: WebInsets.md),
+              child: Row(
+                children: [
+                  Icon(
+                    selected
+                        ? (destination.selectedIcon ?? destination.icon)
+                        : destination.icon,
+                    size: 20,
                     color: fg,
-                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: WebInsets.md),
+                  Text(
+                    destination.label,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: fg,
+                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

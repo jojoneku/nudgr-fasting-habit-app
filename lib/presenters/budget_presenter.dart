@@ -115,6 +115,85 @@ class BudgetPresenter extends ChangeNotifier {
 
   double get totalRemaining => totalAllocated - totalSpent;
 
+  /// Fraction of the total allocation already spent (0.0–∞). Returns 0 when
+  /// nothing is allocated so the UI can avoid a divide-by-zero in `build()`.
+  double get percentUsed =>
+      totalAllocated > 0 ? totalSpent / totalAllocated : 0.0;
+
+  // ─── Web aggregates (Plan 050-D) ───────────────────────────────────────────────
+
+  /// Human label for a [BudgetGroup] — shared by the web chart + table.
+  static String budgetGroupLabel(BudgetGroup group) => switch (group) {
+        BudgetGroup.nonNegotiables => 'Non-Negotiables',
+        BudgetGroup.livingExpense => 'Living Expense',
+        BudgetGroup.variableOptional => 'Variable / Optional',
+        BudgetGroup.savings => 'Savings / Goals',
+      };
+
+  /// Ordered allocated-vs-spent figures per [BudgetGroup] that actually has a
+  /// budget this month. Drives the web allocation bar chart so `build()` stays
+  /// free of folds and filtering.
+  List<WebBudgetGroupBar> get groupBars {
+    final result = <WebBudgetGroupBar>[];
+    for (final group in BudgetGroup.values) {
+      final allocated = sectionAllocated(group);
+      if (allocated <= 0) continue;
+      result.add(WebBudgetGroupBar(
+        group: group,
+        label: budgetGroupLabel(group),
+        allocated: allocated,
+        spent: sectionSpent(group),
+      ));
+    }
+    return result;
+  }
+
+  /// Flat, display-ready per-category/per-target budget rows for the web data
+  /// table — already grouped (expense groups first, savings last) and with all
+  /// math (spent, remaining, progress, over-budget) resolved here.
+  List<WebBudgetRow> get budgetRows {
+    final rows = <WebBudgetRow>[];
+    final byGroup = categoriesByGroup;
+    for (final group in BudgetGroup.values) {
+      if (group == BudgetGroup.savings) continue;
+      for (final cat in byGroup[group] ?? const <FinanceCategory>[]) {
+        final budget = budgetFor(cat.id);
+        final allocated = budget?.allocatedAmount ?? 0.0;
+        final spent = spentFor(cat.id);
+        rows.add(WebBudgetRow(
+          targetId: cat.id,
+          name: cat.name,
+          group: group,
+          allocated: allocated,
+          spent: spent,
+          remaining: allocated - spent,
+          progress: allocated > 0 ? (spent / allocated).clamp(0.0, 1.0) : 0.0,
+          isOver: allocated > 0 && spent > allocated,
+        ));
+      }
+    }
+    for (final entry in savingsBudgets) {
+      final allocated = entry.budget.allocatedAmount;
+      final contributed = contributedTo(entry.account.id);
+      rows.add(WebBudgetRow(
+        targetId: entry.account.id,
+        name: entry.account.name,
+        group: BudgetGroup.savings,
+        allocated: allocated,
+        spent: contributed,
+        remaining: allocated - contributed,
+        progress:
+            allocated > 0 ? (contributed / allocated).clamp(0.0, 1.0) : 0.0,
+        // Savings rows can never be "over" — exceeding the goal is good.
+        isOver: false,
+      ));
+    }
+    return rows;
+  }
+
+  /// True when there is at least one budget row to render this month.
+  bool get hasBudgets => budgetRows.isNotEmpty;
+
   // ─── Category-level getters ───────────────────────────────────────────────────
 
   List<FinanceCategory> get allCategories => List.unmodifiable(_categories);
@@ -341,4 +420,48 @@ class BudgetPresenter extends ChangeNotifier {
     if (totalAllocated <= 0) return;
     if (totalSpent <= totalAllocated) await _stats.addXp(30);
   }
+}
+
+/// Allocated-vs-spent totals for one [BudgetGroup] — feeds the web allocation
+/// bar chart (Plan 050-D).
+class WebBudgetGroupBar {
+  final BudgetGroup group;
+  final String label;
+  final double allocated;
+  final double spent;
+
+  const WebBudgetGroupBar({
+    required this.group,
+    required this.label,
+    required this.allocated,
+    required this.spent,
+  });
+}
+
+/// One display-ready budget row for the web Budget table (Plan 050-D). All
+/// figures are pre-computed in [BudgetPresenter.budgetRows] so the view stays
+/// math-free. [targetId] is the category id for expense rows and the account
+/// id for savings rows (matching the edit-sheet's `preselectedCategoryId`).
+class WebBudgetRow {
+  final String targetId;
+  final String name;
+  final BudgetGroup group;
+  final double allocated;
+  final double spent;
+  final double remaining;
+
+  /// Clamped 0.0–1.0 fill for the progress cell.
+  final double progress;
+  final bool isOver;
+
+  const WebBudgetRow({
+    required this.targetId,
+    required this.name,
+    required this.group,
+    required this.allocated,
+    required this.spent,
+    required this.remaining,
+    required this.progress,
+    required this.isOver,
+  });
 }
