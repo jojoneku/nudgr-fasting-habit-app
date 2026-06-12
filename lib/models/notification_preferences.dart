@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 /// Stores per-feature notification opt-in preferences.
 class NotificationPreferences {
+  // ── Master switch ──────────────────────────────────────────────────────────
+  /// Turns every app notification on/off. Enforced centrally in
+  /// NotificationService (schedule/show methods no-op while off).
+  final bool masterEnabled;
+
   // ── RPG ────────────────────────────────────────────────────────────────────
   final bool levelUpEnabled;
   final bool rankPromotionEnabled;
@@ -22,6 +27,7 @@ class NotificationPreferences {
   final int budgetWarningPercent; // 50–95, default 80
 
   const NotificationPreferences({
+    this.masterEnabled = true,
     this.levelUpEnabled = true,
     this.rankPromotionEnabled = true,
     this.weightReminderEnabled = false,
@@ -41,6 +47,7 @@ class NotificationPreferences {
     final hourRaw = json['weightReminderHour'] as int? ?? 8;
     final minRaw = json['weightReminderMinute'] as int? ?? 0;
     return NotificationPreferences(
+      masterEnabled: json['masterEnabled'] as bool? ?? true,
       levelUpEnabled: json['levelUpEnabled'] as bool? ?? true,
       rankPromotionEnabled: json['rankPromotionEnabled'] as bool? ?? true,
       weightReminderEnabled: json['weightReminderEnabled'] as bool? ?? false,
@@ -59,6 +66,7 @@ class NotificationPreferences {
   }
 
   Map<String, dynamic> toJson() => {
+        'masterEnabled': masterEnabled,
         'levelUpEnabled': levelUpEnabled,
         'rankPromotionEnabled': rankPromotionEnabled,
         'weightReminderEnabled': weightReminderEnabled,
@@ -74,6 +82,7 @@ class NotificationPreferences {
       };
 
   NotificationPreferences copyWith({
+    bool? masterEnabled,
     bool? levelUpEnabled,
     bool? rankPromotionEnabled,
     bool? weightReminderEnabled,
@@ -87,6 +96,7 @@ class NotificationPreferences {
     int? budgetWarningPercent,
   }) =>
       NotificationPreferences(
+        masterEnabled: masterEnabled ?? this.masterEnabled,
         levelUpEnabled: levelUpEnabled ?? this.levelUpEnabled,
         rankPromotionEnabled: rankPromotionEnabled ?? this.rankPromotionEnabled,
         weightReminderEnabled:

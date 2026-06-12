@@ -216,6 +216,7 @@ class SettingsScreen extends StatelessWidget {
           context,
           storage: storageService!,
           notifications: notificationService ?? NotificationService(),
+          onMasterReenabled: fastingPresenter.rearmAlarms,
         ),
       ));
     }
@@ -647,9 +648,41 @@ class SettingsScreen extends StatelessWidget {
           title: const Text('Test Notification'),
           subtitle: const Text('Check if notifications work'),
           onTap: () async {
-            await fastingPresenter.testNotification();
-            if (context.mounted) {
-              AppToast.show(context, 'Notification sent! Check status bar.');
+            final result = await fastingPresenter.testNotification();
+            if (!context.mounted) return;
+            switch (result) {
+              case NotificationTestResult.sent:
+                AppToast.show(context, 'Notification sent! Check status bar.');
+              case NotificationTestResult.disabledInApp:
+                AppToast.show(
+                    context,
+                    'Notifications are turned off — enable them in '
+                    'Notification preferences.');
+              case NotificationTestResult.blockedBySystem:
+                showDialog<void>(
+                  context: context,
+                  builder: (dialogCtx) => AlertDialog(
+                    title: const Text('Notifications blocked'),
+                    content: const Text(
+                        'Android is blocking notifications for this app, so '
+                        'nothing was sent. Allow notifications for Nudgr in '
+                        'system settings, then test again.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(dialogCtx),
+                        child: const Text('Cancel'),
+                      ),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(dialogCtx);
+                          (notificationService ?? NotificationService())
+                              .openSystemNotificationSettings();
+                        },
+                        child: const Text('Open settings'),
+                      ),
+                    ],
+                  ),
+                );
             }
           },
         ),

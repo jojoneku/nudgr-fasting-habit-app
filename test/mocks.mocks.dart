@@ -1291,6 +1291,45 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
       ) as _i11.Future<int?>);
 
   @override
+  _i11.Future<void> saveWidgetLastUserId(String? userId) => (super.noSuchMethod(
+        Invocation.method(
+          #saveWidgetLastUserId,
+          [userId],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<String?> loadWidgetLastUserId() => (super.noSuchMethod(
+        Invocation.method(
+          #loadWidgetLastUserId,
+          [],
+        ),
+        returnValue: _i11.Future<String?>.value(),
+      ) as _i11.Future<String?>);
+
+  @override
+  _i11.Future<void> saveWidgetPendingActions(List<String>? actions) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveWidgetPendingActions,
+          [actions],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<List<String>> loadWidgetPendingActions() => (super.noSuchMethod(
+        Invocation.method(
+          #loadWidgetPendingActions,
+          [],
+        ),
+        returnValue: _i11.Future<List<String>>.value(<String>[]),
+      ) as _i11.Future<List<String>>);
+
+  @override
   _i11.Future<String> exportAllData() => (super.noSuchMethod(
         Invocation.method(
           #exportAllData,
@@ -1541,6 +1580,50 @@ class MockNotificationService extends _i1.Mock
       ) as _i8.FlutterLocalNotificationsPlugin);
 
   @override
+  bool get masterEnabled => (super.noSuchMethod(
+        Invocation.getter(#masterEnabled),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  _i11.Future<void> setMasterEnabled(bool? enabled) => (super.noSuchMethod(
+        Invocation.method(
+          #setMasterEnabled,
+          [enabled],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<bool> areNotificationsEnabled() => (super.noSuchMethod(
+        Invocation.method(
+          #areNotificationsEnabled,
+          [],
+        ),
+        returnValue: _i11.Future<bool>.value(false),
+      ) as _i11.Future<bool>);
+
+  @override
+  _i11.Future<bool> canScheduleExactAlarms() => (super.noSuchMethod(
+        Invocation.method(
+          #canScheduleExactAlarms,
+          [],
+        ),
+        returnValue: _i11.Future<bool>.value(false),
+      ) as _i11.Future<bool>);
+
+  @override
+  _i11.Future<void> openSystemNotificationSettings() => (super.noSuchMethod(
+        Invocation.method(
+          #openSystemNotificationSettings,
+          [],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
   _i11.Future<void> init() => (super.noSuchMethod(
         Invocation.method(
           #init,
@@ -1551,14 +1634,13 @@ class MockNotificationService extends _i1.Mock
       ) as _i11.Future<void>);
 
   @override
-  _i11.Future<void> requestPermissions() => (super.noSuchMethod(
+  _i11.Future<bool> requestPermissions() => (super.noSuchMethod(
         Invocation.method(
           #requestPermissions,
           [],
         ),
-        returnValue: _i11.Future<void>.value(),
-        returnValueForMissingStub: _i11.Future<void>.value(),
-      ) as _i11.Future<void>);
+        returnValue: _i11.Future<bool>.value(false),
+      ) as _i11.Future<bool>);
 
   @override
   _i11.Future<void> scheduleFastingAlarm(
@@ -1853,6 +1935,37 @@ class MockNotificationService extends _i1.Mock
         Invocation.method(
           #cancelBillsReminder,
           [],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<void> scheduleCreditDueReminder({
+    required String? accountId,
+    required String? accountName,
+    required int? dueDay,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #scheduleCreditDueReminder,
+          [],
+          {
+            #accountId: accountId,
+            #accountName: accountName,
+            #dueDay: dueDay,
+          },
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<void> cancelCreditDueReminder(String? accountId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cancelCreditDueReminder,
+          [accountId],
         ),
         returnValue: _i11.Future<void>.value(),
         returnValueForMissingStub: _i11.Future<void>.value(),
@@ -2574,6 +2687,16 @@ class MockFastingPresenter extends _i1.Mock implements _i52.FastingPresenter {
       ) as _i11.Future<void>);
 
   @override
+  _i11.Future<void> rebaseStartTime(DateTime? start) => (super.noSuchMethod(
+        Invocation.method(
+          #rebaseStartTime,
+          [start],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
   _i11.Future<void> saveState() => (super.noSuchMethod(
         Invocation.method(
           #saveState,
@@ -2634,9 +2757,23 @@ class MockFastingPresenter extends _i1.Mock implements _i52.FastingPresenter {
       ) as _i11.Future<void>);
 
   @override
-  _i11.Future<void> testNotification() => (super.noSuchMethod(
+  _i11.Future<_i37.NotificationTestResult> testNotification() =>
+      (super.noSuchMethod(
         Invocation.method(
           #testNotification,
+          [],
+        ),
+        returnValue: _i11.Future<_i37.NotificationTestResult>.value(
+            _i37.NotificationTestResult.sent),
+        returnValueForMissingStub:
+            _i11.Future<_i37.NotificationTestResult>.value(
+                _i37.NotificationTestResult.sent),
+      ) as _i11.Future<_i37.NotificationTestResult>);
+
+  @override
+  _i11.Future<void> rearmAlarms() => (super.noSuchMethod(
+        Invocation.method(
+          #rearmAlarms,
           [],
         ),
         returnValue: _i11.Future<void>.value(),
