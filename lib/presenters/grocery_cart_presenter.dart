@@ -87,6 +87,42 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
   double? get budgetRemaining => _budget == null ? null : _budget! - grandTotal;
   bool get isOverBudget => _budget != null && grandTotal > _budget!;
 
+  /// Fraction of the budget consumed by the running total, clamped to 0..1 for a
+  /// progress bar. Returns 0 when no budget is set. Over-budget reads as a full
+  /// bar; the overflow is surfaced separately via [isOverBudget].
+  double get budgetUsedFraction {
+    if (_budget == null || _budget! <= 0) return 0;
+    return (grandTotal / _budget!).clamp(0.0, 1.0);
+  }
+
+  /// Whether checkout-to-ledger is currently actionable (a ledger is wired, at
+  /// least one account exists to charge, and there is a non-zero total to post).
+  bool get canCheckoutToLedger =>
+      canPostToLedger && ledgerAccounts.isNotEmpty && grandTotal > 0;
+
+  /// Display string for the "budget remaining" KPI tile. Dash when no budget;
+  /// the over-budget overflow is rendered as a negative amount.
+  String get budgetRemainingLabel {
+    if (_budget == null) return '—';
+    return formatPeso(budgetRemaining!);
+  }
+
+  /// Sub-text under the "budget remaining" KPI tile.
+  String get budgetSubLabel {
+    if (_budget == null) return 'No budget set';
+    return isOverBudget ? 'Over budget' : 'of ${formatPeso(_budget!)}';
+  }
+
+  /// One-line status under the budget meter (e.g. "₱120.00 left" or
+  /// "Over by ₱45.00"). Empty when no budget is set.
+  String get budgetDetailLabel {
+    if (_budget == null) return '';
+    final remaining = budgetRemaining ?? 0;
+    return isOverBudget
+        ? 'Over by ${formatPeso(remaining.abs())}'
+        : '${formatPeso(remaining)} left';
+  }
+
   // ── Lifecycle ────────────────────────────────────────────────────────────────
 
   Future<void> load() async {

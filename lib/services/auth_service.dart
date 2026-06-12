@@ -16,7 +16,12 @@ class AuthService {
     assert(url.isNotEmpty, 'SUPABASE_URL missing from .env');
     assert(anonKey.isNotEmpty, 'SUPABASE_ANON_KEY missing from .env');
 
-    _googleSignIn = GoogleSignIn(serverClientId: webClientId);
+    // On web we use Supabase's OAuth redirect flow instead of the native
+    // google_sign_in ID-token flow, so the GoogleSignIn client is never built
+    // (Plan 042).
+    if (!kIsWeb) {
+      _googleSignIn = GoogleSignIn(serverClientId: webClientId);
+    }
 
     await Supabase.initialize(
       url: url,
@@ -47,6 +52,20 @@ class AuthService {
   // ── Actions ───────────────────────────────────────────────────────────────
 
   Future<void> signInWithGoogle() async {
+    // Web: full-page redirect OAuth. supabase_flutter persists the session in
+    // localStorage and parses the callback itself; `authStateChanges` fires
+    // after the round-trip. An optional WEB_REDIRECT_URL override lets the
+    // deployed site point back at its own origin; locally it defaults to the
+    // current page (e.g. http://localhost:<port>).
+    if (kIsWeb) {
+      final redirect = dotenv.env['WEB_REDIRECT_URL'];
+      await _client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: (redirect != null && redirect.isNotEmpty) ? redirect : null,
+      );
+      return;
+    }
+
     final googleSignIn = _googleSignIn;
     if (googleSignIn == null) throw Exception('AuthService not initialized.');
 

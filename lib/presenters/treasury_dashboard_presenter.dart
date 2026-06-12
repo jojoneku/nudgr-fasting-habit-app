@@ -18,6 +18,47 @@ class DailySpend {
   const DailySpend(this.date, this.amount);
 }
 
+/// Verdict tier for the dashboard "Can I afford it?" calculator (Plan 042/050).
+enum AffordTier { yes, tight, no }
+
+/// Result of [TreasuryDashboardPresenter.canAfford] — a tier plus the figures
+/// the view needs for its copy. Pure value object; copy strings live in the UI.
+class AffordVerdict {
+  final AffordTier tier;
+
+  /// Projected spare left this month *after* the hypothetical spend.
+  final double spareAfter;
+
+  /// When an account was given and the spend exceeds its spendable balance,
+  /// how much it falls short (else null).
+  final double? accountShortfall;
+
+  const AffordVerdict({
+    required this.tier,
+    required this.spareAfter,
+    this.accountShortfall,
+  });
+}
+
+/// A flattened account-balance row for the web dashboard accounts table.
+/// Liquid rows show [balance] and the [held]-for-others slice; credit rows
+/// show the current payable as [balance] and the available limit as [yours].
+class DashboardAccountRow {
+  final String name;
+  final double balance;
+  final double held;
+  final double yours;
+  final bool isCredit;
+
+  const DashboardAccountRow({
+    required this.name,
+    required this.balance,
+    required this.held,
+    required this.yours,
+    required this.isCredit,
+  });
+}
+
 class TreasuryDashboardPresenter extends ChangeNotifier {
   TreasuryDashboardPresenter(StorageService storage, [LedgerPresenter? ledger])
       : _storage = storage,
@@ -174,19 +215,102 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
           (t) => t.month == _currentMonth && t.type == TransactionType.outflow)
       .fold(0.0, (sum, t) => sum + t.amount);
 
-  double get netWorth {
-    // Only sum top-level accounts. Sub-account balances are already reflected
-    // in their parent's balance via the propagation rule in
-    // [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
-    // Custodian balances represent money held for others, so subtract them.
-    final assets = _accounts
-        .where((a) =>
-            a.isActive &&
-            !a.isLiability &&
-            !a.isCustodian &&
-            a.parentAccountId == null)
-        .fold(0.0, (sum, a) => sum + a.balance);
-    return assets - totalHeldForOthers - totalLiabilities;
+  /// Sum of top-level, non-liability, non-custodian account balances — the
+  /// gross asset base (before deducting money held for others or liabilities).
+  /// Only top-level accounts are summed: sub-account balances are already
+  /// reflected in their parent via the propagation rule in
+  /// [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
+  double get totalAssets => _accounts
+      .where((a) =>
+          a.isActive &&
+          !a.isLiability &&
+          !a.isCustodian &&
+          a.parentAccountId == null)
+      .fold(0.0, (sum, a) => sum + a.balance);
+
+  double get netWorth =>
+      // Custodian balances are money held for others, so subtract them.
+      totalAssets - totalHeldForOthers - totalLiabilities;
+
+  // --- Web dashboard parity getters (Plan 042 §6 / Plan 050) ---
+  // Pure computation over already-loaded state; the mobile dashboard can
+  // surface these too. No new storage keys.
+
+  /// This month's income minus expenses.
+  double get monthNetCashFlow => monthTotalInflow - monthTotalOutflow;
+
+  /// Share of this month's income kept (net / income). Null when there is no
+  /// income to divide by — the UI shows "—" rather than a divide-by-zero.
+  double? get savingsRate {
+    final income = monthTotalInflow;
+    if (income <= 0) return null;
+    return monthNetCashFlow / income;
+  }
+
+  /// What you owe right now: this month's unpaid bills plus all liabilities.
+  double get currentObligations => monthUnpaidBills + totalLiabilities;
+
+  /// Projected spare cash for the month after bills, receivables, and budget —
+  /// the "Can I afford it?" baseline. Alias of [forecastedNetBalance], named
+  /// for the UI.
+  double get projectedSpareThisMonth => forecastedNetBalance;
+
+  /// Whether [amount] fits this month. Checks against [projectedSpareThisMonth]
+  /// and, when [accountId] is given, against that account's spendable balance
+  /// (its balance minus any amount held for others on it).
+  AffordVerdict canAfford(double amount, {String? accountId}) {
+    final spare = projectedSpareThisMonth;
+    final spareAfter = spare - amount;
+
+    double? accountShortfall;
+    if (accountId != null) {
+      final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+      if (account != null) {
+        final held = heldAmountByAccountId[accountId] ?? 0.0;
+        final spendable = account.balance - held;
+        if (amount > spendable) accountShortfall = amount - spendable;
+      }
+    }
+
+    final AffordTier tier;
+    if (amount > spare || accountShortfall != null) {
+      tier = AffordTier.no;
+    } else if (amount <= spare * 0.8) {
+      tier = AffordTier.yes;
+    } else {
+      tier = AffordTier.tight;
+    }
+
+    return AffordVerdict(
+      tier: tier,
+      spareAfter: spareAfter,
+      accountShortfall: accountShortfall,
+    );
+  }
+
+  /// Flattened account-balance rows for the web dashboard accounts table —
+  /// liquid accounts (balance / held / yours) followed by credit accounts
+  /// (payable / available limit). Assembly lives here, not in `build()`.
+  List<DashboardAccountRow> get dashboardAccountRows {
+    final held = heldAmountByAccountId;
+    return [
+      for (final a in liquidAccounts)
+        DashboardAccountRow(
+          name: a.name,
+          balance: a.balance,
+          held: held[a.id] ?? 0.0,
+          yours: a.balance - (held[a.id] ?? 0.0),
+          isCredit: false,
+        ),
+      for (final a in creditAccounts)
+        DashboardAccountRow(
+          name: a.name,
+          balance: a.currentPayable,
+          held: 0.0,
+          yours: a.availableCredit ?? 0.0,
+          isCredit: true,
+        ),
+    ];
   }
 
   List<FinancialAccount> get custodianAccounts =>
