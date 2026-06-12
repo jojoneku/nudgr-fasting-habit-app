@@ -77,6 +77,20 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
       .where((i) => isPaidForMonth(i.id))
       .fold(0.0, (sum, i) => sum + i.monthlyAmount);
 
+  // ─── Web helpers (Plan 050-C) ─────────────────────────────────────────────────
+
+  /// Monthly installment cash load for the selected month — the web KPI strip's
+  /// "Installment load". Alias of [totalDueThisMonth] for intent at the call site.
+  double get monthlyInstallmentLoad => totalDueThisMonth;
+
+  /// Human-readable account name for [accountId], or null when unknown. Keeps
+  /// account lookups out of `build`.
+  String? accountName(String? accountId) {
+    if (accountId == null) return null;
+    final match = accounts.where((a) => a.id == accountId).firstOrNull;
+    return match?.name;
+  }
+
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
   Future<void> load() async {

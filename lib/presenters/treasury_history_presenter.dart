@@ -38,6 +38,144 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   List<FinancialAccount> get accounts => List.unmodifiable(_accounts);
 
+  /// True when there are no closed-month summaries to display yet.
+  bool get hasNoSummaries => _summaries.isEmpty;
+
+  // ─── Web derived data (Plan 050-E) ─────────────────────────────────────────────
+
+  /// Summaries ordered oldest → newest, for left-to-right chart plotting.
+  List<MonthlySummary> get summariesChronological {
+    final sorted = [..._summaries];
+    sorted.sort((a, b) => a.month.compareTo(b.month));
+    return sorted;
+  }
+
+  /// Savings rate for a summary = net savings / total inflow. Returns 0 when
+  /// there was no inflow that month.
+  double savingsRate(MonthlySummary s) {
+    if (s.totalInflow <= 0) return 0;
+    return s.netSavings / s.totalInflow;
+  }
+
+  /// Trend points for the net-cash-flow chart, oldest → newest. Each point
+  /// carries the parallel inflow / outflow so the view can plot multiple series
+  /// without doing any math in `build()`.
+  List<HistoryTrendPoint> get trendPoints {
+    final chrono = summariesChronological;
+    return [
+      for (var i = 0; i < chrono.length; i++)
+        HistoryTrendPoint(
+          index: i.toDouble(),
+          month: chrono[i].month,
+          net: chrono[i].netSavings,
+          inflow: chrono[i].totalInflow,
+          outflow: chrono[i].totalOutflow,
+        ),
+    ];
+  }
+
+  /// Largest absolute value across net / inflow / outflow — used by the view to
+  /// set the chart's vertical bounds without scanning the list in `build()`.
+  double get trendMaxMagnitude {
+    var maxMag = 0.0;
+    for (final s in _summaries) {
+      maxMag = [
+        maxMag,
+        s.netSavings.abs(),
+        s.totalInflow.abs(),
+        s.totalOutflow.abs(),
+      ].reduce((a, b) => a > b ? a : b);
+    }
+    return maxMag == 0 ? 1 : maxMag;
+  }
+
+  /// Average monthly net savings across all closed months (0 when none).
+  double get averageNetSavings {
+    if (_summaries.isEmpty) return 0;
+    final total = _summaries.fold(0.0, (s, m) => s + m.netSavings);
+    return total / _summaries.length;
+  }
+
+  /// Average savings rate across all closed months (0 when none).
+  double get averageSavingsRate {
+    if (_summaries.isEmpty) return 0;
+    final total = _summaries.fold(0.0, (s, m) => s + savingsRate(m));
+    return total / _summaries.length;
+  }
+
+  /// Net savings summed across every closed month.
+  double get cumulativeNetSavings =>
+      _summaries.fold(0.0, (s, m) => s + m.netSavings);
+
+  // ─── Sheet-parity matrix (Plan 050 polish) ─────────────────────────────────────
+  // Mirrors the Google Sheet's "Historical Summary" tab: months as columns,
+  // with per-month Income/Expenses/Net/Savings-Rate/Cumulative, plus a
+  // category×month spend breakdown. Computed live from raw transactions (not
+  // just closed summaries) so the current month appears too.
+
+  /// All 'YYYY-MM' months that have at least one transaction, oldest → newest.
+  List<String> get activeMonths {
+    final set = <String>{for (final t in _allTransactions) t.month};
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  /// One column per active month: income, expenses, net, savings rate, and a
+  /// running cumulative net (oldest → newest).
+  List<MonthHistoryColumn> get monthMatrix {
+    final months = activeMonths;
+    var cumulative = 0.0;
+    final cols = <MonthHistoryColumn>[];
+    for (final m in months) {
+      final txns = _allTransactions.where((t) => t.month == m);
+      final income = txns
+          .where((t) => t.type == TransactionType.inflow)
+          .fold(0.0, (s, t) => s + t.amount);
+      final expenses = txns
+          .where((t) => t.type == TransactionType.outflow)
+          .fold(0.0, (s, t) => s + t.amount);
+      final net = income - expenses;
+      cumulative += net;
+      cols.add(MonthHistoryColumn(
+        month: m,
+        income: income,
+        expenses: expenses,
+        net: net,
+        savingsRate: income > 0 ? net / income : null,
+        cumulativeNet: cumulative,
+      ));
+    }
+    return cols;
+  }
+
+  /// One row per spending category (descending by total spend), each carrying
+  /// its spend in every active month — the sheet's category breakdown grid.
+  List<CategoryHistoryRow> get categoryMatrix {
+    final byCat = <String, Map<String, double>>{};
+    for (final t
+        in _allTransactions.where((t) => t.type == TransactionType.outflow)) {
+      (byCat[t.categoryId] ??= {})[t.month] =
+          (byCat[t.categoryId]?[t.month] ?? 0) + t.amount;
+    }
+    final rows = <CategoryHistoryRow>[];
+    byCat.forEach((catId, byMonth) {
+      final cat = _categories.where((c) => c.id == catId).firstOrNull;
+      final total = byMonth.values.fold(0.0, (a, b) => a + b);
+      rows.add(CategoryHistoryRow(
+        categoryId: catId,
+        name: cat?.name ?? 'Uncategorized',
+        colorHex: cat?.colorHex,
+        byMonth: byMonth,
+        total: total,
+      ));
+    });
+    rows.sort((a, b) => b.total.compareTo(a.total));
+    return rows;
+  }
+
+  /// True when there are no transactions at all to build the matrix from.
+  bool get hasNoMatrixData => _allTransactions.isEmpty;
+
   // ─── Load ─────────────────────────────────────────────────────────────────────
 
   Future<void> load() async {
@@ -134,4 +272,63 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     }
     return result;
   }
+}
+
+/// A single plotted point in the History trend chart (Plan 050-E). Pre-computed
+/// in [TreasuryHistoryPresenter.trendPoints] so the view does zero math.
+class HistoryTrendPoint {
+  /// Zero-based x position (oldest = 0).
+  final double index;
+
+  /// 'YYYY-MM' month key for this point.
+  final String month;
+
+  /// Net savings (inflow − outflow) for the month.
+  final double net;
+  final double inflow;
+  final double outflow;
+
+  const HistoryTrendPoint({
+    required this.index,
+    required this.month,
+    required this.net,
+    required this.inflow,
+    required this.outflow,
+  });
+}
+
+/// One month column of the sheet-parity history matrix (Plan 050 polish).
+class MonthHistoryColumn {
+  final String month; // 'YYYY-MM'
+  final double income;
+  final double expenses;
+  final double net;
+  final double? savingsRate; // null when no income that month
+  final double cumulativeNet;
+
+  const MonthHistoryColumn({
+    required this.month,
+    required this.income,
+    required this.expenses,
+    required this.net,
+    required this.savingsRate,
+    required this.cumulativeNet,
+  });
+}
+
+/// One category row of the category×month breakdown grid (Plan 050 polish).
+class CategoryHistoryRow {
+  final String categoryId;
+  final String name;
+  final String? colorHex;
+  final Map<String, double> byMonth; // monthKey → spend
+  final double total;
+
+  const CategoryHistoryRow({
+    required this.categoryId,
+    required this.name,
+    required this.colorHex,
+    required this.byMonth,
+    required this.total,
+  });
 }
