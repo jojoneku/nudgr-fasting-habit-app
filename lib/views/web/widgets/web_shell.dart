@@ -25,6 +25,9 @@ class WebShell extends StatelessWidget {
   /// Optional footer (e.g. sync status + sign-out button).
   final Widget? footer;
 
+  /// Optional global topbar pinned above the content area (e.g. theme toggle).
+  final Widget? topBar;
+
   const WebShell({
     super.key,
     required this.destinations,
@@ -33,6 +36,7 @@ class WebShell extends StatelessWidget {
     required this.body,
     this.header,
     this.footer,
+    this.topBar,
   });
 
   @override
@@ -90,16 +94,26 @@ class WebShell extends StatelessWidget {
           ),
           Expanded(
             child: SafeArea(
-              // Full-height, width-constrained content region. Pages own their
-              // own scrolling and padding (tables and two-pane layouts need to
-              // manage scroll themselves).
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: WebBreakpoints.content),
-                  child: SizedBox.expand(child: body),
-                ),
+              child: Column(
+                children: [
+                  if (topBar != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        border: Border(
+                          bottom: BorderSide(
+                              color: cs.outlineVariant.withValues(alpha: 0.5)),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: WebInsets.xl, vertical: WebInsets.md),
+                      child: topBar!,
+                    ),
+                  // Full-height content region that fills the space after the
+                  // sidebar (matches the Claude design). Pages own their own
+                  // scrolling and padding.
+                  Expanded(child: body),
+                ],
               ),
             ),
           ),
@@ -109,7 +123,7 @@ class WebShell extends StatelessWidget {
   }
 }
 
-class _RailItem extends StatelessWidget {
+class _RailItem extends StatefulWidget {
   final WebDestination destination;
   final bool selected;
   final VoidCallback onTap;
@@ -120,53 +134,62 @@ class _RailItem extends StatelessWidget {
   });
 
   @override
+  State<_RailItem> createState() => _RailItemState();
+}
+
+class _RailItemState extends State<_RailItem> {
+  bool _hover = false;
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final selected = widget.selected;
     final fg = selected ? cs.primary : cs.onSurfaceVariant;
-    final radius = BorderRadius.circular(10);
 
-    // InkWell (over a transparent Material) gives keyboard focus, Enter/Space
-    // activation, a focus ring, hover, and a press ripple for free — the bare
-    // GestureDetector this replaced had none of those.
+    Color? bg;
+    if (selected) {
+      bg = cs.primary.withValues(alpha: 0.12);
+    } else if (_hover) {
+      bg = cs.onSurface.withValues(alpha: 0.05);
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: WebInsets.xs),
-      child: Semantics(
-        button: true,
-        selected: selected,
-        label: destination.label,
-        child: Material(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: radius,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            borderRadius: radius,
-            hoverColor: cs.onSurface.withValues(alpha: 0.05),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: WebInsets.md, vertical: WebInsets.md),
-              child: Row(
-                children: [
-                  Icon(
-                    selected
-                        ? (destination.selectedIcon ?? destination.icon)
-                        : destination.icon,
-                    size: 20,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        onEnter: (_) => setState(() => _hover = true),
+        onExit: (_) => setState(() => _hover = false),
+        child: GestureDetector(
+          onTap: widget.onTap,
+          behavior: HitTestBehavior.opaque,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(
+                horizontal: WebInsets.md, vertical: WebInsets.md),
+            decoration: BoxDecoration(
+              color: bg,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  selected
+                      ? (widget.destination.selectedIcon ??
+                          widget.destination.icon)
+                      : widget.destination.icon,
+                  size: 20,
+                  color: fg,
+                ),
+                const SizedBox(width: WebInsets.md),
+                Text(
+                  widget.destination.label,
+                  style: theme.textTheme.bodyMedium?.copyWith(
                     color: fg,
+                    fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                   ),
-                  const SizedBox(width: WebInsets.md),
-                  Text(
-                    destination.label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: fg,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),

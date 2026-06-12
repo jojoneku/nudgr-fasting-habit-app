@@ -340,14 +340,22 @@ class BudgetPresenter extends ChangeNotifier {
   Future<void> setBudget(
     String categoryId,
     double amount, {
-    BudgetGroup group = BudgetGroup.variableOptional,
-    BudgetType budgetType = BudgetType.monthly,
+    BudgetGroup? group,
+    BudgetType? budgetType,
   }) async {
     final existing = budgetFor(categoryId);
     if (existing != null) {
+      // copyWith treats null as "keep", so omitting group/budgetType preserves
+      // them, while passing a value (e.g. the inline Group dropdown) applies it.
       _allBudgets = [
         for (final b in _allBudgets)
-          b.id == existing.id ? b.copyWith(allocatedAmount: amount) : b,
+          b.id == existing.id
+              ? b.copyWith(
+                  allocatedAmount: amount,
+                  group: group,
+                  budgetType: budgetType,
+                )
+              : b,
       ];
     } else {
       final newBudget = Budget(
@@ -355,8 +363,8 @@ class BudgetPresenter extends ChangeNotifier {
         categoryId: categoryId,
         month: _selectedMonth,
         allocatedAmount: amount,
-        group: group,
-        budgetType: budgetType,
+        group: group ?? BudgetGroup.variableOptional,
+        budgetType: budgetType ?? BudgetType.monthly,
       );
       _allBudgets = [..._allBudgets, newBudget];
     }

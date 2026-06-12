@@ -63,3 +63,6 @@ scripts/data/aliases_shards/
 # Lambda deployment artifact — rebuilt as needed
 lambda.zip
 scripts/data/aliases_run.log
+
+# Treasury web design reference (Claude Design export — local reference only)
+docs/design/treasury-web-reference/
