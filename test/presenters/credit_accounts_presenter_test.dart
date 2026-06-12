@@ -214,6 +214,8 @@ void main() {
       when(storage.loadBudgets()).thenAnswer((_) async => []);
       when(storage.loadBudgetedExpenses()).thenAnswer((_) async => []);
       when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadMonthlySummaries()).thenAnswer((_) async => []);
+      when(storage.saveMonthlySummaries(any)).thenAnswer((_) async {});
       when(storage.saveAccounts(any)).thenAnswer((_) async {});
       presenter = TreasuryDashboardPresenter(storage);
     });
