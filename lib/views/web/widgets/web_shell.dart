@@ -25,6 +25,9 @@ class WebShell extends StatelessWidget {
   /// Optional footer (e.g. sync status + sign-out button).
   final Widget? footer;
 
+  /// Optional global topbar pinned above the content area (e.g. theme toggle).
+  final Widget? topBar;
+
   const WebShell({
     super.key,
     required this.destinations,
@@ -33,6 +36,7 @@ class WebShell extends StatelessWidget {
     required this.body,
     this.header,
     this.footer,
+    this.topBar,
   });
 
   @override
@@ -90,16 +94,26 @@ class WebShell extends StatelessWidget {
           ),
           Expanded(
             child: SafeArea(
-              // Full-height, width-constrained content region. Pages own their
-              // own scrolling and padding (tables and two-pane layouts need to
-              // manage scroll themselves).
-              child: Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(
-                  constraints:
-                      const BoxConstraints(maxWidth: WebBreakpoints.content),
-                  child: SizedBox.expand(child: body),
-                ),
+              child: Column(
+                children: [
+                  if (topBar != null)
+                    Container(
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        border: Border(
+                          bottom: BorderSide(
+                              color: cs.outlineVariant.withValues(alpha: 0.5)),
+                        ),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: WebInsets.xl, vertical: WebInsets.md),
+                      child: topBar!,
+                    ),
+                  // Full-height content region that fills the space after the
+                  // sidebar (matches the Claude design). Pages own their own
+                  // scrolling and padding.
+                  Expanded(child: body),
+                ],
               ),
             ),
           ),
