@@ -59,9 +59,14 @@ class NotificationService {
   // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
   static const int notifIdCreditDueBase = 620;
 
-  // Budget warnings: stable int in 601–640 range
+  // Budget warnings: stable int in 560–599. Must stay disjoint from the
+  // credit-due range above — both derive ids from a hash, and the previous
+  // 601–640 range overlapped 620–719, letting a budget warning and a credit
+  // reminder collide on one id and silently replace/cancel each other.
+  // (Safe to move: budget warnings are immediate show() notifications, not
+  // persisted alarms, so no stale scheduled ids are left behind.)
   static int _budgetWarningId(String budgetId) =>
-      budgetId.hashCode.abs() % 40 + 601;
+      budgetId.hashCode.abs() % 40 + 560;
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
