@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dar
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_form_dialog.dart';
 
@@ -608,20 +609,6 @@ const List<AccountCategory> _kSubSwitchable = [
   AccountCategory.timeDeposit,
 ];
 
-String _categoryLabel(AccountCategory cat) => switch (cat) {
-      AccountCategory.bank => 'Bank',
-      AccountCategory.ewallet => 'eWallet',
-      AccountCategory.cash => 'Cash',
-      AccountCategory.savings => 'Savings',
-      AccountCategory.goal => 'Goal',
-      AccountCategory.timeDeposit => 'Time Deposit',
-      AccountCategory.creditCard => 'Credit Card',
-      AccountCategory.creditLine => 'Credit Line',
-      AccountCategory.bnpl => 'BNPL',
-      AccountCategory.investment => 'Investment',
-      AccountCategory.custodian => 'External',
-    };
-
 /// Compact inline dropdown that re-assigns an account's [AccountCategory].
 /// Selecting a new type persists immediately via [updateAccount]; the section
 /// grouping re-derives on the presenter's notify, so the row jumps to its new
@@ -654,7 +641,7 @@ class _TypeDropdown extends StatelessWidget {
         dropdownColor: cs.surfaceContainerHigh,
         items: [
           for (final c in options)
-            DropdownMenuItem(value: c, child: Text(_categoryLabel(c))),
+            DropdownMenuItem(value: c, child: Text(c.label)),
         ],
         onChanged: (c) => _changeType(context, c),
       ),
@@ -714,19 +701,7 @@ class _AccountRow extends StatelessWidget {
         AccountCategory.custodian => Icons.group_outlined,
       };
 
-  String get _typeLabel => switch (account.category) {
-        AccountCategory.bank => 'Bank',
-        AccountCategory.ewallet => 'eWallet',
-        AccountCategory.cash => 'Cash',
-        AccountCategory.savings => 'Savings',
-        AccountCategory.goal => 'Goal',
-        AccountCategory.timeDeposit => 'Time Deposit',
-        AccountCategory.creditCard => 'Credit Card',
-        AccountCategory.creditLine => 'Credit Line',
-        AccountCategory.bnpl => 'BNPL',
-        AccountCategory.investment => 'Investment',
-        AccountCategory.custodian => 'External',
-      };
+  String get _typeLabel => account.category.label;
 
   Future<void> _confirmDelete(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);

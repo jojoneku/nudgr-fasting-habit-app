@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Account color swatch options. These are user-chosen account colors — the
@@ -40,20 +41,6 @@ const _subAccountCategories = [
   AccountCategory.goal,
   AccountCategory.timeDeposit,
 ];
-
-String _categoryLabel(AccountCategory cat) => switch (cat) {
-      AccountCategory.bank => 'Bank',
-      AccountCategory.ewallet => 'eWallet',
-      AccountCategory.cash => 'Cash',
-      AccountCategory.savings => 'Savings',
-      AccountCategory.goal => 'Goal',
-      AccountCategory.timeDeposit => 'Time Deposit',
-      AccountCategory.creditCard => 'Credit Card',
-      AccountCategory.creditLine => 'Credit Line',
-      AccountCategory.bnpl => 'BNPL',
-      AccountCategory.investment => 'Investment',
-      AccountCategory.custodian => 'External',
-    };
 
 /// Validator for optional currency/number fields: blank is allowed (treated as
 /// 0 / unset on submit), but a non-empty value must parse cleanly so malformed
@@ -423,7 +410,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                               items: _availableCategories
                                   .map((c) => DropdownMenuItem(
                                         value: c,
-                                        child: Text(_categoryLabel(c)),
+                                        child: Text(c.label),
                                       ))
                                   .toList(),
                               onChanged: (c) =>

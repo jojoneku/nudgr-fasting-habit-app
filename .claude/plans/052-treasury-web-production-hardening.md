@@ -141,10 +141,25 @@ reduced-motion guard (U10); enter-to-submit on dialogs (U6); filtered-empty +
 error states (U7). Ledger: presenter `deleteTransactions(Set)` (C8) and
 `updateTransactionFields(id, …)` patch API (C4).
 
-**G6 — Design-system.** `WebEmptyState`, `parseHexColor()` util,
-`AccountCategoryLabel` extension, `WebDialogScaffold`; rewire pages to them.
+**G6 — Design-system.** Shipped: `AccountCategoryLabel` extension
+(`lib/views/web/design/account_category_label.dart`) replacing the three
+copy-pasted 11-arm switches (D1) — the highest-risk drift item (a stale arm
+shows the wrong account label). **Deferred** as a low-risk, internal-only
+follow-up (no user-visible change, broad churn): `parseHexColor()` util (D2),
+`WebEmptyState` (D3), `WebDialogScaffold` (D4). These reduce duplication but
+touch many call sites; tracked for a dedicated refactor PR.
 
-**Excluded from commits:** `main_web_preview.dart` stays untracked (D5).
+**Excluded from commits:** `main_web_preview.dart` stays untracked (D5) — it is
+a throwaway harness that writes to real persisted storage and embeds
+real-looking personal balances; it must not enter repo history.
+
+## Deferred follow-ups (not in this PR)
+- D2–D4 design-system consolidation (above).
+- Full ledger grid virtualization (`ListView.builder`/slivers) for multi-year
+  datasets (P-A4); fine at current row counts.
+- Move the remaining low-cost `build()` aggregations in bills/budget/history/
+  dashboard into presenter getters (P5) — rule-1 tidiness, sub-ms cost today.
+- Donut hover hit-testing (the ranked legend already shows exact values).
 
 ## Verification
 - `dart format` on every changed file (repo rule).
