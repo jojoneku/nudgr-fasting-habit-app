@@ -18,7 +18,34 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  <meta name="description" content="Treasury — your finances, on the big screen.">
+
+  <!--
+    Security headers. The directives below are the subset that is safe to set
+    via <meta> without breaking Flutter's CanvasKit/WASM/script loading. They
+    add real clickjacking + base-tag-injection protection at zero runtime risk.
+
+    The full Content-Security-Policy (connect-src/script-src for Supabase,
+    Google OAuth, and gstatic CanvasKit/fonts) MUST be applied at the HOSTING
+    layer as a real HTTP header — a strict CSP delivered via <meta> reliably
+    breaks Flutter web's bootstrap. Recommended response headers for the host:
+
+      Content-Security-Policy:
+        default-src 'self';
+        connect-src 'self' https://*.supabase.co https://accounts.google.com;
+        script-src 'self' 'wasm-unsafe-eval' https://www.gstatic.com;
+        style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+        font-src 'self' https://fonts.gstatic.com;
+        img-src 'self' data: https:;
+        frame-ancestors 'none'; base-uri 'self'; object-src 'none';
+      X-Frame-Options: DENY
+      X-Content-Type-Options: nosniff
+      Referrer-Policy: strict-origin-when-cross-origin
+    (Plan 052 S3)
+  -->
+  <meta http-equiv="Content-Security-Policy"
+        content="frame-ancestors 'none'; base-uri 'self'; object-src 'none'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
 
   <!-- iOS meta tags & icons -->
   <meta name="mobile-web-app-capable" content="yes">

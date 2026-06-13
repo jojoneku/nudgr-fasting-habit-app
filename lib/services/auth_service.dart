@@ -13,8 +13,15 @@ class AuthService {
     final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
     final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
 
-    assert(url.isNotEmpty, 'SUPABASE_URL missing from .env');
-    assert(anonKey.isNotEmpty, 'SUPABASE_ANON_KEY missing from .env');
+    // Throw (not `assert`) — asserts are stripped in release, so a misconfigured
+    // deploy would otherwise initialise Supabase with empty strings and fail
+    // opaquely on the first request. Fail loudly at startup instead. (Plan 052 S6)
+    if (url.isEmpty || anonKey.isEmpty) {
+      throw StateError(
+        'Supabase credentials missing from .env '
+        '(SUPABASE_URL and SUPABASE_ANON_KEY are required).',
+      );
+    }
 
     // On web we use Supabase's OAuth redirect flow instead of the native
     // google_sign_in ID-token flow, so the GoogleSignIn client is never built
