@@ -146,7 +146,8 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   Color _colorFor(FinanceCategory? cat) {
     if (cat == null) return Theme.of(context).colorScheme.onSurfaceVariant;
     final idx = _p.categories.indexWhere((c) => c.id == cat.id);
-    return resolveSliceColor(cat.colorHex, idx < 0 ? 0 : idx);
+    return resolveSliceColor(cat.colorHex, idx < 0 ? 0 : idx,
+        brightness: Theme.of(context).brightness);
   }
 
   List<FinanceCategory> _categoriesFor(TransactionType type) {
@@ -931,7 +932,9 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                       color: cs.outlineVariant.withValues(alpha: 0.6)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.18),
+                      // Theme shadow token, not literal black — black at 0.18
+                      // reads far too heavy over light-mode surfaces. (T5)
+                      color: cs.shadow.withValues(alpha: 0.18),
                       blurRadius: 24,
                       offset: const Offset(0, 8),
                     ),
@@ -1806,7 +1809,9 @@ class _EditableRowState extends State<_EditableRow> {
     if (widget.selected) {
       bg = cs.primary.withValues(alpha: 0.10);
     } else if (_hover) {
-      bg = cs.onSurface.withValues(alpha: 0.03);
+      // 0.03 was below the perceptual threshold on dark surfaces — the hover
+      // affordance was effectively invisible. (T6)
+      bg = cs.onSurface.withValues(alpha: 0.06);
     } else if (widget.zebra) {
       bg = cs.surfaceContainerHighest.withValues(alpha: 0.25);
     }
@@ -2945,7 +2950,8 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                         width: 8,
                         height: 8,
                         decoration: BoxDecoration(
-                          color: resolveSliceColor(c.colorHex, cats.indexOf(c)),
+                          color: resolveSliceColor(c.colorHex, cats.indexOf(c),
+                              brightness: Theme.of(context).brightness),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),

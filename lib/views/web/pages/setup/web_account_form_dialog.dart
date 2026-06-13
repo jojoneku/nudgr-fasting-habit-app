@@ -616,24 +616,25 @@ class _ColorSwatchPicker extends StatelessWidget {
 
   const _ColorSwatchPicker({required this.selected, required this.onSelected});
 
-  Color _parse(String hex) {
+  Color _parse(String hex, Color fallback) {
     try {
       final clean = hex.replaceFirst('#', '');
       return Color(int.parse('FF$clean', radix: 16));
     } catch (_) {
-      return Colors.blue;
+      return fallback; // theme-resolved, not a hardcoded Colors.blue (T4)
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final fallback = Theme.of(context).colorScheme.primary;
     return Wrap(
       spacing: WebInsets.md,
       runSpacing: WebInsets.md,
       children: [
         for (final hex in _colorOptions)
           _Swatch(
-            color: _parse(hex),
+            color: _parse(hex, fallback),
             selected: hex.toLowerCase() == selected.toLowerCase(),
             onTap: () => onSelected(hex),
             semanticLabel: 'Color $hex',
@@ -690,7 +691,13 @@ class _Swatch extends StatelessWidget {
                     : null,
               ),
               child: selected
-                  ? Icon(Icons.check, color: cs.onPrimary, size: 18)
+                  // Contrast against the arbitrary user swatch (not cs.onPrimary,
+                  // which is near-invisible on light swatches in light mode). (T3)
+                  ? Icon(Icons.check,
+                      color: color.computeLuminance() > 0.5
+                          ? Colors.black
+                          : Colors.white,
+                      size: 18)
                   : null,
             ),
           ),

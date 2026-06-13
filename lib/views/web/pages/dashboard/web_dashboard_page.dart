@@ -331,7 +331,10 @@ class _IncomeExpensesCard extends StatelessWidget {
         groups:
             ie.map((m) => (label: m.label, a: m.income, b: m.expense)).toList(),
         aColor: cs.tertiary,
-        bColor: cs.onSurfaceVariant,
+        // A solid brand color for the expense series — onSurfaceVariant is a
+        // text role and reads as a weak gray fill against gridlines, especially
+        // in light mode. (T2)
+        bColor: cs.primary,
         leftLabelFormat: formatPesoCompact,
         height: 220,
       ),
@@ -735,7 +738,8 @@ class _WhereMoneyGoesCard extends StatelessWidget {
         WebChartSlice(
           label: spend[i].$1.name,
           value: spend[i].$2,
-          color: resolveSliceColor(spend[i].$1.colorHex, i),
+          color: resolveSliceColor(spend[i].$1.colorHex, i,
+              brightness: Theme.of(context).brightness),
         ),
     ];
 
@@ -787,7 +791,8 @@ class _SavingsGoalsCard extends StatelessWidget {
       final target = a.goalTarget ?? 0;
       final progress = target > 0 ? (a.balance / target).clamp(0.0, 1.0) : 0.0;
       final pct = target > 0 ? (a.balance / target * 100).round() : 0;
-      final color = resolveSliceColor(a.colorHex, i);
+      final color = resolveSliceColor(a.colorHex, i,
+          brightness: Theme.of(context).brightness);
       if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));
       rows.add(Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

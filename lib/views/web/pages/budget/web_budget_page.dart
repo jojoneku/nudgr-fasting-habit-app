@@ -107,7 +107,8 @@ class _BudgetBody extends StatelessWidget {
           group: group,
           allocated: presenter.budgetFor(cat.id)?.allocatedAmount ?? 0,
           spent: presenter.spentFor(cat.id),
-          color: resolveSliceColor(cat.colorHex, colorIndex++),
+          color: resolveSliceColor(cat.colorHex, colorIndex++,
+              brightness: Theme.of(context).brightness),
           accountBacked: false,
         ));
       }
