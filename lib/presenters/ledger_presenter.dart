@@ -422,7 +422,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> updateTransaction(TransactionRecord txn) async {
-    final old = _allTransactions.firstWhere((t) => t.id == txn.id);
+    // Guard against a vanished id (reachable via fast successive inline edits
+    // or an interleaved delete) — `firstWhere` would otherwise throw. (C9)
+    final old = _allTransactions.where((t) => t.id == txn.id).firstOrNull;
+    if (old == null) return;
     _reverseBalanceDelta(old.accountId, old.amount, old.type);
     _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = [
@@ -433,7 +436,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
-    final txn = _allTransactions.firstWhere((t) => t.id == id);
+    final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
+    if (txn == null) return; // already gone — no-op (C9)
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     safeNotify();
@@ -523,7 +527,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         return;
       }
       _chatHardError = null;
-      if (preparse.isFullyResolved && _ai == null || preparse.isFullyResolved) {
+      // A fully-resolved parse commits directly (the AI is only consulted for
+      // ambiguous input). The old `a && b || a` clause collapsed to this. (C12)
+      if (preparse.isFullyResolved) {
         await _commitParsed(preparse.toDraft());
         return;
       }

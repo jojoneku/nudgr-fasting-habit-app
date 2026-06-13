@@ -72,7 +72,9 @@ class _BillsBody extends StatelessWidget {
 
     final dueTotal = presenter.totalBillsPending;
     final paidTotal = presenter.totalBillsPaid;
-    final outstandingTotal = presenter.totalBillsPending;
+    // Outstanding = unpaid bills + unpaid budgeted expenses; previously this
+    // duplicated `totalBillsPending`, making the tile a copy of "Due". (C2)
+    final outstandingTotal = presenter.totalUnpaidObligations;
     final receiveTotal =
         pendingReceivables.fold(0.0, (sum, r) => sum + r.amount);
 
@@ -190,6 +192,7 @@ class _AddBillDialogState extends State<_AddBillDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
@@ -206,6 +209,9 @@ class _AddBillDialogState extends State<_AddBillDialog> {
       );
       await widget.presenter.addBill(bill);
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      // Previously a save failure left the dialog open with no message. (C7)
+      messenger.showSnackBar(SnackBar(content: Text('Could not add bill: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -418,7 +424,7 @@ class _StatStrip extends StatelessWidget {
       WebStatTile(
         label: 'Outstanding',
         value: formatPeso(outstandingTotal),
-        sub: 'Bills + installments',
+        sub: 'Unpaid bills + expenses',
         icon: Icons.description_outlined,
       ),
       WebStatTile(
