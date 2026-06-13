@@ -41,6 +41,29 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
 
+  // ── Derived-row caches (Plan 052 P1) ────────────────────────────────────────
+  // `ledgerSpreadsheetRows` reconstructs every account's balance history by
+  // sorting all transactions per account — expensive, and the web grid reads it
+  // on every build (the search box filters view-side via setState, so the page
+  // rebuilds per keystroke without any presenter change). Cache the result and
+  // clear it in [safeNotify], i.e. only when presenter state actually mutates —
+  // so per-keystroke rebuilds reuse the cached rows instead of re-sorting all
+  // history each character.
+  List<({TransactionRecord txn, double runningBalance})>? _rowsForMonthCache;
+  List<
+      ({
+        TransactionRecord txn,
+        double runningBalance,
+        double accountBalance,
+      })>? _spreadsheetCache;
+
+  @override
+  void safeNotify() {
+    _rowsForMonthCache = null;
+    _spreadsheetCache = null;
+    super.safeNotify();
+  }
+
   // ── Chat-logging state (Plan 026 — ephemeral, never persisted) ──────────────
   LedgerChatState _chatState = const LedgerChatState.idle();
   FinanceParseError? _chatHardError;
@@ -187,6 +210,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// filtered scope — it is purely derived, never persisted.
   List<({TransactionRecord txn, double runningBalance})>
       get ledgerRowsForMonth {
+    final cached = _rowsForMonthCache;
+    if (cached != null) return cached;
     var txns = _filteredTransactions;
     if (_selectedCategoryId != null) {
       txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
@@ -207,7 +232,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     // Display newest-first.
-    return rows.reversed.toList();
+    return _rowsForMonthCache = rows.reversed.toList();
   }
 
   /// Inflow subtotal for the current table filter (month/account/category).
@@ -264,8 +289,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         double runningBalance,
         double accountBalance,
       })> get ledgerSpreadsheetRows {
+    final cached = _spreadsheetCache;
+    if (cached != null) return cached;
     final acctMap = _accountBalanceByTxnId;
-    return [
+    return _spreadsheetCache = [
       for (final r in ledgerRowsForMonth)
         (
           txn: r.txn,

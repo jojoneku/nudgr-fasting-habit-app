@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
@@ -12,6 +13,10 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../widgets/web_widgets.dart';
+
+/// Hoisted so the per-row date cells don't allocate a new [DateFormat] on
+/// every build. (Plan 052 P10)
+final DateFormat _kMonthDayFmt = DateFormat('MMM d');
 
 /// Web Ledger page (Plan 051). A Google-Sheets-style, inline-editable
 /// transaction grid matching the Claude Design reference
@@ -120,14 +125,22 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  Timer? _searchDebounce;
+
   void _onSearchChanged() {
-    final next = _searchController.text.trim().toLowerCase();
-    if (next == _query) return;
-    setState(() => _query = next);
+    // Debounce so each keystroke doesn't re-filter the whole grid immediately;
+    // the filter only re-runs once typing pauses (~220ms). (Plan 052 B2/P2)
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 220), () {
+      final next = _searchController.text.trim().toLowerCase();
+      if (next == _query || !mounted) return;
+      setState(() => _query = next);
+    });
   }
 
   // ── Lookups ────────────────────────────────────────────────────────────────
@@ -639,7 +652,7 @@ class _Toolbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final df = DateFormat('MMM d');
+    final df = _kMonthDayFmt;
     final dateLabel = fromDate != null && toDate != null
         ? '${df.format(fromDate!)} → ${df.format(toDate!)}'
         : fromDate != null
@@ -1008,8 +1021,7 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                             child: _DateButton(
                               label: widget.fromDate == null
                                   ? 'From'
-                                  : DateFormat('MMM d')
-                                      .format(widget.fromDate!),
+                                  : _kMonthDayFmt.format(widget.fromDate!),
                               onTap: () => _pickDate(context, true),
                             ),
                           ),
@@ -1023,7 +1035,7 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                             child: _DateButton(
                               label: widget.toDate == null
                                   ? 'Until'
-                                  : DateFormat('MMM d').format(widget.toDate!),
+                                  : _kMonthDayFmt.format(widget.toDate!),
                               onTap: () => _pickDate(context, false),
                             ),
                           ),
@@ -1861,7 +1873,10 @@ class _EditableRowState extends State<_EditableRow> {
                   ),
             // Description
             _InlineText(
-              key: ValueKey('desc_${t.id}_${t.description}'),
+              // Key on the row id ONLY — embedding the value meant every commit
+              // disposed+recreated the controller/FocusNode, breaking Tab/Enter
+              // flow and dropping focus. didUpdateWidget syncs the text. (C3)
+              key: ValueKey('desc_${t.id}'),
               width: widget.descWidth,
               initialValue: t.description,
               hintText: '—',
@@ -1889,7 +1904,7 @@ class _EditableRowState extends State<_EditableRow> {
                   ),
             // Inflow
             _AmountCell(
-              key: ValueKey('in_${t.id}_${t.type}_${t.amount}'),
+              key: ValueKey('in_${t.id}'),
               width: _wInflow,
               value: t.type == TransactionType.inflow ? t.amount : 0,
               color: cs.tertiary,
@@ -1898,7 +1913,7 @@ class _EditableRowState extends State<_EditableRow> {
             ),
             // Outflow
             _AmountCell(
-              key: ValueKey('out_${t.id}_${t.type}_${t.amount}'),
+              key: ValueKey('out_${t.id}'),
               width: _wOutflow,
               value: t.type == TransactionType.outflow ? t.amount : 0,
               color: cs.onSurface,
@@ -2171,6 +2186,16 @@ class _InlineTextState extends State<_InlineText> {
   }
 
   @override
+  void didUpdateWidget(_InlineText old) {
+    super.didUpdateWidget(old);
+    // The row now persists across commits (keyed on id), so sync the controller
+    // when the external value changes — but never clobber active typing. (C3)
+    if (!_focused && widget.initialValue != _c.text) {
+      _c.text = widget.initialValue;
+    }
+  }
+
+  @override
   void dispose() {
     _f.removeListener(_onFocus);
     _f.dispose();
@@ -2287,9 +2312,20 @@ class _AmountCellState extends State<_AmountCell> {
     } else {
       final v = _parse();
       widget.onCommit(v);
-      _c.text = _display(v);
+      // If the parse came back as 0 (field cleared) the amount-edit rule
+      // ignores it — fall back to the current value instead of showing a blank
+      // cell. didUpdateWidget reconciles once the parent rebuilds. (C2)
+      _c.text = _display(v > 0 ? v : widget.value);
     }
     setState(() => _focused = _f.hasFocus);
+  }
+
+  @override
+  void didUpdateWidget(_AmountCell old) {
+    super.didUpdateWidget(old);
+    if (!_focused && old.value != widget.value) {
+      _c.text = _display(widget.value);
+    }
   }
 
   double _parse() {
@@ -2502,7 +2538,7 @@ class _DateCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final label = DateFormat('MMM d').format(date);
+    final label = _kMonthDayFmt.format(date);
     final text = Text(label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
