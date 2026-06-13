@@ -447,6 +447,9 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                                 isDense: true,
                                 border: const OutlineInputBorder(),
                               ),
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) =>
+                                  _submit(), // Enter submits (U6)
                               // Reject malformed numbers (e.g. "1.2.3") instead
                               // of silently coercing them to 0. (Plan 052 C6)
                               validator: _optionalAmountValidator,

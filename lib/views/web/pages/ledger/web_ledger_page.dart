@@ -90,6 +90,7 @@ const double _kControlHeight = 40;
 
 class _WebLedgerPageState extends State<WebLedgerPage> {
   final _searchController = TextEditingController();
+  final _gridHScroll = ScrollController(); // horizontal grid scroll (U8)
   String _query = '';
 
   // Filters & sort (all transient, View-side — never mutate presenter state).
@@ -127,6 +128,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   void dispose() {
     _searchDebounce?.cancel();
     _searchController.dispose();
+    _gridHScroll.dispose();
     super.dispose();
   }
 
@@ -286,17 +288,47 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _p.updateTransaction(t.copyWith(type: dir, amount: value));
   }
 
-  void _deleteRow(TransactionRecord t) {
-    _selected.remove(t.id);
+  Future<void> _deleteRow(TransactionRecord t) async {
+    final ok = await _confirmDelete(1);
+    if (!ok || !mounted) return;
+    setState(() => _selected.remove(t.id));
     _p.deleteTransactionOrGroup(t.id);
   }
 
-  void _deleteSelected() {
-    final ids = _selected.toList();
+  Future<void> _deleteSelected() async {
+    final ids = _selected.toSet();
+    if (ids.isEmpty) return;
+    final ok = await _confirmDelete(ids.length);
+    if (!ok || !mounted) return;
     setState(_selected.clear);
-    for (final id in ids) {
-      _p.deleteTransactionOrGroup(id);
-    }
+    // One batched mutation + persist instead of N fire-and-forget writes. (C8)
+    _p.deleteTransactions(ids);
+  }
+
+  /// Confirms a destructive delete of [count] transaction(s). (Plan 052 U2)
+  Future<bool> _confirmDelete(int count) async {
+    final noun = count == 1 ? 'this transaction' : '$count transactions';
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete transactions?'),
+        content:
+            Text('Permanently delete $noun? This also reverses the affected '
+                'account balances and cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   void _commitDraft() {
@@ -465,91 +497,98 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                   _wAcctBal +
                   _wNotes +
                   _wDelete;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: gridW,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _GridHeader(
-                        descWidth: descW,
-                        sortKey: _sortKey,
-                        sortDir: _sortDir,
-                        allSelected: rows.isNotEmpty &&
-                            rows.every((r) => _selected.contains(r.txn.id)),
-                        onToggleAll: () => setState(() {
-                          final allSel = rows.isNotEmpty &&
-                              rows.every((r) => _selected.contains(r.txn.id));
-                          if (allSel) {
-                            _selected.clear();
-                          } else {
-                            _selected.addAll(rows.map((r) => r.txn.id));
-                          }
-                        }),
-                        onSort: _toggleHeaderSort,
-                      ),
-                      // Draft add-row — placed at the TOP, where newly-added
-                      // transactions appear (the list is newest-first).
-                      _DraftRow(
-                        epoch: _draftEpoch,
-                        descWidth: descW,
-                        date: _draftDate,
-                        accountId: _draftAccountId,
-                        categoryId: _draftCategoryId,
-                        inflow: _draftInflow,
-                        outflow: _draftOutflow,
-                        accounts: _liquidAccounts,
-                        categories: _categoriesFor(_draftInflow > 0
-                            ? TransactionType.inflow
-                            : TransactionType.outflow),
-                        colorFor: _colorFor,
-                        onDate: (d) => setState(() => _draftDate = d),
-                        onAccount: (id) => setState(() => _draftAccountId = id),
-                        onCategory: (id) =>
-                            setState(() => _draftCategoryId = id),
-                        onDescription: (v) => _draftDesc = v,
-                        onNote: (v) => _draftNote = v,
-                        onInflow: (v) => setState(() {
-                          _draftInflow = v;
-                          if (v > 0) _draftOutflow = 0;
-                        }),
-                        onOutflow: (v) => setState(() {
-                          _draftOutflow = v;
-                          if (v > 0) _draftInflow = 0;
-                        }),
-                        onCommit: _commitDraft,
-                      ),
-                      if (rows.isEmpty)
-                        _EmptyGridHint(hasAccounts: _liquidAccounts.isNotEmpty),
-                      for (var i = 0; i < rows.length; i++)
-                        _EditableRow(
-                          key: ValueKey(rows[i].txn.id),
-                          row: rows[i],
+              return Scrollbar(
+                controller: _gridHScroll,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  controller: _gridHScroll,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: gridW,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _GridHeader(
                           descWidth: descW,
-                          zebra: i.isOdd,
-                          selected: _selected.contains(rows[i].txn.id),
-                          accounts: _liquidAccounts,
-                          categories: _categoriesFor(rows[i].txn.type),
-                          accountName: _accountName,
-                          categoryOf: _categoryOf,
-                          colorFor: _colorFor,
-                          onToggleSelect: () => setState(() {
-                            final id = rows[i].txn.id;
-                            _selected.contains(id)
-                                ? _selected.remove(id)
-                                : _selected.add(id);
+                          sortKey: _sortKey,
+                          sortDir: _sortDir,
+                          allSelected: rows.isNotEmpty &&
+                              rows.every((r) => _selected.contains(r.txn.id)),
+                          onToggleAll: () => setState(() {
+                            final allSel = rows.isNotEmpty &&
+                                rows.every((r) => _selected.contains(r.txn.id));
+                            if (allSel) {
+                              _selected.clear();
+                            } else {
+                              _selected.addAll(rows.map((r) => r.txn.id));
+                            }
                           }),
-                          onDate: _editDate,
-                          onAccount: _editAccount,
-                          onCategory: _editCategory,
-                          onDescription: _editDescription,
-                          onNote: _editNote,
-                          onAmount: _editAmount,
-                          onDelete: _deleteRow,
+                          onSort: _toggleHeaderSort,
                         ),
-                    ],
+                        // Draft add-row — placed at the TOP, where newly-added
+                        // transactions appear (the list is newest-first).
+                        _DraftRow(
+                          epoch: _draftEpoch,
+                          descWidth: descW,
+                          date: _draftDate,
+                          accountId: _draftAccountId,
+                          categoryId: _draftCategoryId,
+                          inflow: _draftInflow,
+                          outflow: _draftOutflow,
+                          accounts: _liquidAccounts,
+                          categories: _categoriesFor(_draftInflow > 0
+                              ? TransactionType.inflow
+                              : TransactionType.outflow),
+                          colorFor: _colorFor,
+                          onDate: (d) => setState(() => _draftDate = d),
+                          onAccount: (id) =>
+                              setState(() => _draftAccountId = id),
+                          onCategory: (id) =>
+                              setState(() => _draftCategoryId = id),
+                          onDescription: (v) => _draftDesc = v,
+                          onNote: (v) => _draftNote = v,
+                          onInflow: (v) => setState(() {
+                            _draftInflow = v;
+                            if (v > 0) _draftOutflow = 0;
+                          }),
+                          onOutflow: (v) => setState(() {
+                            _draftOutflow = v;
+                            if (v > 0) _draftInflow = 0;
+                          }),
+                          onCommit: _commitDraft,
+                        ),
+                        if (rows.isEmpty)
+                          _EmptyGridHint(
+                              hasAccounts: _liquidAccounts.isNotEmpty),
+                        for (var i = 0; i < rows.length; i++)
+                          _EditableRow(
+                            key: ValueKey(rows[i].txn.id),
+                            row: rows[i],
+                            descWidth: descW,
+                            zebra: i.isOdd,
+                            selected: _selected.contains(rows[i].txn.id),
+                            accounts: _liquidAccounts,
+                            categories: _categoriesFor(rows[i].txn.type),
+                            accountName: _accountName,
+                            categoryOf: _categoryOf,
+                            colorFor: _colorFor,
+                            onToggleSelect: () => setState(() {
+                              final id = rows[i].txn.id;
+                              _selected.contains(id)
+                                  ? _selected.remove(id)
+                                  : _selected.add(id);
+                            }),
+                            onDate: _editDate,
+                            onAccount: _editAccount,
+                            onCategory: _editCategory,
+                            onDescription: _editDescription,
+                            onNote: _editNote,
+                            onAmount: _editAmount,
+                            onDelete: _deleteRow,
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -1162,21 +1201,26 @@ class _TypeSegmented extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final sel = v == value;
     return Expanded(
-      child: GestureDetector(
-        onTap: () => onChanged(v),
-        behavior: HitTestBehavior.opaque,
-        child: Container(
-          height: double.infinity,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: sel ? cs.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(AppRadii.sm - 2),
+      // MouseRegion for a pointer cursor — this was a bare GestureDetector with
+      // no hover affordance on desktop. (Plan 052 U9)
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () => onChanged(v),
+          behavior: HitTestBehavior.opaque,
+          child: Container(
+            height: double.infinity,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: sel ? cs.primary : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppRadii.sm - 2),
+            ),
+            child: Text(label,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: sel ? cs.onPrimary : cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    )),
           ),
-          child: Text(label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: sel ? cs.onPrimary : cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  )),
         ),
       ),
     );
@@ -1957,16 +2001,21 @@ class _EditableRowState extends State<_EditableRow> {
             SizedBox(
               width: _wDelete,
               child: Center(
-                child: AnimatedOpacity(
-                  opacity: _hover ? 1 : 0,
-                  duration: const Duration(milliseconds: 120),
-                  child: IconButton(
-                    onPressed: () => widget.onDelete(t),
-                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                    color: cs.onSurfaceVariant,
-                    hoverColor: cs.error.withValues(alpha: 0.12),
-                    tooltip: 'Delete',
-                    visualDensity: VisualDensity.compact,
+                // IgnorePointer when hidden — a 0-opacity button still hit-tests,
+                // causing accidental deletes on non-hovered rows. (U4)
+                child: IgnorePointer(
+                  ignoring: !_hover,
+                  child: AnimatedOpacity(
+                    opacity: _hover ? 1 : 0,
+                    duration: const Duration(milliseconds: 150),
+                    child: IconButton(
+                      onPressed: () => widget.onDelete(t),
+                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                      color: cs.onSurfaceVariant,
+                      hoverColor: cs.error.withValues(alpha: 0.12),
+                      tooltip: 'Delete',
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ),
               ),
@@ -2237,23 +2286,37 @@ class _InlineTextState extends State<_InlineText> {
           ),
           padding:
               const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 6),
-          child: TextField(
-            controller: _c,
-            focusNode: _f,
-            style: style,
-            maxLines: 1,
-            textAlignVertical: TextAlignVertical.center,
-            onChanged: widget.onChanged,
-            onSubmitted: (_) {
-              widget.onCommit(_c.text);
-              widget.onSubmit?.call();
+          child: Focus(
+            canRequestFocus: false,
+            onKeyEvent: (_, event) {
+              // Esc reverts to the original value, then blurs (the blur commit
+              // becomes a no-op). (Plan 052 U5)
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                _c.text = widget.initialValue;
+                _f.unfocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
             },
-            decoration: InputDecoration(
-              isCollapsed: true,
-              border: InputBorder.none,
-              hintText: widget.hintText,
-              hintStyle: style?.copyWith(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+            child: TextField(
+              controller: _c,
+              focusNode: _f,
+              style: style,
+              maxLines: 1,
+              textAlignVertical: TextAlignVertical.center,
+              onChanged: widget.onChanged,
+              onSubmitted: (_) {
+                widget.onCommit(_c.text);
+                widget.onSubmit?.call();
+              },
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: widget.hintText,
+                hintStyle: style?.copyWith(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+              ),
             ),
           ),
         ),
@@ -2377,26 +2440,40 @@ class _AmountCellState extends State<_AmountCell> {
           ),
           padding:
               const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 6),
-          child: TextField(
-            controller: _c,
-            focusNode: _f,
-            style: style,
-            textAlign: TextAlign.right,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))
-            ],
-            onChanged: (_) => widget.onChanged?.call(_parse()),
-            onSubmitted: (_) {
-              widget.onCommit(_parse());
-              widget.onSubmit?.call();
+          child: Focus(
+            canRequestFocus: false,
+            onKeyEvent: (_, event) {
+              // Esc reverts to the current value, then blurs. (Plan 052 U5)
+              if (event is KeyDownEvent &&
+                  event.logicalKey == LogicalKeyboardKey.escape) {
+                _c.text = widget.value <= 0 ? '' : _trimZeros(widget.value);
+                _f.unfocus();
+                return KeyEventResult.handled;
+              }
+              return KeyEventResult.ignored;
             },
-            decoration: InputDecoration(
-              isCollapsed: true,
-              border: InputBorder.none,
-              hintText: '—',
-              hintStyle: style?.copyWith(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+            child: TextField(
+              controller: _c,
+              focusNode: _f,
+              style: style,
+              textAlign: TextAlign.right,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))
+              ],
+              onChanged: (_) => widget.onChanged?.call(_parse()),
+              onSubmitted: (_) {
+                widget.onCommit(_parse());
+                widget.onSubmit?.call();
+              },
+              decoration: InputDecoration(
+                isCollapsed: true,
+                border: InputBorder.none,
+                hintText: '—',
+                hintStyle: style?.copyWith(
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+              ),
             ),
           ),
         ),

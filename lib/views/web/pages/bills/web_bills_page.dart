@@ -282,6 +282,8 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                             const InputDecoration(labelText: 'Due day (1–31)'),
                         keyboardType: TextInputType.number,
                         textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) =>
+                            _submit(), // Enter submits (U6)
                         validator: (v) {
                           final d = int.tryParse(v ?? '');
                           if (d == null || d < 1 || d > 31) return '1–31';
@@ -614,16 +616,45 @@ class _BillRow extends StatelessWidget {
         presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
     final accountId =
         bill.accountId ?? (fallback.isNotEmpty ? fallback.first.id : null);
+    final messenger = ScaffoldMessenger.of(context);
     if (accountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(content: Text('Add an account before marking paid.')),
       );
       return;
     }
+
+    // Marking paid moves real money out of an account and can't be undone in
+    // one click — confirm, and show exactly which account is debited (it may be
+    // a silent fallback the user never picked). (Plan 052 U1/U2)
+    final accountName = _accountName(accountId) ?? 'your account';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark bill as paid?'),
+        content: Text('Pay ${formatPeso(bill.amount)} for "${bill.name}" from '
+            '$accountName? This debits the account balance.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Mark paid')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     await presenter.markBillPaid(
       bill.id,
       paidAmount: bill.amount,
       accountId: accountId,
+    );
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text(
+              'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $accountName.')),
     );
   }
 }

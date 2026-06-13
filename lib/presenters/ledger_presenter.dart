@@ -491,6 +491,33 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await _saveAll();
   }
 
+  /// Bulk-deletes the given transaction ids in ONE mutation + ONE persist,
+  /// instead of N fire-and-forget calls each doing a full-list write. Transfer
+  /// pairs are expanded so both legs go (matches [deleteTransactionOrGroup]).
+  /// (Plan 052 C8)
+  Future<void> deleteTransactions(Set<String> ids) async {
+    if (ids.isEmpty) return;
+    // Expand any transfer legs whose partner is in the selection set.
+    final groupIds = _allTransactions
+        .where((t) => ids.contains(t.id) && t.transferGroupId != null)
+        .map((t) => t.transferGroupId)
+        .toSet();
+    final toRemove = _allTransactions
+        .where((t) =>
+            ids.contains(t.id) ||
+            (t.transferGroupId != null && groupIds.contains(t.transferGroupId)))
+        .toList();
+    if (toRemove.isEmpty) return;
+    for (final t in toRemove) {
+      _reverseBalanceDelta(t.accountId, t.amount, t.type);
+    }
+    final removeIds = toRemove.map((t) => t.id).toSet();
+    _allTransactions =
+        _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
+    safeNotify();
+    await _saveAll();
+  }
+
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
     final exists = _accounts.any((a) => a.id == account.id);
