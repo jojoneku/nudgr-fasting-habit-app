@@ -173,6 +173,16 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
 
+  /// Total set aside in savings + goal pockets — powers the Setup
+  /// "Savings & Goals" KPI. Matches the set of accounts the Setup page groups
+  /// under that heading ([savingsAccounts] + [goalAccounts]).
+  double get totalSavingsAndGoals => [...savingsAccounts, ...goalAccounts]
+      .fold(0.0, (sum, a) => sum + a.balance);
+
+  /// Count of all active accounts (every role + sub-accounts) — for the Setup
+  /// "Accounts" KPI tile.
+  int get activeAccountCount => _accounts.where((a) => a.isActive).length;
+
   // --- Summary values ---
 
   /// Total cash that is actually yours — full parent balances minus money
@@ -208,14 +218,22 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get endingCash =>
       totalLiquidCash + pendingReceivables - monthUnpaidBills;
 
+  // Internal transfer legs (transferGroupId != null) are excluded: moving
+  // money between your own accounts is neither income nor an expense. Both
+  // legs would otherwise inflate inflow and outflow equally — net cancels, but
+  // the standalone Income/Expense tiles would read too high.
   double get monthTotalInflow => _transactions
-      .where(
-          (t) => t.month == _currentMonth && t.type == TransactionType.inflow)
+      .where((t) =>
+          t.month == _currentMonth &&
+          t.type == TransactionType.inflow &&
+          t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get monthTotalOutflow => _transactions
-      .where(
-          (t) => t.month == _currentMonth && t.type == TransactionType.outflow)
+      .where((t) =>
+          t.month == _currentMonth &&
+          t.type == TransactionType.outflow &&
+          t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   /// Sum of top-level, non-liability, non-custodian account balances — the
@@ -242,12 +260,37 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// This month's income minus expenses.
   double get monthNetCashFlow => monthTotalInflow - monthTotalOutflow;
 
-  /// Share of this month's income kept (net / income). Null when there is no
-  /// income to divide by — the UI shows "—" rather than a divide-by-zero.
+  /// Money actually saved this month: net flow INTO locked accounts
+  /// (savings / goal / time-deposit / investment). A transfer from a spending
+  /// account into savings lands as an inflow leg on the locked account (+);
+  /// spending out of savings is an outflow leg on it (−); a transfer between
+  /// two locked accounts nets to zero. Negative when you net-withdrew savings.
+  double get monthSavingsContributions {
+    final lockedIds = {
+      for (final a in _accounts)
+        if (a.isLocked) a.id,
+    };
+    var net = 0.0;
+    for (final t in _transactions) {
+      if (t.month != _currentMonth) continue;
+      if (!lockedIds.contains(t.accountId)) continue;
+      if (t.type == TransactionType.inflow) {
+        net += t.amount;
+      } else if (t.type == TransactionType.outflow) {
+        net -= t.amount;
+      }
+    }
+    return net;
+  }
+
+  /// Share of this month's income that you moved into savings accounts
+  /// ([monthSavingsContributions] / [monthTotalInflow]). [monthTotalInflow]
+  /// already excludes internal transfer legs, so it is true income. Null when
+  /// there is no income to divide by — the UI shows "—" not a divide-by-zero.
   double? get savingsRate {
     final income = monthTotalInflow;
     if (income <= 0) return null;
-    return monthNetCashFlow / income;
+    return monthSavingsContributions / income;
   }
 
   /// What you owe right now: this month's unpaid bills plus all liabilities.

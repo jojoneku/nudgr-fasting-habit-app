@@ -15,8 +15,9 @@ import '../../services/auth_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
-import '../app_theme.dart';
 import '../treasury/treasury_module_view.dart';
+import 'design/web_theme.dart';
+import 'dev/preview_seed.dart';
 import 'pages/bills/web_bills_page.dart';
 import 'pages/budget/web_budget_page.dart';
 import 'pages/dashboard/web_dashboard_page.dart';
@@ -44,8 +45,8 @@ class TreasuryWebApp extends StatelessWidget {
       builder: (context, mode, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Treasury',
-        theme: buildLightTheme(),
-        darkTheme: buildDarkTheme(),
+        theme: buildWebLightTheme(),
+        darkTheme: buildWebDarkTheme(),
         themeMode: mode,
         home: const TreasuryWebShell(),
       ),
@@ -84,6 +85,11 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   String? _currentUserId;
   bool _booting = true;
 
+  /// True once the local preview-seed path has loaded — bypasses the auth gate
+  /// so the dashboard renders without a Supabase session. Dev-only; see
+  /// [previewSeedEnabled].
+  bool _previewMode = false;
+
   @override
   void initState() {
     super.initState();
@@ -116,6 +122,21 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
 
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Local preview-seed mode (dev only): seed a demo treasury into local
+      // storage and render the dashboard directly. No Supabase, no auth, no
+      // SyncService is ever constructed — nothing leaves the browser.
+      if (previewSeedEnabled) {
+        await _storage.setUserId(PreviewSeed.userId);
+        await PreviewSeed.seedInto(_storage);
+        await _reloadAll();
+        if (mounted) {
+          setState(() {
+            _previewMode = true;
+            _booting = false;
+          });
+        }
+        return;
+      }
       await _syncQueue.load(); // restore persisted queue before auth
       await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
@@ -279,7 +300,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     return ListenableBuilder(
       listenable: _authPresenter,
       builder: (context, _) {
-        if (!_authPresenter.isSignedIn) {
+        if (!_previewMode && !_authPresenter.isSignedIn) {
           return WebLoginView(presenter: _authPresenter);
         }
         return _TreasuryWebHome(

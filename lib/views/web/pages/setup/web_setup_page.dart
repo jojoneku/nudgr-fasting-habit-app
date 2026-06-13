@@ -6,7 +6,6 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
-import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
@@ -73,7 +72,14 @@ class _SetupBody extends StatelessWidget {
         onAdd: () => _showAccountSheet(context, presenter),
       );
     } else {
-      content = _AccountGroups(presenter: presenter);
+      content = Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _SetupKpiRow(presenter: presenter),
+          const SizedBox(height: WebInsets.xl),
+          _AccountsTableCard(presenter: presenter),
+        ],
+      );
     }
 
     return SingleChildScrollView(
@@ -118,17 +124,13 @@ class _CategoriesCard extends StatefulWidget {
 class _CategoriesCardState extends State<_CategoriesCard> {
   final _nameController = TextEditingController();
   CategoryType _type = CategoryType.expense;
+  String _draftColor = kCategoryPalette.first;
   bool _submitting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
-  }
-
-  String _nextColor() {
-    final index = widget.ledger.categories.where((c) => c.type == _type).length;
-    return categoryColorAt(index, isExpense: _type == CategoryType.expense);
   }
 
   Future<void> _add() async {
@@ -143,9 +145,11 @@ class _CategoriesCardState extends State<_CategoriesCard> {
         name: name,
         type: _type,
         icon: 'tag',
-        colorHex: _nextColor(),
+        colorHex: _draftColor,
       ));
       _nameController.clear();
+      // Advance the draft swatch so consecutive adds get distinct colors.
+      setState(() => _draftColor = cycleCategoryColor(_draftColor));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -199,387 +203,629 @@ class _CategoriesCardState extends State<_CategoriesCard> {
       listenable: widget.ledger,
       builder: (context, _) {
         final cs = Theme.of(context).colorScheme;
-        final expense = widget.ledger.categories
-            .where((c) => c.type == CategoryType.expense)
-            .toList();
-        final income = widget.ledger.categories
-            .where((c) => c.type == CategoryType.income)
-            .toList();
+        // Expense categories first, then income — matches the dropdown order
+        // and keeps like rows together while staying one table.
+        final categories = [
+          ...widget.ledger.categories
+              .where((c) => c.type == CategoryType.expense),
+          ...widget.ledger.categories
+              .where((c) => c.type == CategoryType.income),
+        ];
+
+        final rows = <Widget>[
+          const _CategoryTableHeader(),
+          Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.5)),
+        ];
+        for (final c in categories) {
+          rows.add(_CategoryTableRow(
+            key: ValueKey(c.id),
+            ledger: widget.ledger,
+            category: c,
+            onDelete: () => _confirmDelete(c),
+          ));
+          rows.add(Divider(
+              height: 1, color: cs.outlineVariant.withValues(alpha: 0.25)));
+        }
+        rows.add(_buildAddRow(context));
 
         return WebCard(
           title: 'Categories',
           description: 'Labels for tagging transactions & budgeting',
+          padding: const EdgeInsets.symmetric(
+            horizontal: WebInsets.xl,
+            vertical: WebInsets.lg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  _CategoryTypeToggle(
-                    value: _type,
-                    onChanged: (t) => setState(() => _type = t),
-                  ),
-                  const SizedBox(width: WebInsets.md),
-                  Expanded(
-                    child: SizedBox(
-                      height: 40,
-                      child: TextField(
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.words,
-                        onSubmitted: (_) => _add(),
-                        decoration: InputDecoration(
-                          isDense: true,
-                          hintText: _type == CategoryType.expense
-                              ? 'Add an expense category…'
-                              : 'Add an income category…',
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 0, horizontal: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppRadii.sm),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: WebInsets.sm),
-                  SizedBox(
-                    height: 40,
-                    child: FilledButton.icon(
-                      onPressed: _submitting ? null : _add,
-                      icon: _submitting
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Add'),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(0, 40),
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppRadii.sm)),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              if (expense.isEmpty && income.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(top: WebInsets.xl),
-                  child: Text(
-                    'No categories yet — add expense and income labels above.',
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                )
-              else ...[
-                if (expense.isNotEmpty) ...[
-                  const SizedBox(height: WebInsets.xl),
-                  _CategoryGroup(
-                    label: 'Expense',
-                    accent: cs.error,
-                    categories: expense,
-                    onDelete: _confirmDelete,
-                  ),
-                ],
-                if (income.isNotEmpty) ...[
-                  const SizedBox(height: WebInsets.lg),
-                  _CategoryGroup(
-                    label: 'Income',
-                    accent: cs.tertiary,
-                    categories: income,
-                    onDelete: _confirmDelete,
-                  ),
-                ],
-              ],
-            ],
+            children: rows,
           ),
         );
       },
     );
   }
-}
 
-/// Compact two-option (Expense / Income) segmented toggle that drives which
-/// type the add field creates.
-class _CategoryTypeToggle extends StatelessWidget {
-  final CategoryType value;
-  final ValueChanged<CategoryType> onChanged;
-
-  const _CategoryTypeToggle({required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+  /// The "add a category…" row pinned to the bottom of the table — name field,
+  /// type dropdown, draft color swatch, and a check button. Mirrors the
+  /// reference add-row.
+  Widget _buildAddRow(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
-      height: 40,
-      padding: const EdgeInsets.all(WebInsets.xs),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-      ),
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.xs),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          _seg(context, CategoryType.expense, 'Expense'),
-          _seg(context, CategoryType.income, 'Income'),
+          Expanded(
+            child: Row(
+              children: [
+                _ColorDot(hex: _draftColor),
+                const SizedBox(width: WebInsets.sm),
+                Expanded(
+                  child: TextField(
+                    controller: _nameController,
+                    textCapitalization: TextCapitalization.words,
+                    onSubmitted: (_) => _add(),
+                    style: theme.textTheme.bodyMedium,
+                    decoration: const InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      hintText: 'Add a category…',
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.type,
+            child: _CategoryTypeDropdown(
+              value: _type,
+              onChanged: (t) => setState(() => _type = t),
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.color,
+            child: Center(
+              child: _ColorSwatch(
+                hex: _draftColor,
+                onTap: () => setState(
+                    () => _draftColor = cycleCategoryColor(_draftColor)),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.actions,
+            child: Center(
+              child: _submitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : IconButton(
+                      tooltip: 'Add category',
+                      onPressed: _add,
+                      icon: const Icon(Icons.check_rounded, size: 18),
+                      color: cs.primary,
+                      visualDensity: VisualDensity.compact,
+                    ),
+            ),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _seg(BuildContext context, CategoryType t, String label) {
-    final cs = Theme.of(context).colorScheme;
-    final sel = t == value;
-    return GestureDetector(
-      onTap: () => onChanged(t),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        height: double.infinity,
-        alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: WebInsets.md),
-        decoration: BoxDecoration(
-          color: sel ? cs.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppRadii.sm - 2),
-        ),
-        child: Text(
+/// Palette the Setup categories table cycles through for color swatches
+/// (mirrors the reference SPALETTE).
+const List<String> kCategoryPalette = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#22c55e',
+  '#f59e0b',
+  '#14b8a6',
+  '#ec4899',
+  '#f43f5e',
+  '#0ea5e9',
+  '#64748b',
+  '#9ea8ba',
+];
+
+/// Next color in [kCategoryPalette] after [hex] (wraps); falls back to the
+/// first entry when [hex] isn't in the palette.
+String cycleCategoryColor(String hex) {
+  final i = kCategoryPalette.indexOf(hex);
+  return kCategoryPalette[(i + 1) % kCategoryPalette.length];
+}
+
+Color _hexColor(String hex, Color fallback) {
+  final h = hex.replaceFirst('#', '');
+  try {
+    return Color(int.parse('FF$h', radix: 16));
+  } catch (_) {
+    return fallback;
+  }
+}
+
+/// Column widths for the categories table (Category flexes; the rest fixed).
+class _CatCols {
+  static const double type = 130;
+  static const double color = 70;
+  static const double actions = 56;
+}
+
+/// Uppercase column header row for the categories table.
+class _CategoryTableHeader extends StatelessWidget {
+  const _CategoryTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    Widget h(String label, {TextAlign align = TextAlign.left}) => Text(
           label,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: sel ? cs.onPrimary : cs.onSurfaceVariant,
-                fontWeight: FontWeight.w600,
-              ),
-        ),
+          textAlign: align,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        );
+    return Padding(
+      padding: const EdgeInsets.only(bottom: WebInsets.sm),
+      child: Row(
+        children: [
+          Expanded(child: h('CATEGORY')),
+          SizedBox(width: _CatCols.type, child: h('TYPE')),
+          SizedBox(
+              width: _CatCols.color,
+              child: h('COLOR', align: TextAlign.center)),
+          const SizedBox(width: _CatCols.actions),
+        ],
       ),
     );
   }
 }
 
-/// A labelled group ("Expense"/"Income") rendering its categories as removable
-/// pills that wrap across the card width.
-class _CategoryGroup extends StatelessWidget {
-  final String label;
-  final Color accent;
-  final List<FinanceCategory> categories;
-  final ValueChanged<FinanceCategory> onDelete;
+/// One editable category row: color dot + inline-rename name field · type
+/// dropdown · color swatch (cycles palette) · delete. Persists each edit
+/// through [LedgerPresenter.updateCategory]/[deleteCategory].
+class _CategoryTableRow extends StatefulWidget {
+  final LedgerPresenter ledger;
+  final FinanceCategory category;
+  final VoidCallback onDelete;
 
-  const _CategoryGroup({
-    required this.label,
-    required this.accent,
-    required this.categories,
+  const _CategoryTableRow({
+    super.key,
+    required this.ledger,
+    required this.category,
     required this.onDelete,
   });
 
   @override
+  State<_CategoryTableRow> createState() => _CategoryTableRowState();
+}
+
+class _CategoryTableRowState extends State<_CategoryTableRow> {
+  late final TextEditingController _ctl;
+  late final FocusNode _focus;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctl = TextEditingController(text: widget.category.name);
+    _focus = FocusNode()..addListener(_onFocusChange);
+  }
+
+  @override
+  void didUpdateWidget(covariant _CategoryTableRow old) {
+    super.didUpdateWidget(old);
+    // Reflect external renames (e.g. sync) when this row isn't being edited.
+    if (!_focus.hasFocus && widget.category.name != _ctl.text) {
+      _ctl.text = widget.category.name;
+    }
+  }
+
+  void _onFocusChange() {
+    if (!_focus.hasFocus) _commit();
+  }
+
+  void _commit() {
+    final name = _ctl.text.trim();
+    if (name.isEmpty) {
+      _ctl.text = widget.category.name; // revert empties
+      return;
+    }
+    if (name == widget.category.name) return;
+    widget.ledger.updateCategory(widget.category.copyWith(name: name));
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocusChange);
+    _focus.dispose();
+    _ctl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Row(
-          children: [
-            Text(
-              label.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
+    final cat = widget.category;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.xs),
+      child: Row(
+        children: [
+          Expanded(
+            child: Row(
+              children: [
+                _ColorDot(hex: cat.colorHex),
+                const SizedBox(width: WebInsets.sm),
+                Expanded(
+                  child: TextField(
+                    controller: _ctl,
+                    focusNode: _focus,
+                    textCapitalization: TextCapitalization.words,
+                    onSubmitted: (_) {
+                      _commit();
+                      _focus.unfocus();
+                    },
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    decoration: const InputDecoration(
+                      isCollapsed: true,
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.type,
+            child: _CategoryTypeDropdown(
+              value: cat.type,
+              onChanged: (t) =>
+                  widget.ledger.updateCategory(cat.copyWith(type: t)),
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.color,
+            child: Center(
+              child: _ColorSwatch(
+                hex: cat.colorHex,
+                onTap: () => widget.ledger.updateCategory(
+                    cat.copyWith(colorHex: cycleCategoryColor(cat.colorHex))),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.actions,
+            child: Center(
+              child: IconButton(
+                tooltip: 'Delete category',
+                onPressed: widget.onDelete,
+                icon: const Icon(Icons.delete_outline, size: 18),
                 color: cs.onSurfaceVariant,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.7,
+                visualDensity: VisualDensity.compact,
               ),
             ),
-            const SizedBox(width: WebInsets.sm),
-            Text(
-              '${categories.length}',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: WebInsets.md),
-        Wrap(
-          spacing: WebInsets.sm,
-          runSpacing: WebInsets.sm,
-          children: [
-            for (final c in categories)
-              _CategoryPill(category: c, onDelete: () => onDelete(c)),
-          ],
-        ),
-      ],
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _CategoryPill extends StatelessWidget {
-  final FinanceCategory category;
-  final VoidCallback onDelete;
+/// Inline Expense/Income dropdown used in both the category rows and add-row.
+class _CategoryTypeDropdown extends StatelessWidget {
+  final CategoryType value;
+  final ValueChanged<CategoryType> onChanged;
 
-  const _CategoryPill({required this.category, required this.onDelete});
+  const _CategoryTypeDropdown({required this.value, required this.onChanged});
 
-  Color _dotColor(BuildContext context) {
-    final hex = category.colorHex.replaceFirst('#', '');
-    try {
-      return Color(int.parse('FF$hex', radix: 16));
-    } catch (_) {
-      return Theme.of(context).colorScheme.primary;
-    }
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return DropdownButtonHideUnderline(
+      child: DropdownButton<CategoryType>(
+        value: value,
+        isDense: true,
+        isExpanded: true,
+        borderRadius: AppRadii.smBorder,
+        icon: Icon(Icons.unfold_more, size: 14, color: cs.onSurfaceVariant),
+        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+        dropdownColor: cs.surfaceContainerHigh,
+        items: const [
+          DropdownMenuItem(value: CategoryType.expense, child: Text('Expense')),
+          DropdownMenuItem(value: CategoryType.income, child: Text('Income')),
+        ],
+        onChanged: (t) {
+          if (t != null && t != value) onChanged(t);
+        },
+      ),
+    );
   }
+}
+
+/// Small color dot shown before a category name.
+class _ColorDot extends StatelessWidget {
+  final String hex;
+
+  const _ColorDot({required this.hex});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: _hexColor(hex, Theme.of(context).colorScheme.primary),
+        shape: BoxShape.circle,
+      ),
+    );
+  }
+}
+
+/// Clickable color swatch — cycles the category palette on tap.
+class _ColorSwatch extends StatelessWidget {
+  final String hex;
+  final VoidCallback onTap;
+
+  const _ColorSwatch({required this.hex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Click to change color',
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+        child: Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: _hexColor(hex, cs.primary),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
+            border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── KPI row ─────────────────────────────────────────────────────────────────
+
+/// Four summary tiles at the top of Setup (mirrors `setup.jsx`): account count,
+/// liquid cash, savings & goals set aside, and credit available.
+class _SetupKpiRow extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+
+  const _SetupKpiRow({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final p = presenter;
+    final tiles = <Widget>[
+      WebStatTile(
+        label: 'Accounts',
+        value: '${p.activeAccountCount}',
+        sub: '${p.liquidAccounts.length} liquid',
+        icon: Icons.account_balance_outlined,
+      ),
+      WebStatTile(
+        label: 'Liquid Cash',
+        value: formatPeso(p.totalLiquidCash),
+        sub: 'Spendable',
+        icon: Icons.account_balance_wallet_outlined,
+      ),
+      WebStatTile(
+        label: 'Savings & Goals',
+        value: formatPeso(p.totalSavingsAndGoals),
+        sub: 'Set aside',
+        icon: Icons.savings_outlined,
+      ),
+      WebStatTile(
+        label: 'Credit Available',
+        value: formatPeso(p.totalCreditAvailable),
+        sub: 'Across cards',
+        icon: Icons.credit_card_outlined,
+      ),
+    ];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cols = constraints.maxWidth >= 1040
+            ? 4
+            : constraints.maxWidth >= 560
+                ? 2
+                : 1;
+        final rows = <Widget>[];
+        for (var i = 0; i < tiles.length; i += cols) {
+          final cells = <Widget>[];
+          for (var c = 0; c < cols; c++) {
+            if (c > 0) cells.add(const SizedBox(width: WebInsets.lg));
+            final idx = i + c;
+            cells.add(Expanded(
+              child: idx < tiles.length ? tiles[idx] : const SizedBox.shrink(),
+            ));
+          }
+          if (rows.isNotEmpty) rows.add(const SizedBox(height: WebInsets.lg));
+          rows.add(IntrinsicHeight(
+            child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: cells),
+          ));
+        }
+        return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch, children: rows);
+      },
+    );
+  }
+}
+
+// ─── Accounts table ───────────────────────────────────────────────────────────
+
+/// Column widths for the spreadsheet-style accounts table. The Account column
+/// flexes; the rest are fixed and right-aligned (matching `setup.jsx`).
+class _Cols {
+  static const double type = 150;
+  static const double balance = 130;
+  static const double limit = 120;
+  static const double available = 130;
+  static const double actions = 92;
+}
+
+/// One role group within the accounts table — a labelled sub-header followed by
+/// its account rows (sub-accounts indented under their parent).
+typedef _AccountGroup = ({
+  String title,
+  List<({FinancialAccount account, bool indented})> rows,
+});
+
+/// Single card holding every account in one inline spreadsheet-style table —
+/// adopts the Claude Design layout while keeping the rich edit dialog, inline
+/// type switching, goal progress and credit availability from the prior view.
+/// Rows are organised into labelled role groups (Liquid → Savings & Goals →
+/// Credit → Custodian); sub-accounts render indented under their parent.
+class _AccountsTableCard extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+
+  const _AccountsTableCard({required this.presenter});
+
+  List<_AccountGroup> _groups() {
+    List<({FinancialAccount account, bool indented})> expand(
+        List<FinancialAccount> accts) {
+      final out = <({FinancialAccount account, bool indented})>[];
+      for (final a in accts) {
+        out.add((account: a, indented: false));
+        for (final sub in presenter.subAccountsOf(a.id)) {
+          out.add((account: sub, indented: true));
+        }
+      }
+      return out;
+    }
+
+    final groups = <_AccountGroup>[];
+    void add(String title, List<FinancialAccount> accts) {
+      if (accts.isEmpty) return;
+      groups.add((title: title, rows: expand(accts)));
+    }
+
+    add('Liquid', presenter.liquidAccounts);
+    add('Savings & Goals',
+        [...presenter.savingsAccounts, ...presenter.goalAccounts]);
+    add('Credit', presenter.creditAccounts);
+    add('Custodian / Held', presenter.custodianAccounts);
+    return groups;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final groups = _groups();
+
+    final children = <Widget>[
+      const _AccountTableHeader(),
+      Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.5)),
+    ];
+    for (final group in groups) {
+      children.add(_AccountGroupHeader(title: group.title));
+      for (final row in group.rows) {
+        children.add(_AccountTableRow(
+          presenter: presenter,
+          account: row.account,
+          indented: row.indented,
+        ));
+        children.add(Divider(
+            height: 1, color: cs.outlineVariant.withValues(alpha: 0.25)));
+      }
+    }
+
+    return WebCard(
+      title: 'Accounts',
+      description: "Each account's type & balance · credit cards use a limit",
+      padding: const EdgeInsets.symmetric(
+        horizontal: WebInsets.xl,
+        vertical: WebInsets.lg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
+/// A role sub-header inside the accounts table (e.g. "Liquid", "Credit").
+class _AccountGroupHeader extends StatelessWidget {
+  final String title;
+
+  const _AccountGroupHeader({required this.title});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     return Container(
-      padding: const EdgeInsets.only(
-          left: WebInsets.md, right: WebInsets.xs, top: 6, bottom: 6),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadii.sm),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(
-              color: _dotColor(context),
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: WebInsets.sm),
-          Text(
-            category.name,
-            style: theme.textTheme.bodySmall
-                ?.copyWith(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(width: WebInsets.xs),
-          InkWell(
-            onTap: onDelete,
-            borderRadius: BorderRadius.circular(AppRadii.sm),
-            child: Padding(
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.close_rounded,
-                  size: 14, color: cs.onSurfaceVariant),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Account groups ─────────────────────────────────────────────────────────
-
-class _AccountGroups extends StatelessWidget {
-  final TreasuryDashboardPresenter presenter;
-
-  const _AccountGroups({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final savingsAndGoals = [
-      ...presenter.savingsAccounts,
-      ...presenter.goalAccounts,
-    ];
-
-    final sections = <Widget>[
-      if (presenter.liquidAccounts.isNotEmpty)
-        _AccountSection(
-          title: 'Liquid',
-          description:
-              'Bank, eWallet & cash · ${formatPeso(presenter.totalLiquidCash)} yours',
-          presenter: presenter,
-          accounts: presenter.liquidAccounts,
-        ),
-      if (savingsAndGoals.isNotEmpty)
-        _AccountSection(
-          title: 'Savings & Goals',
-          description: 'Ring-fenced pockets and goal targets',
-          presenter: presenter,
-          accounts: savingsAndGoals,
-        ),
-      if (presenter.creditAccounts.isNotEmpty)
-        _AccountSection(
-          title: 'Credit',
-          description:
-              'Cards, lines & BNPL · ${formatPeso(presenter.totalCreditOwed)} owed',
-          presenter: presenter,
-          accounts: presenter.creditAccounts,
-        ),
-      if (presenter.custodianAccounts.isNotEmpty)
-        _AccountSection(
-          title: 'Custodian / Held',
-          description:
-              'Money held for others · ${formatPeso(presenter.totalHeldForOthers)}',
-          presenter: presenter,
-          accounts: presenter.custodianAccounts,
-        ),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (int i = 0; i < sections.length; i++) ...[
-          if (i > 0) const SizedBox(height: WebInsets.xl),
-          sections[i],
-        ],
-      ],
-    );
-  }
-}
-
-/// One grouped card listing [accounts], each as an [_AccountRow]. Sub-accounts
-/// of any listed account are rendered indented directly under their parent.
-class _AccountSection extends StatelessWidget {
-  final String title;
-  final String description;
-  final TreasuryDashboardPresenter presenter;
-  final List<FinancialAccount> accounts;
-
-  const _AccountSection({
-    required this.title,
-    required this.description,
-    required this.presenter,
-    required this.accounts,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    final rows = <Widget>[];
-    for (final account in accounts) {
-      rows.add(_AccountRow(presenter: presenter, account: account));
-      for (final sub in presenter.subAccountsOf(account.id)) {
-        rows.add(
-            _AccountRow(presenter: presenter, account: sub, indented: true));
-      }
-    }
-
-    return WebCard(
-      title: title,
-      description: description,
+      width: double.infinity,
+      color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
       padding: const EdgeInsets.symmetric(
-        horizontal: WebInsets.xl,
-        vertical: WebInsets.md,
+          horizontal: WebInsets.sm, vertical: WebInsets.sm),
+      child: Text(
+        title.toUpperCase(),
+        style: theme.textTheme.labelSmall?.copyWith(
+          color: cs.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.7,
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+    );
+  }
+}
+
+/// Uppercase column header row for the accounts table.
+class _AccountTableHeader extends StatelessWidget {
+  const _AccountTableHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    Widget h(String label, {TextAlign align = TextAlign.left}) => Text(
+          label,
+          textAlign: align,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: cs.onSurfaceVariant,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: WebInsets.sm),
+      child: Row(
         children: [
-          for (int i = 0; i < rows.length; i++) ...[
-            if (i > 0)
-              Divider(
-                height: 1,
-                color: cs.outlineVariant.withValues(alpha: 0.3),
-              ),
-            rows[i],
-          ],
+          Expanded(child: h('ACCOUNT')),
+          SizedBox(width: _Cols.type, child: h('TYPE')),
+          SizedBox(
+              width: _Cols.balance,
+              child: h('BALANCE', align: TextAlign.right)),
+          SizedBox(
+              width: _Cols.limit,
+              child: h('CREDIT LIMIT', align: TextAlign.right)),
+          SizedBox(
+              width: _Cols.available,
+              child: h('AVAILABLE', align: TextAlign.right)),
+          const SizedBox(width: _Cols.actions),
         ],
       ),
     );
@@ -667,12 +913,12 @@ class _TypeDropdown extends StatelessWidget {
 
 // ─── Account row ─────────────────────────────────────────────────────────────
 
-class _AccountRow extends StatelessWidget {
+class _AccountTableRow extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final FinancialAccount account;
   final bool indented;
 
-  const _AccountRow({
+  const _AccountTableRow({
     required this.presenter,
     required this.account,
     this.indented = false,
@@ -759,115 +1005,141 @@ class _AccountRow extends StatelessWidget {
 
     final isGoal = account.category == AccountCategory.goal;
     final goalTarget = account.goalTarget;
+    final isCredit = account.isLiability;
     final availableCredit = account.availableCredit;
 
-    return Padding(
-      padding: EdgeInsets.only(
-        left: indented ? WebInsets.xl : 0,
-        top: WebInsets.sm,
-        bottom: WebInsets.sm,
-      ),
+    // ACCOUNT — colored icon chip + name (+ Credit badge), indented for subs.
+    final accountCell = Padding(
+      padding: EdgeInsets.only(left: indented ? WebInsets.lg : 0),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Icon chip
           Container(
-            width: 40,
-            height: 40,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(AppRadii.md),
+              borderRadius: BorderRadius.circular(AppRadii.sm),
             ),
-            child: Icon(_icon, size: 20, color: color),
+            child: Icon(_icon, size: 17, color: color),
           ),
           const SizedBox(width: WebInsets.md),
-          // Name + type sub-label (+ goal progress when applicable)
-          Expanded(
+          Flexible(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(
-                        account.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                    if (account.isLiability) ...[
-                      const SizedBox(width: WebInsets.sm),
-                      const WebBadge('Credit', tone: WebBadgeTone.info),
-                    ],
-                  ],
+                Text(
+                  account.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(height: 2),
-                // Liability rows keep a static label — converting to/from
-                // credit stays in the edit form. Asset rows get an inline
-                // type switcher.
-                account.isLiability
-                    ? Text(
-                        _typeLabel,
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant),
-                      )
-                    : _TypeDropdown(presenter: presenter, account: account),
+                // Goal progress under the name (kept from the prior view).
+                // Width-capped so it stays within the name column and never
+                // crowds the Type cell to its right.
                 if (isGoal && goalTarget != null && goalTarget > 0) ...[
-                  const SizedBox(height: WebInsets.sm),
-                  WebProgressBar(
-                    value: account.balance / goalTarget,
-                    color: color,
+                  const SizedBox(height: 6),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: SizedBox(
+                      width: 180,
+                      child: WebProgressBar(
+                          value: account.balance / goalTarget, color: color),
+                    ),
                   ),
                 ],
               ],
             ),
           ),
-          const SizedBox(width: WebInsets.lg),
-          // Balance figure (+ goal target / available credit sub-line)
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                formatPeso(account.balance),
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: account.isLiability ? cs.error : cs.onSurface,
+          if (isCredit) ...[
+            const SizedBox(width: WebInsets.sm),
+            const WebBadge('Credit', tone: WebBadgeTone.info),
+          ],
+        ],
+      ),
+    );
+
+    // TYPE — inline switcher for assets; static label for liabilities.
+    final typeCell = isCredit
+        ? Text(_typeLabel,
+            style:
+                theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant))
+        : _TypeDropdown(presenter: presenter, account: account);
+
+    // BALANCE — red for liabilities; "of target" sub-line for goals.
+    final balanceCell = Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          formatPeso(account.balance),
+          textAlign: TextAlign.right,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: isCredit ? cs.error : cs.onSurface,
+          ),
+        ),
+        if (isGoal && goalTarget != null) ...[
+          const SizedBox(height: 2),
+          Text('of ${formatPeso(goalTarget)}',
+              style: theme.textTheme.labelSmall
+                  ?.copyWith(color: cs.onSurfaceVariant)),
+        ],
+      ],
+    );
+
+    Widget rightText(String value, {Color? color}) => Text(
+          value,
+          textAlign: TextAlign.right,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: color ?? cs.onSurfaceVariant,
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.sm),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Expanded(child: accountCell),
+          SizedBox(width: _Cols.type, child: typeCell),
+          SizedBox(width: _Cols.balance, child: balanceCell),
+          SizedBox(
+            width: _Cols.limit,
+            child: rightText(isCredit && account.creditLimit != null
+                ? formatPeso(account.creditLimit!)
+                : '—'),
+          ),
+          SizedBox(
+            width: _Cols.available,
+            child: rightText(
+                availableCredit != null ? formatPeso(availableCredit) : '—',
+                color: availableCredit != null ? cs.primary : null),
+          ),
+          SizedBox(
+            width: _Cols.actions,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  tooltip: 'Edit account',
+                  onPressed: () =>
+                      _showAccountSheet(context, presenter, account),
+                  icon: const Icon(Icons.edit_outlined, size: 18),
+                  color: cs.onSurfaceVariant,
+                  visualDensity: VisualDensity.compact,
                 ),
-              ),
-              if (isGoal && goalTarget != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  'of ${formatPeso(goalTarget)}',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
-                ),
-              ] else if (availableCredit != null) ...[
-                const SizedBox(height: 2),
-                Text(
-                  '${formatPeso(availableCredit)} available',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
+                IconButton(
+                  tooltip: 'Delete account',
+                  onPressed: () => _confirmDelete(context),
+                  icon: const Icon(Icons.delete_outline, size: 18),
+                  color: cs.onSurfaceVariant,
+                  visualDensity: VisualDensity.compact,
                 ),
               ],
-            ],
-          ),
-          const SizedBox(width: WebInsets.sm),
-          // Edit / delete actions (≥44px touch targets)
-          IconButton(
-            tooltip: 'Edit account',
-            onPressed: () => _showAccountSheet(context, presenter, account),
-            icon: const Icon(Icons.edit_outlined, size: 18),
-            color: cs.onSurfaceVariant,
-          ),
-          IconButton(
-            tooltip: 'Delete account',
-            onPressed: () => _confirmDelete(context),
-            icon: const Icon(Icons.delete_outline, size: 18),
-            color: cs.onSurfaceVariant,
+            ),
           ),
         ],
       ),

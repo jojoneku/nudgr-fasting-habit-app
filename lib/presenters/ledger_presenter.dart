@@ -536,6 +536,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await _storage.saveFinanceCategories(_categories);
   }
 
+  /// Replaces the stored category that shares [category]'s id — used by the web
+  /// Setup categories table for inline rename / recolor / type change. A no-op
+  /// if the id isn't present.
+  Future<void> updateCategory(FinanceCategory category) async {
+    _categories = [
+      for (final c in _categories)
+        if (c.id == category.id) category else c
+    ];
+    safeNotify();
+    await _storage.saveFinanceCategories(_categories);
+  }
+
   /// Throws [StateError('has_transactions')] if any transaction still
   /// references this category — refusing to delete prevents broken category
   /// references in the ledger feed and pie chart.
