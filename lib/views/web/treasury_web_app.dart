@@ -354,6 +354,8 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
         widget.historyPresenter.load();
       case 5:
         widget.dashPresenter.load();
+        widget.ledgerPresenter
+            .load(); // categories live on the ledger presenter
     }
   }
 
@@ -371,7 +373,10 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       case 4:
         return WebHistoryPage(presenter: widget.historyPresenter);
       case 5:
-        return WebSetupPage(presenter: widget.dashPresenter);
+        return WebSetupPage(
+          presenter: widget.dashPresenter,
+          ledgerPresenter: widget.ledgerPresenter,
+        );
       case 0:
       default:
         return WebDashboardPage(presenter: widget.dashPresenter);

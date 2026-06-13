@@ -72,7 +72,20 @@ class WebStatTile extends StatelessWidget {
             ),
             if (icon != null) ...[
               const SizedBox(width: WebInsets.sm),
-              Icon(icon, size: 18, color: mutedFg),
+              // Reference StatTile seats the icon in a 28px tinted rounded
+              // square (`bg-hover-subtle`), not as a bare glyph.
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: accent
+                      ? cs.onPrimary.withValues(alpha: 0.15)
+                      : cs.onSurface.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                ),
+                child: Icon(icon, size: 16, color: mutedFg),
+              ),
             ],
           ],
         ),

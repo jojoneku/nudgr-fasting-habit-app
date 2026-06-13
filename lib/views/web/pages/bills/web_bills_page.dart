@@ -727,7 +727,7 @@ class _ReceivableRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Due ${_ordinal(receivable.expectedDate.day)}',
+                  'Due ${_ordinal(receivable.expectedDate.day)} · ${_receivableTypeLabel(receivable.receivableType)}',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),
@@ -811,6 +811,13 @@ String _billTypeLabel(BillType type) => switch (type) {
       BillType.govtContribution => 'Govt',
       BillType.utility => 'Bills',
       BillType.other => 'Bills',
+    };
+
+String _receivableTypeLabel(ReceivableType type) => switch (type) {
+      ReceivableType.salary => 'Salary',
+      ReceivableType.reimbursement => 'Reimbursement',
+      ReceivableType.business => 'Business',
+      ReceivableType.other => 'Other',
     };
 
 WebBadgeTone _billTypeTone(BillType type) => switch (type) {

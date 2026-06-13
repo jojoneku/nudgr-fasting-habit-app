@@ -230,40 +230,42 @@ class _HistoryBody extends StatelessWidget {
         ),
         const SizedBox(height: WebInsets.xl),
 
-        // ── Ending-cash trend + monthly table ──────────────────────────────
+        // ── Ending-cash trend (full-width, own row) ─────────────────────────
+        _cashTrendCard(context, rows, cashGrowth),
+        const SizedBox(height: WebInsets.xl),
+
+        // ── Monthly summary + spending by category (side by side) ───────────
         if (isWide)
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _cashTrendCard(context, rows, cashGrowth)),
-                const SizedBox(width: WebInsets.xl),
                 Expanded(
                     child: _monthlyTableCard(
                         context, rows, neutralValue, upTone, danger)),
+                const SizedBox(width: WebInsets.xl),
+                Expanded(child: _categoryCard()),
               ],
             ),
           )
         else ...[
-          _cashTrendCard(context, rows, cashGrowth),
-          const SizedBox(height: WebInsets.xl),
           _monthlyTableCard(context, rows, neutralValue, upTone, danger),
+          const SizedBox(height: WebInsets.xl),
+          _categoryCard(),
         ],
-        const SizedBox(height: WebInsets.xl),
-
-        // ── Category averages ──────────────────────────────────────────────
-        WebCard(
-          title: 'Spending by Category',
-          description: 'Average per month, with the latest month vs. average',
-          child: _CategoryAverages(
-            months: months,
-            current: current,
-            categories: categories,
-          ),
-        ),
       ],
     );
   }
+
+  Widget _categoryCard() => WebCard(
+        title: 'Spending by Category',
+        description: 'Average per month, with the latest month vs. average',
+        child: _CategoryAverages(
+          months: months,
+          current: current,
+          categories: categories,
+        ),
+      );
 
   Widget _cashTrendCard(
       BuildContext context, List<_MonthRow> rows, double growth) {

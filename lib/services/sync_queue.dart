@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +17,7 @@ class SyncQueue {
   final List<SyncQueueEntry> _entries = [];
   final Map<String, DateTime> _timestamps = {};
   bool _loaded = false;
+  bool _flushScheduled = false;
 
   String get _queueKey =>
       _userId != null ? 'u/$_userId/syncQueue' : 'syncQueue';
@@ -75,7 +77,7 @@ class SyncQueue {
       _entries.removeRange(0, _entries.length - _maxEntries);
     }
     setTimestamp(domain, key, time: DateTime.now());
-    _persist();
+    _scheduleFlush();
   }
 
   void removeEntries(List<SyncQueueEntry> processed) {
@@ -83,7 +85,7 @@ class SyncQueue {
       _entries.removeWhere((q) =>
           q.domain == e.domain && q.key == e.key && q.queuedAt == e.queuedAt);
     }
-    _persist();
+    _scheduleFlush();
   }
 
   DateTime getTimestamp(SyncDomain domain, String key) {
@@ -93,12 +95,12 @@ class SyncQueue {
 
   void setTimestamp(SyncDomain domain, String key, {required DateTime time}) {
     _timestamps['${domain.name}::$key'] = time;
-    _persistTimestamps();
+    _scheduleFlush();
   }
 
   void clear() {
     _entries.clear();
-    _persist();
+    _scheduleFlush();
   }
 
   /// Clears all in-memory state on sign-out. Persisted prefs keys under the
@@ -108,6 +110,21 @@ class SyncQueue {
     _timestamps.clear();
     _loaded = false;
     _userId = null;
+  }
+
+  /// Coalesces persistence. A single save can mark hundreds of records dirty in
+  /// one synchronous burst (e.g. [LocalStorageService.saveTransactions] marks
+  /// every transaction); without this, each call would do two full jsonEncode +
+  /// prefs writes, jamming the main isolate and making edits feel like they
+  /// hang. Instead we flush once on the next microtask, after the burst settles.
+  void _scheduleFlush() {
+    if (_flushScheduled) return;
+    _flushScheduled = true;
+    scheduleMicrotask(() {
+      _flushScheduled = false;
+      _persist();
+      _persistTimestamps();
+    });
   }
 
   Future<void> _persist() async {

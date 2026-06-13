@@ -365,6 +365,13 @@ class WebLineChart extends StatelessWidget {
     final labelStyle =
         theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
 
+    // Show at most ~7 x-axis labels: with few points (6-month trend, 7-day
+    // spending) every point is labelled; a long series (e.g. a 30-day sheet)
+    // thins to every Nth label so they don't overlap.
+    final labelCount = bottomLabels?.length ?? 0;
+    final labelStep =
+        labelCount == 0 ? 1 : (labelCount / 7).ceil().clamp(1, labelCount);
+
     return SizedBox(
       height: height,
       child: LineChart(
@@ -414,10 +421,22 @@ class WebLineChart extends StatelessWidget {
               sideTitles: SideTitles(
                 showTitles: bottomLabels != null,
                 reservedSize: 24,
+                // Pin the interval to whole data points. Without this fl_chart
+                // picks a fractional default and fires the builder at x = 0,
+                // 0.45, 0.9, … — each rounds to the same index, repeating labels
+                // ("Jan Jan Feb Feb …"). The integral guard + [labelStep] keep
+                // exactly one label per (thinned) spot.
+                interval: labelStep.toDouble(),
                 getTitlesWidget: (value, meta) {
+                  if (value != value.roundToDouble()) {
+                    return const SizedBox.shrink();
+                  }
                   final i = value.round();
                   final labels = bottomLabels;
-                  if (labels == null || i < 0 || i >= labels.length) {
+                  if (labels == null ||
+                      i < 0 ||
+                      i >= labels.length ||
+                      i % labelStep != 0) {
                     return const SizedBox.shrink();
                   }
                   return Padding(

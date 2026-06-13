@@ -220,6 +220,61 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       .where((r) => r.txn.type == TransactionType.outflow)
       .fold(0.0, (sum, r) => sum + r.txn.amount);
 
+  /// Per-transaction account balance: the involved account's balance
+  /// immediately *after* that transaction. Reconstructed by unwinding each
+  /// account's CURRENT [FinancialAccount.balance] backward (newest → oldest)
+  /// across every one of its transactions, so the value is correct for any
+  /// month without needing a stored historical opening balance.
+  ///
+  /// Liability-aware: mirrors the sign rule in [_applyBalanceDelta] (spending on
+  /// a card raises the owed balance). Keyed by transaction id. Purely derived,
+  /// never persisted.
+  Map<String, double> get _accountBalanceByTxnId {
+    final byAccount = <String, List<TransactionRecord>>{};
+    for (final t in _allTransactions) {
+      byAccount.putIfAbsent(t.accountId, () => []).add(t);
+    }
+    final map = <String, double>{};
+    for (final entry in byAccount.entries) {
+      final account = _accounts.where((a) => a.id == entry.key).firstOrNull;
+      final isLiability = account?.isLiability ?? false;
+      // Newest first; stable on id for deterministic same-instant ordering.
+      final txns = [...entry.value]..sort((a, b) {
+          final byDate = b.date.compareTo(a.date);
+          return byDate != 0 ? byDate : b.id.compareTo(a.id);
+        });
+      var running = account?.balance ?? 0.0;
+      for (final t in txns) {
+        map[t.id] = running; // balance AFTER this transaction
+        final base = t.type == TransactionType.inflow ? t.amount : -t.amount;
+        final delta = isLiability ? -base : base;
+        running -= delta; // unwind → balance before, for the next older txn
+      }
+    }
+    return map;
+  }
+
+  /// Rows for the web spreadsheet view: every [ledgerRowsForMonth] row enriched
+  /// with the involved account's post-transaction balance. The View applies
+  /// transient filters/sorts on top — running balances stay stable regardless,
+  /// matching the reference design.
+  List<
+      ({
+        TransactionRecord txn,
+        double runningBalance,
+        double accountBalance,
+      })> get ledgerSpreadsheetRows {
+    final acctMap = _accountBalanceByTxnId;
+    return [
+      for (final r in ledgerRowsForMonth)
+        (
+          txn: r.txn,
+          runningBalance: r.runningBalance,
+          accountBalance: acctMap[r.txn.id] ?? 0.0,
+        ),
+    ];
+  }
+
   // --- Filter controls ---
 
   void setMonth(String month) {
@@ -249,7 +304,22 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   // --- Load ---
 
+  bool _hasLoaded = false;
+
   Future<void> load() async {
+    // After the first load this presenter is long-lived and already holds the
+    // data. Re-entrant calls (e.g. switching back to the Ledger tab) do a silent
+    // background refresh — no loading spinner, and skip the one-time dictionary
+    // init + category migration — so the page stays on screen and just updates
+    // in place. Flipping `_isLoading` here is what made tab-switching feel slow.
+    if (_hasLoaded) {
+      _accounts = await _storage.loadAccounts();
+      _categories = await _storage.loadFinanceCategories();
+      _allTransactions = await _storage.loadTransactions();
+      safeNotify();
+      return;
+    }
+
     _isLoading = true;
     safeNotify();
 
@@ -267,6 +337,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     _isLoading = false;
+    _hasLoaded = true;
     safeNotify();
   }
 
@@ -365,6 +436,26 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final txn = _allTransactions.firstWhere((t) => t.id == id);
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
+    safeNotify();
+    await _saveAll();
+  }
+
+  /// Deletes a transaction; if it belongs to a transfer pair, removes BOTH legs
+  /// so the two accounts unwind cleanly and neither side is left orphaned.
+  Future<void> deleteTransactionOrGroup(String id) async {
+    final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
+    if (txn == null) return;
+    final groupId = txn.transferGroupId;
+    if (groupId == null) {
+      await deleteTransaction(id);
+      return;
+    }
+    for (final leg
+        in _allTransactions.where((t) => t.transferGroupId == groupId)) {
+      _reverseBalanceDelta(leg.accountId, leg.amount, leg.type);
+    }
+    _allTransactions =
+        _allTransactions.where((t) => t.transferGroupId != groupId).toList();
     safeNotify();
     await _saveAll();
   }
