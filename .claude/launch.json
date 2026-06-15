@@ -1,0 +1,66 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Treasury Web (web-server)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main_web.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8090",
+        "--web-hostname",
+        "localhost"
+      ],
+      "port": 8090
+    },
+    {
+      "name": "Treasury Web (Edge)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main_web.dart",
+        "-d",
+        "edge",
+        "--web-port",
+        "8090",
+        "--web-hostname",
+        "localhost"
+      ],
+      "port": 8090
+    },
+    {
+      "name": "Treasury Web (preview seed)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main_web.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8090",
+        "--web-hostname",
+        "localhost",
+        "--dart-define=PREVIEW_SEED=true"
+      ],
+      "port": 8090
+    },
+    {
+      "name": "Mobile App (Windows desktop)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main.dart",
+        "-d",
+        "windows"
+      ],
+      "port": 0
+    }
+  ]
+}

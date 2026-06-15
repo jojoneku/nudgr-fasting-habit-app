@@ -3,9 +3,9 @@
     "short_name": "Nudgr",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#hexcode",
-    "theme_color": "#hexcode",
-    "description": "A new Flutter project.",
+    "background_color": "#0A0E14",
+    "theme_color": "#0A0E14",
+    "description": "Treasury — your finances, on the big screen.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
