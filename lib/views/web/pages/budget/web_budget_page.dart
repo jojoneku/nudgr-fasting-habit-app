@@ -107,7 +107,8 @@ class _BudgetBody extends StatelessWidget {
           group: group,
           allocated: presenter.budgetFor(cat.id)?.allocatedAmount ?? 0,
           spent: presenter.spentFor(cat.id),
-          color: resolveSliceColor(cat.colorHex, colorIndex++),
+          color: resolveSliceColor(cat.colorHex, colorIndex++,
+              brightness: Theme.of(context).brightness),
           accountBacked: false,
         ));
       }
@@ -128,9 +129,6 @@ class _BudgetBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
     final rows = _buildRows(context);
     final allocated = presenter.totalAllocated;
     final spent = presenter.totalSpent;
@@ -178,12 +176,13 @@ class _BudgetBody extends StatelessWidget {
       ),
     );
 
-    return Container(
-      color: cs.surface,
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(WebInsets.xxl),
-        child: Align(alignment: Alignment.topCenter, child: content),
-      ),
+    // No explicit background: let the page show the shell's (darker)
+    // scaffoldBackgroundColor like the Dashboard/Setup pages, so the content
+    // area is distinct from the sidebar (both the sidebar and `cs.surface`
+    // share surfaceContainerLow, which made the page blend into the rail).
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(WebInsets.xxl),
+      child: Align(alignment: Alignment.topCenter, child: content),
     );
   }
 }
@@ -344,13 +343,23 @@ class _SetupCard extends StatelessWidget {
               ],
             ),
           ),
-          // Horizontally-scrollable table
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 920),
-              child: _Table(presenter: presenter, rows: rows),
-            ),
+          // Horizontally-scrollable table. The table must be given a BOUNDED
+          // width: a horizontal SingleChildScrollView hands its child unbounded
+          // width, and the rows use Expanded (the flexible Category column),
+          // which asserts under unbounded constraints (box.dart). So size the
+          // table to fill the card, falling back to a 920px min that scrolls
+          // horizontally only when the viewport is narrower than that.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tableWidth = max(920.0, constraints.maxWidth);
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: tableWidth,
+                  child: _Table(presenter: presenter, rows: rows),
+                ),
+              );
+            },
           ),
         ],
       ),
@@ -868,9 +877,12 @@ class _AddRowState extends State<_AddRow> {
         group: _group,
         budgetType: BudgetType.variable,
       );
+      // Guard the controller writes after the await — the row may have been
+      // removed mid-save, in which case the controllers are disposed. (C11)
+      if (!mounted) return;
       _nameController.clear();
       _amountController.clear();
-      if (mounted) setState(() => _group = BudgetGroup.variableOptional);
+      setState(() => _group = BudgetGroup.variableOptional);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

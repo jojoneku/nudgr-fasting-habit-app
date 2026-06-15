@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../utils/app_radii.dart';
 import '../design/web_breakpoints.dart';
 
 /// Tone of a [WebBadge] — maps to a theme color, never a hardcoded one.
@@ -33,9 +32,10 @@ class WebBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(
           horizontal: WebInsets.sm, vertical: WebInsets.xs),
-      decoration: BoxDecoration(
+      decoration: ShapeDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(AppRadii.sm),
+        // Reference chips are full-radius pills (`rounded-full`).
+        shape: const StadiumBorder(),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

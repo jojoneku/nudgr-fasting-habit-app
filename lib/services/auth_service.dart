@@ -6,6 +6,12 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AuthService {
   GoogleSignIn? _googleSignIn;
 
+  /// True once [init] has run [Supabase.initialize]. Until then, reading
+  /// `Supabase.instance` throws, so all getters below short-circuit to safe
+  /// defaults. This lets the web companion's local preview-seed mode render the
+  /// signed-in UI without ever initialising Supabase. (Plan 052)
+  bool _initialized = false;
+
   /// Initialises Supabase. Call once at app startup before any auth checks.
   /// Reads credentials from .env — never hardcoded in source.
   Future<void> init() async {
@@ -13,8 +19,15 @@ class AuthService {
     final anonKey = dotenv.env['SUPABASE_ANON_KEY'] ?? '';
     final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
 
-    assert(url.isNotEmpty, 'SUPABASE_URL missing from .env');
-    assert(anonKey.isNotEmpty, 'SUPABASE_ANON_KEY missing from .env');
+    // Throw (not `assert`) — asserts are stripped in release, so a misconfigured
+    // deploy would otherwise initialise Supabase with empty strings and fail
+    // opaquely on the first request. Fail loudly at startup instead. (Plan 052 S6)
+    if (url.isEmpty || anonKey.isEmpty) {
+      throw StateError(
+        'Supabase credentials missing from .env '
+        '(SUPABASE_URL and SUPABASE_ANON_KEY are required).',
+      );
+    }
 
     // On web we use Supabase's OAuth redirect flow instead of the native
     // google_sign_in ID-token flow, so the GoogleSignIn client is never built
@@ -28,23 +41,29 @@ class AuthService {
       anonKey: anonKey,
       debug: kDebugMode,
     );
+    _initialized = true;
   }
 
   SupabaseClient get _client => Supabase.instance.client;
 
   // ── Getters ──────────────────────────────────────────────────────────────
 
-  bool get isSignedIn => _client.auth.currentUser != null;
-  String? get currentUserId => _client.auth.currentUser?.id;
-  String? get currentUserEmail => _client.auth.currentUser?.email;
-  String? get currentUserAvatarUrl =>
-      _client.auth.currentUser?.userMetadata?['avatar_url'] as String?;
-  String? get currentUserDisplayName =>
-      _client.auth.currentUser?.userMetadata?['full_name'] as String? ??
-      _client.auth.currentUser?.userMetadata?['name'] as String?;
+  bool get isSignedIn => _initialized && _client.auth.currentUser != null;
+  String? get currentUserId =>
+      _initialized ? _client.auth.currentUser?.id : null;
+  String? get currentUserEmail =>
+      _initialized ? _client.auth.currentUser?.email : null;
+  String? get currentUserAvatarUrl => _initialized
+      ? (_client.auth.currentUser?.userMetadata?['avatar_url'] as String?)
+      : null;
+  String? get currentUserDisplayName => _initialized
+      ? (_client.auth.currentUser?.userMetadata?['full_name'] as String? ??
+          _client.auth.currentUser?.userMetadata?['name'] as String?)
+      : null;
 
   /// Current Supabase access token. Refreshed automatically by the SDK.
-  String? get currentAccessToken => _client.auth.currentSession?.accessToken;
+  String? get currentAccessToken =>
+      _initialized ? _client.auth.currentSession?.accessToken : null;
 
   /// Emits on every auth state change (sign-in, sign-out, token refresh).
   Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
@@ -87,7 +106,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await _googleSignIn?.signOut();
-    await _client.auth.signOut();
+    if (_initialized) await _client.auth.signOut();
   }
 }
 

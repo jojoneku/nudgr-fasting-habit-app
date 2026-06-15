@@ -206,62 +206,110 @@ class _HistoryBody extends StatelessWidget {
         ),
         const SizedBox(height: WebInsets.xl),
 
-        // ── Tri-series cash-flow trend ─────────────────────────────────────
+        // ── Cash-flow trend: how income / expenses / net move month to month ─
         WebCard(
-          title: 'Income vs Expenses vs Net',
-          description: 'Monthly cash flow · $spanLabel',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              WebBarPairChart(
-                groups: [
-                  for (final r in rows)
-                    (label: r.label, a: r.income, b: r.expenses),
-                ],
-                aColor: cs.tertiary,
-                bColor: cs.error,
-                aLabel: 'Income',
-                bLabel: 'Expenses',
-                leftLabelFormat: formatPesoCompact,
-                height: 240,
+          title: 'Cash Flow Trend',
+          description: 'Income, expenses & net each month · $spanLabel',
+          child: WebMultiLineChart(
+            bottomLabels: [for (final r in rows) r.label],
+            leftLabelFormat: formatPesoCompact,
+            height: 248,
+            series: [
+              WebLineSeries(
+                label: 'Income',
+                color: cs.tertiary,
+                values: [for (final r in rows) r.income],
+              ),
+              WebLineSeries(
+                label: 'Expenses',
+                color: cs.error,
+                values: [for (final r in rows) r.expenses],
+              ),
+              WebLineSeries(
+                label: 'Net',
+                color: cs.primary,
+                values: [for (final r in rows) r.net],
               ),
             ],
           ),
         ),
         const SizedBox(height: WebInsets.xl),
 
-        // ── Ending-cash trend + monthly table ──────────────────────────────
+        // ── Savings growth + ending cash, paired ────────────────────────────
         if (isWide)
           IntrinsicHeight(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _cashTrendCard(context, rows, cashGrowth)),
+                Expanded(child: _cumulativeSavingsCard(context, rows)),
                 const SizedBox(width: WebInsets.xl),
-                Expanded(
-                    child: _monthlyTableCard(
-                        context, rows, neutralValue, upTone, danger)),
+                Expanded(child: _cashTrendCard(context, rows, cashGrowth)),
               ],
             ),
           )
         else ...[
-          _cashTrendCard(context, rows, cashGrowth),
+          _cumulativeSavingsCard(context, rows),
           const SizedBox(height: WebInsets.xl),
-          _monthlyTableCard(context, rows, neutralValue, upTone, danger),
+          _cashTrendCard(context, rows, cashGrowth),
         ],
         const SizedBox(height: WebInsets.xl),
 
-        // ── Category averages ──────────────────────────────────────────────
-        WebCard(
-          title: 'Spending by Category',
-          description: 'Average per month, with the latest month vs. average',
-          child: _CategoryAverages(
-            months: months,
-            current: current,
-            categories: categories,
-          ),
-        ),
+        // ── Monthly summary + spending by category (side by side) ───────────
+        if (isWide)
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                    child: _monthlyTableCard(
+                        context, rows, neutralValue, upTone, danger)),
+                const SizedBox(width: WebInsets.xl),
+                Expanded(child: _categoryCard()),
+              ],
+            ),
+          )
+        else ...[
+          _monthlyTableCard(context, rows, neutralValue, upTone, danger),
+          const SizedBox(height: WebInsets.xl),
+          _categoryCard(),
+        ],
       ],
+    );
+  }
+
+  Widget _categoryCard() => WebCard(
+        title: 'Spending by Category',
+        description: 'Average per month, with the latest month vs. average',
+        child: _CategoryAverages(
+          months: months,
+          current: current,
+          categories: categories,
+        ),
+      );
+
+  /// "How savings grew" — the running total of each month's net, so the line
+  /// climbs as savings accumulate (and dips on a net-negative month).
+  Widget _cumulativeSavingsCard(BuildContext context, List<_MonthRow> rows) {
+    var run = 0.0;
+    final cumulative = <double>[
+      for (final r in rows) run += r.net,
+    ];
+    final total = cumulative.isEmpty ? 0.0 : cumulative.last;
+    return WebCard(
+      title: 'Cumulative Savings',
+      description: 'Running total of monthly net',
+      trailing: WebBadge(
+        '${total >= 0 ? '+' : '−'}${formatPesoCompact(total.abs())}',
+        tone: total >= 0 ? WebBadgeTone.success : WebBadgeTone.danger,
+        icon: total >= 0 ? Icons.arrow_upward : Icons.arrow_downward,
+      ),
+      child: WebLineChart(
+        values: cumulative,
+        bottomLabels: [for (final r in rows) r.label],
+        leftLabelFormat: formatPesoCompact,
+        area: true,
+        height: 236,
+      ),
     );
   }
 
