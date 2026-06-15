@@ -42,7 +42,11 @@ class WebProgressBar extends StatelessWidget {
                 Container(color: cs.surfaceContainerHighest),
                 TweenAnimationBuilder<double>(
                   tween: Tween(begin: 0, end: clamped),
-                  duration: const Duration(milliseconds: 280),
+                  // Honor the OS "reduce motion" setting — the doc comment
+                  // claimed this but the framework doesn't do it for us. (C2)
+                  duration: MediaQuery.disableAnimationsOf(context)
+                      ? Duration.zero
+                      : const Duration(milliseconds: 280),
                   curve: Curves.easeOutCubic,
                   builder: (context, v, _) => Align(
                     alignment: Alignment.centerLeft,

@@ -51,22 +51,46 @@ String categoryColorAt(int index, {required bool isExpense}) {
     0.68, // 68% lightness — readable on #0A0E14 background
   ).toColor();
 
-  return '#${color.value.toRadixString(16).substring(2).toUpperCase()}';
+  return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
 }
 
 /// Parses [hex] and returns the color. If the color is white / near-white
 /// (luminance > 0.65) — the old default — substitutes a palette color
 /// based on [index] so existing categories always render distinctly.
-Color resolveSliceColor(String hex, int index) {
+///
+/// [brightness] defaults to [Brightness.dark] (the curated palettes are tuned
+/// for dark backgrounds, so existing callers are unchanged). When
+/// [Brightness.light] is passed, the resolved color is darkened/saturated so it
+/// stays legible on light-mode white cards — the palette pastels (luminance
+/// ≈0.7–0.9) are otherwise near-invisible there. Hue is preserved, so a
+/// category keeps its recognisable color, just deeper. (Plan 052 T1)
+Color resolveSliceColor(
+  String hex,
+  int index, {
+  Brightness brightness = Brightness.dark,
+}) {
+  Color color;
   try {
-    final color = Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
+    color = Color(int.parse('FF${hex.replaceFirst('#', '')}', radix: 16));
     if (color.computeLuminance() > 0.65) {
-      return _parseHex(kExpensePalette[index % kExpensePalette.length]);
+      color = _parseHex(kExpensePalette[index % kExpensePalette.length]);
     }
-    return color;
   } catch (_) {
-    return _parseHex(kExpensePalette[index % kExpensePalette.length]);
+    color = _parseHex(kExpensePalette[index % kExpensePalette.length]);
   }
+  return brightness == Brightness.light ? _darkenForLight(color) : color;
+}
+
+/// Deepens a dark-tuned palette color for use on light backgrounds: caps
+/// lightness and floors saturation while keeping the hue, yielding a vivid
+/// readable variant instead of a washed-out pastel.
+Color _darkenForLight(Color c) {
+  final hsl = HSLColor.fromColor(c);
+  final saturation = hsl.saturation < 0.45 ? 0.6 : hsl.saturation;
+  return hsl
+      .withLightness(hsl.lightness.clamp(0.0, 0.42))
+      .withSaturation(saturation.clamp(0.0, 1.0))
+      .toColor();
 }
 
 Color _parseHex(String hex) {

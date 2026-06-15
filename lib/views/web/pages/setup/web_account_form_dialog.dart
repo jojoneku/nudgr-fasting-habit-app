@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Account color swatch options. These are user-chosen account colors — the
@@ -41,19 +42,18 @@ const _subAccountCategories = [
   AccountCategory.timeDeposit,
 ];
 
-String _categoryLabel(AccountCategory cat) => switch (cat) {
-      AccountCategory.bank => 'Bank',
-      AccountCategory.ewallet => 'eWallet',
-      AccountCategory.cash => 'Cash',
-      AccountCategory.savings => 'Savings',
-      AccountCategory.goal => 'Goal',
-      AccountCategory.timeDeposit => 'Time Deposit',
-      AccountCategory.creditCard => 'Credit Card',
-      AccountCategory.creditLine => 'Credit Line',
-      AccountCategory.bnpl => 'BNPL',
-      AccountCategory.investment => 'Investment',
-      AccountCategory.custodian => 'External',
-    };
+/// Validator for optional currency/number fields: blank is allowed (treated as
+/// 0 / unset on submit), but a non-empty value must parse cleanly so malformed
+/// input like "1.2.3" is rejected up front instead of silently coerced to 0.
+/// (Plan 052 C6)
+String? _optionalAmountValidator(String? v) {
+  final raw = (v ?? '').replaceAll(',', '').trim();
+  if (raw.isEmpty) return null;
+  final parsed = double.tryParse(raw);
+  if (parsed == null) return 'Enter a valid number';
+  if (parsed < 0) return 'Must be 0 or more';
+  return null;
+}
 
 /// Native desktop Add/Edit Account form for the Treasury web "Setup & Accounts"
 /// page. Replaces the mobile [AccountSetupView]-in-a-bottom-sheet with a
@@ -118,10 +118,15 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
   String? _creditBrand;
   bool _isSubmitting = false;
 
+  /// The parent this account belongs to. On EDIT the setup page opens the
+  /// dialog without `parentAccountId`, so we must fall back to the existing
+  /// record's parent — otherwise saving a sub-account would orphan it
+  /// (`parentAccountId: null` detaches the pocket from its parent). (Plan 052 C1)
+  String? get _effectiveParentId =>
+      widget.existing?.parentAccountId ?? widget.parentAccountId;
+
   List<AccountCategory> get _availableCategories =>
-      widget.parentAccountId == null
-          ? _topLevelCategories
-          : _subAccountCategories;
+      _effectiveParentId == null ? _topLevelCategories : _subAccountCategories;
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
@@ -208,6 +213,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
 
     try {
@@ -230,10 +236,15 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
         id: id,
         name: _nameController.text.trim(),
         category: _category,
-        parentAccountId: widget.parentAccountId,
+        parentAccountId: _effectiveParentId,
         balance: balance,
         colorHex: _selectedColor,
-        icon: _category.name,
+        // Preserve the existing icon unless the category itself changed —
+        // blindly writing `_category.name` discarded a customised icon. (C5)
+        icon:
+            (widget.existing != null && widget.existing!.category == _category)
+                ? widget.existing!.icon
+                : _category.name,
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
@@ -256,6 +267,12 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
       }
 
       if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      // A save failure was previously invisible (try/finally with no catch) —
+      // the spinner reset and the dialog just sat there. Surface it. (C7)
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not save account: $e')),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -393,7 +410,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                               items: _availableCategories
                                   .map((c) => DropdownMenuItem(
                                         value: c,
-                                        child: Text(_categoryLabel(c)),
+                                        child: Text(c.label),
                                       ))
                                   .toList(),
                               onChanged: (c) =>
@@ -417,6 +434,12 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                                 isDense: true,
                                 border: const OutlineInputBorder(),
                               ),
+                              textInputAction: TextInputAction.done,
+                              onFieldSubmitted: (_) =>
+                                  _submit(), // Enter submits (U6)
+                              // Reject malformed numbers (e.g. "1.2.3") instead
+                              // of silently coercing them to 0. (Plan 052 C6)
+                              validator: _optionalAmountValidator,
                             ),
                           ),
                         ],
@@ -471,34 +494,46 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                       ],
                       if (_isCustodian) ...[
                         const SizedBox(height: WebInsets.lg),
-                        DropdownButtonFormField<String>(
-                          initialValue: _linkedAccountId,
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Stored in account (optional)',
-                            helperText:
-                                'These funds physically live in this account',
-                            isDense: true,
-                            border: OutlineInputBorder(),
-                          ),
-                          items: [
-                            DropdownMenuItem<String>(
-                              value: null,
-                              child: Text(
-                                '— Not linked —',
-                                style: TextStyle(color: cs.onSurfaceVariant),
-                              ),
+                        Builder(builder: (context) {
+                          // Guard against a dangling link: if the stored
+                          // linked account was deleted/de-listed, its id is no
+                          // longer among the items and DropdownButtonFormField
+                          // asserts. Fall back to "not linked". (Plan 052 C10)
+                          final liquidIds = widget.presenter.liquidAccounts
+                              .map((a) => a.id)
+                              .toSet();
+                          final selected = liquidIds.contains(_linkedAccountId)
+                              ? _linkedAccountId
+                              : null;
+                          return DropdownButtonFormField<String>(
+                            initialValue: selected,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Stored in account (optional)',
+                              helperText:
+                                  'These funds physically live in this account',
+                              isDense: true,
+                              border: OutlineInputBorder(),
                             ),
-                            ...widget.presenter.liquidAccounts.map(
-                              (a) => DropdownMenuItem<String>(
-                                value: a.id,
-                                child: Text(a.name),
+                            items: [
+                              DropdownMenuItem<String>(
+                                value: null,
+                                child: Text(
+                                  '— Not linked —',
+                                  style: TextStyle(color: cs.onSurfaceVariant),
+                                ),
                               ),
-                            ),
-                          ],
-                          onChanged: (id) =>
-                              setState(() => _linkedAccountId = id),
-                        ),
+                              ...widget.presenter.liquidAccounts.map(
+                                (a) => DropdownMenuItem<String>(
+                                  value: a.id,
+                                  child: Text(a.name),
+                                ),
+                              ),
+                            ],
+                            onChanged: (id) =>
+                                setState(() => _linkedAccountId = id),
+                          );
+                        }),
                       ],
                       if (_isCredit) ...[
                         const SizedBox(height: WebInsets.lg),
@@ -571,24 +606,25 @@ class _ColorSwatchPicker extends StatelessWidget {
 
   const _ColorSwatchPicker({required this.selected, required this.onSelected});
 
-  Color _parse(String hex) {
+  Color _parse(String hex, Color fallback) {
     try {
       final clean = hex.replaceFirst('#', '');
       return Color(int.parse('FF$clean', radix: 16));
     } catch (_) {
-      return Colors.blue;
+      return fallback; // theme-resolved, not a hardcoded Colors.blue (T4)
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final fallback = Theme.of(context).colorScheme.primary;
     return Wrap(
       spacing: WebInsets.md,
       runSpacing: WebInsets.md,
       children: [
         for (final hex in _colorOptions)
           _Swatch(
-            color: _parse(hex),
+            color: _parse(hex, fallback),
             selected: hex.toLowerCase() == selected.toLowerCase(),
             onTap: () => onSelected(hex),
             semanticLabel: 'Color $hex',
@@ -645,7 +681,13 @@ class _Swatch extends StatelessWidget {
                     : null,
               ),
               child: selected
-                  ? Icon(Icons.check, color: cs.onPrimary, size: 18)
+                  // Contrast against the arbitrary user swatch (not cs.onPrimary,
+                  // which is near-invisible on light swatches in light mode). (T3)
+                  ? Icon(Icons.check,
+                      color: color.computeLuminance() > 0.5
+                          ? Colors.black
+                          : Colors.white,
+                      size: 18)
                   : null,
             ),
           ),
@@ -767,6 +809,7 @@ class _CreditDetailsSection extends StatelessWidget {
             isDense: true,
             border: OutlineInputBorder(),
           ),
+          validator: _optionalAmountValidator,
         ),
         const SizedBox(height: WebInsets.lg),
         Row(
@@ -802,6 +845,7 @@ class _CreditDetailsSection extends StatelessWidget {
             isDense: true,
             border: OutlineInputBorder(),
           ),
+          validator: _optionalAmountValidator,
         ),
       ],
     );

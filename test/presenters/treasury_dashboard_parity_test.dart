@@ -27,16 +27,19 @@ TransactionRecord _txn({
   required String id,
   required double amount,
   required TransactionType type,
+  String accountId = 'acc1',
+  String? transferGroupId,
 }) =>
     TransactionRecord(
       id: id,
       date: DateTime.now(),
-      accountId: 'acc1',
+      accountId: accountId,
       categoryId: 'cat',
       amount: amount,
       type: type,
       description: 'Test',
       month: toMonthKey(DateTime.now()),
+      transferGroupId: transferGroupId,
     );
 
 void main() {
@@ -76,7 +79,7 @@ void main() {
       expect(p.currentObligations, 4000); // 0 unpaid bills + 4000 liabilities
     });
 
-    test('monthNetCashFlow and savingsRate compute from this month', () async {
+    test('monthNetCashFlow computes from this month', () async {
       when(mockStorage.loadTransactions()).thenAnswer((_) async => [
             _txn(id: 't1', amount: 5000, type: TransactionType.inflow),
             _txn(id: 't2', amount: 2000, type: TransactionType.outflow),
@@ -85,7 +88,60 @@ void main() {
       await p.load();
 
       expect(p.monthNetCashFlow, 3000);
-      expect(p.savingsRate, closeTo(0.6, 1e-9)); // 3000 / 5000
+    });
+
+    test('savingsRate = money moved into savings / real income', () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(id: 'acc1', balance: 0),
+            _account(
+                id: 'sav', category: AccountCategory.savings, balance: 8000),
+          ]);
+      // 40k salary into the spending account, then an 8k transfer into savings
+      // (stored as an outflow leg on acc1 + an inflow leg on sav, sharing a
+      // group id). Income denominator must exclude that transfer inflow leg.
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(id: 'salary', amount: 40000, type: TransactionType.inflow),
+            _txn(
+                id: 'xfer_out',
+                amount: 8000,
+                type: TransactionType.outflow,
+                accountId: 'acc1',
+                transferGroupId: 'g1'),
+            _txn(
+                id: 'xfer_in',
+                amount: 8000,
+                type: TransactionType.inflow,
+                accountId: 'sav',
+                transferGroupId: 'g1'),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.monthTotalInflow, 40000); // transfer inflow leg excluded
+      expect(p.monthTotalOutflow, 0); // transfer outflow leg excluded too
+      expect(p.monthSavingsContributions, 8000); // landed in the savings acct
+      expect(p.savingsRate, closeTo(0.2, 1e-9)); // 8000 / 40000
+    });
+
+    test('savingsRate goes negative when you net-withdraw from savings',
+        () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(id: 'acc1'),
+            _account(id: 'sav', category: AccountCategory.savings),
+          ]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(id: 'salary', amount: 10000, type: TransactionType.inflow),
+            _txn(
+                id: 'raid',
+                amount: 2000,
+                type: TransactionType.outflow,
+                accountId: 'sav'),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.monthSavingsContributions, -2000);
+      expect(p.savingsRate, closeTo(-0.2, 1e-9)); // -2000 / 10000
     });
 
     test('savingsRate is null when there is no income', () async {

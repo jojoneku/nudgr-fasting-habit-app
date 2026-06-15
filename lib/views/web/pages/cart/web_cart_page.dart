@@ -11,16 +11,16 @@ class WebCartPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: presenter,
-      builder: (context, _) => SingleChildScrollView(
-        padding: const EdgeInsets.all(WebInsets.xxl),
+      builder: (context, _) => const SingleChildScrollView(
+        padding: EdgeInsets.all(WebInsets.xxl),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const WebSectionHeader(
+            WebSectionHeader(
               title: 'Grocery Cart',
               subtitle: 'Running total before you reach the till.',
             ),
-            const WebCard(
+            WebCard(
               child: Text('Cart redesign in progress — Plan 050-F.'),
             ),
           ],

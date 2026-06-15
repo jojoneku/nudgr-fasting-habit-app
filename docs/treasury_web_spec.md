@@ -139,7 +139,10 @@ Already available: `netWorth`, `totalLiquidCash`(+gross/held), `monthTotalInflow
 
 ```dart
 double get monthNetCashFlow;        // monthTotalInflow − monthTotalOutflow
-double? get savingsRate;            // monthNetCashFlow / monthTotalInflow; null when no income
+double get monthSavingsContributions; // net flow INTO locked (savings/goal/TD/investment) accounts this month
+double? get savingsRate;            // monthSavingsContributions / monthTotalInflow; null when no income
+// NB: monthTotalInflow/Outflow exclude internal transfer legs (transferGroupId != null) —
+// moving money between your own accounts is neither income nor an expense.
 double get totalAssets;             // top-level, non-liability, non-custodian (factored out of netWorth)
 double get currentObligations;      // monthUnpaidBills + totalLiabilities
 double get projectedSpareThisMonth; // forecastedNetBalance, named for the UI

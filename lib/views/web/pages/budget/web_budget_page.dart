@@ -107,7 +107,8 @@ class _BudgetBody extends StatelessWidget {
           group: group,
           allocated: presenter.budgetFor(cat.id)?.allocatedAmount ?? 0,
           spent: presenter.spentFor(cat.id),
-          color: resolveSliceColor(cat.colorHex, colorIndex++),
+          color: resolveSliceColor(cat.colorHex, colorIndex++,
+              brightness: Theme.of(context).brightness),
           accountBacked: false,
         ));
       }
@@ -876,9 +877,12 @@ class _AddRowState extends State<_AddRow> {
         group: _group,
         budgetType: BudgetType.variable,
       );
+      // Guard the controller writes after the await — the row may have been
+      // removed mid-save, in which case the controllers are disposed. (C11)
+      if (!mounted) return;
       _nameController.clear();
       _amountController.clear();
-      if (mounted) setState(() => _group = BudgetGroup.variableOptional);
+      setState(() => _group = BudgetGroup.variableOptional);
     } finally {
       if (mounted) setState(() => _busy = false);
     }

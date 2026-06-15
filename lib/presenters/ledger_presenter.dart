@@ -41,6 +41,29 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
 
+  // ── Derived-row caches (Plan 052 P1) ────────────────────────────────────────
+  // `ledgerSpreadsheetRows` reconstructs every account's balance history by
+  // sorting all transactions per account — expensive, and the web grid reads it
+  // on every build (the search box filters view-side via setState, so the page
+  // rebuilds per keystroke without any presenter change). Cache the result and
+  // clear it in [safeNotify], i.e. only when presenter state actually mutates —
+  // so per-keystroke rebuilds reuse the cached rows instead of re-sorting all
+  // history each character.
+  List<({TransactionRecord txn, double runningBalance})>? _rowsForMonthCache;
+  List<
+      ({
+        TransactionRecord txn,
+        double runningBalance,
+        double accountBalance,
+      })>? _spreadsheetCache;
+
+  @override
+  void safeNotify() {
+    _rowsForMonthCache = null;
+    _spreadsheetCache = null;
+    super.safeNotify();
+  }
+
   // ── Chat-logging state (Plan 026 — ephemeral, never persisted) ──────────────
   LedgerChatState _chatState = const LedgerChatState.idle();
   FinanceParseError? _chatHardError;
@@ -187,6 +210,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// filtered scope — it is purely derived, never persisted.
   List<({TransactionRecord txn, double runningBalance})>
       get ledgerRowsForMonth {
+    final cached = _rowsForMonthCache;
+    if (cached != null) return cached;
     var txns = _filteredTransactions;
     if (_selectedCategoryId != null) {
       txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
@@ -207,7 +232,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     // Display newest-first.
-    return rows.reversed.toList();
+    return _rowsForMonthCache = rows.reversed.toList();
   }
 
   /// Inflow subtotal for the current table filter (month/account/category).
@@ -264,8 +289,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         double runningBalance,
         double accountBalance,
       })> get ledgerSpreadsheetRows {
+    final cached = _spreadsheetCache;
+    if (cached != null) return cached;
     final acctMap = _accountBalanceByTxnId;
-    return [
+    return _spreadsheetCache = [
       for (final r in ledgerRowsForMonth)
         (
           txn: r.txn,
@@ -422,7 +449,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> updateTransaction(TransactionRecord txn) async {
-    final old = _allTransactions.firstWhere((t) => t.id == txn.id);
+    // Guard against a vanished id (reachable via fast successive inline edits
+    // or an interleaved delete) — `firstWhere` would otherwise throw. (C9)
+    final old = _allTransactions.where((t) => t.id == txn.id).firstOrNull;
+    if (old == null) return;
     _reverseBalanceDelta(old.accountId, old.amount, old.type);
     _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = [
@@ -433,7 +463,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> deleteTransaction(String id) async {
-    final txn = _allTransactions.firstWhere((t) => t.id == id);
+    final txn = _allTransactions.where((t) => t.id == id).firstOrNull;
+    if (txn == null) return; // already gone — no-op (C9)
     _reverseBalanceDelta(txn.accountId, txn.amount, txn.type);
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     safeNotify();
@@ -460,6 +491,33 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     await _saveAll();
   }
 
+  /// Bulk-deletes the given transaction ids in ONE mutation + ONE persist,
+  /// instead of N fire-and-forget calls each doing a full-list write. Transfer
+  /// pairs are expanded so both legs go (matches [deleteTransactionOrGroup]).
+  /// (Plan 052 C8)
+  Future<void> deleteTransactions(Set<String> ids) async {
+    if (ids.isEmpty) return;
+    // Expand any transfer legs whose partner is in the selection set.
+    final groupIds = _allTransactions
+        .where((t) => ids.contains(t.id) && t.transferGroupId != null)
+        .map((t) => t.transferGroupId)
+        .toSet();
+    final toRemove = _allTransactions
+        .where((t) =>
+            ids.contains(t.id) ||
+            (t.transferGroupId != null && groupIds.contains(t.transferGroupId)))
+        .toList();
+    if (toRemove.isEmpty) return;
+    for (final t in toRemove) {
+      _reverseBalanceDelta(t.accountId, t.amount, t.type);
+    }
+    final removeIds = toRemove.map((t) => t.id).toSet();
+    _allTransactions =
+        _allTransactions.where((t) => !removeIds.contains(t.id)).toList();
+    safeNotify();
+    await _saveAll();
+  }
+
   /// Upserts an account (used for filter chips and add-sheet in ledger view).
   Future<void> saveAccount(FinancialAccount account) async {
     final exists = _accounts.any((a) => a.id == account.id);
@@ -474,6 +532,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> addCategory(FinanceCategory category) async {
     _categories = [..._categories, category];
+    safeNotify();
+    await _storage.saveFinanceCategories(_categories);
+  }
+
+  /// Replaces the stored category that shares [category]'s id — used by the web
+  /// Setup categories table for inline rename / recolor / type change. A no-op
+  /// if the id isn't present.
+  Future<void> updateCategory(FinanceCategory category) async {
+    _categories = [
+      for (final c in _categories)
+        if (c.id == category.id) category else c
+    ];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);
   }
@@ -523,7 +593,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         return;
       }
       _chatHardError = null;
-      if (preparse.isFullyResolved && _ai == null || preparse.isFullyResolved) {
+      // A fully-resolved parse commits directly (the AI is only consulted for
+      // ambiguous input). The old `a && b || a` clause collapsed to this. (C12)
+      if (preparse.isFullyResolved) {
         await _commitParsed(preparse.toDraft());
         return;
       }

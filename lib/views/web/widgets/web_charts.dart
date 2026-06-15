@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../design/web_breakpoints.dart';
@@ -17,6 +18,18 @@ class WebChartSlice {
     required this.value,
     required this.color,
   });
+
+  // Value equality so the donut painter's `listEquals` guard actually short-
+  // circuits when the dashboard rebuilds an identical slice list. (P3)
+  @override
+  bool operator ==(Object other) =>
+      other is WebChartSlice &&
+      other.label == label &&
+      other.value == value &&
+      other.color == color;
+
+  @override
+  int get hashCode => Object.hash(label, value, color);
 }
 
 /// A ring donut with a two-line center label and an optional ranked legend on
@@ -106,20 +119,34 @@ class _WebDonutChartState extends State<WebDonutChart>
       );
     }
 
-    final ring = AnimatedBuilder(
-      animation: _animation,
-      builder: (context, _) => SizedBox(
+    // Derive the center-label styles from the theme so they honor text scaling
+    // and theme switches instead of hardcoding size/weight in the painter. (T7)
+    final centerLabelStyle = (theme.textTheme.labelSmall ?? const TextStyle())
+        .copyWith(
+            color: cs.onSurfaceVariant,
+            letterSpacing: 0.8,
+            fontWeight: FontWeight.w600);
+    final centerValueStyle = (theme.textTheme.titleMedium ?? const TextStyle())
+        .copyWith(color: cs.onSurface, fontWeight: FontWeight.w700);
+
+    // Pass the animation to the painter via `repaint:` instead of rebuilding the
+    // whole subtree each tick with AnimatedBuilder — the painter is now created
+    // ~once per data/theme change (not per frame), so its reusable Paint and
+    // cached TextPainters survive the sweep. Wrapped in a RepaintBoundary so the
+    // ticking ring never dirties the surrounding card layer. (P4, P8)
+    final ring = RepaintBoundary(
+      child: SizedBox(
         width: widget.size,
         height: widget.size,
         child: CustomPaint(
           painter: _DonutPainter(
+            animation: _animation,
             slices: widget.slices,
             total: total,
-            progress: _animation.value,
             centerLabel: widget.centerLabel,
             centerValue: widget.centerValue,
-            labelColor: cs.onSurfaceVariant,
-            valueColor: cs.onSurface,
+            centerLabelStyle: centerLabelStyle,
+            centerValueStyle: centerValueStyle,
           ),
         ),
       ),
@@ -223,26 +250,40 @@ class _DonutLegend extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
+  final Animation<double> animation;
   final List<WebChartSlice> slices;
   final double total;
-  final double progress;
   final String? centerLabel;
   final String? centerValue;
-  final Color labelColor;
-  final Color valueColor;
+  final TextStyle centerLabelStyle;
+  final TextStyle centerValueStyle;
 
   static const double _gapAngle = 0.04;
   static const double _strokeWidth = 22.0;
 
+  // Reused across every slice and every animation tick — one allocation instead
+  // of one Paint per slice per frame. (P4)
+  final Paint _arcPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = _strokeWidth
+    ..strokeCap = StrokeCap.butt;
+
+  // Built once (lazily) and reused — the text content/style is stable across
+  // the sweep, so we don't lay out two TextPainters every tick. (P4)
+  TextPainter? _labelPainter;
+  TextPainter? _valuePainter;
+
   _DonutPainter({
+    required this.animation,
     required this.slices,
     required this.total,
-    required this.progress,
     required this.centerLabel,
     required this.centerValue,
-    required this.labelColor,
-    required this.valueColor,
-  });
+    required this.centerLabelStyle,
+    required this.centerValueStyle,
+  }) : super(repaint: animation);
+
+  double get progress => animation.value;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -254,62 +295,54 @@ class _DonutPainter extends CustomPainter {
 
     double startAngle = -math.pi / 2;
     final totalGap = _gapAngle * slices.length;
-    final availableAngle = (2 * math.pi - totalGap) * progress;
+    // Clamp so a pathological slice count can never drive the sweep negative.
+    final availableAngle =
+        ((2 * math.pi - totalGap) * progress).clamp(0.0, 2 * math.pi);
 
     for (final slice in slices) {
       final sweepAngle = (slice.value / total) * availableAngle;
-      canvas.drawArc(
-        rect,
-        startAngle,
-        sweepAngle,
-        false,
-        Paint()
-          ..color = slice.color
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = _strokeWidth
-          ..strokeCap = StrokeCap.butt,
-      );
+      _arcPaint.color = slice.color;
+      canvas.drawArc(rect, startAngle, sweepAngle, false, _arcPaint);
       startAngle += sweepAngle + _gapAngle;
     }
 
     if (progress > 0.8 && (centerLabel != null || centerValue != null)) {
+      // Fade the center text in with the tail of the sweep rather than popping.
+      final opacity = ((progress - 0.8) / 0.2).clamp(0.0, 1.0);
       if (centerLabel != null) {
-        final lp = TextPainter(
+        final lp = _labelPainter ??= TextPainter(
           text: TextSpan(
-            text: centerLabel!.toUpperCase(),
-            style: TextStyle(
-              color: labelColor,
-              fontSize: 10,
-              letterSpacing: 0.8,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+              text: centerLabel!.toUpperCase(), style: centerLabelStyle),
           textDirection: ui.TextDirection.ltr,
           textAlign: TextAlign.center,
         )..layout();
+        canvas.saveLayer(
+            null, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
         lp.paint(canvas, center - Offset(lp.width / 2, lp.height + 1));
+        canvas.restore();
       }
       if (centerValue != null) {
-        final vp = TextPainter(
-          text: TextSpan(
-            text: centerValue!,
-            style: TextStyle(
-              color: valueColor,
-              fontSize: 17,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
+        final vp = _valuePainter ??= TextPainter(
+          text: TextSpan(text: centerValue!, style: centerValueStyle),
           textDirection: ui.TextDirection.ltr,
           textAlign: TextAlign.center,
         )..layout();
+        canvas.saveLayer(
+            null, Paint()..color = Color.fromRGBO(0, 0, 0, opacity));
         vp.paint(canvas, center - Offset(vp.width / 2, -2));
+        canvas.restore();
       }
     }
   }
 
   @override
   bool shouldRepaint(_DonutPainter old) =>
-      old.progress != progress || old.total != total || old.slices != slices;
+      old.total != total ||
+      old.centerLabel != centerLabel ||
+      old.centerValue != centerValue ||
+      old.centerLabelStyle != centerLabelStyle ||
+      old.centerValueStyle != centerValueStyle ||
+      !listEquals(old.slices, slices); // value compare, not identity (P3)
 }
 
 /// A smooth line chart (fl_chart) in [ColorScheme.primary] with an optional
@@ -447,7 +480,31 @@ class WebLineChart extends StatelessWidget {
               ),
             ),
           ),
-          lineTouchData: const LineTouchData(enabled: false),
+          // Desktop users expect to hover a point and read its exact value. (U3)
+          lineTouchData: LineTouchData(
+            enabled: true,
+            touchTooltipData: LineTouchTooltipData(
+              getTooltipColor: (_) => cs.inverseSurface,
+              getTooltipItems: (spots) => spots.map((s) {
+                final i = s.x.round();
+                final labels = bottomLabels;
+                final prefix = (labels != null && i >= 0 && i < labels.length)
+                    ? '${labels[i]}\n'
+                    : '';
+                final v = leftLabelFormat != null
+                    ? leftLabelFormat!(s.y)
+                    : s.y.toStringAsFixed(0);
+                return LineTooltipItem(
+                  '$prefix$v',
+                  TextStyle(
+                    color: cs.onInverseSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
           lineBarsData: [
             LineChartBarData(
               spots: spots,
@@ -470,9 +527,198 @@ class WebLineChart extends StatelessWidget {
             ),
           ],
         ),
-        duration: const Duration(milliseconds: 280),
+        // Honor the OS "reduce motion" setting. (C2)
+        duration: MediaQuery.disableAnimationsOf(context)
+            ? Duration.zero
+            : const Duration(milliseconds: 280),
         curve: Curves.easeOutCubic,
       ),
+    );
+  }
+}
+
+/// One named, colored series for [WebMultiLineChart].
+class WebLineSeries {
+  final String label;
+  final Color color;
+  final List<double> values;
+  const WebLineSeries({
+    required this.label,
+    required this.color,
+    required this.values,
+  });
+}
+
+/// A multi-series line chart (fl_chart) — several trend lines on shared axes
+/// with a legend and per-series hover tooltips. Used by History to show how
+/// income, expenses and net savings each move month-over-month.
+///
+/// Shares the minimal grid / muted-axis styling of [WebLineChart]; lines are
+/// drawn unfilled (no area) so overlapping series stay legible.
+class WebMultiLineChart extends StatelessWidget {
+  final List<WebLineSeries> series;
+  final List<String>? bottomLabels;
+  final String Function(double)? leftLabelFormat;
+  final double height;
+
+  const WebMultiLineChart({
+    super.key,
+    required this.series,
+    this.bottomLabels,
+    this.leftLabelFormat,
+    this.height = 240,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    final maxLen = series.fold<int>(0, (m, s) => math.max(m, s.values.length));
+    if (series.isEmpty || maxLen == 0) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Text('No data',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant)),
+        ),
+      );
+    }
+
+    final labelStyle =
+        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    final labelCount = bottomLabels?.length ?? 0;
+    final labelStep =
+        labelCount == 0 ? 1 : (labelCount / 7).ceil().clamp(1, labelCount);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: height,
+          child: LineChart(
+            LineChartData(
+              minX: 0,
+              maxX: (maxLen - 1).toDouble(),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: cs.outlineVariant.withValues(alpha: 0.4),
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  left: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.7),
+                      width: 1),
+                  bottom: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.7),
+                      width: 1),
+                ),
+              ),
+              titlesData: FlTitlesData(
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: leftLabelFormat != null,
+                    reservedSize: 48,
+                    getTitlesWidget: (value, meta) {
+                      if (value != meta.min && value != meta.max) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: WebInsets.sm),
+                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: bottomLabels != null,
+                    reservedSize: 24,
+                    interval: labelStep.toDouble(),
+                    getTitlesWidget: (value, meta) {
+                      if (value != value.roundToDouble()) {
+                        return const SizedBox.shrink();
+                      }
+                      final i = value.round();
+                      final labels = bottomLabels;
+                      if (labels == null ||
+                          i < 0 ||
+                          i >= labels.length ||
+                          i % labelStep != 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: WebInsets.sm),
+                        child: Text(labels[i], style: labelStyle),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              lineTouchData: LineTouchData(
+                enabled: true,
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => cs.inverseSurface,
+                  getTooltipItems: (spots) => spots.map((s) {
+                    final label = s.barIndex >= 0 && s.barIndex < series.length
+                        ? series[s.barIndex].label
+                        : '';
+                    final v = leftLabelFormat != null
+                        ? leftLabelFormat!(s.y)
+                        : s.y.toStringAsFixed(0);
+                    return LineTooltipItem(
+                      '$label  $v',
+                      TextStyle(
+                        color: cs.onInverseSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              lineBarsData: [
+                for (final s in series)
+                  LineChartBarData(
+                    spots: [
+                      for (int i = 0; i < s.values.length; i++)
+                        FlSpot(i.toDouble(), s.values[i]),
+                    ],
+                    isCurved: true,
+                    preventCurveOverShooting: true,
+                    color: s.color,
+                    barWidth: 2.5,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+              ],
+            ),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+          ),
+        ),
+        const SizedBox(height: WebInsets.md),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: WebInsets.lg,
+          runSpacing: WebInsets.sm,
+          children: [
+            for (final s in series) _LegendDot(color: s.color, label: s.label),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -555,7 +801,27 @@ class WebBarPairChart extends StatelessWidget {
                       width: 1),
                 ),
               ),
-              barTouchData: BarTouchData(enabled: false),
+              // Hover a bar to read its series + exact value. (U3)
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipColor: (_) => cs.inverseSurface,
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final series = rodIndex == 0 ? aLabel : bLabel;
+                    final v = leftLabelFormat != null
+                        ? leftLabelFormat!(rod.toY)
+                        : rod.toY.toStringAsFixed(0);
+                    return BarTooltipItem(
+                      '$series\n$v',
+                      TextStyle(
+                        color: cs.onInverseSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    );
+                  },
+                ),
+              ),
               titlesData: FlTitlesData(
                 topTitles:
                     const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -619,7 +885,10 @@ class WebBarPairChart extends StatelessWidget {
                   ),
               ],
             ),
-            duration: const Duration(milliseconds: 280),
+            // Honor the OS "reduce motion" setting. (C2)
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
           ),
         ),
