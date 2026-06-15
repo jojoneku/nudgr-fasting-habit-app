@@ -15,8 +15,10 @@ serves files on a CDN. We use **Firebase Hosting** (free Spark tier).
 3. Deploys `build/web` to the Firebase Hosting **live** channel.
 
 `firebase.json` configures the SPA rewrite (`** → /index.html`) and no-cache
-headers for `index.html` / the service worker. `.firebaserc` is only used for
-local `firebase deploy` — set its project id if you deploy by hand.
+headers for `index.html` / the service worker. There's intentionally no
+committed `.firebaserc` (a placeholder one breaks every CLI command, even
+`login`) — run `firebase use --add` locally to generate one; CI uses the
+`FIREBASE_PROJECT_ID` secret instead.
 
 ## One-time setup (required before it works)
 
@@ -33,7 +35,8 @@ local `firebase deploy` — set its project id if you deploy by hand.
    URLs*: add `https://<project>.web.app` and `https://<project>.firebaseapp.com`
    (and set the Site URL). Without this, Google sign-in fails on the live site.
    Google's OAuth console already has the Supabase callback — no change there.
-4. Set `.firebaserc`'s `default` to your project id (for local deploys).
+4. For local deploys, run `firebase use --add` to pick the project (writes a
+   local `.firebaserc`).
 
 ## Deploy by hand (optional, to validate before CI)
 
