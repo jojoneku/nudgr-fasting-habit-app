@@ -537,6 +537,192 @@ class WebLineChart extends StatelessWidget {
   }
 }
 
+/// One named, colored series for [WebMultiLineChart].
+class WebLineSeries {
+  final String label;
+  final Color color;
+  final List<double> values;
+  const WebLineSeries({
+    required this.label,
+    required this.color,
+    required this.values,
+  });
+}
+
+/// A multi-series line chart (fl_chart) — several trend lines on shared axes
+/// with a legend and per-series hover tooltips. Used by History to show how
+/// income, expenses and net savings each move month-over-month.
+///
+/// Shares the minimal grid / muted-axis styling of [WebLineChart]; lines are
+/// drawn unfilled (no area) so overlapping series stay legible.
+class WebMultiLineChart extends StatelessWidget {
+  final List<WebLineSeries> series;
+  final List<String>? bottomLabels;
+  final String Function(double)? leftLabelFormat;
+  final double height;
+
+  const WebMultiLineChart({
+    super.key,
+    required this.series,
+    this.bottomLabels,
+    this.leftLabelFormat,
+    this.height = 240,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    final maxLen = series.fold<int>(0, (m, s) => math.max(m, s.values.length));
+    if (series.isEmpty || maxLen == 0) {
+      return SizedBox(
+        height: height,
+        child: Center(
+          child: Text('No data',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant)),
+        ),
+      );
+    }
+
+    final labelStyle =
+        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    final labelCount = bottomLabels?.length ?? 0;
+    final labelStep =
+        labelCount == 0 ? 1 : (labelCount / 7).ceil().clamp(1, labelCount);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: height,
+          child: LineChart(
+            LineChartData(
+              minX: 0,
+              maxX: (maxLen - 1).toDouble(),
+              gridData: FlGridData(
+                show: true,
+                drawVerticalLine: false,
+                getDrawingHorizontalLine: (_) => FlLine(
+                  color: cs.outlineVariant.withValues(alpha: 0.4),
+                  strokeWidth: 1,
+                ),
+              ),
+              borderData: FlBorderData(
+                show: true,
+                border: Border(
+                  left: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.7),
+                      width: 1),
+                  bottom: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.7),
+                      width: 1),
+                ),
+              ),
+              titlesData: FlTitlesData(
+                topTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                rightTitles:
+                    const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: leftLabelFormat != null,
+                    reservedSize: 48,
+                    getTitlesWidget: (value, meta) {
+                      if (value != meta.min && value != meta.max) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(right: WebInsets.sm),
+                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                      );
+                    },
+                  ),
+                ),
+                bottomTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: bottomLabels != null,
+                    reservedSize: 24,
+                    interval: labelStep.toDouble(),
+                    getTitlesWidget: (value, meta) {
+                      if (value != value.roundToDouble()) {
+                        return const SizedBox.shrink();
+                      }
+                      final i = value.round();
+                      final labels = bottomLabels;
+                      if (labels == null ||
+                          i < 0 ||
+                          i >= labels.length ||
+                          i % labelStep != 0) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.only(top: WebInsets.sm),
+                        child: Text(labels[i], style: labelStyle),
+                      );
+                    },
+                  ),
+                ),
+              ),
+              lineTouchData: LineTouchData(
+                enabled: true,
+                touchTooltipData: LineTouchTooltipData(
+                  getTooltipColor: (_) => cs.inverseSurface,
+                  getTooltipItems: (spots) => spots.map((s) {
+                    final label = s.barIndex >= 0 && s.barIndex < series.length
+                        ? series[s.barIndex].label
+                        : '';
+                    final v = leftLabelFormat != null
+                        ? leftLabelFormat!(s.y)
+                        : s.y.toStringAsFixed(0);
+                    return LineTooltipItem(
+                      '$label  $v',
+                      TextStyle(
+                        color: cs.onInverseSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+              lineBarsData: [
+                for (final s in series)
+                  LineChartBarData(
+                    spots: [
+                      for (int i = 0; i < s.values.length; i++)
+                        FlSpot(i.toDouble(), s.values[i]),
+                    ],
+                    isCurved: true,
+                    preventCurveOverShooting: true,
+                    color: s.color,
+                    barWidth: 2.5,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(show: false),
+                  ),
+              ],
+            ),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+          ),
+        ),
+        const SizedBox(height: WebInsets.md),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: WebInsets.lg,
+          runSpacing: WebInsets.sm,
+          children: [
+            for (final s in series) _LegendDot(color: s.color, label: s.label),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 /// A grouped bar chart (fl_chart) with two bars per group — typically income
 /// (green / [aColor]) vs expenses (muted / [bColor]) — plus a small legend.
 class WebBarPairChart extends StatelessWidget {
