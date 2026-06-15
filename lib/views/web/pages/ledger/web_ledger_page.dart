@@ -566,7 +566,6 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                             key: ValueKey(rows[i].txn.id),
                             row: rows[i],
                             descWidth: descW,
-                            zebra: i.isOdd,
                             selected: _selected.contains(rows[i].txn.id),
                             accounts: _liquidAccounts,
                             categories: _categoriesFor(rows[i].txn.type),
@@ -1713,7 +1712,7 @@ class _HeaderCell extends StatelessWidget {
     final style = Theme.of(context).textTheme.labelSmall?.copyWith(
           color: active ? cs.onSurface : cs.onSurfaceVariant,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          letterSpacing: 0.6,
         );
     final chevron = onSort == null
         ? const SizedBox.shrink()
@@ -1731,7 +1730,7 @@ class _HeaderCell extends StatelessWidget {
           Transform.rotate(
               angle: active && dir < 0 ? 3.14159 : 0, child: chevron),
         Flexible(
-            child: Text(label,
+            child: Text(label.toUpperCase(),
                 style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
         if (!right && onSort != null)
           Transform.rotate(
@@ -1810,7 +1809,6 @@ class _EmptyGridHint extends StatelessWidget {
 class _EditableRow extends StatefulWidget {
   final _Row row;
   final double descWidth;
-  final bool zebra;
   final bool selected;
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
@@ -1830,7 +1828,6 @@ class _EditableRow extends StatefulWidget {
     super.key,
     required this.row,
     required this.descWidth,
-    required this.zebra,
     required this.selected,
     required this.accounts,
     required this.categories,
@@ -1861,6 +1858,8 @@ class _EditableRowState extends State<_EditableRow> {
     final t = widget.row.txn;
     final isTransfer = t.transferGroupId != null;
 
+    // Flat grid (no zebra) — rows are separated by a hairline bottom border and
+    // a hover tint only, matching the reference's clean spreadsheet look.
     Color? bg;
     if (widget.selected) {
       bg = cs.primary.withValues(alpha: 0.10);
@@ -1868,8 +1867,6 @@ class _EditableRowState extends State<_EditableRow> {
       // 0.03 was below the perceptual threshold on dark surfaces — the hover
       // affordance was effectively invisible. (T6)
       bg = cs.onSurface.withValues(alpha: 0.06);
-    } else if (widget.zebra) {
-      bg = cs.surfaceContainerHighest.withValues(alpha: 0.25);
     }
 
     return MouseRegion(
@@ -2033,7 +2030,7 @@ Widget _readCell(
       width: width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.md, vertical: WebInsets.md),
+            horizontal: WebInsets.md, vertical: WebInsets.sm),
         child: Align(
           alignment: right ? Alignment.centerRight : Alignment.centerLeft,
           child: child,
@@ -2276,16 +2273,24 @@ class _InlineTextState extends State<_InlineText> {
       width: widget.width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.sm),
+            horizontal: WebInsets.sm, vertical: WebInsets.xs),
         child: Container(
           decoration: BoxDecoration(
-            color: _focused ? cs.surfaceContainerHighest : Colors.transparent,
+            color: _focused
+                ? cs.surfaceContainerHighest.withValues(alpha: 0.7)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
+            // Border width is always reserved (transparent at rest) so focusing
+            // never shifts the row's layout; the focus ring is a softened
+            // primary rather than a hard solid box. (matches reference ring)
             border: Border.all(
-                color: _focused ? cs.primary : Colors.transparent, width: 1.5),
+                color: _focused
+                    ? cs.primary.withValues(alpha: 0.55)
+                    : Colors.transparent,
+                width: 1.5),
           ),
           padding:
-              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 4),
           child: Focus(
             canRequestFocus: false,
             onKeyEvent: (_, event) {
@@ -2430,16 +2435,23 @@ class _AmountCellState extends State<_AmountCell> {
       width: widget.width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.sm),
+            horizontal: WebInsets.sm, vertical: WebInsets.xs),
         child: Container(
           decoration: BoxDecoration(
-            color: _focused ? cs.surfaceContainerHighest : Colors.transparent,
+            color: _focused
+                ? cs.surfaceContainerHighest.withValues(alpha: 0.7)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(6),
+            // Border width always reserved so focus never shifts layout;
+            // softened primary ring rather than a hard box.
             border: Border.all(
-                color: _focused ? cs.primary : Colors.transparent, width: 1.5),
+                color: _focused
+                    ? cs.primary.withValues(alpha: 0.55)
+                    : Colors.transparent,
+                width: 1.5),
           ),
           padding:
-              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 6),
+              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 4),
           child: Focus(
             canRequestFocus: false,
             onKeyEvent: (_, event) {
@@ -2636,7 +2648,7 @@ class _DateCell extends StatelessWidget {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: WebInsets.md, vertical: WebInsets.md),
+              horizontal: WebInsets.md, vertical: WebInsets.sm),
           child: Align(alignment: Alignment.centerLeft, child: text),
         ),
       ),
