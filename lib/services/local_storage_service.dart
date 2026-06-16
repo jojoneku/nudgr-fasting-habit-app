@@ -144,7 +144,10 @@ class LocalStorageService extends StorageService {
   ];
 
   /// Removes all `u/$userId/` prefixed prefs keys and resets the user
-  /// namespace. Called by [AppShell._tearDownSync] on sign-out.
+  /// namespace. This is DESTRUCTIVE and is reserved for an explicit
+  /// "delete my data" / account-removal action — NOT ordinary sign-out.
+  /// Sign-out uses [detachUser] so a stale/empty cloud row can never wipe
+  /// local progress (see Plan 053).
   Future<void> clearUserData() async {
     if (_userId == null) return;
     final prefs = await SharedPreferences.getInstance();
@@ -153,6 +156,18 @@ class LocalStorageService extends StorageService {
         in prefs.getKeys().where((k) => k.startsWith(prefix)).toList()) {
       await prefs.remove(key);
     }
+    _userId = null;
+    _syncQueue = null;
+    _cachedTransactionIds = null;
+    _cachedAccountIds = null;
+  }
+
+  /// Detaches the current user namespace WITHOUT deleting any stored data.
+  /// Called by `_tearDownSync` on sign-out: the user's data survives under its
+  /// `u/$userId/` scope (invisible to any other account via key-scoping) and is
+  /// restored on the next sign-in, so an empty or stale cloud can never cause
+  /// local data loss. For an actual reset, use [clearUserData].
+  void detachUser() {
     _userId = null;
     _syncQueue = null;
     _cachedTransactionIds = null;

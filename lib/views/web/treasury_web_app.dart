@@ -209,17 +209,12 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     final userId = _currentUserId;
     _currentUserId = null;
 
-    // Flush unsynced local changes to the cloud BEFORE wiping local data, so a
-    // sign-out can never destroy un-uploaded records. If the flush can't
-    // complete, KEEP local data (it stays under the user's own scope and
-    // re-syncs next launch).
+    // Best-effort flush of unsynced changes to the cloud before detaching.
     final svc = _syncService;
-    var flushed = true;
     if (userId != null && svc != null) {
       try {
         await svc.pushPending();
       } catch (_) {}
-      flushed = (_syncQueue.pendingCount) == 0;
     }
 
     _storage.onDirty = null;
@@ -229,10 +224,11 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     _syncService = null;
     _syncPresenter = null;
 
-    if (userId != null && flushed) {
-      _storage.clearUserData();
-      _syncQueue.clearAll();
-    }
+    // Sign-out is NON-DESTRUCTIVE (Plan 053): detach the user namespace rather
+    // than wiping it, so an empty/stale cloud row can never wipe local data.
+    // Data stays under the user's own `u/$id/` scope and restores next sign-in.
+    _storage.detachUser();
+    _syncQueue.clearAll();
 
     if (mounted) setState(() {});
   }
