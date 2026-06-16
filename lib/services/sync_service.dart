@@ -81,6 +81,20 @@ class SyncService {
     });
   }
 
+  // Per-entry failure bookkeeping for skip-and-continue with exponential
+  // backoff (Plan 053 Phase 2). Previously pushPending `break`ed on the first
+  // error, so one poison/conflicting entry blocked every entry behind it
+  // forever. Now a failure is isolated: the entry stays queued and is retried
+  // after a growing delay, while the rest of the queue still drains.
+  final Map<String, int> _failureCounts = {};
+  final Map<String, DateTime> _retryAfter = {};
+
+  String _entryId(SyncQueueEntry e) => '${e.domain.name}/${e.key}';
+
+  @visibleForTesting
+  int failureCountFor(SyncDomain domain, String key) =>
+      _failureCounts['${domain.name}/$key'] ?? 0;
+
   Future<void> pushPending() async {
     if (_isSyncing || _queue.pendingCount == 0) {
       debugPrint(
@@ -94,15 +108,30 @@ class SyncService {
     try {
       final entries = List<SyncQueueEntry>.from(_queue.entries);
       final processed = <SyncQueueEntry>[];
+      final now = DateTime.now();
       for (final entry in entries) {
+        final id = _entryId(entry);
+        final retryAt = _retryAfter[id];
+        if (retryAt != null && now.isBefore(retryAt)) {
+          // Quarantined after repeated failures — skip this round, stay queued.
+          debugPrint('SyncService: skipping $id (in backoff until $retryAt)');
+          continue;
+        }
         try {
-          debugPrint('SyncService: pushing ${entry.domain.name}/${entry.key}');
+          debugPrint('SyncService: pushing $id');
           await _pushEntry(entry);
           processed.add(entry);
+          _failureCounts.remove(id);
+          _retryAfter.remove(id);
         } catch (e) {
+          // Isolate the failure: record it, back off, and CONTINUE so later
+          // entries still get a turn (no `break`).
+          final count = (_failureCounts[id] ?? 0) + 1;
+          _failureCounts[id] = count;
+          final backoffSec = (1 << count.clamp(1, 9)).clamp(2, 300);
+          _retryAfter[id] = now.add(Duration(seconds: backoffSec));
           debugPrint(
-              'SyncService: push failed for ${entry.domain.name}/${entry.key}: $e');
-          break;
+              'SyncService: push failed for $id (attempt $count), backing off ${backoffSec}s: $e');
         }
       }
       _queue.removeEntries(processed);
