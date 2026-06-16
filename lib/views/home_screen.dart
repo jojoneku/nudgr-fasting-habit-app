@@ -449,6 +449,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           settingsPresenter: widget.settingsPresenter,
           updatePresenter: widget.updatePresenter,
           deepLinkRoute: _deepLinkRoute,
+          localStorage: _storage,
         ),
         if (widget.updatePresenter != null)
           Positioned(

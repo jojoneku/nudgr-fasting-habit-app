@@ -21,6 +21,7 @@ import '../presenters/sync_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
 import '../presenters/update_presenter.dart';
+import '../services/local_storage_service.dart';
 import '../services/widget_bridge_service.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
@@ -65,6 +66,7 @@ class HubScreen extends StatefulWidget {
     required this.settingsPresenter,
     this.updatePresenter,
     this.deepLinkRoute,
+    this.localStorage,
   });
 
   final HubPresenter hubPresenter;
@@ -89,6 +91,9 @@ class HubScreen extends StatefulWidget {
   /// Set by [AppShell] when a home-screen widget is tapped; the hub consumes it
   /// and navigates to the matching screen.
   final ValueNotifier<WidgetRoute?>? deepLinkRoute;
+
+  /// Concrete storage, forwarded to Settings for the cloud-backup restore flow.
+  final LocalStorageService? localStorage;
 
   @override
   State<HubScreen> createState() => _HubScreenState();
@@ -565,6 +570,7 @@ class _HubScreenState extends State<HubScreen>
           statsPresenter: widget.statsPresenter,
           aiCoachPresenter: widget.aiCoachPresenter,
           updatePresenter: widget.updatePresenter,
+          localStorage: widget.localStorage,
         ),
       ),
     );
