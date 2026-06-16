@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -76,7 +78,74 @@ void main() {
       // netWorth == totalAssets - held(0) - liabilities
       expect(p.netWorth, p.totalAssets - p.totalHeldForOthers - 4000);
       expect(p.netWorth, 8000);
-      expect(p.currentObligations, 4000); // 0 unpaid bills + 4000 liabilities
+      // Obligations are unpaid bills only — NOT liabilities (the card statement
+      // is already a bill, so adding the liability balance too would
+      // double-count) and NOT budgeted expenses (those are a separate
+      // "Budget / Savings Due" figure). No bills here → 0.
+      expect(p.currentObligations, 0);
+    });
+
+    test(
+        'currentObligations = unpaid bills only; budgetedExpensesRemaining is '
+        'separate (allocated − spent, excluding settled expenses)', () async {
+      final month = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            // A liability that must NOT be added on top of the bill below.
+            _account(
+                id: 'cc', category: AccountCategory.creditCard, balance: 9000),
+          ]);
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            Bill(
+              id: 'b1',
+              name: 'Electricity',
+              billType: BillType.utility,
+              amount: 1800,
+              dueDay: 16,
+              month: month,
+              categoryId: '',
+            ),
+            Bill(
+              id: 'b2',
+              name: 'Paid bill',
+              billType: BillType.utility,
+              amount: 500,
+              dueDay: 1,
+              month: month,
+              categoryId: '',
+              isPaid: true,
+            ),
+          ]);
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            // Remaining = 5000 − 2000 = 3000.
+            BudgetedExpense(
+              id: 'e1',
+              name: 'Family Support',
+              budgetedType: BillType.other,
+              month: month,
+              allocatedAmount: 5000,
+              spentAmount: 2000,
+              categoryId: '',
+            ),
+            // Settled expense contributes nothing.
+            BudgetedExpense(
+              id: 'e2',
+              name: 'Done',
+              budgetedType: BillType.other,
+              month: month,
+              allocatedAmount: 1000,
+              spentAmount: 0,
+              categoryId: '',
+              isPaid: true,
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.monthUnpaidBills, 1800); // paid bill excluded
+      expect(p.budgetedExpensesRemaining, 3000); // 5000−2000; settled excluded
+      // Obligations = unpaid bills ONLY: budgeted set-asides and the 9000
+      // liability are intentionally NOT folded in.
+      expect(p.currentObligations, 1800);
     });
 
     test('monthNetCashFlow computes from this month', () async {

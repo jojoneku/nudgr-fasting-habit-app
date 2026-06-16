@@ -110,12 +110,35 @@ class SyncService {
       final entries = List<SyncQueueEntry>.from(_queue.entries);
       final processed = <SyncQueueEntry>[];
       final now = DateTime.now();
+
+      // Finance UPSERTS are batched into bulk requests (one HTTP call per
+      // ~200 rows, each table read once) instead of one request + a full-list
+      // reload per record. Boot was otherwise firing hundreds of serial
+      // upserts (O(n²) local reads), taking minutes. Deletes/tombstones and
+      // whole-object singletons keep the per-entry path with its failure
+      // isolation + backoff.
+      final financeUpserts = <SyncQueueEntry>[];
+      final others = <SyncQueueEntry>[];
       for (final entry in entries) {
+        if (entry.domain == SyncDomain.financeRecord &&
+            entry.op == SyncOp.upsert) {
+          financeUpserts.add(entry);
+        } else {
+          others.add(entry);
+        }
+      }
+
+      final readyFinance =
+          financeUpserts.where((e) => !_inBackoff(_entryId(e), now)).toList();
+      if (readyFinance.isNotEmpty) {
+        processed.addAll(await _pushFinanceUpsertBatch(readyFinance, now));
+      }
+
+      for (final entry in others) {
         final id = _entryId(entry);
-        final retryAt = _retryAfter[id];
-        if (retryAt != null && now.isBefore(retryAt)) {
+        if (_inBackoff(id, now)) {
           // Quarantined after repeated failures — skip this round, stay queued.
-          debugPrint('SyncService: skipping $id (in backoff until $retryAt)');
+          debugPrint('SyncService: skipping $id (in backoff)');
           continue;
         }
         try {
@@ -127,12 +150,7 @@ class SyncService {
         } catch (e) {
           // Isolate the failure: record it, back off, and CONTINUE so later
           // entries still get a turn (no `break`).
-          final count = (_failureCounts[id] ?? 0) + 1;
-          _failureCounts[id] = count;
-          final backoffSec = (1 << count.clamp(1, 9)).clamp(2, 300);
-          _retryAfter[id] = now.add(Duration(seconds: backoffSec));
-          debugPrint(
-              'SyncService: push failed for $id (attempt $count), backing off ${backoffSec}s: $e');
+          _recordFailure(id, now, e);
         }
       }
       _queue.removeEntries(processed);
@@ -142,6 +160,140 @@ class SyncService {
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
+    }
+  }
+
+  bool _inBackoff(String id, DateTime now) {
+    final retryAt = _retryAfter[id];
+    return retryAt != null && now.isBefore(retryAt);
+  }
+
+  void _recordFailure(String id, DateTime now, Object e) {
+    final count = (_failureCounts[id] ?? 0) + 1;
+    _failureCounts[id] = count;
+    final backoffSec = (1 << count.clamp(1, 9)).clamp(2, 300);
+    _retryAfter[id] = now.add(Duration(seconds: backoffSec));
+    debugPrint(
+        'SyncService: push failed for $id (attempt $count), backing off ${backoffSec}s: $e');
+  }
+
+  /// Maximum rows per bulk finance upsert. Keeps each request bounded while
+  /// collapsing hundreds of per-record pushes into a handful of calls.
+  static const int _financeBatchSize = 200;
+
+  /// Bulk-pushes finance upsert [ready] entries. Each finance table is loaded
+  /// once; entries whose local record has vanished (and that have no delete op)
+  /// are dropped so they can't wedge the queue forever — this mirrors the old
+  /// per-record path, which no-opped on missing data then removed the entry.
+  /// A failed chunk backs off just that chunk's entries and leaves them queued.
+  Future<List<SyncQueueEntry>> _pushFinanceUpsertBatch(
+      List<SyncQueueEntry> ready, DateTime now) async {
+    final pairs = await buildFinanceUpsertRows(ready);
+    final present = pairs.map((p) => p.key).toSet();
+    final processed = <SyncQueueEntry>[
+      for (final e in ready)
+        if (!present.contains(e)) e,
+    ];
+
+    for (var i = 0; i < pairs.length; i += _financeBatchSize) {
+      final end = (i + _financeBatchSize).clamp(0, pairs.length);
+      final chunk = pairs.sublist(i, end);
+      try {
+        await _supabase
+            .from('finance_records')
+            .upsert([for (final p in chunk) p.value]);
+        for (final p in chunk) {
+          final id = _entryId(p.key);
+          processed.add(p.key);
+          _failureCounts.remove(id);
+          _retryAfter.remove(id);
+        }
+      } catch (e) {
+        for (final p in chunk) {
+          _recordFailure(_entryId(p.key), now, e);
+        }
+        debugPrint(
+            'SyncService: finance batch upsert failed (${chunk.length} rows): $e');
+      }
+    }
+    return processed;
+  }
+
+  /// Builds bulk-upsert (entry → row) pairs for finance upsert entries, reading
+  /// each finance table at most once. Pairs are only produced for records that
+  /// still exist locally; missing ones are omitted (the caller drops them).
+  @visibleForTesting
+  Future<List<MapEntry<SyncQueueEntry, Map<String, dynamic>>>>
+      buildFinanceUpsertRows(List<SyncQueueEntry> entries) async {
+    final byTable = <String, List<SyncQueueEntry>>{};
+    for (final e in entries) {
+      final parts = e.key.split('/');
+      if (parts.length != 2) continue;
+      byTable.putIfAbsent(parts[0], () => []).add(e);
+    }
+    final stamp = DateTime.now().toUtc().toIso8601String();
+    final rows = <MapEntry<SyncQueueEntry, Map<String, dynamic>>>[];
+    for (final tableName in byTable.keys) {
+      final lookup = await _loadFinanceTable(tableName);
+      if (lookup == null) continue;
+      for (final e in byTable[tableName]!) {
+        final recordId = e.key.split('/')[1];
+        final data = lookup[recordId];
+        if (data == null) continue;
+        rows.add(MapEntry(e, {
+          'user_id': _userId,
+          'table_name': tableName,
+          'record_id': recordId,
+          'data': data,
+          'updated_at': stamp,
+        }));
+      }
+    }
+    return rows;
+  }
+
+  /// Loads an entire finance table once as `recordId -> data`, so a batch push
+  /// doesn't reload the full list per record (was O(n²)).
+  Future<Map<String, Map<String, dynamic>>?> _loadFinanceTable(
+      String tableName) async {
+    switch (tableName) {
+      case 'finance_accounts':
+        return {
+          for (final e in await _storage.loadAccounts()) e.id: e.toJson()
+        };
+      case 'finance_transactions':
+        return {
+          for (final e in await _storage.loadTransactions()) e.id: e.toJson()
+        };
+      case 'finance_categories':
+        return {
+          for (final e in await _storage.loadFinanceCategories())
+            e.id: e.toJson()
+        };
+      case 'finance_budgets':
+        return {for (final e in await _storage.loadBudgets()) e.id: e.toJson()};
+      case 'finance_budgeted_expenses':
+        return {
+          for (final e in await _storage.loadBudgetedExpenses())
+            e.id: e.toJson()
+        };
+      case 'finance_bills':
+        return {for (final e in await _storage.loadBills()) e.id: e.toJson()};
+      case 'finance_receivables':
+        return {
+          for (final e in await _storage.loadReceivables()) e.id: e.toJson()
+        };
+      case 'finance_installments':
+        return {
+          for (final e in await _storage.loadInstallments()) e.id: e.toJson()
+        };
+      case 'finance_monthly_summaries':
+        return {
+          for (final e in await _storage.loadMonthlySummaries())
+            e.month: e.toJson()
+        };
+      default:
+        return null;
     }
   }
 

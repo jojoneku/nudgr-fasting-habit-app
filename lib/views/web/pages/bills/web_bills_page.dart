@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -58,9 +59,10 @@ class _BillsBody extends StatelessWidget {
 
     final dueTotal = presenter.totalBillsPending;
     final paidTotal = presenter.totalBillsPaid;
-    // Outstanding = unpaid bills + unpaid budgeted expenses; previously this
-    // duplicated `totalBillsPending`, making the tile a copy of "Due". (C2)
-    final outstandingTotal = presenter.totalUnpaidObligations;
+    // All bills for the month (paid + unpaid). Budgeted expenses are NOT
+    // surfaced on this page — they're an obligation shown on the dashboard's
+    // "Current Obligations", so mixing them in here was confusing.
+    final monthTotal = presenter.totalBillsAmount;
     final receiveTotal =
         pendingReceivables.fold(0.0, (sum, r) => sum + r.amount);
 
@@ -79,7 +81,7 @@ class _BillsBody extends StatelessWidget {
       _StatStrip(
         dueTotal: dueTotal,
         paidTotal: paidTotal,
-        outstandingTotal: outstandingTotal,
+        monthTotal: monthTotal,
         receiveTotal: receiveTotal,
         unpaidCount: unpaid.length,
         paidCount: paid.length,
@@ -98,12 +100,19 @@ class _BillsBody extends StatelessWidget {
       receivables: receivables,
       pendingTotal: receiveTotal,
     );
+    final budgetedCard = _BudgetedExpensesCard(
+      presenter: presenter,
+      expenses: presenter.budgetedExpenses,
+    );
 
-    // One card per row, full-width (Upcoming → Receivables → Paid).
+    // One card per row, full-width
+    // (Upcoming → Receivables → Budgeted set-asides → Paid).
     children
       ..add(upcomingCard)
       ..add(const SizedBox(height: WebInsets.xl))
-      ..add(receivablesCard);
+      ..add(receivablesCard)
+      ..add(const SizedBox(height: WebInsets.xl))
+      ..add(budgetedCard);
 
     if (paid.isNotEmpty) {
       children
@@ -691,7 +700,7 @@ class _Header extends StatelessWidget {
 class _StatStrip extends StatelessWidget {
   final double dueTotal;
   final double paidTotal;
-  final double outstandingTotal;
+  final double monthTotal;
   final double receiveTotal;
   final int unpaidCount;
   final int paidCount;
@@ -700,7 +709,7 @@ class _StatStrip extends StatelessWidget {
   const _StatStrip({
     required this.dueTotal,
     required this.paidTotal,
-    required this.outstandingTotal,
+    required this.monthTotal,
     required this.receiveTotal,
     required this.unpaidCount,
     required this.paidCount,
@@ -726,9 +735,9 @@ class _StatStrip extends StatelessWidget {
         valueColor: cs.tertiary,
       ),
       WebStatTile(
-        label: 'Outstanding',
-        value: formatPeso(outstandingTotal),
-        sub: 'Unpaid bills + expenses',
+        label: 'Total This Month',
+        value: formatPeso(monthTotal),
+        sub: '${unpaidCount + paidCount} bills',
         icon: Icons.description_outlined,
       ),
       WebStatTile(
@@ -1305,6 +1314,442 @@ class _ReceivableRow extends StatelessWidget {
           content: Text(alreadyInLedger
               ? 'Marked "${receivable.name}" received.'
               : 'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.')),
+    );
+  }
+}
+
+// ─── Budgeted expenses (set-asides) ───────────────────────────────────────────
+
+void _onAddBudgetedExpense(
+    BuildContext context, BillsReceivablesPresenter presenter) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => _BudgetedExpenseDialog(presenter: presenter),
+  );
+}
+
+/// Money set aside that isn't a bill or a budget category — savings/sinking-fund
+/// contributions and one-off plans (gifts, outings). Marking one "funded" posts
+/// an outflow that leaves your liquid cash, mirroring the mobile flow.
+class _BudgetedExpensesCard extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final List<BudgetedExpense> expenses;
+
+  const _BudgetedExpensesCard(
+      {required this.presenter, required this.expenses});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final pending = expenses.where((e) => !e.isPaid).toList();
+    final pendingTotal = pending.fold(0.0, (sum, e) => sum + e.allocatedAmount);
+
+    return WebCard(
+      accentColor: cs.secondary,
+      title: 'Budgeted Set-Asides',
+      description: 'Savings, sinking funds & one-off plans',
+      trailing: OutlinedButton.icon(
+        onPressed: () => _onAddBudgetedExpense(context, presenter),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Add Set-Aside'),
+      ),
+      child: expenses.isEmpty
+          ? const _EmptyHint('No set-asides budgeted this month.')
+          : Column(
+              children: [
+                for (var i = 0; i < expenses.length; i++)
+                  _BudgetedExpenseRow(
+                    presenter: presenter,
+                    expense: expenses[i],
+                    showDivider: i > 0,
+                  ),
+                if (pending.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  Container(
+                    padding: const EdgeInsets.only(top: WebInsets.md),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(
+                            color: cs.outlineVariant.withValues(alpha: 0.5)),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('TO SET ASIDE',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.7,
+                            )),
+                        Text(formatPeso(pendingTotal),
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: cs.secondary,
+                            )),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+}
+
+class _BudgetedExpenseRow extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final BudgetedExpense expense;
+  final bool showDivider;
+
+  const _BudgetedExpenseRow({
+    required this.presenter,
+    required this.expense,
+    required this.showDivider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final funded = expense.isPaid;
+    final subtitle = expense.note == null || expense.note!.trim().isEmpty
+        ? _billTypeLabel(expense.budgetedType)
+        : '${_billTypeLabel(expense.budgetedType)} · ${expense.note!.trim()}';
+
+    return Container(
+      decoration: showDivider
+          ? BoxDecoration(
+              border: Border(
+                top:
+                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+            )
+          : null,
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
+      child: Row(
+        children: [
+          _PaidCheckbox(
+            checked: funded,
+            onTap: funded ? null : () => _markFunded(context),
+          ),
+          const SizedBox(width: WebInsets.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  expense.name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: funded ? cs.onSurfaceVariant : cs.onSurface,
+                    decoration: funded ? TextDecoration.lineThrough : null,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: WebInsets.md),
+          Text(
+            formatPeso(expense.allocatedAmount),
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: funded ? cs.onSurfaceVariant : cs.secondary,
+            ),
+          ),
+          _RowActions(
+            onEdit: () => _edit(context),
+            onDelete: () => _delete(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _edit(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _BudgetedExpenseDialog(presenter: presenter, existing: expense),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete set-aside?'),
+        content: Text('Remove "${expense.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.deleteBudgetedExpense(expense.id);
+    messenger
+        .showSnackBar(SnackBar(content: Text('Deleted "${expense.name}".')));
+  }
+
+  Future<void> _markFunded(BuildContext context) async {
+    // Funding a set-aside posts an outflow from a liquid account — the money
+    // leaves your spendable cash (into savings / the planned spend), exactly
+    // like the mobile "mark paid" flow.
+    final fallback =
+        presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
+    final accountId = fallback.isNotEmpty ? fallback.first.id : null;
+    final messenger = ScaffoldMessenger.of(context);
+    if (accountId == null) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Add an account before funding.')),
+      );
+      return;
+    }
+
+    final accountName = presenter.accountName(accountId) ?? 'your account';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Fund this set-aside?'),
+        content: Text(
+            'Move ${formatPeso(expense.allocatedAmount)} for "${expense.name}" '
+            'out of $accountName? This debits the account balance.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Fund')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await presenter.markExpensePaid(
+      expense.id,
+      paidAmount: expense.allocatedAmount,
+      accountId: accountId,
+    );
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text(
+              'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $accountName.')),
+    );
+  }
+}
+
+/// Desktop add/edit form for a budgeted set-aside. Mirrors the mobile
+/// [_AddBudgetedExpenseSheet]: Name, Type, Amount, optional Category, and a
+/// free-text Note (e.g. "Maya Savings"). Calls
+/// [BillsReceivablesPresenter.addBudgetedExpense] / `updateBudgetedExpense`.
+class _BudgetedExpenseDialog extends StatefulWidget {
+  final BillsReceivablesPresenter presenter;
+  final BudgetedExpense? existing;
+
+  const _BudgetedExpenseDialog({required this.presenter, this.existing});
+
+  @override
+  State<_BudgetedExpenseDialog> createState() => _BudgetedExpenseDialogState();
+}
+
+class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _noteController = TextEditingController();
+
+  late BillType _type;
+  String? _selectedCategoryId;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _type = e?.budgetedType ?? BillType.other;
+    if (e != null) {
+      _nameController.text = e.name;
+      _amountController.text =
+          e.allocatedAmount == e.allocatedAmount.roundToDouble()
+              ? e.allocatedAmount.round().toString()
+              : e.allocatedAmount.toString();
+      _noteController.text = e.note ?? '';
+      _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  List<FinanceCategory> get _expenseCategories => widget.presenter.categories
+      .where((c) => c.type == CategoryType.expense)
+      .toList();
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSubmitting = true);
+    try {
+      final amount = double.parse(_amountController.text.replaceAll(',', ''));
+      final note = _noteController.text.trim();
+      final existing = widget.existing;
+      if (existing == null) {
+        await widget.presenter.addBudgetedExpense(BudgetedExpense(
+          id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+          name: _nameController.text.trim(),
+          budgetedType: _type,
+          month: widget.presenter.selectedMonth,
+          allocatedAmount: amount,
+          categoryId: _selectedCategoryId ?? '',
+          note: note.isEmpty ? null : note,
+        ));
+      } else {
+        await widget.presenter.updateBudgetedExpense(existing.copyWith(
+          name: _nameController.text.trim(),
+          budgetedType: _type,
+          allocatedAmount: amount,
+          categoryId: _selectedCategoryId ?? '',
+          note: note.isEmpty ? null : note,
+        ));
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text('Could not save set-aside: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final categories = _expenseCategories;
+    final isEdit = widget.existing != null;
+
+    return AlertDialog(
+      title: Text(isEdit ? 'Edit Set-Aside' : 'Add Set-Aside'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                      labelText: 'Name (e.g. Travel Fund, Tanel Birthday)'),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                ),
+                const SizedBox(height: WebInsets.md),
+                DropdownButtonFormField<BillType>(
+                  initialValue: _type,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: BillType.values
+                      .map((t) => DropdownMenuItem(
+                          value: t, child: Text(_billTypeFormLabel(t))))
+                      .toList(),
+                  onChanged: (v) => setState(() => _type = v ?? _type),
+                ),
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _amountController,
+                  decoration: const InputDecoration(
+                      labelText: 'Amount', prefixText: '₱ '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final p = double.tryParse((v ?? '').replaceAll(',', ''));
+                    if (p == null || p <= 0) return 'Must be > 0';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _noteController,
+                  decoration: const InputDecoration(
+                      labelText: 'Note (optional, e.g. Maya Savings)'),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                ),
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue:
+                        categories.any((c) => c.id == _selectedCategoryId)
+                            ? _selectedCategoryId
+                            : null,
+                    decoration:
+                        const InputDecoration(labelText: 'Category (optional)'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final c in categories)
+                        DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ],
+                    onChanged: (v) => setState(() => _selectedCategoryId = v),
+                  ),
+                ],
+                const SizedBox(height: WebInsets.sm),
+                Text(
+                  'Funding a set-aside later debits a liquid account — the money '
+                  'leaves your spendable cash.',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isEdit ? 'Save' : 'Add Set-Aside'),
+        ),
+      ],
     );
   }
 }

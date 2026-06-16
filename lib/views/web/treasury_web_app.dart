@@ -207,8 +207,14 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       await _syncService!.init();
       // Pull cloud data first so a fresh browser never overwrites cloud data.
       await _syncService!.pullAll();
-      await _syncService!.pushPending();
-      await _syncService!.pushAll();
+      // Push local → cloud in the BACKGROUND so boot isn't blocked on it. With
+      // a large finance backlog this was firing hundreds of serial upserts and
+      // stalling the first paint for minutes. The queue is durable — whatever
+      // doesn't flush now goes out on the next push. Chained so the two pushes
+      // don't race on the _isSyncing guard.
+      unawaited(
+        _syncService!.pushPending().then((_) => _syncService?.pushAll()),
+      );
       // Durable backup on web too (Plan 053 Phase 3.5): write a daily immutable
       // cloud snapshot. Fire-and-forget — 24h-throttled, never throws, inert
       // until the `backups` migration is applied.

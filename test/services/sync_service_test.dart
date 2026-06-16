@@ -2,6 +2,7 @@ import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/sync_queue_entry.dart';
 import 'package:intermittent_fasting/services/local_storage_service.dart';
 import 'package:intermittent_fasting/services/sync_queue.dart';
@@ -129,6 +130,90 @@ void main() {
       // spinning the loop or blocking others).
       expect(service.failureCountFor(SyncDomain.fastingState, 'default'), 1);
       expect(service.pendingCount, 1);
+    });
+  });
+
+  // ── finance batch upsert ─────────────────────────────────────────────────────
+
+  group('finance upsert batching', () {
+    TransactionRecord txn(String id) => TransactionRecord(
+          id: id,
+          date: DateTime(2026, 1, 4),
+          accountId: 'acc_cash',
+          categoryId: '',
+          amount: 100,
+          type: TransactionType.outflow,
+          description: 'Test $id',
+          month: '2026-01',
+        );
+
+    test(
+        'buildFinanceUpsertRows reads each table once and emits one row per '
+        'present record, grouped correctly', () async {
+      await storage.saveTransactions([txn('t1'), txn('t2'), txn('t3')]);
+      final entries = [
+        for (final id in ['t1', 't2', 't3'])
+          SyncQueueEntry(
+            domain: SyncDomain.financeRecord,
+            key: 'finance_transactions/$id',
+            op: SyncOp.upsert,
+            queuedAt: DateTime(2026, 1, 4),
+          ),
+      ];
+
+      final rows = await service.buildFinanceUpsertRows(entries);
+
+      expect(rows.length, 3);
+      expect(
+        rows.map((p) => p.value['record_id']).toSet(),
+        {'t1', 't2', 't3'},
+      );
+      expect(
+        rows.every((p) => p.value['table_name'] == 'finance_transactions'),
+        isTrue,
+      );
+    });
+
+    test(
+        'drops queue entries whose local record no longer exists '
+        '(no infinite wedge) without touching Supabase', () async {
+      // No transactions saved locally → the enqueued upserts reference records
+      // that do not exist. They must be dropped, not retried forever.
+      for (final id in ['gone1', 'gone2']) {
+        queue.markDirty(SyncDomain.financeRecord, 'finance_transactions/$id');
+      }
+      expect(service.pendingCount, 2);
+
+      await service.pushPending();
+
+      // Dropped (removed from the queue) and never hit the Supabase fake.
+      expect(service.pendingCount, 0);
+      expect(
+          service.failureCountFor(
+            SyncDomain.financeRecord,
+            'finance_transactions/gone1',
+          ),
+          0);
+    });
+
+    test(
+        'a failed batch keeps present finance entries queued with backoff '
+        '(no data loss)', () async {
+      await storage.saveTransactions([txn('t1'), txn('t2')]);
+      for (final id in ['t1', 't2']) {
+        queue.markDirty(SyncDomain.financeRecord, 'finance_transactions/$id');
+      }
+
+      // The fake Supabase client throws on `.from(...)`, so the bulk upsert
+      // fails; entries must remain queued and be backed off, never lost.
+      await service.pushPending();
+
+      expect(service.pendingCount, 2, reason: 'failed batch stays queued');
+      expect(
+        service.failureCountFor(
+            SyncDomain.financeRecord, 'finance_transactions/t1'),
+        1,
+      );
     });
   });
 
