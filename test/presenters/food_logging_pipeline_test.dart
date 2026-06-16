@@ -19,6 +19,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
+import 'package:intermittent_fasting/models/food_entry.dart';
+import 'package:intermittent_fasting/models/meal_slot.dart';
 import 'package:intermittent_fasting/models/estimation_source.dart';
 import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/food_db_entry.dart';
@@ -90,8 +92,10 @@ Future<NutritionPresenter> _makePresenter({
   MockAiCoachService? localAi,
   MockAiCoachService? cloudAi,
   MockFoodDbService? foodDb,
+  MockStorageService? injectedStorage,
+  List<DailyNutritionLog>? history,
 }) async {
-  final storage = MockStorageService();
+  final storage = injectedStorage ?? MockStorageService();
   final stats = MockStatsPresenter();
   final fasting = MockFastingPresenter();
   final db = foodDb ?? MockFoodDbService();
@@ -104,7 +108,8 @@ Future<NutritionPresenter> _makePresenter({
       .thenAnswer((_) async => DailyNutritionLog.empty(_today));
   when(storage.loadNutritionGoals())
       .thenAnswer((_) async => NutritionGoals.initial());
-  when(storage.loadNutritionHistory()).thenAnswer((_) async => []);
+  when(storage.loadNutritionHistory())
+      .thenAnswer((_) async => history ?? const <DailyNutritionLog>[]);
   when(storage.loadTdeeProfile()).thenAnswer((_) async => null);
   when(storage.loadFoodLibrary()).thenAnswer((_) async => []);
   when(storage.loadNutritionStreak()).thenAnswer((_) async => 0);
@@ -332,6 +337,77 @@ void main() {
       expect(entries.first.grams, 52);
       expect(entries.first.estimationSource, EstimationSource.cloudAi);
       expect(entries.first.calories, _calApprox(150));
+    });
+
+    test('repeat-learn: out-of-DB cloud estimate NOT learned on first sight',
+        () async {
+      final storage = MockStorageService();
+      final p = await _makePresenter(
+          cloudAi: cloudAi, foodDb: db, injectedStorage: storage);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.singleDish,
+          items: [
+            _extracted(
+                name: 'banana muffin',
+                grams: 52,
+                macros: _macros(150, 2.5, 22, 6)),
+          ],
+        ),
+      );
+
+      await p.parseChat('52g banana muffin');
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // No history of this food → a single open estimate must not be cached.
+      verifyNever(storage.savePersonalDict(any));
+    });
+
+    test('repeat-learn: out-of-DB cloud estimate IS learned after repeats',
+        () async {
+      final storage = MockStorageService();
+      // Two prior logs of the same food → this log is the 3rd (_kLearnAfterLogs).
+      final prior = DailyNutritionLog(
+        date: '2026-06-10',
+        meals: {
+          MealSlot.meal: [
+            FoodEntry(
+                id: 'h1',
+                name: 'banana muffin',
+                calories: 150,
+                loggedAt: DateTime(2026, 6, 10)),
+            FoodEntry(
+                id: 'h2',
+                name: 'banana muffin',
+                calories: 150,
+                loggedAt: DateTime(2026, 6, 11)),
+          ],
+        },
+      );
+      final p = await _makePresenter(
+          cloudAi: cloudAi,
+          foodDb: db,
+          injectedStorage: storage,
+          history: [prior]);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.singleDish,
+          items: [
+            _extracted(
+                name: 'banana muffin',
+                grams: 52,
+                macros: _macros(150, 2.5, 22, 6)),
+          ],
+        ),
+      );
+
+      await p.parseChat('52g banana muffin');
+      await Future.delayed(const Duration(milliseconds: 20));
+
+      // 3rd sighting → promoted into the personal dictionary.
+      verify(storage.savePersonalDict(any)).called(greaterThanOrEqualTo(1));
     });
 
     test('explicit gram override — user states 12g, cloud returned 40g',

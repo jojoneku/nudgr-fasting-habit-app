@@ -1292,7 +1292,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       final rawTexts = <String>[];
       for (final item in result.items) {
         final m = item.estimatedMacros;
-        entries.add(FoodEntry(
+        final photoEntry = FoodEntry(
           id: FoodEntry.generateId(),
           name: _formatDisplayName(item.name),
           calories:
@@ -1305,7 +1305,15 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
           confidence:
               item.resolverConfidence > 0 ? item.resolverConfidence : 0.6,
           loggedAt: DateTime.now(),
-        ));
+        );
+        entries.add(photoEntry);
+        // Photo estimates aren't cached on first sight, but repetition earns it
+        // a spot in the personal dict (see the cloud path / _kLearnAfterLogs).
+        if (m != null &&
+            _priorLogCount(photoEntry.name) + 1 >= _kLearnAfterLogs) {
+          // ignore: unawaited_futures
+          _learnFromEntry(item.name, photoEntry, allowLowConfidence: true);
+        }
         altsList.add(const []);
         rawTexts.add(item.name);
       }
@@ -1788,10 +1796,17 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
                 : (item.resolverConfidence > 0 ? item.resolverConfidence : 0.6),
             loggedAt: DateTime.now(),
           );
-          // H2: do NOT auto-learn open cloud estimates into the personal dict.
-          // A single hallucinated estimate would bypass the DB permanently.
-          // Only DB-resolved picks (with a confirmed food_id) may auto-learn
-          // — see the learnFromEntry path at _learnFromEntry.
+          // H2: a SINGLE open cloud estimate is not auto-learned (a one-off
+          // hallucination would bypass the DB permanently). But once the user
+          // has logged this same food [_kLearnAfterLogs] times, repetition is a
+          // trustworthy enough signal to cache it. The generic ~2 kcal/g
+          // fallback (cloudAiFallback) is excluded — it's a guess, not an
+          // estimate.
+          if (source == EstimationSource.cloudAi &&
+              _priorLogCount(entry.name) + 1 >= _kLearnAfterLogs) {
+            // ignore: unawaited_futures
+            _learnFromEntry(item.name, entry, allowLowConfidence: true);
+          }
         }
 
         if (entry == null) {
@@ -2437,9 +2452,14 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   ///   • missing/zero grams (can't compute per-100g)
   ///   • low confidence (`< 0.70`) — weak DB matches and AI estimates set this,
   ///     so the dict only ever caches reliable mappings.
-  Future<void> _learnFromEntry(String name, FoodEntry e) async {
+  ///
+  /// [allowLowConfidence] bypasses the confidence floor — used by the
+  /// repeat-learning path, where the trust signal is that the user has logged
+  /// the same food several times, not the per-estimate confidence.
+  Future<void> _learnFromEntry(String name, FoodEntry e,
+      {bool allowLowConfidence = false}) async {
     if (e.grams == null || e.grams! <= 0) return;
-    if ((e.confidence ?? 1.0) < 0.70) return;
+    if (!allowLowConfidence && (e.confidence ?? 1.0) < 0.70) return;
     await _personalDict.upsert(
       name: name,
       kcalPer100g: e.calories * 100 / e.grams!,
@@ -2447,6 +2467,25 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       carbsPer100g: e.carbs != null ? e.carbs! * 100 / e.grams! : null,
       fatPer100g: e.fat != null ? e.fat! * 100 / e.grams! : null,
     );
+  }
+
+  /// Open cloud/photo AI estimates are normally never auto-learned (a one-off
+  /// hallucinated estimate would bypass the bundled DB permanently). But once
+  /// the user has logged the same food name this many times, repetition is a
+  /// strong enough signal to cache the latest estimate into the personal dict.
+  static const int _kLearnAfterLogs = 3;
+
+  /// Count of prior logged entries (across history) whose name matches [name],
+  /// case-insensitively. Drives [_kLearnAfterLogs] repeat-learning.
+  int _priorLogCount(String name) {
+    final norm = name.trim().toLowerCase();
+    var n = 0;
+    for (final log in _history) {
+      for (final e in log.allEntries) {
+        if (e.name.trim().toLowerCase() == norm) n++;
+      }
+    }
+    return n;
   }
 
   /// Batch-edit all food items in a message at once.
