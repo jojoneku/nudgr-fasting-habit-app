@@ -94,6 +94,7 @@ class _BillsBody extends StatelessWidget {
       dueTotal: dueTotal,
     );
     final receivablesCard = _ReceivablesCard(
+      presenter: presenter,
       receivables: receivables,
       pendingTotal: receiveTotal,
     );
@@ -138,7 +139,11 @@ class _BillsBody extends StatelessWidget {
 class _AddBillDialog extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
 
-  const _AddBillDialog({required this.presenter});
+  /// When non-null the dialog edits this bill in place via [updateBill];
+  /// otherwise it creates a new one via [addBill].
+  final Bill? existing;
+
+  const _AddBillDialog({required this.presenter, this.existing});
 
   @override
   State<_AddBillDialog> createState() => _AddBillDialogState();
@@ -150,10 +155,26 @@ class _AddBillDialogState extends State<_AddBillDialog> {
   final _amountController = TextEditingController();
   final _dueDayController = TextEditingController();
 
-  BillType _billType = BillType.other;
+  late BillType _billType;
   String? _selectedAccountId;
   String? _selectedCategoryId;
   bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final b = widget.existing;
+    _billType = b?.billType ?? BillType.other;
+    if (b != null) {
+      _nameController.text = b.name;
+      _amountController.text = b.amount == b.amount.roundToDouble()
+          ? b.amount.round().toString()
+          : b.amount.toString();
+      _dueDayController.text = b.dueDay.toString();
+      _selectedAccountId = b.accountId;
+      _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
+    }
+  }
 
   @override
   void dispose() {
@@ -174,21 +195,36 @@ class _AddBillDialogState extends State<_AddBillDialog> {
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
       final dueDay = int.parse(_dueDayController.text);
-      final bill = Bill(
-        id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
-        name: _nameController.text.trim(),
-        billType: _billType,
-        amount: amount,
-        dueDay: dueDay,
-        month: widget.presenter.selectedMonth,
-        categoryId: _selectedCategoryId ?? '',
-        accountId: _selectedAccountId,
-      );
-      await widget.presenter.addBill(bill);
+      final existing = widget.existing;
+      if (existing == null) {
+        final bill = Bill(
+          id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+          name: _nameController.text.trim(),
+          billType: _billType,
+          amount: amount,
+          dueDay: dueDay,
+          month: widget.presenter.selectedMonth,
+          categoryId: _selectedCategoryId ?? '',
+          accountId: _selectedAccountId,
+        );
+        await widget.presenter.addBill(bill);
+      } else {
+        // Edit in place — copyWith preserves fields the form doesn't expose
+        // (paymentNote, recurrence, paid state, linked transaction).
+        await widget.presenter.updateBill(existing.copyWith(
+          name: _nameController.text.trim(),
+          billType: _billType,
+          amount: amount,
+          dueDay: dueDay,
+          categoryId: _selectedCategoryId ?? '',
+          accountId: _selectedAccountId,
+        ));
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       // Previously a save failure left the dialog open with no message. (C7)
-      messenger.showSnackBar(SnackBar(content: Text('Could not add bill: $e')));
+      messenger
+          .showSnackBar(SnackBar(content: Text('Could not save bill: $e')));
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -202,8 +238,9 @@ class _AddBillDialogState extends State<_AddBillDialog> {
         widget.presenter.accounts.where((a) => a.isActive).toList();
     final categories = _expenseCategories;
 
+    final isEdit = widget.existing != null;
     return AlertDialog(
-      title: const Text('Add Bill'),
+      title: Text(isEdit ? 'Edit Bill' : 'Add Bill'),
       content: SizedBox(
         width: 420,
         child: Form(
@@ -273,7 +310,12 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                 if (accounts.isNotEmpty) ...[
                   const SizedBox(height: WebInsets.md),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedAccountId,
+                    // Guard against a stored account that is no longer active —
+                    // a value absent from `items` would assert. (edit case)
+                    initialValue:
+                        accounts.any((a) => a.id == _selectedAccountId)
+                            ? _selectedAccountId
+                            : null,
                     decoration: const InputDecoration(
                         labelText: 'Payment account (optional)'),
                     items: accounts
@@ -286,7 +328,10 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                 if (categories.isNotEmpty) ...[
                   const SizedBox(height: WebInsets.md),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedCategoryId,
+                    initialValue:
+                        categories.any((c) => c.id == _selectedCategoryId)
+                            ? _selectedCategoryId
+                            : null,
                     decoration:
                         const InputDecoration(labelText: 'Category (optional)'),
                     items: categories
@@ -322,7 +367,7 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                   height: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Add Bill'),
+              : Text(isEdit ? 'Save' : 'Add Bill'),
         ),
       ],
     );
@@ -338,6 +383,258 @@ String _billTypeFormLabel(BillType type) => switch (type) {
       BillType.utility => 'Utility',
       BillType.other => 'Other',
     };
+
+// ─── Add/Edit-receivable dialog ───────────────────────────────────────────────
+
+void _onAddReceivable(
+    BuildContext context, BillsReceivablesPresenter presenter) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => _ReceivableDialog(presenter: presenter),
+  );
+}
+
+/// Desktop add/edit-receivable form. Mirrors [_AddBillDialog]: Name, Type,
+/// Amount, Expected day, destination account, and (income) Category, then calls
+/// [BillsReceivablesPresenter.addReceivable] / `updateReceivable`.
+class _ReceivableDialog extends StatefulWidget {
+  final BillsReceivablesPresenter presenter;
+  final Receivable? existing;
+
+  const _ReceivableDialog({required this.presenter, this.existing});
+
+  @override
+  State<_ReceivableDialog> createState() => _ReceivableDialogState();
+}
+
+class _ReceivableDialogState extends State<_ReceivableDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _amountController = TextEditingController();
+  final _dayController = TextEditingController();
+
+  late ReceivableType _type;
+  String? _selectedAccountId;
+  String? _selectedCategoryId;
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final r = widget.existing;
+    _type = r?.receivableType ?? ReceivableType.salary;
+    if (r != null) {
+      _nameController.text = r.name;
+      _amountController.text = r.amount == r.amount.roundToDouble()
+          ? r.amount.round().toString()
+          : r.amount.toString();
+      _dayController.text = r.expectedDate.day.toString();
+      _selectedAccountId = r.accountId;
+      _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _amountController.dispose();
+    _dayController.dispose();
+    super.dispose();
+  }
+
+  List<FinanceCategory> get _incomeCategories => widget.presenter.categories
+      .where((c) => c.type == CategoryType.income)
+      .toList();
+
+  /// Build an [expectedDate] for the selected month, clamping the day to the
+  /// month's length so short months (e.g. Feb 30) never throw.
+  DateTime _expectedDate(int day) {
+    final parts = widget.presenter.selectedMonth.split('-');
+    final year = int.parse(parts[0]);
+    final month = int.parse(parts[1]);
+    final lastDay = DateTime(year, month + 1, 0).day;
+    return DateTime(year, month, day.clamp(1, lastDay));
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSubmitting = true);
+    try {
+      final amount = double.parse(_amountController.text.replaceAll(',', ''));
+      final day = int.parse(_dayController.text);
+      final existing = widget.existing;
+      if (existing == null) {
+        final receivable = Receivable(
+          id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+          name: _nameController.text.trim(),
+          receivableType: _type,
+          amount: amount,
+          expectedDate: _expectedDate(day),
+          month: widget.presenter.selectedMonth,
+          categoryId: _selectedCategoryId ?? '',
+          accountId: _selectedAccountId,
+        );
+        await widget.presenter.addReceivable(receivable);
+      } else {
+        await widget.presenter.updateReceivable(existing.copyWith(
+          name: _nameController.text.trim(),
+          receivableType: _type,
+          amount: amount,
+          expectedDate: _expectedDate(day),
+          categoryId: _selectedCategoryId ?? '',
+          accountId: _selectedAccountId,
+        ));
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text('Could not save receivable: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final accounts =
+        widget.presenter.accounts.where((a) => a.isActive).toList();
+    final categories = _incomeCategories;
+    final isEdit = widget.existing != null;
+
+    return AlertDialog(
+      title: Text(isEdit ? 'Edit Receivable' : 'Add Receivable'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(labelText: 'Name'),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                ),
+                const SizedBox(height: WebInsets.md),
+                DropdownButtonFormField<ReceivableType>(
+                  initialValue: _type,
+                  decoration: const InputDecoration(labelText: 'Type'),
+                  items: ReceivableType.values
+                      .map((t) => DropdownMenuItem(
+                          value: t, child: Text(_receivableTypeLabel(t))))
+                      .toList(),
+                  onChanged: (v) => setState(() => _type = v ?? _type),
+                ),
+                const SizedBox(height: WebInsets.md),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _amountController,
+                        decoration: const InputDecoration(
+                            labelText: 'Amount', prefixText: '₱ '),
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        textInputAction: TextInputAction.next,
+                        validator: (v) {
+                          final p =
+                              double.tryParse((v ?? '').replaceAll(',', ''));
+                          if (p == null || p <= 0) return 'Must be > 0';
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: WebInsets.md),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _dayController,
+                        decoration: const InputDecoration(
+                            labelText: 'Expected day (1–31)'),
+                        keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submit(),
+                        validator: (v) {
+                          final d = int.tryParse(v ?? '');
+                          if (d == null || d < 1 || d > 31) return '1–31';
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (accounts.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue:
+                        accounts.any((a) => a.id == _selectedAccountId)
+                            ? _selectedAccountId
+                            : null,
+                    decoration: const InputDecoration(
+                        labelText: 'Deposit account (optional)'),
+                    items: accounts
+                        .map((a) =>
+                            DropdownMenuItem(value: a.id, child: Text(a.name)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedAccountId = v),
+                  ),
+                ],
+                if (categories.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue:
+                        categories.any((c) => c.id == _selectedCategoryId)
+                            ? _selectedCategoryId
+                            : null,
+                    decoration:
+                        const InputDecoration(labelText: 'Category (optional)'),
+                    items: categories
+                        .map((c) =>
+                            DropdownMenuItem(value: c.id, child: Text(c.name)))
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedCategoryId = v),
+                  ),
+                ],
+                if (accounts.isEmpty && categories.isEmpty) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  Text(
+                    'Add an account or income category in the app for richer receivables.',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isEdit ? 'Save' : 'Add Receivable'),
+        ),
+      ],
+    );
+  }
+}
 
 // ─── Header ─────────────────────────────────────────────────────────────────
 
@@ -623,9 +920,45 @@ class _BillRow extends StatelessWidget {
           ),
           const SizedBox(width: WebInsets.md),
           Text(formatPeso(bill.amount), style: amountStyle),
+          _RowActions(
+            onEdit: () => _edit(context),
+            onDelete: () => _delete(context),
+          ),
         ],
       ),
     );
+  }
+
+  void _edit(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) => _AddBillDialog(presenter: presenter, existing: bill),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete bill?'),
+        content: Text('Remove "${bill.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.deleteBill(bill.id);
+    messenger.showSnackBar(SnackBar(content: Text('Deleted "${bill.name}".')));
   }
 
   String? _accountName(String? accountId) {
@@ -688,10 +1021,12 @@ class _BillRow extends StatelessWidget {
 // ─── Receivables card ─────────────────────────────────────────────────────────
 
 class _ReceivablesCard extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
   final List<Receivable> receivables;
   final double pendingTotal;
 
   const _ReceivablesCard({
+    required this.presenter,
     required this.receivables,
     required this.pendingTotal,
   });
@@ -706,12 +1041,18 @@ class _ReceivablesCard extends StatelessWidget {
       accentColor: Theme.of(context).colorScheme.tertiary,
       title: 'Receivables',
       description: 'Money owed to you',
+      trailing: OutlinedButton.icon(
+        onPressed: () => _onAddReceivable(context, presenter),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Add Receivable'),
+      ),
       child: receivables.isEmpty
           ? const _EmptyHint('Nothing owed to you this month.')
           : Column(
               children: [
                 for (var i = 0; i < receivables.length; i++)
                   _ReceivableRow(
+                    presenter: presenter,
                     receivable: receivables[i],
                     showDivider: i > 0,
                   ),
@@ -750,10 +1091,15 @@ class _ReceivablesCard extends StatelessWidget {
 }
 
 class _ReceivableRow extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
   final Receivable receivable;
   final bool showDivider;
 
-  const _ReceivableRow({required this.receivable, required this.showDivider});
+  const _ReceivableRow({
+    required this.presenter,
+    required this.receivable,
+    required this.showDivider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -773,7 +1119,10 @@ class _ReceivableRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
       child: Row(
         children: [
-          _PaidCheckbox(checked: received, onTap: null),
+          _PaidCheckbox(
+            checked: received,
+            onTap: received ? null : () => _markReceived(context),
+          ),
           const SizedBox(width: WebInsets.md),
           Expanded(
             child: Column(
@@ -806,8 +1155,95 @@ class _ReceivableRow extends StatelessWidget {
               color: received ? cs.onSurfaceVariant : cs.tertiary,
             ),
           ),
+          _RowActions(
+            onEdit: () => _edit(context),
+            onDelete: () => _delete(context),
+          ),
         ],
       ),
+    );
+  }
+
+  void _edit(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _ReceivableDialog(presenter: presenter, existing: receivable),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete receivable?'),
+        content: Text('Remove "${receivable.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.deleteReceivable(receivable.id);
+    messenger
+        .showSnackBar(SnackBar(content: Text('Deleted "${receivable.name}".')));
+  }
+
+  Future<void> _markReceived(BuildContext context) async {
+    // Mirror the bill mark-paid flow but as an inflow: money lands in the
+    // receivable's preferred account, falling back to the first active liquid
+    // (asset) account.
+    final fallback =
+        presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
+    final accountId = receivable.accountId ??
+        (fallback.isNotEmpty ? fallback.first.id : null);
+    final messenger = ScaffoldMessenger.of(context);
+    if (accountId == null) {
+      messenger.showSnackBar(
+        const SnackBar(
+            content: Text('Add an account before marking received.')),
+      );
+      return;
+    }
+
+    final accountName = presenter.accountName(accountId) ?? 'your account';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark as received?'),
+        content: Text(
+            'Deposit ${formatPeso(receivable.amount)} from "${receivable.name}" '
+            'into $accountName? This credits the account balance.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Mark received')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    await presenter.markReceivableReceived(
+      receivable.id,
+      receivedAmount: receivable.amount,
+      accountId: accountId,
+    );
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text(
+              'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.')),
     );
   }
 }
@@ -840,6 +1276,37 @@ class _PaidCheckbox extends StatelessWidget {
         child:
             checked ? Icon(Icons.check, size: 14, color: cs.onTertiary) : null,
       ),
+    );
+  }
+}
+
+/// Trailing overflow menu shared by bill + receivable rows. Keeps edit/delete
+/// out of the way until hovered/tapped so the row stays scannable.
+class _RowActions extends StatelessWidget {
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _RowActions({required this.onEdit, required this.onDelete});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return PopupMenuButton<String>(
+      tooltip: 'Actions',
+      icon: Icon(Icons.more_vert, size: 18, color: cs.onSurfaceVariant),
+      padding: EdgeInsets.zero,
+      splashRadius: 20,
+      onSelected: (v) {
+        if (v == 'edit') onEdit();
+        if (v == 'delete') onDelete();
+      },
+      itemBuilder: (_) => [
+        const PopupMenuItem(value: 'edit', child: Text('Edit')),
+        PopupMenuItem(
+          value: 'delete',
+          child: Text('Delete', style: TextStyle(color: cs.error)),
+        ),
+      ],
     );
   }
 }
