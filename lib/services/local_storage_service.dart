@@ -690,6 +690,22 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<Set<String>> loadWarnedBudgetKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_k(StorageService.keyWarnedBudgetKeys)) ??
+            const [])
+        .toSet();
+  }
+
+  @override
+  Future<void> saveWarnedBudgetKeys(Set<String> keys) async {
+    // Local-only device UX state — intentionally not marked dirty for sync.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _k(StorageService.keyWarnedBudgetKeys), keys.toList());
+  }
+
+  @override
   Future<Set<String>> loadProteinGoalCreditedDates() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getStringList(

@@ -1240,16 +1240,14 @@ class NotificationService {
     final NotificationDetails details =
         NotificationDetails(android: androidDetails);
 
-    // If scheduled date is in the past (but within 5 mins) or very close to now (within 5 seconds), show immediately
+    // If the target time is already now/past, SKIP — do not fire it here.
+    // This method is re-run on every app open / sync (reschedule), so showing
+    // a now/past one-shot immediately made quests re-notify on every reopen.
+    // The real fire happens via the recurring zonedSchedule at the actual time;
+    // a moment that has already passed should not be resurfaced on launch.
     if (scheduledDate.isBefore(now.add(const Duration(seconds: 5)))) {
       debugPrint(
-          'NotificationService: Showing immediate notification $id ($title) as time is effectively now');
-      await flutterLocalNotificationsPlugin.show(
-        id,
-        title,
-        body,
-        details,
-      );
+          'NotificationService: Skipping one-shot $id ($title) — target is now/past ($scheduledDate); not firing on reschedule');
       return;
     }
 

@@ -560,6 +560,9 @@ void main() {
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
       when(mockStorage.loadAccounts()).thenAnswer((_) async => []);
       when(mockStorage.saveBudgets(any)).thenAnswer((_) async {});
+      when(mockStorage.loadWarnedBudgetKeys())
+          .thenAnswer((_) async => <String>{});
+      when(mockStorage.saveWarnedBudgetKeys(any)).thenAnswer((_) async {});
       when(mockStats.addXp(any)).thenAnswer((_) async {});
       when(mockStats.stats).thenReturn(UserStats.initial());
       presenter = BudgetPresenter(mockStorage, mockStats);

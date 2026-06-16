@@ -44,17 +44,23 @@ class BudgetPresenter extends ChangeNotifier {
   }
 
   /// Fire a budget-over-threshold warning for any budget that crossed the
-  /// configured percentage for the first time this session.
+  /// configured percentage for the first time THIS MONTH. The warned set is
+  /// keyed "YYYY-MM/budgetId" and persisted, so a warning fires once per
+  /// month-crossing and does NOT re-fire every time the app is reopened (the
+  /// previous in-memory-only set reset on each cold start → repeated alerts).
   Future<void> _checkBudgetWarnings(NotificationPreferences prefs) async {
     if (!prefs.budgetWarningEnabled) return;
     final threshold = prefs.budgetWarningPercent / 100.0;
+    var changed = false;
     for (final budget in _budgetsForMonth) {
       final spent = spentFor(budget.categoryId);
       final limit = budget.allocatedAmount;
       if (limit <= 0) continue;
       final pct = spent / limit;
-      if (pct >= threshold && !_warnedBudgets.contains(budget.id)) {
-        _warnedBudgets.add(budget.id);
+      final key = '$_selectedMonth/${budget.id}';
+      if (pct >= threshold && !_warnedBudgets.contains(key)) {
+        _warnedBudgets.add(key);
+        changed = true;
         final catName = _categories
             .where((c) => c.id == budget.categoryId)
             .map((c) => c.name)
@@ -66,11 +72,13 @@ class BudgetPresenter extends ChangeNotifier {
           limit,
           prefs.budgetWarningPercent,
         );
-      } else if (pct < threshold) {
-        // Reset so the warning fires again next time spending crosses the threshold.
-        _warnedBudgets.remove(budget.id);
+      } else if (pct < threshold && _warnedBudgets.contains(key)) {
+        // Dropped back below — allow it to warn again if it re-crosses.
+        _warnedBudgets.remove(key);
+        changed = true;
       }
     }
+    if (changed) await _storage.saveWarnedBudgetKeys(_warnedBudgets);
   }
 
   @override
@@ -404,6 +412,11 @@ class BudgetPresenter extends ChangeNotifier {
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
     _cachedNotifPrefs = await _storage.loadNotificationPreferences();
+    // Restore which budgets have already warned (persisted across restarts) so
+    // the over-threshold alert doesn't re-fire on every cold reopen.
+    _warnedBudgets
+      ..clear()
+      ..addAll(await _storage.loadWarnedBudgetKeys());
     notifyListeners();
     await _checkBudgetWarnings(_cachedNotifPrefs);
   }

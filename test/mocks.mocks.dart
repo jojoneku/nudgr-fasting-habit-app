@@ -574,6 +574,26 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
       ) as _i11.Future<void>);
 
   @override
+  _i11.Future<Set<String>> loadWarnedBudgetKeys() => (super.noSuchMethod(
+        Invocation.method(
+          #loadWarnedBudgetKeys,
+          [],
+        ),
+        returnValue: _i11.Future<Set<String>>.value(<String>{}),
+      ) as _i11.Future<Set<String>>);
+
+  @override
+  _i11.Future<void> saveWarnedBudgetKeys(Set<String>? keys) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveWarnedBudgetKeys,
+          [keys],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
   _i11.Future<int> loadStreakMilestonePaid() => (super.noSuchMethod(
         Invocation.method(
           #loadStreakMilestonePaid,
