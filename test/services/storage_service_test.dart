@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/weight_entry.dart';
 import 'package:intermittent_fasting/models/body_measurement_entry.dart';
 import 'package:intermittent_fasting/models/sync_queue_entry.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/food_feedback.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
@@ -138,6 +139,17 @@ void main() {
       final queue = SyncQueue();
       svc.setSyncQueue(queue);
       await svc.saveMeasurementUnit(MeasurementUnit.imperial);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('notification preferences mark userProfile dirty for sync (Plan 053)',
+        () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveNotificationPreferences(NotificationPreferences.defaults());
       expect(
         queue.entries.any((e) => e.domain == SyncDomain.userProfile),
         true,

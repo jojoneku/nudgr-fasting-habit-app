@@ -12,6 +12,7 @@ import '../models/food_template.dart';
 import '../models/grocery/remembered_price.dart';
 import '../models/grocery/saved_trip.dart';
 import '../models/habit_routine.dart';
+import '../models/notification_preferences.dart';
 import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
 import '../models/quest_achievement.dart';
@@ -265,6 +266,8 @@ class SyncService {
       'proteinGoalCreditedDates':
           (await _storage.loadProteinGoalCreditedDates()).toList(),
       'streakMilestonePaid': await _storage.loadStreakMilestonePaid(),
+      'notificationPreferences':
+          (await _storage.loadNotificationPreferences()).toJson(),
     };
     if (await _wouldClobberRemote(
         'user_profile', profileDataEmpty(data), profileDataEmpty)) {
@@ -594,6 +597,11 @@ class SyncService {
       if (data['streakMilestonePaid'] != null) {
         await _storage
             .saveStreakMilestonePaid(data['streakMilestonePaid'] as int);
+      }
+      if (data['notificationPreferences'] != null) {
+        await _storage.saveNotificationPreferences(
+            NotificationPreferences.fromJson(
+                data['notificationPreferences'] as Map<String, dynamic>));
       }
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);

@@ -86,7 +86,7 @@ The exact trigger of *this* incident can't be 100% pinned without device logs/DB
 - **Tests:** poison entry doesn't block tail; writes during reload are queued; crash-mid-migration leaves no data gap.
 
 ### Phase 3 — Hybrid completeness & cross-device correctness
-- **3.1 Sync `notification_preferences`** (add to a singleton domain, push+pull). Audit remaining local-only keys; document each as "intentionally local" or fold into sync.
+- **3.1 Sync `notification_preferences`** (add to a singleton domain, push+pull). Audit remaining local-only keys; document each as "intentionally local" or fold into sync. **✅ DONE — PR (`fix/sync-notification-prefs`).** `saveNotificationPreferences` now marks `userProfile` dirty; prefs ride in the `userProfile` push/pull payload. Test added. (Remaining intentionally-local: `themeMode`/`useCloudAi`/`aiPromptSkippedAt` device prefs; `grocery_cart`/`grocery_budget` transient; widget state.)
 - **3.2 Finance delete reconciliation on pull** — tombstones or full-set reconcile so deletes propagate across devices without resurrecting records.
 - **3.3 Web freshness** — reduce `pullIfStale` window and/or add Supabase realtime subscription for the active user; verify tab-visibility actually triggers a pull (add an explicit `visibilitychange`/focus hook if `AppLifecycleState.resumed` doesn't fire on web).
 - **3.4 Clock-skew** — prefer server-authoritative `updated_at` (DB default `now()` returned on upsert) or a monotonic per-record version for LWW instead of the device clock.

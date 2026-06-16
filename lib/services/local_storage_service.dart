@@ -1538,6 +1538,8 @@ class LocalStorageService extends StorageService {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_k(StorageService.keyNotificationPreferences),
         jsonEncode(prefs.toJson()));
+    // Sync across devices via the userProfile singleton (Plan 053 Phase 3.1).
+    _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override
