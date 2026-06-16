@@ -168,16 +168,30 @@ class SyncService {
     }
   }
 
+  /// Marker stored in a finance_records row's `data` to denote a deletion.
+  /// (Plan 053 Phase 3.2 — tombstones, no schema change.)
+  static const String _tombstoneKey = '__deleted';
+
+  @visibleForTesting
+  static bool isTombstone(Map<String, dynamic> data) =>
+      data[_tombstoneKey] == true;
+
   Future<void> _pushDelete(SyncQueueEntry entry) async {
     if (entry.domain != SyncDomain.financeRecord) return;
     final parts = entry.key.split('/');
     if (parts.length != 2) return;
-    await _supabase
-        .from('finance_records')
-        .delete()
-        .eq('user_id', _userId)
-        .eq('table_name', parts[0])
-        .eq('record_id', parts[1]);
+    // Write a TOMBSTONE rather than hard-deleting the row. A hard delete just
+    // made the row vanish, which pull couldn't distinguish from "never synced"
+    // — so a record deleted on one device resurrected on others. Keeping a
+    // `{__deleted: true}` row with a fresh timestamp lets every other device
+    // learn of the deletion on pull and drop its local copy via last-write-wins.
+    await _supabase.from('finance_records').upsert({
+      'user_id': _userId,
+      'table_name': parts[0],
+      'record_id': parts[1],
+      'data': {_tombstoneKey: true},
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
   }
 
   // ── Empty-overwrite guards (Plan 053 Phase 1) ──────────────────────────────
@@ -922,10 +936,16 @@ class SyncService {
       final localTime =
           _queue.getTimestamp(SyncDomain.financeRecord, '$tableName/$recordId');
       if (!remoteTime.isAfter(localTime)) continue;
-      localMap[recordId] = fromJson(row['data'] as Map<String, dynamic>);
+      final data = row['data'] as Map<String, dynamic>;
+      if (isTombstone(data)) {
+        // Deletion propagated from another device — remove the local record.
+        if (localMap.remove(recordId) != null) changed = true;
+      } else {
+        localMap[recordId] = fromJson(data);
+        changed = true;
+      }
       _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId',
           time: remoteTime);
-      changed = true;
     }
     if (changed) {
       await _storage.applyRemote(() async => saveAll(localMap.values.toList()));
