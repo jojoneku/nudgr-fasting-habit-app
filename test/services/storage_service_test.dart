@@ -244,6 +244,52 @@ void main() {
       );
     });
   });
+
+  // ── Sign-out is non-destructive (Plan 053) ───────────────────────────────────
+  // Regression guard for three rounds of data loss: sign-out must DETACH the
+  // user namespace (keep data on disk under `u/$id/`), never wipe it. A stale or
+  // empty cloud row can then never destroy local progress.
+
+  group('StorageService — sign-out is non-destructive', () {
+    test('detachUser keeps stored data; same user re-login restores it',
+        () async {
+      await svc.setUserId('user-a');
+      await svc.saveUserStats(
+          UserStats.initial().copyWith(level: 9, currentXp: 123));
+
+      svc.detachUser(); // sign out
+
+      await svc.setUserId('user-a'); // sign back in
+      final loaded = await svc.loadUserStats();
+      expect(loaded.level, 9, reason: 'data must survive sign-out');
+      expect(loaded.currentXp, 123);
+    });
+
+    test('a different account never sees the previous user data', () async {
+      await svc.setUserId('user-a');
+      await svc.saveUserStats(UserStats.initial().copyWith(level: 9));
+
+      svc.detachUser();
+
+      await svc.setUserId('user-b');
+      final loaded = await svc.loadUserStats();
+      expect(loaded.level, 1,
+          reason: 'key-scoping isolates accounts on a shared device');
+    });
+
+    test('clearUserData (explicit reset) DOES wipe — unlike sign-out',
+        () async {
+      await svc.setUserId('user-a');
+      await svc.saveUserStats(UserStats.initial().copyWith(level: 9));
+
+      await svc.clearUserData();
+
+      await svc.setUserId('user-a');
+      final loaded = await svc.loadUserStats();
+      expect(loaded.level, 1,
+          reason: 'explicit reset is destructive by design');
+    });
+  });
 }
 
 final _epoch = DateTime.fromMillisecondsSinceEpoch(0);

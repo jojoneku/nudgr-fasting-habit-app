@@ -150,6 +150,94 @@ class SyncService {
         .eq('record_id', parts[1]);
   }
 
+  // ── Empty-overwrite guards (Plan 053 Phase 1) ──────────────────────────────
+  // A whole-object "singleton" push must never clobber a populated cloud row
+  // with empty/default local data, and a pull must never wipe populated local
+  // data with an empty/stale remote. This is the exact failure mode that
+  // emptied `user_quests` to `[]` and reverted quests/fasting/weight/body.
+  //
+  // Tradeoff: for singletons we bias toward "never lose" over "propagate a
+  // full clear". Wiping ALL quests / ALL weight on one device and expecting
+  // that emptiness to replicate is vanishingly rare and far less damaging than
+  // silent total loss; such a clear can still be redone explicitly. Per-record
+  // deletes (finance) propagate normally via SyncOp.delete.
+
+  static bool _listEmpty(dynamic v) => v == null || (v is List && v.isEmpty);
+
+  @visibleForTesting
+  static bool questsDataEmpty(Map<String, dynamic> d) =>
+      _listEmpty(d['quests']) && _listEmpty(d['achievements']);
+
+  @visibleForTesting
+  static bool fastingDataEmpty(Map<String, dynamic> d) =>
+      _listEmpty(d['history']) && d['isFasting'] != true;
+
+  @visibleForTesting
+  static bool profileDataEmpty(Map<String, dynamic> d) {
+    final stats = d['userStats'] as Map<String, dynamic>?;
+    final freshStats = stats == null ||
+        (((stats['level'] as num?) ?? 1) <= 1 &&
+            ((stats['currentXp'] as num?) ?? 0) == 0);
+    return _listEmpty(d['weightLog']) &&
+        _listEmpty(d['bodyMeasurements']) &&
+        freshStats;
+  }
+
+  @visibleForTesting
+  static bool collectionsDataEmpty(Map<String, dynamic> d) =>
+      _listEmpty(d['routines']) &&
+      _listEmpty(d['foodLibrary']) &&
+      _listEmpty(d['personalDict']) &&
+      _listEmpty(d['foodFeedback']) &&
+      _listEmpty(d['financeDictionary']) &&
+      _listEmpty(d['groceryPriceMemory']) &&
+      _listEmpty(d['groceryTripHistory']);
+
+  /// True when a push would clobber a populated cloud row: the local payload is
+  /// empty AND a non-empty remote row already exists → the push must be skipped.
+  Future<bool> _wouldClobberRemote(
+    String table,
+    bool localEmpty,
+    bool Function(Map<String, dynamic>) remoteEmpty,
+  ) async {
+    if (!localEmpty) return false;
+    final row = await _supabase
+        .from(table)
+        .select('data')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    final data = row?['data'] as Map<String, dynamic>?;
+    if (data == null) return false;
+    return !remoteEmpty(data);
+  }
+
+  Future<bool> _localQuestsEmpty() async =>
+      (await _storage.loadQuests()).isEmpty &&
+      (await _storage.loadAchievements()).isEmpty;
+
+  Future<bool> _localFastingEmpty() async {
+    final st = await _storage.loadState();
+    final hist = st['history'] as List<FastingLog>;
+    return hist.isEmpty && st['isFasting'] != true;
+  }
+
+  Future<bool> _localProfileEmpty() async {
+    final stats = await _storage.loadUserStats();
+    return (await _storage.loadWeightLog()).isEmpty &&
+        (await _storage.loadBodyMeasurements()).isEmpty &&
+        stats.level <= 1 &&
+        stats.currentXp == 0;
+  }
+
+  Future<bool> _localCollectionsEmpty() async =>
+      (await _storage.loadRoutines()).isEmpty &&
+      (await _storage.loadFoodLibrary()).isEmpty &&
+      (await _storage.loadPersonalDict()).isEmpty &&
+      (await _storage.loadFoodFeedback()).isEmpty &&
+      (await _storage.loadFinanceDictionary()).isEmpty &&
+      (await _storage.loadGroceryPriceMemory()).isEmpty &&
+      (await _storage.loadGroceryTripHistory()).isEmpty;
+
   Future<void> _pushUserProfile() async {
     debugPrint('SyncService: _pushUserProfile — pushing profile data');
     final data = {
@@ -178,6 +266,12 @@ class SyncService {
           (await _storage.loadProteinGoalCreditedDates()).toList(),
       'streakMilestonePaid': await _storage.loadStreakMilestonePaid(),
     };
+    if (await _wouldClobberRemote(
+        'user_profile', profileDataEmpty(data), profileDataEmpty)) {
+      debugPrint(
+          'SyncService: _pushUserProfile — local empty but cloud populated; skipping to avoid clobber');
+      return;
+    }
     await _supabase.from('user_profile').upsert({
       'user_id': _userId,
       'data': data,
@@ -202,6 +296,12 @@ class SyncService {
       'lastPenaltyCheckDate':
           (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
     };
+    if (await _wouldClobberRemote(
+        'fasting_state', fastingDataEmpty(data), fastingDataEmpty)) {
+      debugPrint(
+          'SyncService: _pushFastingState — local empty but cloud populated; skipping to avoid clobber');
+      return;
+    }
     await _supabase.from('fasting_state').upsert({
       'user_id': _userId,
       'data': data,
@@ -221,6 +321,12 @@ class SyncService {
       'questPenaltyCheckDate':
           (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
     };
+    if (await _wouldClobberRemote(
+        'user_quests', questsDataEmpty(data), questsDataEmpty)) {
+      debugPrint(
+          'SyncService: _pushUserQuests — local empty but cloud populated; skipping to avoid clobber');
+      return;
+    }
     await _supabase.from('user_quests').upsert({
       'user_id': _userId,
       'data': data,
@@ -251,6 +357,12 @@ class SyncService {
           .map((e) => e.toJson())
           .toList(),
     };
+    if (await _wouldClobberRemote(
+        'user_collections', collectionsDataEmpty(data), collectionsDataEmpty)) {
+      debugPrint(
+          'SyncService: _pushUserCollections — local empty but cloud populated; skipping to avoid clobber');
+      return;
+    }
     await _supabase.from('user_collections').upsert({
       'user_id': _userId,
       'data': data,
@@ -410,6 +522,11 @@ class SyncService {
     debugPrint(
         'SyncService: userProfile — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
+    if (profileDataEmpty(data) && !await _localProfileEmpty()) {
+      debugPrint(
+          'SyncService: userProfile — remote empty but local populated; skipping to avoid wipe');
+      return;
+    }
     await _storage.applyRemote(() async {
       if (data['userStats'] != null) {
         await _storage.saveUserStats(
@@ -501,6 +618,11 @@ class SyncService {
     debugPrint(
         'SyncService: fastingState — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
+    if (fastingDataEmpty(data) && !await _localFastingEmpty()) {
+      debugPrint(
+          'SyncService: fastingState — remote empty but local populated; skipping to avoid wipe');
+      return;
+    }
     await _storage.applyRemote(() async {
       final history = (data['history'] as List? ?? [])
           .map((e) => FastingLog.fromJson(e as Map<String, dynamic>))
@@ -543,6 +665,11 @@ class SyncService {
     debugPrint(
         'SyncService: userQuests — applying remote data (remote=$remoteTime)');
     final data = row['data'] as Map<String, dynamic>;
+    if (questsDataEmpty(data) && !await _localQuestsEmpty()) {
+      debugPrint(
+          'SyncService: userQuests — remote empty but local populated; skipping to avoid wipe');
+      return;
+    }
     await _storage.applyRemote(() async {
       if (data['quests'] != null) {
         await _storage.saveQuests((data['quests'] as List)
@@ -581,6 +708,11 @@ class SyncService {
     }
     debugPrint('SyncService: userCollections — applying remote data');
     final data = row['data'] as Map<String, dynamic>;
+    if (collectionsDataEmpty(data) && !await _localCollectionsEmpty()) {
+      debugPrint(
+          'SyncService: userCollections — remote empty but local populated; skipping to avoid wipe');
+      return;
+    }
     await _storage.applyRemote(() async {
       if (data['routines'] != null) {
         await _storage.saveRoutines((data['routines'] as List)
@@ -778,8 +910,11 @@ class SyncService {
     await pullAll();
   }
 
+  // Scoped under the `u/$userId/` prefix so an explicit reset (clearUserData)
+  // wipes it via the same prefix sweep — previously a bare key, it survived a
+  // wipe and suppressed the safety re-push forever. (Plan 053 Phase 1)
   static String _initialPushKey(String userId) =>
-      'sync_initial_push_done_v2_$userId';
+      'u/$userId/sync_initial_push_done_v2';
 
   Future<bool> _isInitialPushDone() async {
     final prefs = await SharedPreferences.getInstance();

@@ -22,6 +22,7 @@ import '../services/health_service.dart';
 import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/local_storage_service.dart';
+import '../services/notification_service.dart';
 import '../services/remote_secrets_service.dart';
 import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
@@ -287,18 +288,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     final userId = _currentUserId;
     _currentUserId = null;
 
-    // Flush unsynced local changes to the cloud BEFORE wiping local data, so a
-    // sign-out can never destroy un-uploaded records (e.g. weight/body logs).
-    // If the push can't fully complete (offline / error), we KEEP local data
-    // intact — it stays under the user's own `u/$id/` scope (invisible to any
-    // other user) and re-syncs on the next launch — rather than being lost.
+    // Best-effort flush of unsynced changes to the cloud before detaching.
     final svc = _syncService;
-    var flushed = true;
     if (userId != null && svc != null) {
       try {
         await svc.pushPending();
       } catch (_) {}
-      flushed = (_syncQueue?.pendingCount ?? 0) == 0;
     }
 
     _storage.onDirty = null;
@@ -308,13 +303,18 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _syncService = null;
     _syncPresenter = null;
 
-    // Only wipe once everything is safely uploaded. Skipping the wipe when a
-    // flush didn't complete is safe: user-scoping keeps a later signed-in user
-    // from ever seeing this data.
-    if (userId != null && flushed) {
-      _storage.clearUserData();
-      _syncQueue?.clearAll();
-    }
+    // Sign-out is NON-DESTRUCTIVE (Plan 053): we DETACH the user namespace
+    // instead of wiping it. The data stays under the user's own `u/$id/` scope
+    // (invisible to any other account via key-scoping) and is restored on the
+    // next sign-in, so a stale or empty cloud row can never wipe local
+    // progress — the failure mode behind three rounds of data loss.
+    _storage.detachUser();
+    _syncQueue?.clearAll();
+
+    // Cancel scheduled OS notifications so a signed-out user never receives
+    // ghost quest/weight/bills/fasting reminders. These live in the OS alarm
+    // manager, not app storage, so detaching/wiping data never cleared them.
+    await NotificationService().cancelAll();
 
     // Clear the home-screen widgets so a second account on a shared device never
     // sees the signed-out user's data.
