@@ -305,13 +305,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
               sum +
               (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity));
 
-  /// What you still owe / must set aside this month: unpaid bills plus the
-  /// remaining (allocated − spent) of this month's budgeted expenses.
-  ///
-  /// Liability balances are intentionally NOT added: a credit-card statement
-  /// already surfaces as a bill, so adding the liability balance too would
-  /// double-count the same debt. Total debt still lives in [netWorth].
-  double get currentObligations => monthUnpaidBills + budgetedExpensesRemaining;
+  /// What you owe this month: unpaid bills only. Budgeted-expense set-asides are
+  /// surfaced separately as "Budget / Savings Due" ([budgetedExpensesRemaining]),
+  /// and liability balances are NOT added — a credit-card statement already
+  /// shows up as a bill, so adding the liability too would double-count the same
+  /// debt. Total debt still lives in [netWorth]. (Mirrors the reference sheet:
+  /// Current Obligations = outstanding bills.)
+  double get currentObligations => monthUnpaidBills;
 
   /// Projected spare cash for the month after bills, receivables, and budget —
   /// the "Can I afford it?" baseline. Alias of [forecastedNetBalance], named

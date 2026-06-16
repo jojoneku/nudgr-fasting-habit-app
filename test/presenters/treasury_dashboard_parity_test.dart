@@ -78,16 +78,16 @@ void main() {
       // netWorth == totalAssets - held(0) - liabilities
       expect(p.netWorth, p.totalAssets - p.totalHeldForOthers - 4000);
       expect(p.netWorth, 8000);
-      // Obligations are bills + budgeted-expense remaining — NOT liabilities
-      // (the card statement is already a bill, so adding the liability balance
-      // too would double-count). No bills/expenses here → 0.
+      // Obligations are unpaid bills only — NOT liabilities (the card statement
+      // is already a bill, so adding the liability balance too would
+      // double-count) and NOT budgeted expenses (those are a separate
+      // "Budget / Savings Due" figure). No bills here → 0.
       expect(p.currentObligations, 0);
     });
 
     test(
-        'currentObligations = unpaid bills + budgeted-expense remaining '
-        '(allocated − spent), excluding liabilities and settled expenses',
-        () async {
+        'currentObligations = unpaid bills only; budgetedExpensesRemaining is '
+        'separate (allocated − spent, excluding settled expenses)', () async {
       final month = toMonthKey(DateTime.now());
       when(mockStorage.loadAccounts()).thenAnswer((_) async => [
             // A liability that must NOT be added on top of the bill below.
@@ -143,8 +143,9 @@ void main() {
 
       expect(p.monthUnpaidBills, 1800); // paid bill excluded
       expect(p.budgetedExpensesRemaining, 3000); // 5000−2000; settled excluded
-      // 1800 + 3000 = 4800 — the 9000 liability is intentionally NOT added.
-      expect(p.currentObligations, 4800);
+      // Obligations = unpaid bills ONLY: budgeted set-asides and the 9000
+      // liability are intentionally NOT folded in.
+      expect(p.currentObligations, 1800);
     });
 
     test('monthNetCashFlow computes from this month', () async {
