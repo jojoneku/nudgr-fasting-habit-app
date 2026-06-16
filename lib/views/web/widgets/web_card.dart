@@ -20,6 +20,9 @@ class WebCard extends StatelessWidget {
   /// fill from `surfaceContainerLow` to `surfaceContainerHigh`).
   final bool onSurface;
 
+  /// Optional left accent stripe (e.g. red for bills due, green for income).
+  final Color? accentColor;
+
   const WebCard({
     super.key,
     this.title,
@@ -28,6 +31,7 @@ class WebCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(WebInsets.xl),
     this.onSurface = false,
+    this.accentColor,
   });
 
   @override
@@ -36,12 +40,7 @@ class WebCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final hasHeader = title != null || trailing != null;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: onSurface ? cs.surfaceContainerHigh : cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
-      ),
+    final content = Padding(
       padding: padding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -77,6 +76,29 @@ class WebCard extends StatelessWidget {
           child,
         ],
       ),
+    );
+
+    return Container(
+      decoration: BoxDecoration(
+        color: onSurface ? cs.surfaceContainerHigh : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      // Clip so the accent stripe follows the card's rounded corners.
+      clipBehavior: accentColor != null ? Clip.antiAlias : Clip.none,
+      child: accentColor == null
+          ? content
+          // IntrinsicHeight bounds the Row's height to the content so the
+          // stretched stripe doesn't try to grow infinitely in the scroll view.
+          : IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(width: 4, color: accentColor),
+                  Expanded(child: content),
+                ],
+              ),
+            ),
     );
   }
 }
