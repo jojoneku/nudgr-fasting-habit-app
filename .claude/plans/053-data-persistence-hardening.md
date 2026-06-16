@@ -69,6 +69,7 @@ The exact trigger of *this* incident can't be 100% pinned without device logs/DB
 - **Mobile-only:** web has no filesystem — its equivalent is export/import (Plan 044). Guard file I/O behind `!kIsWeb`.
 - **Caveat:** the sandbox file is gone on uninstall / "clear data" — it survives sign-out + app updates, not a fresh device. (Phase 3.5 covers device loss.)
 - **Tests:** snapshot written after change; restore repopulates presenters; web no-ops.
+- **STATUS: ✅ DONE — PR (`feat/local-autosave-backup`).** Generic snapshot: `LocalStorageService.exportUserData`/`importUserData`/`hasUserData` (all `u/$id/` keys, sync bookkeeping excluded; import is a raw write — no dirty mark / no LWW bump, so cloud still wins). New `BackupService` (mobile-only, `kIsWeb` no-op) writes `documents/backup.json` on app-pause; `_initSync` restores-on-empty before reload+sync. Round-trip + exclusion + hasUserData tests. (Auto-restore is silent rather than a prompt — safe because restore can't override newer cloud.)
 
 ### Phase 1 — Empty/stale overwrite guards (core correctness)
 **Goal:** cloud can never be clobbered by empty/default state, and pull can never wipe populated local.
