@@ -402,6 +402,7 @@ const double _kSpentW = 108;
 const double _kRemainW = 116;
 const double _kUsedW = 168;
 const double _kStatusW = 116;
+const double _kActionW = 48;
 
 class _HeaderRow extends StatelessWidget {
   const _HeaderRow();
@@ -444,6 +445,7 @@ class _HeaderRow extends StatelessWidget {
           cell('Remaining', _kRemainW, align: TextAlign.right),
           cell('Used', _kUsedW),
           cell('Status', _kStatusW),
+          cell('', _kActionW),
         ],
       ),
     );
@@ -602,9 +604,47 @@ class _DataRow extends StatelessWidget {
               child: WebBadge(status.label, tone: status.tone),
             ),
           ),
+          // Remove from budget
+          SizedBox(
+            width: _kActionW,
+            child: IconButton(
+              tooltip: 'Remove from budget',
+              visualDensity: VisualDensity.compact,
+              icon: Icon(Icons.close, size: 16, color: cs.onSurfaceVariant),
+              onPressed: () => _confirmRemove(context),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  Future<void> _confirmRemove(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Remove from budget?'),
+        content: Text(
+            'Remove "${row.name}" from this month\'s budget? The category and '
+            'its transactions stay — only the allocation is cleared.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Remove'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.removeBudget(row.id);
+    messenger.showSnackBar(
+        SnackBar(content: Text('Removed "${row.name}" from the budget.')));
   }
 }
 
@@ -986,6 +1026,7 @@ class _AddRowState extends State<_AddRow> {
                     ),
             ),
           ),
+          const SizedBox(width: _kActionW),
         ],
       ),
     );
