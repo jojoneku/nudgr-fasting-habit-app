@@ -84,8 +84,30 @@ class NotificationService {
   static const MethodChannel _systemSettingsChannel =
       MethodChannel('com.nudgr.app/system_settings');
 
+  // Per-reminder signature of the last successful (re)schedule. Recurring
+  // reminders get re-scheduled on every app resume / cloud-sync reload; when
+  // the inputs haven't changed that's pure alarm-manager churn. We skip the
+  // redundant cancel+reschedule when the signature matches. In-memory only, so
+  // a cold start (fresh process) always reschedules once.
+  final Map<String, String> _scheduleSignatures = {};
+
+  /// True if [key] should be (re)scheduled — i.e. its [signature] changed since
+  /// the last successful schedule this session. Records the new signature.
+  bool _scheduleChanged(String key, String signature) {
+    if (_scheduleSignatures[key] == signature) return false;
+    _scheduleSignatures[key] = signature;
+    return true;
+  }
+
+  /// Forget a reminder's signature so the next schedule call runs (e.g. after
+  /// cancelling it, or when the master toggle flips and alarms were cleared).
+  void _invalidateSchedule(String key) => _scheduleSignatures.remove(key);
+
   Future<void> setMasterEnabled(bool enabled) async {
     _masterEnabled = enabled;
+    // Force a reschedule on the next call regardless of cached signatures:
+    // disabling cancels everything, and re-enabling must re-register alarms.
+    _scheduleSignatures.clear();
     if (!enabled) {
       await cancelAll();
     }
@@ -594,6 +616,21 @@ class NotificationService {
 
   Future<void> scheduleQuestNotifications(Quest quest) async {
     if (!_isInitialized || !_masterEnabled) return;
+    // Skip if this quest's schedule-relevant config is unchanged since the last
+    // schedule this session — avoids re-registering the same alarms on every
+    // app resume / sync reload. Cleared on cold start and on edit/cancel.
+    final sig = [
+      quest.recurrenceType.name,
+      quest.hour,
+      quest.minute,
+      quest.days.map((d) => d ? '1' : '0').join(),
+      quest.weeklyWeekday,
+      quest.monthlyDays.join(','),
+      quest.recurrenceAnchorDate,
+      quest.reminderMinutes,
+      quest.title,
+    ].join('|');
+    if (!_scheduleChanged('quest/${quest.id}', sig)) return;
     debugPrint(
         'NotificationService: Scheduling quest notifications for ${quest.title}');
 
@@ -828,6 +865,7 @@ class NotificationService {
   Future<void> cancelQuestNotifications(Quest quest) async {
     debugPrint(
         'NotificationService: Cancelling quest notifications for ${quest.title}');
+    _invalidateSchedule('quest/${quest.id}');
     final int baseId = quest.id;
     // Daily: IDs baseId+0..6 and reminders baseId+100..106
     for (int i = 0; i < 7; i++) {
@@ -964,6 +1002,9 @@ class NotificationService {
   /// [DateTimeComponents.time] — persists across app restarts automatically.
   Future<void> scheduleWeightReminder(TimeOfDay time) async {
     if (!_isInitialized || !_masterEnabled) return;
+    if (!_scheduleChanged('weightReminder', '${time.hour}:${time.minute}')) {
+      return;
+    }
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
 
     final now = tz.TZDateTime.now(tz.local);
@@ -1007,6 +1048,7 @@ class NotificationService {
 
   Future<void> cancelWeightReminder() async {
     if (!_isInitialized) return;
+    _invalidateSchedule('weightReminder');
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
   }
 
@@ -1038,9 +1080,10 @@ class NotificationService {
   /// [DateTimeComponents.dayOfMonthAndTime].
   Future<void> scheduleBillsReminder(int dayOfMonth) async {
     if (!_isInitialized || !_masterEnabled) return;
+    final day = dayOfMonth.clamp(1, 28);
+    if (!_scheduleChanged('billsReminder', '$day')) return;
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
 
-    final day = dayOfMonth.clamp(1, 28);
     final scheduled = _nextInstanceOfMonthDay(day, 9, 0);
 
     const AndroidNotificationDetails androidDetails =
@@ -1077,6 +1120,7 @@ class NotificationService {
 
   Future<void> cancelBillsReminder() async {
     if (!_isInitialized) return;
+    _invalidateSchedule('billsReminder');
     await flutterLocalNotificationsPlugin.cancel(notifIdBillsReminder);
   }
 
@@ -1092,10 +1136,11 @@ class NotificationService {
     required int dueDay,
   }) async {
     if (!_isInitialized || !_masterEnabled) return;
+    final day = dueDay.clamp(1, 28);
+    if (!_scheduleChanged('creditDue/$accountId', '$day|$accountName')) return;
     final id = _creditDueId(accountId);
     await flutterLocalNotificationsPlugin.cancel(id);
 
-    final day = dueDay.clamp(1, 28);
     final scheduled = _nextInstanceOfMonthDay(day, 9, 0);
 
     const AndroidNotificationDetails androidDetails =
@@ -1131,6 +1176,7 @@ class NotificationService {
 
   Future<void> cancelCreditDueReminder(String accountId) async {
     if (!_isInitialized) return;
+    _invalidateSchedule('creditDue/$accountId');
     await flutterLocalNotificationsPlugin.cancel(_creditDueId(accountId));
   }
 
