@@ -293,8 +293,25 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     return monthSavingsContributions / income;
   }
 
-  /// What you owe right now: this month's unpaid bills plus all liabilities.
-  double get currentObligations => monthUnpaidBills + totalLiabilities;
+  /// Still-to-set-aside portion of this month's budgeted expenses: each
+  /// expense's remaining (allocated − already spent, never negative), excluding
+  /// ones already settled. Uses `remaining` rather than the full allocation so
+  /// money already spent isn't counted as still owed.
+  double get budgetedExpensesRemaining => _budgetedExpenses
+      .where((e) => e.month == _currentMonth && !e.isPaid)
+      .fold(
+          0.0,
+          (sum, e) =>
+              sum +
+              (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity));
+
+  /// What you still owe / must set aside this month: unpaid bills plus the
+  /// remaining (allocated − spent) of this month's budgeted expenses.
+  ///
+  /// Liability balances are intentionally NOT added: a credit-card statement
+  /// already surfaces as a bill, so adding the liability balance too would
+  /// double-count the same debt. Total debt still lives in [netWorth].
+  double get currentObligations => monthUnpaidBills + budgetedExpensesRemaining;
 
   /// Projected spare cash for the month after bills, receivables, and budget —
   /// the "Can I afford it?" baseline. Alias of [forecastedNetBalance], named

@@ -88,7 +88,7 @@ class _PositionRow extends StatelessWidget {
       WebStatTile(
         label: 'Current Obligations',
         value: formatPeso(p.currentObligations),
-        sub: 'Bills + liabilities due',
+        sub: 'Unpaid bills + budgeted expenses',
         icon: Icons.receipt_long_outlined,
         valueColor: cs.error,
       ),

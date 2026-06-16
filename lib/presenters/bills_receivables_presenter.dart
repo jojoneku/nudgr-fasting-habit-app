@@ -112,14 +112,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Web helpers (Plan 050-C) ─────────────────────────────────────────────────
 
-  /// Total still-owed bills + budgeted expenses for the selected month — the web
-  /// KPI strip's "Unpaid bills".
-  double get totalUnpaidObligations =>
-      totalBillsPending +
-      budgetedExpenses
-          .where((e) => !e.isPaid)
-          .fold(0.0, (s, e) => s + e.allocatedAmount);
-
   /// Human-readable account name for [accountId] (e.g. the bill's funding
   /// account), or null when unset/unknown. Keeps account lookups out of `build`.
   String? accountName(String? accountId) {
