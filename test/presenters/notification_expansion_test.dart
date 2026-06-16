@@ -162,6 +162,15 @@ MockStorageService _makeStorage({
   when(s.saveCalorieGoalCreditedDates(any)).thenAnswer((_) async {});
   when(s.saveProteinGoalCreditedDates(any)).thenAnswer((_) async {});
   when(s.saveStreakMilestonePaid(any)).thenAnswer((_) async {});
+  // Memory-backed so warned-budget state persists across load()s / presenter
+  // instances within a test (mirrors real device persistence).
+  final warnedBudgets = <String>{};
+  when(s.loadWarnedBudgetKeys()).thenAnswer((_) async => warnedBudgets.toSet());
+  when(s.saveWarnedBudgetKeys(any)).thenAnswer((inv) async {
+    warnedBudgets
+      ..clear()
+      ..addAll(inv.positionalArguments.first as Set<String>);
+  });
   when(s.loadFoodFeedback()).thenAnswer((_) async => []);
   when(s.loadWeightLog()).thenAnswer((_) async => []);
   when(s.saveWeightLog(any)).thenAnswer((_) async {});
@@ -582,6 +591,42 @@ void main() {
       await presenter.load();
 
       verifyNever(notifications.showBudgetWarning(any, any, any, any, any));
+    });
+
+    test('12. warning does NOT re-fire after a cold restart (persisted)',
+        () async {
+      final storage = _makeStorage(
+        notifPrefs: const NotificationPreferences(
+          budgetWarningEnabled: true,
+          budgetWarningPercent: 80,
+        ),
+      );
+      when(storage.loadBudgets()).thenAnswer((_) async => [makeBudget(100)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [makeCat()]);
+      when(storage.loadTransactions())
+          .thenAnswer((_) async => [makeTxn(85)]); // 85% — over threshold
+      when(storage.loadAccounts()).thenAnswer((_) async => []);
+
+      final notifications = MockNotificationService();
+      when(notifications.showBudgetWarning(any, any, any, any, any))
+          .thenAnswer((_) async {});
+      final stats = MockStatsPresenter();
+      when(stats.addXp(any)).thenAnswer((_) async {});
+
+      // First launch fires once and persists the "warned" marker.
+      final first = BudgetPresenter(storage, stats, null, notifications);
+      first.setMonth(month);
+      await first.load();
+
+      // Simulate closing + reopening the app: a brand-new presenter over the
+      // same (persisted) storage. It must NOT re-fire the same warning.
+      final reopened = BudgetPresenter(storage, stats, null, notifications);
+      reopened.setMonth(month);
+      await reopened.load();
+
+      verify(notifications.showBudgetWarning(any, any, any, any, any))
+          .called(1);
     });
   });
 }
