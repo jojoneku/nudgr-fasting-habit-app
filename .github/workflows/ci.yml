@@ -11,6 +11,11 @@ jobs:
   analyze_format:
     name: Analyze & Format
     runs-on: ubuntu-latest
+    # Skip on direct pushes to main: the dev→main promotion is the exact same
+    # tree that already passed these checks on dev (and again on the promotion
+    # PR). Re-running here only adds latency before release/deploy. Still runs
+    # on every PR (incl. dev→main) and on pushes to dev/hotfix.
+    if: github.ref != 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +65,9 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    # See analyze_format: skipped on push to main (already validated via the
+    # dev→main promotion PR), still runs on PRs and dev/hotfix pushes.
+    if: github.ref != 'refs/heads/main'
 
     steps:
       - uses: actions/checkout@v4
@@ -202,7 +210,9 @@ jobs:
   release:
     name: Release — Build & Deploy APK
     runs-on: ubuntu-latest
-    needs: [analyze_format, test]
+    # No `needs` on analyze_format/test: those are skipped on push to main
+    # (already validated on the dev→main promotion PR), so depending on them
+    # here would skip the release. The promotion gate already guards main.
     # Serialize release builds. When two merges to main land in quick
     # succession, both runs would otherwise race to create v<next>.<patch>:
     # the earlier upload wins the release tag, the later (newer-code) upload
@@ -229,6 +239,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          # Cache ~/.gradle (keyed on gradle files) so release APK builds reuse
+          # downloaded deps and the build cache instead of starting cold.
+          cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
@@ -376,7 +389,8 @@ jobs:
   deploy_functions:
     name: Deploy Supabase Edge Functions
     runs-on: ubuntu-latest
-    needs: [analyze_format, test]
+    # No analyze_format/test needs — those are skipped on push to main (already
+    # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -410,7 +424,8 @@ jobs:
   deploy_lambda:
     name: Deploy AI Coach Lambda
     runs-on: ubuntu-latest
-    needs: [analyze_format, test]
+    # No analyze_format/test needs — those are skipped on push to main (already
+    # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
@@ -460,7 +475,8 @@ jobs:
   deploy_web:
     name: Deploy Treasury Web (Firebase Hosting)
     runs-on: ubuntu-latest
-    needs: [analyze_format, test]
+    # No analyze_format/test needs — those are skipped on push to main (already
+    # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
