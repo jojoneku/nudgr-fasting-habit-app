@@ -174,6 +174,74 @@ class LocalStorageService extends StorageService {
     _cachedAccountIds = null;
   }
 
+  // ── Local backup export/import (Plan 053 Phase 0.5) ────────────────────────
+  // Generic, model-agnostic snapshot of ALL user data: every `u/$userId/` pref
+  // key (minus sync bookkeeping). Used by BackupService to write an on-device
+  // backup.json the sign-out/detach path never touches, and to restore it if
+  // local data is ever found empty. Restore writes raw prefs WITHOUT marking
+  // dirty or touching sync timestamps, so a later cloud pull still wins via LWW.
+
+  /// Sync-internal base keys excluded from the user-data backup.
+  static const Set<String> _backupExcludedKeys = {
+    'syncQueue',
+    'syncTimestamps',
+    'sync_initial_push_done_v2',
+  };
+
+  /// True if any user-scoped data key exists for the current user.
+  Future<bool> hasUserData() async {
+    if (_userId == null) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final prefix = 'u/$_userId/';
+    return prefs.getKeys().any((k) =>
+        k.startsWith(prefix) &&
+        !_backupExcludedKeys.contains(k.substring(prefix.length)));
+  }
+
+  /// Snapshots all user-scoped data as a `{baseKey: value}` map (sync
+  /// bookkeeping excluded). Values are the raw prefs types
+  /// (String/int/double/bool/List&lt;String&gt;) — all JSON-encodable.
+  Future<Map<String, dynamic>> exportUserData() async {
+    if (_userId == null) return {};
+    final prefs = await SharedPreferences.getInstance();
+    final prefix = 'u/$_userId/';
+    final out = <String, dynamic>{};
+    for (final key in prefs.getKeys()) {
+      if (!key.startsWith(prefix)) continue;
+      final base = key.substring(prefix.length);
+      if (_backupExcludedKeys.contains(base)) continue;
+      out[base] = prefs.get(key);
+    }
+    return out;
+  }
+
+  /// Writes a previously [exportUserData]'d map back under the current user's
+  /// scope. Does NOT mark dirty (raw restore) so it can't echo into the sync
+  /// queue or bump LWW timestamps. No-op without a user id.
+  Future<void> importUserData(Map<String, dynamic> data) async {
+    if (_userId == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final prefix = 'u/$_userId/';
+    for (final entry in data.entries) {
+      if (_backupExcludedKeys.contains(entry.key)) continue;
+      final key = '$prefix${entry.key}';
+      final v = entry.value;
+      if (v is String) {
+        await prefs.setString(key, v);
+      } else if (v is bool) {
+        await prefs.setBool(key, v);
+      } else if (v is int) {
+        await prefs.setInt(key, v);
+      } else if (v is double) {
+        await prefs.setDouble(key, v);
+      } else if (v is List) {
+        await prefs.setStringList(key, v.map((e) => e.toString()).toList());
+      }
+    }
+    _cachedTransactionIds = null;
+    _cachedAccountIds = null;
+  }
+
   /// Fired by SyncService after pullAll() — lets home_screen reload presenters.
   VoidCallback? onRemoteDataApplied;
 
@@ -1538,6 +1606,8 @@ class LocalStorageService extends StorageService {
     final sp = await SharedPreferences.getInstance();
     await sp.setString(_k(StorageService.keyNotificationPreferences),
         jsonEncode(prefs.toJson()));
+    // Sync across devices via the userProfile singleton (Plan 053 Phase 3.1).
+    _markDirty(SyncDomain.userProfile, 'default');
   }
 
   @override

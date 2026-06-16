@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intermittent_fasting/services/local_storage_service.dart';
+import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/models/activity_log.dart';
 import 'package:intermittent_fasting/models/activity_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
@@ -8,6 +9,7 @@ import 'package:intermittent_fasting/models/weight_entry.dart';
 import 'package:intermittent_fasting/models/body_measurement_entry.dart';
 import 'package:intermittent_fasting/models/sync_queue_entry.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
+import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/food_feedback.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
@@ -138,6 +140,17 @@ void main() {
       final queue = SyncQueue();
       svc.setSyncQueue(queue);
       await svc.saveMeasurementUnit(MeasurementUnit.imperial);
+      expect(
+        queue.entries.any((e) => e.domain == SyncDomain.userProfile),
+        true,
+      );
+    });
+
+    test('notification preferences mark userProfile dirty for sync (Plan 053)',
+        () async {
+      final queue = SyncQueue();
+      svc.setSyncQueue(queue);
+      await svc.saveNotificationPreferences(NotificationPreferences.defaults());
       expect(
         queue.entries.any((e) => e.domain == SyncDomain.userProfile),
         true,
@@ -288,6 +301,55 @@ void main() {
       final loaded = await svc.loadUserStats();
       expect(loaded.level, 1,
           reason: 'explicit reset is destructive by design');
+    });
+  });
+
+  // ── Local backup export/import (Plan 053 Phase 0.5) ───────────────────────────
+
+  group('StorageService — local backup export/import', () {
+    test('hasUserData: false for a fresh user, true after a save', () async {
+      await svc.setUserId('fresh-user');
+      expect(await svc.hasUserData(), false);
+      await svc.saveActivityStreak(1);
+      expect(await svc.hasUserData(), true);
+    });
+
+    test('exportUserData captures user data but excludes sync bookkeeping',
+        () async {
+      await svc.setUserId('user-a');
+      await svc
+          .saveUserStats(UserStats.initial().copyWith(level: 4, currentXp: 88));
+      await svc.saveActivityStreak(5);
+      // Sync-internal keys live under the same scope but must NOT be backed up.
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('u/user-a/syncQueue', '[]');
+      await prefs.setBool('u/user-a/sync_initial_push_done_v2', true);
+
+      final export = await svc.exportUserData();
+      expect(export.containsKey(StorageService.keyUserStats), true);
+      expect(export.containsKey(StorageService.keyActivityStreak), true);
+      expect(export.containsKey('syncQueue'), false);
+      expect(export.containsKey('sync_initial_push_done_v2'), false);
+    });
+
+    test('export → wipe → import round-trips user data (recovery path)',
+        () async {
+      await svc.setUserId('user-a');
+      await svc.saveUserStats(
+          UserStats.initial().copyWith(level: 9, currentXp: 200));
+      await svc.saveActivityStreak(7);
+      final export = await svc.exportUserData();
+
+      await svc.clearUserData(); // simulate prefs wiped
+      await svc.setUserId('user-a');
+      expect(await svc.hasUserData(), false);
+
+      await svc.importUserData(export); // restore from backup snapshot
+      expect(await svc.hasUserData(), true);
+      final stats = await svc.loadUserStats();
+      expect(stats.level, 9);
+      expect(stats.currentXp, 200);
+      expect(await svc.loadActivityStreak(), 7);
     });
   });
 }

@@ -17,6 +17,7 @@ import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../presenters/treasury_history_presenter.dart';
 import '../services/auth_service.dart';
+import '../services/backup_service.dart';
 import '../services/food_db_service.dart';
 import '../services/health_service.dart';
 import '../services/cloud_ai_coach_service.dart';
@@ -53,6 +54,7 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final AuthService _authService;
   late final LocalStorageService _storage;
+  late final BackupService _backup;
   late final StatsPresenter _statsPresenter;
   late final FastingPresenter _fastingPresenter;
   late final QuestPresenter _questPresenter;
@@ -85,6 +87,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     super.initState();
     _authService = AuthService();
     _storage = LocalStorageService();
+    _backup = BackupService();
     _syncQueue = SyncQueue();
     _statsPresenter = StatsPresenter(_storage);
     _fastingPresenter = FastingPresenter(
@@ -230,6 +233,20 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _currentUserId = userId;
     // Await migration so scoped keys are populated before presenters reload.
     await _storage.setUserId(userId);
+
+    // Restore-on-empty (Plan 053 Phase 0.5): if this device has no local data
+    // for the user but an on-device backup.json exists, seed local from it
+    // BEFORE reloading/syncing. The restore writes raw prefs (no dirty mark, no
+    // sync-timestamp bump), so a newer cloud row still wins on the pull below.
+    if (!await _storage.hasUserData()) {
+      final backup = await _backup.readBackup(userId);
+      if (backup != null && backup.isNotEmpty) {
+        await _storage.importUserData(backup);
+        debugPrint(
+            'AppShell: restored ${backup.length} keys from local backup');
+      }
+    }
+
     // Reload all presenters from the now-correct scoped namespace.
     // This covers the startup race where constructors read bare keys before
     // the user namespace was known, as well as user-switch scenarios.
@@ -373,6 +390,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
       _ledgerPresenter.notifyAppPaused();
+      _writeLocalBackup();
     }
     if (state == AppLifecycleState.resumed) {
       _ledgerPresenter.notifyAppResumed();
@@ -383,6 +401,17 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // then refresh the widgets.
       _widgetBridge?.drainPendingActions();
     }
+  }
+
+  /// Writes an on-device backup of all local user data (Plan 053 Phase 0.5).
+  /// Fire-and-forget on app pause — [BackupService] never throws and no-ops on
+  /// web. The backup survives sign-out/detach and is the source for the
+  /// restore-on-empty path in [_initSync].
+  Future<void> _writeLocalBackup() async {
+    final userId = _currentUserId;
+    if (userId == null) return;
+    final data = await _storage.exportUserData();
+    await _backup.writeBackup(userId, data);
   }
 
   @override
