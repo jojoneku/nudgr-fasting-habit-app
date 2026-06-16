@@ -24,6 +24,7 @@ import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
+import '../services/snapshot_service.dart';
 import '../services/remote_secrets_service.dart';
 import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
@@ -76,6 +77,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   SyncQueue? _syncQueue;
+  SnapshotService? _snapshots;
   NutritionPresenter? _nutritionPresenter;
   String? _currentUserId;
   WidgetBridgeService? _widgetBridge;
@@ -275,6 +277,15 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // Flush queued offline changes, then do the once-per-device initial push.
       await _syncService!.pushPending();
       await _syncService!.pushAll();
+      // Durable backup: write a daily immutable cloud snapshot (Plan 053 Phase
+      // 3.5). Fire-and-forget — it's 24h-throttled and never throws. Inert until
+      // the `backups` migration is applied.
+      _snapshots = SnapshotService(
+        supabase: Supabase.instance.client,
+        storage: _storage,
+        userId: userId,
+      );
+      unawaited(_snapshots!.writeSnapshotIfDue());
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('AppShell: _initSync failed for $userId: $e');
