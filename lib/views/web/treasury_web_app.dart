@@ -171,7 +171,11 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // flushes anything queued locally.
     if (state == AppLifecycleState.resumed) {
       _syncService?.pushPending();
-      _syncService?.pullIfStale();
+      // Tighten the staleness window on web (Plan 053 Phase 3.3): the 5-minute
+      // default meant refocusing the tab within 5 min of the last pull showed
+      // stale data (e.g. an edit just made on the phone). 30s makes a refocus
+      // reliably reflect recent cross-device changes without hammering the API.
+      _syncService?.pullIfStale(staleness: const Duration(seconds: 30));
     }
   }
 
