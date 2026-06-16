@@ -12,6 +12,11 @@ enum BillType {
 // Used by both Bill and Receivable.
 enum RecurrenceType { monthly, weekly, yearly, custom }
 
+/// copyWith sentinel: lets a caller distinguish "leave this nullable field as
+/// is" (omit the argument) from "clear it" (pass an explicit `null`). Without
+/// this, `field ?? this.field` can never null a value back out.
+const Object _kUnset = Object();
+
 class Bill {
   final String id;
   final String name;
@@ -106,7 +111,7 @@ class Bill {
     int? dueDay,
     String? month,
     String? categoryId,
-    String? accountId,
+    Object? accountId = _kUnset,
     String? paymentNote,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
@@ -125,7 +130,8 @@ class Bill {
       dueDay: dueDay ?? this.dueDay,
       month: month ?? this.month,
       categoryId: categoryId ?? this.categoryId,
-      accountId: accountId ?? this.accountId,
+      accountId:
+          identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       paymentNote: paymentNote ?? this.paymentNote,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
