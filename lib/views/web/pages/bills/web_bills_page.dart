@@ -31,22 +31,9 @@ class WebBillsPage extends StatelessWidget {
       // Installments surface as bills only via the presenter's auto-generated
       // statements, but we still listen so counts stay live if it reloads.
       listenable: Listenable.merge([presenter, installmentPresenter]),
-      builder: (context, _) => LayoutBuilder(
-        builder: (context, constraints) {
-          final twoColumn = constraints.maxWidth >= 900;
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(WebInsets.xxl),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: double.infinity),
-                child: _BillsBody(
-                  presenter: presenter,
-                  twoColumn: twoColumn,
-                ),
-              ),
-            ),
-          );
-        },
+      builder: (context, _) => SingleChildScrollView(
+        padding: const EdgeInsets.all(WebInsets.xxl),
+        child: _BillsBody(presenter: presenter),
       ),
     );
   }
@@ -56,9 +43,8 @@ class WebBillsPage extends StatelessWidget {
 
 class _BillsBody extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
-  final bool twoColumn;
 
-  const _BillsBody({required this.presenter, required this.twoColumn});
+  const _BillsBody({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -80,9 +66,14 @@ class _BillsBody extends StatelessWidget {
 
     final children = <Widget>[
       _Header(
+        monthLabel: monthLabel(presenter.selectedMonth),
         subtitle:
             '${monthLabel(presenter.selectedMonth)} · ${unpaid.length} bills due, ${pendingReceivables.length} to receive',
         onAddBill: () => _onAddBill(context),
+        onPrevMonth: () =>
+            presenter.setMonth(previousMonth(presenter.selectedMonth)),
+        onNextMonth: () =>
+            presenter.setMonth(nextMonth(presenter.selectedMonth)),
       ),
       const SizedBox(height: WebInsets.xl),
       _StatStrip(
@@ -107,25 +98,11 @@ class _BillsBody extends StatelessWidget {
       pendingTotal: receiveTotal,
     );
 
-    if (twoColumn) {
-      children.add(
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(flex: 3, child: upcomingCard),
-              const SizedBox(width: WebInsets.xl),
-              Expanded(flex: 2, child: receivablesCard),
-            ],
-          ),
-        ),
-      );
-    } else {
-      children
-        ..add(upcomingCard)
-        ..add(const SizedBox(height: WebInsets.xl))
-        ..add(receivablesCard);
-    }
+    // One card per row, full-width (Upcoming → Receivables → Paid).
+    children
+      ..add(upcomingCard)
+      ..add(const SizedBox(height: WebInsets.xl))
+      ..add(receivablesCard);
 
     if (paid.isNotEmpty) {
       children
@@ -365,20 +342,40 @@ String _billTypeFormLabel(BillType type) => switch (type) {
 // ─── Header ─────────────────────────────────────────────────────────────────
 
 class _Header extends StatelessWidget {
+  final String monthLabel;
   final String subtitle;
   final VoidCallback onAddBill;
+  final VoidCallback onPrevMonth;
+  final VoidCallback onNextMonth;
 
-  const _Header({required this.subtitle, required this.onAddBill});
+  const _Header({
+    required this.monthLabel,
+    required this.subtitle,
+    required this.onAddBill,
+    required this.onPrevMonth,
+    required this.onNextMonth,
+  });
 
   @override
   Widget build(BuildContext context) {
     return WebSectionHeader(
       title: 'Bills & Receivables',
       subtitle: subtitle,
-      trailing: FilledButton.icon(
-        onPressed: onAddBill,
-        icon: const Icon(Icons.add, size: 18),
-        label: const Text('Add Bill'),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          WebMonthStepper(
+            label: monthLabel,
+            onPrev: onPrevMonth,
+            onNext: onNextMonth,
+          ),
+          const SizedBox(width: WebInsets.sm),
+          FilledButton.icon(
+            onPressed: onAddBill,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add Bill'),
+          ),
+        ],
       ),
     );
   }
@@ -469,7 +466,10 @@ class _UpcomingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return WebCard(
+      accentColor: cs.error,
       title: 'Upcoming',
       description:
           '${formatPeso(dueTotal)} across ${unpaid.length} ${unpaid.length == 1 ? 'bill' : 'bills'}',
@@ -483,6 +483,32 @@ class _UpcomingCard extends StatelessWidget {
                     bill: unpaid[i],
                     showDivider: i > 0,
                   ),
+                const SizedBox(height: WebInsets.md),
+                Container(
+                  padding: const EdgeInsets.only(top: WebInsets.md),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                          color: cs.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('DUE',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.7,
+                          )),
+                      Text(formatPeso(dueTotal),
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: cs.error,
+                          )),
+                    ],
+                  ),
+                ),
               ],
             ),
     );
@@ -677,6 +703,7 @@ class _ReceivablesCard extends StatelessWidget {
     final pending = receivables.where((r) => !r.isReceived).toList();
 
     return WebCard(
+      accentColor: Theme.of(context).colorScheme.tertiary,
       title: 'Receivables',
       description: 'Money owed to you',
       child: receivables.isEmpty

@@ -7,6 +7,7 @@ export 'web_badge.dart';
 export 'web_card.dart';
 export 'web_charts.dart';
 export 'web_data_table.dart';
+export 'web_month_stepper.dart';
 export 'web_progress.dart';
 export 'web_section.dart';
 export 'web_shell.dart';
