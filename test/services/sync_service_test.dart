@@ -106,6 +106,30 @@ void main() {
       // Entry was not removed because the push failed
       expect(service.pendingCount, 1);
     });
+
+    test('records a failure count and keeps the entry (skip-and-continue)',
+        () async {
+      queue.markDirty(SyncDomain.fastingState, 'default');
+
+      await service.pushPending();
+
+      expect(service.pendingCount, 1, reason: 'failed entry stays queued');
+      expect(service.failureCountFor(SyncDomain.fastingState, 'default'), 1);
+    });
+
+    test('quarantines a repeatedly-failing entry with backoff (does not spin)',
+        () async {
+      queue.markDirty(SyncDomain.fastingState, 'default');
+
+      await service.pushPending(); // attempt 1 → fail, sets a backoff window
+      await service.pushPending(); // immediate retry → within backoff, skipped
+
+      // Still only one recorded failure: the second pass skipped the entry
+      // rather than re-attempting (which is what prevents a poison entry from
+      // spinning the loop or blocking others).
+      expect(service.failureCountFor(SyncDomain.fastingState, 'default'), 1);
+      expect(service.pendingCount, 1);
+    });
   });
 
   // ── pushAll ────────────────────────────────────────────────────────────────
