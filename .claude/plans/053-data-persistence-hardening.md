@@ -77,6 +77,7 @@ The exact trigger of *this* incident can't be 100% pinned without device logs/DB
 - **1.3 User-scope the initial-push flag.** `u/$userId/sync_initial_push_done_v2`; remove the bare key. Clear it in `clearUserData()` (for the rare explicit reset path).
 - **1.4 Clear timestamps on wipe + defensive seeding.** Explicitly remove the persisted `syncTimestamps` key on any real reset, and when setting up a fresh scoped namespace that already has local data, seed timestamps to `now` so stale cloud can't blindly win.
 - **Tests:** empty push rejected when cloud populated; empty pull rejected when local populated; flag scoped + cleared.
+- **STATUS: ✅ DONE — PR B (branch `fix/sync-overwrite-guards`).** Added `_wouldClobberRemote` + per-domain emptiness predicates (`questsDataEmpty`/`fastingDataEmpty`/`profileDataEmpty`/`collectionsDataEmpty`, `@visibleForTesting`); all four singleton pushes skip when local-empty-and-cloud-populated; all four pulls skip when remote-empty-and-local-populated; initial-push flag scoped under `u/$id/`. Predicate unit tests added; full guard wiring lands in Phase 4 harness.
 
 ### Phase 2 — Sync engine robustness
 - **2.1 `pushPending` skip-and-continue.** Don't `break` on first error: process all entries, keep failures queued, quarantine repeat-failers (failure count + backoff) so one poison entry can't block the rest.
