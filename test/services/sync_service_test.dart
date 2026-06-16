@@ -14,7 +14,8 @@ class _FakeSupabaseClient extends Fake implements SupabaseClient {}
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const _testUserId = 'test-user-id';
-const _pushDoneKey = 'sync_initial_push_done_v2_$_testUserId';
+// Scoped under the user prefix (Plan 053 Phase 1) so an explicit reset wipes it.
+const _pushDoneKey = 'u/$_testUserId/sync_initial_push_done_v2';
 
 SyncService _buildService(SyncQueue queue, LocalStorageService storage) =>
     SyncService(
@@ -205,6 +206,91 @@ void main() {
   group('lastSyncedAt', () {
     test('is null until a successful push completes', () {
       expect(service.lastSyncedAt, isNull);
+    });
+  });
+
+  // ── Empty-overwrite predicates (Plan 053 Phase 1) ────────────────────────────
+  // These define "what counts as empty" for the guards that stop an empty/stale
+  // singleton from clobbering populated data — the failure mode behind the
+  // `quests: []` clobber. The full guard wiring (read-before-write, pull skip)
+  // is exercised end-to-end by the Phase 4 fake-Supabase harness.
+
+  group('singleton emptiness predicates', () {
+    test('questsDataEmpty: true when both lists empty/absent, false otherwise',
+        () {
+      expect(SyncService.questsDataEmpty({'quests': [], 'achievements': []}),
+          true);
+      expect(SyncService.questsDataEmpty({}), true);
+      expect(
+          SyncService.questsDataEmpty({
+            'quests': [
+              {'id': 'q1'}
+            ]
+          }),
+          false);
+      expect(
+          SyncService.questsDataEmpty({
+            'achievements': [
+              {'id': 'a1'}
+            ]
+          }),
+          false);
+    });
+
+    test('fastingDataEmpty: empty only when no history AND not fasting', () {
+      expect(SyncService.fastingDataEmpty({'history': [], 'isFasting': false}),
+          true);
+      expect(SyncService.fastingDataEmpty({'isFasting': true}), false,
+          reason: 'an active fast is meaningful state');
+      expect(
+          SyncService.fastingDataEmpty({
+            'history': [
+              {'id': 'f1'}
+            ]
+          }),
+          false);
+    });
+
+    test('profileDataEmpty: empty only when no weight/body AND fresh stats',
+        () {
+      expect(
+          SyncService.profileDataEmpty({
+            'weightLog': [],
+            'bodyMeasurements': [],
+            'userStats': {'level': 1, 'currentXp': 0},
+          }),
+          true);
+      expect(
+          SyncService.profileDataEmpty({
+            'weightLog': [
+              {'id': 'w1'}
+            ],
+          }),
+          false);
+      expect(
+          SyncService.profileDataEmpty({
+            'userStats': {'level': 7, 'currentXp': 300},
+          }),
+          false,
+          reason: 'a leveled-up character is meaningful state');
+    });
+
+    test('collectionsDataEmpty: true only when every collection is empty', () {
+      expect(SyncService.collectionsDataEmpty({}), true);
+      expect(
+          SyncService.collectionsDataEmpty({
+            'routines': [
+              {'id': 'r1'}
+            ]
+          }),
+          false);
+      expect(
+          SyncService.collectionsDataEmpty({
+            'groceryTripHistory': [
+              {'id': 't1'}
+            ]
+          }),
+          false);
     });
   });
 }
