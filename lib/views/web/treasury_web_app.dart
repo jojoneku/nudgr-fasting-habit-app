@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -13,6 +15,7 @@ import '../../presenters/treasury_dashboard_presenter.dart';
 import '../../presenters/treasury_history_presenter.dart';
 import '../../services/auth_service.dart';
 import '../../services/local_storage_service.dart';
+import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
 import '../treasury/treasury_module_view.dart';
@@ -82,6 +85,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final AuthPresenter _authPresenter;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
+  SnapshotService? _snapshots;
   String? _currentUserId;
   bool _booting = true;
 
@@ -205,6 +209,15 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       await _syncService!.pullAll();
       await _syncService!.pushPending();
       await _syncService!.pushAll();
+      // Durable backup on web too (Plan 053 Phase 3.5): write a daily immutable
+      // cloud snapshot. Fire-and-forget — 24h-throttled, never throws, inert
+      // until the `backups` migration is applied.
+      _snapshots = SnapshotService(
+        supabase: Supabase.instance.client,
+        storage: _storage,
+        userId: userId,
+      );
+      unawaited(_snapshots!.writeSnapshotIfDue());
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('TreasuryWebShell: _initSync failed for $userId: $e');

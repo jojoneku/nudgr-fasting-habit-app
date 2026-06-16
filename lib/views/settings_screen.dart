@@ -10,11 +10,13 @@ import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/update_presenter.dart';
+import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_spacing.dart';
 import 'auth/login_view.dart';
 import 'settings/notification_settings_sheet.dart';
+import 'settings/restore_backup_sheet.dart';
 import 'stats_view.dart';
 import 'widgets/system/system.dart';
 
@@ -31,6 +33,7 @@ class SettingsScreen extends StatelessWidget {
     this.updatePresenter,
     this.storageService,
     this.notificationService,
+    this.localStorage,
   });
 
   final FastingPresenter fastingPresenter;
@@ -43,6 +46,10 @@ class SettingsScreen extends StatelessWidget {
   final UpdatePresenter? updatePresenter;
   final StorageService? storageService;
   final NotificationService? notificationService;
+
+  /// Concrete storage for the cloud-backup restore flow (needs
+  /// export/import helpers not on the abstract [StorageService]).
+  final LocalStorageService? localStorage;
 
   @override
   Widget build(BuildContext context) {
@@ -515,6 +522,24 @@ class SettingsScreen extends StatelessWidget {
             );
           },
         ),
+        if (authPresenter.isSignedIn &&
+            authPresenter.userId != null &&
+            localStorage != null)
+          AppListTile(
+            insetGrouped: true,
+            leading: AppIconBadge(
+              icon: Icons.history,
+              color: theme.colorScheme.tertiary,
+            ),
+            title: const Text('Restore from cloud backup'),
+            subtitle: const Text('Roll back to an earlier daily snapshot'),
+            trailing: const Icon(Icons.chevron_right, size: 18),
+            onTap: () => showRestoreBackupSheet(
+              context,
+              storage: localStorage!,
+              userId: authPresenter.userId!,
+            ),
+          ),
         AppListTile(
           insetGrouped: true,
           leading: AppIconBadge(
