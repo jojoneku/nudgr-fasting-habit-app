@@ -2,6 +2,11 @@ import 'bill.dart' show RecurrenceType;
 
 enum ReceivableType { salary, reimbursement, business, other }
 
+/// copyWith sentinel — see the note in `bill.dart`. Lets [Receivable.copyWith]
+/// clear the nullable [accountId] with an explicit `null` while omitting it
+/// leaves the current value untouched.
+const Object _kUnset = Object();
+
 class Receivable {
   final String id;
   final String name;
@@ -102,7 +107,7 @@ class Receivable {
     DateTime? receivedDate,
     double? receivedAmount,
     String? transactionId,
-    String? accountId,
+    Object? accountId = _kUnset,
     DateTime? updatedAt,
   }) {
     return Receivable(
@@ -120,7 +125,8 @@ class Receivable {
       receivedDate: receivedDate ?? this.receivedDate,
       receivedAmount: receivedAmount ?? this.receivedAmount,
       transactionId: transactionId ?? this.transactionId,
-      accountId: accountId ?? this.accountId,
+      accountId:
+          identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

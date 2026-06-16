@@ -318,10 +318,12 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                             : null,
                     decoration: const InputDecoration(
                         labelText: 'Payment account (optional)'),
-                    items: accounts
-                        .map((a) =>
-                            DropdownMenuItem(value: a.id, child: Text(a.name)))
-                        .toList(),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final a in accounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
                     onChanged: (v) => setState(() => _selectedAccountId = v),
                   ),
                 ],
@@ -334,10 +336,12 @@ class _AddBillDialogState extends State<_AddBillDialog> {
                             : null,
                     decoration:
                         const InputDecoration(labelText: 'Category (optional)'),
-                    items: categories
-                        .map((c) =>
-                            DropdownMenuItem(value: c.id, child: Text(c.name)))
-                        .toList(),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final c in categories)
+                        DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ],
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
                   ),
                 ],
@@ -580,10 +584,12 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                             : null,
                     decoration: const InputDecoration(
                         labelText: 'Deposit account (optional)'),
-                    items: accounts
-                        .map((a) =>
-                            DropdownMenuItem(value: a.id, child: Text(a.name)))
-                        .toList(),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final a in accounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
                     onChanged: (v) => setState(() => _selectedAccountId = v),
                   ),
                 ],
@@ -596,10 +602,12 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                             : null,
                     decoration:
                         const InputDecoration(labelText: 'Category (optional)'),
-                    items: categories
-                        .map((c) =>
-                            DropdownMenuItem(value: c.id, child: Text(c.name)))
-                        .toList(),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final c in categories)
+                        DropdownMenuItem(value: c.id, child: Text(c.name)),
+                    ],
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
                   ),
                 ],
