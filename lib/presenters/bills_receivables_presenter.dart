@@ -211,45 +211,58 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _notifyDependents();
   }
 
+  /// Marks [billId] paid. When [recordInLedger] is true (default) this also
+  /// debits [accountId] via a ledger transaction (or a transfer for credit-card
+  /// statements). Pass `recordInLedger: false` when the user already logged the
+  /// expense in the ledger manually — the bill is still flagged paid, but no
+  /// transaction is created and no account is touched (so [accountId] is
+  /// optional and ignored in that case).
   Future<void> markBillPaid(
     String billId, {
     required double paidAmount,
-    required String accountId,
+    String? accountId,
     DateTime? paidDate,
+    bool recordInLedger = true,
   }) async {
     final bill = _allBills.firstWhere((b) => b.id == billId);
     final date = paidDate ?? DateTime.now();
 
-    // Paying a credit-card statement is a *transfer*: cash leaves the funding
-    // account and the card's owed balance goes down. A plain outflow would
-    // shrink cash without clearing the debt, so route these through addTransfer.
-    final card =
-        _ledger.accounts.where((a) => a.id == bill.accountId).firstOrNull;
     String? txnId;
-    if (bill.billType == BillType.creditCard &&
-        card != null &&
-        card.isLiability &&
-        accountId != bill.accountId) {
-      await _ledger.addTransfer(
-        fromAccountId: accountId,
-        toAccountId: bill.accountId!,
-        amount: paidAmount,
-        categoryId: bill.categoryId,
-        description: bill.name,
-        date: date,
-      );
-    } else {
-      final txn = _buildOutflowTxn(
-        id: _generateId(),
-        amount: paidAmount,
-        accountId: accountId,
-        categoryId: bill.categoryId,
-        description: bill.name,
-        date: date,
-        billId: bill.id,
-      );
-      await _ledger.addTransaction(txn);
-      txnId = txn.id;
+    if (recordInLedger) {
+      assert(accountId != null,
+          'accountId is required when recording the payment in the ledger');
+      final acct = accountId!;
+      // Paying a credit-card statement is a *transfer*: cash leaves the funding
+      // account and the card's owed balance goes down. A plain outflow would
+      // shrink cash without clearing the debt, so route these through
+      // addTransfer.
+      final card =
+          _ledger.accounts.where((a) => a.id == bill.accountId).firstOrNull;
+      if (bill.billType == BillType.creditCard &&
+          card != null &&
+          card.isLiability &&
+          acct != bill.accountId) {
+        await _ledger.addTransfer(
+          fromAccountId: acct,
+          toAccountId: bill.accountId!,
+          amount: paidAmount,
+          categoryId: bill.categoryId,
+          description: bill.name,
+          date: date,
+        );
+      } else {
+        final txn = _buildOutflowTxn(
+          id: _generateId(),
+          amount: paidAmount,
+          accountId: acct,
+          categoryId: bill.categoryId,
+          description: bill.name,
+          date: date,
+          billId: bill.id,
+        );
+        await _ledger.addTransaction(txn);
+        txnId = txn.id;
+      }
     }
     _updateBill(bill.copyWith(
       isPaid: true,
@@ -288,28 +301,41 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _notifyDependents();
   }
 
+  /// Marks [receivableId] received. When [recordInLedger] is true (default) this
+  /// also credits [accountId] via a ledger inflow. Pass `recordInLedger: false`
+  /// when the user already logged the income in the ledger manually — the
+  /// receivable is still flagged received, but no transaction is created and no
+  /// account is touched (so [accountId] is optional and ignored in that case).
   Future<void> markReceivableReceived(
     String receivableId, {
     required double receivedAmount,
-    required String accountId,
+    String? accountId,
     DateTime? receivedDate,
+    bool recordInLedger = true,
   }) async {
     final rec = _allReceivables.firstWhere((r) => r.id == receivableId);
-    final txn = _buildInflowTxn(
-      id: _generateId(),
-      amount: receivedAmount,
-      accountId: accountId,
-      categoryId: rec.categoryId,
-      description: rec.name,
-      date: receivedDate ?? DateTime.now(),
-      receivableId: rec.id,
-    );
-    await _ledger.addTransaction(txn);
+    final date = receivedDate ?? DateTime.now();
+    String? txnId;
+    if (recordInLedger) {
+      assert(accountId != null,
+          'accountId is required when recording the receipt in the ledger');
+      final txn = _buildInflowTxn(
+        id: _generateId(),
+        amount: receivedAmount,
+        accountId: accountId!,
+        categoryId: rec.categoryId,
+        description: rec.name,
+        date: date,
+        receivableId: rec.id,
+      );
+      await _ledger.addTransaction(txn);
+      txnId = txn.id;
+    }
     _updateReceivable(rec.copyWith(
       isReceived: true,
-      receivedDate: receivedDate ?? DateTime.now(),
+      receivedDate: date,
       receivedAmount: receivedAmount,
-      transactionId: txn.id,
+      transactionId: txnId,
     ));
     safeNotify();
     await _storage.saveReceivables(_allReceivables);

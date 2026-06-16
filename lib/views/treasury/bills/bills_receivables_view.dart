@@ -686,6 +686,9 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
   String? _selectedAccountId;
   DateTime _paidDate = DateTime.now();
   bool _isSubmitting = false;
+  // When true the user already logged this expense in the ledger, so marking
+  // paid should NOT create a transaction or debit an account.
+  bool _alreadyInLedger = false;
 
   @override
   void initState() {
@@ -716,14 +719,16 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
-    if (_selectedAccountId == null) return;
+    // An account is only needed when we're recording the payment in the ledger.
+    if (!_alreadyInLedger && _selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
     try {
       await widget.presenter.markBillPaid(
         widget.bill.id,
         paidAmount: amount,
-        accountId: _selectedAccountId!,
+        accountId: _alreadyInLedger ? null : _selectedAccountId,
         paidDate: _paidDate,
+        recordInLedger: !_alreadyInLedger,
       );
       if (mounted) Navigator.pop(context);
     } finally {
@@ -757,7 +762,18 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
             ),
-            if (widget.presenter.accounts.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            CheckboxListTile(
+              value: _alreadyInLedger,
+              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Already added to ledger'),
+              subtitle: const Text(
+                  "Just mark it paid — don't record a transaction or debit an account."),
+            ),
+            if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,
@@ -824,6 +840,9 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   String? _selectedAccountId;
   DateTime _receivedDate = DateTime.now();
   bool _isSubmitting = false;
+  // When true the user already logged this income in the ledger, so marking
+  // received should NOT create a transaction or credit an account.
+  bool _alreadyInLedger = false;
 
   @override
   void initState() {
@@ -859,14 +878,16 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
-    if (_selectedAccountId == null) return;
+    // An account is only needed when we're recording the receipt in the ledger.
+    if (!_alreadyInLedger && _selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
     try {
       await widget.presenter.markReceivableReceived(
         widget.receivable.id,
         receivedAmount: amount,
-        accountId: _selectedAccountId!,
+        accountId: _alreadyInLedger ? null : _selectedAccountId,
         receivedDate: _receivedDate,
+        recordInLedger: !_alreadyInLedger,
       );
       if (mounted) Navigator.pop(context);
     } finally {
@@ -900,7 +921,18 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
             ),
-            if (widget.presenter.accounts.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            CheckboxListTile(
+              value: _alreadyInLedger,
+              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              dense: true,
+              title: const Text('Already added to ledger'),
+              subtitle: const Text(
+                  "Just mark it received — don't record a transaction or credit an account."),
+            ),
+            if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 value: _selectedAccountId,

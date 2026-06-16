@@ -984,44 +984,71 @@ class _BillRow extends StatelessWidget {
     final accountId =
         bill.accountId ?? (fallback.isNotEmpty ? fallback.first.id : null);
     final messenger = ScaffoldMessenger.of(context);
-    if (accountId == null) {
+    final accountName = _accountName(accountId) ?? 'your account';
+
+    // Marking paid moves real money out of an account and can't be undone in
+    // one click — confirm, and show exactly which account is debited (it may be
+    // a silent fallback the user never picked). (Plan 052 U1/U2) The "already
+    // in ledger" toggle skips recording entirely for expenses logged manually.
+    var alreadyInLedger = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocalState) => AlertDialog(
+          title: const Text('Mark bill as paid?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(alreadyInLedger
+                  ? 'Mark "${bill.name}" (${formatPeso(bill.amount)}) as paid '
+                      'without recording a transaction.'
+                  : 'Pay ${formatPeso(bill.amount)} for "${bill.name}" from '
+                      '$accountName? This debits the account balance.'),
+              const SizedBox(height: 4),
+              CheckboxListTile(
+                value: alreadyInLedger,
+                onChanged: (v) =>
+                    setLocalState(() => alreadyInLedger = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Already added to ledger'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Mark paid')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
+    // An account is only required when we're actually recording the payment.
+    if (!alreadyInLedger && accountId == null) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Add an account before marking paid.')),
       );
       return;
     }
 
-    // Marking paid moves real money out of an account and can't be undone in
-    // one click — confirm, and show exactly which account is debited (it may be
-    // a silent fallback the user never picked). (Plan 052 U1/U2)
-    final accountName = _accountName(accountId) ?? 'your account';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mark bill as paid?'),
-        content: Text('Pay ${formatPeso(bill.amount)} for "${bill.name}" from '
-            '$accountName? This debits the account balance.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Mark paid')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
     await presenter.markBillPaid(
       bill.id,
       paidAmount: bill.amount,
-      accountId: accountId,
+      accountId: alreadyInLedger ? null : accountId,
+      recordInLedger: !alreadyInLedger,
     );
     messenger.showSnackBar(
       SnackBar(
-          content: Text(
-              'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $accountName.')),
+          content: Text(alreadyInLedger
+              ? 'Marked "${bill.name}" paid.'
+              : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $accountName.')),
     );
   }
 }
@@ -1215,7 +1242,51 @@ class _ReceivableRow extends StatelessWidget {
     final accountId = receivable.accountId ??
         (fallback.isNotEmpty ? fallback.first.id : null);
     final messenger = ScaffoldMessenger.of(context);
-    if (accountId == null) {
+    final accountName = presenter.accountName(accountId) ?? 'your account';
+
+    var alreadyInLedger = false;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocalState) => AlertDialog(
+          title: const Text('Mark as received?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(alreadyInLedger
+                  ? 'Mark "${receivable.name}" (${formatPeso(receivable.amount)}) '
+                      'as received without recording a transaction.'
+                  : 'Deposit ${formatPeso(receivable.amount)} from '
+                      '"${receivable.name}" into $accountName? This credits the '
+                      'account balance.'),
+              const SizedBox(height: 4),
+              CheckboxListTile(
+                value: alreadyInLedger,
+                onChanged: (v) =>
+                    setLocalState(() => alreadyInLedger = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                title: const Text('Already added to ledger'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Mark received')),
+          ],
+        ),
+      ),
+    );
+    if (confirmed != true) return;
+
+    // An account is only required when we're actually recording the receipt.
+    if (!alreadyInLedger && accountId == null) {
       messenger.showSnackBar(
         const SnackBar(
             content: Text('Add an account before marking received.')),
@@ -1223,35 +1294,17 @@ class _ReceivableRow extends StatelessWidget {
       return;
     }
 
-    final accountName = presenter.accountName(accountId) ?? 'your account';
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Mark as received?'),
-        content: Text(
-            'Deposit ${formatPeso(receivable.amount)} from "${receivable.name}" '
-            'into $accountName? This credits the account balance.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Mark received')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-
     await presenter.markReceivableReceived(
       receivable.id,
       receivedAmount: receivable.amount,
-      accountId: accountId,
+      accountId: alreadyInLedger ? null : accountId,
+      recordInLedger: !alreadyInLedger,
     );
     messenger.showSnackBar(
       SnackBar(
-          content: Text(
-              'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.')),
+          content: Text(alreadyInLedger
+              ? 'Marked "${receivable.name}" received.'
+              : 'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.')),
     );
   }
 }

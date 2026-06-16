@@ -469,6 +469,56 @@ void main() {
       verify(mockStats.addXp(50)).called(1);
     });
 
+    test(
+        'markBillPaid with recordInLedger:false flags paid without a transaction',
+        () async {
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            _bill(id: 'b1', amount: 500, isPaid: false, month: '2026-03'),
+          ]);
+      await presenter.load();
+      await presenter.setMonth('2026-03');
+      await _waitForLoad(ledger);
+
+      // User already logged this expense manually — skip the ledger entirely.
+      await presenter.markBillPaid('b1',
+          paidAmount: 500, recordInLedger: false);
+
+      final capturedBills =
+          verify(mockStorage.saveBills(captureAny)).captured.last as List<Bill>;
+      final paidBill = capturedBills.firstWhere((b) => b.id == 'b1');
+      expect(paidBill.isPaid, isTrue);
+      expect(paidBill.paidAmount, 500);
+      // No transaction created and nothing persisted to the ledger.
+      expect(paidBill.transactionId, isNull);
+      expect(ledger.allTransactions, isEmpty);
+      verifyNever(mockStorage.saveTransactions(any));
+    });
+
+    test(
+        'markReceivableReceived with recordInLedger:false flags received without a transaction',
+        () async {
+      when(mockStorage.loadReceivables()).thenAnswer((_) async => [
+            _receivable(
+                id: 'r1', amount: 400, isReceived: false, month: '2026-03'),
+          ]);
+      await presenter.load();
+      await presenter.setMonth('2026-03');
+      await _waitForLoad(ledger);
+
+      await presenter.markReceivableReceived('r1',
+          receivedAmount: 400, recordInLedger: false);
+
+      final captured = verify(mockStorage.saveReceivables(captureAny))
+          .captured
+          .last as List<Receivable>;
+      final received = captured.firstWhere((r) => r.id == 'r1');
+      expect(received.isReceived, isTrue);
+      expect(received.receivedAmount, 400);
+      expect(received.transactionId, isNull);
+      expect(ledger.allTransactions, isEmpty);
+      verifyNever(mockStorage.saveTransactions(any));
+    });
+
     test('addBill persists to storage', () async {
       await presenter.load();
       await presenter.setMonth('2026-03');
