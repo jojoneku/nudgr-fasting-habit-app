@@ -58,9 +58,10 @@ class _BillsBody extends StatelessWidget {
 
     final dueTotal = presenter.totalBillsPending;
     final paidTotal = presenter.totalBillsPaid;
-    // Outstanding = unpaid bills + unpaid budgeted expenses; previously this
-    // duplicated `totalBillsPending`, making the tile a copy of "Due". (C2)
-    final outstandingTotal = presenter.totalUnpaidObligations;
+    // All bills for the month (paid + unpaid). Budgeted expenses are NOT
+    // surfaced on this page — they're an obligation shown on the dashboard's
+    // "Current Obligations", so mixing them in here was confusing.
+    final monthTotal = presenter.totalBillsAmount;
     final receiveTotal =
         pendingReceivables.fold(0.0, (sum, r) => sum + r.amount);
 
@@ -79,7 +80,7 @@ class _BillsBody extends StatelessWidget {
       _StatStrip(
         dueTotal: dueTotal,
         paidTotal: paidTotal,
-        outstandingTotal: outstandingTotal,
+        monthTotal: monthTotal,
         receiveTotal: receiveTotal,
         unpaidCount: unpaid.length,
         paidCount: paid.length,
@@ -691,7 +692,7 @@ class _Header extends StatelessWidget {
 class _StatStrip extends StatelessWidget {
   final double dueTotal;
   final double paidTotal;
-  final double outstandingTotal;
+  final double monthTotal;
   final double receiveTotal;
   final int unpaidCount;
   final int paidCount;
@@ -700,7 +701,7 @@ class _StatStrip extends StatelessWidget {
   const _StatStrip({
     required this.dueTotal,
     required this.paidTotal,
-    required this.outstandingTotal,
+    required this.monthTotal,
     required this.receiveTotal,
     required this.unpaidCount,
     required this.paidCount,
@@ -726,9 +727,9 @@ class _StatStrip extends StatelessWidget {
         valueColor: cs.tertiary,
       ),
       WebStatTile(
-        label: 'Outstanding',
-        value: formatPeso(outstandingTotal),
-        sub: 'Unpaid bills + expenses',
+        label: 'Total This Month',
+        value: formatPeso(monthTotal),
+        sub: '${unpaidCount + paidCount} bills',
         icon: Icons.description_outlined,
       ),
       WebStatTile(

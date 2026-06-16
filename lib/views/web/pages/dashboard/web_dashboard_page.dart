@@ -88,7 +88,7 @@ class _PositionRow extends StatelessWidget {
       WebStatTile(
         label: 'Current Obligations',
         value: formatPeso(p.currentObligations),
-        sub: 'Bills + liabilities due',
+        sub: 'Unpaid bills this month',
         icon: Icons.receipt_long_outlined,
         valueColor: cs.error,
       ),
@@ -120,7 +120,6 @@ class _MonthEndOutlookRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final p = presenter;
-    final budgetSavingsDue = p.monthUnpaidBills + p.totalBudgetRemaining;
 
     final tiles = <Widget>[
       WebStatTile(
@@ -137,8 +136,8 @@ class _MonthEndOutlookRow extends StatelessWidget {
       ),
       WebStatTile(
         label: 'Budget / Savings Due',
-        value: formatPeso(budgetSavingsDue),
-        sub: 'Still to set aside',
+        value: formatPeso(p.budgetedExpensesRemaining),
+        sub: 'Set-asides still to fund',
         icon: Icons.savings_outlined,
       ),
       WebStatTile(
