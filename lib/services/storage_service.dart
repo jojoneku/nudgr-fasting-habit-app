@@ -55,6 +55,10 @@ abstract class StorageService {
   static const String keyProteinGoalCreditedDates =
       'nutrition.proteinGoalCreditedDates';
   static const String keyStreakMilestonePaid = 'nutrition.streakMilestonePaid';
+  // Budget-over-threshold warnings already shown, keyed "YYYY-MM/budgetId" so a
+  // warning fires once per month-crossing and survives app restarts (otherwise
+  // it re-fired on every cold reopen). Local-only — device UX state.
+  static const String keyWarnedBudgetKeys = 'finance.warnedBudgetKeys';
   static const String keyActivityLogs = 'activityLogs';
   static const String keyActivityGoals = 'activityGoals';
   static const String keyActivityGoalMetDate = 'activityGoalMetDate';
@@ -141,6 +145,8 @@ abstract class StorageService {
   Future<void> saveCalorieGoalCreditedDates(Set<String> dates);
   Future<Set<String>> loadProteinGoalCreditedDates();
   Future<void> saveProteinGoalCreditedDates(Set<String> dates);
+  Future<Set<String>> loadWarnedBudgetKeys();
+  Future<void> saveWarnedBudgetKeys(Set<String> keys);
   Future<int> loadStreakMilestonePaid();
   Future<void> saveStreakMilestonePaid(int milestone);
 
