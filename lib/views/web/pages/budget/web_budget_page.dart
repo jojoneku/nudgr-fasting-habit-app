@@ -146,6 +146,13 @@ class _BudgetBody extends StatelessWidget {
             subtitle:
                 '${monthLabel(presenter.selectedMonth)} · set your allocations · '
                 '${usedPct.toStringAsFixed(1)}% of ${formatPeso(allocated)} used',
+            trailing: WebMonthStepper(
+              label: monthLabel(presenter.selectedMonth),
+              onPrev: () =>
+                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
+              onNext: () =>
+                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
+            ),
           ),
           _StatStrip(
             allocated: allocated,

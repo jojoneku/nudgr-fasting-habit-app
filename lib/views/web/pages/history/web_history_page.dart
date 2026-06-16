@@ -254,25 +254,10 @@ class _HistoryBody extends StatelessWidget {
         ],
         const SizedBox(height: WebInsets.xl),
 
-        // ── Monthly summary + spending by category (side by side) ───────────
-        if (isWide)
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                    child: _monthlyTableCard(
-                        context, rows, neutralValue, upTone, danger)),
-                const SizedBox(width: WebInsets.xl),
-                Expanded(child: _categoryCard()),
-              ],
-            ),
-          )
-        else ...[
-          _monthlyTableCard(context, rows, neutralValue, upTone, danger),
-          const SizedBox(height: WebInsets.xl),
-          _categoryCard(),
-        ],
+        // ── Monthly summary + spending by category (one card per row) ───────
+        _monthlyTableCard(context, rows, neutralValue, upTone, danger),
+        const SizedBox(height: WebInsets.xl),
+        _categoryCard(),
       ],
     );
   }

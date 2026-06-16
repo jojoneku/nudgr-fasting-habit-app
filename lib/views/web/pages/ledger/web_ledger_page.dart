@@ -418,6 +418,8 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
         const SizedBox(height: WebInsets.xl),
         _Toolbar(
           monthLabel: monthLabel(_p.selectedMonth),
+          onPrevMonth: () => _p.setMonth(previousMonth(_p.selectedMonth)),
+          onNextMonth: () => _p.setMonth(nextMonth(_p.selectedMonth)),
           searchController: _searchController,
           accounts: _liquidAccounts,
           categories: _p.categories,
@@ -634,6 +636,8 @@ DateTime _dayEnd(DateTime d) => DateTime(d.year, d.month, d.day, 23, 59, 59);
 
 class _Toolbar extends StatelessWidget {
   final String monthLabel;
+  final VoidCallback onPrevMonth;
+  final VoidCallback onNextMonth;
   final TextEditingController searchController;
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
@@ -658,6 +662,8 @@ class _Toolbar extends StatelessWidget {
 
   const _Toolbar({
     required this.monthLabel,
+    required this.onPrevMonth,
+    required this.onNextMonth,
     required this.searchController,
     required this.accounts,
     required this.categories,
@@ -735,6 +741,13 @@ class _Toolbar extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
+        // Month stepper — page back/forward through months.
+        IconButton(
+          onPressed: onPrevMonth,
+          icon: const Icon(Icons.chevron_left_rounded),
+          tooltip: 'Previous month',
+          visualDensity: VisualDensity.compact,
+        ),
         Text(
           monthLabel,
           style: Theme.of(context)
@@ -742,7 +755,13 @@ class _Toolbar extends StatelessWidget {
               .titleMedium
               ?.copyWith(fontWeight: FontWeight.w700),
         ),
-        const SizedBox(width: WebInsets.lg),
+        IconButton(
+          onPressed: onNextMonth,
+          icon: const Icon(Icons.chevron_right_rounded),
+          tooltip: 'Next month',
+          visualDensity: VisualDensity.compact,
+        ),
+        const SizedBox(width: WebInsets.md),
         Expanded(
           child: Wrap(
             crossAxisAlignment: WrapCrossAlignment.center,
