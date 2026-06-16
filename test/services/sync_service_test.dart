@@ -317,4 +317,18 @@ void main() {
           false);
     });
   });
+
+  // ── Finance delete tombstones (Plan 053 Phase 3.2) ───────────────────────────
+  // Deletes are written as `{__deleted: true}` rows so other devices learn of
+  // them on pull and drop their local copy (instead of resurrecting it). Full
+  // pull-reconcile wiring is exercised by the Phase 4 fake-Supabase harness.
+
+  group('finance delete tombstones', () {
+    test('isTombstone detects the deletion marker', () {
+      expect(SyncService.isTombstone({'__deleted': true}), true);
+      expect(SyncService.isTombstone({'__deleted': false}), false);
+      expect(SyncService.isTombstone({'id': 'x', 'amount': 5}), false);
+      expect(SyncService.isTombstone({}), false);
+    });
+  });
 }
