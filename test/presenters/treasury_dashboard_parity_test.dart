@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -222,6 +223,49 @@ void main() {
 
       expect(p.savingsRate, isNull);
       expect(p.monthNetCashFlow, -2000);
+    });
+
+    test(
+        'forecastedNetBalance subtracts unfunded set-asides + remaining budget; '
+        'budget "spent" comes from real ledger outflows (so it shrinks)',
+        () async {
+      final month = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts())
+          .thenAnswer((_) async => [_account(id: 'acc1', balance: 10000)]);
+      // Category budget Food = 5000 allocated; 2000 actually spent via ledger.
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [
+            Budget(
+              id: 'b1',
+              categoryId: 'cat', // _txn defaults categoryId to 'cat'
+              month: month,
+              allocatedAmount: 5000,
+              group: BudgetGroup.variableOptional,
+              budgetType: BudgetType.monthly,
+            ),
+          ]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async =>
+          [_txn(id: 't1', amount: 2000, type: TransactionType.outflow)]);
+      // One unfunded set-aside still to fund: 1000.
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            BudgetedExpense(
+              id: 'e1',
+              name: 'Gift',
+              budgetedType: BillType.other,
+              month: month,
+              allocatedAmount: 1000,
+              categoryId: '',
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      // Spent = real outflow (2000), NOT the set-aside spentAmount.
+      expect(p.totalBudgetSpent, 2000);
+      expect(
+          p.totalBudgetRemaining, 3000); // 5000 − 2000 → shrinks as you spend
+      expect(p.budgetedExpensesRemaining, 1000);
+      // 10000 liquid − 0 bills − 1000 set-aside − 3000 remaining budget = 6000.
+      expect(p.forecastedNetBalance, 6000);
     });
   });
 
