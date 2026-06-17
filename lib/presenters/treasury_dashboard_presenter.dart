@@ -443,14 +443,51 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((b) => b.month == _currentMonth)
       .fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
-  double get totalBudgetSpent => _budgetedExpenses
-      .where((e) => e.month == _currentMonth)
-      .fold(0.0, (sum, e) => sum + e.spentAmount);
+  /// Actual money spent against this month's budgets — real ledger outflows per
+  /// expense category (and contributions into the target account for savings
+  /// budgets), mirroring the Budget page's `spentFor`. Previously this counted
+  /// only set-aside rows' `spentAmount`, so [totalBudgetRemaining] reserved the
+  /// full monthly budget even as you spent through it (the forecast never shrank
+  /// during the month).
+  double get totalBudgetSpent => _budgets
+      .where((b) => b.month == _currentMonth)
+      .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
+
+  double _budgetSpentFor(Budget b) {
+    if (b.group == BudgetGroup.savings) {
+      // Savings budgets track contributions INTO the target account (here the
+      // "categoryId" is an account id), not category outflows.
+      var total = 0.0;
+      for (final t in _transactions) {
+        if (t.month != _currentMonth) continue;
+        if (t.type == TransactionType.inflow && t.accountId == b.categoryId) {
+          total += t.amount;
+        } else if (t.type == TransactionType.transfer &&
+            t.transferToAccountId == b.categoryId) {
+          total += t.amount;
+        }
+      }
+      return total;
+    }
+    return _transactions
+        .where((t) =>
+            t.month == _currentMonth &&
+            t.categoryId == b.categoryId &&
+            t.type == TransactionType.outflow)
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   double get totalBudgetRemaining =>
       (totalBudgetAllocated - totalBudgetSpent).clamp(0.0, double.infinity);
 
-  double get forecastedNetBalance => endingCash - totalBudgetRemaining;
+  /// Projected month-end cash: current liquid + incoming receivables, minus
+  /// everything still expected to leave this month —
+  ///   • unpaid bills (already netted in [endingCash]),
+  ///   • budgeted set-asides not yet funded ([budgetedExpensesRemaining]),
+  ///   • the remaining monthly category budget you still plan to spend
+  ///     ([totalBudgetRemaining]) — which shrinks as actual spending accrues.
+  double get forecastedNetBalance =>
+      endingCash - budgetedExpensesRemaining - totalBudgetRemaining;
 
   Map<BudgetGroup, double> get budgetAllocatedByGroup {
     final result = <BudgetGroup, double>{};
