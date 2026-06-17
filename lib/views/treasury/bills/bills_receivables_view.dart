@@ -1138,7 +1138,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
-  BillType _budgetedType = BillType.other;
+  SetAsideType _budgetedType = SetAsideType.other;
   String? _selectedCategoryId;
   bool _isSubmitting = false;
 
@@ -1241,6 +1241,17 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                   if (p == null || p <= 0) return 'Must be > 0';
                   return null;
                 },
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<SetAsideType>(
+                initialValue: _budgetedType,
+                decoration: const InputDecoration(labelText: 'Type'),
+                items: SetAsideType.values
+                    .map(
+                        (t) => DropdownMenuItem(value: t, child: Text(t.label)))
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _budgetedType = v ?? _budgetedType),
               ),
               const SizedBox(height: 12),
               AppTextField(

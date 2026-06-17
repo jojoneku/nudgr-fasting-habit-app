@@ -121,7 +121,7 @@ void main() {
             BudgetedExpense(
               id: 'e1',
               name: 'Family Support',
-              budgetedType: BillType.other,
+              budgetedType: SetAsideType.other,
               month: month,
               allocatedAmount: 5000,
               spentAmount: 2000,
@@ -131,7 +131,7 @@ void main() {
             BudgetedExpense(
               id: 'e2',
               name: 'Done',
-              budgetedType: BillType.other,
+              budgetedType: SetAsideType.other,
               month: month,
               allocatedAmount: 1000,
               spentAmount: 0,
@@ -250,7 +250,7 @@ void main() {
             BudgetedExpense(
               id: 'e1',
               name: 'Gift',
-              budgetedType: BillType.other,
+              budgetedType: SetAsideType.other,
               month: month,
               allocatedAmount: 1000,
               categoryId: '',

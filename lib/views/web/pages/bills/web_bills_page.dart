@@ -1415,8 +1415,8 @@ class _BudgetedExpenseRow extends StatelessWidget {
     final cs = theme.colorScheme;
     final funded = expense.isPaid;
     final subtitle = expense.note == null || expense.note!.trim().isEmpty
-        ? _billTypeLabel(expense.budgetedType)
-        : '${_billTypeLabel(expense.budgetedType)} · ${expense.note!.trim()}';
+        ? expense.budgetedType.label
+        : '${expense.budgetedType.label} · ${expense.note!.trim()}';
 
     return Container(
       decoration: showDivider
@@ -1577,7 +1577,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
 
-  late BillType _type;
+  late SetAsideType _type;
   String? _selectedCategoryId;
   bool _isSubmitting = false;
 
@@ -1585,7 +1585,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
   void initState() {
     super.initState();
     final e = widget.existing;
-    _type = e?.budgetedType ?? BillType.other;
+    _type = e?.budgetedType ?? SetAsideType.other;
     if (e != null) {
       _nameController.text = e.name;
       _amountController.text =
@@ -1673,12 +1673,12 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                       (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
                 ),
                 const SizedBox(height: WebInsets.md),
-                DropdownButtonFormField<BillType>(
+                DropdownButtonFormField<SetAsideType>(
                   initialValue: _type,
                   decoration: const InputDecoration(labelText: 'Type'),
-                  items: BillType.values
-                      .map((t) => DropdownMenuItem(
-                          value: t, child: Text(_billTypeFormLabel(t))))
+                  items: SetAsideType.values
+                      .map((t) =>
+                          DropdownMenuItem(value: t, child: Text(t.label)))
                       .toList(),
                   onChanged: (v) => setState(() => _type = v ?? _type),
                 ),

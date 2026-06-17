@@ -1,11 +1,34 @@
-import 'bill.dart';
+/// Classifies a budgeted set-aside so the UI can group/label it. Replaces the
+/// old reuse of `BillType`, which was bill-oriented and a poor fit here.
+enum SetAsideType { savings, goal, sinkingFund, gift, other }
+
+extension SetAsideTypeLabel on SetAsideType {
+  String get label => switch (this) {
+        SetAsideType.savings => 'Savings',
+        SetAsideType.goal => 'Goal',
+        SetAsideType.sinkingFund => 'Sinking Fund',
+        SetAsideType.gift => 'Gift',
+        SetAsideType.other => 'Other',
+      };
+}
+
+/// Parses a stored type name, tolerating legacy `BillType` values (e.g.
+/// "utility", "creditCard") and anything unknown by mapping them to
+/// [SetAsideType.other] — so existing set-asides load without error.
+SetAsideType setAsideTypeFromName(String? name) {
+  if (name == null) return SetAsideType.other;
+  for (final t in SetAsideType.values) {
+    if (t.name == name) return t;
+  }
+  return SetAsideType.other;
+}
 
 // Planned spending commitments (Family Support, Braces Sinking Fund, EF top-up).
 // These appear in the Bills & Receivables sheet under "BUDGETED EXPENSE".
 class BudgetedExpense {
   final String id;
   final String name;
-  final BillType budgetedType; // reuses BillType taxonomy
+  final SetAsideType budgetedType;
   final String month; // 'YYYY-MM'
   final double allocatedAmount;
   final double? nextMonthAmount; // pre-set amount for following month
@@ -35,7 +58,7 @@ class BudgetedExpense {
     return BudgetedExpense(
       id: json['id'] as String,
       name: json['name'] as String,
-      budgetedType: BillType.values.byName(json['budgetedType'] as String),
+      budgetedType: setAsideTypeFromName(json['budgetedType'] as String?),
       month: json['month'] as String,
       allocatedAmount: (json['allocatedAmount'] as num).toDouble(),
       nextMonthAmount: (json['nextMonthAmount'] as num?)?.toDouble(),
@@ -66,7 +89,7 @@ class BudgetedExpense {
 
   BudgetedExpense copyWith({
     String? name,
-    BillType? budgetedType,
+    SetAsideType? budgetedType,
     String? month,
     double? allocatedAmount,
     double? nextMonthAmount,

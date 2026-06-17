@@ -215,7 +215,7 @@ abstract final class PreviewSeed {
         BudgetedExpense(
           id: id,
           name: name,
-          budgetedType: BillType.other,
+          budgetedType: SetAsideType.savings,
           month: month,
           allocatedAmount: alloc,
           spentAmount: spent,
