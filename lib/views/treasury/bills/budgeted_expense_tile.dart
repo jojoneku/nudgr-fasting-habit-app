@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
-import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -19,24 +18,13 @@ class BudgetedExpenseTile extends StatelessWidget {
     this.onDelete,
   });
 
-  String _typeLabel(BillType type) {
-    switch (type) {
-      case BillType.creditCard:
-        return 'CC';
-      case BillType.installment:
-        return 'INSTALL';
-      case BillType.subscription:
-        return 'SUB';
-      case BillType.insurance:
-        return 'INS';
-      case BillType.govtContribution:
-        return 'GOV';
-      case BillType.utility:
-        return 'UTIL';
-      case BillType.other:
-        return 'BUDGETED';
-    }
-  }
+  String _typeLabel(SetAsideType type) => switch (type) {
+        SetAsideType.savings => 'SAVINGS',
+        SetAsideType.goal => 'GOAL',
+        SetAsideType.sinkingFund => 'SINKING',
+        SetAsideType.gift => 'GIFT',
+        SetAsideType.other => 'BUDGETED',
+      };
 
   @override
   Widget build(BuildContext context) {

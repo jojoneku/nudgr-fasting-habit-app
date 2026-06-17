@@ -132,7 +132,7 @@ void main() {
       final exp = BudgetedExpense(
         id: 'e1',
         name: 'Family Allowance',
-        budgetedType: BillType.other,
+        budgetedType: SetAsideType.sinkingFund,
         month: '2026-04',
         allocatedAmount: 10000,
         spentAmount: 9500,
@@ -142,6 +142,22 @@ void main() {
       final exp2 = BudgetedExpense.fromJson(exp.toJson());
       expect(exp2.note, 'Maya Savings');
       expect(exp2.spentAmount, 9500);
+      expect(exp2.budgetedType, SetAsideType.sinkingFund);
+    });
+
+    test('legacy BillType-valued budgetedType migrates to SetAsideType.other',
+        () {
+      // Pre-existing rows stored a BillType name (e.g. "utility"). These must
+      // load without throwing and fall back to `other`.
+      final json = {
+        'id': 'e9',
+        'name': 'Old row',
+        'budgetedType': 'utility', // legacy BillType value
+        'month': '2026-01',
+        'allocatedAmount': 500.0,
+        'categoryId': '',
+      };
+      expect(BudgetedExpense.fromJson(json).budgetedType, SetAsideType.other);
     });
   });
 
