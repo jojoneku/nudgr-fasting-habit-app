@@ -1,6 +1,17 @@
-import 'bill.dart' show RecurrenceType;
+import 'bill.dart' show RecurrenceType, recurrenceTypeFromName;
 
 enum ReceivableType { salary, reimbursement, business, other }
+
+/// Parses a [ReceivableType] name, falling back to [ReceivableType.other] for an
+/// unknown or null value — so a corrupt/version-skewed record loads instead of
+/// throwing out of sync. Mirrors `billTypeFromName` / `setAsideTypeFromName`.
+ReceivableType receivableTypeFromName(String? name) {
+  if (name == null) return ReceivableType.other;
+  for (final t in ReceivableType.values) {
+    if (t.name == name) return t;
+  }
+  return ReceivableType.other;
+}
 
 /// copyWith sentinel — see the note in `bill.dart`. Lets [Receivable.copyWith]
 /// clear the nullable [accountId] with an explicit `null` while omitting it
@@ -49,19 +60,20 @@ class Receivable {
 
   factory Receivable.fromJson(Map<String, dynamic> json) {
     return Receivable(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      receivableType:
-          ReceivableType.values.byName(json['receivableType'] as String),
-      amount: (json['amount'] as num).toDouble(),
+      // Null-tolerant: a corrupt cloud row (missing date/category/type/etc.)
+      // loads with safe defaults instead of throwing out of sync and being
+      // dropped. Review-and-fix in-app beats silent data loss.
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      receivableType: receivableTypeFromName(json['receivableType'] as String?),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
       nextMonthAmount: (json['nextMonthAmount'] as num?)?.toDouble(),
-      expectedDate: DateTime.parse(json['expectedDate'] as String),
-      month: json['month'] as String,
-      categoryId: json['categoryId'] as String,
+      expectedDate: DateTime.tryParse(json['expectedDate'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      month: json['month'] as String? ?? '',
+      categoryId: json['categoryId'] as String? ?? '',
       isRecurring: json['isRecurring'] as bool? ?? false,
-      recurrenceType: json['recurrenceType'] != null
-          ? RecurrenceType.values.byName(json['recurrenceType'] as String)
-          : null,
+      recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
       isReceived: json['isReceived'] as bool? ?? false,
       receivedDate: json['receivedDate'] != null
           ? DateTime.parse(json['receivedDate'] as String)

@@ -301,7 +301,8 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Sync failed. Tap retry or pull to refresh.'),
+            content: Text('Sync failed: $e'),
+            duration: const Duration(seconds: 8),
             action: SnackBarAction(
               label: 'Retry',
               onPressed: () => _initSync(userId),
