@@ -238,7 +238,8 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Sync failed. Tap retry to refresh.'),
+            content: Text('Sync failed: $e'),
+            duration: const Duration(seconds: 8),
             action: SnackBarAction(
               label: 'Retry',
               onPressed: () => _initSync(userId),

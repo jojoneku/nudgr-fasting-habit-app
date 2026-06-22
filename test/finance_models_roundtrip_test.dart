@@ -125,6 +125,25 @@ void main() {
       expect(bill2.recurrenceType, RecurrenceType.monthly);
       expect(bill2.paymentNote, 'GCash 09171234567');
     });
+
+    test('null-tolerant: a corrupt row (null amount) loads with defaults', () {
+      // Mirrors a real bad cloud row (finance_bills/bill_spotify_*) that used
+      // to throw 'Null is not a subtype of num' out of pullAll and be dropped.
+      final json = {
+        'id': 'bill_spotify_2026_06',
+        'name': 'Spotify',
+        'billType': 'subscription',
+        'amount': null,
+        'dueDay': null,
+        'month': '2026-06',
+        'categoryId': null,
+      };
+      final bill = Bill.fromJson(json);
+      expect(bill.amount, 0);
+      expect(bill.dueDay, 1);
+      expect(bill.categoryId, '');
+      expect(bill.billType, BillType.subscription);
+    });
   });
 
   group('BudgetedExpense', () {
@@ -177,6 +196,30 @@ void main() {
       final rec2 = Receivable.fromJson(rec.toJson());
       expect(rec2.receivableType, ReceivableType.salary);
       expect(rec2.recurrenceType, RecurrenceType.monthly);
+    });
+
+    test(
+        'null-tolerant: a corrupt row (null String fields) loads with defaults',
+        () {
+      // Mirrors real bad cloud rows (finance_receivables/rcv_business_expense,
+      // rcv_alphaus_july) that used to throw 'Null is not a subtype of String'
+      // out of pullAll and be silently dropped.
+      final json = {
+        'id': 'rcv_business_expense',
+        'name': null,
+        'receivableType': null,
+        'amount': null,
+        'expectedDate': null,
+        'month': null,
+        'categoryId': null,
+      };
+      final rec = Receivable.fromJson(json);
+      expect(rec.name, '');
+      expect(rec.receivableType, ReceivableType.other);
+      expect(rec.amount, 0);
+      expect(rec.month, '');
+      expect(rec.categoryId, '');
+      expect(rec.expectedDate, DateTime.fromMillisecondsSinceEpoch(0));
     });
   });
 

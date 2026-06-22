@@ -50,6 +50,26 @@ class SyncService {
   VoidCallback? _onStateChange;
   Timer? _debounceTimer;
 
+  // Diagnostics for the last pullAll: domains that threw and individual records
+  // that were skipped because they couldn't be parsed. Surfaced so a failure
+  // is debuggable in release builds (where debugPrint is stripped) instead of
+  // collapsing into an opaque "Sync failed".
+  List<String> _lastPullErrors = const [];
+  final List<String> _lastSkippedRecords = [];
+
+  /// Domain-level pull failures from the most recent [pullAll] (empty on a
+  /// clean pull). Each entry is `'<domain>: <error>'`.
+  List<String> get lastPullErrors => _lastPullErrors;
+
+  /// Individual records skipped during the most recent [pullAll] because they
+  /// could not be parsed. Each entry is `'<table>/<recordId>: <error>'`.
+  List<String> get lastSkippedRecords => List.unmodifiable(_lastSkippedRecords);
+
+  void _recordSkipped(String id, Object e) {
+    _lastSkippedRecords.add('$id: $e');
+    debugPrint('SyncService: skipping unparseable record $id: $e');
+  }
+
   SyncService({
     required SupabaseClient supabase,
     required LocalStorageService storage,
@@ -673,28 +693,53 @@ class SyncService {
     debugPrint('SyncService: pullAll starting for user $_userId');
     _isSyncing = true;
     _onStateChange?.call();
+    _lastSkippedRecords.clear();
+    final errors = <String>[];
+    var attempted = 0;
+
+    // Each domain is pulled independently. A failure in one domain (a corrupt
+    // singleton row, a poison record, a transient read) is logged and recorded
+    // but does NOT abort the others — previously the first throw rethrew out of
+    // pullAll and tore down sync entirely, surfacing as a blanket "Sync failed"
+    // on every client that saw the bad data. We only rethrow when EVERY domain
+    // failed, which signals a genuine connectivity/auth outage rather than one
+    // unparseable row.
+    Future<void> pull(String label, Future<void> Function() fn) async {
+      attempted++;
+      try {
+        debugPrint('SyncService: pulling $label...');
+        await fn();
+      } catch (e) {
+        errors.add('$label: $e');
+        debugPrint('SyncService: pull failed for $label: $e');
+      }
+    }
+
     try {
-      debugPrint('SyncService: pulling userProfile...');
-      await _pullUserProfile();
-      debugPrint('SyncService: pulling fastingState...');
-      await _pullFastingState();
-      debugPrint('SyncService: pulling userQuests...');
-      await _pullUserQuests();
-      debugPrint('SyncService: pulling userCollections...');
-      await _pullUserCollections();
-      debugPrint('SyncService: pulling nutritionLogs...');
-      await _pullNutritionLogs();
-      debugPrint('SyncService: pulling activityLogs...');
-      await _pullActivityLogs();
-      debugPrint('SyncService: pulling financeRecords...');
-      await _pullFinanceRecords();
+      await pull('userProfile', _pullUserProfile);
+      await pull('fastingState', _pullFastingState);
+      await pull('userQuests', _pullUserQuests);
+      await pull('userCollections', _pullUserCollections);
+      await pull('nutritionLogs', _pullNutritionLogs);
+      await pull('activityLogs', _pullActivityLogs);
+      await pull('financeRecords', _pullFinanceRecords);
+
+      _lastPullErrors = List.unmodifiable(errors);
+      if (errors.length == attempted) {
+        // Nothing pulled — treat as a real failure so the UI can prompt a retry.
+        throw Exception(
+            'Sync pull failed for all domains. First error — ${errors.first}');
+      }
+      if (errors.isNotEmpty || _lastSkippedRecords.isNotEmpty) {
+        debugPrint(
+            'SyncService: pullAll completed with ${errors.length} domain failure(s) '
+            'and ${_lastSkippedRecords.length} skipped record(s): '
+            '${[...errors, ..._lastSkippedRecords]}');
+      }
       _lastSyncedAt = DateTime.now();
       _lastPulledAt = _lastSyncedAt;
       debugPrint('SyncService: pullAll complete ✓');
       _storage.onRemoteDataApplied?.call();
-    } catch (e) {
-      debugPrint('SyncService: pullAll error: $e');
-      rethrow;
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
@@ -965,22 +1010,26 @@ class SyncService {
         .select('date, data, updated_at')
         .eq('user_id', _userId);
     for (final row in rows as List) {
-      final dateKey = row['date'] as String;
-      final remoteTime = DateTime.parse(row['updated_at'] as String);
-      final localTime = _queue.getTimestamp(SyncDomain.nutritionLog, dateKey);
-      if (!remoteTime.isAfter(localTime)) continue;
-      final data = row['data'] as Map<String, dynamic>;
-      await _storage.applyRemote(() async {
-        if (data['log'] != null) {
-          await _storage.saveNutritionLog(
-              DailyNutritionLog.fromJson(data['log'] as Map<String, dynamic>));
-        }
-        if (data['messages'] != null) {
-          await _storage.saveChatMessages(
-              dateKey, (data['messages'] as List).cast<Map<String, dynamic>>());
-        }
-      });
-      _queue.setTimestamp(SyncDomain.nutritionLog, dateKey, time: remoteTime);
+      final dateKey = row['date'] as String? ?? '';
+      try {
+        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final localTime = _queue.getTimestamp(SyncDomain.nutritionLog, dateKey);
+        if (!remoteTime.isAfter(localTime)) continue;
+        final data = row['data'] as Map<String, dynamic>;
+        await _storage.applyRemote(() async {
+          if (data['log'] != null) {
+            await _storage.saveNutritionLog(DailyNutritionLog.fromJson(
+                data['log'] as Map<String, dynamic>));
+          }
+          if (data['messages'] != null) {
+            await _storage.saveChatMessages(dateKey,
+                (data['messages'] as List).cast<Map<String, dynamic>>());
+          }
+        });
+        _queue.setTimestamp(SyncDomain.nutritionLog, dateKey, time: remoteTime);
+      } catch (e) {
+        _recordSkipped('nutrition_logs/$dateKey', e);
+      }
     }
   }
 
@@ -990,15 +1039,19 @@ class SyncService {
         .select('date, data, updated_at')
         .eq('user_id', _userId);
     for (final row in rows as List) {
-      final dateKey = row['date'] as String;
-      final remoteTime = DateTime.parse(row['updated_at'] as String);
-      final localTime = _queue.getTimestamp(SyncDomain.activityLog, dateKey);
-      if (!remoteTime.isAfter(localTime)) continue;
-      await _storage.applyRemote(() async {
-        await _storage.saveActivityLog(
-            ActivityLog.fromJson(row['data'] as Map<String, dynamic>));
-      });
-      _queue.setTimestamp(SyncDomain.activityLog, dateKey, time: remoteTime);
+      final dateKey = row['date'] as String? ?? '';
+      try {
+        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final localTime = _queue.getTimestamp(SyncDomain.activityLog, dateKey);
+        if (!remoteTime.isAfter(localTime)) continue;
+        await _storage.applyRemote(() async {
+          await _storage.saveActivityLog(
+              ActivityLog.fromJson(row['data'] as Map<String, dynamic>));
+        });
+        _queue.setTimestamp(SyncDomain.activityLog, dateKey, time: remoteTime);
+      } catch (e) {
+        _recordSkipped('activity_logs/$dateKey', e);
+      }
     }
   }
 
@@ -1083,21 +1136,30 @@ class SyncService {
     final localMap = {for (final item in localList) getId(item): item};
     bool changed = false;
     for (final row in rows) {
-      final recordId = row['record_id'] as String;
-      final remoteTime = DateTime.parse(row['updated_at'] as String);
-      final localTime =
-          _queue.getTimestamp(SyncDomain.financeRecord, '$tableName/$recordId');
-      if (!remoteTime.isAfter(localTime)) continue;
-      final data = row['data'] as Map<String, dynamic>;
-      if (isTombstone(data)) {
-        // Deletion propagated from another device — remove the local record.
-        if (localMap.remove(recordId) != null) changed = true;
-      } else {
-        localMap[recordId] = fromJson(data);
-        changed = true;
+      final recordId = row['record_id'] as String? ?? '';
+      try {
+        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final localTime = _queue.getTimestamp(
+            SyncDomain.financeRecord, '$tableName/$recordId');
+        if (!remoteTime.isAfter(localTime)) continue;
+        final data = row['data'] as Map<String, dynamic>;
+        if (isTombstone(data)) {
+          // Deletion propagated from another device — remove the local record.
+          if (localMap.remove(recordId) != null) changed = true;
+        } else {
+          localMap[recordId] = fromJson(data);
+          changed = true;
+        }
+        _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId',
+            time: remoteTime);
+      } catch (e) {
+        // Skip a poison record (unparseable enum / null field / bad date)
+        // rather than aborting the whole table — one corrupt row used to throw
+        // out of pullAll and surface as a blanket "Sync failed". The timestamp
+        // is deliberately NOT advanced, so a later app build that can parse the
+        // row still picks it up on the next pull.
+        _recordSkipped('$tableName/$recordId', e);
       }
-      _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId',
-          time: remoteTime);
     }
     if (changed) {
       await _storage.applyRemote(() async => saveAll(localMap.values.toList()));
