@@ -57,6 +57,8 @@ TransactionRecord _txn({
       type: type,
       description: 'Test',
       month: month ?? '2026-03',
+      transferGroupId: transferGroupId,
+      transferToAccountId: transferToAccountId,
     );
 
 Bill _bill({
@@ -597,6 +599,44 @@ void main() {
       expect(presenter.spentFor('food'), 350);
     });
 
+    test('spentFor excludes transfer legs stamped with an expense category',
+        () async {
+      // Transfers are committed as an outflow+inflow pair, both carrying the
+      // first expense category id ("food"). They must NOT count as spending.
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 't1',
+                accountId: 'a1',
+                amount: 200,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food'),
+            _txn(
+                id: 'xfer-out',
+                accountId: 'a1',
+                amount: 5000,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food',
+                transferGroupId: 'g1',
+                transferToAccountId: 'a2'),
+            _txn(
+                id: 'xfer-in',
+                accountId: 'a2',
+                amount: 5000,
+                type: TransactionType.inflow,
+                month: '2026-03',
+                categoryId: 'food',
+                transferGroupId: 'g1'),
+          ]);
+      await presenter.load();
+      presenter.setMonth('2026-03');
+      // Only the genuine 200 outflow counts — the 5000 transfer leg is excluded.
+      expect(presenter.spentFor('food'), 200);
+      expect(presenter.receivedFor('food'), 0);
+      expect(presenter.transactionsForCategory('food').length, 1);
+    });
+
     test('setBudget creates new budget for category', () async {
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => [
             _category(id: 'food', type: CategoryType.expense, name: 'Food'),
@@ -775,6 +815,108 @@ void main() {
       expect(summary?.totalInflow, 1000);
       expect(summary?.totalOutflow, 300);
       expect(summary?.netSavings, 700);
+    });
+
+    test(
+        'repairTransferPollutedSummariesOnce recomputes transfer-inflated '
+        'months while preserving frozen net-worth fields', () async {
+      // A stored summary closed by an earlier build: a 5000 transfer was
+      // counted as both income and Food & Drinks spending.
+      final polluted = MonthlySummary(
+        month: '2026-03',
+        totalInflow: 15000, // real 10000 + 5000 transfer-in leg
+        totalOutflow: 9000, // real 4000 + 5000 transfer-out leg
+        totalBills: 0,
+        totalBillsPaid: 0,
+        billCount: 0,
+        billsPaidCount: 0,
+        totalReceivables: 0,
+        totalReceived: 0,
+        receivableCount: 0,
+        netSavings: 6000,
+        endingCash: 12345, // frozen month-end snapshot — must be preserved
+        accountSnapshots: const {'a1': 999},
+        netWorth: 50000, // frozen — must be preserved
+        categorySpend: const {'food': 9000}, // real 4000 + 5000 transfer
+      );
+      when(mockStorage.loadMonthlySummaries())
+          .thenAnswer((_) async => [polluted]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 'real-out',
+                accountId: 'a1',
+                amount: 4000,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food'),
+            _txn(
+                id: 'real-in',
+                accountId: 'a1',
+                amount: 10000,
+                type: TransactionType.inflow,
+                month: '2026-03',
+                categoryId: 'salary'),
+            _txn(
+                id: 'xfer-out',
+                accountId: 'a1',
+                amount: 5000,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food',
+                transferGroupId: 'g1',
+                transferToAccountId: 'a2'),
+            _txn(
+                id: 'xfer-in',
+                accountId: 'a2',
+                amount: 5000,
+                type: TransactionType.inflow,
+                month: '2026-03',
+                categoryId: 'food',
+                transferGroupId: 'g1'),
+          ]);
+      await presenter.load();
+
+      final fixed = presenter.summaries.firstWhere((s) => s.month == '2026-03');
+      // Transfer-derived inflation removed.
+      expect(fixed.totalInflow, 10000);
+      expect(fixed.totalOutflow, 4000);
+      expect(fixed.netSavings, 6000);
+      expect(fixed.categorySpend['food'], 4000);
+      // Frozen month-end snapshot fields are untouched.
+      expect(fixed.endingCash, 12345);
+      expect(fixed.netWorth, 50000);
+      expect(fixed.accountSnapshots, const {'a1': 999});
+      // The corrected summaries were persisted.
+      verify(mockStorage.saveMonthlySummaries(any)).called(1);
+    });
+
+    test('repairTransferPollutedSummariesOnce leaves clean months untouched',
+        () async {
+      // Spreadsheet-imported month: authoritative figures, no transaction rows.
+      final clean = MonthlySummary(
+        month: '2026-02',
+        totalInflow: 54097,
+        totalOutflow: 43580,
+        totalBills: 0,
+        totalBillsPaid: 0,
+        billCount: 0,
+        billsPaidCount: 0,
+        totalReceivables: 0,
+        totalReceived: 0,
+        receivableCount: 0,
+        netSavings: 10517,
+        endingCash: 0,
+        accountSnapshots: const {},
+        categorySpend: const {'food': 2481},
+      );
+      when(mockStorage.loadMonthlySummaries()).thenAnswer((_) async => [clean]);
+      await presenter.load();
+
+      final after = presenter.summaries.firstWhere((s) => s.month == '2026-02');
+      expect(after.totalInflow, 54097);
+      expect(after.categorySpend['food'], 2481);
+      // No transfer legs in any month → nothing rewritten.
+      verifyNever(mockStorage.saveMonthlySummaries(any));
     });
   });
 }

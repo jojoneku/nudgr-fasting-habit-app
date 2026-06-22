@@ -266,6 +266,7 @@ class BudgetPresenter extends ChangeNotifier {
         .where((t) =>
             t.month == _selectedMonth &&
             t.type == TransactionType.outflow &&
+            t.transferGroupId == null &&
             catIds.contains(t.categoryId))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
@@ -299,12 +300,16 @@ class BudgetPresenter extends ChangeNotifier {
       .where((t) =>
           t.month == _selectedMonth &&
           t.categoryId == categoryId &&
-          t.type == TransactionType.inflow)
+          t.type == TransactionType.inflow &&
+          t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   List<TransactionRecord> transactionsForCategory(String categoryId) =>
       _allTransactions
-          .where((t) => t.month == _selectedMonth && t.categoryId == categoryId)
+          .where((t) =>
+              t.month == _selectedMonth &&
+              t.categoryId == categoryId &&
+              t.transferGroupId == null)
           .toList()
         ..sort((a, b) => b.date.compareTo(a.date));
 
@@ -327,7 +332,8 @@ class BudgetPresenter extends ChangeNotifier {
         .where((t) =>
             t.month == _selectedMonth &&
             t.categoryId == categoryId &&
-            t.type == TransactionType.outflow)
+            t.type == TransactionType.outflow &&
+            t.transferGroupId == null)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
