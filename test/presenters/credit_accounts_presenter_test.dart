@@ -141,7 +141,6 @@ void main() {
         fromAccountId: 'gcash',
         toAccountId: 'cc',
         amount: 3000,
-        categoryId: '',
         description: 'Pay card',
         date: DateTime(2026, 6, 7),
       );
