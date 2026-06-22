@@ -243,6 +243,28 @@ void main() {
     });
   });
 
+  // ── pullAll resilience ───────────────────────────────────────────────────────
+  // A single unparseable record or a corrupt domain must not abort the whole
+  // pull (which used to surface as a blanket "Sync failed" on every client).
+  // pullAll only rethrows when EVERY domain fails — a genuine outage.
+
+  group('pullAll resilience', () {
+    test(
+        'rethrows an aggregate error and records every domain failure when all '
+        'domains fail (e.g. offline)', () async {
+      // The fake Supabase client throws on `.from(...)`, so every domain pull
+      // fails — this stands in for a total connectivity/auth outage.
+      await expectLater(service.pullAll(), throwsA(isA<Exception>()));
+
+      // All seven domains were attempted and recorded as failures.
+      expect(service.lastPullErrors.length, 7);
+      // isSyncing is reset by the finally block even on a total failure.
+      expect(service.isSyncing, false);
+      // No partial pull succeeded, so nothing was timestamped as synced.
+      expect(service.lastSyncedAt, isNull);
+    });
+  });
+
   // ── schedulePush ───────────────────────────────────────────────────────────
 
   group('schedulePush', () {

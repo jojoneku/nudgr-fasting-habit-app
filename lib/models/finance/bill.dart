@@ -12,6 +12,26 @@ enum BillType {
 // Used by both Bill and Receivable.
 enum RecurrenceType { monthly, weekly, yearly, custom }
 
+/// Parses a [BillType] name, falling back to [BillType.other] for an unknown or
+/// null value — so a record written by a newer/older build (or with corrupt
+/// data) loads instead of throwing out of sync. Mirrors `setAsideTypeFromName`.
+BillType billTypeFromName(String? name) {
+  if (name == null) return BillType.other;
+  for (final t in BillType.values) {
+    if (t.name == name) return t;
+  }
+  return BillType.other;
+}
+
+/// Parses a [RecurrenceType] name; null/unknown → null (treated as one-off).
+RecurrenceType? recurrenceTypeFromName(String? name) {
+  if (name == null) return null;
+  for (final t in RecurrenceType.values) {
+    if (t.name == name) return t;
+  }
+  return null;
+}
+
 /// copyWith sentinel: lets a caller distinguish "leave this nullable field as
 /// is" (omit the argument) from "clear it" (pass an explicit `null`). Without
 /// this, `field ?? this.field` can never null a value back out.
@@ -58,20 +78,21 @@ class Bill {
 
   factory Bill.fromJson(Map<String, dynamic> json) {
     return Bill(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      billType: BillType.values.byName(json['billType'] as String),
-      amount: (json['amount'] as num).toDouble(),
+      // Null-tolerant: a corrupt cloud row (missing amount/dueDay/etc.) loads
+      // with safe defaults instead of throwing out of sync and being dropped.
+      // Review-and-fix in-app is far better than silent data loss.
+      id: json['id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      billType: billTypeFromName(json['billType'] as String?),
+      amount: (json['amount'] as num?)?.toDouble() ?? 0,
       nextMonthAmount: (json['nextMonthAmount'] as num?)?.toDouble(),
-      dueDay: json['dueDay'] as int,
-      month: json['month'] as String,
-      categoryId: json['categoryId'] as String,
+      dueDay: (json['dueDay'] as num?)?.toInt() ?? 1,
+      month: json['month'] as String? ?? '',
+      categoryId: json['categoryId'] as String? ?? '',
       accountId: json['accountId'] as String?,
       paymentNote: json['paymentNote'] as String?,
       isRecurring: json['isRecurring'] as bool? ?? false,
-      recurrenceType: json['recurrenceType'] != null
-          ? RecurrenceType.values.byName(json['recurrenceType'] as String)
-          : null,
+      recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
       isPaid: json['isPaid'] as bool? ?? false,
       paidDate: json['paidDate'] != null
           ? DateTime.parse(json['paidDate'] as String)
