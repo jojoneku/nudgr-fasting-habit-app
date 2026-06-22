@@ -363,9 +363,34 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       await _storage.saveFinanceCategories(_categories);
     }
 
+    await _migrateTransferLegCategories();
+
     _isLoading = false;
     _hasLoaded = true;
     safeNotify();
+  }
+
+  /// One-time backfill for the dedicated-transfer-category change. Earlier
+  /// builds stamped transfer legs with the first expense category (or an empty
+  /// id); re-point every transfer leg at the reserved transfer category so the
+  /// stored data is semantically correct and no longer depends on the
+  /// `transferGroupId` guard to stay out of spend totals. Idempotent: once every
+  /// leg references the transfer id there is nothing left to change.
+  Future<void> _migrateTransferLegCategories() async {
+    final hasStrayLeg = _allTransactions.any((t) =>
+        t.transferGroupId != null &&
+        t.categoryId != FinanceCategory.transferCategoryId);
+    if (!hasStrayLeg) return;
+
+    final transferId = await _ensureTransferCategory();
+    _allTransactions = [
+      for (final t in _allTransactions)
+        if (t.transferGroupId != null && t.categoryId != transferId)
+          t.copyWith(categoryId: transferId)
+        else
+          t,
+    ];
+    await _saveAll();
   }
 
   /// Returns a new list with corrected colors if any category needed migration,
@@ -407,13 +432,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String fromAccountId,
     required String toAccountId,
     required double amount,
-    required String categoryId,
     required String description,
     required DateTime date,
     String? note,
   }) async {
     final groupId = _generateId();
     final monthKey = toMonthKey(date);
+    // Both legs carry the reserved transfer category — a transfer is neither an
+    // expense nor income, so it must never be stamped with a real category.
+    final categoryId = await _ensureTransferCategory();
 
     final outflow = TransactionRecord(
       id: _generateId(),
@@ -770,7 +797,6 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         fromAccountId: draft.accountId!,
         toAccountId: draft.transferToAccountId!,
         amount: draft.amount!,
-        categoryId: _firstCategoryIdForTransfer(),
         description: description,
         date: now,
       );
@@ -870,12 +896,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return s;
   }
 
-  /// Transfers still need a categoryId per the data model. Picks the first
-  /// expense category; if none exists, picks any category. Caller has already
-  /// validated that at least one category exists for the transfer path.
-  String _firstCategoryIdForTransfer() {
-    final expense = _categories.where((c) => c.type == CategoryType.expense);
-    return (expense.isNotEmpty ? expense : _categories).first.id;
+  /// Returns the id of the reserved transfer category, lazily creating and
+  /// persisting it the first time a transfer is recorded. The category is
+  /// system-owned: hidden from every picker/breakdown (it is neither expense
+  /// nor income) and protected from deletion while transfers reference it.
+  Future<String> _ensureTransferCategory() async {
+    final existing =
+        _categories.where((c) => c.type == CategoryType.transfer).firstOrNull;
+    if (existing != null) return existing.id;
+    final category = FinanceCategory.transfer();
+    _categories = [..._categories, category];
+    await _storage.saveFinanceCategories(_categories);
+    return category.id;
   }
 
   // --- Private helpers ---

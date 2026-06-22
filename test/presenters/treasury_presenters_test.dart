@@ -57,6 +57,8 @@ TransactionRecord _txn({
       type: type,
       description: 'Test',
       month: month ?? '2026-03',
+      transferGroupId: transferGroupId,
+      transferToAccountId: transferToAccountId,
     );
 
 Bill _bill({
@@ -247,6 +249,7 @@ void main() {
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
       when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
       when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
+      when(mockStorage.saveFinanceCategories(any)).thenAnswer((_) async {});
       when(mockStorage.saveTransactions(any)).thenAnswer((_) async {});
       when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
       when(mockStats.addXp(any)).thenAnswer((_) async {});
@@ -296,7 +299,6 @@ void main() {
         fromAccountId: 'gcash',
         toAccountId: 'bpi',
         amount: 500,
-        categoryId: '',
         description: 'Transfer test',
         date: now,
       );
@@ -313,7 +315,6 @@ void main() {
         fromAccountId: 'gcash',
         toAccountId: 'bpi',
         amount: 500,
-        categoryId: '',
         description: 'Transfer',
         date: DateTime.now(),
       );
@@ -321,6 +322,70 @@ void main() {
       final bpi = presenter.accounts.firstWhere((a) => a.id == 'bpi');
       expect(gcash.balance, 500);
       expect(bpi.balance, 5500);
+    });
+
+    test('addTransfer stamps both legs with the reserved transfer category',
+        () async {
+      await _waitForLoad(presenter);
+      await presenter.addTransfer(
+        fromAccountId: 'gcash',
+        toAccountId: 'bpi',
+        amount: 500,
+        description: 'Transfer',
+        date: DateTime.now(),
+      );
+      final legs = presenter.allTransactions
+          .where((t) => t.transferGroupId != null)
+          .toList();
+      expect(legs.length, 2);
+      expect(
+          legs.every((t) => t.categoryId == FinanceCategory.transferCategoryId),
+          isTrue);
+      // The reserved category was seeded and is of the transfer type.
+      final transferCat = presenter.categories
+          .singleWhere((c) => c.id == FinanceCategory.transferCategoryId);
+      expect(transferCat.type, CategoryType.transfer);
+    });
+
+    test('load() backfills legacy transfer legs onto the transfer category',
+        () async {
+      // Legs stamped with the old first-expense-category id ('food').
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 'xfer-out',
+                accountId: 'gcash',
+                amount: 500,
+                type: TransactionType.outflow,
+                categoryId: 'food',
+                transferGroupId: 'g1',
+                transferToAccountId: 'bpi'),
+            _txn(
+                id: 'xfer-in',
+                accountId: 'bpi',
+                amount: 500,
+                type: TransactionType.inflow,
+                categoryId: 'food',
+                transferGroupId: 'g1'),
+            _txn(
+                id: 'real',
+                accountId: 'gcash',
+                amount: 100,
+                type: TransactionType.outflow,
+                categoryId: 'food'),
+          ]);
+      final fresh = LedgerPresenter(mockStorage, mockStats);
+      await _waitForLoad(fresh);
+
+      final legs = fresh.allTransactions
+          .where((t) => t.transferGroupId != null)
+          .toList();
+      expect(
+          legs.every((t) => t.categoryId == FinanceCategory.transferCategoryId),
+          isTrue);
+      // A genuine expense leg keeps its category.
+      expect(fresh.allTransactions.firstWhere((t) => t.id == 'real').categoryId,
+          'food');
+      verify(mockStorage.saveTransactions(any)).called(greaterThanOrEqualTo(1));
     });
 
     test('addTransaction awards +25 XP for first-ever transaction', () async {

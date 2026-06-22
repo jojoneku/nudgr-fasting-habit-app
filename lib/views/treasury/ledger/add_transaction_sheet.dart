@@ -136,7 +136,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           fromAccountId: _selectedAccountId!,
           toAccountId: _transferToAccountId!,
           amount: amount,
-          categoryId: categoryId,
           description: description,
           date: _date,
           note: note.isEmpty ? null : note,
