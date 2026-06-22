@@ -1,7 +1,23 @@
-enum CategoryType { income, expense }
+enum CategoryType { income, expense, transfer }
 
-// No default seeding — users create all categories themselves.
+// No default seeding — users create all categories themselves, except the one
+// reserved [FinanceCategory.transfer] category the ledger maintains internally.
 class FinanceCategory {
+  /// Stable id of the reserved, system-owned category that tags both legs of an
+  /// internal transfer. Never shown in pickers/breakdowns (filtered out by the
+  /// expense/income type checks) and never user-editable. See
+  /// [LedgerPresenter] for how it is seeded and applied.
+  static const String transferCategoryId = '__transfer__';
+
+  /// The reserved transfer category instance. Created on demand by the ledger.
+  factory FinanceCategory.transfer() => FinanceCategory(
+        id: transferCategoryId,
+        name: 'Transfer',
+        type: CategoryType.transfer,
+        icon: 'bank-transfer',
+        colorHex: '#64748B', // slate — neutral, never a spending color
+      );
+
   final String id;
   final String name;
   final CategoryType type;
@@ -22,7 +38,10 @@ class FinanceCategory {
     return FinanceCategory(
       id: json['id'] as String,
       name: json['name'] as String,
-      type: CategoryType.values.byName(json['type'] as String),
+      // Tolerant of unknown/future type names (defensive against an older build
+      // pulling a newer category type from sync) — defaults to expense.
+      type: CategoryType.values.asNameMap()[json['type'] as String?] ??
+          CategoryType.expense,
       icon: json['icon'] as String,
       colorHex: json['colorHex'] as String,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??

@@ -415,6 +415,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final now = DateTime.now();
     return _transactions.where((t) {
       return t.type == TransactionType.outflow &&
+          t.transferGroupId == null &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -425,6 +426,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final now = DateTime.now();
     return _transactions.where((t) {
       return t.type == TransactionType.inflow &&
+          t.transferGroupId == null &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -473,7 +475,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         .where((t) =>
             t.month == _currentMonth &&
             t.categoryId == b.categoryId &&
-            t.type == TransactionType.outflow)
+            t.type == TransactionType.outflow &&
+            t.transferGroupId == null)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -527,7 +530,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<(FinanceCategory, double)> _categorySpendRanked({required int? limit}) {
     final spendMap = <String, double>{};
     for (final t in _transactions) {
-      if (t.month == _currentMonth && t.type == TransactionType.outflow) {
+      if (t.month == _currentMonth &&
+          t.type == TransactionType.outflow &&
+          t.transferGroupId == null) {
         spendMap[t.categoryId] = (spendMap[t.categoryId] ?? 0.0) + t.amount;
       }
     }
@@ -576,6 +581,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       final total = _transactions
           .where((t) =>
               t.type == TransactionType.outflow &&
+              t.transferGroupId == null &&
               t.date.year == day.year &&
               t.date.month == day.month &&
               t.date.day == day.day)

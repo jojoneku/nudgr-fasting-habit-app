@@ -42,6 +42,33 @@ class MonthlySummary {
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
+  MonthlySummary copyWith({
+    double? totalInflow,
+    double? totalOutflow,
+    double? netSavings,
+    Map<String, double>? categorySpend,
+    DateTime? updatedAt,
+  }) {
+    return MonthlySummary(
+      month: month,
+      totalInflow: totalInflow ?? this.totalInflow,
+      totalOutflow: totalOutflow ?? this.totalOutflow,
+      totalBills: totalBills,
+      totalBillsPaid: totalBillsPaid,
+      billCount: billCount,
+      billsPaidCount: billsPaidCount,
+      totalReceivables: totalReceivables,
+      totalReceived: totalReceived,
+      receivableCount: receivableCount,
+      netSavings: netSavings ?? this.netSavings,
+      endingCash: endingCash,
+      accountSnapshots: accountSnapshots,
+      categorySpend: categorySpend ?? this.categorySpend,
+      netWorth: netWorth,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
   factory MonthlySummary.fromJson(Map<String, dynamic> json) {
     return MonthlySummary(
       month: json['month'] as String,

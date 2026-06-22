@@ -2791,15 +2791,10 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
       final month = toMonthKey(_date);
 
       if (_type == TransactionType.transfer) {
-        final cats = _p.categories;
-        final expense = cats.where((c) => c.type == CategoryType.expense);
-        final categoryId =
-            (expense.isNotEmpty ? expense : cats).firstOrNull?.id ?? '';
         await _p.addTransfer(
           fromAccountId: _accountId!,
           toAccountId: _toAccountId!,
           amount: amount,
-          categoryId: categoryId,
           description: description.isEmpty ? 'Transfer' : description,
           date: _date,
           note: note.isEmpty ? null : note,

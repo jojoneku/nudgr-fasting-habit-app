@@ -238,7 +238,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           fromAccountId: acct,
           toAccountId: bill.accountId!,
           amount: paidAmount,
-          categoryId: bill.categoryId,
           description: bill.name,
           date: date,
         );
