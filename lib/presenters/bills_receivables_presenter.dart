@@ -224,15 +224,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       assert(accountId != null,
           'accountId is required when recording the payment in the ledger');
       final acct = accountId!;
-      // Paying a credit-card statement is a *transfer*: cash leaves the funding
-      // account and the card's owed balance goes down. A plain outflow would
-      // shrink cash without clearing the debt, so route these through
-      // addTransfer.
-      final card =
+      // Paying down ANY liability statement (credit card, credit line, BNPL) is
+      // a *transfer*: cash leaves the funding account and the liability's owed
+      // balance goes down. A plain outflow would shrink cash without clearing
+      // the debt AND wrongly count as spending — the original charge already
+      // booked the expense. So route any payment whose target account is a
+      // liability through addTransfer, regardless of the bill's type.
+      final liability =
           _ledger.accounts.where((a) => a.id == bill.accountId).firstOrNull;
-      if (bill.billType == BillType.creditCard &&
-          card != null &&
-          card.isLiability &&
+      if (liability != null &&
+          liability.isLiability &&
           acct != bill.accountId) {
         await _ledger.addTransfer(
           fromAccountId: acct,

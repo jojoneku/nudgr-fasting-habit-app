@@ -68,17 +68,20 @@ Bill _bill({
   String month = '2026-03',
   String categoryId = '',
   bool isRecurring = false,
+  BillType billType = BillType.utility,
+  String? accountId,
 }) =>
     Bill(
       id: id,
       name: 'Bill $id',
-      billType: BillType.utility,
+      billType: billType,
       amount: amount,
       dueDay: 10,
       month: month,
       categoryId: categoryId,
       isPaid: isPaid,
       isRecurring: isRecurring,
+      accountId: accountId,
     );
 
 Receivable _receivable({
@@ -324,6 +327,34 @@ void main() {
       expect(bpi.balance, 5500);
     });
 
+    test('filteredMonthOutflow/Inflow exclude transfer legs', () async {
+      final now = DateTime.now();
+      final month = toMonthKey(now);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 'spend',
+                accountId: 'gcash',
+                amount: 200,
+                type: TransactionType.outflow,
+                month: month,
+                categoryId: 'food'),
+          ]);
+      final fresh = LedgerPresenter(mockStorage, mockStats);
+      await _waitForLoad(fresh);
+      // A transfer out of gcash into bpi this month.
+      await fresh.addTransfer(
+        fromAccountId: 'gcash',
+        toAccountId: 'bpi',
+        amount: 5000,
+        description: 'move to savings',
+        date: now,
+      );
+
+      // Only the genuine 200 spend counts — the 5000 transfer leg is excluded.
+      expect(fresh.filteredMonthOutflow, 200);
+      expect(fresh.filteredMonthInflow, 0);
+    });
+
     test('addTransfer stamps both legs with the reserved transfer category',
         () async {
       await _waitForLoad(presenter);
@@ -463,6 +494,7 @@ void main() {
                 id: 'gcash', category: AccountCategory.ewallet, balance: 5000),
           ]);
       when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(mockStorage.saveFinanceCategories(any)).thenAnswer((_) async {});
       when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
       when(mockStorage.loadFinanceDictionary()).thenAnswer((_) async => []);
       when(mockStorage.saveFinanceDictionary(any)).thenAnswer((_) async {});
@@ -519,6 +551,56 @@ void main() {
       final paidBill = capturedBills.firstWhere((b) => b.id == 'b1');
       expect(paidBill.isPaid, isTrue);
       expect(paidBill.paidAmount, 500);
+    });
+
+    test('markBillPaid on a credit-line statement is a transfer, not spend',
+        () async {
+      // A credit LINE statement (billType is NOT creditCard) whose target is a
+      // liability account must still pay down via transfer — deduct the funder,
+      // reduce the debt — and never count as a category expense.
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(
+                id: 'gcash', category: AccountCategory.ewallet, balance: 5000),
+            _account(
+                id: 'cl', category: AccountCategory.creditLine, balance: 3000),
+          ]);
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            _bill(
+                id: 'b1',
+                amount: 1000,
+                month: '2026-03',
+                categoryId: 'food',
+                billType: BillType.utility, // deliberately NOT creditCard
+                accountId: 'cl'),
+          ]);
+      // Fresh instances so the ledger loads the credit-line account above
+      // (setUp's ledger was constructed before this stub override).
+      final freshLedger = LedgerPresenter(mockStorage, mockStats);
+      final freshBills =
+          BillsReceivablesPresenter(mockStorage, freshLedger, mockStats);
+      await freshBills.load();
+      await freshBills.setMonth('2026-03');
+      await _waitForLoad(freshLedger);
+
+      await freshBills.markBillPaid('b1', paidAmount: 1000, accountId: 'gcash');
+
+      // Funder down, liability debt down (it was a transfer).
+      expect(freshLedger.accounts.firstWhere((a) => a.id == 'gcash').balance,
+          4000);
+      expect(
+          freshLedger.accounts.firstWhere((a) => a.id == 'cl').balance, 2000);
+      // Both legs are transfer-tagged → nothing landed on the 'food' category.
+      final legs = freshLedger.allTransactions
+          .where((t) => t.transferGroupId != null)
+          .toList();
+      expect(legs.length, 2);
+      expect(
+          legs.every((t) => t.categoryId == FinanceCategory.transferCategoryId),
+          isTrue);
+      expect(
+          freshLedger.allTransactions.any((t) =>
+              t.categoryId == 'food' && t.type == TransactionType.outflow),
+          isFalse);
     });
 
     test('markBillPaid awards XP when all bills are paid', () async {
