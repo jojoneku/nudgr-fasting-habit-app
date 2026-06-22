@@ -53,24 +53,6 @@ lib/
 └── main.dart       # Entry point & Dependency Injection
 ```
 
-## 🚀 Getting Started
-
-1.  **Prerequisites:**
-    - Flutter SDK (3.4.1 or higher)
-    - Android Studio / VS Code
-
-2.  **Installation:**
-    ```bash
-    git clone https://github.com/jojoneku/nudgr-fasting-habit-app.git
-    cd intermittent_fasting_2
-    flutter pub get
-    ```
-
-3.  **Run the App:**
-    ```bash
-    flutter run
-    ```
-
 ## 🎨 Color Palette
 
 | Color | Hex | Usage |
@@ -82,13 +64,17 @@ lib/
 | **Success** | `#00E676` | Level Up, Completion |
 | **Gold** | `#FFD600` | S-Rank Highlights |
 
-## 🤝 Contributing
+## 📄 License & Use
 
-1.  Fork the repository.
-2.  Create your feature branch (`git checkout -b feat/amazing-feature`).
-3.  Commit your changes (`git commit -m 'Add some amazing feature'`).
-4.  Push to the branch (`git push origin feat/amazing-feature`).
-5.  Open a Pull Request.
+**Proprietary — All Rights Reserved** (see [LICENSE](LICENSE)).
+
+This source is published for transparency and review only. It is **not** open
+source and is **not** set up for external use, deployment, or contribution. No
+license is granted to use, copy, modify, or redistribute it. The application is
+non-functional without its private backend (Supabase project, cloud functions,
+and credentials), which is not included.
+
+To report a security issue, see [SECURITY.md](SECURITY.md).
 
 ---
 
