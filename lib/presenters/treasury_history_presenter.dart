@@ -127,7 +127,10 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     var cumulative = 0.0;
     final cols = <MonthHistoryColumn>[];
     for (final m in months) {
-      final txns = _allTransactions.where((t) => t.month == m);
+      // Exclude internal transfer legs — moving money between your own accounts
+      // is neither income nor an expense (mirrors the dashboard cash-flow getters).
+      final txns = _allTransactions
+          .where((t) => t.month == m && t.transferGroupId == null);
       final income = txns
           .where((t) => t.type == TransactionType.inflow)
           .fold(0.0, (s, t) => s + t.amount);
@@ -152,8 +155,8 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   /// its spend in every active month — the sheet's category breakdown grid.
   List<CategoryHistoryRow> get categoryMatrix {
     final byCat = <String, Map<String, double>>{};
-    for (final t
-        in _allTransactions.where((t) => t.type == TransactionType.outflow)) {
+    for (final t in _allTransactions.where((t) =>
+        t.type == TransactionType.outflow && t.transferGroupId == null)) {
       (byCat[t.categoryId] ??= {})[t.month] =
           (byCat[t.categoryId]?[t.month] ?? 0) + t.amount;
     }
@@ -190,6 +193,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     _categories = await _storage.loadFinanceCategories();
 
     await closePreviousMonthIfNeeded();
+    await repairTransferPollutedSummariesOnce();
 
     _isLoading = false;
     notifyListeners();
@@ -212,6 +216,60 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
     _summaries = [..._summaries, summary];
     await _storage.saveMonthlySummaries(_summaries);
+  }
+
+  /// One-time repair for the transfer-exclusion fix. Earlier builds stamped each
+  /// transfer leg with the first expense category and counted the outflow leg as
+  /// spending, so any month the app auto-closed while transfers existed has an
+  /// inflated [MonthlySummary] (income, expenses, and per-category spend). This
+  /// recomputes ONLY those transfer-derived totals from the month's transactions
+  /// — preserving the frozen [MonthlySummary.endingCash]/[MonthlySummary.netWorth]
+  /// /[MonthlySummary.accountSnapshots] — and leaves spreadsheet-imported months
+  /// (which carry no transaction rows, hence no transfer legs) untouched.
+  /// Naturally idempotent: once corrected, the recompute matches the stored
+  /// values and nothing is rewritten.
+  Future<void> repairTransferPollutedSummariesOnce() async {
+    var changed = false;
+    final repaired = <MonthlySummary>[];
+    for (final s in _summaries) {
+      final txns = _allTransactions.where((t) => t.month == s.month).toList();
+      // Only months that actually contain transfer legs can be polluted; this
+      // skips legacy spreadsheet months, which have no underlying transactions.
+      if (!txns.any((t) => t.transferGroupId != null)) {
+        repaired.add(s);
+        continue;
+      }
+      final inflow = _sumType(txns, TransactionType.inflow);
+      final outflow = _sumType(txns, TransactionType.outflow);
+      final categorySpend = _buildCategorySpend(txns);
+      if (_closeEnough(inflow, s.totalInflow) &&
+          _closeEnough(outflow, s.totalOutflow) &&
+          _categorySpendClose(categorySpend, s.categorySpend)) {
+        repaired.add(s);
+        continue;
+      }
+      changed = true;
+      repaired.add(s.copyWith(
+        totalInflow: inflow,
+        totalOutflow: outflow,
+        netSavings: inflow - outflow,
+        categorySpend: categorySpend,
+      ));
+    }
+    if (!changed) return;
+    _summaries = repaired;
+    await _storage.saveMonthlySummaries(_summaries);
+  }
+
+  bool _closeEnough(double a, double b) => (a - b).abs() < 0.005;
+
+  bool _categorySpendClose(Map<String, double> a, Map<String, double> b) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      final other = b[entry.key];
+      if (other == null || !_closeEnough(entry.value, other)) return false;
+    }
+    return true;
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -256,8 +314,9 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     );
   }
 
-  double _sumType(List<TransactionRecord> txns, TransactionType type) =>
-      txns.where((t) => t.type == type).fold(0.0, (s, t) => s + t.amount);
+  double _sumType(List<TransactionRecord> txns, TransactionType type) => txns
+      .where((t) => t.type == type && t.transferGroupId == null)
+      .fold(0.0, (s, t) => s + t.amount);
 
   Map<String, double> _buildAccountSnapshots() {
     return {
@@ -267,7 +326,8 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   Map<String, double> _buildCategorySpend(List<TransactionRecord> txns) {
     final result = <String, double>{};
-    for (final t in txns.where((t) => t.type == TransactionType.outflow)) {
+    for (final t in txns.where((t) =>
+        t.type == TransactionType.outflow && t.transferGroupId == null)) {
       result[t.categoryId] = (result[t.categoryId] ?? 0.0) + t.amount;
     }
     return result;
