@@ -92,13 +92,19 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       List.unmodifiable(_allTransactions);
 
   // --- Filtered summary ---
+  // These month/daily totals exclude internal transfer legs (transferGroupId
+  // != null): moving money between your own accounts (incl. paying down a
+  // credit card) is neither income nor spending, so it must not inflate the
+  // ledger's inflow/outflow figures. Transfer rows still appear in the list.
 
   double get filteredMonthInflow => _filteredTransactions
-      .where((t) => t.type == TransactionType.inflow)
+      .where(
+          (t) => t.type == TransactionType.inflow && t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get filteredMonthOutflow => _filteredTransactions
-      .where((t) => t.type == TransactionType.outflow)
+      .where(
+          (t) => t.type == TransactionType.outflow && t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
@@ -107,7 +113,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Map<String, double> get dailyOutflowMap {
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (t.type != TransactionType.outflow) continue;
+      if (t.type != TransactionType.outflow || t.transferGroupId != null) {
+        continue;
+      }
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -120,7 +128,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Map<String, double> get dailyInflowMap {
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (t.type != TransactionType.inflow) continue;
+      if (t.type != TransactionType.inflow || t.transferGroupId != null) {
+        continue;
+      }
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -236,13 +246,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Inflow subtotal for the current table filter (month/account/category).
+  /// Excludes transfer legs — a transfer is neither income nor spending.
   double get tableInflow => ledgerRowsForMonth
-      .where((r) => r.txn.type == TransactionType.inflow)
+      .where((r) =>
+          r.txn.type == TransactionType.inflow && r.txn.transferGroupId == null)
       .fold(0.0, (sum, r) => sum + r.txn.amount);
 
   /// Outflow subtotal for the current table filter (month/account/category).
+  /// Excludes transfer legs — a transfer is neither income nor spending.
   double get tableOutflow => ledgerRowsForMonth
-      .where((r) => r.txn.type == TransactionType.outflow)
+      .where((r) =>
+          r.txn.type == TransactionType.outflow &&
+          r.txn.transferGroupId == null)
       .fold(0.0, (sum, r) => sum + r.txn.amount);
 
   /// Per-transaction account balance: the involved account's balance

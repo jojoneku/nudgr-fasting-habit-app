@@ -402,11 +402,18 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     final all = _p.ledgerSpreadsheetRows;
     final rows = _sorted(all.where(_matches).toList());
 
+    // Exclude transfer legs from the summary totals — moving money between
+    // your own accounts (incl. paying a credit card) is neither income nor
+    // spending. The rows themselves still list transfers.
     final totIn = rows
-        .where((r) => r.txn.type == TransactionType.inflow)
+        .where((r) =>
+            r.txn.type == TransactionType.inflow &&
+            r.txn.transferGroupId == null)
         .fold(0.0, (s, r) => s + r.txn.amount);
     final totOut = rows
-        .where((r) => r.txn.type == TransactionType.outflow)
+        .where((r) =>
+            r.txn.type == TransactionType.outflow &&
+            r.txn.transferGroupId == null)
         .fold(0.0, (s, r) => s + r.txn.amount);
 
     return Column(
