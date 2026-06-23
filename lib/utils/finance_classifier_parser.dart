@@ -88,6 +88,11 @@ String buildFinanceClassifierPrompt({
       '- If you have all required fields with confidence >= 0.8, return step:"resolved".\n'
       '- If unsure, return step:"clarify" with one question and optional quickReplies.\n'
       '- After $kMaxFinanceClarifyTurns clarify turns total, return step:"give_up".\n'
+      '- description: a short, natural Title Case label for what the money was '
+      'for (e.g. "Lunch", "Grab ride", "Jollibee", "Electric bill"). Capture the '
+      'item/merchant/purpose only — never include the amount, the account name, '
+      'or a bare restatement of the category, and never echo the raw input '
+      'verbatim. Keep it under ~5 words.\n'
       '\n'
       'Required fields:\n'
       '- inflow/outflow: amount, type, account, category, description\n'
@@ -96,6 +101,7 @@ String buildFinanceClassifierPrompt({
       'Output ONE of:\n'
       '  {"step":"resolved","amount":number,"type":"outflow|inflow|transfer",\n'
       '   "account":"<name>","transferTo":"<name>|null","category":"<name>|null",\n'
+      '   "description":"<short Title Case label, e.g. Lunch>",\n'
       '   "learnedToken":"<lowercase>|null","confidence":0.0-1.0,\n'
       '   "summaryText":"Log ₱500 outflow → Food (GCash)?"}\n'
       '  {"step":"clarify","question":"...",'
@@ -208,6 +214,12 @@ ClassifierStep? parseFinanceClassifierResponse({
           'Log this transaction?';
       final learnedToken = (decoded['learnedToken'] as String?)?.trim();
 
+      // Prefer the model's clean, human-written label; fall back to the raw
+      // input (which the commit path then strips of extraction tokens).
+      final aiDescription = (decoded['description'] as String?)?.trim();
+      final hasAiDescription =
+          aiDescription != null && aiDescription.isNotEmpty;
+
       return StepResolved(
         transaction: ParsedTransaction(
           amount: amount,
@@ -215,7 +227,8 @@ ClassifierStep? parseFinanceClassifierResponse({
           accountId: accountId,
           transferToAccountId: transferToId,
           categoryId: categoryId,
-          description: preparse.rawInput,
+          description: hasAiDescription ? aiDescription : preparse.rawInput,
+          descriptionIsClean: hasAiDescription,
         ),
         learnedToken: (learnedToken == null || learnedToken.isEmpty)
             ? null

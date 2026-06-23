@@ -849,7 +849,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       return;
     }
     final now = DateTime.now();
-    final description = _truncateDescription(_cleanDescription(draft));
+    // The AI classifier writes a clean, meaningful label — use it as-is. Only
+    // raw chat input needs the extraction tokens (amount/account/…) stripped.
+    final description = draft.descriptionIsClean
+        ? _truncateDescription(draft.description)
+        : _truncateDescription(_cleanDescription(draft));
     if (draft.type == TransactionType.transfer) {
       await addTransfer(
         fromAccountId: draft.accountId!,
