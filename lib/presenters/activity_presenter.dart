@@ -50,6 +50,10 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
   bool get healthPermissionDenied => _healthPermissionDenied;
   String? get preferredStepsSourceId => _preferredStepsSourceId;
   List<({String sourceId, String sourceName})> get stepSources => _stepSources;
+
+  /// True when [sourceId] is the merged on-device ("Phone") source.
+  bool isPhoneSourceId(String sourceId) =>
+      HealthService.isPhoneSource(sourceId);
   int? get tdee => _tdeeProfile?.tdee;
 
   // ─── Computed getters (safe for build()) ─────────────────────────────────
@@ -166,8 +170,6 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     try {
-      await _healthService
-          .debugDumpTodayStepRecords(); // TEMP: remove after inspection
       final steps = await _healthService.readTodaySteps(
           sourceId: _preferredStepsSourceId);
       final activeCalories = await _healthService.readTodayActiveCalories();
