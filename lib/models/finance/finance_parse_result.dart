@@ -58,6 +58,11 @@ class ParsedTransaction {
   final String? categoryId;
   final String description;
 
+  /// True when [description] is already a clean, human-meaningful label (the AI
+  /// classifier wrote it) rather than raw chat input. When false the commit
+  /// path strips extraction tokens (amount/account/etc.) out of it first.
+  final bool descriptionIsClean;
+
   const ParsedTransaction({
     this.amount,
     this.type,
@@ -65,6 +70,7 @@ class ParsedTransaction {
     this.transferToAccountId,
     this.categoryId,
     this.description = '',
+    this.descriptionIsClean = false,
   });
 
   bool get isComplete {
@@ -83,6 +89,7 @@ class ParsedTransaction {
     String? transferToAccountId,
     String? categoryId,
     String? description,
+    bool? descriptionIsClean,
   }) =>
       ParsedTransaction(
         amount: amount ?? this.amount,
@@ -91,6 +98,7 @@ class ParsedTransaction {
         transferToAccountId: transferToAccountId ?? this.transferToAccountId,
         categoryId: categoryId ?? this.categoryId,
         description: description ?? this.description,
+        descriptionIsClean: descriptionIsClean ?? this.descriptionIsClean,
       );
 
   /// Merge non-null fields from [other] onto this draft.
@@ -101,6 +109,8 @@ class ParsedTransaction {
         transferToAccountId: other.transferToAccountId,
         categoryId: other.categoryId,
         description: other.description.isEmpty ? null : other.description,
+        descriptionIsClean:
+            other.description.isEmpty ? null : other.descriptionIsClean,
       );
 }
 
