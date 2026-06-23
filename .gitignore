@@ -66,3 +66,6 @@ scripts/data/aliases_run.log
 
 # Treasury web design reference (Claude Design export — local reference only)
 docs/design/treasury-web-reference/
+
+# Transient release-notes artifact produced by scripts/release_changelog.sh
+RELEASE_NOTES.md
