@@ -194,8 +194,11 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   Color _colorFor(FinanceCategory? cat) {
     if (cat == null) return Theme.of(context).colorScheme.onSurfaceVariant;
     final idx = _p.categories.indexWhere((c) => c.id == cat.id);
-    return resolveSliceColor(cat.colorHex, idx < 0 ? 0 : idx,
-        brightness: Theme.of(context).brightness);
+    return resolveSliceColor(
+      cat.colorHex,
+      idx < 0 ? 0 : idx,
+      brightness: Theme.of(context).brightness,
+    );
   }
 
   List<FinanceCategory> _categoriesFor(TransactionType type) {
@@ -235,15 +238,15 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
       // 1,000) and as a substring of the formatted amount, so "1000" finds
       // ₱1,000.00 and "10" finds ₱10.00. Either text OR amount may match.
       var amountMatch = false;
-      final cleaned = _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(
-            ',',
-            '',
-          );
+      final cleaned =
+          _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(',', '');
       final n = double.tryParse(cleaned);
       if (n != null) {
         final fixed = t.amount.toStringAsFixed(2); // e.g. "1000.00"
-        final grouped =
-            NumberFormat('#,##0.00', 'en_PH').format(t.amount); // "1,000.00"
+        final grouped = NumberFormat(
+          '#,##0.00',
+          'en_PH',
+        ).format(t.amount); // "1,000.00"
         amountMatch = t.amount == n ||
             fixed.contains(cleaned) ||
             grouped.contains(_query);
@@ -255,11 +258,11 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   }
 
   List<_Row> _sorted(List<_Row> rows) {
-    // Default ordering is oldest-first (matches a spreadsheet — the most recent
-    // entry sits at the bottom, where the draft add-row lives). Explicit sort
-    // presets still override via [_sortKey]/[_sortDir]. (Ledger UX overhaul PR1)
+    // Default ordering is newest-first — the most recent entry sits at the top,
+    // right below the draft add-row. Explicit sort presets still override via
+    // [_sortKey]/[_sortDir]. (Ledger UX overhaul PR2)
     final key = _sortKey ?? _SortKey.date;
-    final dir = _sortKey == null ? 1 : _sortDir;
+    final dir = _sortKey == null ? -1 : _sortDir;
     Comparable keyOf(_Row r) {
       final t = r.txn;
       switch (key) {
@@ -369,16 +372,19 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete transactions?'),
-        content:
-            Text('Permanently delete $noun? This also reverses the affected '
-                'account balances and cannot be undone.'),
+        content: Text(
+          'Permanently delete $noun? This also reverses the affected '
+          'account balances and cannot be undone.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(ctx).colorScheme.error),
+              backgroundColor: Theme.of(ctx).colorScheme.error,
+            ),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -406,17 +412,19 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
         : _draftDesc.trim();
     final id =
         '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-    _p.addTransaction(TransactionRecord(
-      id: id,
-      date: _draftDate,
-      accountId: accountId,
-      categoryId: categoryId,
-      amount: amount,
-      type: type,
-      description: desc,
-      note: _draftNote.trim().isEmpty ? null : _draftNote.trim(),
-      month: toMonthKey(_draftDate),
-    ));
+    _p.addTransaction(
+      TransactionRecord(
+        id: id,
+        date: _draftDate,
+        accountId: accountId,
+        categoryId: categoryId,
+        amount: amount,
+        type: type,
+        description: desc,
+        note: _draftNote.trim().isEmpty ? null : _draftNote.trim(),
+        month: toMonthKey(_draftDate),
+      ),
+    );
     setState(() {
       _draftDesc = '';
       _draftNote = '';
@@ -461,65 +469,61 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     final all = _p.ledgerSpreadsheetRows;
     final rows = _sorted(all.where(_matches).toList());
 
-    // Exclude transfer legs from the summary totals — moving money between
-    // your own accounts (incl. paying a credit card) is neither income nor
-    // spending. The rows themselves still list transfers.
-    final totIn = rows
-        .where((r) =>
-            r.txn.type == TransactionType.inflow &&
-            r.txn.transferGroupId == null)
-        .fold(0.0, (s, r) => s + r.txn.amount);
-    final totOut = rows
-        .where((r) =>
-            r.txn.type == TransactionType.outflow &&
-            r.txn.transferGroupId == null)
-        .fold(0.0, (s, r) => s + r.txn.amount);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    // The page is now focused purely on the ledger grid — the inflow/outflow/
+    // net-cash summary tiles moved out, and natural-language Quick Add became
+    // the floating button in the bottom-right corner (see [_QuickAddFab]).
+    return Stack(
       children: [
-        _SummaryRow(inflow: totIn, outflow: totOut, net: totIn - totOut),
-        const SizedBox(height: WebInsets.xl),
-        _QuickAdd(presenter: _p, onNeedsForm: _openAddDialog),
-        const SizedBox(height: WebInsets.xl),
-        _Toolbar(
-          monthLabel: monthLabel(_p.selectedMonth),
-          onPrevMonth: () => _p.setMonth(previousMonth(_p.selectedMonth)),
-          onNextMonth: () => _p.setMonth(nextMonth(_p.selectedMonth)),
-          searchController: _searchController,
-          accounts: _liquidAccounts,
-          categories: _p.categories,
-          accountId: _fAccountId,
-          categoryId: _fCategoryId,
-          type: _fType,
-          fromDate: _fromDate,
-          toDate: _toDate,
-          sortKey: _sortKey,
-          sortDir: _sortDir,
-          activeCount: _activeFilterCount,
-          accountName: _accountName,
-          categoryName: (id) => _categoryOf(id)?.name ?? '—',
-          onAccount: (v) => setState(() => _fAccountId = v),
-          onCategory: (v) => setState(() => _fCategoryId = v),
-          onType: (v) => setState(() => _fType = v),
-          onFromDate: (v) => setState(() => _fromDate = v),
-          onToDate: (v) => setState(() => _toDate = v),
-          onSort: (opt) => setState(() {
-            if (opt == null) {
-              _sortKey = null;
-              _sortDir = -1;
-            } else {
-              _sortKey = opt.key;
-              _sortDir = opt.dir;
-            }
-          }),
-          onClear: _clearFilters,
-          onAdd: () => _openAddDialog(),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _Toolbar(
+              monthLabel: monthLabel(_p.selectedMonth),
+              onPrevMonth: () => _p.setMonth(previousMonth(_p.selectedMonth)),
+              onNextMonth: () => _p.setMonth(nextMonth(_p.selectedMonth)),
+              searchController: _searchController,
+              accounts: _liquidAccounts,
+              categories: _p.categories,
+              accountId: _fAccountId,
+              categoryId: _fCategoryId,
+              type: _fType,
+              fromDate: _fromDate,
+              toDate: _toDate,
+              sortKey: _sortKey,
+              sortDir: _sortDir,
+              activeCount: _activeFilterCount,
+              accountName: _accountName,
+              categoryName: (id) => _categoryOf(id)?.name ?? '—',
+              onAccount: (v) => setState(() => _fAccountId = v),
+              onCategory: (v) => setState(() => _fCategoryId = v),
+              onType: (v) => setState(() => _fType = v),
+              onFromDate: (v) => setState(() => _fromDate = v),
+              onToDate: (v) => setState(() => _toDate = v),
+              onSort: (opt) => setState(() {
+                if (opt == null) {
+                  _sortKey = null;
+                  _sortDir = -1;
+                } else {
+                  _sortKey = opt.key;
+                  _sortDir = opt.dir;
+                }
+              }),
+              onClear: _clearFilters,
+              onAdd: () => _openAddDialog(),
+            ),
+            const SizedBox(height: WebInsets.xl),
+            // The table fills the remaining viewport height and owns its own
+            // scrolling, so the toolbar above stays pinned.
+            Expanded(child: _buildTableCard(context, rows)),
+          ],
         ),
-        const SizedBox(height: WebInsets.xl),
-        // The table fills the remaining viewport height and owns its own
-        // scrolling, so the cards + toolbar above stay pinned.
-        Expanded(child: _buildTableCard(context, rows)),
+        // Natural-language Quick Add — a floating button anchored to the
+        // bottom-right that pops open a compact chat box on tap.
+        Positioned(
+          right: 0,
+          bottom: 0,
+          child: _QuickAddFab(presenter: _p, onNeedsForm: _openAddDialog),
+        ),
       ],
     );
   }
@@ -545,7 +549,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
           if (_selected.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(
-                  horizontal: WebInsets.lg, vertical: WebInsets.md),
+                horizontal: WebInsets.lg,
+                vertical: WebInsets.md,
+              ),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
               ),
@@ -564,6 +570,12 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                 final avail = constraints.maxWidth;
                 final descW = max(_wDescMin, avail - _col.fixedSum);
                 final gridW = _col.fixedSum + descW;
+                // Left edges of the two money columns, used to paint full-height
+                // green/red column washes that run continuously behind every row
+                // (header → draft → rows) instead of stopping inside each cell.
+                final inflowLeft =
+                    _wCheck + _col.date + _col.account + descW + _col.category;
+                final outflowLeft = inflowLeft + _col.inflow;
                 return Scrollbar(
                   controller: _gridHScroll,
                   thumbVisibility: true,
@@ -572,108 +584,136 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(
                       width: gridW,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                      child: Stack(
                         children: [
-                          // Pinned header.
-                          _GridHeader(
-                            descWidth: descW,
-                            widths: _col,
-                            sortKey: _sortKey,
-                            sortDir: _sortDir,
-                            allSelected: rows.isNotEmpty &&
-                                rows.every((r) => _selected.contains(r.txn.id)),
-                            onToggleAll: () => setState(() {
-                              final allSel = rows.isNotEmpty &&
-                                  rows.every(
-                                      (r) => _selected.contains(r.txn.id));
-                              if (allSel) {
-                                _selected.clear();
-                              } else {
-                                _selected.addAll(rows.map((r) => r.txn.id));
-                              }
-                            }),
-                            onSort: _toggleHeaderSort,
-                            onResize: (col, d) =>
-                                setState(() => _col.resize(col, d)),
+                          // Continuous column washes — span the full grid height
+                          // so each money column reads as one solid band.
+                          Positioned(
+                            left: inflowLeft,
+                            top: 0,
+                            bottom: 0,
+                            width: _col.inflow,
+                            child: ColoredBox(color: _inflowTint(context)),
                           ),
-                          // Scrolling rows (oldest-first; newest at the bottom).
-                          Expanded(
-                            child: Scrollbar(
-                              controller: _gridVScroll,
-                              thumbVisibility: true,
-                              child: ListView(
-                                controller: _gridVScroll,
-                                padding: EdgeInsets.zero,
-                                children: [
-                                  if (rows.isEmpty)
-                                    _EmptyGridHint(
-                                        hasAccounts:
-                                            _liquidAccounts.isNotEmpty),
-                                  for (var i = 0; i < rows.length; i++)
-                                    _EditableRow(
-                                      key: ValueKey(rows[i].txn.id),
-                                      row: rows[i],
-                                      descWidth: descW,
-                                      widths: _col,
-                                      selected:
-                                          _selected.contains(rows[i].txn.id),
-                                      accounts: _liquidAccounts,
-                                      categories:
-                                          _categoriesFor(rows[i].txn.type),
-                                      accountName: _accountName,
-                                      categoryOf: _categoryOf,
-                                      colorFor: _colorFor,
-                                      onToggleSelect: () => setState(() {
-                                        final id = rows[i].txn.id;
-                                        _selected.contains(id)
-                                            ? _selected.remove(id)
-                                            : _selected.add(id);
-                                      }),
-                                      onDate: _editDate,
-                                      onAccount: _editAccount,
-                                      onCategory: _editCategory,
-                                      onDescription: _editDescription,
-                                      onNote: _editNote,
-                                      onAmount: _editAmount,
-                                      onDelete: _deleteRow,
+                          Positioned(
+                            left: outflowLeft,
+                            top: 0,
+                            bottom: 0,
+                            width: _col.outflow,
+                            child: ColoredBox(color: _outflowTint(context)),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Pinned header.
+                              _GridHeader(
+                                descWidth: descW,
+                                widths: _col,
+                                sortKey: _sortKey,
+                                sortDir: _sortDir,
+                                allSelected: rows.isNotEmpty &&
+                                    rows.every(
+                                      (r) => _selected.contains(r.txn.id),
                                     ),
-                                ],
+                                onToggleAll: () => setState(() {
+                                  final allSel = rows.isNotEmpty &&
+                                      rows.every(
+                                        (r) => _selected.contains(r.txn.id),
+                                      );
+                                  if (allSel) {
+                                    _selected.clear();
+                                  } else {
+                                    _selected.addAll(rows.map((r) => r.txn.id));
+                                  }
+                                }),
+                                onSort: _toggleHeaderSort,
+                                onResize: (col, d) =>
+                                    setState(() => _col.resize(col, d)),
                               ),
-                            ),
-                          ),
-                          // Draft add-row — pinned at the BOTTOM, where the
-                          // newest entries live (oldest-first ordering).
-                          _DraftRow(
-                            epoch: _draftEpoch,
-                            descWidth: descW,
-                            widths: _col,
-                            date: _draftDate,
-                            accountId: _draftAccountId,
-                            categoryId: _draftCategoryId,
-                            inflow: _draftInflow,
-                            outflow: _draftOutflow,
-                            accounts: _liquidAccounts,
-                            categories: _categoriesFor(_draftInflow > 0
-                                ? TransactionType.inflow
-                                : TransactionType.outflow),
-                            colorFor: _colorFor,
-                            onDate: (d) => setState(() => _draftDate = d),
-                            onAccount: (id) =>
-                                setState(() => _draftAccountId = id),
-                            onCategory: (id) =>
-                                setState(() => _draftCategoryId = id),
-                            onDescription: (v) => _draftDesc = v,
-                            onNote: (v) => _draftNote = v,
-                            onInflow: (v) => setState(() {
-                              _draftInflow = v;
-                              if (v > 0) _draftOutflow = 0;
-                            }),
-                            onOutflow: (v) => setState(() {
-                              _draftOutflow = v;
-                              if (v > 0) _draftInflow = 0;
-                            }),
-                            onCommit: _commitDraft,
+                              // Draft add-row — pinned at the TOP, right above
+                              // the newest entries (newest-first ordering).
+                              _DraftRow(
+                                epoch: _draftEpoch,
+                                descWidth: descW,
+                                widths: _col,
+                                date: _draftDate,
+                                accountId: _draftAccountId,
+                                categoryId: _draftCategoryId,
+                                inflow: _draftInflow,
+                                outflow: _draftOutflow,
+                                accounts: _liquidAccounts,
+                                categories: _categoriesFor(
+                                  _draftInflow > 0
+                                      ? TransactionType.inflow
+                                      : TransactionType.outflow,
+                                ),
+                                colorFor: _colorFor,
+                                onDate: (d) => setState(() => _draftDate = d),
+                                onAccount: (id) =>
+                                    setState(() => _draftAccountId = id),
+                                onCategory: (id) =>
+                                    setState(() => _draftCategoryId = id),
+                                onDescription: (v) => _draftDesc = v,
+                                onNote: (v) => _draftNote = v,
+                                onInflow: (v) => setState(() {
+                                  _draftInflow = v;
+                                  if (v > 0) _draftOutflow = 0;
+                                }),
+                                onOutflow: (v) => setState(() {
+                                  _draftOutflow = v;
+                                  if (v > 0) _draftInflow = 0;
+                                }),
+                                onCommit: _commitDraft,
+                              ),
+                              // Scrolling rows (newest-first; newest on top).
+                              Expanded(
+                                child: Scrollbar(
+                                  controller: _gridVScroll,
+                                  thumbVisibility: true,
+                                  child: ListView(
+                                    controller: _gridVScroll,
+                                    padding: EdgeInsets.zero,
+                                    children: [
+                                      if (rows.isEmpty)
+                                        _EmptyGridHint(
+                                          hasAccounts:
+                                              _liquidAccounts.isNotEmpty,
+                                        ),
+                                      for (var i = 0; i < rows.length; i++)
+                                        _EditableRow(
+                                          key: ValueKey(rows[i].txn.id),
+                                          row: rows[i],
+                                          descWidth: descW,
+                                          widths: _col,
+                                          selected: _selected.contains(
+                                            rows[i].txn.id,
+                                          ),
+                                          accounts: _liquidAccounts,
+                                          categories: _categoriesFor(
+                                            rows[i].txn.type,
+                                          ),
+                                          accountName: _accountName,
+                                          categoryOf: _categoryOf,
+                                          colorFor: _colorFor,
+                                          onToggleSelect: () => setState(() {
+                                            final id = rows[i].txn.id;
+                                            _selected.contains(id)
+                                                ? _selected.remove(id)
+                                                : _selected.add(id);
+                                          }),
+                                          onDate: _editDate,
+                                          onAccount: _editAccount,
+                                          onCategory: _editCategory,
+                                          onDescription: _editDescription,
+                                          onNote: _editNote,
+                                          onAmount: _editAmount,
+                                          onDelete: _deleteRow,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -686,11 +726,14 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
           // Footer hint.
           Container(
             padding: const EdgeInsets.symmetric(
-                horizontal: WebInsets.lg, vertical: WebInsets.sm),
+              horizontal: WebInsets.lg,
+              vertical: WebInsets.sm,
+            ),
             decoration: BoxDecoration(
               border: Border(
-                top:
-                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                top: BorderSide(
+                  color: cs.outlineVariant.withValues(alpha: 0.4),
+                ),
               ),
             ),
             child: Row(
@@ -700,11 +743,12 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                 const SizedBox(width: WebInsets.sm),
                 Expanded(
                   child: Text(
-                    'Click any cell to edit · press Enter on the bottom row to '
+                    'Click any cell to edit · press Enter on the top row to '
                     'add · drag a column edge to resize · account balance '
                     'recalculates automatically.',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -799,10 +843,14 @@ class _Toolbar extends StatelessWidget {
     final chips = <Widget>[
       if (accountId != null)
         _ActiveChip(
-            label: accountName(accountId), onClear: () => onAccount(null)),
+          label: accountName(accountId),
+          onClear: () => onAccount(null),
+        ),
       if (categoryId != null)
         _ActiveChip(
-            label: categoryName(categoryId), onClear: () => onCategory(null)),
+          label: categoryName(categoryId),
+          onClear: () => onCategory(null),
+        ),
       if (type != _LedgerType.all)
         _ActiveChip(
           label: type == _LedgerType.inflow ? 'Inflow only' : 'Outflow only',
@@ -839,10 +887,9 @@ class _Toolbar extends StatelessWidget {
         ),
         Text(
           monthLabel,
-          style: Theme.of(context)
-              .textTheme
-              .titleMedium
-              ?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         IconButton(
           onPressed: onNextMonth,
@@ -903,8 +950,10 @@ class _SearchField extends StatelessWidget {
           isDense: true,
           hintText: 'Search…',
           prefixIcon: const Icon(Icons.search_rounded, size: 18),
-          contentPadding:
-              const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+          contentPadding: const EdgeInsets.symmetric(
+            vertical: 0,
+            horizontal: 12,
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(AppRadii.sm),
           ),
@@ -931,7 +980,8 @@ class _AddButton extends StatelessWidget {
           minimumSize: const Size(0, _kControlHeight),
           tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppRadii.sm)),
+            borderRadius: BorderRadius.circular(AppRadii.sm),
+          ),
         ),
       ),
     );
@@ -1034,11 +1084,14 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                       color: cs.primary,
                       borderRadius: BorderRadius.circular(9),
                     ),
-                    child: Text('${widget.activeCount}',
-                        style: TextStyle(
-                            color: cs.onPrimary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700)),
+                    child: Text(
+                      '${widget.activeCount}',
+                      style: TextStyle(
+                        color: cs.onPrimary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                 ],
                 const SizedBox(width: WebInsets.xs),
@@ -1052,7 +1105,8 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
               minimumSize: const Size(0, _kControlHeight),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadii.sm)),
+                borderRadius: BorderRadius.circular(AppRadii.sm),
+              ),
             ),
           ),
         ),
@@ -1089,7 +1143,8 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                   color: cs.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(AppRadii.md),
                   border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.6)),
+                    color: cs.outlineVariant.withValues(alpha: 0.6),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       // Theme shadow token, not literal black — black at 0.18
@@ -1111,10 +1166,15 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                         hintText: 'All accounts',
                         entries: [
                           const WebDropdownEntry<String?>(
-                              value: null, label: 'All accounts'),
-                          ...widget.accounts.map((a) =>
-                              WebDropdownEntry<String?>(
-                                  value: a.id, label: a.name)),
+                            value: null,
+                            label: 'All accounts',
+                          ),
+                          ...widget.accounts.map(
+                            (a) => WebDropdownEntry<String?>(
+                              value: a.id,
+                              label: a.name,
+                            ),
+                          ),
                         ],
                         onChanged: widget.onAccount,
                       ),
@@ -1127,10 +1187,15 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                         hintText: 'All categories',
                         entries: [
                           const WebDropdownEntry<String?>(
-                              value: null, label: 'All categories'),
-                          ...widget.categories.map((c) =>
-                              WebDropdownEntry<String?>(
-                                  value: c.id, label: c.name)),
+                            value: null,
+                            label: 'All categories',
+                          ),
+                          ...widget.categories.map(
+                            (c) => WebDropdownEntry<String?>(
+                              value: c.id,
+                              label: c.name,
+                            ),
+                          ),
                         ],
                         onChanged: widget.onCategory,
                       ),
@@ -1139,7 +1204,9 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                     _FilterRow(
                       label: 'Type',
                       child: _TypeSegmented(
-                          value: widget.type, onChanged: widget.onType),
+                        value: widget.type,
+                        onChanged: widget.onType,
+                      ),
                     ),
                     const SizedBox(height: WebInsets.md),
                     _FilterRow(
@@ -1150,13 +1217,18 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                             : _kSortOptions.indexOf(_activeSortOption!),
                         items: [
                           const DropdownMenuItem(
-                              value: -1, child: Text('Default (date order)')),
+                            value: -1,
+                            child: Text('Default (date order)'),
+                          ),
                           for (var i = 0; i < _kSortOptions.length; i++)
                             DropdownMenuItem(
-                                value: i, child: Text(_kSortOptions[i].label)),
+                              value: i,
+                              child: Text(_kSortOptions[i].label),
+                            ),
                         ],
                         onChanged: (i) => widget.onSort(
-                            i == null || i < 0 ? null : _kSortOptions[i]),
+                          i == null || i < 0 ? null : _kSortOptions[i],
+                        ),
                       ),
                     ),
                     const SizedBox(height: WebInsets.md),
@@ -1174,9 +1246,12 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                           ),
                           Padding(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: WebInsets.sm),
-                            child: Text('→',
-                                style: TextStyle(color: cs.onSurfaceVariant)),
+                              horizontal: WebInsets.sm,
+                            ),
+                            child: Text(
+                              '→',
+                              style: TextStyle(color: cs.onSurfaceVariant),
+                            ),
                           ),
                           Expanded(
                             child: _DateButton(
@@ -1191,20 +1266,23 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                     ),
                     const SizedBox(height: WebInsets.lg),
                     Divider(
-                        height: 1,
-                        color: cs.outlineVariant.withValues(alpha: 0.5)),
+                      height: 1,
+                      color: cs.outlineVariant.withValues(alpha: 0.5),
+                    ),
                     const SizedBox(height: WebInsets.md),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         TextButton(
-                            onPressed: widget.onClear,
-                            child: const Text('Clear all')),
+                          onPressed: widget.onClear,
+                          child: const Text('Clear all'),
+                        ),
                         FilledButton(
                           onPressed: _controller.hide,
                           style: FilledButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: WebInsets.lg),
+                              horizontal: WebInsets.lg,
+                            ),
                           ),
                           child: const Text('Done'),
                         ),
@@ -1233,12 +1311,14 @@ class _FilterRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label.toUpperCase(),
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                )),
+        Text(
+          label.toUpperCase(),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: cs.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+        ),
         const SizedBox(height: WebInsets.sm),
         child,
       ],
@@ -1250,8 +1330,11 @@ class _PanelDropdown<T> extends StatelessWidget {
   final T value;
   final List<DropdownMenuItem<T>> items;
   final ValueChanged<T?> onChanged;
-  const _PanelDropdown(
-      {required this.value, required this.items, required this.onChanged});
+  const _PanelDropdown({
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1323,11 +1406,13 @@ class _TypeSegmented extends StatelessWidget {
               color: sel ? cs.primary : Colors.transparent,
               borderRadius: BorderRadius.circular(AppRadii.sm - 2),
             ),
-            child: Text(label,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: sel ? cs.onPrimary : cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    )),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: sel ? cs.onPrimary : cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
           ),
         ),
       ),
@@ -1355,14 +1440,19 @@ class _DateButton extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_outlined,
-                size: 14, color: cs.onSurfaceVariant),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 14,
+              color: cs.onSurfaceVariant,
+            ),
             const SizedBox(width: WebInsets.sm),
             Expanded(
-              child: Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall),
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ),
           ],
         ),
@@ -1395,19 +1485,23 @@ class _ActiveChip extends StatelessWidget {
             Icon(icon, size: 13, color: cs.onSurfaceVariant),
             const SizedBox(width: WebInsets.sm),
           ],
-          Text(label,
-              style: Theme.of(context)
-                  .textTheme
-                  .labelMedium
-                  ?.copyWith(fontWeight: FontWeight.w600)),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(width: WebInsets.xs),
           InkWell(
             onTap: onClear,
             borderRadius: BorderRadius.circular(AppRadii.sm),
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(Icons.close_rounded,
-                  size: 14, color: cs.onSurfaceVariant),
+              child: Icon(
+                Icons.close_rounded,
+                size: 14,
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ),
         ],
@@ -1417,140 +1511,43 @@ class _ActiveChip extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Summary tiles
+// QuickAdd — floating button + compact chat box (single-shot NL entry)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-class _SummaryRow extends StatelessWidget {
-  final double inflow;
-  final double outflow;
-  final double net;
-  const _SummaryRow(
-      {required this.inflow, required this.outflow, required this.net});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final netPositive = net >= 0;
-    return Row(
-      children: [
-        Expanded(
-          child: _SumTile(
-            label: 'Inflow',
-            value: '+${formatPeso(inflow)}',
-            icon: Icons.south_west_rounded,
-            fg: cs.tertiary,
-            bg: cs.tertiary.withValues(alpha: 0.14),
-          ),
-        ),
-        const SizedBox(width: WebInsets.md),
-        Expanded(
-          child: _SumTile(
-            label: 'Outflow',
-            value: '−${formatPeso(outflow)}',
-            icon: Icons.north_east_rounded,
-            fg: cs.onSurface,
-            bg: cs.surfaceContainerHighest,
-          ),
-        ),
-        const SizedBox(width: WebInsets.md),
-        Expanded(
-          child: _SumTile(
-            label: 'Net Cash',
-            value: '${netPositive ? '+' : '−'}${formatPeso(net.abs())}',
-            icon: Icons.swap_vert_rounded,
-            fg: netPositive ? cs.tertiary : cs.error,
-            bg: (netPositive ? cs.tertiary : cs.error).withValues(alpha: 0.14),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _SumTile extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color fg;
-  final Color bg;
-  const _SumTile({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.fg,
-    required this.bg,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return WebCard(
-      padding: const EdgeInsets.all(WebInsets.lg),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(AppRadii.md),
-            ),
-            child: Icon(icon, size: 20, color: fg),
-          ),
-          const SizedBox(width: WebInsets.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(label.toUpperCase(),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.7,
-                    )),
-                const SizedBox(height: 2),
-                Text(value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: fg,
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    )),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// QuickAdd — single-shot natural-language entry (no chat history)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-class _QuickAdd extends StatefulWidget {
+/// Floating natural-language entry: a round button anchored bottom-right that
+/// expands into a compact chat box. Typing a transaction in plain words parses
+/// + posts it (or hands off to the full form when the rule-based parser can't
+/// fully resolve it). Replaces the old full-width Quick Add card.
+class _QuickAddFab extends StatefulWidget {
   final LedgerPresenter presenter;
   final void Function(ParsedTransaction? prefill) onNeedsForm;
-  const _QuickAdd({required this.presenter, required this.onNeedsForm});
+  const _QuickAddFab({required this.presenter, required this.onNeedsForm});
 
   @override
-  State<_QuickAdd> createState() => _QuickAddState();
+  State<_QuickAddFab> createState() => _QuickAddFabState();
 }
 
-class _QuickAddState extends State<_QuickAdd> {
+class _QuickAddFabState extends State<_QuickAddFab> {
   final _controller = TextEditingController();
   final _focus = FocusNode();
   bool _busy = false;
+  bool _open = false;
 
   @override
   void dispose() {
     _controller.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  void _toggle() {
+    setState(() => _open = !_open);
+    if (_open) {
+      // Focus the field once the box has been inserted into the tree.
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _focus.requestFocus(),
+      );
+    }
   }
 
   Future<void> _send() async {
@@ -1568,8 +1565,8 @@ class _QuickAddState extends State<_QuickAdd> {
       p.clearLastCommittedSummary();
       _controller.clear();
       _toast(messenger, summary, ok: true);
-      // Keep the field focused so the next transaction can be typed straight
-      // away — desktop users log several in a row.
+      // Keep the box open + focused so the next transaction can be typed
+      // straight away — desktop users log several in a row.
       _focus.requestFocus();
     } else if (p.chatHardError != null) {
       final msg = p.chatHardError!.userMessage;
@@ -1577,48 +1574,102 @@ class _QuickAddState extends State<_QuickAdd> {
       _toast(messenger, msg, ok: false);
     } else {
       // Rule-based parser couldn't fully resolve (no on-device AI on web) —
-      // hand off to the form prefilled with whatever we did parse.
+      // close the box and hand off to the form prefilled with what we parsed.
       final prefill = p.pendingFormPrefill;
       p.consumeFormPrefill();
       _controller.clear();
+      setState(() => _open = false);
       widget.onNeedsForm(prefill);
     }
     if (mounted) setState(() => _busy = false);
   }
 
-  void _toast(ScaffoldMessengerState messenger, String message,
-      {required bool ok}) {
+  void _toast(
+    ScaffoldMessengerState messenger,
+    String message, {
+    required bool ok,
+  }) {
     final cs = Theme.of(context).colorScheme;
     messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        behavior: SnackBarBehavior.floating,
-        width: 420,
-        backgroundColor: ok ? cs.tertiaryContainer : cs.errorContainer,
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
+      ..showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          width: 420,
+          backgroundColor: ok ? cs.tertiaryContainer : cs.errorContainer,
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                ok ? Icons.check_circle_rounded : Icons.error_outline_rounded,
                 size: 18,
-                color: ok ? cs.onTertiaryContainer : cs.onErrorContainer),
-            const SizedBox(width: WebInsets.sm),
-            Flexible(
-              child: Text(message,
+                color: ok ? cs.onTertiaryContainer : cs.onErrorContainer,
+              ),
+              const SizedBox(width: WebInsets.sm),
+              Flexible(
+                child: Text(
+                  message,
                   style: TextStyle(
-                      color:
-                          ok ? cs.onTertiaryContainer : cs.onErrorContainer)),
-            ),
-          ],
+                    color: ok ? cs.onTertiaryContainer : cs.onErrorContainer,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-      ));
+      );
   }
 
   @override
   Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SizeTransition(sizeFactor: anim, child: child),
+          ),
+          child: _open ? _chatBox(context) : const SizedBox.shrink(),
+        ),
+        const SizedBox(height: WebInsets.md),
+        _fab(context),
+      ],
+    );
+  }
+
+  Widget _fab(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FloatingActionButton(
+      heroTag: 'ledgerQuickAdd',
+      onPressed: _toggle,
+      backgroundColor: cs.primary,
+      foregroundColor: cs.onPrimary,
+      tooltip: _open ? 'Close Quick Add' : 'Quick Add a transaction',
+      child: Icon(_open ? Icons.close_rounded : Icons.auto_awesome),
+    );
+  }
+
+  Widget _chatBox(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    return WebCard(
+    return Container(
+      width: 340,
       padding: const EdgeInsets.all(WebInsets.lg),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: cs.shadow.withValues(alpha: 0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -1627,62 +1678,64 @@ class _QuickAddState extends State<_QuickAdd> {
             children: [
               Icon(Icons.auto_awesome, size: 15, color: cs.secondary),
               const SizedBox(width: WebInsets.sm),
-              Text('Quick Add',
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w700)),
-              const SizedBox(width: WebInsets.sm),
+              Text(
+                'Quick Add',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const Spacer(),
               Flexible(
-                child: Text('· type a transaction in plain words',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant)),
+                child: Text(
+                  'type it in plain words',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: WebInsets.md),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 44,
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focus,
-                    enabled: !_busy,
-                    onSubmitted: (_) => _send(),
-                    textAlignVertical: TextAlignVertical.center,
-                    decoration: InputDecoration(
-                      hintText: 'e.g. “Grab 180 from gcash” or “Salary 46500”',
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 0, horizontal: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppRadii.sm),
-                      ),
-                    ),
-                  ),
+          SizedBox(
+            height: 44,
+            child: TextField(
+              controller: _controller,
+              focusNode: _focus,
+              enabled: !_busy,
+              onSubmitted: (_) => _send(),
+              textAlignVertical: TextAlignVertical.center,
+              decoration: InputDecoration(
+                hintText: 'e.g. “Grab 180 from gcash” or “Salary 46500”',
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 12,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
               ),
-              const SizedBox(width: WebInsets.sm),
-              SizedBox(
-                height: 44,
-                child: FilledButton(
-                  onPressed: _busy ? null : _send,
-                  style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: WebInsets.xl),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppRadii.sm)),
-                  ),
-                  child: _busy
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Add'),
+            ),
+          ),
+          const SizedBox(height: WebInsets.md),
+          SizedBox(
+            height: 44,
+            child: FilledButton(
+              onPressed: _busy ? null : _send,
+              style: FilledButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
               ),
-            ],
+              child: _busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text('Add'),
+            ),
           ),
           // Loading indicator while the entry is being parsed + saved.
           AnimatedSwitcher(
@@ -1711,8 +1764,11 @@ class _SelectionBar extends StatelessWidget {
   final int count;
   final VoidCallback onClear;
   final VoidCallback onDelete;
-  const _SelectionBar(
-      {required this.count, required this.onClear, required this.onDelete});
+  const _SelectionBar({
+    required this.count,
+    required this.onClear,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1721,9 +1777,12 @@ class _SelectionBar extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Text('$count selected',
-              style: theme.textTheme.labelMedium
-                  ?.copyWith(fontWeight: FontWeight.w700)),
+          child: Text(
+            '$count selected',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
         TextButton(onPressed: onClear, child: const Text('Clear')),
         const SizedBox(width: WebInsets.sm),
@@ -1765,10 +1824,10 @@ class _GridHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final inflowTint = _inflowTint(context);
-    final outflowTint = _outflowTint(context);
     return Container(
       decoration: BoxDecoration(
+        // Translucent so the green/red column washes painted behind the grid
+        // still read through the header band.
         color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
         border: Border(
           bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.8)),
@@ -1778,35 +1837,63 @@ class _GridHeader extends StatelessWidget {
         children: [
           SizedBox(
             width: _wCheck,
-            child: Center(child: _Check(on: allSelected, onTap: onToggleAll)),
+            child: Center(
+              child: _Check(on: allSelected, onTap: onToggleAll),
+            ),
           ),
-          _hCell('Date', widths.date, _SortKey.date,
-              resize: _ResizableCol.date),
-          _hCell('Account', widths.account, _SortKey.account,
-              resize: _ResizableCol.account),
+          _hCell(
+            'Date',
+            widths.date,
+            _SortKey.date,
+            resize: _ResizableCol.date,
+          ),
+          _hCell(
+            'Account',
+            widths.account,
+            _SortKey.account,
+            resize: _ResizableCol.account,
+          ),
           _hCell('Description', descWidth, _SortKey.description),
-          _hCell('Category', widths.category, _SortKey.category,
-              resize: _ResizableCol.category),
-          ColoredBox(
-            color: inflowTint,
-            child: _hCell('Inflow', widths.inflow, _SortKey.inflow,
-                right: true, resize: _ResizableCol.inflow),
+          _hCell(
+            'Category',
+            widths.category,
+            _SortKey.category,
+            resize: _ResizableCol.category,
           ),
-          ColoredBox(
-            color: outflowTint,
-            child: _hCell('Outflow', widths.outflow, _SortKey.outflow,
-                right: true, resize: _ResizableCol.outflow),
+          _hCell(
+            'Inflow',
+            widths.inflow,
+            _SortKey.inflow,
+            right: true,
+            resize: _ResizableCol.inflow,
           ),
-          _hCell('Acct. Balance', widths.acctBal, null,
-              right: true, resize: _ResizableCol.acctBal),
+          _hCell(
+            'Outflow',
+            widths.outflow,
+            _SortKey.outflow,
+            right: true,
+            resize: _ResizableCol.outflow,
+          ),
+          _hCell(
+            'Acct. Balance',
+            widths.acctBal,
+            null,
+            right: true,
+            resize: _ResizableCol.acctBal,
+          ),
           const SizedBox(width: _wDelete),
         ],
       ),
     );
   }
 
-  Widget _hCell(String label, double width, _SortKey? key,
-      {bool right = false, _ResizableCol? resize}) {
+  Widget _hCell(
+    String label,
+    double width,
+    _SortKey? key, {
+    bool right = false,
+    _ResizableCol? resize,
+  }) {
     return _HeaderCell(
       label: label,
       width: width,
@@ -1874,13 +1961,22 @@ class _HeaderCell extends StatelessWidget {
       children: [
         if (right && onSort != null)
           Transform.rotate(
-              angle: active && dir < 0 ? 3.14159 : 0, child: chevron),
+            angle: active && dir < 0 ? 3.14159 : 0,
+            child: chevron,
+          ),
         Flexible(
-            child: Text(label.toUpperCase(),
-                style: style, maxLines: 1, overflow: TextOverflow.ellipsis)),
+          child: Text(
+            label.toUpperCase(),
+            style: style,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
         if (!right && onSort != null)
           Transform.rotate(
-              angle: active && dir < 0 ? 3.14159 : 0, child: chevron),
+            angle: active && dir < 0 ? 3.14159 : 0,
+            child: chevron,
+          ),
       ],
     );
     return SizedBox(
@@ -1891,7 +1987,9 @@ class _HeaderCell extends StatelessWidget {
             onTap: onSort,
             child: Padding(
               padding: const EdgeInsets.symmetric(
-                  horizontal: WebInsets.md, vertical: WebInsets.md),
+                horizontal: WebInsets.md,
+                vertical: WebInsets.md,
+              ),
               child: Align(
                 alignment: right ? Alignment.centerRight : Alignment.centerLeft,
                 child: content,
@@ -1964,12 +2062,11 @@ class _EmptyGridHint extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         hasAccounts
-            ? 'No transactions yet — add one in the row below.'
+            ? 'No transactions yet — add one in the row above.'
             : 'Add an account in Setup before logging transactions.',
-        style: Theme.of(context)
-            .textTheme
-            .bodyMedium
-            ?.copyWith(color: cs.onSurfaceVariant),
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
       ),
     );
   }
@@ -2031,8 +2128,6 @@ class _EditableRowState extends State<_EditableRow> {
     final t = widget.row.txn;
     final isTransfer = t.transferGroupId != null;
     final w = widget.widths;
-    final inflowTint = _inflowTint(context);
-    final outflowTint = _outflowTint(context);
 
     // Flat grid (no zebra) — rows are separated by a hairline bottom border and
     // a hover tint only, matching the reference's clean spreadsheet look.
@@ -2060,8 +2155,11 @@ class _EditableRowState extends State<_EditableRow> {
             SizedBox(
               width: _wCheck,
               child: Center(
-                  child: _Check(
-                      on: widget.selected, onTap: widget.onToggleSelect)),
+                child: _Check(
+                  on: widget.selected,
+                  onTap: widget.onToggleSelect,
+                ),
+              ),
             ),
             // Date
             _DateCell(
@@ -2107,9 +2205,11 @@ class _EditableRowState extends State<_EditableRow> {
                     width: w.category,
                     child: const Align(
                       alignment: Alignment.centerLeft,
-                      child: WebBadge('Transfer',
-                          tone: WebBadgeTone.info,
-                          icon: Icons.swap_horiz_rounded),
+                      child: WebBadge(
+                        'Transfer',
+                        tone: WebBadgeTone.info,
+                        icon: Icons.swap_horiz_rounded,
+                      ),
                     ),
                   )
                 : _CategoryCell(
@@ -2119,41 +2219,37 @@ class _EditableRowState extends State<_EditableRow> {
                     colorFor: widget.colorFor,
                     onChanged: (id) => widget.onCategory(t, id),
                   ),
-            // Inflow — faint green column wash.
-            ColoredBox(
-              color: inflowTint,
-              child: _AmountCell(
-                key: ValueKey('in_${t.id}'),
-                width: w.inflow,
-                value: t.type == TransactionType.inflow ? t.amount : 0,
-                color: cs.tertiary,
-                enabled: !isTransfer,
-                onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
-              ),
+            // Inflow — sits over the green column wash painted behind the grid.
+            _AmountCell(
+              key: ValueKey('in_${t.id}'),
+              width: w.inflow,
+              value: t.type == TransactionType.inflow ? t.amount : 0,
+              color: cs.tertiary,
+              enabled: !isTransfer,
+              onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
             ),
-            // Outflow — faint red column wash.
-            ColoredBox(
-              color: outflowTint,
-              child: _AmountCell(
-                key: ValueKey('out_${t.id}'),
-                width: w.outflow,
-                value: t.type == TransactionType.outflow ? t.amount : 0,
-                color: cs.onSurface,
-                enabled: !isTransfer,
-                onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
-              ),
+            // Outflow — sits over the red column wash painted behind the grid.
+            _AmountCell(
+              key: ValueKey('out_${t.id}'),
+              width: w.outflow,
+              value: t.type == TransactionType.outflow ? t.amount : 0,
+              color: cs.onSurface,
+              enabled: !isTransfer,
+              onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
             ),
             // Acct. balance — brighter (onSurface) so it reads as the key figure.
             _readCell(
               width: w.acctBal,
               right: true,
-              child: Text(formatPeso(widget.row.accountBalance),
-                  textAlign: TextAlign.right,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurface,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  )),
+              child: Text(
+                formatPeso(widget.row.accountBalance),
+                textAlign: TextAlign.right,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
             ),
             // Delete
             SizedBox(
@@ -2185,13 +2281,18 @@ class _EditableRowState extends State<_EditableRow> {
   }
 }
 
-Widget _readCell(
-        {required double width, required Widget child, bool right = false}) =>
+Widget _readCell({
+  required double width,
+  required Widget child,
+  bool right = false,
+}) =>
     SizedBox(
       width: width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.md, vertical: WebInsets.sm),
+          horizontal: WebInsets.md,
+          vertical: WebInsets.sm,
+        ),
         child: Align(
           alignment: right ? Alignment.centerRight : Alignment.centerLeft,
           child: child,
@@ -2249,8 +2350,6 @@ class _DraftRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final w = widths;
-    final inflowTint = _inflowTint(context);
-    final outflowTint = _outflowTint(context);
     return Container(
       decoration: BoxDecoration(
         color: cs.primary.withValues(alpha: 0.04),
@@ -2262,7 +2361,11 @@ class _DraftRow extends StatelessWidget {
         children: [
           const SizedBox(width: _wCheck),
           _DateCell(
-              width: w.date, date: date, enabled: true, onChanged: onDate),
+            width: w.date,
+            date: date,
+            enabled: true,
+            onChanged: onDate,
+          ),
           accounts.isEmpty
               ? _readCell(width: w.account, child: const Text('—'))
               : _AccountCell(
@@ -2293,36 +2396,34 @@ class _DraftRow extends StatelessWidget {
                   colorFor: colorFor,
                   onChanged: onCategory,
                 ),
-          ColoredBox(
-            color: inflowTint,
-            child: _AmountCell(
-              key: ValueKey('draft_in_$epoch'),
-              width: w.inflow,
-              value: inflow,
-              color: cs.tertiary,
-              onCommit: onInflow,
-              onChanged: onInflow,
-              onSubmit: onCommit,
-            ),
+          _AmountCell(
+            key: ValueKey('draft_in_$epoch'),
+            width: w.inflow,
+            value: inflow,
+            color: cs.tertiary,
+            onCommit: onInflow,
+            onChanged: onInflow,
+            onSubmit: onCommit,
           ),
-          ColoredBox(
-            color: outflowTint,
-            child: _AmountCell(
-              key: ValueKey('draft_out_$epoch'),
-              width: w.outflow,
-              value: outflow,
-              color: cs.onSurface,
-              onCommit: onOutflow,
-              onChanged: onOutflow,
-              onSubmit: onCommit,
-            ),
+          _AmountCell(
+            key: ValueKey('draft_out_$epoch'),
+            width: w.outflow,
+            value: outflow,
+            color: cs.onSurface,
+            onCommit: onOutflow,
+            onChanged: onOutflow,
+            onSubmit: onCommit,
           ),
           _readCell(
-              width: w.acctBal,
-              right: true,
-              child: Text('—',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: cs.onSurfaceVariant))),
+            width: w.acctBal,
+            right: true,
+            child: Text(
+              '—',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ),
           SizedBox(
             width: _wDelete,
             child: Center(
@@ -2418,19 +2519,22 @@ class _InlineTextState extends State<_InlineText> {
       return _readCell(
         width: widget.width,
         child: Text(
-            widget.initialValue.isEmpty
-                ? (widget.hintText ?? '')
-                : widget.initialValue,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: style),
+          widget.initialValue.isEmpty
+              ? (widget.hintText ?? '')
+              : widget.initialValue,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: style,
+        ),
       );
     }
     return SizedBox(
       width: widget.width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.xs),
+          horizontal: WebInsets.sm,
+          vertical: WebInsets.xs,
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: _focused
@@ -2441,13 +2545,16 @@ class _InlineTextState extends State<_InlineText> {
             // never shifts the row's layout; the focus ring is a softened
             // primary rather than a hard solid box. (matches reference ring)
             border: Border.all(
-                color: _focused
-                    ? cs.primary.withValues(alpha: 0.55)
-                    : Colors.transparent,
-                width: 1.5),
+              color: _focused
+                  ? cs.primary.withValues(alpha: 0.55)
+                  : Colors.transparent,
+              width: 1.5,
+            ),
           ),
-          padding:
-              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: WebInsets.sm,
+            vertical: 4,
+          ),
           child: Focus(
             canRequestFocus: false,
             onKeyEvent: (_, event) {
@@ -2477,7 +2584,8 @@ class _InlineTextState extends State<_InlineText> {
                 border: InputBorder.none,
                 hintText: widget.hintText,
                 hintStyle: style?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
               ),
             ),
           ),
@@ -2518,11 +2626,9 @@ class _AmountCellState extends State<_AmountCell> {
   late final FocusNode _f;
   bool _focused = false;
 
-  // Two-decimal, comma-grouped formatting so amounts line up like a ledger
-  // (e.g. 1,000.00). Blank when zero so empty cells stay clean.
-  static final _fmt = NumberFormat('#,##0.00', 'en_PH');
-
-  String _display(double v) => v <= 0 ? '' : _fmt.format(v);
+  // Peso-prefixed, two-decimal, comma-grouped formatting so amounts line up
+  // like a ledger (e.g. ₱1,000.00). Blank when zero so empty cells stay clean.
+  String _display(double v) => v <= 0 ? '' : formatPeso(v);
 
   @override
   void initState() {
@@ -2586,15 +2692,20 @@ class _AmountCellState extends State<_AmountCell> {
       return _readCell(
         width: widget.width,
         right: true,
-        child: Text(widget.value <= 0 ? '—' : _display(widget.value),
-            textAlign: TextAlign.right, style: style),
+        child: Text(
+          widget.value <= 0 ? '—' : _display(widget.value),
+          textAlign: TextAlign.right,
+          style: style,
+        ),
       );
     }
     return SizedBox(
       width: widget.width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.xs),
+          horizontal: WebInsets.sm,
+          vertical: WebInsets.xs,
+        ),
         child: Container(
           decoration: BoxDecoration(
             color: _focused
@@ -2604,13 +2715,16 @@ class _AmountCellState extends State<_AmountCell> {
             // Border width always reserved so focus never shifts layout;
             // softened primary ring rather than a hard box.
             border: Border.all(
-                color: _focused
-                    ? cs.primary.withValues(alpha: 0.55)
-                    : Colors.transparent,
-                width: 1.5),
+              color: _focused
+                  ? cs.primary.withValues(alpha: 0.55)
+                  : Colors.transparent,
+              width: 1.5,
+            ),
           ),
-          padding:
-              const EdgeInsets.symmetric(horizontal: WebInsets.sm, vertical: 4),
+          padding: const EdgeInsets.symmetric(
+            horizontal: WebInsets.sm,
+            vertical: 4,
+          ),
           child: Focus(
             canRequestFocus: false,
             onKeyEvent: (_, event) {
@@ -2628,10 +2742,11 @@ class _AmountCellState extends State<_AmountCell> {
               focusNode: _f,
               style: style,
               textAlign: TextAlign.right,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]'))
+                FilteringTextInputFormatter.allow(RegExp(r'[\d.,]')),
               ],
               onChanged: (_) => widget.onChanged?.call(_parse()),
               onSubmitted: (_) {
@@ -2643,7 +2758,8 @@ class _AmountCellState extends State<_AmountCell> {
                 border: InputBorder.none,
                 hintText: '—',
                 hintStyle: style?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6)),
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                ),
               ),
             ),
           ),
@@ -2673,14 +2789,19 @@ class _AccountCell extends StatelessWidget {
         WebDropdownEntry<String>(
           value: accounts[i].id,
           label: accounts[i].name,
-          dotColor: resolveSliceColor(accounts[i].colorHex, i,
-              brightness: brightness),
+          dotColor: resolveSliceColor(
+            accounts[i].colorHex,
+            i,
+            brightness: brightness,
+          ),
         ),
     ];
     final hasValue = accounts.any((a) => a.id == value);
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm, vertical: WebInsets.xs),
+        horizontal: WebInsets.sm,
+        vertical: WebInsets.xs,
+      ),
       child: WebSearchableDropdown<String>(
         width: width - WebInsets.sm * 2,
         value: hasValue ? value : null,
@@ -2720,7 +2841,9 @@ class _CategoryCell extends StatelessWidget {
     final hasValue = categories.any((c) => c.id == value);
     return Padding(
       padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm, vertical: WebInsets.xs),
+        horizontal: WebInsets.sm,
+        vertical: WebInsets.xs,
+      ),
       child: WebSearchableDropdown<String>(
         width: width - WebInsets.sm * 2,
         value: hasValue ? value : null,
@@ -2749,10 +2872,12 @@ class _DateCell extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final label = _kMonthDayFmt.format(date);
-    final text = Text(label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: theme.textTheme.bodySmall);
+    final text = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      style: theme.textTheme.bodySmall,
+    );
     if (!enabled) return _readCell(width: width, child: text);
     return SizedBox(
       width: width,
@@ -2769,7 +2894,9 @@ class _DateCell extends StatelessWidget {
         },
         child: Padding(
           padding: const EdgeInsets.symmetric(
-              horizontal: WebInsets.md, vertical: WebInsets.sm),
+            horizontal: WebInsets.md,
+            vertical: WebInsets.sm,
+          ),
           child: Align(alignment: Alignment.centerLeft, child: text),
         ),
       ),
@@ -2915,17 +3042,19 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
       } else {
         final id =
             '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-        await _p.addTransaction(TransactionRecord(
-          id: id,
-          date: _date,
-          accountId: _accountId!,
-          categoryId: _categoryId ?? '',
-          amount: amount,
-          type: _type,
-          description: description,
-          note: note.isEmpty ? null : note,
-          month: month,
-        ));
+        await _p.addTransaction(
+          TransactionRecord(
+            id: id,
+            date: _date,
+            accountId: _accountId!,
+            categoryId: _categoryId ?? '',
+            amount: amount,
+            type: _type,
+            description: description,
+            note: note.isEmpty ? null : note,
+            month: month,
+          ),
+        );
       }
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -2942,7 +3071,8 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     return Dialog(
       backgroundColor: cs.surfaceContainerHigh,
       shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppRadii.lg)),
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+      ),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 520),
         child: Column(
@@ -2950,13 +3080,20 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  WebInsets.xl, WebInsets.lg, WebInsets.md, WebInsets.lg),
+                WebInsets.xl,
+                WebInsets.lg,
+                WebInsets.md,
+                WebInsets.lg,
+              ),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text('Add Transaction',
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      'Add Transaction',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.of(context).pop(),
@@ -3137,8 +3274,11 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           ),
           child: Row(
             children: [
-              Icon(Icons.calendar_today_outlined,
-                  size: 16, color: cs.onSurfaceVariant),
+              Icon(
+                Icons.calendar_today_outlined,
+                size: 16,
+                color: cs.onSurfaceVariant,
+              ),
               const SizedBox(width: WebInsets.sm),
               Expanded(
                 child: Text(
@@ -3165,8 +3305,11 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         WebDropdownEntry<String>(
           value: accounts[i].id,
           label: accounts[i].name,
-          dotColor: resolveSliceColor(accounts[i].colorHex, i,
-              brightness: Theme.of(context).brightness),
+          dotColor: resolveSliceColor(
+            accounts[i].colorHex,
+            i,
+            brightness: Theme.of(context).brightness,
+          ),
         ),
     ];
     return _labeledField(
@@ -3191,8 +3334,11 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         WebDropdownEntry<String>(
           value: cats[i].id,
           label: cats[i].name,
-          dotColor: resolveSliceColor(cats[i].colorHex, i,
-              brightness: Theme.of(context).brightness),
+          dotColor: resolveSliceColor(
+            cats[i].colorHex,
+            i,
+            brightness: Theme.of(context).brightness,
+          ),
         ),
     ];
     final showError =
@@ -3230,8 +3376,10 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         ),
         if (error != null)
           Padding(
-            padding:
-                const EdgeInsets.only(top: WebInsets.xs, left: WebInsets.sm),
+            padding: const EdgeInsets.only(
+              top: WebInsets.xs,
+              left: WebInsets.sm,
+            ),
             child: Text(
               error,
               style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
