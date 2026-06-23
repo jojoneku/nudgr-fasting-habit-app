@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/models/grocery/remembered_price.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/app_spacing.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -22,6 +23,7 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _qtyController = TextEditingController(text: '1');
+  final _nameFocus = FocusNode();
   ItemUnit _unit = ItemUnit.piece;
   RememberedPrice? _remembered;
 
@@ -30,23 +32,29 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
     _nameController.dispose();
     _priceController.dispose();
     _qtyController.dispose();
+    _nameFocus.dispose();
     super.dispose();
   }
 
   void _onNameChanged(String value) {
     final match = widget.presenter.lookup(name: value);
-    if (match?.key != _remembered?.key) {
-      setState(() {
+    // Always rebuild so the submit button re-evaluates as the name is typed —
+    // even for a brand-new item with no price-memory match.
+    setState(() {
+      if (match?.key != _remembered?.key) {
         _remembered = match;
         // Pre-select the unit we last used for this item.
         if (match != null) _unit = match.unit;
-      });
-    }
+      }
+    });
   }
 
   bool get _canSubmit => _nameController.text.trim().isNotEmpty;
 
-  Future<void> _submit() async {
+  /// Adds the current item. When [keepOpen] the sheet stays up, the fields
+  /// reset, and focus returns to the name — so a full grocery trip can be
+  /// logged item-after-item without reopening the sheet each time.
+  Future<void> _submit({bool keepOpen = false}) async {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
     final qty = double.tryParse(_qtyController.text.trim());
@@ -57,7 +65,19 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
       unitPrice: price,
       unit: _unit,
     );
-    if (mounted) Navigator.of(context).pop();
+    if (!mounted) return;
+    if (keepOpen) {
+      setState(() {
+        _nameController.clear();
+        _priceController.clear();
+        _qtyController.text = '1';
+        _remembered = null;
+        // Keep the unit — successive items in a trip often share it.
+      });
+      _nameFocus.requestFocus();
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
@@ -71,6 +91,7 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
       children: [
         AppTextField(
           controller: _nameController,
+          focusNode: _nameFocus,
           label: 'Item name',
           hint: 'e.g. Bear Brand 320g',
           autofocus: true,
@@ -131,17 +152,32 @@ class _AddCartItemSheetState extends State<AddCartItemSheet> {
                 prefix: const Text('₱ '),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: amountInputFormatters,
                 textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
+                onSubmitted: (_) => _submit(keepOpen: true),
               ),
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.lg),
-        AppPrimaryButton(
-          label: 'Add to cart',
-          leading: Icons.add_shopping_cart,
-          onPressed: _canSubmit ? _submit : null,
+        Row(
+          children: [
+            Expanded(
+              child: AppSecondaryButton(
+                label: 'Add & next',
+                leading: Icons.playlist_add,
+                onPressed: _canSubmit ? () => _submit(keepOpen: true) : null,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppPrimaryButton(
+                label: 'Add to cart',
+                leading: Icons.add_shopping_cart,
+                onPressed: _canSubmit ? _submit : null,
+              ),
+            ),
+          ],
         ),
       ],
     );

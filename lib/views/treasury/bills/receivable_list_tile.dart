@@ -125,20 +125,16 @@ class ReceivableListTile extends StatelessWidget {
           if (receivable.isReceived)
             Icon(Icons.check_circle, color: context.appColors.success, size: 18)
           else
-            SizedBox(
-              height: 28,
-              child: TextButton(
-                onPressed: onMarkReceived,
-                style: TextButton.styleFrom(
-                  foregroundColor: context.appColors.success,
-                  padding: const EdgeInsets.symmetric(horizontal: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Mark Received',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                ),
+            TextButton(
+              onPressed: onMarkReceived,
+              style: TextButton.styleFrom(
+                foregroundColor: context.appColors.success,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                minimumSize: const Size(44, 44),
+              ),
+              child: const Text(
+                'Mark Received',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
               ),
             ),
         ],

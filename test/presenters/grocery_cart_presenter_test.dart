@@ -234,5 +234,29 @@ void main() {
       await p.deleteTrip(p.tripHistory.first.id);
       expect(p.tripHistory, isEmpty);
     });
+
+    test('restoreItem re-inserts a removed item at its position', () async {
+      final p = await build();
+      await p.addItem(name: 'Eggs', unitPrice: 8);
+      await p.addItem(name: 'Milk', unitPrice: 40);
+      await p.addItem(name: 'Bread', unitPrice: 45);
+
+      final removed = p.items[1]; // Milk
+      await p.removeItem(removed.id);
+      expect(p.items.map((i) => i.name), ['Eggs', 'Bread']);
+
+      await p.restoreItem(removed, 1);
+      expect(p.items.map((i) => i.name), ['Eggs', 'Milk', 'Bread']);
+      // Same identity and confirmed price preserved (undo, not a fresh add).
+      expect(p.items[1].id, removed.id);
+      expect(p.items[1].unitPrice, 40);
+    });
+
+    test('restoreItem is a no-op if the id already exists', () async {
+      final p = await build();
+      await p.addItem(name: 'Eggs', unitPrice: 8);
+      await p.restoreItem(p.items.first, 0);
+      expect(p.itemCount, 1);
+    });
   });
 }

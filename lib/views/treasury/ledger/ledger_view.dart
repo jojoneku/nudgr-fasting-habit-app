@@ -69,7 +69,13 @@ class _LedgerViewState extends State<LedgerView> {
     AppBottomSheet.show(
       context: context,
       title: 'Log Transaction',
-      body: AddTransactionSheet(presenter: presenter, prefill: prefill),
+      body: AddTransactionSheet(
+        presenter: presenter,
+        prefill: prefill,
+        // Pre-fill the filtered day so a forgotten past-dated entry can be
+        // logged without clearing the filter first.
+        initialDate: presenter.selectedDate,
+      ),
     );
   }
 
@@ -363,7 +369,7 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
   }
 
   String _hint(LedgerPresenter p) {
-    if (!p.isSelectedDateToday) return 'View only — clear date filter to log';
+    if (!p.isSelectedDateToday) return 'Tap the form to log on this day';
     if (p.chatState.phase == ChatPhase.clarifying) return 'Reply…';
     return 'Log a transaction…';
   }
@@ -371,6 +377,8 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    // Quick chat-logging stamps "today", so it stays gated to the current day.
+    // The form, however, is always reachable and pre-fills the filtered day.
     final canSend = widget.presenter.isSelectedDateToday;
     return Container(
       color: cs.surface,
@@ -386,7 +394,9 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
           ),
           IconButton(
             icon: Icon(Icons.edit_outlined, color: cs.onSurfaceVariant),
-            onPressed: canSend ? () => widget.onOpenForm() : null,
+            // Always available — the form pre-fills the filtered day so a
+            // past-dated transaction can be logged without clearing the filter.
+            onPressed: () => widget.onOpenForm(),
             tooltip: 'Open form',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),

@@ -163,21 +163,16 @@ class BillListTile extends StatelessWidget {
                 Icon(Icons.check_circle,
                     color: context.appColors.success, size: 18)
               else
-                SizedBox(
-                  height: 28,
-                  child: TextButton(
-                    onPressed: onMarkPaid,
-                    style: TextButton.styleFrom(
-                      foregroundColor: colorScheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: const Text(
-                      'Mark Paid',
-                      style:
-                          TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
+                TextButton(
+                  onPressed: onMarkPaid,
+                  style: TextButton.styleFrom(
+                    foregroundColor: colorScheme.primary,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(44, 44),
+                  ),
+                  child: const Text(
+                    'Mark Paid',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
             ],

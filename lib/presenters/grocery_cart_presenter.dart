@@ -243,6 +243,17 @@ class GroceryCartPresenter extends ChangeNotifier with SafeNotifier {
     await _persistCart();
   }
 
+  /// Re-inserts a previously removed [item] at [index] (clamped to range),
+  /// preserving its id, price, and confirmed/remembered state. Backs the
+  /// swipe-to-delete undo so an accidental swipe mid-shop is recoverable.
+  Future<void> restoreItem(CartItem item, int index) async {
+    if (_items.any((i) => i.id == item.id)) return;
+    final at = index.clamp(0, _items.length);
+    _items.insert(at, item);
+    safeNotify();
+    await _persistCart();
+  }
+
   /// Sets the optional spending cap. A non-positive value clears it.
   Future<void> setBudget(double? amount) async {
     _budget = (amount != null && amount <= 0) ? null : amount;
