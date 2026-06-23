@@ -50,8 +50,7 @@ class HealthService {
   /// no selection we de-duplicate across all sources first (legacy behavior).
   Map<String, double> _stepsByDay(
       List<HealthDataPoint> points, String? selection) {
-    final pts =
-        selection == null ? Health().removeDuplicates(points) : points;
+    final pts = selection == null ? Health().removeDuplicates(points) : points;
     // day -> sourceName -> summed steps (matched sources only)
     final perDay = <String, Map<String, double>>{};
     for (final p in pts) {
