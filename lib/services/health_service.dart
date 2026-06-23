@@ -21,16 +21,27 @@ class HealthService {
   ];
 
   /// Canonical id for the user's own device, presented as a single "Phone"
-  /// source in the picker. Health Connect has relabeled on-device step data
-  /// over time (e.g. "android" → "com.android.healthconnect.phone.<hash>"),
-  /// so we treat every on-device label as one logical source. Existing users
-  /// who stored "android" map onto this group automatically.
+  /// source in the picker. As of the Health Connect June 2026 update, natively
+  /// tracked steps are attributed to a per-device Synthetic Package Name (SPN)
+  /// like "com.android.healthconnect.phone.<hash>"; data recorded before then
+  /// keeps the legacy "android" package. We merge both into one logical source
+  /// so an OS relabel never drops history, and existing users who stored
+  /// "android" map onto this group automatically.
+  /// See: developer.android.com/health-and-fitness/health-connect/features/steps
   static const phoneSourceId = 'android';
 
-  /// Whether [name] is one of the device's own on-device step providers.
-  /// All such labels are merged so an OS relabel never drops history.
+  /// Prefix of the on-device Synthetic Package Name. The documented format is
+  /// `com.android.healthconnect.phone.<hash>`; the hash is per-device and
+  /// per-app and must never be hardcoded, so we match by prefix. (The canonical
+  /// API is `getCurrentDeviceDataSource()`, not exposed by the `health` plugin.)
+  static const _phoneSpnPrefix = 'com.android.healthconnect.phone';
+
+  /// Whether [name] is the device's own on-device step provider — the legacy
+  /// `android` package or the current device's SPN. Mirrors the official read
+  /// rule (DataOrigin == "android" OR the device SPN); merging them means an OS
+  /// relabel never drops history.
   static bool isPhoneSource(String name) =>
-      name == 'android' || name.startsWith('com.android.healthconnect');
+      name == 'android' || name.startsWith(_phoneSpnPrefix);
 
   /// Whether a Health Connect record [name] satisfies the user's [selection].
   /// `null` selection matches everything; a phone-group selection matches any
