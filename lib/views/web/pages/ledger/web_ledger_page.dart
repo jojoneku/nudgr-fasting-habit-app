@@ -1023,15 +1023,15 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                   children: [
                     _FilterRow(
                       label: 'Account',
-                      child: _PanelDropdown<String?>(
+                      child: WebSearchableDropdown<String?>(
                         value: widget.accountId,
-                        items: [
-                          const DropdownMenuItem(
-                              value: null, child: Text('All accounts')),
-                          ...widget.accounts.map((a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(a.name,
-                                  overflow: TextOverflow.ellipsis))),
+                        hintText: 'All accounts',
+                        entries: [
+                          const WebDropdownEntry<String?>(
+                              value: null, label: 'All accounts'),
+                          ...widget.accounts.map((a) =>
+                              WebDropdownEntry<String?>(
+                                  value: a.id, label: a.name)),
                         ],
                         onChanged: widget.onAccount,
                       ),
@@ -1039,15 +1039,15 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                     const SizedBox(height: WebInsets.md),
                     _FilterRow(
                       label: 'Category',
-                      child: _PanelDropdown<String?>(
+                      child: WebSearchableDropdown<String?>(
                         value: widget.categoryId,
-                        items: [
-                          const DropdownMenuItem(
-                              value: null, child: Text('All categories')),
-                          ...widget.categories.map((c) => DropdownMenuItem(
-                              value: c.id,
-                              child: Text(c.name,
-                                  overflow: TextOverflow.ellipsis))),
+                        hintText: 'All categories',
+                        entries: [
+                          const WebDropdownEntry<String?>(
+                              value: null, label: 'All categories'),
+                          ...widget.categories.map((c) =>
+                              WebDropdownEntry<String?>(
+                                  value: c.id, label: c.name)),
                         ],
                         onChanged: widget.onCategory,
                       ),
@@ -2540,37 +2540,27 @@ class _AccountCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final hasValue = accounts.any((a) => a.id == value);
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.xs),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: hasValue ? value : null,
-            isExpanded: true,
-            isDense: true,
-            borderRadius: BorderRadius.circular(AppRadii.sm),
-            style: theme.textTheme.bodySmall,
-            icon: const Icon(Icons.expand_more_rounded, size: 16),
-            hint: Text('Account',
-                style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
-            items: accounts
-                .map((a) => DropdownMenuItem(
-                      value: a.id,
-                      child: Text(a.name,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) onChanged(v);
-            },
-          ),
+    final brightness = Theme.of(context).brightness;
+    final entries = [
+      for (var i = 0; i < accounts.length; i++)
+        WebDropdownEntry<String>(
+          value: accounts[i].id,
+          label: accounts[i].name,
+          dotColor: resolveSliceColor(accounts[i].colorHex, i,
+              brightness: brightness),
         ),
+    ];
+    final hasValue = accounts.any((a) => a.id == value);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: WebInsets.sm, vertical: WebInsets.xs),
+      child: WebSearchableDropdown<String>(
+        width: width - WebInsets.sm * 2,
+        value: hasValue ? value : null,
+        entries: entries,
+        hintText: 'Account',
+        isDense: true,
+        onChanged: onChanged,
       ),
     );
   }
@@ -2592,53 +2582,25 @@ class _CategoryCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final hasValue = categories.any((c) => c.id == value);
-    return SizedBox(
-      width: width,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: WebInsets.sm, vertical: WebInsets.xs),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: hasValue ? value : null,
-            isExpanded: true,
-            isDense: true,
-            borderRadius: BorderRadius.circular(AppRadii.sm),
-            style: theme.textTheme.bodySmall,
-            icon: const Icon(Icons.expand_more_rounded, size: 16),
-            hint: Text('Category',
-                style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6))),
-            items: categories
-                .map((c) => DropdownMenuItem(
-                      value: c.id,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: colorFor(c),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                          ),
-                          const SizedBox(width: WebInsets.sm),
-                          Flexible(
-                            child: Text(c.name,
-                                maxLines: 1, overflow: TextOverflow.ellipsis),
-                          ),
-                        ],
-                      ),
-                    ))
-                .toList(),
-            onChanged: (v) {
-              if (v != null) onChanged(v);
-            },
-          ),
+    final entries = [
+      for (final c in categories)
+        WebDropdownEntry<String>(
+          value: c.id,
+          label: c.name,
+          dotColor: colorFor(c),
         ),
+    ];
+    final hasValue = categories.any((c) => c.id == value);
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: WebInsets.sm, vertical: WebInsets.xs),
+      child: WebSearchableDropdown<String>(
+        width: width - WebInsets.sm * 2,
+        value: hasValue ? value : null,
+        entries: entries,
+        hintText: 'Category',
+        isDense: true,
+        onChanged: onChanged,
       ),
     );
   }
@@ -2727,6 +2689,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   String? _categoryId;
   DateTime _date = DateTime.now();
   bool _isSubmitting = false;
+  bool _showFieldErrors = false;
 
   LedgerPresenter get _p => widget.presenter;
 
@@ -2792,9 +2755,19 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   }
 
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
-    if (_accountId == null) return;
-    if (_type == TransactionType.transfer && _toAccountId == null) return;
+    final formOk = _formKey.currentState!.validate();
+    // Account & category are now searchable dropdowns (not form fields), so
+    // validate them manually and surface inline errors on the first attempt.
+    final accountMissing = _accountId == null;
+    final toAccountMissing =
+        _type == TransactionType.transfer && _toAccountId == null;
+    final categoryMissing = _type != TransactionType.transfer &&
+        _filteredCategories.isNotEmpty &&
+        _categoryId == null;
+    if (!formOk || accountMissing || toAccountMissing || categoryMissing) {
+      setState(() => _showFieldErrors = true);
+      return;
+    }
 
     setState(() => _isSubmitting = true);
     try {
@@ -3057,68 +3030,87 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   Widget _accountDropdown({
     required String label,
     required String? value,
-    required ValueChanged<String?> onChanged,
+    required ValueChanged<String> onChanged,
   }) {
     final accounts = _accounts;
+    final entries = [
+      for (var i = 0; i < accounts.length; i++)
+        WebDropdownEntry<String>(
+          value: accounts[i].id,
+          label: accounts[i].name,
+          dotColor: resolveSliceColor(accounts[i].colorHex, i,
+              brightness: Theme.of(context).brightness),
+        ),
+    ];
     return _labeledField(
       label,
-      DropdownButtonFormField<String>(
-        initialValue: accounts.any((a) => a.id == value) ? value : null,
-        isExpanded: true,
-        decoration: const InputDecoration(
+      _decoratedField(
+        error: _showFieldErrors && value == null ? 'Select an account' : null,
+        child: WebSearchableDropdown<String>(
+          value: accounts.any((a) => a.id == value) ? value : null,
+          hintText: 'Select…',
+          entries: entries,
           isDense: true,
-          border: OutlineInputBorder(),
+          onChanged: onChanged,
         ),
-        items: accounts
-            .map((a) => DropdownMenuItem(
-                  value: a.id,
-                  child: Text(a.name, overflow: TextOverflow.ellipsis),
-                ))
-            .toList(),
-        onChanged: onChanged,
-        validator: (v) => v == null ? 'Select an account' : null,
       ),
     );
   }
 
   Widget _categoryDropdown() {
     final cats = _filteredCategories;
+    final entries = [
+      for (var i = 0; i < cats.length; i++)
+        WebDropdownEntry<String>(
+          value: cats[i].id,
+          label: cats[i].name,
+          dotColor: resolveSliceColor(cats[i].colorHex, i,
+              brightness: Theme.of(context).brightness),
+        ),
+    ];
+    final showError =
+        _showFieldErrors && cats.isNotEmpty && _categoryId == null;
     return _labeledField(
       'Category',
-      DropdownButtonFormField<String>(
-        initialValue: cats.any((c) => c.id == _categoryId) ? _categoryId : null,
-        isExpanded: true,
-        decoration: const InputDecoration(
+      _decoratedField(
+        error: showError ? 'Select a category' : null,
+        child: WebSearchableDropdown<String>(
+          value: cats.any((c) => c.id == _categoryId) ? _categoryId : null,
+          hintText: cats.isEmpty ? 'No categories' : 'Select…',
+          entries: entries,
           isDense: true,
-          border: OutlineInputBorder(),
+          onChanged: (v) => setState(() => _categoryId = v),
         ),
-        hint: Text(cats.isEmpty ? 'No categories' : 'Select…'),
-        items: cats
-            .map((c) => DropdownMenuItem(
-                  value: c.id,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: resolveSliceColor(c.colorHex, cats.indexOf(c),
-                              brightness: Theme.of(context).brightness),
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ),
-                      const SizedBox(width: WebInsets.sm),
-                      Flexible(
-                        child: Text(c.name, overflow: TextOverflow.ellipsis),
-                      ),
-                    ],
-                  ),
-                ))
-            .toList(),
-        onChanged: (v) => setState(() => _categoryId = v),
-        validator: (v) =>
-            (v == null && cats.isNotEmpty) ? 'Select a category' : null,
       ),
+    );
+  }
+
+  /// Wraps a [WebSearchableDropdown] in an outlined box matching the dialog's
+  /// other form fields, with an optional inline error message below it.
+  Widget _decoratedField({required Widget child, String? error}) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(AppRadii.sm),
+            border: Border.all(color: error != null ? cs.error : cs.outline),
+          ),
+          child: child,
+        ),
+        if (error != null)
+          Padding(
+            padding:
+                const EdgeInsets.only(top: WebInsets.xs, left: WebInsets.sm),
+            child: Text(
+              error,
+              style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+            ),
+          ),
+      ],
     );
   }
 }
