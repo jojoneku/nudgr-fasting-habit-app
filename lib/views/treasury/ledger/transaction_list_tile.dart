@@ -8,6 +8,10 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class TransactionListTile extends StatelessWidget {
   final TransactionRecord txn;
   final FinancialAccount? account;
+
+  /// Palette-indexed, brightness-aware swatch color for the account, rendered
+  /// as a small dot before the account name in the subtitle. Null hides it.
+  final Color? accountColor;
   final FinanceCategory? category;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
@@ -16,6 +20,7 @@ class TransactionListTile extends StatelessWidget {
     super.key,
     required this.txn,
     this.account,
+    this.accountColor,
     this.category,
     this.onTap,
     this.onDelete,
@@ -59,10 +64,7 @@ class TransactionListTile extends StatelessWidget {
     final categoryLabel =
         isTransfer ? 'Transfer' : (category?.name ?? 'Uncategorized');
     final accountLabel = account?.name ?? '';
-    final subtitleParts = [
-      categoryLabel,
-      if (accountLabel.isNotEmpty) accountLabel,
-    ];
+    final showAccountDot = accountLabel.isNotEmpty && accountColor != null;
 
     return Semantics(
       label: '${txn.description}, $_amountText, $accountLabel',
@@ -79,7 +81,37 @@ class TransactionListTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
-        subtitle: Text(subtitleParts.join(' · ')),
+        subtitle: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                accountLabel.isEmpty ? categoryLabel : '$categoryLabel · ',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            if (showAccountDot) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: accountColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            if (accountLabel.isNotEmpty)
+              Flexible(
+                child: Text(
+                  accountLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+        ),
         trailing: AppNumberDisplay(
           value: _amountText,
           size: AppNumberSize.body,

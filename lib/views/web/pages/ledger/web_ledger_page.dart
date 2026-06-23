@@ -2562,8 +2562,28 @@ class _AccountCell extends StatelessWidget {
             items: accounts
                 .map((a) => DropdownMenuItem(
                       value: a.id,
-                      child: Text(a.name,
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: resolveSliceColor(
+                                a.colorHex,
+                                accounts.indexOf(a),
+                                brightness: theme.brightness,
+                              ),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          const SizedBox(width: WebInsets.sm),
+                          Flexible(
+                            child: Text(a.name,
+                                maxLines: 1, overflow: TextOverflow.ellipsis),
+                          ),
+                        ],
+                      ),
                     ))
                 .toList(),
             onChanged: (v) {

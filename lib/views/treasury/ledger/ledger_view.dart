@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
@@ -917,6 +918,18 @@ class _DateGroup extends StatelessWidget {
     }
   }
 
+  /// Resolves an account's swatch color (palette-indexed, brightness-aware)
+  /// for the subtitle dot. Null when the account is unknown.
+  Color? _accountColor(BuildContext context, String id) {
+    final idx = presenter.accounts.indexWhere((a) => a.id == id);
+    if (idx < 0) return null;
+    return resolveSliceColor(
+      presenter.accounts[idx].colorHex,
+      idx,
+      brightness: Theme.of(context).brightness,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -937,6 +950,7 @@ class _DateGroup extends StatelessWidget {
                     key: ValueKey(txn.id),
                     txn: txn,
                     account: _findAccount(txn.accountId),
+                    accountColor: _accountColor(context, txn.accountId),
                     category: _findCategory(txn.categoryId),
                     onTap: () => onEditTransaction(txn),
                     onDelete: () {
