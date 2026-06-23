@@ -3,6 +3,7 @@ import '../presenters/settings_presenter.dart';
 import '../presenters/update_presenter.dart';
 import '../services/local_storage_service.dart';
 import '../services/update_service.dart';
+import '../services/patch_update_service.dart';
 import 'app_theme.dart';
 import 'home_screen.dart';
 
@@ -47,11 +48,15 @@ class _FastingAppState extends State<FastingApp> {
       updateService: updateService,
       storage: _storage,
       currentVersion: _currentVersion,
+      // Shorebird code-push observer. No-op on builds where it's unavailable.
+      patchService: PatchUpdateService(),
     );
 
-    // Check for updates after first frame
+    // Check for updates after first frame. Both are fire-and-forget — never
+    // gate startup on the patch check (it can stall on the splash screen).
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updatePresenter.checkForUpdates();
+      _updatePresenter.checkForPatch();
     });
   }
 

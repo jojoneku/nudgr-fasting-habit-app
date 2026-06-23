@@ -1,0 +1,15 @@
+# Shorebird configuration — checked into version control (app_id is not a secret).
+# Learn more at https://docs.shorebird.dev
+#
+# ⚠️ TODO(setup): this app_id is a PLACEHOLDER. On your dev machine, run:
+#       shorebird init
+#   …which registers the app in your Shorebird console and rewrites this line
+#   with the real app_id. (If `init` says the project is already initialized,
+#   just paste the app_id from https://console.shorebird.dev here instead.)
+app_id: REPLACE_ME_RUN_shorebird_init
+
+# Shorebird auto-downloads and applies patches in the background on launch.
+# We ALSO use package:shorebird_code_push (see PatchUpdateService) only to
+# surface a "patch ready — reopen to apply" nudge; leaving auto_update on is
+# intentional. Set to false only if you want updates to be fully manual.
+# auto_update: false

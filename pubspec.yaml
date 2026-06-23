@@ -63,6 +63,8 @@ dependencies:
   image_picker: ^1.1.2
   flutter_image_compress: ^2.3.0
   fl_chart: ^0.69.0
+  # Shorebird code push — observe/stage OTA Dart patches (see docs/shorebird_code_push.md)
+  shorebird_code_push: ^2.0.6
 
 
 dev_dependencies:
@@ -92,3 +94,5 @@ flutter:
     - assets/img/
     - assets/food_db.sqlite
     - .env
+    # Bundled so the Shorebird engine can read the app_id at runtime.
+    - shorebird.yaml

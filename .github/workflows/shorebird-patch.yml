@@ -1,0 +1,85 @@
+# Shorebird code-push — OTA Dart patches (and baseline releases).
+#
+# This is intentionally SEPARATE from ci.yml and runs ONLY when triggered
+# manually (workflow_dispatch), so it can't interfere with the existing
+# APK release pipeline. It stays dormant until setup is complete.
+#
+# ── Before the first run ──────────────────────────────────────────────────
+#   1. Run `shorebird init` locally and commit the real app_id in shorebird.yaml.
+#   2. Create a CI token: Shorebird console → Account → API Keys.
+#   3. Add it to GitHub repo secrets as SHOREBIRD_TOKEN.
+#
+# ── How to use ────────────────────────────────────────────────────────────
+#   • mode: release → cut a NEW baseline (run after a native/Flutter-version
+#     change, then distribute that APK through the normal manifest flow).
+#   • mode: patch   → ship Dart-only changes onto the latest release as an
+#     instant OTA update (no re-download).
+name: Shorebird
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'release (new baseline) or patch (OTA on latest release)'
+        type: choice
+        options: [patch, release]
+        default: patch
+
+env:
+  SHOREBIRD_TOKEN: ${{ secrets.SHOREBIRD_TOKEN }}
+
+jobs:
+  shorebird:
+    name: Shorebird ${{ inputs.mode }} (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - uses: shorebirdtech/setup-shorebird@v1
+        with:
+          cache: true
+
+      # Same .env the other jobs build (see ci.yml).
+      - name: Create .env file
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+          echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
+
+      # Release signing — Shorebird wraps `flutter build`, so it needs the same
+      # keystore the APK release uses.
+      - name: Set up keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 --decode > android/app/nudgr-release.jks
+          cat > android/key.properties <<EOF
+          storePassword=${{ secrets.KEY_STORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=../app/nudgr-release.jks
+          EOF
+
+      - name: Shorebird release
+        if: inputs.mode == 'release'
+        uses: shorebirdtech/shorebird-release@v1
+        with:
+          platform: android
+          # dart-defines must match the APK build in ci.yml so behaviour is identical.
+          args: '-- --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}'
+
+      - name: Shorebird patch
+        if: inputs.mode == 'patch'
+        uses: shorebirdtech/shorebird-patch@v1
+        with:
+          platform: android
+          args: '-- --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}'
