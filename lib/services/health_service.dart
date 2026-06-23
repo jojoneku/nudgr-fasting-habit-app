@@ -32,16 +32,42 @@ class HealthService {
 
   /// Prefix of the on-device Synthetic Package Name. The documented format is
   /// `com.android.healthconnect.phone.<hash>`; the hash is per-device and
-  /// per-app and must never be hardcoded, so we match by prefix. (The canonical
-  /// API is `getCurrentDeviceDataSource()`, not exposed by the `health` plugin.)
+  /// per-app and must never be hardcoded. Used as a fallback when the canonical
+  /// API (below) is unavailable.
   static const _phoneSpnPrefix = 'com.android.healthconnect.phone';
 
+  /// The device's on-device steps Synthetic Package Name, resolved via the
+  /// canonical `getCurrentDeviceDataSource()` platform API and cached for the
+  /// process (the value is stable per device + app). Null until resolved, or
+  /// when the API is unavailable (pre-Android-14, SDK extension < 20, non-
+  /// Android) — callers then fall back to [_phoneSpnPrefix].
+  static String? _onDeviceSpn;
+  static bool _spnResolved = false;
+
+  /// Resolves and caches the on-device steps SPN from the native canonical API
+  /// (`HealthConnectManager.getCurrentDeviceDataSource()`, see MainActivity.kt).
+  /// No-ops after the first attempt; safe and cheap to call before every read.
+  Future<void> ensureOnDeviceSourceResolved() async {
+    if (_spnResolved) return;
+    _spnResolved = true;
+    try {
+      final spn = await _channel.invokeMethod<String>('getOnDeviceStepsSpn');
+      if (spn != null && spn.isNotEmpty) _onDeviceSpn = spn;
+    } catch (e) {
+      // Not implemented (iOS), unavailable, or denied — keep null, use prefix.
+      debugPrint('HealthService: getOnDeviceStepsSpn unavailable: $e');
+    }
+  }
+
   /// Whether [name] is the device's own on-device step provider — the legacy
-  /// `android` package or the current device's SPN. Mirrors the official read
-  /// rule (DataOrigin == "android" OR the device SPN); merging them means an OS
-  /// relabel never drops history.
+  /// `android` package, the exact device SPN (canonical, from
+  /// `getCurrentDeviceDataSource()`), or the documented SPN prefix as a
+  /// fallback. Mirrors the official read rule (DataOrigin == "android" OR the
+  /// device SPN); merging them means an OS relabel never drops history.
   static bool isPhoneSource(String name) =>
-      name == 'android' || name.startsWith(_phoneSpnPrefix);
+      name == 'android' ||
+      (_onDeviceSpn != null && name == _onDeviceSpn) ||
+      name.startsWith(_phoneSpnPrefix);
 
   /// Whether a Health Connect record [name] satisfies the user's [selection].
   /// `null` selection matches everything; a phone-group selection matches any
@@ -130,6 +156,7 @@ class HealthService {
 
   Future<int> readTodaySteps({String? sourceId}) async {
     try {
+      await ensureOnDeviceSourceResolved();
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
       final pts = await Health().getHealthDataFromTypes(
@@ -226,6 +253,7 @@ class HealthService {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     try {
+      await ensureOnDeviceSourceResolved();
       final stepsPts = await Health().getHealthDataFromTypes(
           startTime: start, endTime: end, types: [HealthDataType.STEPS]);
       final steps = _stepsByDay(stepsPts, stepsSourceId)
@@ -277,6 +305,7 @@ class HealthService {
     final distance = <String, double>{};
 
     try {
+      await ensureOnDeviceSourceResolved();
       // STEPS — 1 API call for entire range
       final stepsPoints = await Health().getHealthDataFromTypes(
           startTime: start, endTime: end, types: [HealthDataType.STEPS]);
@@ -388,6 +417,7 @@ class HealthService {
   /// Each entry is (sourceId, sourceName).
   Future<List<({String sourceId, String sourceName})>> readStepSources() async {
     try {
+      await ensureOnDeviceSourceResolved();
       final end = DateTime.now();
       final start = end.subtract(const Duration(days: 7));
       final data = await Health().getHealthDataFromTypes(
