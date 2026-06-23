@@ -65,14 +65,32 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     widget.presenter.reloadAccounts();
     final existing = widget.existing;
     if (existing != null) {
-      _type = existing.type;
       _amountController.text = existing.amount.toStringAsFixed(2);
       _descriptionController.text = existing.description;
       _noteController.text = existing.note ?? '';
-      _selectedAccountId = existing.accountId;
-      _transferToAccountId = existing.transferToAccountId;
       _selectedCategoryId = existing.categoryId;
       _date = existing.date;
+      if (existing.transferGroupId != null) {
+        // A transfer is stored as two legs (outflow on the source, inflow on
+        // the destination) that share a groupId — NEITHER leg's `type` is
+        // `transfer`. Deriving the toggle from the leg's type therefore always
+        // reverted a transfer to Outflow on open. Detect the group instead and
+        // rebuild From/To from the two legs.
+        _type = TransactionType.transfer;
+        String? fromId;
+        String? toId;
+        for (final t in widget.presenter.allTransactions) {
+          if (t.transferGroupId != existing.transferGroupId) continue;
+          if (t.type == TransactionType.outflow) fromId = t.accountId;
+          if (t.type == TransactionType.inflow) toId = t.accountId;
+        }
+        _selectedAccountId = fromId ?? existing.accountId;
+        _transferToAccountId = toId ?? existing.transferToAccountId;
+      } else {
+        _type = existing.type;
+        _selectedAccountId = existing.accountId;
+        _transferToAccountId = existing.transferToAccountId;
+      }
     } else {
       if (widget.initialDate != null) _date = widget.initialDate!;
       final prefill = widget.prefill;
@@ -138,7 +156,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       final month = toMonthKey(_date);
       final categoryId = _selectedCategoryId ?? '';
 
+      final existing = widget.existing;
       if (_type == TransactionType.transfer) {
+        // Editing a transfer: drop the existing leg(s) first so we replace the
+        // pair in place. addTransfer always creates a fresh outflow+inflow
+        // pair, so without this an edit would duplicate the transfer and
+        // double-apply the balances.
+        if (existing != null) {
+          await widget.presenter.deleteTransactionOrGroup(existing.id);
+        }
         await widget.presenter.addTransfer(
           fromAccountId: _selectedAccountId!,
           toAccountId: _transferToAccountId!,
@@ -148,7 +174,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           note: note.isEmpty ? null : note,
         );
       } else {
-        final id = widget.existing?.id ??
+        final id = existing?.id ??
             '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
         final txn = TransactionRecord(
           id: id,
@@ -161,8 +187,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           note: note.isEmpty ? null : note,
           month: month,
         );
-        if (widget.existing != null) {
-          await widget.presenter.updateTransaction(txn.copyWith());
+        if (existing != null) {
+          if (existing.transferGroupId != null) {
+            // Converting a transfer into a normal income/expense: remove the
+            // whole transfer group, then add the single replacement record.
+            await widget.presenter.deleteTransactionOrGroup(existing.id);
+            await widget.presenter.addTransaction(txn);
+          } else {
+            await widget.presenter.updateTransaction(txn.copyWith());
+          }
         } else {
           await widget.presenter.addTransaction(txn);
         }

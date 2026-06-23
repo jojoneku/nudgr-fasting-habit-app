@@ -274,4 +274,52 @@ void main() {
       expect(ledger.averageDailyOutflow, 0.0);
     });
   });
+
+  // ── Both transfer legs visible in the all-accounts view ───────────────────
+  group('transfer legs in all-accounts list', () {
+    test('all-accounts view shows BOTH transfer legs; totals exclude them',
+        () async {
+      final accounts = [
+        _account(id: 'a', balance: 0),
+        _account(id: 'b', balance: 0),
+      ];
+      // Transfer a → b (two legs sharing g1) plus a real expense.
+      final txns = [
+        _txn(
+            id: 'out',
+            accountId: 'a',
+            amount: 1000,
+            type: TransactionType.outflow,
+            transferGroupId: 'g1'),
+        _txn(
+            id: 'in',
+            accountId: 'b',
+            amount: 1000,
+            type: TransactionType.inflow,
+            transferGroupId: 'g1'),
+        _txn(
+            id: 'spend',
+            accountId: 'a',
+            amount: 250,
+            type: TransactionType.outflow),
+      ];
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => accounts);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => txns);
+
+      final ledger = LedgerPresenter(mockStorage, mockStats);
+      await ledger.load();
+      // Default = all-accounts view (no account filter).
+
+      final ids = ledger.groupedTransactions.values
+          .expand((list) => list)
+          .map((t) => t.id)
+          .toSet();
+      // BOTH transfer legs are present, not just the outflow leg.
+      expect(ids, containsAll(<String>{'out', 'in', 'spend'}));
+
+      // Totals still exclude transfer legs — only the ₱250 expense counts.
+      expect(ledger.filteredMonthInflow, 0.0);
+      expect(ledger.filteredMonthOutflow, 250.0);
+    });
+  });
 }

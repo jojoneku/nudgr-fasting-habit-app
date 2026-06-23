@@ -83,7 +83,8 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   String get selectedMonth => _selectedMonth;
   String? get selectedAccountId => _selectedAccountId;
 
-  /// Optional category filter for the web table view. Null = all categories.
+  /// Optional category filter applied to both the mobile transaction list
+  /// ([groupedTransactions]) and the web table view. Null = all categories.
   /// Independent of the chat view, which doesn't filter by category.
   String? get selectedCategoryId => _selectedCategoryId;
   List<FinancialAccount> get accounts => _accounts;
@@ -180,11 +181,17 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     return account?.balance ?? 0.0;
   }
 
-  /// Transactions in [selectedMonth] filtered by [selectedAccountId].
+  /// Transactions in [selectedMonth] filtered by [selectedAccountId] and
+  /// [selectedCategoryId].
   /// In "All" view: deduplicates transfers — keeps only the outflow leg.
   /// In single-account view: shows both legs belonging to that account.
   Map<DateTime, List<TransactionRecord>> get groupedTransactions {
     var txns = _filteredTransactions;
+
+    // Apply optional category filter (mirrors the web table view).
+    if (_selectedCategoryId != null) {
+      txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
+    }
 
     // Apply optional single-day filter (from calendar tap)
     if (_selectedDate != null) {
@@ -330,7 +337,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  /// Sets the table-view category filter. Null clears it (all categories).
+  /// Sets the active category filter. Null clears it (all categories).
   void setCategoryFilter(String? id) {
     _selectedCategoryId = id;
     safeNotify();
@@ -993,10 +1000,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       return inMonth.where((t) => t.accountId == _selectedAccountId).toList();
     }
 
-    // All-accounts view: deduplicate transfers — keep only outflow leg.
-    return inMonth
-        .where((t) =>
-            t.transferGroupId == null || t.type == TransactionType.outflow)
-        .toList();
+    // All-accounts view: show every transaction, including BOTH transfer legs
+    // (outflow on the source account and inflow on the destination account) so
+    // the destination's increase is visible. Income/expense totals still
+    // exclude transfer legs via transferGroupId == null guards in the summary
+    // getters, so this does not affect those figures.
+    return inMonth;
   }
 }
