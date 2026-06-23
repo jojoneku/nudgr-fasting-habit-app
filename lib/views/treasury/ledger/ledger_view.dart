@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
@@ -450,14 +451,43 @@ class _AccountFilterRow extends StatelessWidget {
 
   const _AccountFilterRow({required this.presenter});
 
+  Future<void> _openCategoryFilter(BuildContext context) async {
+    HapticFeedback.selectionClick();
+    await AppBottomSheet.show(
+      context: context,
+      title: 'Filter by Category',
+      body: _CategoryFilterSheet(presenter: presenter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selectedCategory = presenter.categories
+        .where((c) => c.id == presenter.selectedCategoryId)
+        .firstOrNull;
+
     return SizedBox(
       height: 48,
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         children: [
+          // Category filter: a clearable active chip when one is selected,
+          // otherwise a plain "Category" affordance that opens the picker.
+          if (selectedCategory != null)
+            _CategoryActiveChip(
+              category: selectedCategory,
+              onClear: () => presenter.setCategoryFilter(null),
+              onTap: () => _openCategoryFilter(context),
+            )
+          else
+            _AccountPill(
+              label: 'Category',
+              icon: Icons.filter_list_rounded,
+              selected: false,
+              onTap: () => _openCategoryFilter(context),
+            ),
+          _FilterDivider(),
           _AccountPill(
             label: 'All',
             icon: Icons.account_balance_wallet_outlined,
@@ -470,6 +500,255 @@ class _AccountFilterRow extends StatelessWidget {
                 onTap: () => presenter.setAccount(a.id),
               )),
         ],
+      ),
+    );
+  }
+}
+
+/// Thin vertical separator between the category affordance and the account
+/// pills so the two filter dimensions read as distinct groups.
+class _FilterDivider extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Center(
+        child: Container(
+          width: 1,
+          height: 22,
+          color: cs.outlineVariant,
+        ),
+      ),
+    );
+  }
+}
+
+/// Active category filter shown as a colored chip with an ✕ to clear it.
+/// Tapping the body reopens the picker; tapping the ✕ clears the filter.
+class _CategoryActiveChip extends StatelessWidget {
+  final FinanceCategory category;
+  final VoidCallback onClear;
+  final VoidCallback onTap;
+
+  const _CategoryActiveChip({
+    required this.category,
+    required this.onClear,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final dotColor = resolveSliceColor(
+      category.colorHex,
+      0,
+      brightness: Theme.of(context).brightness,
+    );
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: () {
+          HapticFeedback.selectionClick();
+          onTap();
+        },
+        child: Container(
+          padding: const EdgeInsets.only(left: 12, right: 6),
+          decoration: BoxDecoration(
+            color: cs.primary.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: cs.primary),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                category.name,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: cs.primary,
+                ),
+              ),
+              SizedBox(
+                width: 32,
+                height: 44,
+                child: Semantics(
+                  label: 'Clear category filter',
+                  button: true,
+                  child: InkWell(
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      onClear();
+                    },
+                    borderRadius: BorderRadius.circular(22),
+                    child:
+                        Icon(Icons.close_rounded, size: 16, color: cs.primary),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Modal picker listing every selectable category (income + expense), each
+/// with a color dot, plus an "All categories" reset option at the top.
+class _CategoryFilterSheet extends StatelessWidget {
+  final LedgerPresenter presenter;
+
+  const _CategoryFilterSheet({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    // Exclude the reserved transfer category — it is never a user filter target.
+    final expense = presenter.categories
+        .where((c) => c.type == CategoryType.expense)
+        .toList();
+    final income = presenter.categories
+        .where((c) => c.type == CategoryType.income)
+        .toList();
+
+    void select(String? id) {
+      HapticFeedback.selectionClick();
+      presenter.setCategoryFilter(id);
+      Navigator.of(context).pop();
+    }
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CategoryFilterTile(
+            label: 'All categories',
+            selected: presenter.selectedCategoryId == null,
+            onTap: () => select(null),
+          ),
+          if (expense.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            AppSection(
+              title: 'Expense',
+              child: Column(
+                children: [
+                  for (final c in expense)
+                    _CategoryFilterTile(
+                      key: ValueKey(c.id),
+                      label: c.name,
+                      dotColor: resolveSliceColor(c.colorHex, 0,
+                          brightness: brightness),
+                      selected: presenter.selectedCategoryId == c.id,
+                      onTap: () => select(c.id),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (income.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            AppSection(
+              title: 'Income',
+              child: Column(
+                children: [
+                  for (final c in income)
+                    _CategoryFilterTile(
+                      key: ValueKey(c.id),
+                      label: c.name,
+                      dotColor: resolveSliceColor(c.colorHex, 0,
+                          brightness: brightness),
+                      selected: presenter.selectedCategoryId == c.id,
+                      onTap: () => select(c.id),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (expense.isEmpty && income.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: AppEmptyState(
+                icon: Icons.label_off_outlined,
+                title: 'No categories yet',
+                body: 'Add categories to filter your transactions by them.',
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CategoryFilterTile extends StatelessWidget {
+  final String label;
+  final Color? dotColor;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _CategoryFilterTile({
+    super.key,
+    required this.label,
+    this.dotColor,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: dotColor ?? cs.onSurfaceVariant,
+                  shape:
+                      dotColor != null ? BoxShape.circle : BoxShape.rectangle,
+                  borderRadius:
+                      dotColor == null ? BorderRadius.circular(3) : null,
+                ),
+                child: dotColor == null
+                    ? Icon(Icons.clear_all_rounded, size: 12, color: cs.surface)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    color: selected ? cs.primary : cs.onSurface,
+                  ),
+                ),
+              ),
+              if (selected)
+                Icon(Icons.check_rounded, size: 18, color: cs.primary),
+            ],
+          ),
+        ),
       ),
     );
   }
