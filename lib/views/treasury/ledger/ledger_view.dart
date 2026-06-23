@@ -658,7 +658,10 @@ class _CalendarPopover extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.35),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .shadow
+                      .withValues(alpha: 0.35),
                   blurRadius: 20,
                   offset: const Offset(0, 6),
                 ),
