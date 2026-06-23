@@ -116,8 +116,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       healthService: _healthService,
       storage: _storage,
     );
-    _ledgerPresenter =
-        LedgerPresenter(_storage, _statsPresenter, ai: _onDeviceAi);
+    _ledgerPresenter = LedgerPresenter(
+      _storage,
+      _statsPresenter,
+      ai: _onDeviceAi,
+      cloudAi: _cloudAi,
+    );
     _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
     _budgetPresenter =
         BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);

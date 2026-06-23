@@ -1556,7 +1556,9 @@ class _QuickAddFabState extends State<_QuickAddFab> {
     setState(() => _busy = true);
 
     final p = widget.presenter;
-    await p.sendChatInput(text);
+    // One-shot: the web box has no multi-turn clarify UI, so a confident parse
+    // commits immediately and an ambiguous one opens the prefilled form.
+    await p.sendChatInput(text, autoResolve: true);
     if (!mounted) return;
 
     final messenger = ScaffoldMessenger.of(context);
