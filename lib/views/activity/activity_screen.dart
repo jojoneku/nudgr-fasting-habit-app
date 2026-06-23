@@ -907,14 +907,19 @@ class _GoalSheetState extends State<_GoalSheet> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Pick one source to prevent double-counting.',
+                      'Pick one source to prevent double-counting. '
+                      'Your phone’s data is merged automatically.',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm),
                     ...sources.map((s) {
-                      final isSelected = currentSource == s.sourceId;
+                      final isPhone = p.isPhoneSourceId(s.sourceId);
+                      final isSelected = currentSource == s.sourceId ||
+                          (currentSource != null &&
+                              isPhone &&
+                              p.isPhoneSourceId(currentSource));
                       return AppListTile(
                         leading: Icon(
                           isSelected
@@ -933,7 +938,9 @@ class _GoalSheetState extends State<_GoalSheet> {
                                 : FontWeight.normal,
                           ),
                         ),
-                        subtitle: Text(s.sourceId),
+                        subtitle: Text(isPhone
+                            ? 'Your phone (Health Connect)'
+                            : s.sourceId),
                         onTap: () => p.setPreferredStepsSource(
                             isSelected ? null : s.sourceId),
                       );
