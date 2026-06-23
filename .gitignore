@@ -69,3 +69,6 @@ docs/design/treasury-web-reference/
 
 # Shorebird code push — local build artifacts (shorebird.yaml IS committed)
 .shorebird/
+
+# Transient release-notes artifact produced by scripts/release_changelog.sh
+RELEASE_NOTES.md
