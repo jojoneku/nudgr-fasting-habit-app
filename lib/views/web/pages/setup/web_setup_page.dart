@@ -235,9 +235,22 @@ class _CategoriesCardState extends State<_CategoriesCard> {
             horizontal: WebInsets.xl,
             vertical: WebInsets.lg,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: rows,
+          // Scroll horizontally on narrow viewports rather than overflowing the
+          // fixed TYPE/COLOR/actions columns (matches the accounts table).
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final tableWidth = max(480.0, constraints.maxWidth);
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: tableWidth,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: rows,
+                  ),
+                ),
+              );
+            },
           ),
         );
       },
@@ -757,9 +770,24 @@ class _AccountsTableCard extends StatelessWidget {
         horizontal: WebInsets.xl,
         vertical: WebInsets.lg,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: children,
+      // The fixed columns total ~622px plus a flexible ACCOUNT column. Below the
+      // rail breakpoint the content area can fall under that, so give the table
+      // a bounded min width and scroll horizontally when the viewport is narrow
+      // — matching the budget table and avoiding a RenderFlex overflow.
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final tableWidth = max(820.0, constraints.maxWidth);
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: children,
+              ),
+            ),
+          );
+        },
       ),
     );
   }
