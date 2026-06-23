@@ -195,7 +195,28 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
       final acct = _accountName(t.accountId).toLowerCase();
       final hay = '${t.description.toLowerCase()} '
           '${(t.note ?? '').toLowerCase()} $cat $acct';
-      if (!hay.contains(_query)) return false;
+      final textMatch = hay.contains(_query);
+
+      // Numeric match: when the query (stripped of ₱, spaces and commas) is a
+      // number, also match on the transaction amount — both exact (1000 ==
+      // 1,000) and as a substring of the formatted amount, so "1000" finds
+      // ₱1,000.00 and "10" finds ₱10.00. Either text OR amount may match.
+      var amountMatch = false;
+      final cleaned = _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(
+            ',',
+            '',
+          );
+      final n = double.tryParse(cleaned);
+      if (n != null) {
+        final fixed = t.amount.toStringAsFixed(2); // e.g. "1000.00"
+        final grouped =
+            NumberFormat('#,##0.00', 'en_PH').format(t.amount); // "1,000.00"
+        amountMatch = t.amount == n ||
+            fixed.contains(cleaned) ||
+            grouped.contains(_query);
+      }
+
+      if (!textMatch && !amountMatch) return false;
     }
     return true;
   }

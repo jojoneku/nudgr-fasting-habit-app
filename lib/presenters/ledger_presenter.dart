@@ -993,10 +993,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       return inMonth.where((t) => t.accountId == _selectedAccountId).toList();
     }
 
-    // All-accounts view: deduplicate transfers — keep only outflow leg.
-    return inMonth
-        .where((t) =>
-            t.transferGroupId == null || t.type == TransactionType.outflow)
-        .toList();
+    // All-accounts view: show every transaction, including BOTH transfer legs
+    // (outflow on the source account and inflow on the destination account) so
+    // the destination's increase is visible. Income/expense totals still
+    // exclude transfer legs via transferGroupId == null guards in the summary
+    // getters, so this does not affect those figures.
+    return inMonth;
   }
 }
