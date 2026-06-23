@@ -1196,6 +1196,18 @@ class _DateGroup extends StatelessWidget {
     }
   }
 
+  /// Resolves an account's swatch color (palette-indexed, brightness-aware)
+  /// for the subtitle dot. Null when the account is unknown.
+  Color? _accountColor(BuildContext context, String id) {
+    final idx = presenter.accounts.indexWhere((a) => a.id == id);
+    if (idx < 0) return null;
+    return resolveSliceColor(
+      presenter.accounts[idx].colorHex,
+      idx,
+      brightness: Theme.of(context).brightness,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1216,6 +1228,7 @@ class _DateGroup extends StatelessWidget {
                     key: ValueKey(txn.id),
                     txn: txn,
                     account: _findAccount(txn.accountId),
+                    accountColor: _accountColor(context, txn.accountId),
                     category: _findCategory(txn.categoryId),
                     onTap: () => onEditTransaction(txn),
                     onDelete: () {
