@@ -37,6 +37,7 @@ import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
@@ -627,6 +628,64 @@ void main() {
 
       verify(notifications.showBudgetWarning(any, any, any, any, any))
           .called(1);
+    });
+
+    test(
+        '13. ledger notify during load() before warned-keys restored does NOT '
+        're-fire (cold-start race)', () async {
+      // Regression for the reopen-spam that survived the PR #274 fix: budgets
+      // already warned LAST session (key persisted). On reopen, BudgetPresenter
+      // subscribes to the ledger in its constructor and every presenter loads
+      // concurrently — so the ledger can notify (with transactions loaded)
+      // *before* this presenter's load() has restored the persisted warned-keys.
+      // Without the guard, that mid-load notify runs _checkBudgetWarnings with an
+      // empty warned set and re-fires the alert on every cold open.
+      final storage = _makeStorage(
+        notifPrefs: const NotificationPreferences(
+          budgetWarningEnabled: true,
+          budgetWarningPercent: 80,
+        ),
+      );
+      when(storage.loadBudgets()).thenAnswer((_) async => [makeBudget(100)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [makeCat()]);
+      when(storage.loadTransactions())
+          .thenAnswer((_) async => [makeTxn(85)]); // 85% — over threshold
+      when(storage.loadAccounts()).thenAnswer((_) async => []);
+
+      final stats = MockStatsPresenter();
+      when(stats.addXp(any)).thenAnswer((_) async {});
+
+      // Prior session: warn once and persist the marker (memory-backed storage).
+      final seedNotif = MockNotificationService();
+      when(seedNotif.showBudgetWarning(any, any, any, any, any))
+          .thenAnswer((_) async {});
+      final seed = BudgetPresenter(storage, stats, null, seedNotif);
+      seed.setMonth(month);
+      await seed.load();
+      verify(seedNotif.showBudgetWarning(any, any, any, any, any)).called(1);
+
+      // Reopen: real ledger the budget presenter listens to, plus a fresh
+      // notifications mock so we count only this session's fires.
+      final reopenNotif = MockNotificationService();
+      when(reopenNotif.showBudgetWarning(any, any, any, any, any))
+          .thenAnswer((_) async {});
+      final ledger = LedgerPresenter(storage, stats);
+      final reopened = BudgetPresenter(storage, stats, ledger, reopenNotif);
+      reopened.setMonth(month);
+
+      // Inject the race: when load() reaches the warned-keys restore step, drive
+      // the ledger's load() first so its notifyListeners() fans out to
+      // _syncFromLedger -> _checkBudgetWarnings *before* the keys are restored.
+      when(storage.loadWarnedBudgetKeys()).thenAnswer((_) async {
+        await ledger.load();
+        return {'$month/$budgetId'};
+      });
+
+      await reopened.load();
+
+      // Already warned last session → must stay silent this session.
+      verifyNever(reopenNotif.showBudgetWarning(any, any, any, any, any));
     });
   });
 }

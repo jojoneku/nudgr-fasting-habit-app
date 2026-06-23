@@ -178,6 +178,38 @@ void main() {
       expect(presenter.todaySteps, 7500);
     });
 
+    test('recheckPermissions re-syncs today when permission already granted',
+        () async {
+      // Regression: reopening the app (resume) must refresh today's data even
+      // when permission was ALREADY granted. Previously recheckPermissions only
+      // synced on the not-granted → granted transition, so Strava data pushed
+      // into Health Connect while backgrounded never showed up after a reopen.
+      when(mockHealth.isAvailable()).thenAnswer((_) async => true);
+      when(mockHealth.hasPermissions()).thenAnswer((_) async => true);
+      when(mockHealth.readTodaySteps()).thenAnswer((_) async => 4200);
+      when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayTotalCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayDistance()).thenAnswer((_) async => 1500.0);
+      when(mockHealth.readTodayWorkoutDistance())
+          .thenAnswer((_) async => null);
+      when(mockStorage.loadActivityLogKeys()).thenAnswer((_) async => {});
+      when(mockHealth.readRangeDataByDay(any, any)).thenAnswer((_) async => {});
+
+      presenter = ActivityPresenter(
+        statsPresenter: mockStats,
+        healthService: mockHealth,
+        storage: mockStorage,
+      );
+      await Future.delayed(Duration.zero);
+      // Sanity: loadState alone does not sync today (backfill skips today).
+      expect(presenter.todaySteps, 0);
+
+      await presenter.recheckPermissions();
+
+      expect(presenter.todaySteps, 4200);
+      expect(presenter.todayLog.distanceMeters, 1500.0);
+    });
+
     test('requestHealthPermission syncs after grant', () async {
       when(mockHealth.isAvailable()).thenAnswer((_) async => true);
       when(mockHealth.hasPermissions()).thenAnswer((_) async => false);
