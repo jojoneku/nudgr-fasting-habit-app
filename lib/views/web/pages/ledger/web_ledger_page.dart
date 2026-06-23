@@ -1065,10 +1065,11 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
     final cs = theme.colorScheme;
     return Stack(
       children: [
-        // Outside-tap barrier.
+        // Outside-tap barrier. translucent so the tap that dismisses the
+        // panel also reaches the row cell the user intended to click. (fix)
         Positioned.fill(
           child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+            behavior: HitTestBehavior.translucent,
             onTap: _controller.hide,
           ),
         ),

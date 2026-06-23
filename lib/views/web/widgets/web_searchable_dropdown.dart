@@ -186,11 +186,14 @@ class _WebSearchableDropdownState<T> extends State<WebSearchableDropdown<T>> {
     final cs = theme.colorScheme;
 
     // Full-screen barrier closes the overlay on an outside tap.
+    // translucent (not opaque) so the tap is also forwarded to the widget
+    // beneath — users can click a row cell while a dropdown is open and
+    // both the close AND the intended action happen in one tap. (fix)
     return Stack(
       children: [
         Positioned.fill(
           child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+            behavior: HitTestBehavior.translucent,
             onTap: _close,
           ),
         ),
