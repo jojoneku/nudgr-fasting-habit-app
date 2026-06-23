@@ -142,7 +142,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Average daily outflow for the selected month (excludes zero-spend days).
   double get averageDailyOutflow {
     final values = dailyOutflowMap.values;
-    if (values.isEmpty) return 1.0; // avoid division by zero
+    if (values.isEmpty) return 0.0; // no spend this month → genuinely ₱0
     return values.reduce((a, b) => a + b) / values.length;
   }
 

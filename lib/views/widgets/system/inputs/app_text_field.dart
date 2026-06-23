@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../../../utils/app_spacing.dart';
 
 /// TextField wrapper with consistent padding, error/helper text, and optional icons.
@@ -32,6 +33,7 @@ class AppTextField extends StatelessWidget {
     this.textStyle,
     this.focusNode,
     this.autofocus = false,
+    this.inputFormatters,
   });
 
   final TextEditingController? controller;
@@ -58,6 +60,7 @@ class AppTextField extends StatelessWidget {
   final TextStyle? textStyle;
   final FocusNode? focusNode;
   final bool autofocus;
+  final List<TextInputFormatter>? inputFormatters;
 
   @override
   Widget build(BuildContext context) {
@@ -73,6 +76,7 @@ class AppTextField extends StatelessWidget {
       maxLength: maxLength,
       enabled: enabled,
       style: textStyle,
+      inputFormatters: inputFormatters,
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       decoration: InputDecoration(

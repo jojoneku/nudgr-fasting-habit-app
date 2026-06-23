@@ -138,8 +138,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     if (day == null) return null;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    var due = DateTime(now.year, now.month, day);
-    if (due.isBefore(today)) due = DateTime(now.year, now.month + 1, day);
+    // Clamp the due day to the target month's length so day 29–31 doesn't
+    // overflow into the next month (e.g. DateTime(2026, 2, 31) → Mar 3).
+    DateTime dueOn(int year, int month) {
+      final lastDay = DateTime(year, month + 1, 0).day;
+      return DateTime(year, month, day.clamp(1, lastDay));
+    }
+
+    var due = dueOn(now.year, now.month);
+    if (due.isBefore(today)) due = dueOn(now.year, now.month + 1);
     final diff = due.difference(today).inDays;
     final label = diff == 0
         ? 'Due today'
@@ -399,15 +406,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   bool get hasBills => upcomingBills.isNotEmpty;
 
-  bool get hasBillImminent {
-    final today = DateTime.now().day;
-    return upcomingBills.any((b) => b.dueDay == today || b.dueDay == today + 1);
-  }
+  bool get hasBillImminent => imminentBill != null;
 
+  /// First unpaid current-month bill due today or tomorrow. `tomorrow` is
+  /// guarded against the month boundary so `today + 1` can't match a phantom
+  /// 31st on a 30-day month.
   Bill? get imminentBill {
-    final today = DateTime.now().day;
+    final now = DateTime.now();
+    final today = now.day;
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    final tomorrow = today + 1;
     return upcomingBills
-        .where((b) => b.dueDay == today || b.dueDay == today + 1)
+        .where((b) =>
+            b.dueDay == today || (b.dueDay == tomorrow && tomorrow <= lastDay))
         .firstOrNull;
   }
 
@@ -433,7 +444,17 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     }).fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  bool isBillOverdue(Bill bill) => bill.dueDay < DateTime.now().day;
+  /// A bill is overdue when it's unpaid and its due date has passed. The bill's
+  /// month is honoured: a future-month bill is never overdue, and a past-month
+  /// unpaid bill always is — comparing only `dueDay` would mis-flag both.
+  bool isBillOverdue(Bill bill) {
+    if (bill.isPaid) return false;
+    final now = DateTime.now();
+    final nowKey = toMonthKey(now);
+    if (bill.month.compareTo(nowKey) < 0) return true; // a past month, unpaid
+    if (bill.month.compareTo(nowKey) > 0) return false; // a future month
+    return bill.dueDay < now.day; // this month
+  }
 
   // --- Budget ---
 
@@ -457,16 +478,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   double _budgetSpentFor(Budget b) {
     if (b.group == BudgetGroup.savings) {
-      // Savings budgets track contributions INTO the target account (here the
-      // "categoryId" is an account id), not category outflows.
+      // Savings budgets track NET contributions INTO the target account (here
+      // the "categoryId" is an account id): inflow legs add, outflow legs
+      // subtract. This mirrors [monthSavingsContributions] and the Budget
+      // page's `contributedTo` so all three surfaces report the same number —
+      // a transfer between two savings accounts nets to zero, not double-count.
       var total = 0.0;
       for (final t in _transactions) {
         if (t.month != _currentMonth) continue;
-        if (t.type == TransactionType.inflow && t.accountId == b.categoryId) {
+        if (t.accountId != b.categoryId) continue;
+        if (t.type == TransactionType.inflow) {
           total += t.amount;
-        } else if (t.type == TransactionType.transfer &&
-            t.transferToAccountId == b.categoryId) {
-          total += t.amount;
+        } else if (t.type == TransactionType.outflow) {
+          total -= t.amount;
         }
       }
       return total;
@@ -483,6 +507,33 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get totalBudgetRemaining =>
       (totalBudgetAllocated - totalBudgetSpent).clamp(0.0, double.infinity);
 
+  /// Overlap between unpaid bills and category budgets, so the forecast doesn't
+  /// deduct the same obligation twice. An unpaid bill is already subtracted via
+  /// [endingCash]; if its category also carries a monthly budget, that budget's
+  /// remaining would subtract it a second time. We credit back the smaller of
+  /// (unpaid-bill total in that category) and (that category's remaining budget).
+  double get _unpaidBillBudgetOverlap {
+    final unpaidByCategory = <String, double>{};
+    for (final b in _bills) {
+      if (b.month != _currentMonth || b.isPaid || b.categoryId.isEmpty) {
+        continue;
+      }
+      unpaidByCategory[b.categoryId] =
+          (unpaidByCategory[b.categoryId] ?? 0) + b.amount;
+    }
+    if (unpaidByCategory.isEmpty) return 0.0;
+    var overlap = 0.0;
+    for (final budget in _budgets.where((b) => b.month == _currentMonth)) {
+      if (budget.group == BudgetGroup.savings) continue;
+      final unpaid = unpaidByCategory[budget.categoryId];
+      if (unpaid == null) continue;
+      final remaining = (budget.allocatedAmount - _budgetSpentFor(budget))
+          .clamp(0.0, double.infinity);
+      overlap += unpaid < remaining ? unpaid : remaining;
+    }
+    return overlap;
+  }
+
   /// Projected month-end cash: current liquid + incoming receivables, minus
   /// everything still expected to leave this month —
   ///   • unpaid bills (already netted in [endingCash]),
@@ -490,7 +541,10 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   ///   • the remaining monthly category budget you still plan to spend
   ///     ([totalBudgetRemaining]) — which shrinks as actual spending accrues.
   double get forecastedNetBalance =>
-      endingCash - budgetedExpensesRemaining - totalBudgetRemaining;
+      endingCash -
+      budgetedExpensesRemaining -
+      totalBudgetRemaining +
+      _unpaidBillBudgetOverlap;
 
   Map<BudgetGroup, double> get budgetAllocatedByGroup {
     final result = <BudgetGroup, double>{};

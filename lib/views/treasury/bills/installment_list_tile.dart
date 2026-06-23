@@ -118,12 +118,12 @@ class InstallmentListTile extends StatelessWidget {
                     _MarkPaidButton(onTap: onMarkPaid, color: color),
                   const SizedBox(width: 4),
                   SizedBox(
-                    width: 32,
-                    height: 32,
+                    width: 44,
+                    height: 44,
                     child: IconButton(
                       padding: EdgeInsets.zero,
                       icon: Icon(Icons.delete_outline,
-                          size: 16, color: colorScheme.onSurfaceVariant),
+                          size: 18, color: colorScheme.onSurfaceVariant),
                       onPressed: onDelete,
                       tooltip: 'Delete installment',
                     ),
@@ -151,17 +151,24 @@ class _MarkPaidButton extends StatelessWidget {
         HapticFeedback.mediumImpact();
         onTap();
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Text(
-          'Mark Paid',
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      behavior: HitTestBehavior.opaque,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        child: Center(
+          widthFactor: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: color.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              'Mark Paid',
+              style: TextStyle(
+                  color: color, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ),
         ),
       ),
     );
@@ -178,27 +185,34 @@ class _PaidChip extends StatelessWidget {
     final successColor = context.appColors.success;
     return GestureDetector(
       onTap: onUndo,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-        decoration: BoxDecoration(
-          color: successColor.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: successColor.withValues(alpha: 0.3)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.check, color: successColor, size: 12),
-            const SizedBox(width: 4),
-            Text(
-              'Paid · Undo',
-              style: TextStyle(
-                color: successColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
+      behavior: HitTestBehavior.opaque,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
+        child: Center(
+          widthFactor: 1,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: successColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(color: successColor.withValues(alpha: 0.3)),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check, color: successColor, size: 14),
+                const SizedBox(width: 4),
+                Text(
+                  'Paid · Undo',
+                  style: TextStyle(
+                    color: successColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

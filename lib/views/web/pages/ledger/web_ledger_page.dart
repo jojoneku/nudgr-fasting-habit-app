@@ -1460,11 +1460,13 @@ class _QuickAdd extends StatefulWidget {
 
 class _QuickAddState extends State<_QuickAdd> {
   final _controller = TextEditingController();
+  final _focus = FocusNode();
   bool _busy = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _focus.dispose();
     super.dispose();
   }
 
@@ -1483,6 +1485,9 @@ class _QuickAddState extends State<_QuickAdd> {
       p.clearLastCommittedSummary();
       _controller.clear();
       _toast(messenger, summary, ok: true);
+      // Keep the field focused so the next transaction can be typed straight
+      // away — desktop users log several in a row.
+      _focus.requestFocus();
     } else if (p.chatHardError != null) {
       final msg = p.chatHardError!.userMessage;
       p.clearChatHardError();
@@ -1560,6 +1565,7 @@ class _QuickAddState extends State<_QuickAdd> {
                   height: 44,
                   child: TextField(
                     controller: _controller,
+                    focusNode: _focus,
                     enabled: !_busy,
                     onSubmitted: (_) => _send(),
                     textAlignVertical: TextAlignVertical.center,

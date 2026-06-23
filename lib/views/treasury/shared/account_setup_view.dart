@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -425,9 +425,7 @@ class _AccountSetupForm extends StatelessWidget {
                           controller: balanceController,
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                          ],
+                          inputFormatters: amountInputFormatters,
                           decoration: InputDecoration(
                             labelText: balanceLabel,
                             prefixText: '₱ ',
@@ -463,9 +461,7 @@ class _AccountSetupForm extends StatelessWidget {
                 controller: goalTargetController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                ],
+                inputFormatters: amountInputFormatters,
                 decoration: const InputDecoration(
                   labelText: 'Goal Target',
                   prefixText: '₱ ',
@@ -641,6 +637,11 @@ class _ColorPicker extends StatelessWidget {
         ...options.map((hex) {
           final color = _parse(hex);
           final isSelected = hex.toLowerCase() == selected.toLowerCase();
+          // Contrast the ring/check against the swatch itself, not a fixed
+          // white — otherwise a pale swatch in light mode shows an invisible
+          // selection.
+          final onSwatch =
+              color.computeLuminance() > 0.5 ? Colors.black : Colors.white;
           return Semantics(
             label: 'Color $hex',
             selected: isSelected,
@@ -653,7 +654,7 @@ class _ColorPicker extends StatelessWidget {
                   color: color,
                   shape: BoxShape.circle,
                   border: isSelected
-                      ? Border.all(color: Colors.white, width: 2.5)
+                      ? Border.all(color: onSwatch, width: 2.5)
                       : null,
                   boxShadow: isSelected
                       ? [
@@ -664,7 +665,7 @@ class _ColorPicker extends StatelessWidget {
                       : null,
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, color: Colors.white, size: 18)
+                    ? Icon(Icons.check, color: onSwatch, size: 18)
                     : null,
               ),
             ),
@@ -682,7 +683,9 @@ class _ColorPicker extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isCustom
-                      ? Colors.white
+                      ? (_parse(selected).computeLuminance() > 0.5
+                          ? Colors.black
+                          : Colors.white)
                       : Theme.of(context).colorScheme.outlineVariant,
                   width: isCustom ? 2.5 : 1.5,
                 ),
@@ -696,7 +699,13 @@ class _ColorPicker extends StatelessWidget {
                     : null,
               ),
               child: isCustom
-                  ? const Icon(Icons.check, color: Colors.white, size: 18)
+                  ? Icon(
+                      Icons.check,
+                      color: _parse(selected).computeLuminance() > 0.5
+                          ? Colors.black
+                          : Colors.white,
+                      size: 18,
+                    )
                   : Icon(
                       Icons.colorize_rounded,
                       color: Theme.of(context)
@@ -807,9 +816,7 @@ class _CreditDetailsCard extends StatelessWidget {
           TextFormField(
             controller: creditLimitController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-            ],
+            inputFormatters: amountInputFormatters,
             decoration: const InputDecoration(
               labelText: 'Credit Limit',
               prefixText: '₱ ',
@@ -839,9 +846,7 @@ class _CreditDetailsCard extends StatelessWidget {
           TextFormField(
             controller: financeRateController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-            ],
+            inputFormatters: amountInputFormatters,
             decoration: const InputDecoration(
               labelText: 'Monthly finance rate',
               suffixText: '% / mo',

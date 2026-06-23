@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -19,11 +19,17 @@ class AddTransactionSheet extends StatefulWidget {
   /// the AI managed to extract so the user can finish entry by hand.
   final ParsedTransaction? prefill;
 
+  /// Pre-selects the transaction date for a NEW entry — used when the ledger has
+  /// a past day filtered, so logging a forgotten transaction lands on that day
+  /// without first clearing the filter. Ignored when editing an existing record.
+  final DateTime? initialDate;
+
   const AddTransactionSheet({
     super.key,
     required this.presenter,
     this.existing,
     this.prefill,
+    this.initialDate,
   });
 
   @override
@@ -68,6 +74,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _selectedCategoryId = existing.categoryId;
       _date = existing.date;
     } else {
+      if (widget.initialDate != null) _date = widget.initialDate!;
       final prefill = widget.prefill;
       if (prefill != null) {
         if (prefill.type != null) _type = prefill.type!;
@@ -398,7 +405,7 @@ class _AmountField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+      inputFormatters: amountInputFormatters,
       decoration: const InputDecoration(
         labelText: 'Amount',
         prefixText: '₱ ',
