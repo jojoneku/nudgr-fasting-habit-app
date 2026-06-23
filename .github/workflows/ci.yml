@@ -521,7 +521,9 @@ jobs:
 
       - name: Build web (Treasury companion)
         if: steps.changes.outputs.changed == 'true'
-        run: flutter build web --release -t lib/main_web.dart
+        run: |
+          flutter build web --release -t lib/main_web.dart \
+            --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'

@@ -960,8 +960,6 @@ class OnDeviceAiCoachService implements AiCoachService {
 
   // ── Finance classifier step (Plan 026 §3.3) ───────────────────────────────
 
-  static const _maxClarifyTurns = 3;
-
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({
     required List<LedgerChatTurn> conversation,
@@ -973,7 +971,7 @@ class OnDeviceAiCoachService implements AiCoachService {
   }) async {
     // Hard turn budget — service won't burn more inference time once the user
     // has already been through the clarify loop the max number of times.
-    if (turnCount >= _maxClarifyTurns) {
+    if (turnCount >= kMaxFinanceClarifyTurns) {
       return StepGiveUp(
         reason: 'Took too many tries — opening the form.',
         partialDraft: preparse.toDraft(),
@@ -1009,7 +1007,7 @@ class OnDeviceAiCoachService implements AiCoachService {
     );
 
     try {
-      final prompt = _buildFinanceClassifierPrompt(
+      final prompt = buildFinanceClassifierPrompt(
         conversation: conversation,
         preparse: preparse,
         categories: categories,
@@ -1039,84 +1037,6 @@ class OnDeviceAiCoachService implements AiCoachService {
         await chat.session.close();
       } catch (_) {}
     }
-  }
-
-  String _buildFinanceClassifierPrompt({
-    required List<LedgerChatTurn> conversation,
-    required PreparseResult preparse,
-    required List<FinanceCategory> categories,
-    required List<FinancialAccount> accounts,
-    required Map<String, String> learnedMappings,
-  }) {
-    final accountsJson =
-        jsonEncode(accounts.map((a) => a.name).toList(growable: false));
-    final categoriesJson = jsonEncode(categories
-        .map((c) => {'name': c.name, 'type': c.type.name})
-        .toList(growable: false));
-    final dictJson = jsonEncode(learnedMappings);
-
-    final transcript = StringBuffer();
-    for (final t in conversation) {
-      transcript.writeln(
-        '  [${t.isUser ? 'user' : 'ai'}] "${t.text.replaceAll('"', "'")}"',
-      );
-    }
-
-    final preparseSummary = jsonEncode({
-      'amount': preparse.amount,
-      'type': preparse.type?.name,
-      'account': preparse.accountId == null
-          ? null
-          : _accountName(preparse.accountId!, accounts),
-      'category': preparse.categoryId == null
-          ? null
-          : categories
-              .firstWhere(
-                (c) => c.id == preparse.categoryId,
-                orElse: () => categories.first,
-              )
-              .name,
-      'unresolved': preparse.unresolvedTokens,
-      'ambiguous': preparse.ambiguousAccountTokens,
-    });
-
-    return 'You are a finance transaction assistant. Output JSON only.\n'
-        '\n'
-        'Existing accounts: $accountsJson\n'
-        'Existing categories: $categoriesJson\n'
-        'Learned token→category: $dictJson\n'
-        '\n'
-        'Conversation:\n$transcript\n'
-        'Preparser knowledge: $preparseSummary\n'
-        '\n'
-        'Rules:\n'
-        '- Pick accounts ONLY from the existing list. Never invent.\n'
-        '- Pick categories ONLY from the existing list. Never invent.\n'
-        '- If a token is unknown, infer or ask — don\'t guess silently.\n'
-        '- If you have all required fields with confidence >= 0.8, return step:"resolved".\n'
-        '- If unsure, return step:"clarify" with one question and optional quickReplies.\n'
-        '- After $_maxClarifyTurns clarify turns total, return step:"give_up".\n'
-        '\n'
-        'Required fields:\n'
-        '- inflow/outflow: amount, type, account, category, description\n'
-        '- transfer:       amount, account, transferTo, description (no category)\n'
-        '\n'
-        'Output ONE of:\n'
-        '  {"step":"resolved","amount":number,"type":"outflow|inflow|transfer",\n'
-        '   "account":"<name>","transferTo":"<name>|null","category":"<name>|null",\n'
-        '   "learnedToken":"<lowercase>|null","confidence":0.0-1.0,\n'
-        '   "summaryText":"Log ₱500 outflow → Food (GCash)?"}\n'
-        '  {"step":"clarify","question":"...",'
-        '"quickReplies":[{"label":"...","replyText":"..."}]}\n'
-        '  {"step":"give_up","reason":"..."}\n'
-        'Output:';
-  }
-
-  String? _accountName(String id, List<FinancialAccount> accounts) {
-    for (final a in accounts) {
-      if (a.id == id) return a.name;
-    }
-    return null;
   }
 
   FoodDisambiguation? _parseDisambiguateResponse(

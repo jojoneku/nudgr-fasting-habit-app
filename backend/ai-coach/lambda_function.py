@@ -15,6 +15,10 @@ _SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 _SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 _MAX_TEXT_LEN = 500   # chars; guards prompt-size and injection blast radius
 _MAX_CANDIDATES = 15
+# The finance classifier prompt is built client-side and embeds the user's
+# account/category lists + conversation, so it runs larger than _MAX_TEXT_LEN.
+# Cap separately to bound Bedrock cost and injection blast radius.
+_MAX_PROMPT_LEN = 6000
 
 # Vision (parseFoodFromImage). The client resizes to 1024px JPEG q80, which is
 # well under 1 MB; the base64 cap below is a generous abuse guard, not a target.
@@ -124,6 +128,8 @@ def lambda_handler(event, context):
         return _parse_food_from_image(payload)
     if op == "respond":
         return _respond(payload)
+    if op == "classifyFinance":
+        return _classify_finance(payload)
 
     return _resp(400, {"error": "unsupported_op", "message": f"op '{op}' not implemented"})
 
@@ -670,6 +676,43 @@ def _respond(payload):
         return _resp(200, {"response": response_text})
     except Exception as e:
         print(f"Bedrock error (respond): {e}")
+        return _resp(502, {"error": "bedrock_error", "message": str(e)})
+
+
+# ── Finance Quick Add classifier ────────────────────────────────────────────────
+
+def _classify_finance(payload):
+    """Finance Quick Add classifier for the mobile ledger chat.
+
+    The client builds the full prompt (it holds the user's accounts, categories,
+    learned dictionary, and conversation) and we just run it through Bedrock,
+    returning the raw model text. The client parses + validates the JSON against
+    its live account/category lists, so the Lambda never echoes or invents IDs.
+    """
+    prompt = (payload.get("prompt") or "").strip()
+    if not prompt:
+        return _resp(400, {"error": "missing_prompt", "message": "payload.prompt is required"})
+    prompt = prompt[:_MAX_PROMPT_LEN]
+
+    try:
+        raw = _bedrock.invoke_model(
+            modelId=_MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "messages": [{"role": "user", "content": prompt}],
+            }),
+        )
+        result = json.loads(raw["body"].read())
+        text = result["content"][0]["text"].strip()
+        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text).strip()
+        print(f"cost_line op=classifyFinance chars={len(prompt)}")
+        return _resp(200, {"text": text})
+    except Exception as e:
+        print(f"Bedrock error (classifyFinance): {e}")
         return _resp(502, {"error": "bedrock_error", "message": str(e)})
 
 

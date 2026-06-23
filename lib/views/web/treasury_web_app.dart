@@ -14,6 +14,7 @@ import '../../presenters/sync_presenter.dart';
 import '../../presenters/treasury_dashboard_presenter.dart';
 import '../../presenters/treasury_history_presenter.dart';
 import '../../services/auth_service.dart';
+import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
@@ -101,8 +102,17 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     _storage = LocalStorageService();
     _syncQueue = SyncQueue();
     _statsPresenter = StatsPresenter(_storage);
-    // No on-device AI on web — ledger NLP falls back to its rule-based parser.
-    _ledgerPresenter = LedgerPresenter(_storage, _statsPresenter);
+    // No on-device model on web. The ledger's natural-language Quick Add uses
+    // the rule-based parser first, then Bedrock (Claude Haiku) via the cloud
+    // service for anything ambiguous — on by default (no Cloud AI toggle), it
+    // just needs the user signed in + AI_COACH_ENDPOINT compiled into the build.
+    _ledgerPresenter = LedgerPresenter(
+      _storage,
+      _statsPresenter,
+      cloudAi: CloudAiCoachService(
+        tokenProvider: () => _authService.currentAccessToken,
+      ),
+    );
     _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
     _budgetPresenter =
         BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);

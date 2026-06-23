@@ -19,17 +19,26 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     StorageService storage,
     StatsPresenter stats, {
     AiCoachService? ai,
+    AiCoachService? cloudAi,
     FinancePersonalDictionary? financeDict,
   })  : _storage = storage,
         _stats = stats,
         _ai = ai,
+        _cloudAi = cloudAi,
         _financeDict = financeDict ?? FinancePersonalDictionary(storage) {
     load();
   }
 
   final StorageService _storage;
   final StatsPresenter _stats;
+
+  /// On-device classifier (Qwen3 0.6B). Always present; may not be downloaded.
   final AiCoachService? _ai;
+
+  /// Cloud classifier (Bedrock Haiku). Preferred when the user has Cloud AI
+  /// enabled and it's reachable; otherwise the on-device tier handles the turn.
+  final AiCoachService? _cloudAi;
+
   final FinancePersonalDictionary _financeDict;
 
   bool _isLoading = true;
@@ -623,7 +632,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// 2. If fully resolved AND no live conversation → commit + snackbar.
   /// 3. Otherwise enter `classifying` phase and invoke the AI for one turn.
   /// 4. Map the [ClassifierStep] to the next [LedgerChatState] phase.
-  Future<void> sendChatInput(String text) async {
+  ///
+  /// [autoResolve] is for surfaces without a multi-turn clarify UI (the web
+  /// Quick Add box): a confident `resolved` step is committed immediately and
+  /// anything ambiguous opens the prefilled form, all in one shot — no chat
+  /// drawer. Mobile leaves it false and drives the clarify conversation.
+  Future<void> sendChatInput(String text, {bool autoResolve = false}) async {
     final isReply = _chatState.phase == ChatPhase.clarifying;
     final viewingPast = !isSelectedDateToday;
 
@@ -657,7 +671,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         turnCount: 0,
       );
       safeNotify();
-      await _runClassifier(preparse);
+      await _runClassifier(preparse, autoResolve: autoResolve);
     } else {
       // Reply turn — append, advance the AI.
       final updatedTurns = [
@@ -680,26 +694,38 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         transferToAccountId: _chatState.draft.transferToAccountId,
         categoryId: _chatState.draft.categoryId,
       );
-      await _runClassifier(preparse);
+      await _runClassifier(preparse, autoResolve: autoResolve);
     }
   }
 
-  Future<void> _runClassifier(PreparseResult preparse) async {
-    final ai = _ai;
-    if (ai == null || !ai.isAvailable) {
-      _fallbackToForm(preparse.toDraft(), 'AI unavailable.');
-      return;
+  Future<void> _runClassifier(
+    PreparseResult preparse, {
+    bool autoResolve = false,
+  }) async {
+    Future<ClassifierStep?> run(AiCoachService svc) =>
+        svc.runFinanceClassifierStep(
+          conversation: _chatState.turns,
+          preparse: preparse,
+          categories: _categories,
+          accounts: _accounts,
+          learnedMappings: _financeDict.snapshot(),
+          turnCount: _chatState.turnCount,
+        );
+
+    // Tier cascade (per product decision): Bedrock is the default classifier
+    // (on by default, no Cloud AI toggle required) whenever it has transport;
+    // else the on-device model (which may not be downloaded yet); else the
+    // manual form. A null result from a tier — transport error, model not
+    // loaded, unparseable output — falls through to the next tier.
+    final cloud = _cloudAi;
+    final onDevice = _ai;
+    ClassifierStep? step;
+    if (cloud != null) step = await run(cloud);
+    if (step == null && onDevice != null && onDevice.isAvailable) {
+      step = await run(onDevice);
     }
-    final step = await ai.runFinanceClassifierStep(
-      conversation: _chatState.turns,
-      preparse: preparse,
-      categories: _categories,
-      accounts: _accounts,
-      learnedMappings: _financeDict.snapshot(),
-      turnCount: _chatState.turnCount,
-    );
     if (step == null) {
-      _fallbackToForm(_chatState.draft, 'Couldn\'t reach the model.');
+      _fallbackToForm(_chatState.draft, 'AI unavailable.');
       return;
     }
     _chatState = _chatState.copyWith(
@@ -726,6 +752,16 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     );
     if (step is StepGiveUp) {
       _fallbackToForm(_chatState.draft, step.reason);
+      return;
+    }
+    // One-shot surfaces (web Quick Add) have no clarify UI: commit a confident
+    // resolve straight away, and hand an ambiguous one to the prefilled form.
+    if (autoResolve) {
+      if (step is StepResolved) {
+        await confirmResolved();
+      } else {
+        _fallbackToForm(_chatState.draft, 'Needs more detail.');
+      }
       return;
     }
     safeNotify();
