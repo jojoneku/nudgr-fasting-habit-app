@@ -307,9 +307,13 @@ void main() {
       );
       final txns =
           presenter.groupedTransactions.values.expand((l) => l).toList();
-      // In all-accounts view, deduplication keeps only outflow leg
-      expect(txns.length, 1);
-      expect(txns.first.type, TransactionType.outflow);
+      // All-accounts view now shows BOTH transfer legs (outflow on the source,
+      // inflow on the destination) so the destination's increase is visible.
+      expect(txns.length, 2);
+      expect(txns.map((t) => t.type).toSet(),
+          {TransactionType.outflow, TransactionType.inflow});
+      expect(txns.map((t) => t.transferGroupId).toSet().length, 1);
+      expect(txns.first.transferGroupId, isNotNull);
     });
 
     test('addTransfer updates balances on both accounts', () async {
