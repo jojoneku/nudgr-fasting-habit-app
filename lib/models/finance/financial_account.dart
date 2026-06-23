@@ -113,16 +113,22 @@ class FinancialAccount {
   // --- Credit getters (meaningful only when isLiability) ---
 
   /// What you currently owe on this card/line. Zero for non-liability accounts.
-  double get currentPayable => isLiability ? balance : 0;
+  /// A negative balance means the card is overpaid (the bank owes you) — that's
+  /// a credit balance, not extra debt, so it floors at zero here.
+  double get currentPayable => isLiability && balance > 0 ? balance : 0;
 
   /// Limit minus what's owed. Null when no limit is set or not a liability.
-  double? get availableCredit =>
-      (isLiability && creditLimit != null) ? creditLimit! - balance : null;
+  /// Uses [currentPayable] so an overpaid card can't show MORE than the limit
+  /// as available (e.g. limit 50k, balance −2k must read 50k available, not 52k).
+  double? get availableCredit => (isLiability && creditLimit != null)
+      ? creditLimit! - currentPayable
+      : null;
 
   /// Owed / limit as a 0..1 ratio for the utilization meter. Null when no limit.
+  /// Floors at 0 via [currentPayable] so an overpaid card isn't negative.
   double? get utilization =>
       (isLiability && creditLimit != null && creditLimit! > 0)
-          ? balance / creditLimit!
+          ? currentPayable / creditLimit!
           : null;
 
   factory FinancialAccount.fromJson(Map<String, dynamic> json) {

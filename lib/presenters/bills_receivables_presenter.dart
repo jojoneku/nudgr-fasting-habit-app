@@ -232,6 +232,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       // liability through addTransfer, regardless of the bill's type.
       final liability =
           _ledger.accounts.where((a) => a.id == bill.accountId).firstOrNull;
+      // A liability statement can never be paid FROM that same liability
+      // account — that would book a plain outflow whose sign-flip *increases*
+      // the owed balance and double-counts as spend. Require a funding account.
+      if (liability != null &&
+          liability.isLiability &&
+          acct == bill.accountId) {
+        throw ArgumentError(
+            'Cannot pay a liability statement from the same liability account; '
+            'choose a cash/funding account.');
+      }
       if (liability != null &&
           liability.isLiability &&
           acct != bill.accountId) {
@@ -588,9 +598,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         _allReceivables.where((r) => r.month == prev && r.isRecurring).toList();
     if (recurringFromPrev.isEmpty) return;
 
+    final parts = month.split('-');
+    final year = int.parse(parts[0]);
+    final monthNum = int.parse(parts[1]);
+    final lastDay = DateTime(year, monthNum + 1, 0).day;
     final copies = recurringFromPrev.map((r) {
-      final expectedDate = DateTime.parse(
-          '$month-${r.expectedDate.day.toString().padLeft(2, '0')}');
+      // Clamp the day to the target month's length so a 31st-of-the-month
+      // receivable copied into February doesn't silently drift into March.
+      final day = r.expectedDate.day.clamp(1, lastDay);
+      final expectedDate = DateTime(year, monthNum, day);
       return Receivable(
         id: _generateId(),
         name: r.name,
