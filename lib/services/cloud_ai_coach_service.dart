@@ -13,6 +13,7 @@ import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
+import '../utils/finance_classifier_parser.dart';
 import 'ai_coach_service.dart';
 
 /// Cloud AI Coach — calls the AWS Lambda → Bedrock Claude Haiku endpoint.
@@ -40,9 +41,13 @@ class CloudAiCoachService implements AiCoachService {
   @override
   AiCoachTier get tier => AiCoachTier.cloud;
 
+  /// Transport readiness: endpoint compiled in + a signed-in user. Independent
+  /// of the [enabled] opt-in toggle — the finance Quick Add classifier uses
+  /// this so Bedrock is the default ledger parser even when Cloud AI is off.
+  bool get _hasTransport => _endpoint.isNotEmpty && tokenProvider() != null;
+
   @override
-  bool get isAvailable =>
-      _endpoint.isNotEmpty && _enabled && tokenProvider() != null;
+  bool get isAvailable => _hasTransport && _enabled;
 
   @override
   int? get downloadProgress => null;
@@ -65,9 +70,12 @@ class CloudAiCoachService implements AiCoachService {
 
   Future<Map<String, dynamic>?> _call(
     String op,
-    Map<String, dynamic> payload,
-  ) async {
-    if (!isAvailable) return null;
+    Map<String, dynamic> payload, {
+    bool requireOptIn = true,
+  }) async {
+    // Most ops gate on the Cloud AI opt-in; the finance classifier only needs
+    // transport (it's on by default — see [runFinanceClassifierStep]).
+    if (requireOptIn ? !isAvailable : !_hasTransport) return null;
     try {
       final response = await http
           .post(
@@ -387,7 +395,7 @@ class CloudAiCoachService implements AiCoachService {
     return FoodDisambiguation(foodId: foodId, confidence: confidence);
   }
 
-  // ── Finance classifier (not implemented in cloud tier) ────────────────────
+  // ── Finance classifier (Bedrock Haiku via the `classifyFinance` op) ───────
 
   @override
   Future<ClassifierStep?> runFinanceClassifierStep({
@@ -397,8 +405,50 @@ class CloudAiCoachService implements AiCoachService {
     required List<FinancialAccount> accounts,
     required Map<String, String> learnedMappings,
     required int turnCount,
-  }) async =>
-      null;
+  }) async {
+    // Bedrock is the default Quick Add classifier regardless of the Cloud AI
+    // opt-in toggle, but it still needs the endpoint + a signed-in user. Bail
+    // to the next tier (on-device, then the form) when transport is missing.
+    if (!_hasTransport) return null;
+
+    // Hard turn budget — mirror the on-device tier so the clarify loop can't
+    // burn the daily Bedrock cap.
+    if (turnCount >= kMaxFinanceClarifyTurns) {
+      return StepGiveUp(
+        reason: 'Took too many tries — opening the form.',
+        partialDraft: preparse.toDraft(),
+      );
+    }
+
+    // Only top-level, active accounts are loggable via chat (Plan 026 §4) —
+    // same filter the on-device tier and parser use.
+    final activeAccounts = accounts
+        .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
+        .toList();
+
+    final prompt = buildFinanceClassifierPrompt(
+      conversation: conversation,
+      preparse: preparse,
+      categories: categories,
+      accounts: activeAccounts,
+      learnedMappings: learnedMappings,
+    );
+
+    // Returns null on any transport/Bedrock error → the presenter falls back to
+    // the on-device model, then the form. requireOptIn:false → runs without the
+    // Cloud AI toggle.
+    final result =
+        await _call('classifyFinance', {'prompt': prompt}, requireOptIn: false);
+    final text = result?['text'] as String?;
+    if (text == null || text.isEmpty) return null;
+
+    return parseFinanceClassifierResponse(
+      text: text,
+      accounts: activeAccounts,
+      categories: categories,
+      preparse: preparse,
+    );
+  }
 
   // ── Internals ─────────────────────────────────────────────────────────────
 
