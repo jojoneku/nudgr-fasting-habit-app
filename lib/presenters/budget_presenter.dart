@@ -271,17 +271,20 @@ class BudgetPresenter extends ChangeNotifier {
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  /// Contributions into [accountId] this month — inflows + the receiving leg
-  /// of transfers. Used for savings/goal progress.
+  /// NET contributions into [accountId] this month: inflow legs add, outflow
+  /// legs subtract (transfer legs included — a transfer leg's `accountId` is the
+  /// endpoint it touches). Used for savings/goal progress. Netting means a
+  /// transfer *between* two savings accounts contributes zero overall instead
+  /// of inflating one side, keeping the Budget page and Dashboard in agreement.
   double contributedTo(String accountId) {
     var total = 0.0;
     for (final t in _allTransactions) {
       if (t.month != _selectedMonth) continue;
-      if (t.type == TransactionType.inflow && t.accountId == accountId) {
+      if (t.accountId != accountId) continue;
+      if (t.type == TransactionType.inflow) {
         total += t.amount;
-      } else if (t.type == TransactionType.transfer &&
-          t.transferToAccountId == accountId) {
-        total += t.amount;
+      } else if (t.type == TransactionType.outflow) {
+        total -= t.amount;
       }
     }
     return total;
