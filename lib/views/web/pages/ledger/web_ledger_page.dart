@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -60,29 +61,57 @@ const _kSortOptions = <_SortOption>[
   _SortOption('Largest amount', _SortKey.amount, -1),
 ];
 
-// Fixed column widths (px) — total drives the horizontal scroll min-width.
+// Fixed, non-resizable column widths (px). The selection checkbox and the
+// hover-delete column never resize.
 const double _wCheck = 44;
-const double _wDate = 118;
-const double _wAccount = 152;
-const double _wDesc = 224;
-const double _wCategory = 170;
-const double _wInflow = 122;
-const double _wOutflow = 122;
-const double _wRunning = 132;
-const double _wAcctBal = 142;
-const double _wNotes = 176;
 const double _wDelete = 48;
-const double _kGridWidth = _wCheck +
-    _wDate +
-    _wAccount +
-    _wDesc +
-    _wCategory +
-    _wInflow +
-    _wOutflow +
-    _wRunning +
-    _wAcctBal +
-    _wNotes +
-    _wDelete;
+
+/// Minimum width the flexible Description column is allowed to shrink to before
+/// the grid starts scrolling horizontally.
+const double _wDescMin = 200;
+
+/// Columns the user can drag-resize from the header.
+enum _ResizableCol { date, account, category, inflow, outflow, acctBal }
+
+/// Mutable per-column widths. The Description column is flexible (it stretches
+/// to fill leftover space) so it isn't tracked here. Defaults reclaim the space
+/// freed by removing the old Running + Notes columns and hand it to Account and
+/// Category, which were truncating long names. (Ledger UX overhaul PR1)
+class _ColWidths {
+  double date = 118;
+  double account = 210;
+  double category = 210;
+  double inflow = 124;
+  double outflow = 124;
+  double acctBal = 150;
+
+  double get fixedSum =>
+      _wCheck +
+      date +
+      account +
+      category +
+      inflow +
+      outflow +
+      acctBal +
+      _wDelete;
+
+  void resize(_ResizableCol col, double delta) {
+    switch (col) {
+      case _ResizableCol.date:
+        date = (date + delta).clamp(80.0, 360.0);
+      case _ResizableCol.account:
+        account = (account + delta).clamp(110.0, 420.0);
+      case _ResizableCol.category:
+        category = (category + delta).clamp(110.0, 420.0);
+      case _ResizableCol.inflow:
+        inflow = (inflow + delta).clamp(90.0, 260.0);
+      case _ResizableCol.outflow:
+        outflow = (outflow + delta).clamp(90.0, 260.0);
+      case _ResizableCol.acctBal:
+        acctBal = (acctBal + delta).clamp(100.0, 300.0);
+    }
+  }
+}
 
 /// Shared height for every toolbar control (Filters & Sort, search, Add
 /// Transaction, active chips) so they line up at exactly the same height.
@@ -91,6 +120,9 @@ const double _kControlHeight = 40;
 class _WebLedgerPageState extends State<WebLedgerPage> {
   final _searchController = TextEditingController();
   final _gridHScroll = ScrollController(); // horizontal grid scroll (U8)
+  final _gridVScroll =
+      ScrollController(); // vertical rows scroll (sticky header)
+  final _col = _ColWidths(); // drag-resizable column widths
   String _query = '';
 
   // Filters & sort (all transient, View-side — never mutate presenter state).
@@ -129,6 +161,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _searchDebounce?.cancel();
     _searchController.dispose();
     _gridHScroll.dispose();
+    _gridVScroll.dispose();
     super.dispose();
   }
 
@@ -195,14 +228,38 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
       final acct = _accountName(t.accountId).toLowerCase();
       final hay = '${t.description.toLowerCase()} '
           '${(t.note ?? '').toLowerCase()} $cat $acct';
-      if (!hay.contains(_query)) return false;
+      final textMatch = hay.contains(_query);
+
+      // Numeric match: when the query (stripped of ₱, spaces and commas) is a
+      // number, also match on the transaction amount — both exact (1000 ==
+      // 1,000) and as a substring of the formatted amount, so "1000" finds
+      // ₱1,000.00 and "10" finds ₱10.00. Either text OR amount may match.
+      var amountMatch = false;
+      final cleaned = _query.replaceAll('₱', '').replaceAll(' ', '').replaceAll(
+            ',',
+            '',
+          );
+      final n = double.tryParse(cleaned);
+      if (n != null) {
+        final fixed = t.amount.toStringAsFixed(2); // e.g. "1000.00"
+        final grouped =
+            NumberFormat('#,##0.00', 'en_PH').format(t.amount); // "1,000.00"
+        amountMatch = t.amount == n ||
+            fixed.contains(cleaned) ||
+            grouped.contains(_query);
+      }
+
+      if (!textMatch && !amountMatch) return false;
     }
     return true;
   }
 
   List<_Row> _sorted(List<_Row> rows) {
-    final key = _sortKey;
-    if (key == null) return rows; // presenter order (newest first)
+    // Default ordering is oldest-first (matches a spreadsheet — the most recent
+    // entry sits at the bottom, where the draft add-row lives). Explicit sort
+    // presets still override via [_sortKey]/[_sortDir]. (Ledger UX overhaul PR1)
+    final key = _sortKey ?? _SortKey.date;
+    final dir = _sortKey == null ? 1 : _sortDir;
     Comparable keyOf(_Row r) {
       final t = r.txn;
       switch (key) {
@@ -224,7 +281,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     }
 
     final out = [...rows]
-      ..sort((a, b) => Comparable.compare(keyOf(a), keyOf(b)) * _sortDir);
+      ..sort((a, b) => Comparable.compare(keyOf(a), keyOf(b)) * dir);
     return out;
   }
 
@@ -390,7 +447,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     return ListenableBuilder(
       listenable: _p,
       builder: (context, _) {
-        return SingleChildScrollView(
+        return Padding(
+          // No page-level vertical scroll: the summary cards + toolbar stay
+          // pinned and only the grid rows scroll (sticky header + cards).
           padding: const EdgeInsets.all(WebInsets.xxl),
           child: _p.isLoading ? const _LoadingBlock() : _buildBody(context),
         );
@@ -458,7 +517,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
           onAdd: () => _openAddDialog(),
         ),
         const SizedBox(height: WebInsets.xl),
-        _buildTableCard(context, rows),
+        // The table fills the remaining viewport height and owns its own
+        // scrolling, so the cards + toolbar above stay pinned.
+        Expanded(child: _buildTableCard(context, rows)),
       ],
     );
   }
@@ -467,15 +528,20 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return WebCard(
-      padding: EdgeInsets.zero,
+    // Card surface built by hand (not WebCard) because the table fills a
+    // bounded height and uses an inner Expanded for the scrolling rows, which a
+    // mainAxisSize.min card Column can't host.
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppRadii.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Selection bar — shown only while rows are selected. The month label
-          // now lives in the toolbar and the totals are already in the summary
-          // cards, so there's no resting band header above the grid.
+          // Selection bar — shown only while rows are selected.
           if (_selected.isNotEmpty)
             Container(
               padding: const EdgeInsets.symmetric(
@@ -489,118 +555,133 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                 onDelete: _deleteSelected,
               ),
             ),
-          // Grid: fills the container by stretching the Description column;
-          // falls back to horizontal scroll when narrower than the minimum.
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final avail = constraints.maxWidth;
-              final descW = _wDesc + max(0.0, avail - _kGridWidth);
-              final gridW = _wCheck +
-                  _wDate +
-                  _wAccount +
-                  descW +
-                  _wCategory +
-                  _wInflow +
-                  _wOutflow +
-                  _wRunning +
-                  _wAcctBal +
-                  _wNotes +
-                  _wDelete;
-              return Scrollbar(
-                controller: _gridHScroll,
-                thumbVisibility: true,
-                child: SingleChildScrollView(
+          // Grid: header + draft row stay pinned; only the rows scroll
+          // vertically. The Description column stretches to fill leftover width;
+          // the grid scrolls horizontally when columns exceed the viewport.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final avail = constraints.maxWidth;
+                final descW = max(_wDescMin, avail - _col.fixedSum);
+                final gridW = _col.fixedSum + descW;
+                return Scrollbar(
                   controller: _gridHScroll,
-                  scrollDirection: Axis.horizontal,
-                  child: SizedBox(
-                    width: gridW,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _GridHeader(
-                          descWidth: descW,
-                          sortKey: _sortKey,
-                          sortDir: _sortDir,
-                          allSelected: rows.isNotEmpty &&
-                              rows.every((r) => _selected.contains(r.txn.id)),
-                          onToggleAll: () => setState(() {
-                            final allSel = rows.isNotEmpty &&
-                                rows.every((r) => _selected.contains(r.txn.id));
-                            if (allSel) {
-                              _selected.clear();
-                            } else {
-                              _selected.addAll(rows.map((r) => r.txn.id));
-                            }
-                          }),
-                          onSort: _toggleHeaderSort,
-                        ),
-                        // Draft add-row — placed at the TOP, where newly-added
-                        // transactions appear (the list is newest-first).
-                        _DraftRow(
-                          epoch: _draftEpoch,
-                          descWidth: descW,
-                          date: _draftDate,
-                          accountId: _draftAccountId,
-                          categoryId: _draftCategoryId,
-                          inflow: _draftInflow,
-                          outflow: _draftOutflow,
-                          accounts: _liquidAccounts,
-                          categories: _categoriesFor(_draftInflow > 0
-                              ? TransactionType.inflow
-                              : TransactionType.outflow),
-                          colorFor: _colorFor,
-                          onDate: (d) => setState(() => _draftDate = d),
-                          onAccount: (id) =>
-                              setState(() => _draftAccountId = id),
-                          onCategory: (id) =>
-                              setState(() => _draftCategoryId = id),
-                          onDescription: (v) => _draftDesc = v,
-                          onNote: (v) => _draftNote = v,
-                          onInflow: (v) => setState(() {
-                            _draftInflow = v;
-                            if (v > 0) _draftOutflow = 0;
-                          }),
-                          onOutflow: (v) => setState(() {
-                            _draftOutflow = v;
-                            if (v > 0) _draftInflow = 0;
-                          }),
-                          onCommit: _commitDraft,
-                        ),
-                        if (rows.isEmpty)
-                          _EmptyGridHint(
-                              hasAccounts: _liquidAccounts.isNotEmpty),
-                        for (var i = 0; i < rows.length; i++)
-                          _EditableRow(
-                            key: ValueKey(rows[i].txn.id),
-                            row: rows[i],
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: _gridHScroll,
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: gridW,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Pinned header.
+                          _GridHeader(
                             descWidth: descW,
-                            selected: _selected.contains(rows[i].txn.id),
-                            accounts: _liquidAccounts,
-                            categories: _categoriesFor(rows[i].txn.type),
-                            accountName: _accountName,
-                            categoryOf: _categoryOf,
-                            colorFor: _colorFor,
-                            onToggleSelect: () => setState(() {
-                              final id = rows[i].txn.id;
-                              _selected.contains(id)
-                                  ? _selected.remove(id)
-                                  : _selected.add(id);
+                            widths: _col,
+                            sortKey: _sortKey,
+                            sortDir: _sortDir,
+                            allSelected: rows.isNotEmpty &&
+                                rows.every((r) => _selected.contains(r.txn.id)),
+                            onToggleAll: () => setState(() {
+                              final allSel = rows.isNotEmpty &&
+                                  rows.every(
+                                      (r) => _selected.contains(r.txn.id));
+                              if (allSel) {
+                                _selected.clear();
+                              } else {
+                                _selected.addAll(rows.map((r) => r.txn.id));
+                              }
                             }),
-                            onDate: _editDate,
-                            onAccount: _editAccount,
-                            onCategory: _editCategory,
-                            onDescription: _editDescription,
-                            onNote: _editNote,
-                            onAmount: _editAmount,
-                            onDelete: _deleteRow,
+                            onSort: _toggleHeaderSort,
+                            onResize: (col, d) =>
+                                setState(() => _col.resize(col, d)),
                           ),
-                      ],
+                          // Scrolling rows (oldest-first; newest at the bottom).
+                          Expanded(
+                            child: Scrollbar(
+                              controller: _gridVScroll,
+                              thumbVisibility: true,
+                              child: ListView(
+                                controller: _gridVScroll,
+                                padding: EdgeInsets.zero,
+                                children: [
+                                  if (rows.isEmpty)
+                                    _EmptyGridHint(
+                                        hasAccounts:
+                                            _liquidAccounts.isNotEmpty),
+                                  for (var i = 0; i < rows.length; i++)
+                                    _EditableRow(
+                                      key: ValueKey(rows[i].txn.id),
+                                      row: rows[i],
+                                      descWidth: descW,
+                                      widths: _col,
+                                      selected:
+                                          _selected.contains(rows[i].txn.id),
+                                      accounts: _liquidAccounts,
+                                      categories:
+                                          _categoriesFor(rows[i].txn.type),
+                                      accountName: _accountName,
+                                      categoryOf: _categoryOf,
+                                      colorFor: _colorFor,
+                                      onToggleSelect: () => setState(() {
+                                        final id = rows[i].txn.id;
+                                        _selected.contains(id)
+                                            ? _selected.remove(id)
+                                            : _selected.add(id);
+                                      }),
+                                      onDate: _editDate,
+                                      onAccount: _editAccount,
+                                      onCategory: _editCategory,
+                                      onDescription: _editDescription,
+                                      onNote: _editNote,
+                                      onAmount: _editAmount,
+                                      onDelete: _deleteRow,
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          // Draft add-row — pinned at the BOTTOM, where the
+                          // newest entries live (oldest-first ordering).
+                          _DraftRow(
+                            epoch: _draftEpoch,
+                            descWidth: descW,
+                            widths: _col,
+                            date: _draftDate,
+                            accountId: _draftAccountId,
+                            categoryId: _draftCategoryId,
+                            inflow: _draftInflow,
+                            outflow: _draftOutflow,
+                            accounts: _liquidAccounts,
+                            categories: _categoriesFor(_draftInflow > 0
+                                ? TransactionType.inflow
+                                : TransactionType.outflow),
+                            colorFor: _colorFor,
+                            onDate: (d) => setState(() => _draftDate = d),
+                            onAccount: (id) =>
+                                setState(() => _draftAccountId = id),
+                            onCategory: (id) =>
+                                setState(() => _draftCategoryId = id),
+                            onDescription: (v) => _draftDesc = v,
+                            onNote: (v) => _draftNote = v,
+                            onInflow: (v) => setState(() {
+                              _draftInflow = v;
+                              if (v > 0) _draftOutflow = 0;
+                            }),
+                            onOutflow: (v) => setState(() {
+                              _draftOutflow = v;
+                              if (v > 0) _draftInflow = 0;
+                            }),
+                            onCommit: _commitDraft,
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
           // Footer hint.
           Container(
@@ -619,8 +700,9 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                 const SizedBox(width: WebInsets.sm),
                 Expanded(
                   child: Text(
-                    'Click any cell to edit · press Enter on the top row to '
-                    'add · running balance recalculates automatically.',
+                    'Click any cell to edit · press Enter on the bottom row to '
+                    'add · drag a column edge to resize · account balance '
+                    'recalculates automatically.',
                     style: theme.textTheme.bodySmall
                         ?.copyWith(color: cs.onSurfaceVariant),
                   ),
@@ -1661,23 +1743,29 @@ class _SelectionBar extends StatelessWidget {
 
 class _GridHeader extends StatelessWidget {
   final double descWidth;
+  final _ColWidths widths;
   final _SortKey? sortKey;
   final int sortDir;
   final bool allSelected;
   final VoidCallback onToggleAll;
   final ValueChanged<_SortKey> onSort;
+  final void Function(_ResizableCol, double) onResize;
   const _GridHeader({
     required this.descWidth,
+    required this.widths,
     required this.sortKey,
     required this.sortDir,
     required this.allSelected,
     required this.onToggleAll,
     required this.onSort,
+    required this.onResize,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final inflowTint = _inflowTint(context);
+    final outflowTint = _outflowTint(context);
     return Container(
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -1691,15 +1779,25 @@ class _GridHeader extends StatelessWidget {
             width: _wCheck,
             child: Center(child: _Check(on: allSelected, onTap: onToggleAll)),
           ),
-          _hCell('Date', _wDate, _SortKey.date),
-          _hCell('Account', _wAccount, _SortKey.account),
+          _hCell('Date', widths.date, _SortKey.date,
+              resize: _ResizableCol.date),
+          _hCell('Account', widths.account, _SortKey.account,
+              resize: _ResizableCol.account),
           _hCell('Description', descWidth, _SortKey.description),
-          _hCell('Category', _wCategory, _SortKey.category),
-          _hCell('Inflow', _wInflow, _SortKey.inflow, right: true),
-          _hCell('Outflow', _wOutflow, _SortKey.outflow, right: true),
-          _hCell('Running', _wRunning, null, right: true),
-          _hCell('Acct. Balance', _wAcctBal, null, right: true),
-          _hCell('Notes', _wNotes, null),
+          _hCell('Category', widths.category, _SortKey.category,
+              resize: _ResizableCol.category),
+          ColoredBox(
+            color: inflowTint,
+            child: _hCell('Inflow', widths.inflow, _SortKey.inflow,
+                right: true, resize: _ResizableCol.inflow),
+          ),
+          ColoredBox(
+            color: outflowTint,
+            child: _hCell('Outflow', widths.outflow, _SortKey.outflow,
+                right: true, resize: _ResizableCol.outflow),
+          ),
+          _hCell('Acct. Balance', widths.acctBal, null,
+              right: true, resize: _ResizableCol.acctBal),
           const SizedBox(width: _wDelete),
         ],
       ),
@@ -1707,7 +1805,7 @@ class _GridHeader extends StatelessWidget {
   }
 
   Widget _hCell(String label, double width, _SortKey? key,
-      {bool right = false}) {
+      {bool right = false, _ResizableCol? resize}) {
     return _HeaderCell(
       label: label,
       width: width,
@@ -1716,9 +1814,19 @@ class _GridHeader extends StatelessWidget {
       dir: sortDir,
       right: right,
       onSort: key == null ? null : () => onSort(key),
+      onResize: resize == null ? null : (d) => onResize(resize, d),
     );
   }
 }
+
+/// Faint green/red wash behind the Inflow/Outflow columns so the two money
+/// directions read apart at a glance, like a color-coded spreadsheet.
+Color _inflowTint(BuildContext context) =>
+    (Theme.of(context).extension<AppThemeExtension>()?.success ??
+            Theme.of(context).colorScheme.tertiary)
+        .withValues(alpha: 0.06);
+Color _outflowTint(BuildContext context) =>
+    Theme.of(context).colorScheme.error.withValues(alpha: 0.06);
 
 class _HeaderCell extends StatelessWidget {
   final String label;
@@ -1728,6 +1836,10 @@ class _HeaderCell extends StatelessWidget {
   final int dir;
   final bool right;
   final VoidCallback? onSort;
+
+  /// When non-null, a draggable divider on the cell's right edge resizes the
+  /// column by the horizontal drag delta.
+  final ValueChanged<double>? onResize;
   const _HeaderCell({
     required this.label,
     required this.width,
@@ -1736,6 +1848,7 @@ class _HeaderCell extends StatelessWidget {
     required this.dir,
     required this.right,
     required this.onSort,
+    this.onResize,
   });
 
   @override
@@ -1771,16 +1884,41 @@ class _HeaderCell extends StatelessWidget {
     );
     return SizedBox(
       width: width,
-      child: InkWell(
-        onTap: onSort,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-              horizontal: WebInsets.md, vertical: WebInsets.md),
-          child: Align(
-            alignment: right ? Alignment.centerRight : Alignment.centerLeft,
-            child: content,
+      child: Stack(
+        children: [
+          InkWell(
+            onTap: onSort,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: WebInsets.md, vertical: WebInsets.md),
+              child: Align(
+                alignment: right ? Alignment.centerRight : Alignment.centerLeft,
+                child: content,
+              ),
+            ),
           ),
-        ),
+          if (onResize != null)
+            Positioned(
+              top: 0,
+              bottom: 0,
+              right: 0,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeColumn,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onHorizontalDragUpdate: (d) => onResize!(d.delta.dx),
+                  child: Center(
+                    child: Container(
+                      width: 1,
+                      height: 16,
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      color: cs.outlineVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -1841,6 +1979,7 @@ class _EmptyGridHint extends StatelessWidget {
 class _EditableRow extends StatefulWidget {
   final _Row row;
   final double descWidth;
+  final _ColWidths widths;
   final bool selected;
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
@@ -1860,6 +1999,7 @@ class _EditableRow extends StatefulWidget {
     super.key,
     required this.row,
     required this.descWidth,
+    required this.widths,
     required this.selected,
     required this.accounts,
     required this.categories,
@@ -1889,6 +2029,9 @@ class _EditableRowState extends State<_EditableRow> {
     final cs = theme.colorScheme;
     final t = widget.row.txn;
     final isTransfer = t.transferGroupId != null;
+    final w = widget.widths;
+    final inflowTint = _inflowTint(context);
+    final outflowTint = _outflowTint(context);
 
     // Flat grid (no zebra) — rows are separated by a hairline bottom border and
     // a hover tint only, matching the reference's clean spreadsheet look.
@@ -1921,7 +2064,7 @@ class _EditableRowState extends State<_EditableRow> {
             ),
             // Date
             _DateCell(
-              width: _wDate,
+              width: w.date,
               date: t.date,
               enabled: !isTransfer,
               onChanged: (d) => widget.onDate(t, d),
@@ -1929,7 +2072,7 @@ class _EditableRowState extends State<_EditableRow> {
             // Account
             isTransfer
                 ? _readCell(
-                    width: _wAccount,
+                    width: w.account,
                     child: Text(
                       '${widget.accountName(t.accountId)} → '
                       '${widget.accountName(t.transferToAccountId)}',
@@ -1939,7 +2082,7 @@ class _EditableRowState extends State<_EditableRow> {
                     ),
                   )
                 : _AccountCell(
-                    width: _wAccount,
+                    width: w.account,
                     value: t.accountId,
                     accounts: widget.accounts,
                     onChanged: (id) => widget.onAccount(t, id),
@@ -1960,7 +2103,7 @@ class _EditableRowState extends State<_EditableRow> {
             // Category
             isTransfer
                 ? _readCell(
-                    width: _wCategory,
+                    width: w.category,
                     child: const Align(
                       alignment: Alignment.centerLeft,
                       child: WebBadge('Transfer',
@@ -1969,62 +2112,47 @@ class _EditableRowState extends State<_EditableRow> {
                     ),
                   )
                 : _CategoryCell(
-                    width: _wCategory,
+                    width: w.category,
                     value: t.categoryId,
                     categories: widget.categories,
                     colorFor: widget.colorFor,
                     onChanged: (id) => widget.onCategory(t, id),
                   ),
-            // Inflow
-            _AmountCell(
-              key: ValueKey('in_${t.id}'),
-              width: _wInflow,
-              value: t.type == TransactionType.inflow ? t.amount : 0,
-              color: cs.tertiary,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
+            // Inflow — faint green column wash.
+            ColoredBox(
+              color: inflowTint,
+              child: _AmountCell(
+                key: ValueKey('in_${t.id}'),
+                width: w.inflow,
+                value: t.type == TransactionType.inflow ? t.amount : 0,
+                color: cs.tertiary,
+                enabled: !isTransfer,
+                onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
+              ),
             ),
-            // Outflow
-            _AmountCell(
-              key: ValueKey('out_${t.id}'),
-              width: _wOutflow,
-              value: t.type == TransactionType.outflow ? t.amount : 0,
-              color: cs.onSurface,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
+            // Outflow — faint red column wash.
+            ColoredBox(
+              color: outflowTint,
+              child: _AmountCell(
+                key: ValueKey('out_${t.id}'),
+                width: w.outflow,
+                value: t.type == TransactionType.outflow ? t.amount : 0,
+                color: cs.onSurface,
+                enabled: !isTransfer,
+                onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
+              ),
             ),
-            // Running
+            // Acct. balance — brighter (onSurface) so it reads as the key figure.
             _readCell(
-              width: _wRunning,
-              right: true,
-              child: Text(formatPeso(widget.row.runningBalance),
-                  textAlign: TextAlign.right,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: const [FontFeature.tabularFigures()],
-                  )),
-            ),
-            // Acct. balance
-            _readCell(
-              width: _wAcctBal,
+              width: w.acctBal,
               right: true,
               child: Text(formatPeso(widget.row.accountBalance),
                   textAlign: TextAlign.right,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w700,
                     fontFeatures: const [FontFeature.tabularFigures()],
                   )),
-            ),
-            // Notes
-            _InlineText(
-              key: ValueKey('note_${t.id}_${t.note}'),
-              width: _wNotes,
-              initialValue: t.note ?? '',
-              hintText: '—',
-              muted: true,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onNote(t, v),
             ),
             // Delete
             SizedBox(
@@ -2075,6 +2203,7 @@ Widget _readCell(
 class _DraftRow extends StatelessWidget {
   final int epoch;
   final double descWidth;
+  final _ColWidths widths;
   final DateTime date;
   final String? accountId;
   final String? categoryId;
@@ -2095,6 +2224,7 @@ class _DraftRow extends StatelessWidget {
   const _DraftRow({
     required this.epoch,
     required this.descWidth,
+    required this.widths,
     required this.date,
     required this.accountId,
     required this.categoryId,
@@ -2117,19 +2247,25 @@ class _DraftRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final w = widths;
+    final inflowTint = _inflowTint(context);
+    final outflowTint = _outflowTint(context);
     return Container(
       decoration: BoxDecoration(
         color: cs.primary.withValues(alpha: 0.04),
+        border: Border(
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        ),
       ),
       child: Row(
         children: [
           const SizedBox(width: _wCheck),
           _DateCell(
-              width: _wDate, date: date, enabled: true, onChanged: onDate),
+              width: w.date, date: date, enabled: true, onChanged: onDate),
           accounts.isEmpty
-              ? _readCell(width: _wAccount, child: const Text('—'))
+              ? _readCell(width: w.account, child: const Text('—'))
               : _AccountCell(
-                  width: _wAccount,
+                  width: w.account,
                   // Null until the user picks — shows the "Account" placeholder
                   // so the draft reads as an empty add-row, not a real entry.
                   value: accountId,
@@ -2147,55 +2283,45 @@ class _DraftRow extends StatelessWidget {
             onSubmit: onCommit,
           ),
           categories.isEmpty
-              ? _readCell(width: _wCategory, child: const Text('—'))
+              ? _readCell(width: w.category, child: const Text('—'))
               : _CategoryCell(
-                  width: _wCategory,
+                  width: w.category,
                   // Null until picked — shows the "Category" placeholder.
                   value: categoryId,
                   categories: categories,
                   colorFor: colorFor,
                   onChanged: onCategory,
                 ),
-          _AmountCell(
-            key: ValueKey('draft_in_$epoch'),
-            width: _wInflow,
-            value: inflow,
-            color: cs.tertiary,
-            onCommit: onInflow,
-            onChanged: onInflow,
-            onSubmit: onCommit,
+          ColoredBox(
+            color: inflowTint,
+            child: _AmountCell(
+              key: ValueKey('draft_in_$epoch'),
+              width: w.inflow,
+              value: inflow,
+              color: cs.tertiary,
+              onCommit: onInflow,
+              onChanged: onInflow,
+              onSubmit: onCommit,
+            ),
           ),
-          _AmountCell(
-            key: ValueKey('draft_out_$epoch'),
-            width: _wOutflow,
-            value: outflow,
-            color: cs.onSurface,
-            onCommit: onOutflow,
-            onChanged: onOutflow,
-            onSubmit: onCommit,
+          ColoredBox(
+            color: outflowTint,
+            child: _AmountCell(
+              key: ValueKey('draft_out_$epoch'),
+              width: w.outflow,
+              value: outflow,
+              color: cs.onSurface,
+              onCommit: onOutflow,
+              onChanged: onOutflow,
+              onSubmit: onCommit,
+            ),
           ),
           _readCell(
-              width: _wRunning,
+              width: w.acctBal,
               right: true,
               child: Text('—',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant))),
-          _readCell(
-              width: _wAcctBal,
-              right: true,
-              child: Text('—',
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: cs.onSurfaceVariant))),
-          _InlineText(
-            key: ValueKey('draft_note_$epoch'),
-            width: _wNotes,
-            initialValue: '',
-            hintText: '—',
-            muted: true,
-            onCommit: onNote,
-            onChanged: onNote,
-            onSubmit: onCommit,
-          ),
           SizedBox(
             width: _wDelete,
             child: Center(
@@ -2221,7 +2347,6 @@ class _InlineText extends StatefulWidget {
   final String initialValue;
   final String? hintText;
   final bool bold;
-  final bool muted;
   final bool enabled;
   final ValueChanged<String> onCommit;
 
@@ -2235,7 +2360,6 @@ class _InlineText extends StatefulWidget {
     required this.initialValue,
     this.hintText,
     this.bold = false,
-    this.muted = false,
     this.enabled = true,
     required this.onCommit,
     this.onChanged,
@@ -2287,7 +2411,7 @@ class _InlineTextState extends State<_InlineText> {
     final cs = theme.colorScheme;
     final style = theme.textTheme.bodySmall?.copyWith(
       fontWeight: widget.bold ? FontWeight.w600 : FontWeight.w400,
-      color: widget.muted ? cs.onSurfaceVariant : cs.onSurface,
+      color: cs.onSurface,
     );
     if (!widget.enabled) {
       return _readCell(
@@ -2393,7 +2517,9 @@ class _AmountCellState extends State<_AmountCell> {
   late final FocusNode _f;
   bool _focused = false;
 
-  static final _fmt = NumberFormat('#,##0.##', 'en_PH');
+  // Two-decimal, comma-grouped formatting so amounts line up like a ledger
+  // (e.g. 1,000.00). Blank when zero so empty cells stay clean.
+  static final _fmt = NumberFormat('#,##0.00', 'en_PH');
 
   String _display(double v) => v <= 0 ? '' : _fmt.format(v);
 
