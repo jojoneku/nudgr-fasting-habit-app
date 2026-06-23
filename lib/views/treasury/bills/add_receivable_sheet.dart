@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -141,6 +142,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
                       labelText: 'Expected Amount', prefixText: '₱ '),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: amountInputFormatters,
                   textInputAction: TextInputAction.done,
                   validator: (v) {
                     final p = double.tryParse(v ?? '');
@@ -197,8 +199,9 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
                 return ChoiceChip(
                   label: Text(cat.name),
                   selected: isSelected,
-                  onSelected: (_) =>
-                      setState(() => _selectedCategoryId = cat.id),
+                  // Tap again to clear the category.
+                  onSelected: (_) => setState(
+                      () => _selectedCategoryId = isSelected ? null : cat.id),
                 );
               }).toList(),
             ),

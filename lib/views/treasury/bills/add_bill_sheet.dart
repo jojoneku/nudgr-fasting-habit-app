@@ -1,9 +1,11 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBillSheet extends StatefulWidget {
@@ -44,6 +46,12 @@ class _AddBillSheetState extends State<AddBillSheet> {
       _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
       _isRecurring = b.isRecurring;
       _recurrenceType = b.recurrenceType ?? RecurrenceType.monthly;
+    } else {
+      // Default the payment account to the first one so a new bill is one tap
+      // closer to done; the user can still change or clear it.
+      _selectedAccountId = widget.presenter.accounts.isNotEmpty
+          ? widget.presenter.accounts.first.id
+          : null;
     }
   }
 
@@ -137,6 +145,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
                       labelText: 'Amount', prefixText: '₱ '),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: amountInputFormatters,
                   textInputAction: TextInputAction.next,
                   validator: (v) {
                     final p = double.tryParse(v ?? '');
@@ -152,6 +161,10 @@ class _AddBillSheetState extends State<AddBillSheet> {
                   decoration:
                       const InputDecoration(labelText: 'Due Day (1–31)'),
                   keyboardType: TextInputType.number,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(2),
+                  ],
                   textInputAction: TextInputAction.next,
                   validator: (v) {
                     final d = int.tryParse(v ?? '');
@@ -167,7 +180,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
           if (widget.presenter.accounts.isNotEmpty) ...[
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedAccountId,
+              initialValue: _selectedAccountId,
               hint: Text('Account (optional)',
                   style: TextStyle(
                       color: colorScheme.onSurfaceVariant, fontSize: 14)),
@@ -195,8 +208,9 @@ class _AddBillSheetState extends State<AddBillSheet> {
                 return ChoiceChip(
                   label: Text(cat.name),
                   selected: isSelected,
-                  onSelected: (_) =>
-                      setState(() => _selectedCategoryId = cat.id),
+                  // Tap again to clear — a bill needn't carry a category.
+                  onSelected: (_) => setState(
+                      () => _selectedCategoryId = isSelected ? null : cat.id),
                 );
               }).toList(),
             ),
@@ -224,7 +238,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
           if (_isRecurring) ...[
             const SizedBox(height: 8),
             DropdownButtonFormField<RecurrenceType>(
-              value: _recurrenceType,
+              initialValue: _recurrenceType,
               decoration: const InputDecoration(labelText: 'Recurrence'),
               items: RecurrenceType.values
                   .map((r) => DropdownMenuItem(

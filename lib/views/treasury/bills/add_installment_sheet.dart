@@ -1,8 +1,10 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -132,7 +134,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           // Account
           _FieldLabel('Account (Credit / BNPL)'),
           DropdownButtonFormField<String>(
-            value: _accountId,
+            initialValue: _accountId,
             decoration: const InputDecoration(hintText: 'Select account'),
             items: widget.presenter.accounts.map((a) {
               return DropdownMenuItem(value: a.id, child: Text(a.name));
@@ -148,11 +150,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             controller: _totalCtrl,
             decoration: const InputDecoration(hintText: '0.00'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: amountInputFormatters,
             textInputAction: TextInputAction.next,
             validator: (v) {
-              if (v == null || double.tryParse(v) == null) {
-                return 'Enter a valid amount';
-              }
+              final p = double.tryParse(v ?? '');
+              if (p == null || p <= 0) return 'Must be > 0';
               return null;
             },
           ),
@@ -172,12 +174,12 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
             controller: _monthlyCtrl,
             decoration: const InputDecoration(hintText: '0.00'),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: amountInputFormatters,
             textInputAction: TextInputAction.next,
             onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
             validator: (v) {
-              if (v == null || double.tryParse(v) == null) {
-                return 'Enter a valid amount';
-              }
+              final p = double.tryParse(v ?? '');
+              if (p == null || p <= 0) return 'Must be > 0';
               return null;
             },
           ),
@@ -372,6 +374,10 @@ class _CustomMonthsFieldState extends State<_CustomMonthsField> {
         controller: _ctrl,
         hint: 'Custom',
         keyboardType: TextInputType.number,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(3),
+        ],
         onChanged: (v) {
           final parsed = int.tryParse(v);
           if (parsed != null && parsed > 0) widget.onChanged(parsed);

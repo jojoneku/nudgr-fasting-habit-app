@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -425,9 +425,7 @@ class _AccountSetupForm extends StatelessWidget {
                           controller: balanceController,
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                          ],
+                          inputFormatters: amountInputFormatters,
                           decoration: InputDecoration(
                             labelText: balanceLabel,
                             prefixText: '₱ ',
@@ -463,9 +461,7 @@ class _AccountSetupForm extends StatelessWidget {
                 controller: goalTargetController,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-                ],
+                inputFormatters: amountInputFormatters,
                 decoration: const InputDecoration(
                   labelText: 'Goal Target',
                   prefixText: '₱ ',
@@ -807,9 +803,7 @@ class _CreditDetailsCard extends StatelessWidget {
           TextFormField(
             controller: creditLimitController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-            ],
+            inputFormatters: amountInputFormatters,
             decoration: const InputDecoration(
               labelText: 'Credit Limit',
               prefixText: '₱ ',
@@ -839,9 +833,7 @@ class _CreditDetailsCard extends StatelessWidget {
           TextFormField(
             controller: financeRateController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))
-            ],
+            inputFormatters: amountInputFormatters,
             decoration: const InputDecoration(
               labelText: 'Monthly finance rate',
               suffixText: '% / mo',

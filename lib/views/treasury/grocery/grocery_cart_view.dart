@@ -340,7 +340,18 @@ class _CartItemTile extends StatelessWidget {
       // row leaves the tree on the rebuild — avoids the "dismissed Dismissible
       // still in the tree" assertion when the persist write spans a frame.
       confirmDismiss: (_) async {
+        final index = presenter.items.indexWhere((i) => i.id == item.id);
+        final removed = item;
         await presenter.removeItem(item.id);
+        if (context.mounted) {
+          AppToast.action(
+            context,
+            message: '${removed.name} removed',
+            actionLabel: 'Undo',
+            onAction: () =>
+                presenter.restoreItem(removed, index < 0 ? 0 : index),
+          );
+        }
         return true;
       },
       child: InkWell(

@@ -82,7 +82,10 @@ class AccountCardWidget extends StatelessWidget {
         padding: EdgeInsets.zero,
         onTap: onTap,
         child: SizedBox(
-          width: 140,
+          // Fill the grid cell instead of forcing 140px — on a 360px phone the
+          // 3-column cell is only ~110px wide, so a fixed width clipped the
+          // name and balance. The grid's mainAxisExtent already fixes height.
+          width: double.infinity,
           height: 90,
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
