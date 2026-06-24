@@ -267,6 +267,7 @@ class BudgetPresenter extends ChangeNotifier {
             t.month == _selectedMonth &&
             t.type == TransactionType.outflow &&
             t.transferGroupId == null &&
+            !t.reimbursable &&
             catIds.contains(t.categoryId))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
@@ -336,7 +337,8 @@ class BudgetPresenter extends ChangeNotifier {
             t.month == _selectedMonth &&
             t.categoryId == categoryId &&
             t.type == TransactionType.outflow &&
-            t.transferGroupId == null)
+            t.transferGroupId == null &&
+            !t.reimbursable)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 

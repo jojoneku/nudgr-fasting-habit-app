@@ -47,6 +47,7 @@ TransactionRecord _txn({
   String? transferGroupId,
   String? transferToAccountId,
   String categoryId = '',
+  bool reimbursable = false,
 }) =>
     TransactionRecord(
       id: id,
@@ -59,6 +60,7 @@ TransactionRecord _txn({
       month: month ?? '2026-03',
       transferGroupId: transferGroupId,
       transferToAccountId: transferToAccountId,
+      reimbursable: reimbursable,
     );
 
 Bill _bill({
@@ -692,6 +694,50 @@ void main() {
       final march = capturedBills.where((b) => b.month == '2026-03').toList();
       expect(march.length, 1);
     });
+
+    test('reimbursable expense lifecycle: spawn → settle → cleanup', () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      // Expected back this month so the month-filtered `receivables` getter
+      // surfaces the spawned entry.
+      final expected = DateTime.now();
+      final outflow = TransactionRecord(
+        id: 'txn-reimb',
+        date: DateTime.now(),
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 1200,
+        type: TransactionType.outflow,
+        description: 'Client dinner',
+        month: toMonthKey(DateTime.now()),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-reimb',
+      );
+
+      // Spawn: the reimbursable outflow creates a linked receivable.
+      await ledger.addReimbursableExpense(
+        outflow,
+        expectedReimbursementDate: expected,
+      );
+      final spawned =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-reimb');
+      expect(spawned.receivableType, ReceivableType.reimbursement);
+      expect(spawned.reimbursementForTxnId, 'txn-reimb');
+      expect(spawned.amount, 1200);
+
+      // Settle: marking it received writes the offsetting inflow.
+      await presenter.markReceivableReceived('rcv-reimb',
+          receivedAmount: 1200, accountId: 'gcash');
+      final inflow = ledger.allTransactions
+          .firstWhere((t) => t.receivableId == 'rcv-reimb');
+      expect(inflow.type, TransactionType.inflow);
+      expect(inflow.amount, 1200);
+
+      // Cleanup: deleting the outflow tidies up its linked receivable.
+      await ledger.deleteTransaction('txn-reimb');
+      expect(presenter.receivables.any((r) => r.id == 'rcv-reimb'), isFalse);
+    });
   });
 
   // ─── BudgetPresenter ──────────────────────────────────────────────────────
@@ -784,6 +830,31 @@ void main() {
       expect(presenter.spentFor('food'), 200);
       expect(presenter.receivedFor('food'), 0);
       expect(presenter.transactionsForCategory('food').length, 1);
+    });
+
+    test('spentFor excludes reimbursable outflows (they do not eat the budget)',
+        () async {
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 't1',
+                accountId: 'a1',
+                amount: 200,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food'),
+            _txn(
+                id: 'reimb',
+                accountId: 'a1',
+                amount: 1500,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food',
+                reimbursable: true),
+          ]);
+      await presenter.load();
+      presenter.setMonth('2026-03');
+      // The reimbursable 1500 is excluded — only the genuine 200 counts.
+      expect(presenter.spentFor('food'), 200);
     });
 
     test('setBudget creates new budget for category', () async {

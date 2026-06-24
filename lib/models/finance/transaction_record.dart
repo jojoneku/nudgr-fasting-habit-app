@@ -16,6 +16,13 @@ class TransactionRecord {
   final String? transferToAccountId; // outbound leg of transfer
   final String? transferGroupId; // shared by both legs of a transfer pair
   final String? installmentId; // links to Installment
+  // Money you spent but expect to recover (e.g. a work expense to be
+  // reimbursed). STILL counts in headline Expenses (real cash left your pocket)
+  // but is excluded from per-category budget spend. Only ever set on outflows.
+  final bool reimbursable;
+  // Forward link to the ReceivableType.reimbursement this outflow spawned, so
+  // the UI can show what you're owed and settle it. Null unless reimbursable.
+  final String? reimbursementReceivableId;
   final DateTime updatedAt;
 
   TransactionRecord({
@@ -33,6 +40,8 @@ class TransactionRecord {
     this.transferToAccountId,
     this.transferGroupId,
     this.installmentId,
+    this.reimbursable = false,
+    this.reimbursementReceivableId,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -52,6 +61,8 @@ class TransactionRecord {
       transferToAccountId: json['transferToAccountId'] as String?,
       transferGroupId: json['transferGroupId'] as String?,
       installmentId: json['installmentId'] as String?,
+      reimbursable: json['reimbursable'] as bool? ?? false,
+      reimbursementReceivableId: json['reimbursementReceivableId'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -72,6 +83,8 @@ class TransactionRecord {
         'transferToAccountId': transferToAccountId,
         'transferGroupId': transferGroupId,
         'installmentId': installmentId,
+        'reimbursable': reimbursable,
+        'reimbursementReceivableId': reimbursementReceivableId,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -89,6 +102,8 @@ class TransactionRecord {
     String? transferToAccountId,
     String? transferGroupId,
     String? installmentId,
+    bool? reimbursable,
+    String? reimbursementReceivableId,
     DateTime? updatedAt,
   }) {
     return TransactionRecord(
@@ -106,6 +121,9 @@ class TransactionRecord {
       transferToAccountId: transferToAccountId ?? this.transferToAccountId,
       transferGroupId: transferGroupId ?? this.transferGroupId,
       installmentId: installmentId ?? this.installmentId,
+      reimbursable: reimbursable ?? this.reimbursable,
+      reimbursementReceivableId:
+          reimbursementReceivableId ?? this.reimbursementReceivableId,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

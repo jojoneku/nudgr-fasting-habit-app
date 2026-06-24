@@ -138,6 +138,26 @@ void main() {
       expect(r.amount, 500);
     });
 
+    test('strips php currency suffix', () {
+      final r = run('-500php food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('strips ₱ currency suffix', () {
+      final r = run('-500₱ food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('strips spaced "pesos" suffix', () {
+      final r = run('-500 pesos food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('suffix p does not eat a word starting with p', () {
+      final r = run('-120 plates gcash');
+      expect(r.amount, 120);
+    });
+
     test('strips thousand-commas', () {
       final r = run('-1,500 food gcash');
       expect(r.amount, 1500);
@@ -152,6 +172,33 @@ void main() {
       final r = run('-500 FOOD GCASH');
       expect(r.accountId, gcash.id);
       expect(r.categoryId, food.id);
+    });
+  });
+
+  group('paid for someone (card → cash)', () {
+    final cc = _acc('CC', cat: AccountCategory.creditCard);
+    final withCard = [bpi, gcash, cash, cc];
+
+    test('payback phrasing routes to a CC → Cash transfer', () {
+      final r = run('paid 800 on my cc for jana, she paid me back',
+          overrideAccounts: withCard);
+      expect(r.type, TransactionType.transfer);
+      expect(r.amount, 800);
+      expect(r.accountId, cc.id); // from = the card charged
+      expect(r.transferToAccountId, cash.id); // to = cash they handed back
+    });
+
+    test('"refunded" also counts as a payback signal', () {
+      final r = run('spotted 1200 cc for mike refunded in cash',
+          overrideAccounts: withCard);
+      expect(r.type, TransactionType.transfer);
+      expect(r.accountId, cc.id);
+    });
+
+    test('no payback signal stays a normal expense, not a transfer', () {
+      // Money hasn't come back yet — must NOT become a wash transfer.
+      final r = run('paid 500 for jana', overrideAccounts: withCard);
+      expect(r.type, isNot(TransactionType.transfer));
     });
   });
 
