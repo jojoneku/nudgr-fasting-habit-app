@@ -33,7 +33,13 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         _stats = stats,
         _dashboard = dashboard,
         _budget = budget,
-        _notifications = notifications ?? NotificationService();
+        _notifications = notifications ?? NotificationService() {
+    // Receivables live here, so let the ledger delegate reimbursement-receivable
+    // create/delete back to this presenter (keeps the in-memory list
+    // authoritative instead of racing direct storage writes).
+    _ledger.onSpawnReimbursementReceivable = createReimbursementReceivable;
+    _ledger.onDeleteReimbursementReceivable = deleteReceivable;
+  }
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
@@ -285,6 +291,31 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
+  }
+
+  /// Creates the reimbursement receivable linked to a reimbursable [outflow].
+  /// Wired onto the ledger as [LedgerPresenter.onSpawnReimbursementReceivable].
+  /// The receivable reuses the outflow's pre-generated id so the two stay
+  /// linked; settling it later flows through [markReceivableReceived] like any
+  /// other receivable, writing the offsetting inflow.
+  Future<void> createReimbursementReceivable(
+    TransactionRecord outflow,
+    DateTime expectedDate,
+  ) async {
+    final receivableId = outflow.reimbursementReceivableId;
+    if (receivableId == null) return;
+    await addReceivable(Receivable(
+      id: receivableId,
+      name: outflow.description.trim().isEmpty
+          ? 'Reimbursement'
+          : outflow.description.trim(),
+      receivableType: ReceivableType.reimbursement,
+      amount: outflow.amount,
+      expectedDate: expectedDate,
+      month: toMonthKey(expectedDate),
+      categoryId: outflow.categoryId,
+      reimbursementForTxnId: outflow.id,
+    ));
   }
 
   Future<void> updateReceivable(Receivable receivable) async {

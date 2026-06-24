@@ -41,6 +41,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   final FinancePersonalDictionary _financeDict;
 
+  // Cross-presenter hooks for reimbursable expenses. Receivables are owned by
+  // BillsReceivablesPresenter, so the ledger delegates create/delete of the
+  // linked reimbursement receivable to it. Wired once at construction (see
+  // BillsReceivablesPresenter); null in contexts without a bills presenter
+  // (e.g. unit tests) — the reimbursable flag still persists on the txn.
+  Future<void> Function(TransactionRecord outflow, DateTime expectedDate)?
+      onSpawnReimbursementReceivable;
+  Future<void> Function(String receivableId)? onDeleteReimbursementReceivable;
+
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
   String? _selectedAccountId;
@@ -459,6 +468,37 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (isFirstToday) await _stats.addXp(10);
   }
 
+  /// Logs a reimbursable outflow — money you spent but expect to recover (e.g.
+  /// a work expense). [outflow] must already carry `reimbursable: true` and a
+  /// pre-generated `reimbursementReceivableId`. The outflow is persisted as a
+  /// normal expense (so it still counts in headline Expenses) and, when a bills
+  /// presenter is wired, a linked ReceivableType.reimbursement is spawned for
+  /// the expected payback.
+  Future<void> addReimbursableExpense(
+    TransactionRecord outflow, {
+    required DateTime expectedReimbursementDate,
+  }) async {
+    await addTransaction(outflow);
+    await spawnReimbursementReceivable(outflow, expectedReimbursementDate);
+  }
+
+  /// Spawns the reimbursement receivable for an already-persisted [outflow].
+  /// No-op when no bills presenter is wired.
+  Future<void> spawnReimbursementReceivable(
+    TransactionRecord outflow,
+    DateTime expectedDate,
+  ) async {
+    final spawn = onSpawnReimbursementReceivable;
+    if (spawn != null) await spawn(outflow, expectedDate);
+  }
+
+  /// Deletes a reimbursement receivable by id (used when a reimbursable expense
+  /// is un-flagged or removed). No-op when no bills presenter is wired.
+  Future<void> deleteReimbursementReceivable(String receivableId) async {
+    final remove = onDeleteReimbursementReceivable;
+    if (remove != null) await remove(receivableId);
+  }
+
   Future<void> addTransfer({
     required String fromAccountId,
     required String toAccountId,
@@ -527,6 +567,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     safeNotify();
     await _saveAll();
+    // Tidy up the linked reimbursement receivable so deleting the expense
+    // doesn't leave an orphaned "you're owed" entry behind.
+    final receivableId = txn.reimbursementReceivableId;
+    if (receivableId != null) {
+      await deleteReimbursementReceivable(receivableId);
+    }
   }
 
   /// Deletes a transaction; if it belongs to a transfer pair, removes BOTH legs
