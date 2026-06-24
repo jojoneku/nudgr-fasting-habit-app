@@ -138,6 +138,26 @@ void main() {
       expect(r.amount, 500);
     });
 
+    test('strips php currency suffix', () {
+      final r = run('-500php food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('strips ₱ currency suffix', () {
+      final r = run('-500₱ food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('strips spaced "pesos" suffix', () {
+      final r = run('-500 pesos food gcash');
+      expect(r.amount, 500);
+    });
+
+    test('suffix p does not eat a word starting with p', () {
+      final r = run('-120 plates gcash');
+      expect(r.amount, 120);
+    });
+
     test('strips thousand-commas', () {
       final r = run('-1,500 food gcash');
       expect(r.amount, 1500);

@@ -86,8 +86,13 @@ PreparseResult preparseFinanceInput({
 /// transfer aliases to the literal word "transfer".
 String _normalize(String input) {
   var s = input.toLowerCase().trim();
-  // strip currency markers attached to digits
+  // strip currency markers attached to a number, on EITHER side:
+  //   prefix — ₱120 / php120 / p120
+  //   suffix — 120₱ / 120php / 120 php / 120p / 120 pesos
+  // The lone `p` suffix carries a \b so it can't eat the p inside a word
+  // ("120plates" stays intact); the multi-char markers don't need it.
   s = s.replaceAll(RegExp(r'(?:₱|php|p)(?=\d)'), '');
+  s = s.replaceAll(RegExp(r'(?<=\d)\s*(?:php|pesos?|p\b|₱)'), '');
   // collapse thousand-commas inside numbers: 1,500 → 1500
   s = s.replaceAllMapped(
     RegExp(r'(\d),(?=\d{3}(?:\D|$))'),
