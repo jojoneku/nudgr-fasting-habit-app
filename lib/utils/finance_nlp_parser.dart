@@ -61,6 +61,14 @@ PreparseResult preparseFinanceInput({
   final transfer = _tryTransfer(normalized, activeAccounts);
   if (transfer != null) return transfer.copyWith(rawInput: raw);
 
+  // Pattern A1 — paid on your card FOR someone who paid you back in cash. This
+  // is never your spending or income, so it routes to a Credit Card → Cash
+  // transfer. Must run before Pattern A2: the "for <someone>" + payback signal
+  // distinguishes it from paying DOWN a card. ("paid 800 on my cc for jana,
+  // she paid me back" → card→cash; "paid bpi cc 5000 from gcash" → pay-down.)
+  final paidForSomeone = _tryPaidForSomeone(normalized, activeAccounts);
+  if (paidForSomeone != null) return paidForSomeone.copyWith(rawInput: raw);
+
   // Pattern A2 — pay a credit account ("paid bpi cc 5000 from gcash"). Resolves
   // to a transfer that tops up (pays down) the credit account. Only fires when a
   // liability account is the clear target; otherwise falls through to amounts so
@@ -178,6 +186,57 @@ PreparseResult? _tryTransfer(
     unresolvedTokens: const [],
     ambiguousAccountTokens: ambiguous,
   );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pattern A1 — paid on your card for someone (who paid you back in cash)
+// ─────────────────────────────────────────────────────────────────────────────
+
+PreparseResult? _tryPaidForSomeone(
+    String normalized, List<FinancialAccount> accounts) {
+  // Needs a pay verb, a "for <someone>" beneficiary, and a payback signal.
+  // Without the payback signal we deliberately do NOT fire — the money hasn't
+  // returned, so it should stay a normal (possibly reimbursable) expense rather
+  // than a wash transfer.
+  if (!RegExp(r'\b(?:paid|pay|spotted|covered)\b').hasMatch(normalized)) {
+    return null;
+  }
+  if (!RegExp(r'\bfor\b').hasMatch(normalized)) return null;
+  final paybackRe = RegExp(
+      r'paid me back|paid back|pay me back|paid me|gave me cash|cash back|'
+      r'refunded|reimbursed');
+  if (!paybackRe.hasMatch(normalized)) return null;
+
+  // Exactly one amount, else let the AI handle it.
+  final amounts = RegExp(r'(?<=^|\s)(\d+(?:\.\d+)?)(?=\s|$)')
+      .allMatches(normalized)
+      .toList();
+  if (amounts.length != 1) return null;
+  final amount = double.tryParse(amounts.first.group(1)!);
+  if (amount == null || amount <= 0) return null;
+
+  // The card charged (a liability) is the source; cash is the destination.
+  final cardId = _matchAccountInText(normalized, accounts, liability: true);
+  if (cardId == null) return null;
+  // Destination defaults to the user's cash account; null falls through to AI
+  // clarification ("which account did the cash land in?").
+  final cashId = _firstAccountOfCategory(accounts, AccountCategory.cash);
+
+  return PreparseResult(
+    rawInput: '',
+    amount: amount,
+    type: TransactionType.transfer,
+    accountId: cardId,
+    transferToAccountId: cashId,
+  );
+}
+
+String? _firstAccountOfCategory(
+    List<FinancialAccount> accounts, AccountCategory category) {
+  for (final a in accounts) {
+    if (a.category == category) return a.id;
+  }
+  return null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

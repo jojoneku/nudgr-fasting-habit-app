@@ -175,6 +175,33 @@ void main() {
     });
   });
 
+  group('paid for someone (card → cash)', () {
+    final cc = _acc('CC', cat: AccountCategory.creditCard);
+    final withCard = [bpi, gcash, cash, cc];
+
+    test('payback phrasing routes to a CC → Cash transfer', () {
+      final r = run('paid 800 on my cc for jana, she paid me back',
+          overrideAccounts: withCard);
+      expect(r.type, TransactionType.transfer);
+      expect(r.amount, 800);
+      expect(r.accountId, cc.id); // from = the card charged
+      expect(r.transferToAccountId, cash.id); // to = cash they handed back
+    });
+
+    test('"refunded" also counts as a payback signal', () {
+      final r = run('spotted 1200 cc for mike refunded in cash',
+          overrideAccounts: withCard);
+      expect(r.type, TransactionType.transfer);
+      expect(r.accountId, cc.id);
+    });
+
+    test('no payback signal stays a normal expense, not a transfer', () {
+      // Money hasn't come back yet — must NOT become a wash transfer.
+      final r = run('paid 500 for jana', overrideAccounts: withCard);
+      expect(r.type, isNot(TransactionType.transfer));
+    });
+  });
+
   group('account fuzzy + prefix matching', () {
     test('prefix match resolves "gca" → GCash (single hit)', () {
       final r = run('-500 food gca');
