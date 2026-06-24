@@ -182,7 +182,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         final id = existing?.id ?? _generateId();
         // Reimbursable only applies to outflows. Reuse the existing linked
         // receivable id when editing so the link survives; mint one otherwise.
-        final isReimbursable = _type == TransactionType.outflow && _reimbursable;
+        final isReimbursable =
+            _type == TransactionType.outflow && _reimbursable;
         final receivableId = isReimbursable
             ? (existing?.reimbursementReceivableId ?? _generateId())
             : null;
@@ -340,7 +341,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           setState(() => _transferToAccountId = v),
                     ),
                     const SizedBox(height: 12),
-                    _PaidForSomeoneHint(onUsePreset: _applyPaidForSomeonePreset),
+                    _PaidForSomeoneHint(
+                        onUsePreset: _applyPaidForSomeonePreset),
                   ],
                   if (_type != TransactionType.transfer) ...[
                     const SizedBox(height: 16),
