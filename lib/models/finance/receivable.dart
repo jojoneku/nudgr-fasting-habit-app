@@ -37,6 +37,10 @@ class Receivable {
   /// _MarkReceivedSheet so recurring receivables don't need re-picking each
   /// month. Null means "no preference, ask at received-time".
   final String? accountId;
+
+  /// Back-link to the TransactionRecord whose reimbursable outflow spawned this
+  /// receivable. Null for receivables created directly (salary, business, etc.).
+  final String? reimbursementForTxnId;
   final DateTime updatedAt;
 
   Receivable({
@@ -55,6 +59,7 @@ class Receivable {
     this.receivedAmount,
     this.transactionId,
     this.accountId,
+    this.reimbursementForTxnId,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -81,6 +86,7 @@ class Receivable {
       receivedAmount: (json['receivedAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
       accountId: json['accountId'] as String?,
+      reimbursementForTxnId: json['reimbursementForTxnId'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -102,6 +108,7 @@ class Receivable {
         'receivedAmount': receivedAmount,
         'transactionId': transactionId,
         'accountId': accountId,
+        'reimbursementForTxnId': reimbursementForTxnId,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -120,6 +127,7 @@ class Receivable {
     double? receivedAmount,
     String? transactionId,
     Object? accountId = _kUnset,
+    String? reimbursementForTxnId,
     DateTime? updatedAt,
   }) {
     return Receivable(
@@ -139,6 +147,8 @@ class Receivable {
       transactionId: transactionId ?? this.transactionId,
       accountId:
           identical(accountId, _kUnset) ? this.accountId : accountId as String?,
+      reimbursementForTxnId:
+          reimbursementForTxnId ?? this.reimbursementForTxnId,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

@@ -74,6 +74,42 @@ void main() {
       expect(txn2.transferToAccountId, 'a1');
       expect(txn2.type, TransactionType.transfer);
     });
+
+    test('roundtrip preserves reimbursable flag and receivable link', () {
+      final txn = TransactionRecord(
+        id: 't2',
+        date: DateTime(2026, 4, 1),
+        accountId: 'a0',
+        categoryId: 'c1',
+        amount: 1200,
+        type: TransactionType.outflow,
+        description: 'Client dinner',
+        month: '2026-04',
+        reimbursable: true,
+        reimbursementReceivableId: 'r9',
+      );
+      final txn2 = TransactionRecord.fromJson(txn.toJson());
+      expect(txn2.reimbursable, isTrue);
+      expect(txn2.reimbursementReceivableId, 'r9');
+    });
+
+    test('legacy JSON (no reimbursable keys) loads with safe defaults', () {
+      // A row written before the reimbursable fields existed must deserialize
+      // unchanged: not reimbursable, no link.
+      final json = {
+        'id': 't_old',
+        'date': DateTime(2026, 1, 1).toIso8601String(),
+        'accountId': 'a0',
+        'categoryId': 'c1',
+        'amount': 300.0,
+        'type': 'outflow',
+        'description': 'Lunch',
+        'month': '2026-01',
+      };
+      final txn = TransactionRecord.fromJson(json);
+      expect(txn.reimbursable, isFalse);
+      expect(txn.reimbursementReceivableId, isNull);
+    });
   });
 
   group('FinanceCategory', () {
@@ -196,6 +232,35 @@ void main() {
       final rec2 = Receivable.fromJson(rec.toJson());
       expect(rec2.receivableType, ReceivableType.salary);
       expect(rec2.recurrenceType, RecurrenceType.monthly);
+    });
+
+    test('roundtrip preserves reimbursement back-link', () {
+      final rec = Receivable(
+        id: 'r9',
+        name: 'Client dinner',
+        receivableType: ReceivableType.reimbursement,
+        amount: 1200,
+        expectedDate: DateTime(2026, 5, 1),
+        month: '2026-04',
+        categoryId: 'c4',
+        reimbursementForTxnId: 't2',
+      );
+      final rec2 = Receivable.fromJson(rec.toJson());
+      expect(rec2.receivableType, ReceivableType.reimbursement);
+      expect(rec2.reimbursementForTxnId, 't2');
+    });
+
+    test('legacy JSON (no reimbursementForTxnId) loads with null link', () {
+      final json = {
+        'id': 'rcv_old',
+        'name': 'Salary',
+        'receivableType': 'salary',
+        'amount': 51000.0,
+        'expectedDate': DateTime(2026, 4, 15).toIso8601String(),
+        'month': '2026-04',
+        'categoryId': 'c4',
+      };
+      expect(Receivable.fromJson(json).reimbursementForTxnId, isNull);
     });
 
     test(

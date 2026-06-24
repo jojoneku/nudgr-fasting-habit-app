@@ -243,6 +243,30 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
           t.transferGroupId == null)
       .fold(0.0, (sum, t) => sum + t.amount);
 
+  /// This month's reimbursable outflows that haven't been paid back yet — money
+  /// you spent (so it's in [monthTotalOutflow]) but expect to recover. A
+  /// reimbursable outflow counts as pending until its linked receivable is
+  /// marked received; one with no linked receivable is treated as still owed.
+  double get pendingReimbursableOutflow {
+    final receivedIds = {
+      for (final r in _receivables)
+        if (r.isReceived) r.id,
+    };
+    return _transactions
+        .where((t) =>
+            t.month == _currentMonth &&
+            t.type == TransactionType.outflow &&
+            t.transferGroupId == null &&
+            t.reimbursable &&
+            !receivedIds.contains(t.reimbursementReceivableId))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  /// Headline outflow minus the portion you still expect back — the "true cost
+  /// so far" view. Equals [monthTotalOutflow] once everything is reimbursed.
+  double get monthOutflowNetOfReimbursements =>
+      monthTotalOutflow - pendingReimbursableOutflow;
+
   /// Sum of top-level, non-liability, non-custodian account balances — the
   /// gross asset base (before deducting money held for others or liabilities).
   /// Only top-level accounts are summed: sub-account balances are already
@@ -495,12 +519,17 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       }
       return total;
     }
+    // Reimbursable outflows are excluded from budget spend: money you expect to
+    // recover shouldn't eat the category's budget (it still counts in headline
+    // Expenses via [monthTotalOutflow]). Mirrors the guard in
+    // BudgetPresenter.spentFor / sectionSpent.
     return _transactions
         .where((t) =>
             t.month == _currentMonth &&
             t.categoryId == b.categoryId &&
             t.type == TransactionType.outflow &&
-            t.transferGroupId == null)
+            t.transferGroupId == null &&
+            !t.reimbursable)
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 

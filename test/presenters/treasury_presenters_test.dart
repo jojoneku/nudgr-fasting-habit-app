@@ -47,6 +47,7 @@ TransactionRecord _txn({
   String? transferGroupId,
   String? transferToAccountId,
   String categoryId = '',
+  bool reimbursable = false,
 }) =>
     TransactionRecord(
       id: id,
@@ -59,6 +60,7 @@ TransactionRecord _txn({
       month: month ?? '2026-03',
       transferGroupId: transferGroupId,
       transferToAccountId: transferToAccountId,
+      reimbursable: reimbursable,
     );
 
 Bill _bill({
@@ -784,6 +786,31 @@ void main() {
       expect(presenter.spentFor('food'), 200);
       expect(presenter.receivedFor('food'), 0);
       expect(presenter.transactionsForCategory('food').length, 1);
+    });
+
+    test('spentFor excludes reimbursable outflows (they do not eat the budget)',
+        () async {
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 't1',
+                accountId: 'a1',
+                amount: 200,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food'),
+            _txn(
+                id: 'reimb',
+                accountId: 'a1',
+                amount: 1500,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                categoryId: 'food',
+                reimbursable: true),
+          ]);
+      await presenter.load();
+      presenter.setMonth('2026-03');
+      // The reimbursable 1500 is excluded — only the genuine 200 counts.
+      expect(presenter.spentFor('food'), 200);
     });
 
     test('setBudget creates new budget for category', () async {
