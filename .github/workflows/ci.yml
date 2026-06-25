@@ -542,6 +542,23 @@ jobs:
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
+      - name: Verify credential file
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          echo "=== GOOGLE_APPLICATION_CREDENTIALS path ==="
+          echo "$GOOGLE_APPLICATION_CREDENTIALS"
+          echo "=== Credential file exists ==="
+          test -f "$GOOGLE_APPLICATION_CREDENTIALS" && echo "YES" || echo "NO — file missing"
+          echo "=== Credential type ==="
+          python3 -c "import json; d=json.load(open('$GOOGLE_APPLICATION_CREDENTIALS')); print(d.get('type','MISSING')); print('project_id:', d.get('project_id','n/a')); print('client_email:', d.get('client_email','n/a (not service_account type)'))"
+          echo "=== ADC discovery ==="
+          python3 -c "
+          import google.auth, json
+          creds, project = google.auth.default()
+          print('ADC project:', project)
+          print('ADC creds type:', type(creds).__name__)
+          " 2>&1 || echo "ADC discovery failed (google-auth not installed or error above)"
+
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
         run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
