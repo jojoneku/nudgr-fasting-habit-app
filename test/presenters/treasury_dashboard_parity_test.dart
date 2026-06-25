@@ -4,6 +4,7 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -31,18 +32,23 @@ TransactionRecord _txn({
   required double amount,
   required TransactionType type,
   String accountId = 'acc1',
+  String categoryId = 'cat',
   String? transferGroupId,
+  bool reimbursable = false,
+  String? reimbursementReceivableId,
 }) =>
     TransactionRecord(
       id: id,
       date: DateTime.now(),
       accountId: accountId,
-      categoryId: 'cat',
+      categoryId: categoryId,
       amount: amount,
       type: type,
       description: 'Test',
       month: toMonthKey(DateTime.now()),
       transferGroupId: transferGroupId,
+      reimbursable: reimbursable,
+      reimbursementReceivableId: reimbursementReceivableId,
     );
 
 void main() {
@@ -266,6 +272,76 @@ void main() {
       expect(p.budgetedExpensesRemaining, 1000);
       // 10000 liquid − 0 bills − 1000 set-aside − 3000 remaining budget = 6000.
       expect(p.forecastedNetBalance, 6000);
+    });
+  });
+
+  group('reimbursable expenses', () {
+    final month = toMonthKey(DateTime.now());
+
+    Budget catBudget() => Budget(
+          id: 'b1',
+          categoryId: 'cat',
+          month: month,
+          allocatedAmount: 5000,
+          group: BudgetGroup.variableOptional,
+          budgetType: BudgetType.monthly,
+        );
+
+    test(
+        'reimbursable outflow counts in monthTotalOutflow but NOT in budget spend',
+        () async {
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [catBudget()]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(id: 'normal', amount: 2000, type: TransactionType.outflow),
+            _txn(
+                id: 'reimb',
+                amount: 1500,
+                type: TransactionType.outflow,
+                reimbursable: true),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      // Headline Expenses counts BOTH (real cash left the account).
+      expect(p.monthTotalOutflow, 3500);
+      // Budget spend excludes the reimbursable one — it shouldn't eat the
+      // category's budget. Only the 2000 normal outflow counts.
+      expect(p.totalBudgetSpent, 2000);
+      expect(p.totalBudgetRemaining, 3000);
+      // Pending = the unreimbursed outflow; net-of-reimbursements strips it.
+      expect(p.pendingReimbursableOutflow, 1500);
+      expect(p.monthOutflowNetOfReimbursements, 2000);
+    });
+
+    test('a received reimbursement is no longer pending', () async {
+      when(mockStorage.loadBudgets()).thenAnswer((_) async => [catBudget()]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 'reimb',
+                amount: 1500,
+                type: TransactionType.outflow,
+                reimbursable: true,
+                reimbursementReceivableId: 'r1'),
+          ]);
+      when(mockStorage.loadReceivables()).thenAnswer((_) async => [
+            Receivable(
+              id: 'r1',
+              name: 'Client dinner',
+              receivableType: ReceivableType.reimbursement,
+              amount: 1500,
+              expectedDate: DateTime.now(),
+              month: month,
+              categoryId: 'cat',
+              isReceived: true,
+              reimbursementForTxnId: 'reimb',
+            ),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.monthTotalOutflow, 1500); // still real cash out
+      expect(p.pendingReimbursableOutflow, 0); // already paid back
+      expect(p.monthOutflowNetOfReimbursements, 1500);
     });
   });
 

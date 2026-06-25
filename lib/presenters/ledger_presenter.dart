@@ -41,10 +41,24 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   final FinancePersonalDictionary _financeDict;
 
+  // Cross-presenter hooks for reimbursable expenses. Receivables are owned by
+  // BillsReceivablesPresenter, so the ledger delegates create/delete of the
+  // linked reimbursement receivable to it. Wired once at construction (see
+  // BillsReceivablesPresenter); null in contexts without a bills presenter
+  // (e.g. unit tests) — the reimbursable flag still persists on the txn.
+  Future<void> Function(TransactionRecord outflow, DateTime expectedDate)?
+      onSpawnReimbursementReceivable;
+  Future<void> Function(String receivableId)? onDeleteReimbursementReceivable;
+  Future<void> Function(TransactionRecord outflow)?
+      onUpdateReimbursementReceivable;
+
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
   String? _selectedAccountId;
   String? _selectedCategoryId;
+  // When true, the feed shows only outstanding reimbursable expenses — money
+  // you've spent and are still owed back.
+  bool _owedOnly = false;
 
   List<FinancialAccount> _accounts = [];
   List<FinanceCategory> _categories = [];
@@ -202,6 +216,11 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
     }
 
+    // Apply optional "money I'm owed" filter.
+    if (_owedOnly) {
+      txns = txns.where(isOutstandingReimbursable).toList();
+    }
+
     // Apply optional single-day filter (from calendar tap)
     if (_selectedDate != null) {
       txns = txns
@@ -352,6 +371,48 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  bool get owedOnly => _owedOnly;
+
+  /// Toggles the "money I'm owed" filter — shows only outstanding reimbursable
+  /// expenses (spent, not yet paid back).
+  void setOwedFilter(bool value) {
+    _owedOnly = value;
+    safeNotify();
+  }
+
+  /// Reimbursement receivable ids that already have a settling inflow leg, i.e.
+  /// the payback has landed. Derived purely from the transaction list.
+  Set<String> get _settledReimbursementIds => {
+        for (final t in _allTransactions)
+          if (t.type == TransactionType.inflow && t.receivableId != null)
+            t.receivableId!,
+      };
+
+  /// A reimbursable outflow still awaiting payback (no settling inflow yet).
+  bool isOutstandingReimbursable(TransactionRecord t) {
+    if (!t.reimbursable || t.type != TransactionType.outflow) return false;
+    if (t.transferGroupId != null) return false;
+    final receivableId = t.reimbursementReceivableId;
+    return receivableId == null ||
+        !_settledReimbursementIds.contains(receivableId);
+  }
+
+  /// Total still owed to you this month across outstanding reimbursables.
+  double get outstandingOwedTotal {
+    final settled = _settledReimbursementIds;
+    return _allTransactions
+        .where((t) =>
+            t.month == _selectedMonth &&
+            t.reimbursable &&
+            t.type == TransactionType.outflow &&
+            t.transferGroupId == null &&
+            !(t.reimbursementReceivableId != null &&
+                settled.contains(t.reimbursementReceivableId)))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
+
+  bool get hasOutstandingOwed => outstandingOwedTotal > 0;
+
   /// Refreshes the account list from storage. Call this before showing any
   /// sheet that needs accounts — TreasuryDashboardPresenter may have added
   /// or removed accounts since LedgerPresenter last loaded.
@@ -459,6 +520,44 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (isFirstToday) await _stats.addXp(10);
   }
 
+  /// Logs a reimbursable outflow — money you spent but expect to recover (e.g.
+  /// a work expense). [outflow] must already carry `reimbursable: true` and a
+  /// pre-generated `reimbursementReceivableId`. The outflow is persisted as a
+  /// normal expense (so it still counts in headline Expenses) and, when a bills
+  /// presenter is wired, a linked ReceivableType.reimbursement is spawned for
+  /// the expected payback.
+  Future<void> addReimbursableExpense(
+    TransactionRecord outflow, {
+    required DateTime expectedReimbursementDate,
+  }) async {
+    await addTransaction(outflow);
+    await spawnReimbursementReceivable(outflow, expectedReimbursementDate);
+  }
+
+  /// Spawns the reimbursement receivable for an already-persisted [outflow].
+  /// No-op when no bills presenter is wired.
+  Future<void> spawnReimbursementReceivable(
+    TransactionRecord outflow,
+    DateTime expectedDate,
+  ) async {
+    final spawn = onSpawnReimbursementReceivable;
+    if (spawn != null) await spawn(outflow, expectedDate);
+  }
+
+  /// Deletes a reimbursement receivable by id (used when a reimbursable expense
+  /// is un-flagged or removed). No-op when no bills presenter is wired.
+  Future<void> deleteReimbursementReceivable(String receivableId) async {
+    final remove = onDeleteReimbursementReceivable;
+    if (remove != null) await remove(receivableId);
+  }
+
+  /// Re-syncs the linked receivable's amount/name after a reimbursable [outflow]
+  /// is edited. No-op when no bills presenter is wired.
+  Future<void> syncReimbursementReceivable(TransactionRecord outflow) async {
+    final sync = onUpdateReimbursementReceivable;
+    if (sync != null) await sync(outflow);
+  }
+
   Future<void> addTransfer({
     required String fromAccountId,
     required String toAccountId,
@@ -527,6 +626,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _allTransactions = _allTransactions.where((t) => t.id != id).toList();
     safeNotify();
     await _saveAll();
+    // Tidy up the linked reimbursement receivable so deleting the expense
+    // doesn't leave an orphaned "you're owed" entry behind.
+    final receivableId = txn.reimbursementReceivableId;
+    if (receivableId != null) {
+      await deleteReimbursementReceivable(receivableId);
+    }
   }
 
   /// Deletes a transaction; if it belongs to a transfer pair, removes BOTH legs
@@ -861,6 +966,25 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         amount: draft.amount!,
         description: description,
         date: now,
+      );
+    } else if (draft.reimbursable && draft.type == TransactionType.outflow) {
+      // Chat suggested a reimbursable expense — log it as one (spawns the
+      // linked receivable) with the default payback horizon. Reversible via
+      // edit if the guess was wrong.
+      await addReimbursableExpense(
+        TransactionRecord(
+          id: _generateId(),
+          date: now,
+          accountId: draft.accountId!,
+          categoryId: draft.categoryId!,
+          amount: draft.amount!,
+          type: TransactionType.outflow,
+          description: description,
+          month: toMonthKey(now),
+          reimbursable: true,
+          reimbursementReceivableId: _generateId(),
+        ),
+        expectedReimbursementDate: now.add(const Duration(days: 30)),
       );
     } else {
       await addTransaction(TransactionRecord(

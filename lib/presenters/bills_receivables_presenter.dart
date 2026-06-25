@@ -33,7 +33,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         _stats = stats,
         _dashboard = dashboard,
         _budget = budget,
-        _notifications = notifications ?? NotificationService();
+        _notifications = notifications ?? NotificationService() {
+    // Receivables live here, so let the ledger delegate reimbursement-receivable
+    // create/delete back to this presenter (keeps the in-memory list
+    // authoritative instead of racing direct storage writes).
+    _ledger.onSpawnReimbursementReceivable = createReimbursementReceivable;
+    _ledger.onDeleteReimbursementReceivable = deleteReceivable;
+    _ledger.onUpdateReimbursementReceivable = updateReimbursementReceivable;
+  }
 
   final StorageService _storage;
   final LedgerPresenter _ledger;
@@ -285,6 +292,58 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
     await _storage.saveReceivables(_allReceivables);
     await _notifyDependents();
+  }
+
+  /// Creates the reimbursement receivable linked to a reimbursable [outflow].
+  /// Wired onto the ledger as [LedgerPresenter.onSpawnReimbursementReceivable].
+  /// The receivable reuses the outflow's pre-generated id so the two stay
+  /// linked; settling it later flows through [markReceivableReceived] like any
+  /// other receivable, writing the offsetting inflow.
+  Future<void> createReimbursementReceivable(
+    TransactionRecord outflow,
+    DateTime expectedDate,
+  ) async {
+    final receivableId = outflow.reimbursementReceivableId;
+    if (receivableId == null) return;
+    await addReceivable(Receivable(
+      id: receivableId,
+      name: _reimbursementReceivableName(outflow),
+      receivableType: ReceivableType.reimbursement,
+      amount: outflow.amount,
+      expectedDate: expectedDate,
+      month: toMonthKey(expectedDate),
+      categoryId: outflow.categoryId,
+      reimbursementForTxnId: outflow.id,
+    ));
+  }
+
+  /// Re-syncs the linked receivable after a reimbursable [outflow] is edited:
+  /// keeps its amount/name in step with the expense so "what you're owed" never
+  /// drifts from what you actually spent. No-op if the receivable is gone or
+  /// has already been received (don't disturb a settled payback). Wired onto
+  /// the ledger as [LedgerPresenter.onUpdateReimbursementReceivable].
+  Future<void> updateReimbursementReceivable(TransactionRecord outflow) async {
+    final receivableId = outflow.reimbursementReceivableId;
+    if (receivableId == null) return;
+    final existing =
+        _allReceivables.where((r) => r.id == receivableId).firstOrNull;
+    if (existing == null || existing.isReceived) return;
+    await updateReceivable(existing.copyWith(
+      name: _reimbursementReceivableName(outflow),
+      amount: outflow.amount,
+      categoryId: outflow.categoryId,
+    ));
+  }
+
+  /// Display name for a reimbursement receivable: prefers "<who owes you> —
+  /// <expense>", falling back to the expense description, then a generic label.
+  String _reimbursementReceivableName(TransactionRecord outflow) {
+    final desc = outflow.description.trim();
+    final who = outflow.owedBy?.trim() ?? '';
+    if (who.isNotEmpty && desc.isNotEmpty) return '$who — $desc';
+    if (who.isNotEmpty) return 'Reimbursement from $who';
+    if (desc.isNotEmpty) return desc;
+    return 'Reimbursement';
   }
 
   Future<void> updateReceivable(Receivable receivable) async {

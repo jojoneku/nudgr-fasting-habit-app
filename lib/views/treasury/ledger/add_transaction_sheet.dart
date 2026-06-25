@@ -41,12 +41,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _noteController = TextEditingController();
+  final _owedByController = TextEditingController();
 
   TransactionType _type = TransactionType.outflow;
   String? _selectedAccountId;
   String? _transferToAccountId;
   String? _selectedCategoryId;
   DateTime _date = DateTime.now();
+
+  // Reimbursable-expense state (outflow only): money spent now, recovered later.
+  bool _reimbursable = false;
+  DateTime? _expectedReimbursementDate;
 
   bool _isSubmitting = false;
 
@@ -90,6 +95,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _type = existing.type;
         _selectedAccountId = existing.accountId;
         _transferToAccountId = existing.transferToAccountId;
+        _reimbursable = existing.reimbursable;
+        _owedByController.text = existing.owedBy ?? '';
       }
     } else {
       if (widget.initialDate != null) _date = widget.initialDate!;
@@ -105,6 +112,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _selectedAccountId = prefill.accountId;
         _transferToAccountId = prefill.transferToAccountId;
         _selectedCategoryId = prefill.categoryId;
+        if (prefill.reimbursable) {
+          _reimbursable = true;
+          _expectedReimbursementDate = _defaultExpectedReimbursementDate;
+        }
       }
     }
   }
@@ -127,6 +138,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     _amountController.dispose();
     _descriptionController.dispose();
     _noteController.dispose();
+    _owedByController.dispose();
     super.dispose();
   }
 
@@ -174,8 +186,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           note: note.isEmpty ? null : note,
         );
       } else {
-        final id = existing?.id ??
-            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+        final id = existing?.id ?? _generateId();
+        // Reimbursable only applies to outflows. Reuse the existing linked
+        // receivable id when editing so the link survives; mint one otherwise.
+        final isReimbursable =
+            _type == TransactionType.outflow && _reimbursable;
+        final receivableId = isReimbursable
+            ? (existing?.reimbursementReceivableId ?? _generateId())
+            : null;
+        final owedBy = _owedByController.text.trim();
         final txn = TransactionRecord(
           id: id,
           date: _date,
@@ -186,16 +205,41 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           description: description,
           note: note.isEmpty ? null : note,
           month: month,
+          reimbursable: isReimbursable,
+          reimbursementReceivableId: receivableId,
+          owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
         );
+        final expectedDate =
+            _expectedReimbursementDate ?? _defaultExpectedReimbursementDate;
         if (existing != null) {
+          // Drop a stale linked receivable when the expense is no longer
+          // reimbursable (toggled off, or type changed away from outflow).
+          final oldReceivableId = existing.reimbursementReceivableId;
+          if (oldReceivableId != null && !isReimbursable) {
+            await widget.presenter
+                .deleteReimbursementReceivable(oldReceivableId);
+          }
           if (existing.transferGroupId != null) {
             // Converting a transfer into a normal income/expense: remove the
             // whole transfer group, then add the single replacement record.
             await widget.presenter.deleteTransactionOrGroup(existing.id);
             await widget.presenter.addTransaction(txn);
           } else {
-            await widget.presenter.updateTransaction(txn.copyWith());
+            await widget.presenter.updateTransaction(txn);
           }
+          // Newly reimbursable → spawn; still reimbursable on an existing
+          // receivable → re-sync its amount/name/owedBy so it never drifts.
+          if (isReimbursable && oldReceivableId == null) {
+            await widget.presenter
+                .spawnReimbursementReceivable(txn, expectedDate);
+          } else if (isReimbursable) {
+            await widget.presenter.syncReimbursementReceivable(txn);
+          }
+        } else if (isReimbursable) {
+          await widget.presenter.addReimbursableExpense(
+            txn,
+            expectedReimbursementDate: expectedDate,
+          );
         } else {
           await widget.presenter.addTransaction(txn);
         }
@@ -207,6 +251,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
   }
 
+  String _generateId() =>
+      '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+
+  /// Default "expected back by" horizon for a reimbursable expense: 30 days
+  /// after the transaction date.
+  DateTime get _defaultExpectedReimbursementDate =>
+      _date.add(const Duration(days: 30));
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -215,6 +267,32 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       lastDate: DateTime(2030),
     );
     if (picked != null) setState(() => _date = picked);
+  }
+
+  Future<void> _pickExpectedReimbursementDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate:
+          _expectedReimbursementDate ?? _defaultExpectedReimbursementDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() => _expectedReimbursementDate = picked);
+    }
+  }
+
+  /// Pre-fills the transfer for the "paid on my card for someone, they paid me
+  /// back in cash" case: From = a credit card (liability), To = a cash account.
+  /// Picks the first of each as a starting point; the user can change either.
+  void _applyPaidForSomeonePreset() {
+    final cards = _accounts.where((a) => a.isLiability).toList();
+    final cash =
+        _accounts.where((a) => a.category == AccountCategory.cash).toList();
+    setState(() {
+      if (cards.isNotEmpty) _selectedAccountId = cards.first.id;
+      if (cash.isNotEmpty) _transferToAccountId = cash.first.id;
+    });
   }
 
   @override
@@ -274,6 +352,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       onChanged: (v) =>
                           setState(() => _transferToAccountId = v),
                     ),
+                    const SizedBox(height: 12),
+                    _PaidForSomeoneHint(
+                        onUsePreset: _applyPaidForSomeonePreset),
                   ],
                   if (_type != TransactionType.transfer) ...[
                     const SizedBox(height: 16),
@@ -286,6 +367,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         onSelected: (id) =>
                             setState(() => _selectedCategoryId = id),
                       ),
+                  ],
+                  if (_type == TransactionType.outflow) ...[
+                    const SizedBox(height: 12),
+                    _ReimbursableField(
+                      value: _reimbursable,
+                      expectedDate: _expectedReimbursementDate ??
+                          _defaultExpectedReimbursementDate,
+                      owedByController: _owedByController,
+                      onChanged: (v) => setState(() {
+                        _reimbursable = v;
+                        if (v) {
+                          _expectedReimbursementDate ??=
+                              _defaultExpectedReimbursementDate;
+                        }
+                      }),
+                      onPickDate: _pickExpectedReimbursementDate,
+                    ),
                   ],
                   const SizedBox(height: 12),
                   _NoteField(controller: _noteController),
@@ -629,6 +727,150 @@ class _NoCategoriesHint extends StatelessWidget {
             child: Text(
               'No $label categories yet — add some in the Ledger first.',
               style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Reimbursable Field ──────────────────────────────────────────────────────
+
+class _ReimbursableField extends StatelessWidget {
+  final bool value;
+  final DateTime expectedDate;
+  final TextEditingController owedByController;
+  final ValueChanged<bool> onChanged;
+  final VoidCallback onPickDate;
+
+  const _ReimbursableField({
+    required this.value,
+    required this.expectedDate,
+    required this.owedByController,
+    required this.onChanged,
+    required this.onPickDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Reimbursable',
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Counts as cash out, but not against your budget. '
+                      "We'll track it as money you're owed.",
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(value: value, onChanged: onChanged),
+            ],
+          ),
+          if (value) ...[
+            Divider(height: 1, color: cs.outlineVariant),
+            InkWell(
+              onTap: onPickDate,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_outlined,
+                        color: cs.onSurfaceVariant, size: 18),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Expected back by',
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                    ),
+                    const Spacer(),
+                    Text(
+                      DateFormat('MMM d, yyyy').format(expectedDate),
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: TextFormField(
+                controller: owedByController,
+                maxLength: 40,
+                decoration: const InputDecoration(
+                  labelText: 'Who owes you? (optional)',
+                  isDense: true,
+                  counterText: '',
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Paid-For-Someone Hint ───────────────────────────────────────────────────
+
+class _PaidForSomeoneHint extends StatelessWidget {
+  final VoidCallback onUsePreset;
+
+  const _PaidForSomeoneHint({required this.onUsePreset});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Paid on your card for someone and got cash back? Pick your '
+                  "credit card as From and Cash as To — it won't count as "
+                  'spending or income.',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: onUsePreset,
+              child: const Text('Set card → cash'),
             ),
           ),
         ],
