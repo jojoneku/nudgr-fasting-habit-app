@@ -537,6 +537,8 @@ jobs:
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
-        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}' > /tmp/sa-key.json
+          npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --site ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
-          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
