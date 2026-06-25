@@ -827,6 +827,55 @@ void main() {
       expect(synced.amount, 1450);
       expect(synced.name, contains('Team dinner'));
     });
+
+    test('owed total tracks authoritative receivable state, not inflow legs',
+        () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      // A reimbursable expense with a linked, outstanding receivable.
+      final outflow = TransactionRecord(
+        id: 'txn-owed',
+        date: DateTime.now(),
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 800,
+        type: TransactionType.outflow,
+        description: 'Team lunch',
+        month: toMonthKey(DateTime.now()),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-owed',
+        owedBy: 'Acme Corp',
+      );
+      await ledger.addReimbursableExpense(
+        outflow,
+        expectedReimbursementDate: DateTime.now(),
+      );
+
+      // A reimbursable outflow whose receivable was never created (e.g. legacy
+      // data or a since-deleted receivable) must NOT count — no receivable
+      // means there's nothing still owed.
+      await ledger.addTransaction(_txn(
+        id: 'txn-orphan',
+        accountId: 'gcash',
+        amount: 300,
+        type: TransactionType.outflow,
+        month: toMonthKey(DateTime.now()),
+        reimbursable: true,
+        reimbursementReceivableId: 'ghost',
+      ));
+
+      expect(ledger.outstandingOwedTotal, 800);
+
+      // Marking the receivable received clears the owed even though the payback
+      // was recorded outside the ledger (no offsetting inflow leg exists). The
+      // old inflow-leg reconstruction would have kept counting it.
+      await presenter.markReceivableReceived('rcv-owed',
+          receivedAmount: 800, recordInLedger: false);
+
+      expect(ledger.outstandingOwedTotal, 0);
+      expect(ledger.hasOutstandingOwed, isFalse);
+    });
   });
 
   // ─── BudgetPresenter ──────────────────────────────────────────────────────
