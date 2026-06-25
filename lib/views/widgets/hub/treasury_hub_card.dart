@@ -400,9 +400,11 @@ class _ResponseArea extends StatelessWidget {
 
     Widget? body;
     if (hardError != null) {
-      body = _ErrorBody(message: hardError.userMessage, onDismiss: () {
-        ledger.clearChatHardError();
-      });
+      body = _ErrorBody(
+          message: hardError.userMessage,
+          onDismiss: () {
+            ledger.clearChatHardError();
+          });
     } else if (state.phase == ChatPhase.classifying) {
       body = Row(
         children: [
@@ -413,8 +415,8 @@ class _ResponseArea extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text('Thinking…',
-              style: AppTextStyles.bodySmall
-                  .copyWith(color: cs.onSurfaceVariant)),
+              style:
+                  AppTextStyles.bodySmall.copyWith(color: cs.onSurfaceVariant)),
         ],
       );
     } else if (step is StepResolved) {
