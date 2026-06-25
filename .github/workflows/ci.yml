@@ -527,9 +527,6 @@ jobs:
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}
-          projectId: ${{ secrets.FIREBASE_PROJECT_ID }}
-          channelId: live
+        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
+        env:
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
