@@ -527,6 +527,6 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}' > /tmp/sa-key.json
-          npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --site ${{ secrets.FIREBASE_PROJECT_ID }}
+          npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
