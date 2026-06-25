@@ -234,6 +234,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Full history + tags so the changelog can diff against the last release tag.
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Detect app-code changes
         id: changes
@@ -311,6 +314,16 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           sed -i "s/^version: .*/version: ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }}/" pubspec.yaml
+
+      # Build release notes from Conventional Commits since the last release tag,
+      # update CHANGELOG.md, and write RELEASE_NOTES.md (used below for the
+      # GitHub release + manifest).
+      - name: Update changelog & release notes
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          bash scripts/release_changelog.sh \
+            "${{ steps.meta.outputs.new_version }}" \
+            "${{ steps.meta.outputs.released_at }}"
 
       - name: Set up keystore
         if: steps.changes.outputs.changed == 'true'
