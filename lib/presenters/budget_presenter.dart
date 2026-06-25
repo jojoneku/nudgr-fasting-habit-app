@@ -49,6 +49,15 @@ class BudgetPresenter extends ChangeNotifier {
   /// month-crossing and does NOT re-fire every time the app is reopened (the
   /// previous in-memory-only set reset on each cold start → repeated alerts).
   Future<void> _checkBudgetWarnings(NotificationPreferences prefs) async {
+    // Guard against a cold-start race: BudgetPresenter subscribes to the ledger
+    // in its constructor, and on startup every presenter's load() runs
+    // concurrently. The ledger's load() notifies after loading transactions,
+    // which fires _syncFromLedger -> _checkBudgetWarnings. If that happens
+    // before our own load() has restored the persisted warned-keys, the warned
+    // set is still empty and prefs are still defaults, so every over-threshold
+    // budget re-fires its alert on launch (the symptom PR #274 only partly
+    // fixed). Skip until load() has restored state.
+    if (!_warnedKeysLoaded) return;
     if (!prefs.budgetWarningEnabled) return;
     final threshold = prefs.budgetWarningPercent / 100.0;
     var changed = false;
@@ -96,6 +105,10 @@ class BudgetPresenter extends ChangeNotifier {
   /// Tracks which budgets have already triggered a warning this session.
   /// Resets when spending drops below threshold so the warning re-fires next month.
   final Set<String> _warnedBudgets = {};
+
+  /// True once [load] has restored the persisted warned-keys (and cached prefs).
+  /// Until then [_checkBudgetWarnings] must not fire — see the guard there.
+  bool _warnedKeysLoaded = false;
 
   /// Cached notification preferences — loaded in [load()] and used by [_syncFromLedger].
   NotificationPreferences _cachedNotifPrefs =
@@ -428,6 +441,10 @@ class BudgetPresenter extends ChangeNotifier {
     _warnedBudgets
       ..clear()
       ..addAll(await _storage.loadWarnedBudgetKeys());
+    // Mark state restored BEFORE the first check so the guard in
+    // _checkBudgetWarnings lets it run, while any earlier ledger-driven
+    // _syncFromLedger calls (which lost the startup race) were correctly skipped.
+    _warnedKeysLoaded = true;
     notifyListeners();
     await _checkBudgetWarnings(_cachedNotifPrefs);
   }
