@@ -529,6 +529,8 @@ jobs:
         if: steps.changes.outputs.changed == 'true'
         run: |
           printf '%s' "$FIREBASE_SA_JSON" > /tmp/sa-key.json
+          echo "SA email: $(python3 -c "import json,sys; d=json.load(open('/tmp/sa-key.json')); print(d.get('client_email','MISSING'))")"
+          echo "Key type: $(python3 -c "import json,sys; d=json.load(open('/tmp/sa-key.json')); print(d.get('type','MISSING'))")"
           npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
