@@ -539,14 +539,15 @@ jobs:
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - uses: google-github-actions/auth@v2
+        id: auth
         if: steps.changes.outputs.changed == 'true'
         with:
-          # Workload Identity Federation — no SA key needed; GitHub OIDC token
-          # is exchanged via sts.googleapis.com (avoids the broken oauth2/v4/token
-          # endpoint that fails on GH Actions runners with service account keys).
           workload_identity_provider: ${{ secrets.FIREBASE_WIF_PROVIDER }}
           service_account: ${{ secrets.FIREBASE_WIF_SA }}
+          token_format: 'access_token'
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
+        env:
+          GOOGLE_OAUTH_ACCESS_TOKEN: ${{ steps.auth.outputs.access_token }}
         run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
