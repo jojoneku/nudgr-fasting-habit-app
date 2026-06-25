@@ -478,6 +478,9 @@ jobs:
     # No analyze_format/test needs — those are skipped on push to main (already
     # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write   # required for Workload Identity Federation OIDC
     steps:
       - uses: actions/checkout@v4
 
@@ -528,7 +531,11 @@ jobs:
       - uses: google-github-actions/auth@v2
         if: steps.changes.outputs.changed == 'true'
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}
+          # Workload Identity Federation — no SA key needed; GitHub OIDC token
+          # is exchanged via sts.googleapis.com (avoids the broken oauth2/v4/token
+          # endpoint that fails on GH Actions runners with service account keys).
+          workload_identity_provider: ${{ secrets.FIREBASE_WIF_PROVIDER }}
+          service_account: ${{ secrets.FIREBASE_WIF_SA }}
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
