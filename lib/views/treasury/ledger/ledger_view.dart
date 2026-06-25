@@ -112,13 +112,6 @@ class _LedgerViewState extends State<LedgerView> {
                     date: presenter.selectedDate!,
                     onClear: () => presenter.setSelectedDate(null),
                   ),
-                if (presenter.hasOutstandingOwed || presenter.owedOnly)
-                  _OwedFilterChip(
-                    total: presenter.outstandingOwedTotal,
-                    active: presenter.owedOnly,
-                    onToggle: () =>
-                        presenter.setOwedFilter(!presenter.owedOnly),
-                  ),
                 _SummaryCard(presenter: presenter),
                 _AccountFilterRow(presenter: presenter),
                 Expanded(
@@ -494,6 +487,14 @@ class _AccountFilterRow extends StatelessWidget {
               selected: false,
               onTap: () => _openCategoryFilter(context),
             ),
+          // The owed filter now lives inside the category picker; when it's
+          // active we still surface a clearable chip here so the engaged filter
+          // stays visible — mirroring the active-category chip above.
+          if (presenter.owedOnly)
+            _OwedActiveChip(
+              total: presenter.outstandingOwedTotal,
+              onClear: () => presenter.setOwedFilter(false),
+            ),
           _FilterDivider(),
           _AccountPill(
             label: 'All',
@@ -635,11 +636,28 @@ class _CategoryFilterSheet extends StatelessWidget {
       Navigator.of(context).pop();
     }
 
+    void toggleOwed() {
+      HapticFeedback.selectionClick();
+      presenter.setOwedFilter(!presenter.owedOnly);
+      Navigator.of(context).pop();
+    }
+
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Money-owed filter — shown whenever there's an outstanding
+          // reimbursable (or the filter is already on). Independent of the
+          // category selection below.
+          if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
+            _OwedFilterTile(
+              total: presenter.outstandingOwedTotal,
+              active: presenter.owedOnly,
+              onTap: toggleOwed,
+            ),
+            const Divider(height: 8),
+          ],
           _CategoryFilterTile(
             label: 'All categories',
             selected: presenter.selectedCategoryId == null,
@@ -1030,59 +1048,110 @@ class _DateFilterChip extends StatelessWidget {
 
 /// Tappable chip surfacing money you're still owed this month (reimbursable
 /// expenses not yet paid back). Tapping toggles a filter to just those rows.
-class _OwedFilterChip extends StatelessWidget {
+/// Owed-filter row inside the category picker. Toggles [LedgerPresenter.owedOnly]
+/// and reads as a sibling option to the category list. Styled like
+/// [_CategoryFilterTile] but tinted tertiary to match the "money owed" accent.
+class _OwedFilterTile extends StatelessWidget {
   final double total;
   final bool active;
-  final VoidCallback onToggle;
+  final VoidCallback onTap;
 
-  const _OwedFilterChip({
+  const _OwedFilterTile({
     required this.total,
     required this.active,
-    required this.onToggle,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = active ? cs.onTertiaryContainer : cs.tertiary;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onToggle,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-              decoration: BoxDecoration(
-                color: active
-                    ? cs.tertiaryContainer
-                    : cs.tertiary.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.tertiary.withValues(alpha: 0.4)),
+    final fg = active ? cs.tertiary : cs.onSurface;
+    return Semantics(
+      selected: active,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            children: [
+              Icon(
+                Icons.account_balance_wallet_outlined,
+                size: 16,
+                color: active ? cs.tertiary : cs.onSurfaceVariant,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.account_balance_wallet_outlined,
-                      size: 12, color: fg),
-                  const SizedBox(width: 6),
-                  Text(
-                    'Owed to you: ${formatPeso(total)}',
-                    style: TextStyle(
-                      color: fg,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Owed to you: ${formatPeso(total)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                    color: fg,
                   ),
-                  if (active) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.close_rounded, size: 14, color: fg),
-                  ],
-                ],
+                ),
               ),
+              if (active)
+                Icon(Icons.check_rounded, size: 18, color: cs.tertiary),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact active-state chip for the filter row, shown only while the owed
+/// filter is on. Tapping anywhere clears it. Mirrors [_CategoryActiveChip].
+class _OwedActiveChip extends StatelessWidget {
+  final double total;
+  final VoidCallback onClear;
+
+  const _OwedActiveChip({required this.total, required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Semantics(
+        label: 'Clear owed filter',
+        button: true,
+        child: GestureDetector(
+          onTap: () {
+            HapticFeedback.selectionClick();
+            onClear();
+          },
+          child: Container(
+            padding: const EdgeInsets.only(left: 12, right: 8),
+            decoration: BoxDecoration(
+              color: cs.tertiaryContainer,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cs.tertiary.withValues(alpha: 0.4)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.account_balance_wallet_outlined,
+                    size: 12, color: cs.onTertiaryContainer),
+                const SizedBox(width: 6),
+                Text(
+                  'Owed: ${formatPeso(total)}',
+                  style: TextStyle(
+                    color: cs.onTertiaryContainer,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Icon(Icons.close_rounded,
+                    size: 14, color: cs.onTertiaryContainer),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

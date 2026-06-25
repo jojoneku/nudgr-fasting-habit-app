@@ -440,6 +440,7 @@ class _HubScreenState extends State<HubScreen>
       HubCardType.treasury => widget.treasuryPresenter != null
           ? TreasuryHubCard(
               treasury: widget.treasuryPresenter!,
+              ledger: widget.ledgerPresenter,
               onNavigate: () => _pushTreasuryScreen(context),
             )
           : const SizedBox.shrink(),
