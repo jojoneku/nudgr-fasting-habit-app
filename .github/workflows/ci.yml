@@ -235,7 +235,22 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Detect app-code changes
+        id: changes
+        run: |
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            if git diff --name-only HEAD~1 HEAD | grep -qvE '^\.github/'; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+              echo "Only CI/config files changed — skipping release build."
+            fi
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/setup-java@v4
+        if: steps.changes.outputs.changed == 'true'
         with:
           distribution: temurin
           java-version: '17'
@@ -244,20 +259,24 @@ jobs:
           cache: gradle
 
       - uses: subosito/flutter-action@v2
+        if: steps.changes.outputs.changed == 'true'
         with:
           channel: stable
           cache: true
 
       - name: Create .env file
+        if: steps.changes.outputs.changed == 'true'
         run: |
           echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
           echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
           echo "GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
 
       - name: Install dependencies
+        if: steps.changes.outputs.changed == 'true'
         run: flutter pub get
 
       - name: Compute release metadata
+        if: steps.changes.outputs.changed == 'true'
         id: meta
         run: |
           CURRENT=$(grep '^version:' pubspec.yaml | sed 's/version: //' | cut -d'+' -f1)
@@ -289,10 +308,12 @@ jobs:
             "$(git log -1 --pretty=%B | head -c 300)" >> $GITHUB_OUTPUT
 
       - name: Bump pubspec version
+        if: steps.changes.outputs.changed == 'true'
         run: |
           sed -i "s/^version: .*/version: ${{ steps.meta.outputs.new_version }}+${{ steps.meta.outputs.build_number }}/" pubspec.yaml
 
       - name: Set up keystore
+        if: steps.changes.outputs.changed == 'true'
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 --decode > android/app/nudgr-release.jks
           cat > android/key.properties <<EOF
@@ -303,6 +324,7 @@ jobs:
           EOF
 
       - name: Build APK
+        if: steps.changes.outputs.changed == 'true'
         run: |
           flutter build apk --release \
             --build-number=${{ steps.meta.outputs.build_number }} \
@@ -312,6 +334,7 @@ jobs:
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - name: Generate manifest.json
+        if: steps.changes.outputs.changed == 'true'
         run: |
           python3 -c "
           import json, sys
@@ -331,6 +354,7 @@ jobs:
           cat manifest.json
 
       - name: Create GitHub Release
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -347,6 +371,7 @@ jobs:
             manifest.json
 
       - name: Commit version bump
+        if: steps.changes.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -363,6 +388,7 @@ jobs:
           git push -u origin release-version-bump-${{ steps.meta.outputs.new_version }}
 
       - name: Open PR for version bump
+        if: steps.changes.outputs.changed == 'true'
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
@@ -551,4 +577,4 @@ jobs:
 
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
-        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --debug 2>&1 | tail -80
