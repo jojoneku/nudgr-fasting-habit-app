@@ -528,7 +528,8 @@ jobs:
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}' > /tmp/sa-key.json
+          printf '%s' "$FIREBASE_SA_JSON" > /tmp/sa-key.json
           npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
         env:
           GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}
