@@ -525,13 +525,11 @@ jobs:
           flutter build web --release -t lib/main_web.dart \
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
+      - uses: google-github-actions/auth@v2
+        if: steps.changes.outputs.changed == 'true'
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}
+
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
-        run: |
-          printf '%s' "$FIREBASE_SA_JSON" > /tmp/sa-key.json
-          echo "SA email: $(python3 -c "import json,sys; d=json.load(open('/tmp/sa-key.json')); print(d.get('client_email','MISSING'))")"
-          echo "Key type: $(python3 -c "import json,sys; d=json.load(open('/tmp/sa-key.json')); print(d.get('type','MISSING'))")"
-          npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }}
-        env:
-          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa-key.json
-          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_NUDGR_APP }}
+        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --debug 2>&1 | tail -30
