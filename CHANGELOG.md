@@ -13,6 +13,17 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-06-25
+
+### Added
+- auto-generate CHANGELOG + release notes from Conventional Commits
+- resolve on-device steps SPN via canonical platform API
+
+### Fixed
+- resolve device timezone via TimezoneInfo.identifier
+- narrow on-device step SPN match to documented phone prefix
+- merge on-device step labels so Health Connect relabels don't drop data
+
 ## [1.1.2] - 2026-06-25
 
 ### Added
@@ -49,7 +60,8 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.3...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
+[1.1.3]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.3
