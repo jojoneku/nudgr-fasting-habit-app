@@ -202,9 +202,11 @@ PreparseResult? _tryPaidForSomeone(
     return null;
   }
   if (!RegExp(r'\bfor\b').hasMatch(normalized)) return null;
-  final paybackRe = RegExp(
-      r'paid me back|paid back|pay me back|paid me|gave me cash|cash back|'
-      r'refunded|reimbursed');
+  // PAST/completed payback only — the cash has already come back, so it's a
+  // wash transfer. Future phrasings ("will pay me back", "reimbursable") fall
+  // through to the reimbursable-expense suggestion in _tryAmount instead.
+  final paybackRe =
+      RegExp(r'paid me back|paid back|paid me|gave me cash|cash back|refunded');
   if (!paybackRe.hasMatch(normalized)) return null;
 
   // Exactly one amount, else let the AI handle it.
@@ -441,15 +443,34 @@ PreparseResult _tryAmount({
     }
   }
 
+  // Suggest the reimbursable toggle when the text signals a spent-now,
+  // owed-back expense. Only for expenses (never income).
+  final reimbursable = _detectReimbursable(normalized) &&
+      (inferredType == null || inferredType == TransactionType.outflow);
+
   return PreparseResult(
     rawInput: raw,
     amount: amount,
     type: inferredType,
     accountId: accountId,
     categoryId: categoryId,
+    reimbursable: reimbursable,
     unresolvedTokens: unresolved,
     ambiguousAccountTokens: ambiguous,
   );
+}
+
+/// Detects a reimbursable-expense intent: money spent now that you expect back
+/// later (future payback, owed-by, or work/business-expense phrasing). The
+/// past-tense "paid me back"/"refunded" cases are handled as transfers upstream.
+bool _detectReimbursable(String normalized) {
+  return RegExp(
+    r'reimburs' // reimburse / reimbursable / reimbursement / reimbursed
+    r'|will pay me back|gonna pay me back|pay me back'
+    r'|owes? me|owe me back|to be paid back'
+    r'|claim it back|get it back|expense it'
+    r'|work expense|business expense',
+  ).hasMatch(normalized);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -539,6 +560,7 @@ extension on PreparseResult {
         accountId: accountId,
         transferToAccountId: transferToAccountId,
         categoryId: categoryId,
+        reimbursable: reimbursable,
         unresolvedTokens: unresolvedTokens,
         ambiguousAccountTokens: ambiguousAccountTokens,
         hardError: hardError,

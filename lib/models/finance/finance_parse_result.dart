@@ -9,6 +9,11 @@ class PreparseResult {
   final String? accountId;
   final String? transferToAccountId;
   final String? categoryId;
+
+  /// The preprocessor suspects this expense is reimbursable (spent now, owed
+  /// back). A non-binding suggestion — the form pre-checks the toggle so the
+  /// user confirms. Orthogonal to [isFullyResolved].
+  final bool reimbursable;
   final List<String> unresolvedTokens;
   final List<String> ambiguousAccountTokens;
   final FinanceParseError? hardError;
@@ -20,6 +25,7 @@ class PreparseResult {
     this.accountId,
     this.transferToAccountId,
     this.categoryId,
+    this.reimbursable = false,
     this.unresolvedTokens = const [],
     this.ambiguousAccountTokens = const [],
     this.hardError,
@@ -44,6 +50,7 @@ class PreparseResult {
         accountId: accountId,
         transferToAccountId: transferToAccountId,
         categoryId: categoryId,
+        reimbursable: reimbursable,
         description: rawInput,
       );
 }
@@ -58,6 +65,10 @@ class ParsedTransaction {
   final String? categoryId;
   final String description;
 
+  /// Suggested reimbursable expense (spent now, owed back). Carried into the
+  /// commit/form so the reimbursable toggle starts on.
+  final bool reimbursable;
+
   /// True when [description] is already a clean, human-meaningful label (the AI
   /// classifier wrote it) rather than raw chat input. When false the commit
   /// path strips extraction tokens (amount/account/etc.) out of it first.
@@ -69,6 +80,7 @@ class ParsedTransaction {
     this.accountId,
     this.transferToAccountId,
     this.categoryId,
+    this.reimbursable = false,
     this.description = '',
     this.descriptionIsClean = false,
   });
@@ -88,6 +100,7 @@ class ParsedTransaction {
     String? accountId,
     String? transferToAccountId,
     String? categoryId,
+    bool? reimbursable,
     String? description,
     bool? descriptionIsClean,
   }) =>
@@ -97,17 +110,21 @@ class ParsedTransaction {
         accountId: accountId ?? this.accountId,
         transferToAccountId: transferToAccountId ?? this.transferToAccountId,
         categoryId: categoryId ?? this.categoryId,
+        reimbursable: reimbursable ?? this.reimbursable,
         description: description ?? this.description,
         descriptionIsClean: descriptionIsClean ?? this.descriptionIsClean,
       );
 
-  /// Merge non-null fields from [other] onto this draft.
+  /// Merge non-null fields from [other] onto this draft. [reimbursable] is
+  /// sticky — once suggested it stays on (a later turn never silently clears
+  /// it), so we only forward a `true`.
   ParsedTransaction mergeWith(ParsedTransaction other) => copyWith(
         amount: other.amount,
         type: other.type,
         accountId: other.accountId,
         transferToAccountId: other.transferToAccountId,
         categoryId: other.categoryId,
+        reimbursable: other.reimbursable ? true : null,
         description: other.description.isEmpty ? null : other.description,
         descriptionIsClean:
             other.description.isEmpty ? null : other.descriptionIsClean,

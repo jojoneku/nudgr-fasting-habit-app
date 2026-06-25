@@ -202,6 +202,36 @@ void main() {
     });
   });
 
+  group('reimbursable suggestion', () {
+    test('"work expense" flags the expense as reimbursable', () {
+      final r = run('1200 hotel bpi work expense');
+      expect(r.reimbursable, isTrue);
+    });
+
+    test('"reimbursable" keyword on a fully-resolved expense', () {
+      final r = run('500 food gcash reimbursable');
+      expect(r.reimbursable, isTrue);
+      expect(r.type, TransactionType.outflow);
+      expect(r.isFullyResolved, isTrue); // commits straight as reimbursable
+    });
+
+    test('future "she\'ll pay me back" → reimbursable, not a transfer', () {
+      final r = run("200 food gcash she'll pay me back");
+      expect(r.reimbursable, isTrue);
+      expect(r.type, isNot(TransactionType.transfer));
+    });
+
+    test('no signal → not reimbursable', () {
+      expect(run('500 food gcash').reimbursable, isFalse);
+    });
+
+    test('income is never flagged reimbursable', () {
+      // Explicit + sign makes it income; the suggestion must not apply.
+      final r = run('+5000 salary bpi reimbursable');
+      expect(r.reimbursable, isFalse);
+    });
+  });
+
   group('account fuzzy + prefix matching', () {
     test('prefix match resolves "gca" → GCash (single hit)', () {
       final r = run('-500 food gca');
