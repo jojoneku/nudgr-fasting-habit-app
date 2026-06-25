@@ -153,25 +153,21 @@ class NotificationService {
 
     try {
       tz.initializeTimeZones();
-      final timeZoneName = await FlutterTimezone.getLocalTimezone();
-      debugPrint('NotificationService: Device timezone: $timeZoneName');
+      // flutter_timezone 5.x returns a TimezoneInfo object whose IANA name is in
+      // `.identifier` (e.g. "Asia/Manila"). Read it directly — do NOT parse
+      // `.toString()`, whose format is not the IANA name and made
+      // tz.getLocation() throw, silently falling back to UTC. With tz.local set
+      // to UTC, a quest at 08:30 was scheduled as 08:30 UTC, which fires at
+      // 16:30 in UTC+8 zones — the "wrong time" notification bug.
+      final timezoneInfo = await FlutterTimezone.getLocalTimezone();
+      final String tzName = timezoneInfo.identifier;
+      debugPrint('NotificationService: Device timezone: $tzName');
       try {
-        // FlutterTimezone returns the IANA timezone name directly (e.g., "Asia/Manila")
-        // Extract just the timezone identifier if it's wrapped in additional info
-        String tzName = timeZoneName.toString();
-        // Handle case where FlutterTimezone returns a complex object string
-        if (tzName.contains('(') && tzName.contains(',')) {
-          // Extract "Asia/Manila" from "TimezoneInfo(Asia/Manila, ...)"
-          final match = RegExp(r'TimezoneInfo\(([^,]+)').firstMatch(tzName);
-          if (match != null) {
-            tzName = match.group(1)!.trim();
-          }
-        }
-        debugPrint('NotificationService: Using timezone: $tzName');
         tz.setLocalLocation(tz.getLocation(tzName));
+        debugPrint('NotificationService: Using timezone: $tzName');
       } catch (e) {
         debugPrint(
-            'NotificationService: Error setting location $timeZoneName: $e. Fallback to UTC.');
+            'NotificationService: Error setting location $tzName: $e. Fallback to UTC.');
         try {
           tz.setLocalLocation(tz.getLocation('UTC'));
         } catch (e2) {
