@@ -234,16 +234,23 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
     await _healthService.openHealthConnectSettings();
   }
 
-  /// Called when the app resumes from background (e.g. returning from Health Connect settings).
+  /// Called when the app resumes from background (e.g. returning from Health
+  /// Connect settings, or simply reopening the app). Strava and other apps push
+  /// new steps/distance into Health Connect while we're backgrounded, so today's
+  /// cached log goes stale. Re-sync today's data on every resume when permission
+  /// is granted — not only on the not-granted → granted transition, which left
+  /// the card showing stale (or zero) data after a normal reopen.
   Future<void> recheckPermissions() async {
     if (!_isHealthConnectAvailable) return;
     final had = _hasHealthPermission;
     _hasHealthPermission = await _healthService.hasPermissions();
     _healthPermissionDenied = false;
     safeNotify();
-    if (_hasHealthPermission && !had) {
+    if (_hasHealthPermission) {
       await syncFromHealthConnect();
-      await backfillHistory();
+      // History backfill is heavier and skips today, so only run it on the
+      // first grant; a plain resume just needs today refreshed.
+      if (!had) await backfillHistory();
     }
   }
 
