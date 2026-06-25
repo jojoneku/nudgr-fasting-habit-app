@@ -190,8 +190,7 @@ void main() {
       when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
       when(mockHealth.readTodayTotalCalories()).thenAnswer((_) async => null);
       when(mockHealth.readTodayDistance()).thenAnswer((_) async => 1500.0);
-      when(mockHealth.readTodayWorkoutDistance())
-          .thenAnswer((_) async => null);
+      when(mockHealth.readTodayWorkoutDistance()).thenAnswer((_) async => null);
       when(mockStorage.loadActivityLogKeys()).thenAnswer((_) async => {});
       when(mockHealth.readRangeDataByDay(any, any)).thenAnswer((_) async => {});
 
