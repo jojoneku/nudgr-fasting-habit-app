@@ -388,28 +388,47 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
             t.receivableId!,
       };
 
-  /// A reimbursable outflow still awaiting payback (no settling inflow yet).
+  /// Authoritative set of reimbursement-receivable ids that are still
+  /// outstanding (the linked receivable exists and hasn't been received).
+  /// Pushed by [BillsReceivablesPresenter] via [setOutstandingReimbursementIds]
+  /// whenever receivable state changes. Null until first pushed — in that state
+  /// (no bills presenter, e.g. tests or a standalone ledger) the ledger falls
+  /// back to inferring settlement from payback inflow legs.
+  Set<String>? _outstandingReimbursementIds;
+
+  /// Wired by [BillsReceivablesPresenter] so "owed to you" reflects the real
+  /// receivable state (received, partially paid back, deleted, or never
+  /// created) instead of guessing from transaction inflow legs.
+  void setOutstandingReimbursementIds(Set<String> ids) {
+    _outstandingReimbursementIds = ids;
+    safeNotify();
+  }
+
+  /// A reimbursable outflow still awaiting payback.
+  ///
+  /// When the authoritative receivable set is available, an expense counts as
+  /// owed only while a linked, unreceived receivable exists for it — so an
+  /// expense with no receivable (never created, or since deleted) reads as
+  /// already settled, and one whose receivable was marked received drops off
+  /// even if the payback was recorded outside the ledger. Without that set
+  /// (no bills presenter) it falls back to inferring settlement from the
+  /// presence of a payback inflow leg.
   bool isOutstandingReimbursable(TransactionRecord t) {
     if (!t.reimbursable || t.type != TransactionType.outflow) return false;
     if (t.transferGroupId != null) return false;
     final receivableId = t.reimbursementReceivableId;
+    final outstanding = _outstandingReimbursementIds;
+    if (outstanding != null) {
+      return receivableId != null && outstanding.contains(receivableId);
+    }
     return receivableId == null ||
         !_settledReimbursementIds.contains(receivableId);
   }
 
   /// Total still owed to you this month across outstanding reimbursables.
-  double get outstandingOwedTotal {
-    final settled = _settledReimbursementIds;
-    return _allTransactions
-        .where((t) =>
-            t.month == _selectedMonth &&
-            t.reimbursable &&
-            t.type == TransactionType.outflow &&
-            t.transferGroupId == null &&
-            !(t.reimbursementReceivableId != null &&
-                settled.contains(t.reimbursementReceivableId)))
-        .fold(0.0, (sum, t) => sum + t.amount);
-  }
+  double get outstandingOwedTotal => _allTransactions
+      .where((t) => t.month == _selectedMonth && isOutstandingReimbursable(t))
+      .fold(0.0, (sum, t) => sum + t.amount);
 
   bool get hasOutstandingOwed => outstandingOwedTotal > 0;
 

@@ -53,10 +53,24 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// state after this presenter mutates storage. Ledger sync handles the
   /// transaction/account fan-out automatically via the listener chain.
   Future<void> _notifyDependents() async {
+    _syncReimbursementsToLedger();
     await Future.wait([
       if (_dashboard != null) _dashboard.load(),
       if (_budget != null) _budget.load(),
     ]);
+  }
+
+  /// Pushes the set of still-outstanding reimbursement receivables to the
+  /// ledger so its "owed to you" total is sourced from authoritative receivable
+  /// state (existence + received flag) rather than guessed from inflow legs.
+  /// A reimbursement receivable drops out of the set the moment it's received,
+  /// so paybacks recorded with or without a ledger entry both clear the owed.
+  void _syncReimbursementsToLedger() {
+    _ledger.setOutstandingReimbursementIds({
+      for (final r in _allReceivables)
+        if (r.receivableType == ReceivableType.reimbursement && !r.isReceived)
+          r.id,
+    });
   }
 
   String _selectedMonth = toMonthKey(DateTime.now());
@@ -174,6 +188,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // and (re)schedule per-account due-date reminders.
     await _autoGenerateCreditStatements(_selectedMonth);
     await _syncCreditDueReminders(prefs.billsReminderEnabled);
+
+    // Make the ledger's "owed to you" total authoritative from the moment
+    // receivables are loaded, not just after the next mutation.
+    _syncReimbursementsToLedger();
 
     safeNotify();
   }
