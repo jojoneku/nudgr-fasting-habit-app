@@ -87,10 +87,12 @@ void main() {
         month: '2026-04',
         reimbursable: true,
         reimbursementReceivableId: 'r9',
+        owedBy: 'Acme Corp',
       );
       final txn2 = TransactionRecord.fromJson(txn.toJson());
       expect(txn2.reimbursable, isTrue);
       expect(txn2.reimbursementReceivableId, 'r9');
+      expect(txn2.owedBy, 'Acme Corp');
     });
 
     test('legacy JSON (no reimbursable keys) loads with safe defaults', () {
@@ -109,6 +111,7 @@ void main() {
       final txn = TransactionRecord.fromJson(json);
       expect(txn.reimbursable, isFalse);
       expect(txn.reimbursementReceivableId, isNull);
+      expect(txn.owedBy, isNull);
     });
   });
 

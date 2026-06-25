@@ -112,6 +112,13 @@ class _LedgerViewState extends State<LedgerView> {
                     date: presenter.selectedDate!,
                     onClear: () => presenter.setSelectedDate(null),
                   ),
+                if (presenter.hasOutstandingOwed || presenter.owedOnly)
+                  _OwedFilterChip(
+                    total: presenter.outstandingOwedTotal,
+                    active: presenter.owedOnly,
+                    onToggle: () =>
+                        presenter.setOwedFilter(!presenter.owedOnly),
+                  ),
                 _SummaryCard(presenter: presenter),
                 _AccountFilterRow(presenter: presenter),
                 Expanded(
@@ -1011,6 +1018,68 @@ class _DateFilterChip extends StatelessWidget {
                   child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Owed Filter Chip ───────────────────────────────────────────────────────
+
+/// Tappable chip surfacing money you're still owed this month (reimbursable
+/// expenses not yet paid back). Tapping toggles a filter to just those rows.
+class _OwedFilterChip extends StatelessWidget {
+  final double total;
+  final bool active;
+  final VoidCallback onToggle;
+
+  const _OwedFilterChip({
+    required this.total,
+    required this.active,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fg = active ? cs.onTertiaryContainer : cs.tertiary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: onToggle,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: active
+                    ? cs.tertiaryContainer
+                    : cs.tertiary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cs.tertiary.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.account_balance_wallet_outlined,
+                      size: 12, color: fg),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Owed to you: ${formatPeso(total)}',
+                    style: TextStyle(
+                      color: fg,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (active) ...[
+                    const SizedBox(width: 6),
+                    Icon(Icons.close_rounded, size: 14, color: fg),
+                  ],
+                ],
+              ),
             ),
           ),
         ],

@@ -41,6 +41,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _noteController = TextEditingController();
+  final _owedByController = TextEditingController();
 
   TransactionType _type = TransactionType.outflow;
   String? _selectedAccountId;
@@ -95,6 +96,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _selectedAccountId = existing.accountId;
         _transferToAccountId = existing.transferToAccountId;
         _reimbursable = existing.reimbursable;
+        _owedByController.text = existing.owedBy ?? '';
       }
     } else {
       if (widget.initialDate != null) _date = widget.initialDate!;
@@ -110,6 +112,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _selectedAccountId = prefill.accountId;
         _transferToAccountId = prefill.transferToAccountId;
         _selectedCategoryId = prefill.categoryId;
+        if (prefill.reimbursable) {
+          _reimbursable = true;
+          _expectedReimbursementDate = _defaultExpectedReimbursementDate;
+        }
       }
     }
   }
@@ -132,6 +138,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     _amountController.dispose();
     _descriptionController.dispose();
     _noteController.dispose();
+    _owedByController.dispose();
     super.dispose();
   }
 
@@ -187,6 +194,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         final receivableId = isReimbursable
             ? (existing?.reimbursementReceivableId ?? _generateId())
             : null;
+        final owedBy = _owedByController.text.trim();
         final txn = TransactionRecord(
           id: id,
           date: _date,
@@ -199,6 +207,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           month: month,
           reimbursable: isReimbursable,
           reimbursementReceivableId: receivableId,
+          owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
         );
         final expectedDate =
             _expectedReimbursementDate ?? _defaultExpectedReimbursementDate;
@@ -218,10 +227,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           } else {
             await widget.presenter.updateTransaction(txn);
           }
-          // Newly reimbursable (no receivable before) → spawn one.
+          // Newly reimbursable → spawn; still reimbursable on an existing
+          // receivable → re-sync its amount/name/owedBy so it never drifts.
           if (isReimbursable && oldReceivableId == null) {
             await widget.presenter
                 .spawnReimbursementReceivable(txn, expectedDate);
+          } else if (isReimbursable) {
+            await widget.presenter.syncReimbursementReceivable(txn);
           }
         } else if (isReimbursable) {
           await widget.presenter.addReimbursableExpense(
@@ -362,6 +374,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       value: _reimbursable,
                       expectedDate: _expectedReimbursementDate ??
                           _defaultExpectedReimbursementDate,
+                      owedByController: _owedByController,
                       onChanged: (v) => setState(() {
                         _reimbursable = v;
                         if (v) {
@@ -727,12 +740,14 @@ class _NoCategoriesHint extends StatelessWidget {
 class _ReimbursableField extends StatelessWidget {
   final bool value;
   final DateTime expectedDate;
+  final TextEditingController owedByController;
   final ValueChanged<bool> onChanged;
   final VoidCallback onPickDate;
 
   const _ReimbursableField({
     required this.value,
     required this.expectedDate,
+    required this.owedByController,
     required this.onChanged,
     required this.onPickDate,
   });
@@ -798,6 +813,18 @@ class _ReimbursableField extends StatelessWidget {
                       ),
                     ),
                   ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: TextFormField(
+                controller: owedByController,
+                maxLength: 40,
+                decoration: const InputDecoration(
+                  labelText: 'Who owes you? (optional)',
+                  isDense: true,
+                  counterText: '',
                 ),
               ),
             ),

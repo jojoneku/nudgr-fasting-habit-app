@@ -48,6 +48,8 @@ TransactionRecord _txn({
   String? transferToAccountId,
   String categoryId = '',
   bool reimbursable = false,
+  String? reimbursementReceivableId,
+  String? receivableId,
 }) =>
     TransactionRecord(
       id: id,
@@ -61,6 +63,8 @@ TransactionRecord _txn({
       transferGroupId: transferGroupId,
       transferToAccountId: transferToAccountId,
       reimbursable: reimbursable,
+      reimbursementReceivableId: reimbursementReceivableId,
+      receivableId: receivableId,
     );
 
 Bill _bill({
@@ -283,6 +287,53 @@ void main() {
           type: TransactionType.outflow));
       final gcash = presenter.accounts.firstWhere((a) => a.id == 'gcash');
       expect(gcash.balance, 700);
+    });
+
+    test('owed filter surfaces only outstanding reimbursables', () async {
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            _txn(
+                id: 'owed',
+                accountId: 'gcash',
+                amount: 800,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                reimbursable: true,
+                reimbursementReceivableId: 'r1'),
+            _txn(
+                id: 'settled',
+                accountId: 'gcash',
+                amount: 500,
+                type: TransactionType.outflow,
+                month: '2026-03',
+                reimbursable: true,
+                reimbursementReceivableId: 'r2'),
+            _txn(
+                id: 'payback',
+                accountId: 'gcash',
+                amount: 500,
+                type: TransactionType.inflow,
+                month: '2026-03',
+                receivableId: 'r2'),
+            _txn(
+                id: 'normal',
+                accountId: 'gcash',
+                amount: 300,
+                type: TransactionType.outflow,
+                month: '2026-03'),
+          ]);
+      await _waitForLoad(presenter);
+      presenter.setMonth('2026-03');
+
+      // The settled reimbursable (its payback inflow exists) is excluded.
+      expect(presenter.outstandingOwedTotal, 800);
+      expect(presenter.hasOutstandingOwed, isTrue);
+
+      presenter.setOwedFilter(true);
+      final shown = presenter.groupedTransactions.values
+          .expand((list) => list)
+          .map((t) => t.id)
+          .toList();
+      expect(shown, ['owed']);
     });
 
     test('deleteTransaction reverses balance delta', () async {
@@ -713,9 +764,11 @@ void main() {
         month: toMonthKey(DateTime.now()),
         reimbursable: true,
         reimbursementReceivableId: 'rcv-reimb',
+        owedBy: 'Acme Corp',
       );
 
-      // Spawn: the reimbursable outflow creates a linked receivable.
+      // Spawn: the reimbursable outflow creates a linked receivable whose name
+      // surfaces who owes you.
       await ledger.addReimbursableExpense(
         outflow,
         expectedReimbursementDate: expected,
@@ -725,6 +778,7 @@ void main() {
       expect(spawned.receivableType, ReceivableType.reimbursement);
       expect(spawned.reimbursementForTxnId, 'txn-reimb');
       expect(spawned.amount, 1200);
+      expect(spawned.name, contains('Acme Corp'));
 
       // Settle: marking it received writes the offsetting inflow.
       await presenter.markReceivableReceived('rcv-reimb',
@@ -737,6 +791,41 @@ void main() {
       // Cleanup: deleting the outflow tidies up its linked receivable.
       await ledger.deleteTransaction('txn-reimb');
       expect(presenter.receivables.any((r) => r.id == 'rcv-reimb'), isFalse);
+    });
+
+    test('editing a reimbursable expense re-syncs its receivable amount',
+        () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      final outflow = TransactionRecord(
+        id: 'txn-edit',
+        date: DateTime.now(),
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 1000,
+        type: TransactionType.outflow,
+        description: 'Team lunch',
+        month: toMonthKey(DateTime.now()),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-edit',
+      );
+      await ledger.addReimbursableExpense(
+        outflow,
+        expectedReimbursementDate: DateTime.now(),
+      );
+      expect(presenter.receivables.firstWhere((r) => r.id == 'rcv-edit').amount,
+          1000);
+
+      // Edit the expense (new amount + name) and re-sync the receivable.
+      final edited = outflow.copyWith(amount: 1450, description: 'Team dinner');
+      await ledger.updateTransaction(edited);
+      await ledger.syncReimbursementReceivable(edited);
+
+      final synced =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-edit');
+      expect(synced.amount, 1450);
+      expect(synced.name, contains('Team dinner'));
     });
   });
 
