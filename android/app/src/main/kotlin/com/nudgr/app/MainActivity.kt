@@ -1,6 +1,7 @@
 package com.nudgr.app
 
 import android.content.Intent
+import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -35,6 +36,39 @@ class MainActivity : FlutterFragmentActivity() {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channel)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
+                    "getOnDeviceStepsSpn" -> {
+                        // Canonical resolution of the device's on-device steps
+                        // Synthetic Package Name via HealthConnectManager
+                        // .getCurrentDeviceDataSource() (Android 14, SDK
+                        // extension 20+). Reflection avoids a compileSdk
+                        // dependency on the extension symbols; any failure
+                        // returns null so Dart falls back to the SPN prefix.
+                        try {
+                            if (Build.VERSION.SDK_INT < 34) {
+                                result.success(null)
+                            } else {
+                                val mgrClass = Class.forName(
+                                    "android.health.connect.HealthConnectManager")
+                                val mgr = getSystemService(mgrClass)
+                                if (mgr == null) {
+                                    result.success(null)
+                                } else {
+                                    val dataSource = mgrClass
+                                        .getMethod("getCurrentDeviceDataSource")
+                                        .invoke(mgr)
+                                    val origin = dataSource?.javaClass
+                                        ?.getMethod("getDeviceDataOrigin")
+                                        ?.invoke(dataSource)
+                                    val pkg = origin?.javaClass
+                                        ?.getMethod("getPackageName")
+                                        ?.invoke(origin) as? String
+                                    result.success(pkg)
+                                }
+                            }
+                        } catch (e: Throwable) {
+                            result.success(null)
+                        }
+                    }
                     "openPermissionsSettings" -> {
                         try {
                             // Opens Health Connect permissions screen for our app directly

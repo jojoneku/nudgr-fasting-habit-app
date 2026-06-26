@@ -20,6 +20,92 @@ class HealthService {
     HealthDataAccess.READ,
   ];
 
+  /// Canonical id for the user's own device, presented as a single "Phone"
+  /// source in the picker. As of the Health Connect June 2026 update, natively
+  /// tracked steps are attributed to a per-device Synthetic Package Name (SPN)
+  /// like "com.android.healthconnect.phone.<hash>"; data recorded before then
+  /// keeps the legacy "android" package. We merge both into one logical source
+  /// so an OS relabel never drops history, and existing users who stored
+  /// "android" map onto this group automatically.
+  /// See: developer.android.com/health-and-fitness/health-connect/features/steps
+  static const phoneSourceId = 'android';
+
+  /// Prefix of the on-device Synthetic Package Name. The documented format is
+  /// `com.android.healthconnect.phone.<hash>`; the hash is per-device and
+  /// per-app and must never be hardcoded. Used as a fallback when the canonical
+  /// API (below) is unavailable.
+  static const _phoneSpnPrefix = 'com.android.healthconnect.phone';
+
+  /// The device's on-device steps Synthetic Package Name, resolved via the
+  /// canonical `getCurrentDeviceDataSource()` platform API and cached for the
+  /// process (the value is stable per device + app). Null until resolved, or
+  /// when the API is unavailable (pre-Android-14, SDK extension < 20, non-
+  /// Android) — callers then fall back to [_phoneSpnPrefix].
+  static String? _onDeviceSpn;
+  static bool _spnResolved = false;
+
+  /// Resolves and caches the on-device steps SPN from the native canonical API
+  /// (`HealthConnectManager.getCurrentDeviceDataSource()`, see MainActivity.kt).
+  /// No-ops after the first attempt; safe and cheap to call before every read.
+  Future<void> ensureOnDeviceSourceResolved() async {
+    if (_spnResolved) return;
+    _spnResolved = true;
+    try {
+      final spn = await _channel.invokeMethod<String>('getOnDeviceStepsSpn');
+      if (spn != null && spn.isNotEmpty) _onDeviceSpn = spn;
+    } catch (e) {
+      // Not implemented (iOS), unavailable, or denied — keep null, use prefix.
+      debugPrint('HealthService: getOnDeviceStepsSpn unavailable: $e');
+    }
+  }
+
+  /// Whether [name] is the device's own on-device step provider — the legacy
+  /// `android` package, the exact device SPN (canonical, from
+  /// `getCurrentDeviceDataSource()`), or the documented SPN prefix as a
+  /// fallback. Mirrors the official read rule (DataOrigin == "android" OR the
+  /// device SPN); merging them means an OS relabel never drops history.
+  static bool isPhoneSource(String name) =>
+      name == 'android' ||
+      (_onDeviceSpn != null && name == _onDeviceSpn) ||
+      name.startsWith(_phoneSpnPrefix);
+
+  /// Whether a Health Connect record [name] satisfies the user's [selection].
+  /// `null` selection matches everything; a phone-group selection matches any
+  /// on-device label; otherwise an exact source-name match is required.
+  static bool _sourceMatches(String name, String? selection) {
+    if (selection == null) return true;
+    if (isPhoneSource(selection)) return isPhoneSource(name);
+    return name == selection;
+  }
+
+  /// Aggregates step records into per-day totals honoring [selection].
+  ///
+  /// For the phone group we sum within each on-device label, then take the
+  /// per-day MAX across labels — the labels are the same physical sensor under
+  /// different names, so summing would double-count and max picks whichever
+  /// label actually recorded the day. For a single source we simply sum; with
+  /// no selection we de-duplicate across all sources first (legacy behavior).
+  Map<String, double> _stepsByDay(
+      List<HealthDataPoint> points, String? selection) {
+    final pts = selection == null ? Health().removeDuplicates(points) : points;
+    // day -> sourceName -> summed steps (matched sources only)
+    final perDay = <String, Map<String, double>>{};
+    for (final p in pts) {
+      if (!_sourceMatches(p.sourceName, selection)) continue;
+      final day = _dayKey(p.dateFrom.toLocal());
+      final v = (p.value as NumericHealthValue).numericValue.toDouble();
+      (perDay[day] ??= <String, double>{})
+          .update(p.sourceName, (s) => s + v, ifAbsent: () => v);
+    }
+    final grouped = selection != null && isPhoneSource(selection);
+    return {
+      for (final e in perDay.entries)
+        e.key: grouped
+            ? e.value.values.fold<double>(0, (m, v) => v > m ? v : m)
+            : e.value.values.fold<double>(0, (s, v) => s + v),
+    };
+  }
+
   Future<bool> isAvailable() async {
     try {
       final result = await Health().isHealthConnectAvailable();
@@ -70,11 +156,18 @@ class HealthService {
 
   Future<int> readTodaySteps({String? sourceId}) async {
     try {
+      await ensureOnDeviceSourceResolved();
       final now = DateTime.now();
       final midnight = DateTime(now.year, now.month, now.day);
-      final total = await _sumTypeForRange(HealthDataType.STEPS, midnight, now,
-          sourceId: sourceId);
-      return total?.round() ?? 0;
+      final pts = await Health().getHealthDataFromTypes(
+        startTime: midnight,
+        endTime: now,
+        types: [HealthDataType.STEPS],
+      );
+      // Single-day range → at most one day key; summing its values is the total.
+      final byDay = _stepsByDay(pts, sourceId);
+      final total = byDay.values.fold<double>(0, (s, v) => s + v);
+      return total.round();
     } catch (e) {
       debugPrint('HealthService: readTodaySteps error: $e');
       return 0;
@@ -160,8 +253,12 @@ class HealthService {
     final start = DateTime(date.year, date.month, date.day);
     final end = start.add(const Duration(days: 1));
     try {
-      final steps = await _sumTypeForRange(HealthDataType.STEPS, start, end,
-          sourceId: stepsSourceId);
+      await ensureOnDeviceSourceResolved();
+      final stepsPts = await Health().getHealthDataFromTypes(
+          startTime: start, endTime: end, types: [HealthDataType.STEPS]);
+      final steps = _stepsByDay(stepsPts, stepsSourceId)
+          .values
+          .fold<double>(0, (s, v) => s + v);
       final activeCalories = await _sumTypeForRange(
           HealthDataType.ACTIVE_ENERGY_BURNED, start, end);
       final totalCalories = await _sumTypeForRange(
@@ -169,7 +266,7 @@ class HealthService {
       final distance =
           await _sumTypeForRange(HealthDataType.DISTANCE_DELTA, start, end);
       return (
-        steps: steps?.round() ?? 0,
+        steps: steps.round(),
         activeCalories: activeCalories,
         totalCalories: totalCalories,
         distance: distance
@@ -208,25 +305,21 @@ class HealthService {
     final distance = <String, double>{};
 
     try {
+      await ensureOnDeviceSourceResolved();
       // STEPS — 1 API call for entire range
       final stepsPoints = await Health().getHealthDataFromTypes(
           startTime: start, endTime: end, types: [HealthDataType.STEPS]);
-      final stepsFiltered = stepsSourceId != null
-          ? stepsPoints.where((p) => p.sourceName == stepsSourceId).toList()
-          : Health().removeDuplicates(stepsPoints);
-      // Log per-source totals to diagnose double-counting
+      // Log per-source totals to diagnose double-counting / relabels.
       final sourceTotals = <String, int>{};
       for (final p in stepsPoints) {
         sourceTotals[p.sourceName] = (sourceTotals[p.sourceName] ?? 0) +
             (p.value as NumericHealthValue).numericValue.toInt();
       }
       debugPrint(
-          'HealthService[STEPS] range source totals: $sourceTotals | filtering by: $stepsSourceId');
-      for (final p in stepsFiltered) {
-        final day = _dayKey(p.dateFrom.toLocal());
-        steps[day] = (steps[day] ?? 0) +
-            (p.value as NumericHealthValue).numericValue.toInt();
-      }
+          'HealthService[STEPS] range source totals: $sourceTotals | selection: $stepsSourceId');
+      // Merge on-device labels (per-day max) so an OS relabel never drops days.
+      _stepsByDay(stepsPoints, stepsSourceId)
+          .forEach((day, v) => steps[day] = v.round());
     } catch (e) {
       debugPrint('HealthService: readRangeDataByDay STEPS error: $e');
     }
@@ -320,41 +413,11 @@ class HealthService {
 
   String _dayKey(DateTime dt) => DateFormat('yyyy-MM-dd').format(dt);
 
-  /// DEBUG: Fetches today's raw step records and prints each one with timestamps.
-  /// Remove after inspection.
-  Future<void> debugDumpTodayStepRecords() async {
-    try {
-      final now = DateTime.now();
-      final midnight = DateTime(now.year, now.month, now.day);
-      final data = await Health().getHealthDataFromTypes(
-        startTime: midnight,
-        endTime: now,
-        types: [HealthDataType.STEPS],
-      );
-      debugPrint('=== DEBUG STEP RECORDS (${data.length} total) ===');
-      for (final p in data) {
-        final steps = (p.value as NumericHealthValue).numericValue.toInt();
-        final durationSec = p.dateTo.difference(p.dateFrom).inSeconds;
-        final rate = durationSec > 0
-            ? (steps / durationSec * 60).toStringAsFixed(1)
-            : 'n/a';
-        debugPrint(
-          '[${p.sourceName}] '
-          '${DateFormat('HH:mm:ss').format(p.dateFrom)} → '
-          '${DateFormat('HH:mm:ss').format(p.dateTo)} '
-          '| ${durationSec}s | steps=$steps | rate=$rate steps/min',
-        );
-      }
-      debugPrint('=== END STEP RECORDS ===');
-    } catch (e) {
-      debugPrint('HealthService: debugDumpTodayStepRecords error: $e');
-    }
-  }
-
   /// Returns distinct step data sources seen in the last 7 days.
   /// Each entry is (sourceId, sourceName).
   Future<List<({String sourceId, String sourceName})>> readStepSources() async {
     try {
+      await ensureOnDeviceSourceResolved();
       final end = DateTime.now();
       final start = end.subtract(const Duration(days: 7));
       final data = await Health().getHealthDataFromTypes(
@@ -364,11 +427,21 @@ class HealthService {
       );
       final seen = <String>{};
       final sources = <({String sourceId, String sourceName})>[];
+      var hasPhone = false;
       for (final p in data) {
+        // Collapse every on-device label into a single "Phone" source so a
+        // Health Connect relabel doesn't fragment the picker or drop history.
+        if (isPhoneSource(p.sourceName)) {
+          hasPhone = true;
+          continue;
+        }
         // Use sourceName as the stable identifier — sourceId is empty on Health Connect Android
         if (seen.add(p.sourceName)) {
           sources.add((sourceId: p.sourceName, sourceName: p.sourceName));
         }
+      }
+      if (hasPhone) {
+        sources.insert(0, (sourceId: phoneSourceId, sourceName: 'Phone'));
       }
       return sources;
     } catch (e) {

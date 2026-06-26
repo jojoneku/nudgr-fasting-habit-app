@@ -1558,16 +1558,6 @@ class MockHealthService extends _i1.Mock implements _i36.HealthService {
               })>>);
 
   @override
-  _i11.Future<void> debugDumpTodayStepRecords() => (super.noSuchMethod(
-        Invocation.method(
-          #debugDumpTodayStepRecords,
-          [],
-        ),
-        returnValue: _i11.Future<void>.value(),
-        returnValueForMissingStub: _i11.Future<void>.value(),
-      ) as _i11.Future<void>);
-
-  @override
   _i11.Future<List<({String sourceId, String sourceName})>> readStepSources() =>
       (super.noSuchMethod(
         Invocation.method(
