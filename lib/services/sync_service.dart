@@ -601,6 +601,28 @@ class SyncService {
   Future<void> _pushNutritionLog(String dateKey) async {
     final log = await _storage.loadNutritionLogForDate(dateKey);
     final messages = await _storage.loadChatMessagesRaw(dateKey);
+
+    // Don't let a session whose local feed is empty (the classic case: right
+    // after a re-login, before the day's feed has reloaded into storage)
+    // overwrite a populated cloud feed and blank the list while the calorie
+    // totals survive. Mirrors the singleton push guards (_wouldClobberRemote)
+    // but keyed per date, since nutrition rows are per-day. A genuinely empty
+    // cloud feed is fine to overwrite — only a populated one is protected.
+    if (messages.isEmpty) {
+      final row = await _supabase
+          .from('nutrition_logs')
+          .select('data')
+          .eq('user_id', _userId)
+          .eq('date', dateKey)
+          .maybeSingle();
+      final remote = row?['data'] as Map<String, dynamic>?;
+      if (remote != null && !nutritionFeedEmpty(remote)) {
+        debugPrint('SyncService: _pushNutritionLog($dateKey) — local feed '
+            'empty but cloud populated; skipping to avoid clobber');
+        return;
+      }
+    }
+
     await _supabase.from('nutrition_logs').upsert({
       'user_id': _userId,
       'date': dateKey,
