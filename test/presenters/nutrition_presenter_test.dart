@@ -380,6 +380,74 @@ void main() {
       verifyNever(mockNotifs.showCalorieGoalNotification(any, any));
     });
   });
+
+  // ── Chat ↔ log reconciliation (food-logging-items-missing) ────────────────
+  //
+  // The feed renders only from chat messages while the totals come from the
+  // nutrition log. Entries logged via non-chat paths (quick-add / log-meal
+  // sheets) or restored by a sync that carried an empty messages array land in
+  // the log but have no chat row, so they counted toward "Eaten" yet never
+  // appeared in the list. The presenter now rebuilds the missing rows.
+  group('chat ↔ log reconciliation', () {
+    test('log entries with no chat row surface in the feed', () async {
+      final entry = makeEntry(calories: 700, name: 'Rice');
+      when(mockStorage.loadNutritionLogForDate('2026-05-27')).thenAnswer(
+        (_) async => DailyNutritionLog(
+          date: '2026-05-27',
+          meals: {
+            MealSlot.meal: [entry]
+          },
+        ),
+      );
+      when(mockStorage.loadChatMessagesRaw('2026-05-27'))
+          .thenAnswer((_) async => []);
+
+      await presenter.setSelectedDate(DateTime.parse('2026-05-27'));
+
+      // Totals reflect the log…
+      expect(presenter.todayCalories, 700);
+      // …and the feed is no longer empty — the orphaned entry is shown.
+      expect(presenter.chatMessages, hasLength(1));
+      expect(presenter.chatMessages.first.foodItems.single.entryId, entry.id);
+      expect(presenter.chatMessages.first.foodItems.single.name, 'Rice');
+    });
+
+    test('does not duplicate entries already shown in a chat row', () async {
+      final entry = makeEntry(calories: 300, name: 'Egg');
+      when(mockStorage.loadNutritionLogForDate('2026-05-27')).thenAnswer(
+        (_) async => DailyNutritionLog(
+          date: '2026-05-27',
+          meals: {
+            MealSlot.meal: [entry]
+          },
+        ),
+      );
+      when(mockStorage.loadChatMessagesRaw('2026-05-27')).thenAnswer(
+        (_) async => [
+          {
+            'id': 'msg-1',
+            'rawText': 'egg',
+            'timestamp': DateTime.now().toIso8601String(),
+            'kind': 'food',
+            'mealSlot': MealSlot.meal.jsonKey,
+            'foodItems': [
+              {
+                'entryId': entry.id,
+                'name': 'Egg',
+                'calories': 300,
+              }
+            ],
+          }
+        ],
+      );
+
+      await presenter.setSelectedDate(DateTime.parse('2026-05-27'));
+
+      // Exactly one row — the existing chat message, not a synthesized clone.
+      expect(presenter.chatMessages, hasLength(1));
+      expect(presenter.chatMessages.first.id, 'msg-1');
+    });
+  });
 }
 
 String _todayKey() {

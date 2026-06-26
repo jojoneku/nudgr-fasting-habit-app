@@ -388,6 +388,15 @@ class SyncService {
   static bool fastingDataEmpty(Map<String, dynamic> d) =>
       _listEmpty(d['history']) && d['isFasting'] != true;
 
+  /// A nutrition snapshot whose chat feed is empty/absent. Such a snapshot
+  /// must not overwrite a populated local feed on pull — that's the bug where
+  /// the calorie totals survive (from `log`) but the list goes blank. Note we
+  /// only gate on `messages`: the `log` half can be legitimately empty and is
+  /// the source of truth for the totals.
+  @visibleForTesting
+  static bool nutritionFeedEmpty(Map<String, dynamic> d) =>
+      _listEmpty(d['messages']);
+
   @visibleForTesting
   static bool profileDataEmpty(Map<String, dynamic> d) {
     final stats = d['userStats'] as Map<String, dynamic>?;
@@ -592,6 +601,28 @@ class SyncService {
   Future<void> _pushNutritionLog(String dateKey) async {
     final log = await _storage.loadNutritionLogForDate(dateKey);
     final messages = await _storage.loadChatMessagesRaw(dateKey);
+
+    // Don't let a session whose local feed is empty (the classic case: right
+    // after a re-login, before the day's feed has reloaded into storage)
+    // overwrite a populated cloud feed and blank the list while the calorie
+    // totals survive. Mirrors the singleton push guards (_wouldClobberRemote)
+    // but keyed per date, since nutrition rows are per-day. A genuinely empty
+    // cloud feed is fine to overwrite — only a populated one is protected.
+    if (messages.isEmpty) {
+      final row = await _supabase
+          .from('nutrition_logs')
+          .select('data')
+          .eq('user_id', _userId)
+          .eq('date', dateKey)
+          .maybeSingle();
+      final remote = row?['data'] as Map<String, dynamic>?;
+      if (remote != null && !nutritionFeedEmpty(remote)) {
+        debugPrint('SyncService: _pushNutritionLog($dateKey) — local feed '
+            'empty but cloud populated; skipping to avoid clobber');
+        return;
+      }
+    }
+
     await _supabase.from('nutrition_logs').upsert({
       'user_id': _userId,
       'date': dateKey,
@@ -1016,17 +1047,40 @@ class SyncService {
         final localTime = _queue.getTimestamp(SyncDomain.nutritionLog, dateKey);
         if (!remoteTime.isAfter(localTime)) continue;
         final data = row['data'] as Map<String, dynamic>;
+        final remoteMessages =
+            (data['messages'] as List?)?.cast<Map<String, dynamic>>();
+
+        // The log and the chat feed are pushed as a pair, but a snapshot can
+        // be captured while the feed is momentarily empty (e.g. food logged
+        // via a non-chat path, or pushed before chat persisted). Applying such
+        // a snapshot would wipe a populated local feed and leave only the
+        // calorie/macro totals — "consumed kcal but nothing in the list".
+        // Guard: never overwrite a non-empty local feed with an empty remote
+        // one. Keep the local rows and re-queue a push so the cloud snapshot
+        // is repaired with the rows it dropped.
+        final localMessages = await _storage.loadChatMessagesRaw(dateKey);
+        final wouldClobberFeed =
+            nutritionFeedEmpty(data) && localMessages.isNotEmpty;
+
         await _storage.applyRemote(() async {
           if (data['log'] != null) {
             await _storage.saveNutritionLog(DailyNutritionLog.fromJson(
                 data['log'] as Map<String, dynamic>));
           }
-          if (data['messages'] != null) {
-            await _storage.saveChatMessages(dateKey,
-                (data['messages'] as List).cast<Map<String, dynamic>>());
+          if (remoteMessages != null && !wouldClobberFeed) {
+            await _storage.saveChatMessages(dateKey, remoteMessages);
           }
         });
-        _queue.setTimestamp(SyncDomain.nutritionLog, dateKey, time: remoteTime);
+
+        if (wouldClobberFeed) {
+          // Local feed is ahead of the cloud — push it back to heal the row.
+          // markDirty stamps the queue at "now", so don't roll the timestamp
+          // back to remoteTime here or the heal-push would look stale.
+          _queue.markDirty(SyncDomain.nutritionLog, dateKey);
+        } else {
+          _queue.setTimestamp(SyncDomain.nutritionLog, dateKey,
+              time: remoteTime);
+        }
       } catch (e) {
         _recordSkipped('nutrition_logs/$dateKey', e);
       }

@@ -1053,6 +1053,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     final raw = await _storage.loadChatMessagesRaw(dateKey);
     _chatMessages = raw.map(ChatMessage.fromJson).toList();
     _todayLog = await _storage.loadNutritionLogForDate(dateKey);
+    _reconcileChatWithLog();
     safeNotify();
   }
 
@@ -2591,6 +2592,46 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     _selectedDate = now;
     final raw = await _storage.loadChatMessagesRaw(today);
     _chatMessages = raw.map(ChatMessage.fromJson).toList();
+    _reconcileChatWithLog();
+  }
+
+  /// Defensive reconciliation between the nutrition log (source of truth for
+  /// what was eaten) and the chat feed (the rendered list). The feed reads
+  /// only from [_chatMessages], so any [FoodEntry] in [_todayLog] that lacks a
+  /// matching chat row is invisible in the UI even though it still counts in
+  /// the calorie/macro totals. That happens when food is logged via a non-chat
+  /// path (quick-add / log-meal sheets call [addFoodEntry], which never builds
+  /// a [ChatMessage]) or when a sync restores the log with an empty messages
+  /// array. Rebuild the missing rows from the log so "consumed kcal but no
+  /// list item" can't happen.
+  ///
+  /// In-memory only — not persisted on load, so it never churns the sync queue.
+  /// Idempotent: matches by [FoodEntry.id], so re-running (or persisting later
+  /// via a normal chat action) can't duplicate rows.
+  void _reconcileChatWithLog() {
+    final shown = <String>{
+      for (final m in _chatMessages)
+        for (final item in m.foodItems) item.entryId,
+    };
+
+    final orphans = <ChatMessage>[];
+    for (final slot in _todayLog.meals.keys) {
+      for (final entry in _todayLog.entriesForSlot(slot)) {
+        if (shown.contains(entry.id)) continue;
+        orphans.add(ChatMessage(
+          id: ChatMessage.generateId(),
+          rawText: entry.name,
+          timestamp: entry.loggedAt,
+          kind: ChatMessageKind.food,
+          foodItems: [ChatFoodItem.fromFoodEntry(entry)],
+          mealSlot: slot,
+        ));
+      }
+    }
+    if (orphans.isEmpty) return;
+
+    _chatMessages = [..._chatMessages, ...orphans]
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
   }
 
   // ── Load state ───────────────────────────────────────────────────────────────
@@ -2623,6 +2664,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     final todayKey = _dateFmt.format(DateTime.now());
     final rawChat = await _storage.loadChatMessagesRaw(todayKey);
     _chatMessages = rawChat.map(ChatMessage.fromJson).toList();
+    _reconcileChatWithLog();
     if (isDisposed) return; // presenter was disposed during async load
 
     // Restore same-day dedup flags from loaded state so app restarts mid-day
