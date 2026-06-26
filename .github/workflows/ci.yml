@@ -586,6 +586,36 @@ jobs:
           print('ADC creds type:', type(creds).__name__)
           " 2>&1 || echo "ADC discovery failed (google-auth not installed or error above)"
 
+      # firebase-tools authenticates by exchanging the service-account JWT for an
+      # access token (POST oauth2/v4/token). Under the runner's default Node 24
+      # (gaxios → undici) that request dies mid-stream with "Premature close", so
+      # the deploy never authenticates — regardless of which SA / identity setup
+      # is used (the credential file the auth step writes is valid; the transport
+      # is the problem). Pin Node 20 for this step, where the exchange succeeds.
+      - uses: actions/setup-node@v4
+        if: steps.changes.outputs.changed == 'true'
+        with:
+          node-version: 20
+
       - name: Deploy to Firebase Hosting (live)
         if: steps.changes.outputs.changed == 'true'
-        run: npx firebase-tools@15.20.0 deploy --only hosting --project ${{ secrets.FIREBASE_PROJECT_ID }} --debug 2>&1 | tail -80
+        # Use `set -o pipefail` (not a bare `… | tail`) so a failed deploy fails
+        # the STEP. The old `… 2>&1 | tail -80` took tail's exit code (always 0),
+        # which masked every auth failure as green — the reason broken deploys
+        # shipped nothing while CI looked healthy. Retry to ride out any
+        # transient token blips; on final failure surface the tail of the log.
+        run: |
+          set -euo pipefail
+          for attempt in 1 2 3; do
+            if npx firebase-tools@15.20.0 deploy --only hosting \
+                 --project ${{ secrets.FIREBASE_PROJECT_ID }} \
+                 --non-interactive --debug 2>&1 | tee deploy.log; then
+              echo "Firebase deploy succeeded (attempt $attempt)"
+              exit 0
+            fi
+            echo "::warning::Firebase deploy attempt $attempt failed; retrying in 10s"
+            sleep 10
+          done
+          echo "::error::Firebase deploy failed after 3 attempts"
+          tail -n 80 deploy.log
+          exit 1
