@@ -317,6 +317,7 @@ jobs:
       # update CHANGELOG.md, and write RELEASE_NOTES.md (used below for the
       # GitHub release + manifest).
       - name: Update changelog & release notes
+        if: steps.changes.outputs.changed == 'true'
         run: |
           bash scripts/release_changelog.sh \
             "${{ steps.meta.outputs.new_version }}" \
