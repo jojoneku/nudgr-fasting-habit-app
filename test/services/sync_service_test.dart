@@ -382,6 +382,35 @@ void main() {
           false);
     });
 
+    test('nutritionFeedEmpty: gates on messages, not the log', () {
+      // Empty/absent feed → must not overwrite a populated local feed.
+      expect(SyncService.nutritionFeedEmpty({'messages': []}), true);
+      expect(SyncService.nutritionFeedEmpty({}), true);
+      // A log with entries but no chat rows is exactly the clobber snapshot
+      // behind "consumed kcal but nothing in the list".
+      expect(
+          SyncService.nutritionFeedEmpty({
+            'log': {
+              'date': '2026-06-26',
+              'meals': {
+                'meal': [
+                  {'id': 'e1', 'name': 'Rice', 'calories': 200}
+                ]
+              }
+            },
+            'messages': [],
+          }),
+          true);
+      // A populated feed is safe to apply.
+      expect(
+          SyncService.nutritionFeedEmpty({
+            'messages': [
+              {'id': 'm1'}
+            ]
+          }),
+          false);
+    });
+
     test('profileDataEmpty: empty only when no weight/body AND fresh stats',
         () {
       expect(
