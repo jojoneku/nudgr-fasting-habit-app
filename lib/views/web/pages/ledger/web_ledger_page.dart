@@ -448,6 +448,18 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     );
   }
 
+  /// Opens the edit dialog for [t]. Used by transfer rows, whose paired legs
+  /// can't be edited inline in the grid.
+  Future<void> _openEditDialog(TransactionRecord t) async {
+    await _p.reloadAccounts();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (_) => _AddTransactionDialog(presenter: _p, existing: t),
+    );
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
@@ -708,6 +720,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                                           onNote: _editNote,
                                           onAmount: _editAmount,
                                           onDelete: _deleteRow,
+                                          onEdit: _openEditDialog,
                                         ),
                                     ],
                                   ),
@@ -2095,6 +2108,10 @@ class _EditableRow extends StatefulWidget {
   final void Function(TransactionRecord, double, TransactionType) onAmount;
   final void Function(TransactionRecord) onDelete;
 
+  /// Opens the edit dialog for [t]. The grid edits ordinary rows inline, but a
+  /// transfer's two legs must move together, so transfer rows route here instead.
+  final void Function(TransactionRecord) onEdit;
+
   const _EditableRow({
     super.key,
     required this.row,
@@ -2114,6 +2131,7 @@ class _EditableRow extends StatefulWidget {
     required this.onNote,
     required this.onAmount,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -2142,10 +2160,9 @@ class _EditableRowState extends State<_EditableRow> {
       bg = cs.onSurface.withValues(alpha: 0.06);
     }
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _hover = true),
-      onExit: (_) => setState(() => _hover = false),
-      child: Container(
+    // A transfer's two legs must change together, so its cells are read-only in
+    // the inline grid; clicking the row opens the pair-aware edit dialog instead.
+    Widget body = Container(
         decoration: BoxDecoration(
           color: bg,
           border: Border(
@@ -2278,7 +2295,24 @@ class _EditableRowState extends State<_EditableRow> {
             ),
           ],
         ),
-      ),
+      );
+
+    if (isTransfer) {
+      body = GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => widget.onEdit(t),
+        child: Tooltip(
+          message: 'Edit transfer',
+          child: body,
+        ),
+      );
+    }
+
+    return MouseRegion(
+      cursor: isTransfer ? SystemMouseCursors.click : MouseCursor.defer,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: body,
     );
   }
 }
@@ -2927,7 +2961,15 @@ class _LoadingBlock extends StatelessWidget {
 class _AddTransactionDialog extends StatefulWidget {
   final LedgerPresenter presenter;
   final ParsedTransaction? prefill;
-  const _AddTransactionDialog({required this.presenter, this.prefill});
+
+  /// When set, the dialog edits this transaction instead of adding a new one.
+  /// For a transfer, pass either leg — both are rebuilt from the shared group.
+  final TransactionRecord? existing;
+  const _AddTransactionDialog({
+    required this.presenter,
+    this.prefill,
+    this.existing,
+  });
 
   @override
   State<_AddTransactionDialog> createState() => _AddTransactionDialogState();
@@ -2962,6 +3004,11 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   @override
   void initState() {
     super.initState();
+    final editing = widget.existing;
+    if (editing != null) {
+      _initFromExisting(editing);
+      return;
+    }
     final liquid = _accounts;
     final pre = widget.prefill;
     if (pre?.type != null) _type = pre!.type!;
@@ -2982,6 +3029,32 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     }
     if (pre != null && pre.description.isNotEmpty) {
       _descriptionController.text = pre.description;
+    }
+  }
+
+  /// Hydrates the form from an existing record. A transfer is two legs sharing a
+  /// `transferGroupId` (neither leg's `type` is `transfer`), so rebuild From/To
+  /// from the pair rather than the single leg's fields.
+  void _initFromExisting(TransactionRecord t) {
+    _amountController.text = t.amount.toStringAsFixed(2);
+    _descriptionController.text = t.description;
+    _noteController.text = t.note ?? '';
+    _date = t.date;
+    if (t.transferGroupId != null) {
+      _type = TransactionType.transfer;
+      String? fromId;
+      String? toId;
+      for (final leg in _p.allTransactions) {
+        if (leg.transferGroupId != t.transferGroupId) continue;
+        if (leg.type == TransactionType.outflow) fromId = leg.accountId;
+        if (leg.type == TransactionType.inflow) toId = leg.accountId;
+      }
+      _accountId = fromId ?? t.accountId;
+      _toAccountId = toId ?? t.transferToAccountId;
+    } else {
+      _type = t.type;
+      _accountId = t.accountId;
+      _categoryId = t.categoryId;
     }
   }
 
@@ -3031,8 +3104,15 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
       final description = _descriptionController.text.trim();
       final note = _noteController.text.trim();
       final month = toMonthKey(_date);
+      final existing = widget.existing;
 
       if (_type == TransactionType.transfer) {
+        // Editing a transfer: drop the old pair first, since addTransfer always
+        // mints a fresh outflow+inflow — otherwise the edit would duplicate the
+        // transfer and double-apply both account balances.
+        if (existing != null) {
+          await _p.deleteTransactionOrGroup(existing.id);
+        }
         await _p.addTransfer(
           fromAccountId: _accountId!,
           toAccountId: _toAccountId!,
@@ -3042,21 +3122,32 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           note: note.isEmpty ? null : note,
         );
       } else {
-        final id =
-            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
-        await _p.addTransaction(
-          TransactionRecord(
-            id: id,
-            date: _date,
-            accountId: _accountId!,
-            categoryId: _categoryId ?? '',
-            amount: amount,
-            type: _type,
-            description: description,
-            note: note.isEmpty ? null : note,
-            month: month,
-          ),
+        // Reuse the existing id when editing a normal record so the row updates
+        // in place; mint a new one when adding (or converting a transfer).
+        final id = (existing != null && existing.transferGroupId == null)
+            ? existing.id
+            : '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+        final txn = TransactionRecord(
+          id: id,
+          date: _date,
+          accountId: _accountId!,
+          categoryId: _categoryId ?? '',
+          amount: amount,
+          type: _type,
+          description: description,
+          note: note.isEmpty ? null : note,
+          month: month,
         );
+        if (existing != null && existing.transferGroupId != null) {
+          // Converting a transfer into a normal income/expense: remove the whole
+          // transfer group, then add the single replacement record.
+          await _p.deleteTransactionOrGroup(existing.id);
+          await _p.addTransaction(txn);
+        } else if (existing != null) {
+          await _p.updateTransaction(txn);
+        } else {
+          await _p.addTransaction(txn);
+        }
       }
       if (mounted) Navigator.of(context).pop();
     } finally {
@@ -3069,6 +3160,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final isTransfer = _type == TransactionType.transfer;
+    final isEdit = widget.existing != null;
 
     return Dialog(
       backgroundColor: cs.surfaceContainerHigh,
@@ -3091,7 +3183,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                 children: [
                   Expanded(
                     child: Text(
-                      'Add Transaction',
+                      isEdit ? 'Edit Transaction' : 'Add Transaction',
                       style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -3206,8 +3298,9 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.add_rounded, size: 18),
-                    label: const Text('Add Transaction'),
+                        : Icon(isEdit ? Icons.check_rounded : Icons.add_rounded,
+                            size: 18),
+                    label: Text(isEdit ? 'Save Changes' : 'Add Transaction'),
                   ),
                 ],
               ),
