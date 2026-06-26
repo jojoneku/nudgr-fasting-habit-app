@@ -172,8 +172,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     var cumulative = 0.0;
     final cols = <MonthHistoryColumn>[];
     for (final m in months) {
-      final monthTxns =
-          _allTransactions.where((t) => t.month == m).toList();
+      final monthTxns = _allTransactions.where((t) => t.month == m).toList();
       // Exclude internal transfer legs — moving money between your own accounts
       // is neither income nor an expense (mirrors the dashboard cash-flow getters).
       final txns = monthTxns.where((t) => t.transferGroupId == null);

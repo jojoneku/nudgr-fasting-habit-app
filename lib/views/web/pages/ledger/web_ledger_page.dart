@@ -2163,139 +2163,139 @@ class _EditableRowState extends State<_EditableRow> {
     // A transfer's two legs must change together, so its cells are read-only in
     // the inline grid; clicking the row opens the pair-aware edit dialog instead.
     Widget body = Container(
-        decoration: BoxDecoration(
-          color: bg,
-          border: Border(
-            bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+      decoration: BoxDecoration(
+        color: bg,
+        border: Border(
+          bottom: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
+        ),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: _wCheck,
+            child: Center(
+              child: _Check(
+                on: widget.selected,
+                onTap: widget.onToggleSelect,
+              ),
+            ),
           ),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: _wCheck,
-              child: Center(
-                child: _Check(
-                  on: widget.selected,
-                  onTap: widget.onToggleSelect,
+          // Date
+          _DateCell(
+            width: w.date,
+            date: t.date,
+            enabled: !isTransfer,
+            onChanged: (d) => widget.onDate(t, d),
+          ),
+          // Account
+          isTransfer
+              ? _readCell(
+                  width: w.account,
+                  child: Text(
+                    '${widget.accountName(t.accountId)} → '
+                    '${widget.accountName(t.transferToAccountId)}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
+                  ),
+                )
+              : _AccountCell(
+                  width: w.account,
+                  value: t.accountId,
+                  accounts: widget.accounts,
+                  onChanged: (id) => widget.onAccount(t, id),
                 ),
+          // Description
+          _InlineText(
+            // Key on the row id ONLY — embedding the value meant every commit
+            // disposed+recreated the controller/FocusNode, breaking Tab/Enter
+            // flow and dropping focus. didUpdateWidget syncs the text. (C3)
+            key: ValueKey('desc_${t.id}'),
+            width: widget.descWidth,
+            initialValue: t.description,
+            hintText: '—',
+            bold: true,
+            enabled: !isTransfer,
+            onCommit: (v) => widget.onDescription(t, v),
+          ),
+          // Category
+          isTransfer
+              ? _readCell(
+                  width: w.category,
+                  child: const Align(
+                    alignment: Alignment.centerLeft,
+                    child: WebBadge(
+                      'Transfer',
+                      tone: WebBadgeTone.info,
+                      icon: Icons.swap_horiz_rounded,
+                    ),
+                  ),
+                )
+              : _CategoryCell(
+                  width: w.category,
+                  value: t.categoryId,
+                  categories: widget.categories,
+                  colorFor: widget.colorFor,
+                  onChanged: (id) => widget.onCategory(t, id),
+                ),
+          // Inflow — sits over the green column wash painted behind the grid.
+          _AmountCell(
+            key: ValueKey('in_${t.id}'),
+            width: w.inflow,
+            value: t.type == TransactionType.inflow ? t.amount : 0,
+            color: cs.tertiary,
+            enabled: !isTransfer,
+            onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
+          ),
+          // Outflow — sits over the red column wash painted behind the grid.
+          _AmountCell(
+            key: ValueKey('out_${t.id}'),
+            width: w.outflow,
+            value: t.type == TransactionType.outflow ? t.amount : 0,
+            color: cs.onSurface,
+            enabled: !isTransfer,
+            onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
+          ),
+          // Acct. balance — brighter (onSurface) so it reads as the key figure.
+          _readCell(
+            width: w.acctBal,
+            right: true,
+            child: Text(
+              formatPeso(widget.row.accountBalance),
+              textAlign: TextAlign.right,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurface,
+                fontWeight: FontWeight.w700,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
-            // Date
-            _DateCell(
-              width: w.date,
-              date: t.date,
-              enabled: !isTransfer,
-              onChanged: (d) => widget.onDate(t, d),
-            ),
-            // Account
-            isTransfer
-                ? _readCell(
-                    width: w.account,
-                    child: Text(
-                      '${widget.accountName(t.accountId)} → '
-                      '${widget.accountName(t.transferToAccountId)}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodySmall,
-                    ),
-                  )
-                : _AccountCell(
-                    width: w.account,
-                    value: t.accountId,
-                    accounts: widget.accounts,
-                    onChanged: (id) => widget.onAccount(t, id),
-                  ),
-            // Description
-            _InlineText(
-              // Key on the row id ONLY — embedding the value meant every commit
-              // disposed+recreated the controller/FocusNode, breaking Tab/Enter
-              // flow and dropping focus. didUpdateWidget syncs the text. (C3)
-              key: ValueKey('desc_${t.id}'),
-              width: widget.descWidth,
-              initialValue: t.description,
-              hintText: '—',
-              bold: true,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onDescription(t, v),
-            ),
-            // Category
-            isTransfer
-                ? _readCell(
-                    width: w.category,
-                    child: const Align(
-                      alignment: Alignment.centerLeft,
-                      child: WebBadge(
-                        'Transfer',
-                        tone: WebBadgeTone.info,
-                        icon: Icons.swap_horiz_rounded,
-                      ),
-                    ),
-                  )
-                : _CategoryCell(
-                    width: w.category,
-                    value: t.categoryId,
-                    categories: widget.categories,
-                    colorFor: widget.colorFor,
-                    onChanged: (id) => widget.onCategory(t, id),
-                  ),
-            // Inflow — sits over the green column wash painted behind the grid.
-            _AmountCell(
-              key: ValueKey('in_${t.id}'),
-              width: w.inflow,
-              value: t.type == TransactionType.inflow ? t.amount : 0,
-              color: cs.tertiary,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onAmount(t, v, TransactionType.inflow),
-            ),
-            // Outflow — sits over the red column wash painted behind the grid.
-            _AmountCell(
-              key: ValueKey('out_${t.id}'),
-              width: w.outflow,
-              value: t.type == TransactionType.outflow ? t.amount : 0,
-              color: cs.onSurface,
-              enabled: !isTransfer,
-              onCommit: (v) => widget.onAmount(t, v, TransactionType.outflow),
-            ),
-            // Acct. balance — brighter (onSurface) so it reads as the key figure.
-            _readCell(
-              width: w.acctBal,
-              right: true,
-              child: Text(
-                formatPeso(widget.row.accountBalance),
-                textAlign: TextAlign.right,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: cs.onSurface,
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-            ),
-            // Delete
-            SizedBox(
-              width: _wDelete,
-              child: Center(
-                // IgnorePointer when hidden — a 0-opacity button still hit-tests,
-                // causing accidental deletes on non-hovered rows. (U4)
-                child: IgnorePointer(
-                  ignoring: !_hover,
-                  child: AnimatedOpacity(
-                    opacity: _hover ? 1 : 0,
-                    duration: const Duration(milliseconds: 150),
-                    child: IconButton(
-                      onPressed: () => widget.onDelete(t),
-                      icon: const Icon(Icons.delete_outline_rounded, size: 16),
-                      color: cs.onSurfaceVariant,
-                      hoverColor: cs.error.withValues(alpha: 0.12),
-                      tooltip: 'Delete',
-                      visualDensity: VisualDensity.compact,
-                    ),
+          ),
+          // Delete
+          SizedBox(
+            width: _wDelete,
+            child: Center(
+              // IgnorePointer when hidden — a 0-opacity button still hit-tests,
+              // causing accidental deletes on non-hovered rows. (U4)
+              child: IgnorePointer(
+                ignoring: !_hover,
+                child: AnimatedOpacity(
+                  opacity: _hover ? 1 : 0,
+                  duration: const Duration(milliseconds: 150),
+                  child: IconButton(
+                    onPressed: () => widget.onDelete(t),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 16),
+                    color: cs.onSurfaceVariant,
+                    hoverColor: cs.error.withValues(alpha: 0.12),
+                    tooltip: 'Delete',
+                    visualDensity: VisualDensity.compact,
                   ),
                 ),
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
 
     if (isTransfer) {
       body = GestureDetector(
