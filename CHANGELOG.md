@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.17] - 2026-06-26
+
+### Added
+- add data-security plan and disable Android cloud auto-backup
+
 ## [1.1.16] - 2026-06-26
 
 ### Added
@@ -206,7 +211,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.16...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.17...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -224,3 +229,4 @@ distributed via `manifest.json`.
 [1.1.14]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.14
 [1.1.15]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.15
 [1.1.16]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.16
+[1.1.17]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.17
