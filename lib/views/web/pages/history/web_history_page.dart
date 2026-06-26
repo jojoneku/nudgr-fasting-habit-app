@@ -101,6 +101,11 @@ class _MonthRow {
   final double net;
   final double rate; // net / income, 0 when no income
   final double endingCash;
+
+  /// Net moved into savings/goal/sinking-fund pockets via transfers this month.
+  /// Distinct from [net]: this is money actually set aside, not the cash-flow
+  /// surplus. Null on summaries closed before the field existed → treated as 0.
+  final double savingsContribution;
   final bool isLive;
 
   _MonthRow(this.month, MonthlySummary s, {this.isLive = false})
@@ -108,7 +113,8 @@ class _MonthRow {
         expenses = s.totalOutflow,
         net = s.netSavings,
         rate = s.totalInflow > 0 ? s.netSavings / s.totalInflow : 0,
-        endingCash = s.endingCash;
+        endingCash = s.endingCash,
+        savingsContribution = s.savingsContribution ?? 0;
 
   String get label => _shortMonth(month);
 }
@@ -150,6 +156,10 @@ class _HistoryBody extends StatelessWidget {
     final avgRate = rows.isEmpty
         ? 0.0
         : rows.fold<double>(0, (s, r) => s + r.rate) / rows.length;
+    final avgSaved = rows.isEmpty
+        ? 0.0
+        : rows.fold<double>(0, (s, r) => s + r.savingsContribution) /
+            rows.length;
     final cashGrowth =
         rows.length < 2 ? 0.0 : rows.last.endingCash - rows.first.endingCash;
     final best =
@@ -192,6 +202,13 @@ class _HistoryBody extends StatelessWidget {
               value: _pct(avgRate),
               sub: 'Of income kept',
               icon: Icons.percent,
+            ),
+            WebStatTile(
+              label: 'Avg Saved / mo',
+              value: formatPesoCompact(avgSaved),
+              sub: 'Into savings & goals',
+              icon: Icons.account_balance_wallet_outlined,
+              valueColor: avgSaved >= 0 ? upTone : danger,
             ),
             WebStatTile(
               label: 'Best Month',

@@ -21,6 +21,13 @@ class MonthlySummary {
   /// consumers fall back to reconstructing from [accountSnapshots].
   final double? netWorth;
   final Map<String, double> categorySpend; // categoryId → total spent
+
+  /// Net amount deliberately set aside into savings/goal/sinking-fund accounts
+  /// this month: transfers into savings pockets minus transfers back out. This
+  /// is distinct from [netSavings] (income − expenses, the cash-flow surplus) —
+  /// it tracks what actually landed in a dedicated pocket. Nullable for backward
+  /// compatibility: summaries closed before this field existed won't have it.
+  final double? savingsContribution;
   final DateTime updatedAt;
 
   MonthlySummary({
@@ -39,6 +46,7 @@ class MonthlySummary {
     required this.accountSnapshots,
     required this.categorySpend,
     this.netWorth,
+    this.savingsContribution,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -47,6 +55,7 @@ class MonthlySummary {
     double? totalOutflow,
     double? netSavings,
     Map<String, double>? categorySpend,
+    double? savingsContribution,
     DateTime? updatedAt,
   }) {
     return MonthlySummary(
@@ -65,6 +74,7 @@ class MonthlySummary {
       accountSnapshots: accountSnapshots,
       categorySpend: categorySpend ?? this.categorySpend,
       netWorth: netWorth,
+      savingsContribution: savingsContribution ?? this.savingsContribution,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -84,6 +94,7 @@ class MonthlySummary {
       netSavings: (json['netSavings'] as num).toDouble(),
       endingCash: (json['endingCash'] as num).toDouble(),
       netWorth: (json['netWorth'] as num?)?.toDouble(),
+      savingsContribution: (json['savingsContribution'] as num?)?.toDouble(),
       accountSnapshots: Map<String, double>.from(
         (json['accountSnapshots'] as Map<String, dynamic>).map(
           (k, v) => MapEntry(k, (v as num).toDouble()),
@@ -113,6 +124,7 @@ class MonthlySummary {
         'netSavings': netSavings,
         'endingCash': endingCash,
         'netWorth': netWorth,
+        'savingsContribution': savingsContribution,
         'accountSnapshots': accountSnapshots,
         'categorySpend': categorySpend,
         'updatedAt': updatedAt.toIso8601String(),
