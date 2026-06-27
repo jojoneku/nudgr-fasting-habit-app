@@ -46,7 +46,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   // linked reimbursement receivable to it. Wired once at construction (see
   // BillsReceivablesPresenter); null in contexts without a bills presenter
   // (e.g. unit tests) — the reimbursable flag still persists on the txn.
-  Future<void> Function(TransactionRecord outflow, DateTime expectedDate)?
+  Future<void> Function(TransactionRecord outflow, DateTime? expectedDate)?
       onSpawnReimbursementReceivable;
   Future<void> Function(String receivableId)? onDeleteReimbursementReceivable;
   Future<void> Function(TransactionRecord outflow)?
@@ -547,17 +547,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// the expected payback.
   Future<void> addReimbursableExpense(
     TransactionRecord outflow, {
-    required DateTime expectedReimbursementDate,
+    required DateTime? expectedReimbursementDate,
   }) async {
     await addTransaction(outflow);
     await spawnReimbursementReceivable(outflow, expectedReimbursementDate);
   }
 
   /// Spawns the reimbursement receivable for an already-persisted [outflow].
-  /// No-op when no bills presenter is wired.
+  /// [expectedDate] is null for "ASAP / no set date". No-op when no bills
+  /// presenter is wired.
   Future<void> spawnReimbursementReceivable(
     TransactionRecord outflow,
-    DateTime expectedDate,
+    DateTime? expectedDate,
   ) async {
     final spawn = onSpawnReimbursementReceivable;
     if (spawn != null) await spawn(outflow, expectedDate);
@@ -988,8 +989,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       );
     } else if (draft.reimbursable && draft.type == TransactionType.outflow) {
       // Chat suggested a reimbursable expense — log it as one (spawns the
-      // linked receivable) with the default payback horizon. Reversible via
-      // edit if the guess was wrong.
+      // linked receivable). No payback date from chat, so it's "ASAP" and
+      // surfaces in the current month. Reversible via edit if the guess was
+      // wrong (a fixed payback date can be set there).
       await addReimbursableExpense(
         TransactionRecord(
           id: _generateId(),
@@ -1003,7 +1005,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
           reimbursable: true,
           reimbursementReceivableId: _generateId(),
         ),
-        expectedReimbursementDate: now.add(const Duration(days: 30)),
+        expectedReimbursementDate: null,
       );
     } else {
       await addTransaction(TransactionRecord(
