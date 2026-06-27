@@ -889,6 +889,7 @@ class _AddRow extends StatefulWidget {
 class _AddRowState extends State<_AddRow> {
   final _amountController = TextEditingController();
   String _groupId = BudgetGroupDef.idVariableOptional;
+  String? _selectedCategoryId;
   bool _busy = false;
 
   @override
