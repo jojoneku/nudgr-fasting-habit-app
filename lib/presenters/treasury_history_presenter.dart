@@ -278,11 +278,12 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     final repaired = <MonthlySummary>[];
     for (final s in _summaries) {
       final txns = _allTransactions.where((t) => t.month == s.month).toList();
-      // Recompute any month backed by real transactions; this fixes summaries
-      // closed before transfer/reimbursable exclusion existed. Legacy
-      // spreadsheet months (no underlying transactions) are left untouched, and
-      // already-correct months produce identical values so nothing is rewritten.
-      if (txns.isEmpty) {
+      // Only months containing transfer legs or reimbursables/loans can be
+      // polluted by the exclusion rules — recompute just those to backfill
+      // summaries closed before the rules existed. Months with only ordinary
+      // income/expense (and legacy spreadsheet months with no transactions) were
+      // always counted correctly, so they're left untouched.
+      if (!txns.any((t) => t.transferGroupId != null || t.reimbursable)) {
         repaired.add(s);
         continue;
       }
