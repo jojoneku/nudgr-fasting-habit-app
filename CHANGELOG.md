@@ -13,6 +13,20 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.20] - 2026-06-27
+
+### Added
+- exclude reimbursables/loans from income & expense everywhere
+- add reimbursable / "I'll get this back" to the web ledger
+- optional payback date controls which month it shows
+- treat money you'll get back as not-spending
+
+### Fixed
+- scope summary repair to transfer/reimbursable months
+- lift the chat bar above the keyboard
+- file reimbursement/loan receivable in the month it arose
+- make the finance card fully tappable
+
 ## [1.1.19] - 2026-06-27
 
 ### Added
@@ -225,7 +239,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.19...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.20...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -246,3 +260,4 @@ distributed via `manifest.json`.
 [1.1.17]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.17
 [1.1.18]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.18
 [1.1.19]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.19
+[1.1.20]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.20
