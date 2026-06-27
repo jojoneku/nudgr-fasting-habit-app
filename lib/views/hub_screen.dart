@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import '../models/ai_coach_context.dart';
+import '../models/chat_message.dart';
+import '../models/finance/finance_parse_result.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
@@ -29,8 +30,9 @@ import 'nutrition/nutrition_screen.dart';
 import 'quests/quests_tab.dart';
 import 'settings_screen.dart';
 import 'tabs/timer_tab.dart';
+import 'treasury/ledger/add_transaction_sheet.dart';
 import 'treasury/treasury_module_view.dart';
-import 'widgets/ai_chat_sheet.dart';
+import 'widgets/finance/ledger_chat_panel.dart';
 import 'widgets/hub/activity_hub_card.dart';
 import 'widgets/hub/body_measurement_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
@@ -40,9 +42,11 @@ import 'widgets/hub/treasury_hub_card.dart';
 import 'widgets/hub/weight_hub_card.dart';
 import 'nutrition/measurement_log_screen.dart';
 import 'nutrition/weight_log_screen.dart';
+import 'widgets/system/overlays/app_bottom_sheet.dart';
 import 'widgets/system/overlays/app_toast.dart';
 import '../utils/app_spacing.dart';
 import '../utils/app_text_styles.dart';
+import '../utils/quick_log_router.dart';
 
 class HubScreen extends StatefulWidget {
   const HubScreen({
@@ -231,11 +235,17 @@ class _HubScreenState extends State<HubScreen> {
       );
     }
 
+    // The docked quick-log bar needs both the ledger and nutrition pipelines;
+    // omit it when either is unavailable (e.g. in widget tests).
+    final ledger = widget.ledgerPresenter;
+    final nutrition = widget.nutritionPresenter;
+    final quickLogBar = (ledger != null && nutrition != null)
+        ? _QuickLogBar(ledger: ledger, nutrition: nutrition)
+        : null;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      bottomNavigationBar: widget.aiCoachPresenter != null
-          ? _HomeChatBar(presenter: widget.aiCoachPresenter!)
-          : null,
+      bottomNavigationBar: quickLogBar,
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: CustomScrollView(
@@ -511,43 +521,141 @@ class _HubScreenState extends State<HubScreen> {
   }
 }
 
-// ── Home chat bar ─────────────────────────────────────────────────────────────
+// ── Quick-log bar ─────────────────────────────────────────────────────────────
 //
-// Persistent docked entry into the AI Coach, replacing the old expandable
-// feature FAB. Typing here and sending opens the full [AiChatSheet] (general
-// entry point) and forwards the message; tapping send while empty just opens
-// the coach. Feature navigation now lives on the hub cards themselves.
+// Persistent docked logger that replaces the old expandable feature FAB. One
+// input feeds two existing pipelines: a [QuickLogRouter] heuristic sends money
+// entries to [LedgerPresenter]'s chat (cloud→on-device→form) and food/exercise
+// to [NutritionPresenter.parseChat] (cloud→on-device→rules). Finance shows the
+// same inline confirm/clarify panel as the Finance hub card; nutrition commits
+// directly and toasts. Feature navigation now lives on the hub cards.
 
-class _HomeChatBar extends StatefulWidget {
-  const _HomeChatBar({required this.presenter});
+class _QuickLogBar extends StatefulWidget {
+  const _QuickLogBar({required this.ledger, required this.nutrition});
 
-  final AiCoachPresenter presenter;
+  final LedgerPresenter ledger;
+  final NutritionPresenter nutrition;
 
   @override
-  State<_HomeChatBar> createState() => _HomeChatBarState();
+  State<_QuickLogBar> createState() => _QuickLogBarState();
 }
 
-class _HomeChatBarState extends State<_HomeChatBar> {
+class _QuickLogBarState extends State<_QuickLogBar> {
   final _ctrl = TextEditingController();
   final _focus = FocusNode();
+  bool _sending = false;
+  String? _lastToastSummary;
+
+  LedgerPresenter get _ledger => widget.ledger;
+  NutritionPresenter get _nutrition => widget.nutrition;
+
+  @override
+  void initState() {
+    super.initState();
+    _ledger.addListener(_onLedgerChange);
+  }
 
   @override
   void dispose() {
+    _ledger.removeListener(_onLedgerChange);
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
   }
 
-  void _launch({String? text}) {
-    final seed = (text ?? _ctrl.text).trim();
-    _ctrl.clear();
-    _focus.unfocus();
-    AiChatSheet.show(
-      context,
-      presenter: widget.presenter,
-      entryPoint: AiCoachEntryPoint.general,
-      initialText: seed.isEmpty ? null : seed,
+  /// Mirrors the Finance hub card: surface the post-commit toast and, when the
+  /// AI hands back to the form, open the prefilled sheet. Guarded on route
+  /// currency so it doesn't fire while a module is pushed on top of the hub.
+  void _onLedgerChange() {
+    if (!mounted) return;
+    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
+    if (!isCurrent) return;
+
+    final summary = _ledger.lastCommittedSummary;
+    if (summary != null && summary != _lastToastSummary) {
+      _lastToastSummary = summary;
+      AppToast.success(context, summary);
+      _ledger.clearLastCommittedSummary();
+    }
+
+    final prefill = _ledger.pendingFormPrefill;
+    if (prefill != null) {
+      _ledger.consumeFormPrefill();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _openFormSheet(prefill);
+      });
+    }
+  }
+
+  Future<void> _send() async {
+    final text = _ctrl.text.trim();
+    if (text.isEmpty || _sending) return;
+    setState(() => _sending = true);
+    try {
+      _ctrl.clear();
+      final target = _routeFor(text);
+      if (target == QuickLogTarget.finance) {
+        // Mobile clarify flow — the inline panel drives confirm/clarify.
+        await _ledger.sendChatInput(text);
+      } else {
+        // Count before/after so a silent no-op (e.g. the IF-sync eating-window
+        // gate) doesn't toast a stale earlier entry.
+        final before = _nutrition.chatMessages.length;
+        await _nutrition.parseChat(text);
+        _toastNutritionResult(before);
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  QuickLogTarget _routeFor(String text) {
+    // A reply mid-finance-clarify stays with the ledger — don't re-route a
+    // bare answer like "BPI" or "yes" back through the heuristic.
+    if (_ledger.chatState.phase == ChatPhase.clarifying) {
+      return QuickLogTarget.finance;
+    }
+    final accountNames = {for (final a in _ledger.accounts) a.name};
+    return QuickLogRouter.route(text, accountNames: accountNames);
+  }
+
+  /// Nutrition commits synchronously to the feed, so after [parseChat] resolves
+  /// we either toast the just-logged entry or leave the error chip showing.
+  void _toastNutritionResult(int beforeCount) {
+    if (!mounted || _nutrition.chatParseError != null) return;
+    final messages = _nutrition.chatMessages;
+    if (messages.length <= beforeCount) return; // nothing was committed
+    final summary = _nutritionSummary(messages.last);
+    if (summary != null) AppToast.success(context, summary);
+  }
+
+  String? _nutritionSummary(ChatMessage m) {
+    if (m.kind == ChatMessageKind.exercise) {
+      final e = m.exerciseEntry;
+      if (e == null) return null;
+      return 'Logged ${e.name} · ${e.caloriesBurned} kcal burned';
+    }
+    if (m.foodItems.isEmpty) return null;
+    final names = m.foodItems.map((f) => f.name).join(', ');
+    final kcal = m.foodItems.fold<int>(0, (sum, f) => sum + f.calories);
+    return 'Logged $names · $kcal kcal';
+  }
+
+  void _openFormSheet(ParsedTransaction prefill) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Log Transaction',
+      body: AddTransactionSheet(
+        presenter: _ledger,
+        prefill: prefill,
+        initialDate: _ledger.selectedDate,
+      ),
     );
+  }
+
+  String _hint() {
+    if (_ledger.chatState.phase == ChatPhase.clarifying) return 'Reply…';
+    return 'Log food or an expense…';
   }
 
   @override
@@ -564,51 +672,114 @@ class _HomeChatBarState extends State<_HomeChatBar> {
             AppSpacing.sm,
             AppSpacing.sm,
           ),
-          child: Row(
-            children: [
-              Icon(Icons.psychology_outlined, color: cs.primary, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  controller: _ctrl,
-                  focusNode: _focus,
-                  style: AppTextStyles.bodyMedium,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (t) => _launch(text: t),
-                  decoration: InputDecoration(
-                    hintText: 'Ask your coach…',
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                    filled: true,
-                    fillColor: cs.surfaceContainerHigh,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
+          child: ListenableBuilder(
+            listenable: Listenable.merge([_ledger, _nutrition]),
+            builder: (context, _) {
+              final busy = _sending ||
+                  _nutrition.isChatParsing ||
+                  _ledger.chatState.phase == ChatPhase.classifying;
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildResponseArea(cs),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _ctrl,
+                          focusNode: _focus,
+                          enabled: !busy,
+                          style: AppTextStyles.bodyMedium,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _send(),
+                          decoration: InputDecoration(
+                            hintText: _hint(),
+                            hintStyle: AppTextStyles.bodyMedium.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                            filled: true,
+                            fillColor: cs.surfaceContainerHigh,
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      SizedBox(
+                        width: 44,
+                        height: 44,
+                        child: IconButton(
+                          icon: busy
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send_rounded),
+                          color: cs.primary,
+                          tooltip: 'Log',
+                          onPressed: busy ? null : _send,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  icon: const Icon(Icons.send_rounded),
-                  color: cs.primary,
-                  tooltip: 'Ask your coach',
-                  onPressed: () => _launch(),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),
     );
+  }
+
+  /// Finance chat state takes the panel when active (it needs confirm/clarify);
+  /// otherwise a nutrition parse error gets a dismissible chip.
+  Widget _buildResponseArea(ColorScheme cs) {
+    final financeActive = _ledger.chatHardError != null ||
+        _ledger.chatState.phase != ChatPhase.idle ||
+        _ledger.chatState.lastStep != null;
+    if (financeActive) return LedgerChatPanel(ledger: _ledger);
+
+    final error = _nutrition.chatParseError;
+    if (error != null) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+        padding: const EdgeInsets.all(AppSpacing.sm),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.error_outline, size: 16, color: cs.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                error,
+                style: AppTextStyles.bodySmall.copyWith(color: cs.error),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.close, color: cs.onSurfaceVariant, size: 18),
+              onPressed: _nutrition.clearChatParseError,
+              tooltip: 'Dismiss',
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
+        ),
+      );
+    }
+    return const SizedBox(width: double.infinity);
   }
 }
