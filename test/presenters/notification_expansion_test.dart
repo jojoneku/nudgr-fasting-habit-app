@@ -26,6 +26,7 @@ import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
 import 'package:intermittent_fasting/models/estimation_source.dart';
 import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -477,7 +478,7 @@ void main() {
           categoryId: catId,
           month: month,
           allocatedAmount: amount,
-          group: BudgetGroup.variableOptional,
+          group: BudgetGroupDef.idVariableOptional,
           budgetType: BudgetType.monthly,
         );
 

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -137,11 +138,11 @@ void main() {
         categoryId: 'c1',
         month: '2026-04',
         allocatedAmount: 2500,
-        group: BudgetGroup.livingExpense,
+        group: BudgetGroupDef.idLivingExpense,
         budgetType: BudgetType.variable,
       );
       final budget2 = Budget.fromJson(budget.toJson());
-      expect(budget2.group, BudgetGroup.livingExpense);
+      expect(budget2.group, BudgetGroupDef.idLivingExpense);
       expect(budget2.budgetType, BudgetType.variable);
     });
   });

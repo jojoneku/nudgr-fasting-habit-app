@@ -166,6 +166,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> setMonth(String month) async {
     _selectedMonth = month;
     await _autoGenerateRecurringIfNeeded(month);
+    // Re-run close-date detection so navigating into the current real month
+    // (e.g., day 1 of a new month) sees the statement without requiring a
+    // full reload.
+    await _autoGenerateCreditStatements();
     safeNotify();
   }
 
@@ -186,7 +190,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
     // Snapshot closed credit statements into bills, reconcile paid-off cards,
     // and (re)schedule per-account due-date reminders.
-    await _autoGenerateCreditStatements(_selectedMonth);
+    await _autoGenerateCreditStatements();
     await _syncCreditDueReminders(prefs.billsReminderEnabled);
 
     // Make the ledger's "owed to you" total authoritative from the moment
@@ -515,7 +519,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       amount: amount,
       type: TransactionType.outflow,
       description: description,
-      month: _selectedMonth,
+      month: toMonthKey(date),
       billId: billId,
     );
   }
@@ -537,7 +541,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       amount: amount,
       type: TransactionType.inflow,
       description: description,
-      month: _selectedMonth,
+      month: toMonthKey(date),
       receivableId: receivableId,
     );
   }
@@ -555,63 +559,139 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _autoGenerateRecurringReceivables(month);
   }
 
-  /// Snapshots a closed credit statement into a bill (once per account/month)
-  /// and reconciles auto-statements that have since been paid off. Runs only for
-  /// the current real month — never backfills history.
-  Future<void> _autoGenerateCreditStatements(String month) async {
-    if (month != toMonthKey(DateTime.now())) return;
+  /// Snapshots closed credit statements into bills for all months up to today.
+  /// Runs close-date detection across every month since the oldest existing
+  /// statement, so a multi-month gap (app was closed on statement day) gets
+  /// backfilled on the next open. Never generates for future months.
+  ///
+  /// Current month: uses live `currentPayable`.
+  /// Past months: generates a ₱0 placeholder only when a balance still exists
+  /// today — actual historical balances are not recoverable, so the placeholder
+  /// reminds the user to review rather than silently mis-stating the amount.
+  Future<void> _autoGenerateCreditStatements() async {
     final now = DateTime.now();
+    final currentMonthKey = toMonthKey(now);
     final categoryId = _defaultCreditCategoryId();
+    if (categoryId == null) return;
     var changed = false;
 
-    final creditAccounts = _ledger.accounts.where((a) =>
+    final creditAccts = _ledger.accounts.where((a) =>
         a.isActive &&
         a.isLiability &&
         a.statementDay != null &&
         a.paymentDueDay != null);
 
-    for (final a in creditAccounts) {
-      final matches = _allBills
-          .where((b) =>
-              _isAutoStatement(b) && b.accountId == a.id && b.month == month)
-          .toList();
-      final existing = matches.isEmpty ? null : matches.first;
+    // Determine the earliest month to backfill from (one after the oldest
+    // existing auto-statement, or the current month when there are none).
+    final existingMonths =
+        _allBills.where(_isAutoStatement).map((b) => b.month).toList()..sort();
+    final startMonth = existingMonths.isEmpty
+        ? currentMonthKey
+        : nextMonth(existingMonths.first);
 
-      // Reconcile: a fully paid-off card clears its outstanding statement.
-      if (existing != null && !existing.isPaid && a.currentPayable <= 0) {
-        _updateBill(existing.copyWith(
-          isPaid: true,
-          paidDate: now,
-          paidAmount: existing.amount,
-        ));
+    // Build the list of months to evaluate (startMonth … currentMonth).
+    final monthsToCheck = <String>[];
+    var cursor = startMonth;
+    while (cursor.compareTo(currentMonthKey) <= 0) {
+      monthsToCheck.add(cursor);
+      cursor = nextMonth(cursor);
+    }
+
+    for (final month in monthsToCheck) {
+      final isCurrentMonth = month == currentMonthKey;
+
+      for (final a in creditAccts) {
+        final existing = _allBills
+            .where((b) =>
+                _isAutoStatement(b) && b.accountId == a.id && b.month == month)
+            .firstOrNull;
+
+        // Reconcile current-month statement when the card is fully cleared.
+        if (isCurrentMonth &&
+            existing != null &&
+            !existing.isPaid &&
+            a.currentPayable <= 0) {
+          _updateBill(existing.copyWith(
+            isPaid: true,
+            paidDate: now,
+            paidAmount: existing.amount,
+          ));
+          changed = true;
+          continue;
+        }
+        if (existing != null) continue;
+
+        // For current month: statement day must have passed.
+        if (isCurrentMonth && now.day < a.statementDay!.clamp(1, 28)) continue;
+        // For either month type: skip if nothing is currently owed (no point
+        // generating a ₱0 placeholder — the card was either fully paid or never
+        // used in that cycle).
+        if (a.currentPayable <= 0) continue;
+
+        // For past months: amount is 0 (historical balance unknown).
+        final amount = isCurrentMonth ? a.currentPayable : 0.0;
+
+        _allBills = [
+          ..._allBills,
+          Bill(
+            id: _generateId(),
+            name: '${a.name} statement',
+            billType: BillType.creditCard,
+            amount: amount,
+            dueDay: a.paymentDueDay!.clamp(1, 28),
+            month: month,
+            categoryId: categoryId,
+            accountId: a.id,
+            paymentNote: _autoStatementMarker,
+          ),
+        ];
         changed = true;
-        continue;
       }
-      if (existing != null) continue;
-
-      // Generate only once the statement day has passed and a balance is owed.
-      if (now.day < a.statementDay!.clamp(1, 28)) continue;
-      if (a.currentPayable <= 0) continue;
-      if (categoryId == null) continue; // need a valid category for a bill
-
-      _allBills = [
-        ..._allBills,
-        Bill(
-          id: _generateId(),
-          name: '${a.name} statement',
-          billType: BillType.creditCard,
-          amount: a.currentPayable,
-          dueDay: a.paymentDueDay!.clamp(1, 28),
-          month: month,
-          categoryId: categoryId,
-          accountId: a.id,
-          paymentNote: _autoStatementMarker,
-        ),
-      ];
-      changed = true;
     }
 
     if (changed) await _storage.saveBills(_allBills);
+  }
+
+  // ─── Credit account helpers ───────────────────────────────────────────────────
+
+  /// All active liability accounts (credit card, credit line, BNPL).
+  List<FinancialAccount> get creditAccounts =>
+      _ledger.accounts.where((a) => a.isActive && a.isLiability).toList();
+
+  /// Non-liability accounts eligible to fund payment of [bill]. For a bill
+  /// whose target account is a liability (CC, BNPL) the payer must be a
+  /// non-liability account — you can't pay a CC from itself. For other bills
+  /// all accounts are returned.
+  List<FinancialAccount> payerAccountsFor(Bill? bill) {
+    final targetId = bill?.accountId;
+    if (targetId == null) return _ledger.accounts;
+    final targetIsLiability = _ledger.accounts
+        .where((a) => a.id == targetId)
+        .any((a) => a.isLiability);
+    if (!targetIsLiability) return _ledger.accounts;
+    return _ledger.accounts.where((a) => !a.isLiability).toList();
+  }
+
+  /// Pays down a credit card balance directly without requiring a statement
+  /// bill. Cash leaves [fromAccountId] and the card's owed balance decreases
+  /// via [LedgerPresenter.addTransfer] (same path as paying a CC bill).
+  Future<void> quickPayCard({
+    required String accountId,
+    required String fromAccountId,
+    required double amount,
+    DateTime? date,
+  }) async {
+    final account =
+        _ledger.accounts.where((a) => a.id == accountId).firstOrNull;
+    if (account == null || !account.isLiability) return;
+    await _ledger.addTransfer(
+      fromAccountId: fromAccountId,
+      toAccountId: accountId,
+      amount: amount,
+      description: '${account.name} payment',
+      date: date ?? DateTime.now(),
+    );
+    await _notifyDependents();
   }
 
   /// (Re)schedules or cancels per-account payment-due reminders, respecting the

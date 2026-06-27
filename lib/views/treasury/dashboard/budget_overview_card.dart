@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
-import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -10,24 +9,15 @@ class BudgetOverviewCard extends StatelessWidget {
 
   const BudgetOverviewCard({super.key, required this.presenter});
 
-  static const _groups = [
-    BudgetGroup.nonNegotiables,
-    BudgetGroup.livingExpense,
-    BudgetGroup.variableOptional,
-  ];
-
-  static const _groupLabels = {
-    BudgetGroup.nonNegotiables: 'Non-Negotiables',
-    BudgetGroup.livingExpense: 'Living Expenses',
-    BudgetGroup.variableOptional: 'Variable',
-  };
-
   @override
   Widget build(BuildContext context) {
     final allocated = presenter.budgetAllocatedByGroup;
     final spent = presenter.budgetSpentByGroup;
     final totalAllocated = presenter.totalBudgetAllocated;
     final totalSpent = presenter.totalBudgetSpent;
+    // Show expense groups only (exclude savings — it has a separate card).
+    final expenseGroups =
+        presenter.budgetGroups.where((g) => !g.isSavings).toList();
 
     return AppSection(
       title: 'Budget This Month',
@@ -50,14 +40,14 @@ class BudgetOverviewCard extends StatelessWidget {
                   .withValues(alpha: 0.4),
             ),
             const SizedBox(height: 12),
-            for (final group in _groups) ...[
+            for (var i = 0; i < expenseGroups.length; i++) ...[
               _BudgetProgressRow(
-                label: _groupLabels[group]!,
-                allocated: allocated[group] ?? 0.0,
-                spent: spent[group] ?? 0.0,
+                label: expenseGroups[i].name,
+                allocated: allocated[expenseGroups[i].id] ?? 0.0,
+                spent: spent[expenseGroups[i].id] ?? 0.0,
                 isTotal: false,
               ),
-              if (group != _groups.last) const SizedBox(height: 10),
+              if (i < expenseGroups.length - 1) const SizedBox(height: 10),
             ],
           ],
         ),

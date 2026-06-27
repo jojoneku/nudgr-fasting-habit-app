@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -246,7 +247,7 @@ void main() {
               categoryId: 'cat', // _txn defaults categoryId to 'cat'
               month: month,
               allocatedAmount: 5000,
-              group: BudgetGroup.variableOptional,
+              group: BudgetGroupDef.idVariableOptional,
               budgetType: BudgetType.monthly,
             ),
           ]);
@@ -284,7 +285,7 @@ void main() {
           categoryId: 'cat',
           month: month,
           allocatedAmount: 5000,
-          group: BudgetGroup.variableOptional,
+          group: BudgetGroupDef.idVariableOptional,
           budgetType: BudgetType.monthly,
         );
 

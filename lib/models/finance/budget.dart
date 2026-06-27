@@ -1,21 +1,15 @@
-// Maps to the 4 sections in the Budget sheet.
-//
-// `savings` is a savings/goal section — for these rows the [Budget.categoryId]
-// stores a *FinancialAccount id* (a savings or goal account) instead of a
-// finance category id, and "spent" semantics flip: inflows / transfers into
-// the account count as contributions toward the allocation.
-enum BudgetGroup { nonNegotiables, livingExpense, variableOptional, savings }
-
 // Affects styling and calculation logic.
 enum BudgetType { monthly, fixed, goal, variable }
 
-// One row per category per month, grouped into 3 budget sections.
+// One row per category per month, grouped into named budget sections.
+// [group] stores the group ID — matches [BudgetGroupDef.id]. Built-in groups
+// use the old enum names as IDs so existing stored data loads without migration.
 class Budget {
   final String id;
   final String categoryId;
   final String month; // 'YYYY-MM'
   final double allocatedAmount;
-  final BudgetGroup group;
+  final String group; // group ID — see BudgetGroupDef
   final BudgetType budgetType;
   final DateTime updatedAt;
 
@@ -35,7 +29,7 @@ class Budget {
       categoryId: json['categoryId'] as String,
       month: json['month'] as String,
       allocatedAmount: (json['allocatedAmount'] as num).toDouble(),
-      group: BudgetGroup.values.byName(json['group'] as String),
+      group: json['group'] as String,
       budgetType: BudgetType.values.byName(json['budgetType'] as String),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -47,7 +41,7 @@ class Budget {
         'categoryId': categoryId,
         'month': month,
         'allocatedAmount': allocatedAmount,
-        'group': group.name,
+        'group': group,
         'budgetType': budgetType.name,
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -56,7 +50,7 @@ class Budget {
     String? categoryId,
     String? month,
     double? allocatedAmount,
-    BudgetGroup? group,
+    String? group,
     BudgetType? budgetType,
     DateTime? updatedAt,
   }) {

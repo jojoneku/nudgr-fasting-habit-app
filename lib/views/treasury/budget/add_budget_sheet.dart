@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
@@ -26,7 +27,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   final _amountController = TextEditingController();
 
   String? _selectedCategoryId;
-  BudgetGroup _group = BudgetGroup.livingExpense;
+  String _groupId = BudgetGroupDef.idLivingExpense;
   BudgetType _budgetType = BudgetType.variable;
   bool _isSubmitting = false;
 
@@ -38,7 +39,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       final existing = widget.presenter.budgetFor(_selectedCategoryId!);
       if (existing != null) {
         _amountController.text = existing.allocatedAmount.toStringAsFixed(2);
-        _group = existing.group;
+        _groupId = existing.group;
         _budgetType = existing.budgetType;
       }
     }
@@ -67,7 +68,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       await widget.presenter.setBudget(
         _selectedCategoryId!,
         amount,
-        group: _group,
+        group: _groupId,
         budgetType: _budgetType,
       );
       if (mounted) Navigator.pop(context);
@@ -125,7 +126,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     return cat;
   }
 
-  bool get _isSavings => _group == BudgetGroup.savings;
+  bool get _isSavings => _groupId == BudgetGroupDef.idSavings;
 
   @override
   Widget build(BuildContext context) {
@@ -260,29 +261,24 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 8),
-            AppSegmentedControl<BudgetGroup>(
-              segments: const [
-                (
-                  value: BudgetGroup.nonNegotiables,
-                  label: 'Non-Neg.',
-                  icon: null
-                ),
-                (value: BudgetGroup.livingExpense, label: 'Living', icon: null),
-                (
-                  value: BudgetGroup.variableOptional,
-                  label: 'Variable',
-                  icon: null
-                ),
-                (value: BudgetGroup.savings, label: 'Savings', icon: null),
+            AppSegmentedControl<String>(
+              segments: [
+                for (final g in widget.presenter.groups)
+                  (
+                    value: g.id,
+                    label: g.name.length > 8 ? g.name.substring(0, 8) : g.name,
+                    icon: null,
+                  ),
               ],
-              selected: _group,
-              onChanged: (g) {
+              selected: _groupId,
+              onChanged: (gId) {
                 // Switching between expense ↔ savings invalidates the picked
                 // id since categories and accounts share the same `categoryId`
                 // slot but draw from different lists.
-                final crossing = (g == BudgetGroup.savings) != _isSavings;
+                final newIsSavings = gId == BudgetGroupDef.idSavings;
+                final crossing = newIsSavings != _isSavings;
                 setState(() {
-                  _group = g;
+                  _groupId = gId;
                   if (crossing) _selectedCategoryId = null;
                 });
               },

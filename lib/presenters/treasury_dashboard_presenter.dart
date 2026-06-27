@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
@@ -98,6 +99,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<Bill> _bills = [];
   List<Receivable> _receivables = [];
   List<Budget> _budgets = [];
+  List<BudgetGroupDef> _budgetGroups = BudgetGroupDef.defaultGroups;
   List<BudgetedExpense> _budgetedExpenses = [];
   List<FinanceCategory> _categories = [];
   List<MonthlySummary> _summaries = [];
@@ -479,8 +481,14 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((b) => b.month == _currentMonth)
       .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
 
+  bool _isSavingsGroup(String groupId) =>
+      _budgetGroups.where((g) => g.id == groupId).firstOrNull?.isSavings ??
+      false;
+
+  List<BudgetGroupDef> get budgetGroups => List.unmodifiable(_budgetGroups);
+
   double _budgetSpentFor(Budget b) {
-    if (b.group == BudgetGroup.savings) {
+    if (_isSavingsGroup(b.group)) {
       // Savings budgets track NET contributions INTO the target account (here
       // the "categoryId" is an account id): inflow legs add, outflow legs
       // subtract. This mirrors [monthSavingsContributions] and the Budget
@@ -529,7 +537,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     if (unpaidByCategory.isEmpty) return 0.0;
     var overlap = 0.0;
     for (final budget in _budgets.where((b) => b.month == _currentMonth)) {
-      if (budget.group == BudgetGroup.savings) continue;
+      if (_isSavingsGroup(budget.group)) continue;
       final unpaid = unpaidByCategory[budget.categoryId];
       if (unpaid == null) continue;
       final remaining = (budget.allocatedAmount - _budgetSpentFor(budget))
@@ -551,24 +559,21 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       totalBudgetRemaining +
       _unpaidBillBudgetOverlap;
 
-  Map<BudgetGroup, double> get budgetAllocatedByGroup {
-    final result = <BudgetGroup, double>{};
+  Map<String, double> get budgetAllocatedByGroup {
+    final result = <String, double>{};
     for (final b in _budgets.where((b) => b.month == _currentMonth)) {
       result[b.group] = (result[b.group] ?? 0.0) + b.allocatedAmount;
     }
     return result;
   }
 
-  Map<BudgetGroup, double> get budgetSpentByGroup {
-    final result = <BudgetGroup, double>{};
-    for (final e in _budgetedExpenses.where((e) => e.month == _currentMonth)) {
-      final budget = _budgets
-          .where(
-              (b) => b.month == _currentMonth && b.categoryId == e.categoryId)
-          .firstOrNull;
-      if (budget != null) {
-        result[budget.group] = (result[budget.group] ?? 0.0) + e.spentAmount;
-      }
+  /// Actual spending per group from real ledger outflows (and savings
+  /// contributions), keyed by group ID. Previously read set-aside rows
+  /// which returned zero for most users.
+  Map<String, double> get budgetSpentByGroup {
+    final result = <String, double>{};
+    for (final b in _budgets.where((b) => b.month == _currentMonth)) {
+      result[b.group] = (result[b.group] ?? 0.0) + _budgetSpentFor(b);
     }
     return result;
   }
@@ -880,6 +885,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _bills = await _storage.loadBills();
     _receivables = await _storage.loadReceivables();
     _budgets = await _storage.loadBudgets();
+    _budgetGroups = BudgetGroupDef.merge(await _storage.loadBudgetGroups());
     _budgetedExpenses = await _storage.loadBudgetedExpenses();
     _categories = await _storage.loadFinanceCategories();
     _summaries = await _storage.loadMonthlySummaries();
