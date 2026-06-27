@@ -429,6 +429,8 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
   late ReceivableType _type;
   String? _selectedAccountId;
   String? _selectedCategoryId;
+  bool _isRecurring = false;
+  RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
   @override
@@ -444,8 +446,17 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
       _dayController.text = r.expectedDate?.day.toString() ?? '';
       _selectedAccountId = r.accountId;
       _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
+      _isRecurring = r.isRecurring;
+      _recurrenceType = r.recurrenceType ?? RecurrenceType.monthly;
     }
   }
+
+  String _recurrenceLabel(RecurrenceType r) => switch (r) {
+        RecurrenceType.monthly => 'Monthly',
+        RecurrenceType.weekly => 'Weekly',
+        RecurrenceType.yearly => 'Yearly',
+        RecurrenceType.custom => 'Custom',
+      };
 
   @override
   void dispose() {
@@ -487,6 +498,8 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           month: widget.presenter.selectedMonth,
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         );
         await widget.presenter.addReceivable(receivable);
       } else {
@@ -497,6 +510,8 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
           expectedDate: _expectedDate(day),
           categoryId: _selectedCategoryId ?? '',
           accountId: _selectedAccountId,
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
       }
       if (mounted) Navigator.of(context).pop();
@@ -618,6 +633,27 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
                         DropdownMenuItem(value: c.id, child: Text(c.name)),
                     ],
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
+                  ),
+                ],
+                const SizedBox(height: WebInsets.sm),
+                SwitchListTile(
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                  title: const Text('Recurring'),
+                  subtitle: const Text('Auto-generate next month'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_isRecurring) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  DropdownButtonFormField<RecurrenceType>(
+                    initialValue: _recurrenceType,
+                    decoration: const InputDecoration(labelText: 'Recurrence'),
+                    items: RecurrenceType.values
+                        .map((r) => DropdownMenuItem(
+                            value: r, child: Text(_recurrenceLabel(r))))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _recurrenceType = v ?? _recurrenceType),
                   ),
                 ],
                 if (accounts.isEmpty && categories.isEmpty) ...[
