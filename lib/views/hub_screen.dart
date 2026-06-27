@@ -555,57 +555,65 @@ class _HomeChatBarState extends State<_HomeChatBar> {
     final cs = Theme.of(context).colorScheme;
     return Material(
       color: cs.surface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.sm,
-            AppSpacing.sm,
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.psychology_outlined, color: cs.primary, size: 22),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: TextField(
-                  controller: _ctrl,
-                  focusNode: _focus,
-                  style: AppTextStyles.bodyMedium,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: (t) => _launch(text: t),
-                  decoration: InputDecoration(
-                    hintText: 'Ask your coach…',
-                    hintStyle: AppTextStyles.bodyMedium.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
-                    filled: true,
-                    fillColor: cs.surfaceContainerHigh,
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
+      // As a Scaffold bottomNavigationBar, this isn't lifted above the keyboard
+      // automatically — the body shrinks but the bar stays put and gets covered.
+      // Pad by the keyboard inset so the input rides up with the keyboard and
+      // stays visible. Zero when the keyboard is dismissed.
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.sm,
+              AppSpacing.sm,
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.psychology_outlined, color: cs.primary, size: 22),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: TextField(
+                    controller: _ctrl,
+                    focusNode: _focus,
+                    style: AppTextStyles.bodyMedium,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (t) => _launch(text: t),
+                    decoration: InputDecoration(
+                      hintText: 'Ask your coach…',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      filled: true,
+                      fillColor: cs.surfaceContainerHigh,
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(24),
+                        borderSide: BorderSide.none,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  icon: const Icon(Icons.send_rounded),
-                  color: cs.primary,
-                  tooltip: 'Ask your coach',
-                  onPressed: () => _launch(),
+                const SizedBox(width: AppSpacing.xs),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    icon: const Icon(Icons.send_rounded),
+                    color: cs.primary,
+                    tooltip: 'Ask your coach',
+                    onPressed: () => _launch(),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
