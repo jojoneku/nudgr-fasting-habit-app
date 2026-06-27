@@ -441,7 +441,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
       _amountController.text = r.amount == r.amount.roundToDouble()
           ? r.amount.round().toString()
           : r.amount.toString();
-      _dayController.text = r.expectedDate.day.toString();
+      _dayController.text = r.expectedDate?.day.toString() ?? '';
       _selectedAccountId = r.accountId;
       _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
     }
@@ -1184,7 +1184,7 @@ class _ReceivableRow extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Due ${_ordinal(receivable.expectedDate.day)} · ${_receivableTypeLabel(receivable.receivableType)}',
+                  '${receivable.expectedDate != null ? 'Due ${_ordinal(receivable.expectedDate!.day)}' : 'ASAP'} · ${_receivableTypeLabel(receivable.receivableType)}',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant),
                 ),

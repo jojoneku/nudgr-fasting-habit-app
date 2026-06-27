@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class TreasuryHistoryPresenter extends ChangeNotifier {
@@ -169,19 +170,15 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   /// running cumulative net (oldest → newest).
   List<MonthHistoryColumn> get monthMatrix {
     final months = activeMonths;
+    final reimb = reimbursementReceivableIds(_allTransactions);
     var cumulative = 0.0;
     final cols = <MonthHistoryColumn>[];
     for (final m in months) {
       final monthTxns = _allTransactions.where((t) => t.month == m).toList();
-      // Exclude internal transfer legs — moving money between your own accounts
-      // is neither income nor an expense (mirrors the dashboard cash-flow getters).
-      final txns = monthTxns.where((t) => t.transferGroupId == null);
-      final income = txns
-          .where((t) => t.type == TransactionType.inflow)
-          .fold(0.0, (s, t) => s + t.amount);
-      final expenses = txns
-          .where((t) => t.type == TransactionType.outflow)
-          .fold(0.0, (s, t) => s + t.amount);
+      // Income/expense exclude transfer legs AND reimbursables/loans (and their
+      // repayments) — none of those are real income or spending.
+      final income = _sumIncome(monthTxns, reimb);
+      final expenses = _sumSpending(monthTxns);
       final net = income - expenses;
       cumulative += net;
       cols.add(MonthHistoryColumn(
@@ -203,8 +200,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   /// its spend in every active month — the sheet's category breakdown grid.
   List<CategoryHistoryRow> get categoryMatrix {
     final byCat = <String, Map<String, double>>{};
-    for (final t in _allTransactions.where((t) =>
-        t.type == TransactionType.outflow && t.transferGroupId == null)) {
+    for (final t in _allTransactions.where(isSpendingOutflow)) {
       (byCat[t.categoryId] ??= {})[t.month] =
           (byCat[t.categoryId]?[t.month] ?? 0) + t.amount;
     }
@@ -278,17 +274,21 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   /// values and nothing is rewritten.
   Future<void> repairTransferPollutedSummariesOnce() async {
     var changed = false;
+    final reimb = reimbursementReceivableIds(_allTransactions);
     final repaired = <MonthlySummary>[];
     for (final s in _summaries) {
       final txns = _allTransactions.where((t) => t.month == s.month).toList();
-      // Only months that actually contain transfer legs can be polluted; this
-      // skips legacy spreadsheet months, which have no underlying transactions.
-      if (!txns.any((t) => t.transferGroupId != null)) {
+      // Only months containing transfer legs or reimbursables/loans can be
+      // polluted by the exclusion rules — recompute just those to backfill
+      // summaries closed before the rules existed. Months with only ordinary
+      // income/expense (and legacy spreadsheet months with no transactions) were
+      // always counted correctly, so they're left untouched.
+      if (!txns.any((t) => t.transferGroupId != null || t.reimbursable)) {
         repaired.add(s);
         continue;
       }
-      final inflow = _sumType(txns, TransactionType.inflow);
-      final outflow = _sumType(txns, TransactionType.outflow);
+      final inflow = _sumIncome(txns, reimb);
+      final outflow = _sumSpending(txns);
       final categorySpend = _buildCategorySpend(txns);
       final savings = _sumSavingsContribution(txns);
       if (_closeEnough(inflow, s.totalInflow) &&
@@ -331,8 +331,9 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     final bills = _allBills.where((b) => b.month == month).toList();
     final receivables = _allReceivables.where((r) => r.month == month).toList();
 
-    final totalInflow = _sumType(txns, TransactionType.inflow);
-    final totalOutflow = _sumType(txns, TransactionType.outflow);
+    final reimb = reimbursementReceivableIds(_allTransactions);
+    final totalInflow = _sumIncome(txns, reimb);
+    final totalOutflow = _sumSpending(txns);
     final totalBills = bills.fold(0.0, (s, b) => s + b.amount);
     final totalBillsPaid = bills
         .where((b) => b.isPaid)
@@ -367,8 +368,14 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     );
   }
 
-  double _sumType(List<TransactionRecord> txns, TransactionType type) => txns
-      .where((t) => t.type == type && t.transferGroupId == null)
+  /// Real spending in [txns] — excludes transfers and reimbursables/loans.
+  double _sumSpending(Iterable<TransactionRecord> txns) =>
+      txns.where(isSpendingOutflow).fold(0.0, (s, t) => s + t.amount);
+
+  /// Real income in [txns] — excludes transfers and reimbursable/loan
+  /// repayments. [reimb] from [reimbursementReceivableIds] over all transactions.
+  double _sumIncome(Iterable<TransactionRecord> txns, Set<String> reimb) => txns
+      .where((t) => isIncomeInflow(t, reimb))
       .fold(0.0, (s, t) => s + t.amount);
 
   /// Set of account ids that are savings pockets (savings / goal / sinking
@@ -416,8 +423,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
 
   Map<String, double> _buildCategorySpend(List<TransactionRecord> txns) {
     final result = <String, double>{};
-    for (final t in txns.where((t) =>
-        t.type == TransactionType.outflow && t.transferGroupId == null)) {
+    for (final t in txns.where(isSpendingOutflow)) {
       result[t.categoryId] = (result[t.categoryId] ?? 0.0) + t.amount;
     }
     return result;

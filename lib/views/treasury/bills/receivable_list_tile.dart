@@ -54,8 +54,11 @@ class ReceivableListTile extends StatelessWidget {
     Widget subtitleWidget;
     {
       final parts = <Widget>[];
+      final expected = receivable.expectedDate;
+      final whenLabel =
+          expected != null ? DateFormat('MMM d').format(expected) : 'ASAP';
       parts.add(Text(
-        'Expected ${DateFormat('MMM d').format(receivable.expectedDate)} · ${_typeLabel(receivable.receivableType)}',
+        'Expected $whenLabel · ${_typeLabel(receivable.receivableType)}',
         style: TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12),
       ));
       if (receivable.isReceived && receivable.receivedAmount != null) {

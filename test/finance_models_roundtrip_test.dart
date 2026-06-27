@@ -287,7 +287,8 @@ void main() {
       expect(rec.amount, 0);
       expect(rec.month, '');
       expect(rec.categoryId, '');
-      expect(rec.expectedDate, DateTime.fromMillisecondsSinceEpoch(0));
+      // A null/absent date now means "ASAP / no set date" rather than epoch.
+      expect(rec.expectedDate, isNull);
     });
   });
 

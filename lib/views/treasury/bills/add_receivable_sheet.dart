@@ -42,7 +42,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
       _receivableType = r.receivableType;
       _selectedCategoryId = r.categoryId.isEmpty ? null : r.categoryId;
       _selectedAccountId = r.accountId;
-      _expectedDate = r.expectedDate;
+      _expectedDate = r.expectedDate ?? DateTime.now();
       _isRecurring = r.isRecurring;
       _recurrenceType = r.recurrenceType ?? RecurrenceType.monthly;
     }

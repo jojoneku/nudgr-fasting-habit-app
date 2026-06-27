@@ -24,7 +24,13 @@ class Receivable {
   final ReceivableType receivableType;
   final double amount;
   final double? nextMonthAmount; // pre-set amount for following month
-  final DateTime expectedDate;
+
+  /// When you expect to be paid back. Null means "ASAP / no set date" — used by
+  /// reimbursements and loans you'll be repaid whenever; such entries are
+  /// bucketed into the month they arose so they surface immediately. A set date
+  /// (e.g. a company's fixed reimbursement-run day) buckets the entry into that
+  /// date's month instead.
+  final DateTime? expectedDate;
   final String month; // 'YYYY-MM'
   final String categoryId;
   final bool isRecurring;
@@ -49,7 +55,7 @@ class Receivable {
     required this.receivableType,
     required this.amount,
     this.nextMonthAmount,
-    required this.expectedDate,
+    this.expectedDate,
     required this.month,
     required this.categoryId,
     this.isRecurring = false,
@@ -73,8 +79,7 @@ class Receivable {
       receivableType: receivableTypeFromName(json['receivableType'] as String?),
       amount: (json['amount'] as num?)?.toDouble() ?? 0,
       nextMonthAmount: (json['nextMonthAmount'] as num?)?.toDouble(),
-      expectedDate: DateTime.tryParse(json['expectedDate'] as String? ?? '') ??
-          DateTime.fromMillisecondsSinceEpoch(0),
+      expectedDate: DateTime.tryParse(json['expectedDate'] as String? ?? ''),
       month: json['month'] as String? ?? '',
       categoryId: json['categoryId'] as String? ?? '',
       isRecurring: json['isRecurring'] as bool? ?? false,
@@ -98,7 +103,7 @@ class Receivable {
         'receivableType': receivableType.name,
         'amount': amount,
         'nextMonthAmount': nextMonthAmount,
-        'expectedDate': expectedDate.toIso8601String(),
+        'expectedDate': expectedDate?.toIso8601String(),
         'month': month,
         'categoryId': categoryId,
         'isRecurring': isRecurring,
@@ -117,7 +122,7 @@ class Receivable {
     ReceivableType? receivableType,
     double? amount,
     double? nextMonthAmount,
-    DateTime? expectedDate,
+    Object? expectedDate = _kUnset,
     String? month,
     String? categoryId,
     bool? isRecurring,
@@ -136,7 +141,9 @@ class Receivable {
       receivableType: receivableType ?? this.receivableType,
       amount: amount ?? this.amount,
       nextMonthAmount: nextMonthAmount ?? this.nextMonthAmount,
-      expectedDate: expectedDate ?? this.expectedDate,
+      expectedDate: identical(expectedDate, _kUnset)
+          ? this.expectedDate
+          : expectedDate as DateTime?,
       month: month ?? this.month,
       categoryId: categoryId ?? this.categoryId,
       isRecurring: isRecurring ?? this.isRecurring,

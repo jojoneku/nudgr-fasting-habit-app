@@ -10,6 +10,7 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
+import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 
 class BudgetPresenter extends ChangeNotifier {
@@ -313,13 +314,15 @@ class BudgetPresenter extends ChangeNotifier {
     }
   }
 
-  double receivedFor(String categoryId) => _allTransactions
-      .where((t) =>
-          t.month == _selectedMonth &&
-          t.categoryId == categoryId &&
-          t.type == TransactionType.inflow &&
-          t.transferGroupId == null)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double receivedFor(String categoryId) {
+    final reimb = reimbursementReceivableIds(_allTransactions);
+    return _allTransactions
+        .where((t) =>
+            t.month == _selectedMonth &&
+            t.categoryId == categoryId &&
+            isIncomeInflow(t, reimb))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   List<TransactionRecord> transactionsForCategory(String categoryId) =>
       _allTransactions

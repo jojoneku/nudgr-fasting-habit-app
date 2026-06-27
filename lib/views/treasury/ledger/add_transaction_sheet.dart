@@ -113,8 +113,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _transferToAccountId = prefill.transferToAccountId;
         _selectedCategoryId = prefill.categoryId;
         if (prefill.reimbursable) {
+          // No payback date by default — "ASAP", surfaces in the current month.
+          // The user can set a fixed date below if they know when they'll be paid.
           _reimbursable = true;
-          _expectedReimbursementDate = _defaultExpectedReimbursementDate;
         }
       }
     }
@@ -209,8 +210,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           reimbursementReceivableId: receivableId,
           owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
         );
-        final expectedDate =
-            _expectedReimbursementDate ?? _defaultExpectedReimbursementDate;
+        // Null = "ASAP / no set date" — surfaces in the current month.
+        final expectedDate = _expectedReimbursementDate;
         if (existing != null) {
           // Drop a stale linked receivable when the expense is no longer
           // reimbursable (toggled off, or type changed away from outflow).
@@ -372,17 +373,12 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     const SizedBox(height: 12),
                     _ReimbursableField(
                       value: _reimbursable,
-                      expectedDate: _expectedReimbursementDate ??
-                          _defaultExpectedReimbursementDate,
+                      expectedDate: _expectedReimbursementDate,
                       owedByController: _owedByController,
-                      onChanged: (v) => setState(() {
-                        _reimbursable = v;
-                        if (v) {
-                          _expectedReimbursementDate ??=
-                              _defaultExpectedReimbursementDate;
-                        }
-                      }),
+                      onChanged: (v) => setState(() => _reimbursable = v),
                       onPickDate: _pickExpectedReimbursementDate,
+                      onClearDate: () =>
+                          setState(() => _expectedReimbursementDate = null),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -739,10 +735,14 @@ class _NoCategoriesHint extends StatelessWidget {
 
 class _ReimbursableField extends StatelessWidget {
   final bool value;
-  final DateTime expectedDate;
+
+  /// Null = "ASAP / no set date": the entry surfaces in the current month.
+  /// A date buckets it into that month instead (e.g. a fixed reimbursement run).
+  final DateTime? expectedDate;
   final TextEditingController owedByController;
   final ValueChanged<bool> onChanged;
   final VoidCallback onPickDate;
+  final VoidCallback onClearDate;
 
   const _ReimbursableField({
     required this.value,
@@ -750,6 +750,7 @@ class _ReimbursableField extends StatelessWidget {
     required this.owedByController,
     required this.onChanged,
     required this.onPickDate,
+    required this.onClearDate,
   });
 
   @override
@@ -767,7 +768,7 @@ class _ReimbursableField extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Reimbursable',
+                      "I'll get this back",
                       style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 14,
@@ -776,8 +777,9 @@ class _ReimbursableField extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Counts as cash out, but not against your budget. '
-                      "We'll track it as money you're owed.",
+                      'A reimbursable expense or money you lent out. Leaves '
+                      "your cash but isn't counted as spending — we'll track "
+                      "it as money you're owed.",
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                     ),
@@ -798,20 +800,44 @@ class _ReimbursableField extends StatelessWidget {
                     Icon(Icons.event_outlined,
                         color: cs.onSurfaceVariant, size: 18),
                     const SizedBox(width: 8),
-                    Text(
-                      'Expected back by',
-                      style:
-                          TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
-                    ),
-                    const Spacer(),
-                    Text(
-                      DateFormat('MMM d, yyyy').format(expectedDate),
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Text(
+                        'Expected back by',
+                        style:
+                            TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
                       ),
                     ),
+                    if (expectedDate == null)
+                      // No date: "ASAP" — surfaces in the current month. Tapping
+                      // the row still opens the picker to set a scheduled date.
+                      Text(
+                        'ASAP',
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      )
+                    else ...[
+                      Text(
+                        DateFormat('MMM d, yyyy').format(expectedDate!),
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: onClearDate,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Icon(Icons.close,
+                              color: cs.onSurfaceVariant, size: 16),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

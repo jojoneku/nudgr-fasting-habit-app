@@ -2980,12 +2980,20 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _noteController = TextEditingController();
+  final _owedByController = TextEditingController();
 
   TransactionType _type = TransactionType.outflow;
   String? _accountId;
   String? _toAccountId;
   String? _categoryId;
   DateTime _date = DateTime.now();
+
+  // Reimbursable / loan state (outflow only): money out now, owed back later.
+  // [_expectedReimbursementDate] null = "ASAP" (surfaces in the current month);
+  // a date buckets the spawned receivable into that month instead.
+  bool _reimbursable = false;
+  DateTime? _expectedReimbursementDate;
+
   bool _isSubmitting = false;
   bool _showFieldErrors = false;
 
@@ -3030,6 +3038,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     if (pre != null && pre.description.isNotEmpty) {
       _descriptionController.text = pre.description;
     }
+    if (pre?.reimbursable == true) _reimbursable = true;
   }
 
   /// Hydrates the form from an existing record. A transfer is two legs sharing a
@@ -3055,6 +3064,8 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
       _type = t.type;
       _accountId = t.accountId;
       _categoryId = t.categoryId;
+      _reimbursable = t.reimbursable;
+      _owedByController.text = t.owedBy ?? '';
     }
   }
 
@@ -3063,6 +3074,7 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     _amountController.dispose();
     _descriptionController.dispose();
     _noteController.dispose();
+    _owedByController.dispose();
     super.dispose();
   }
 
@@ -3082,6 +3094,20 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
     );
     if (picked != null) setState(() => _date = picked);
   }
+
+  Future<void> _pickReimbursementDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate:
+          _expectedReimbursementDate ?? _date.add(const Duration(days: 30)),
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) setState(() => _expectedReimbursementDate = picked);
+  }
+
+  String _genId() =>
+      '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
   Future<void> _submit() async {
     final formOk = _formKey.currentState!.validate();
@@ -3122,11 +3148,21 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           note: note.isEmpty ? null : note,
         );
       } else {
+        // Reimbursable only applies to outflows. Reuse the existing linked
+        // receivable id when editing so the link survives; mint one otherwise.
+        final isReimbursable =
+            _type == TransactionType.outflow && _reimbursable;
+        final receivableId = isReimbursable
+            ? (existing?.reimbursementReceivableId ?? _genId())
+            : null;
+        final owedBy = _owedByController.text.trim();
+        // Null = "ASAP / no set date" — surfaces in the current month.
+        final expectedDate = _expectedReimbursementDate;
         // Reuse the existing id when editing a normal record so the row updates
         // in place; mint a new one when adding (or converting a transfer).
         final id = (existing != null && existing.transferGroupId == null)
             ? existing.id
-            : '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
+            : _genId();
         final txn = TransactionRecord(
           id: id,
           date: _date,
@@ -3137,14 +3173,37 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           description: description,
           note: note.isEmpty ? null : note,
           month: month,
+          reimbursable: isReimbursable,
+          reimbursementReceivableId: receivableId,
+          owedBy: isReimbursable && owedBy.isNotEmpty ? owedBy : null,
         );
-        if (existing != null && existing.transferGroupId != null) {
-          // Converting a transfer into a normal income/expense: remove the whole
-          // transfer group, then add the single replacement record.
-          await _p.deleteTransactionOrGroup(existing.id);
-          await _p.addTransaction(txn);
-        } else if (existing != null) {
-          await _p.updateTransaction(txn);
+        if (existing != null) {
+          // Drop a stale linked receivable when the expense is no longer
+          // reimbursable (toggled off, or type changed away from outflow).
+          final oldReceivableId = existing.reimbursementReceivableId;
+          if (oldReceivableId != null && !isReimbursable) {
+            await _p.deleteReimbursementReceivable(oldReceivableId);
+          }
+          if (existing.transferGroupId != null) {
+            // Converting a transfer into a normal income/expense: remove the
+            // whole transfer group, then add the single replacement record.
+            await _p.deleteTransactionOrGroup(existing.id);
+            await _p.addTransaction(txn);
+          } else {
+            await _p.updateTransaction(txn);
+          }
+          // Newly reimbursable → spawn the linked receivable; still reimbursable
+          // → re-sync its amount/name/owedBy so it never drifts.
+          if (isReimbursable && oldReceivableId == null) {
+            await _p.spawnReimbursementReceivable(txn, expectedDate);
+          } else if (isReimbursable) {
+            await _p.syncReimbursementReceivable(txn);
+          }
+        } else if (isReimbursable) {
+          await _p.addReimbursableExpense(
+            txn,
+            expectedReimbursementDate: expectedDate,
+          );
         } else {
           await _p.addTransaction(txn);
         }
@@ -3272,6 +3331,10 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
                           ),
                         ),
                       ),
+                      if (_type == TransactionType.outflow) ...[
+                        const SizedBox(height: WebInsets.lg),
+                        _reimbursableSection(theme),
+                      ],
                     ],
                   ),
                 ),
@@ -3328,6 +3391,110 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
         const SizedBox(height: WebInsets.sm),
         field,
       ],
+    );
+  }
+
+  /// "I'll get this back" — marks an outflow as a reimbursable expense or a loan.
+  /// Mirrors the mobile sheet: keeps it out of spending and tracks it as money
+  /// you're owed, with an optional payback date (null = ASAP, shows this month).
+  Widget _reimbursableSection(ThemeData theme) {
+    final cs = theme.colorScheme;
+    final date = _expectedReimbursementDate;
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: cs.outlineVariant),
+        borderRadius: BorderRadius.circular(AppRadii.sm),
+      ),
+      padding: const EdgeInsets.fromLTRB(
+          WebInsets.md, WebInsets.sm, WebInsets.md, WebInsets.sm),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "I'll get this back",
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'A reimbursable expense or money you lent out. Leaves your '
+                      "cash but isn't counted as spending — we'll track it as "
+                      "money you're owed.",
+                      style: theme.textTheme.bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _reimbursable,
+                onChanged: (v) => setState(() => _reimbursable = v),
+              ),
+            ],
+          ),
+          if (_reimbursable) ...[
+            Divider(height: WebInsets.md, color: cs.outlineVariant),
+            InkWell(
+              onTap: _pickReimbursementDate,
+              borderRadius: BorderRadius.circular(AppRadii.sm),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: WebInsets.sm),
+                child: Row(
+                  children: [
+                    Icon(Icons.event_outlined,
+                        size: 18, color: cs.onSurfaceVariant),
+                    const SizedBox(width: WebInsets.sm),
+                    Expanded(
+                      child: Text('Expected back by',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant)),
+                    ),
+                    if (date == null)
+                      // No date: "ASAP" — surfaces in the current month. Tapping
+                      // the row opens the picker to set a scheduled date.
+                      Text('ASAP',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w600))
+                    else ...[
+                      Text(DateFormat('MMM d, yyyy').format(date),
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () =>
+                            setState(() => _expectedReimbursementDate = null),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(2),
+                          child: Icon(Icons.close,
+                              size: 16, color: cs.onSurfaceVariant),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: WebInsets.sm),
+            TextFormField(
+              controller: _owedByController,
+              maxLength: 40,
+              decoration: const InputDecoration(
+                labelText: 'Who owes you? (optional)',
+                isDense: true,
+                counterText: '',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

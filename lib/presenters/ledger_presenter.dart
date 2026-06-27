@@ -10,6 +10,7 @@ import 'package:intermittent_fasting/services/ai_coach_service.dart';
 import 'package:intermittent_fasting/services/finance_personal_dictionary.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
@@ -46,7 +47,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   // linked reimbursement receivable to it. Wired once at construction (see
   // BillsReceivablesPresenter); null in contexts without a bills presenter
   // (e.g. unit tests) — the reimbursable flag still persists on the txn.
-  Future<void> Function(TransactionRecord outflow, DateTime expectedDate)?
+  Future<void> Function(TransactionRecord outflow, DateTime? expectedDate)?
       onSpawnReimbursementReceivable;
   Future<void> Function(String receivableId)? onDeleteReimbursementReceivable;
   Future<void> Function(TransactionRecord outflow)?
@@ -116,19 +117,28 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       List.unmodifiable(_allTransactions);
 
   // --- Filtered summary ---
-  // These month/daily totals exclude internal transfer legs (transferGroupId
-  // != null): moving money between your own accounts (incl. paying down a
-  // credit card) is neither income nor spending, so it must not inflate the
-  // ledger's inflow/outflow figures. Transfer rows still appear in the list.
+  // These month/daily totals exclude internal transfer legs AND reimbursables/
+  // loans: moving money between your own accounts (incl. paying down a credit
+  // card), and money you front or lend and will get back, are neither income
+  // nor spending — so they must not inflate the ledger's inflow/outflow figures.
+  // A reimbursable's repayment inflow is likewise excluded from income (it's
+  // your own money returning). Both still appear as rows in the list.
+  // See [isSpendingOutflow] / [isIncomeInflow] in utils/finance_flows.dart.
 
-  double get filteredMonthInflow => _filteredTransactions
-      .where(
-          (t) => t.type == TransactionType.inflow && t.transferGroupId == null)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  /// Receivable ids spawned by reimbursable/loan outflows — used to recognise
+  /// (and exclude) their repayment inflows from income.
+  Set<String> get _reimbursementIds =>
+      reimbursementReceivableIds(_allTransactions);
+
+  double get filteredMonthInflow {
+    final reimb = _reimbursementIds;
+    return _filteredTransactions
+        .where((t) => isIncomeInflow(t, reimb))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   double get filteredMonthOutflow => _filteredTransactions
-      .where(
-          (t) => t.type == TransactionType.outflow && t.transferGroupId == null)
+      .where(isSpendingOutflow)
       .fold(0.0, (sum, t) => sum + t.amount);
 
   double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
@@ -137,9 +147,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Map<String, double> get dailyOutflowMap {
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (t.type != TransactionType.outflow || t.transferGroupId != null) {
-        continue;
-      }
+      if (!isSpendingOutflow(t)) continue;
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -150,11 +158,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Map of 'yyyy-MM-dd' → total inflow for that day (respects account filter).
   Map<String, double> get dailyInflowMap {
+    final reimb = _reimbursementIds;
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (t.type != TransactionType.inflow || t.transferGroupId != null) {
-        continue;
-      }
+      if (!isIncomeInflow(t, reimb)) continue;
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -281,18 +288,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   /// Inflow subtotal for the current table filter (month/account/category).
-  /// Excludes transfer legs — a transfer is neither income nor spending.
-  double get tableInflow => ledgerRowsForMonth
-      .where((r) =>
-          r.txn.type == TransactionType.inflow && r.txn.transferGroupId == null)
-      .fold(0.0, (sum, r) => sum + r.txn.amount);
+  /// Excludes transfer legs and reimbursable/loan repayments — neither is income.
+  double get tableInflow {
+    final reimb = _reimbursementIds;
+    return ledgerRowsForMonth
+        .where((r) => isIncomeInflow(r.txn, reimb))
+        .fold(0.0, (sum, r) => sum + r.txn.amount);
+  }
 
   /// Outflow subtotal for the current table filter (month/account/category).
-  /// Excludes transfer legs — a transfer is neither income nor spending.
+  /// Excludes transfer legs and reimbursables/loans — neither is spending.
   double get tableOutflow => ledgerRowsForMonth
-      .where((r) =>
-          r.txn.type == TransactionType.outflow &&
-          r.txn.transferGroupId == null)
+      .where((r) => isSpendingOutflow(r.txn))
       .fold(0.0, (sum, r) => sum + r.txn.amount);
 
   /// Per-transaction account balance: the involved account's balance
@@ -547,17 +554,18 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// the expected payback.
   Future<void> addReimbursableExpense(
     TransactionRecord outflow, {
-    required DateTime expectedReimbursementDate,
+    required DateTime? expectedReimbursementDate,
   }) async {
     await addTransaction(outflow);
     await spawnReimbursementReceivable(outflow, expectedReimbursementDate);
   }
 
   /// Spawns the reimbursement receivable for an already-persisted [outflow].
-  /// No-op when no bills presenter is wired.
+  /// [expectedDate] is null for "ASAP / no set date". No-op when no bills
+  /// presenter is wired.
   Future<void> spawnReimbursementReceivable(
     TransactionRecord outflow,
-    DateTime expectedDate,
+    DateTime? expectedDate,
   ) async {
     final spawn = onSpawnReimbursementReceivable;
     if (spawn != null) await spawn(outflow, expectedDate);
@@ -988,8 +996,9 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       );
     } else if (draft.reimbursable && draft.type == TransactionType.outflow) {
       // Chat suggested a reimbursable expense — log it as one (spawns the
-      // linked receivable) with the default payback horizon. Reversible via
-      // edit if the guess was wrong.
+      // linked receivable). No payback date from chat, so it's "ASAP" and
+      // surfaces in the current month. Reversible via edit if the guess was
+      // wrong (a fixed payback date can be set there).
       await addReimbursableExpense(
         TransactionRecord(
           id: _generateId(),
@@ -1003,7 +1012,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
           reimbursable: true,
           reimbursementReceivableId: _generateId(),
         ),
-        expectedReimbursementDate: now.add(const Duration(days: 30)),
+        expectedReimbursementDate: null,
       );
     } else {
       await addTransaction(TransactionRecord(

@@ -319,7 +319,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// other receivable, writing the offsetting inflow.
   Future<void> createReimbursementReceivable(
     TransactionRecord outflow,
-    DateTime expectedDate,
+    DateTime? expectedDate,
   ) async {
     final receivableId = outflow.reimbursementReceivableId;
     if (receivableId == null) return;
@@ -329,7 +329,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       receivableType: ReceivableType.reimbursement,
       amount: outflow.amount,
       expectedDate: expectedDate,
-      month: toMonthKey(expectedDate),
+      // Bucket into the month you'll be paid back when a date is set (e.g. a
+      // company's fixed reimbursement-run day → it surfaces in that month);
+      // otherwise into the month the debt arose, so an ASAP/no-date entry shows
+      // up immediately. The list is month-filtered, so a wrong bucket hides the
+      // entry — which is what made a just-logged reimbursable look untracked.
+      month: expectedDate != null ? toMonthKey(expectedDate) : outflow.month,
       categoryId: outflow.categoryId,
       reimbursementForTxnId: outflow.id,
     ));
@@ -682,7 +687,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final copies = recurringFromPrev.map((r) {
       // Clamp the day to the target month's length so a 31st-of-the-month
       // receivable copied into February doesn't silently drift into March.
-      final day = r.expectedDate.day.clamp(1, lastDay);
+      // A recurring entry without a set day defaults to the 1st.
+      final day = (r.expectedDate?.day ?? 1).clamp(1, lastDay);
       final expectedDate = DateTime(year, monthNum, day);
       return Receivable(
         id: _generateId(),
