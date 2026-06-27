@@ -1176,6 +1176,89 @@ void main() {
     });
 
     test(
+        'savings contribution counts transfers into pockets, nets withdrawals, '
+        'and ignores income/spending', () async {
+      final currentMonth = toMonthKey(DateTime.now());
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(id: 'cash', category: AccountCategory.ewallet),
+            _account(id: 'save', category: AccountCategory.savings),
+            _account(id: 'goal', category: AccountCategory.goal),
+          ]);
+      when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            // Real income — must NOT count as a contribution.
+            _txn(
+                id: 'inc',
+                accountId: 'cash',
+                amount: 10000,
+                type: TransactionType.inflow,
+                month: currentMonth),
+            // ₱5000 moved cash → savings (the pocket inflow leg counts).
+            _txn(
+                id: 'to-save-out',
+                accountId: 'cash',
+                amount: 5000,
+                type: TransactionType.outflow,
+                month: currentMonth,
+                transferGroupId: 'g1',
+                transferToAccountId: 'save'),
+            _txn(
+                id: 'to-save-in',
+                accountId: 'save',
+                amount: 5000,
+                type: TransactionType.inflow,
+                month: currentMonth,
+                transferGroupId: 'g1'),
+            // ₱1000 pulled back out of savings — a withdrawal, nets against it.
+            _txn(
+                id: 'from-save-out',
+                accountId: 'save',
+                amount: 1000,
+                type: TransactionType.outflow,
+                month: currentMonth,
+                transferGroupId: 'g2',
+                transferToAccountId: 'cash'),
+            _txn(
+                id: 'from-save-in',
+                accountId: 'cash',
+                amount: 1000,
+                type: TransactionType.inflow,
+                month: currentMonth,
+                transferGroupId: 'g2'),
+            // ₱2000 moved cash → goal.
+            _txn(
+                id: 'to-goal-out',
+                accountId: 'cash',
+                amount: 2000,
+                type: TransactionType.outflow,
+                month: currentMonth,
+                transferGroupId: 'g3',
+                transferToAccountId: 'goal'),
+            _txn(
+                id: 'to-goal-in',
+                accountId: 'goal',
+                amount: 2000,
+                type: TransactionType.inflow,
+                month: currentMonth,
+                transferGroupId: 'g3'),
+          ]);
+      await presenter.load();
+
+      // Net set aside = 5000 in − 1000 out + 2000 goal = 6000.
+      expect(presenter.monthlySavingsContribution(currentMonth), 6000);
+      expect(presenter.currentMonthSummary?.savingsContribution, 6000);
+
+      // Per-pocket breakdown, richest first.
+      final pockets = presenter.savingsContributionByPocket(currentMonth);
+      expect(pockets.map((p) => p.accountId), ['save', 'goal']);
+      expect(pockets.firstWhere((p) => p.accountId == 'save').amount, 4000);
+      expect(pockets.firstWhere((p) => p.accountId == 'goal').amount, 2000);
+
+      // The cash-flow surplus is unaffected by the field (income − expense).
+      // Income 10000, no real expenses → net savings 10000.
+      expect(presenter.currentMonthSummary?.netSavings, 10000);
+    });
+
+    test(
         'repairTransferPollutedSummariesOnce recomputes transfer-inflated '
         'months while preserving frozen net-worth fields', () async {
       // A stored summary closed by an earlier build: a 5000 transfer was

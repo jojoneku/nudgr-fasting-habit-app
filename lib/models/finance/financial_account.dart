@@ -102,6 +102,16 @@ class FinancialAccount {
       category == AccountCategory.goal ||
       category == AccountCategory.timeDeposit ||
       category == AccountCategory.investment;
+
+  /// A deliberate set-aside pocket: plain savings, a goal, or a sinking fund
+  /// (modeled as a goal/time deposit). Used to attribute transfers as monthly
+  /// "savings contributions". Excludes [AccountCategory.investment] — deploying
+  /// capital into investments is a separate act from setting money aside, and
+  /// folding it in would inflate the savings figure.
+  bool get isSavingsPocket =>
+      category == AccountCategory.savings ||
+      category == AccountCategory.goal ||
+      category == AccountCategory.timeDeposit;
   // balance = debt owed, not funds available
   bool get isLiability =>
       category == AccountCategory.creditCard ||
