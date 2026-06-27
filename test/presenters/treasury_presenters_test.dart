@@ -750,9 +750,10 @@ void main() {
       await presenter.load();
       await _waitForLoad(ledger);
 
-      // Expected back this month so the month-filtered `receivables` getter
-      // surfaces the spawned entry.
-      final expected = DateTime.now();
+      // Expected back NEXT month — the spawned receivable must still surface in
+      // the transaction's month (where the debt arose), not be hidden in the
+      // payback month, since the receivables getter is month-filtered.
+      final expected = DateTime.now().add(const Duration(days: 30));
       final outflow = TransactionRecord(
         id: 'txn-reimb',
         date: DateTime.now(),
@@ -779,6 +780,9 @@ void main() {
       expect(spawned.reimbursementForTxnId, 'txn-reimb');
       expect(spawned.amount, 1200);
       expect(spawned.name, contains('Acme Corp'));
+      // Bucketed in the outflow's month, not the (next-month) payback date.
+      expect(spawned.month, toMonthKey(DateTime.now()));
+      expect(spawned.expectedDate, expected);
 
       // Settle: marking it received writes the offsetting inflow.
       await presenter.markReceivableReceived('rcv-reimb',

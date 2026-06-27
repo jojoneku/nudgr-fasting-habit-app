@@ -329,7 +329,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       receivableType: ReceivableType.reimbursement,
       amount: outflow.amount,
       expectedDate: expectedDate,
-      month: toMonthKey(expectedDate),
+      // File the receivable in the month the debt AROSE (the outflow's month),
+      // not the projected payback month. The receivables list is month-filtered,
+      // so bucketing by the default 30-days-out [expectedDate] hid the entry in
+      // next month's view — making a just-logged reimbursable/loan look like it
+      // tracked nothing. [expectedDate] still drives the "expected back by" date.
+      month: outflow.month,
       categoryId: outflow.categoryId,
       reimbursementForTxnId: outflow.id,
     ));
