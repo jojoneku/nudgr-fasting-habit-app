@@ -13,6 +13,17 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.22] - 2026-06-27
+
+### Added
+- credit card live balance section + quick pay
+- show bills and receivables cards side by side
+- custom group CRUD + fix budget health spending zeros
+
+### Fixed
+- declare missing _selectedCategoryId field in _AddRowState
+- re-run credit statement detection on month change
+
 ## [1.1.21] - 2026-06-27
 
 ### Added
@@ -247,7 +258,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.21...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.22...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -270,3 +281,4 @@ distributed via `manifest.json`.
 [1.1.19]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.19
 [1.1.20]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.20
 [1.1.21]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.21
+[1.1.22]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.22
