@@ -767,7 +767,7 @@ class _ReimbursableField extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Reimbursable',
+                      "I'll get this back",
                       style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 14,
@@ -776,8 +776,9 @@ class _ReimbursableField extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Counts as cash out, but not against your budget. '
-                      "We'll track it as money you're owed.",
+                      'A reimbursable expense or money you lent out. Leaves '
+                      "your cash but isn't counted as spending — we'll track "
+                      "it as money you're owed.",
                       style:
                           TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
                     ),
