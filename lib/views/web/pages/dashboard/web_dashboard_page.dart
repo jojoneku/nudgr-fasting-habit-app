@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -349,20 +348,6 @@ class _BudgetHealthCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   const _BudgetHealthCard({required this.presenter});
 
-  static const _groups = [
-    BudgetGroup.nonNegotiables,
-    BudgetGroup.livingExpense,
-    BudgetGroup.variableOptional,
-    BudgetGroup.savings,
-  ];
-
-  static const _labels = {
-    BudgetGroup.nonNegotiables: 'Non-Negotiables',
-    BudgetGroup.livingExpense: 'Living Expenses',
-    BudgetGroup.variableOptional: 'Variable / Optional',
-    BudgetGroup.savings: 'Savings',
-  };
-
   WebBadge _status(double ratio) {
     if (ratio >= 1.0) return const WebBadge('Over', tone: WebBadgeTone.danger);
     if (ratio >= 0.85) {
@@ -381,8 +366,9 @@ class _BudgetHealthCard extends StatelessWidget {
     final totalSpent = presenter.totalBudgetSpent;
     final totalLeft = presenter.totalBudgetRemaining;
 
-    final active = _groups
-        .where((g) => (allocated[g] ?? 0) > 0 || (spent[g] ?? 0) > 0)
+    final budgetGroups = presenter.budgetGroups;
+    final active = budgetGroups
+        .where((g) => (allocated[g.id] ?? 0) > 0 || (spent[g.id] ?? 0) > 0)
         .toList();
 
     final usedPct = totalAlloc > 0
@@ -403,16 +389,16 @@ class _BudgetHealthCard extends StatelessWidget {
     final rows = <Widget>[];
     for (var i = 0; i < active.length; i++) {
       final g = active[i];
-      final alloc = allocated[g] ?? 0;
-      final spnt = spent[g] ?? 0;
+      final alloc = allocated[g.id] ?? 0;
+      final spnt = spent[g.id] ?? 0;
       final ratio = alloc > 0 ? (spnt / alloc) : 0.0;
       final left = (alloc - spnt).clamp(0.0, double.infinity);
       final pct = alloc > 0 ? (spnt / alloc * 100).round() : 0;
-      final dot = _groupColor(cs, g, ratio);
+      final dot = _groupColor(cs, i, ratio);
       if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));
       rows.add(WebBudgetRow(
         dotColor: dot,
-        name: _labels[g]!,
+        name: g.name,
         spent: formatPeso(spnt),
         target: formatPeso(alloc),
         progress: ratio.clamp(0.0, 1.0),
@@ -454,15 +440,10 @@ class _BudgetHealthCard extends StatelessWidget {
     );
   }
 
-  Color _groupColor(ColorScheme cs, BudgetGroup g, double ratio) {
+  Color _groupColor(ColorScheme cs, int index, double ratio) {
     if (ratio >= 1.0) return cs.error;
     if (ratio >= 0.85) return cs.secondary;
-    return switch (g) {
-      BudgetGroup.nonNegotiables => cs.primary,
-      BudgetGroup.livingExpense => cs.tertiary,
-      BudgetGroup.variableOptional => cs.secondary,
-      BudgetGroup.savings => cs.primary,
-    };
+    return [cs.primary, cs.tertiary, cs.secondary, cs.primary][index % 4];
   }
 }
 

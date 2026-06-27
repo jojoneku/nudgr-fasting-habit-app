@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
@@ -99,6 +100,7 @@ class BudgetPresenter extends ChangeNotifier {
 
   String _selectedMonth = toMonthKey(DateTime.now());
   List<Budget> _allBudgets = [];
+  List<BudgetGroupDef> _groups = BudgetGroupDef.defaultGroups;
   List<FinanceCategory> _categories = [];
   List<TransactionRecord> _allTransactions = [];
   List<FinancialAccount> _accounts = [];
@@ -124,6 +126,19 @@ class BudgetPresenter extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ─── Group getters ────────────────────────────────────────────────────────────
+
+  List<BudgetGroupDef> get groups => List.unmodifiable(_groups);
+
+  List<BudgetGroupDef> get expenseGroups =>
+      _groups.where((g) => !g.isSavings).toList();
+
+  BudgetGroupDef? groupById(String id) =>
+      _groups.where((g) => g.id == id).firstOrNull;
+
+  bool _isSavingsGroup(String groupId) =>
+      _groups.where((g) => g.id == groupId).firstOrNull?.isSavings ?? false;
+
   // ─── Summary getters ─────────────────────────────────────────────────────────
 
   double get totalAllocated =>
@@ -144,27 +159,23 @@ class BudgetPresenter extends ChangeNotifier {
 
   // ─── Web aggregates (Plan 050-D) ───────────────────────────────────────────────
 
-  /// Human label for a [BudgetGroup] — shared by the web chart + table.
-  static String budgetGroupLabel(BudgetGroup group) => switch (group) {
-        BudgetGroup.nonNegotiables => 'Non-Negotiables',
-        BudgetGroup.livingExpense => 'Living Expense',
-        BudgetGroup.variableOptional => 'Variable / Optional',
-        BudgetGroup.savings => 'Savings / Goals',
-      };
+  /// Human label for a group ID — shared by the web chart + table.
+  String budgetGroupLabel(String groupId) =>
+      _groups.where((g) => g.id == groupId).firstOrNull?.name ?? groupId;
 
-  /// Ordered allocated-vs-spent figures per [BudgetGroup] that actually has a
-  /// budget this month. Drives the web allocation bar chart so `build()` stays
+  /// Ordered allocated-vs-spent figures per group that actually has a budget
+  /// this month. Drives the web allocation bar chart so `build()` stays
   /// free of folds and filtering.
   List<WebBudgetGroupBar> get groupBars {
     final result = <WebBudgetGroupBar>[];
-    for (final group in BudgetGroup.values) {
-      final allocated = sectionAllocated(group);
+    for (final group in _groups) {
+      final allocated = sectionAllocated(group.id);
       if (allocated <= 0) continue;
       result.add(WebBudgetGroupBar(
-        group: group,
-        label: budgetGroupLabel(group),
+        groupId: group.id,
+        label: group.name,
         allocated: allocated,
-        spent: sectionSpent(group),
+        spent: sectionSpent(group.id),
       ));
     }
     return result;
@@ -176,16 +187,15 @@ class BudgetPresenter extends ChangeNotifier {
   List<WebBudgetRow> get budgetRows {
     final rows = <WebBudgetRow>[];
     final byGroup = categoriesByGroup;
-    for (final group in BudgetGroup.values) {
-      if (group == BudgetGroup.savings) continue;
-      for (final cat in byGroup[group] ?? const <FinanceCategory>[]) {
+    for (final group in expenseGroups) {
+      for (final cat in byGroup[group.id] ?? const <FinanceCategory>[]) {
         final budget = budgetFor(cat.id);
         final allocated = budget?.allocatedAmount ?? 0.0;
         final spent = spentFor(cat.id);
         rows.add(WebBudgetRow(
           targetId: cat.id,
           name: cat.name,
-          group: group,
+          groupId: group.id,
           allocated: allocated,
           spent: spent,
           remaining: allocated - spent,
@@ -200,7 +210,7 @@ class BudgetPresenter extends ChangeNotifier {
       rows.add(WebBudgetRow(
         targetId: entry.account.id,
         name: entry.account.name,
-        group: BudgetGroup.savings,
+        groupId: BudgetGroupDef.idSavings,
         allocated: allocated,
         spent: contributed,
         remaining: allocated - contributed,
@@ -232,18 +242,17 @@ class BudgetPresenter extends ChangeNotifier {
       .toList();
 
   /// Returns categories that have an *expense* budget set for the selected
-  /// month, grouped by BudgetGroup. The `savings` group is rendered separately
+  /// month, grouped by group ID string. The savings group is rendered separately
   /// via [savingsBudgets].
-  Map<BudgetGroup, List<FinanceCategory>> get categoriesByGroup {
-    final result = <BudgetGroup, List<FinanceCategory>>{
-      for (final g in BudgetGroup.values)
-        if (g != BudgetGroup.savings) g: [],
+  Map<String, List<FinanceCategory>> get categoriesByGroup {
+    final result = <String, List<FinanceCategory>>{
+      for (final g in expenseGroups) g.id: [],
     };
     for (final b in _budgetsForMonth) {
-      if (b.group == BudgetGroup.savings) continue;
+      if (_isSavingsGroup(b.group)) continue;
       final matches = _categories.where((c) => c.id == b.categoryId);
       if (matches.isEmpty) continue;
-      result[b.group]!.add(matches.first);
+      result.putIfAbsent(b.group, () => []).add(matches.first);
     }
     return result;
   }
@@ -253,27 +262,26 @@ class BudgetPresenter extends ChangeNotifier {
   /// exists.
   List<({Budget budget, FinancialAccount account})> get savingsBudgets {
     final result = <({Budget budget, FinancialAccount account})>[];
-    for (final b
-        in _budgetsForMonth.where((b) => b.group == BudgetGroup.savings)) {
+    for (final b in _budgetsForMonth.where((b) => _isSavingsGroup(b.group))) {
       final acct = _accounts.where((a) => a.id == b.categoryId).firstOrNull;
       if (acct != null) result.add((budget: b, account: acct));
     }
     return result;
   }
 
-  double sectionAllocated(BudgetGroup group) => _budgetsForMonth
-      .where((b) => b.group == group)
+  double sectionAllocated(String groupId) => _budgetsForMonth
+      .where((b) => b.group == groupId)
       .fold(0.0, (sum, b) => sum + b.allocatedAmount);
 
-  double sectionSpent(BudgetGroup group) {
-    if (group == BudgetGroup.savings) {
+  double sectionSpent(String groupId) {
+    if (_isSavingsGroup(groupId)) {
       return savingsBudgets.fold(
         0.0,
         (sum, e) => sum + contributedTo(e.account.id),
       );
     }
     final catIds = _budgetsForMonth
-        .where((b) => b.group == group)
+        .where((b) => b.group == groupId)
         .map((b) => b.categoryId)
         .toSet();
     return _allTransactions
@@ -343,7 +351,7 @@ class BudgetPresenter extends ChangeNotifier {
 
   double spentFor(String categoryId) {
     final budget = budgetFor(categoryId);
-    if (budget?.group == BudgetGroup.savings) {
+    if (budget != null && _isSavingsGroup(budget.group)) {
       // For savings rows the "categoryId" is actually a target account id —
       // count contributions, not outflows.
       return contributedTo(categoryId);
@@ -375,7 +383,7 @@ class BudgetPresenter extends ChangeNotifier {
   Future<void> setBudget(
     String categoryId,
     double amount, {
-    BudgetGroup? group,
+    String? group,
     BudgetType? budgetType,
   }) async {
     final existing = budgetFor(categoryId);
@@ -398,7 +406,7 @@ class BudgetPresenter extends ChangeNotifier {
         categoryId: categoryId,
         month: _selectedMonth,
         allocatedAmount: amount,
-        group: group ?? BudgetGroup.variableOptional,
+        group: group ?? BudgetGroupDef.idVariableOptional,
         budgetType: budgetType ?? BudgetType.monthly,
       );
       _allBudgets = [..._allBudgets, newBudget];
@@ -407,6 +415,55 @@ class BudgetPresenter extends ChangeNotifier {
     notifyListeners();
     await _storage.saveBudgets(_allBudgets);
     await _checkBudgetNotExceededXp();
+  }
+
+  // ─── Group CRUD ───────────────────────────────────────────────────────────────
+
+  Future<void> addGroup(String name) async {
+    final id = 'custom_${DateTime.now().microsecondsSinceEpoch}';
+    final sortOrder =
+        _groups.fold(0, (max, g) => g.sortOrder > max ? g.sortOrder : max) + 1;
+    _groups = [
+      ..._groups,
+      BudgetGroupDef(
+        id: id,
+        name: name,
+        isSavings: false,
+        isBuiltIn: false,
+        sortOrder: sortOrder,
+      ),
+    ];
+    notifyListeners();
+    await _saveGroups();
+  }
+
+  Future<void> renameGroup(String id, String name) async {
+    _groups = [
+      for (final g in _groups) g.id == id ? g.copyWith(name: name) : g,
+    ];
+    notifyListeners();
+    await _saveGroups();
+  }
+
+  Future<void> deleteGroup(String id) async {
+    // Reassign budgets in this group to the first non-savings built-in group.
+    final fallback = expenseGroups.isNotEmpty
+        ? expenseGroups.first.id
+        : BudgetGroupDef.idVariableOptional;
+    _allBudgets = [
+      for (final b in _allBudgets)
+        b.group == id ? b.copyWith(group: fallback) : b,
+    ];
+    _groups = _groups.where((g) => g.id != id).toList();
+    notifyListeners();
+    await _storage.saveBudgets(_allBudgets);
+    await _saveGroups();
+  }
+
+  Future<void> _saveGroups() async {
+    // Persist only non-defaults OR customised defaults (name changes).
+    // We always save the full list so merge() on reload picks up overrides.
+    await _storage.saveBudgetGroups(_groups);
   }
 
   Future<void> removeBudget(String categoryId) async {
@@ -435,6 +492,7 @@ class BudgetPresenter extends ChangeNotifier {
 
   Future<void> load() async {
     _allBudgets = await _storage.loadBudgets();
+    _groups = BudgetGroupDef.merge(await _storage.loadBudgetGroups());
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
@@ -466,16 +524,16 @@ class BudgetPresenter extends ChangeNotifier {
   }
 }
 
-/// Allocated-vs-spent totals for one [BudgetGroup] — feeds the web allocation
+/// Allocated-vs-spent totals for one group — feeds the web allocation
 /// bar chart (Plan 050-D).
 class WebBudgetGroupBar {
-  final BudgetGroup group;
+  final String groupId;
   final String label;
   final double allocated;
   final double spent;
 
   const WebBudgetGroupBar({
-    required this.group,
+    required this.groupId,
     required this.label,
     required this.allocated,
     required this.spent,
@@ -489,7 +547,7 @@ class WebBudgetGroupBar {
 class WebBudgetRow {
   final String targetId;
   final String name;
-  final BudgetGroup group;
+  final String groupId;
   final double allocated;
   final double spent;
   final double remaining;
@@ -501,7 +559,7 @@ class WebBudgetRow {
   const WebBudgetRow({
     required this.targetId,
     required this.name,
-    required this.group,
+    required this.groupId,
     required this.allocated,
     required this.spent,
     required this.remaining,

@@ -16,6 +16,7 @@ import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budget.dart';
+import '../models/finance/budget_group_def.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/finance_category.dart';
@@ -1107,6 +1108,21 @@ class LocalStorageService extends StorageService {
       debugPrint('LocalStorageService: Error loading budgets: $e');
       return [];
     }
+  }
+
+  @override
+  Future<void> saveBudgetGroups(List<BudgetGroupDef> groups) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_k(StorageService.keyBudgetGroups),
+        jsonEncode(groups.map((g) => g.toJson()).toList()));
+  }
+
+  @override
+  Future<List<BudgetGroupDef>> loadBudgetGroups() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyBudgetGroups));
+    if (raw == null) return [];
+    return BudgetGroupDef.fromJsonList(raw);
   }
 
   @override

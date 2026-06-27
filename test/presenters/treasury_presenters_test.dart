@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
@@ -1056,7 +1057,7 @@ void main() {
         categoryId: 'food',
         month: '2026-03',
         allocatedAmount: 2000,
-        group: BudgetGroup.variableOptional,
+        group: BudgetGroupDef.idVariableOptional,
         budgetType: BudgetType.monthly,
       );
       when(mockStorage.loadBudgets()).thenAnswer((_) async => [existingBudget]);
@@ -1077,7 +1078,7 @@ void main() {
               categoryId: 'food',
               month: '2026-03',
               allocatedAmount: 1000,
-              group: BudgetGroup.variableOptional,
+              group: BudgetGroupDef.idVariableOptional,
               budgetType: BudgetType.monthly,
             ),
           ]);
@@ -1102,7 +1103,7 @@ void main() {
               categoryId: 'food',
               month: '2026-03',
               allocatedAmount: 1000,
-              group: BudgetGroup.variableOptional,
+              group: BudgetGroupDef.idVariableOptional,
               budgetType: BudgetType.monthly,
             ),
           ]);

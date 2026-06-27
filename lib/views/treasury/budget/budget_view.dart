@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/budget/add_budget_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/budget/category_budget_tile.dart';
+import 'package:intermittent_fasting/views/treasury/budget/manage_groups_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class BudgetView extends StatefulWidget {
@@ -37,6 +39,14 @@ class _BudgetViewState extends State<BudgetView> {
     );
   }
 
+  void _showManageGroups() {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Manage Groups',
+      body: ManageGroupsSheet(presenter: widget.presenter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -50,36 +60,38 @@ class _BudgetViewState extends State<BudgetView> {
         return Scaffold(
           body: Column(
             children: [
-              _MonthSelector(presenter: widget.presenter),
+              _MonthSelector(
+                presenter: widget.presenter,
+                onManageGroups: _showManageGroups,
+              ),
               _SummaryBanner(presenter: widget.presenter),
               Expanded(
                 child: hasAny
                     ? ListView(
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
                         children: [
-                          for (final group in BudgetGroup.values) ...[
-                            if (group == BudgetGroup.savings &&
-                                savings.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _SavingsSection(
-                                  presenter: widget.presenter,
-                                  rows: savings,
-                                  onTap: _showAddBudgetSheet,
-                                ),
-                              )
-                            else if (group != BudgetGroup.savings &&
-                                (byGroup[group] ?? const []).isNotEmpty)
+                          for (final group
+                              in widget.presenter.expenseGroups) ...[
+                            if ((byGroup[group.id] ?? const []).isNotEmpty)
                               Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
                                 child: _GroupSection(
                                   group: group,
                                   presenter: widget.presenter,
-                                  categories: byGroup[group]!,
+                                  categories: byGroup[group.id]!,
                                   onTapCategory: _showAddBudgetSheet,
                                 ),
                               ),
                           ],
+                          if (savings.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: _SavingsSection(
+                                presenter: widget.presenter,
+                                rows: savings,
+                                onTap: _showAddBudgetSheet,
+                              ),
+                            ),
                         ],
                       )
                     : AppEmptyState(
@@ -106,8 +118,9 @@ class _BudgetViewState extends State<BudgetView> {
 
 class _MonthSelector extends StatelessWidget {
   final BudgetPresenter presenter;
+  final VoidCallback? onManageGroups;
 
-  const _MonthSelector({required this.presenter});
+  const _MonthSelector({required this.presenter, this.onManageGroups});
 
   @override
   Widget build(BuildContext context) {
@@ -133,14 +146,29 @@ class _MonthSelector extends StatelessWidget {
               style: theme.textTheme.titleSmall
                   ?.copyWith(fontWeight: FontWeight.w600),
             ),
-            SizedBox(
-              width: 44,
-              height: 44,
-              child: IconButton(
-                icon: const Icon(Icons.chevron_right),
-                onPressed: () =>
-                    presenter.setMonth(nextMonth(presenter.selectedMonth)),
-              ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (onManageGroups != null)
+                  SizedBox(
+                    width: 44,
+                    height: 44,
+                    child: IconButton(
+                      icon: const Icon(Icons.category_outlined),
+                      tooltip: 'Manage groups',
+                      onPressed: onManageGroups,
+                    ),
+                  ),
+                SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_right),
+                    onPressed: () =>
+                        presenter.setMonth(nextMonth(presenter.selectedMonth)),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -218,7 +246,7 @@ class _SummaryBanner extends StatelessWidget {
 // ─── Group Section ────────────────────────────────────────────────────────────
 
 class _GroupSection extends StatelessWidget {
-  final BudgetGroup group;
+  final BudgetGroupDef group;
   final BudgetPresenter presenter;
   final List categories;
   final ValueChanged<String> onTapCategory;
@@ -230,20 +258,13 @@ class _GroupSection extends StatelessWidget {
     required this.onTapCategory,
   });
 
-  static const _groupLabels = {
-    BudgetGroup.nonNegotiables: 'NON-NEGOTIABLES',
-    BudgetGroup.livingExpense: 'LIVING EXPENSE',
-    BudgetGroup.variableOptional: 'VARIABLE / OPTIONAL',
-    BudgetGroup.savings: 'SAVINGS / GOALS',
-  };
-
   @override
   Widget build(BuildContext context) {
-    final sectionAllocated = presenter.sectionAllocated(group);
-    final sectionSpent = presenter.sectionSpent(group);
+    final sectionAllocated = presenter.sectionAllocated(group.id);
+    final sectionSpent = presenter.sectionSpent(group.id);
 
     return AppSection(
-      title: _groupLabels[group]!,
+      title: group.name.toUpperCase(),
       hint:
           '${formatPesoCompact(sectionSpent)} / ${formatPesoCompact(sectionAllocated)}',
       child: AppCard(
@@ -294,8 +315,8 @@ class _SavingsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final allocated = presenter.sectionAllocated(BudgetGroup.savings);
-    final saved = presenter.sectionSpent(BudgetGroup.savings);
+    final allocated = presenter.sectionAllocated(BudgetGroupDef.idSavings);
+    final saved = presenter.sectionSpent(BudgetGroupDef.idSavings);
 
     return AppSection(
       title: 'SAVINGS / GOALS',

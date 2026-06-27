@@ -622,6 +622,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       description: description,
       note: note,
       month: monthKey,
+      transferToAccountId: fromAccountId,
       transferGroupId: groupId,
     );
 

@@ -2189,15 +2189,10 @@ class _EditableRowState extends State<_EditableRow> {
           ),
           // Account
           isTransfer
-              ? _readCell(
+              ? _TransferAccountCell(
                   width: w.account,
-                  child: Text(
-                    '${widget.accountName(t.accountId)} → '
-                    '${widget.accountName(t.transferToAccountId)}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  txn: t,
+                  accounts: widget.accounts,
                 )
               : _AccountCell(
                   width: w.account,
@@ -2845,6 +2840,101 @@ class _AccountCell extends StatelessWidget {
         hintText: 'Account',
         isDense: true,
         onChanged: onChanged,
+      ),
+    );
+  }
+}
+
+class _TransferAccountCell extends StatelessWidget {
+  final double width;
+  final TransactionRecord txn;
+  final List<FinancialAccount> accounts;
+
+  const _TransferAccountCell({
+    required this.width,
+    required this.txn,
+    required this.accounts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final brightness = theme.brightness;
+
+    // outflow leg: accountId = from, transferToAccountId = to.
+    // inflow leg: transferToAccountId = from (set by addTransfer), accountId = to.
+    final fromId = txn.type == TransactionType.inflow
+        ? txn.transferToAccountId
+        : txn.accountId;
+    final toId = txn.type == TransactionType.inflow
+        ? txn.accountId
+        : txn.transferToAccountId;
+
+    FinancialAccount? acctById(String? id) =>
+        id == null ? null : accounts.where((a) => a.id == id).firstOrNull;
+
+    Color? dotColor(FinancialAccount? a) {
+      if (a == null) return null;
+      final idx = accounts.indexOf(a);
+      return resolveSliceColor(a.colorHex, idx, brightness: brightness);
+    }
+
+    Widget chip(FinancialAccount? acct) {
+      final dot = dotColor(acct);
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot != null) ...[
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: dot,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+            const SizedBox(width: WebInsets.xs),
+          ],
+          Flexible(
+            child: Text(
+              acct?.name ?? '—',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.bodySmall,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return SizedBox(
+      width: width,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: WebInsets.sm,
+          vertical: WebInsets.xs,
+        ),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 44),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Row(
+              children: [
+                Flexible(child: chip(acctById(fromId))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: WebInsets.xs),
+                  child: Icon(
+                    Icons.arrow_right_alt_rounded,
+                    size: 14,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                  ),
+                ),
+                Flexible(child: chip(acctById(toId))),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
