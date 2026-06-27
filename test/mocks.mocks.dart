@@ -24,6 +24,8 @@ import 'package:intermittent_fasting/models/fasting_log.dart' as _i12;
 import 'package:intermittent_fasting/models/fasting_phase.dart' as _i53;
 import 'package:intermittent_fasting/models/finance/bill.dart' as _i23;
 import 'package:intermittent_fasting/models/finance/budget.dart' as _i21;
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart'
+    as _i58;
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart'
     as _i22;
 import 'package:intermittent_fasting/models/finance/finance_category.dart'
@@ -880,6 +882,31 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
         ),
         returnValue: _i11.Future<List<_i21.Budget>>.value(<_i21.Budget>[]),
       ) as _i11.Future<List<_i21.Budget>>);
+
+  @override
+  _i11.Future<void> saveBudgetGroups(
+          List<_i58.BudgetGroupDef>? groups) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveBudgetGroups,
+          [groups],
+        ),
+        returnValue: _i11.Future<void>.value(),
+        returnValueForMissingStub: _i11.Future<void>.value(),
+      ) as _i11.Future<void>);
+
+  @override
+  _i11.Future<List<_i58.BudgetGroupDef>> loadBudgetGroups() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #loadBudgetGroups,
+          [],
+        ),
+        returnValue: _i11.Future<List<_i58.BudgetGroupDef>>.value(
+            <_i58.BudgetGroupDef>[]),
+        returnValueForMissingStub: _i11.Future<List<_i58.BudgetGroupDef>>.value(
+            <_i58.BudgetGroupDef>[]),
+      ) as _i11.Future<List<_i58.BudgetGroupDef>>);
 
   @override
   _i11.Future<void> saveBudgetedExpenses(

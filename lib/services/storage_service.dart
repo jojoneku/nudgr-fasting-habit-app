@@ -11,6 +11,7 @@ import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 import '../models/finance/bill.dart';
 import '../models/finance/budget.dart';
+import '../models/finance/budget_group_def.dart';
 import '../models/finance/installment.dart';
 import '../models/finance/budgeted_expense.dart';
 import '../models/finance/finance_category.dart';
@@ -69,6 +70,7 @@ abstract class StorageService {
   static const String keyTransactions = 'finance_transactions';
   static const String keyFinanceCategories = 'finance_categories';
   static const String keyBudgets = 'finance_budgets';
+  static const String keyBudgetGroups = 'finance_budget_groups';
   static const String keyBudgetedExpenses = 'finance_budgeted_expenses';
   static const String keyBills = 'finance_bills';
   static const String keyReceivables = 'finance_receivables';
@@ -179,6 +181,8 @@ abstract class StorageService {
   Future<List<FinanceCategory>> loadFinanceCategories();
   Future<void> saveBudgets(List<Budget> budgets);
   Future<List<Budget>> loadBudgets();
+  Future<void> saveBudgetGroups(List<BudgetGroupDef> groups);
+  Future<List<BudgetGroupDef>> loadBudgetGroups();
   Future<void> saveBudgetedExpenses(List<BudgetedExpense> expenses);
   Future<List<BudgetedExpense>> loadBudgetedExpenses();
   Future<void> saveBills(List<Bill> bills);

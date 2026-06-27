@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
@@ -35,30 +36,13 @@ class WebBudgetPage extends StatelessWidget {
   }
 }
 
-/// Display labels + group → BudgetGroup mapping used by the row dropdown.
-const Map<BudgetGroup, String> _kGroupLabel = {
-  BudgetGroup.nonNegotiables: 'Non-Negotiable',
-  BudgetGroup.livingExpense: 'Living',
-  BudgetGroup.variableOptional: 'Variable',
-  BudgetGroup.savings: 'Savings',
-};
-
-/// Groups offered in the inline dropdown. Savings is excluded because savings
-/// rows are keyed by *account* id (not a category id) — reassigning an expense
-/// row into Savings would point at a non-existent account. Savings rows render
-/// their group as a non-editable label.
-const List<BudgetGroup> _kExpenseGroups = [
-  BudgetGroup.nonNegotiables,
-  BudgetGroup.livingExpense,
-  BudgetGroup.variableOptional,
-];
-
 /// One flattened table row. [accountBacked] rows are savings/goal budgets whose
-/// group cannot be changed inline (see [_kExpenseGroups]).
+/// group cannot be changed inline (savings rows are keyed by account id, not
+/// category id — reassigning would point at a non-existent account).
 class _Row {
   final String id; // categoryId or accountId
   final String name;
-  final BudgetGroup group;
+  final String groupId;
   final double allocated;
   final double spent;
   final Color color;
@@ -67,7 +51,7 @@ class _Row {
   const _Row({
     required this.id,
     required this.name,
-    required this.group,
+    required this.groupId,
     required this.allocated,
     required this.spent,
     required this.color,
@@ -99,12 +83,12 @@ class _BudgetBody extends StatelessWidget {
     final rows = <_Row>[];
     final byGroup = presenter.categoriesByGroup;
     var colorIndex = 0;
-    for (final group in _kExpenseGroups) {
-      for (final cat in byGroup[group] ?? const <FinanceCategory>[]) {
+    for (final group in presenter.expenseGroups) {
+      for (final cat in byGroup[group.id] ?? const <FinanceCategory>[]) {
         rows.add(_Row(
           id: cat.id,
           name: cat.name,
-          group: group,
+          groupId: group.id,
           allocated: presenter.budgetFor(cat.id)?.allocatedAmount ?? 0,
           spent: presenter.spentFor(cat.id),
           color: resolveSliceColor(cat.colorHex, colorIndex++,
@@ -117,7 +101,7 @@ class _BudgetBody extends StatelessWidget {
       rows.add(_Row(
         id: entry.account.id,
         name: entry.account.name,
-        group: BudgetGroup.savings,
+        groupId: BudgetGroupDef.idSavings,
         allocated: entry.budget.allocatedAmount,
         spent: presenter.contributedTo(entry.account.id),
         color: Theme.of(context).colorScheme.tertiary,
@@ -134,7 +118,7 @@ class _BudgetBody extends StatelessWidget {
     final spent = presenter.totalSpent;
     final remaining = presenter.totalRemaining;
     final usedPct = allocated > 0 ? (spent / allocated * 100) : 0.0;
-    final groupCount = {for (final r in rows) r.group}.length;
+    final groupCount = {for (final r in rows) r.groupId}.length;
 
     final content = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: double.infinity),
@@ -459,22 +443,21 @@ class _DataRow extends StatelessWidget {
   const _DataRow({super.key, required this.presenter, required this.row});
 
   Future<void> _commitAllocation(double amount) async {
-    // Preserve the existing budget's group/type when editing the allocation.
     final existing = presenter.budgetFor(row.id);
     await presenter.setBudget(
       row.id,
       amount,
-      group: existing?.group ?? row.group,
+      group: existing?.group ?? row.groupId,
       budgetType: existing?.budgetType ?? BudgetType.variable,
     );
   }
 
-  Future<void> _changeGroup(BudgetGroup group) async {
+  Future<void> _changeGroup(String groupId) async {
     final existing = presenter.budgetFor(row.id);
     await presenter.setBudget(
       row.id,
       existing?.allocatedAmount ?? row.allocated,
-      group: group,
+      group: groupId,
       budgetType: existing?.budgetType ?? BudgetType.variable,
     );
   }
@@ -527,9 +510,14 @@ class _DataRow extends StatelessWidget {
           SizedBox(
             width: _kGroupW,
             child: row.accountBacked
-                ? _GroupLabel(group: row.group, color: row.color)
+                ? _GroupLabel(
+                    groupId: row.groupId,
+                    groupName: presenter.budgetGroupLabel(row.groupId),
+                    color: row.color,
+                  )
                 : _GroupDropdown(
-                    group: row.group,
+                    groupId: row.groupId,
+                    expenseGroups: presenter.expenseGroups,
                     onChanged: _changeGroup,
                   ),
           ),
@@ -650,10 +638,15 @@ class _DataRow extends StatelessWidget {
 
 /// Static group chip for savings rows (group cannot be reassigned inline).
 class _GroupLabel extends StatelessWidget {
-  final BudgetGroup group;
+  final String groupId;
+  final String groupName;
   final Color color;
 
-  const _GroupLabel({required this.group, required this.color});
+  const _GroupLabel({
+    required this.groupId,
+    required this.groupName,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -673,7 +666,7 @@ class _GroupLabel extends StatelessWidget {
           const SizedBox(width: WebInsets.sm),
           Flexible(
             child: Text(
-              _kGroupLabel[group] ?? 'Savings',
+              groupName,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium,
             ),
@@ -685,10 +678,15 @@ class _GroupLabel extends StatelessWidget {
 }
 
 class _GroupDropdown extends StatelessWidget {
-  final BudgetGroup group;
-  final ValueChanged<BudgetGroup> onChanged;
+  final String groupId;
+  final List<BudgetGroupDef> expenseGroups;
+  final ValueChanged<String> onChanged;
 
-  const _GroupDropdown({required this.group, required this.onChanged});
+  const _GroupDropdown({
+    required this.groupId,
+    required this.expenseGroups,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -701,8 +699,8 @@ class _GroupDropdown extends StatelessWidget {
         vertical: WebInsets.sm,
       ),
       child: DropdownButtonHideUnderline(
-        child: DropdownButton<BudgetGroup>(
-          value: group,
+        child: DropdownButton<String>(
+          value: expenseGroups.any((g) => g.id == groupId) ? groupId : null,
           isDense: true,
           isExpanded: true,
           borderRadius: AppRadii.smBorder,
@@ -710,44 +708,44 @@ class _GroupDropdown extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
           dropdownColor: cs.surfaceContainerHigh,
           items: [
-            for (final g in _kExpenseGroups)
+            for (var i = 0; i < expenseGroups.length; i++)
               DropdownMenuItem(
-                value: g,
+                value: expenseGroups[i].id,
                 child: Row(
                   children: [
                     Container(
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: _groupColor(context, g),
+                        color: _groupColorByIndex(context, i),
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                     const SizedBox(width: WebInsets.sm),
-                    Text(_kGroupLabel[g] ?? g.name),
+                    Text(expenseGroups[i].name),
                   ],
                 ),
               ),
           ],
           selectedItemBuilder: (context) => [
-            for (final g in _kExpenseGroups)
+            for (var i = 0; i < expenseGroups.length; i++)
               Row(
                 children: [
                   Container(
                     width: 8,
                     height: 8,
                     decoration: BoxDecoration(
-                      color: _groupColor(context, g),
+                      color: _groupColorByIndex(context, i),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
                   const SizedBox(width: WebInsets.sm),
-                  Text(_kGroupLabel[g] ?? g.name),
+                  Text(expenseGroups[i].name),
                 ],
               ),
           ],
-          onChanged: (g) {
-            if (g != null && g != group) onChanged(g);
+          onChanged: (gId) {
+            if (gId != null && gId != groupId) onChanged(gId);
           },
         ),
       ),
@@ -755,15 +753,10 @@ class _GroupDropdown extends StatelessWidget {
   }
 }
 
-/// Distinct theme-derived accent per group for the dot + donut.
-Color _groupColor(BuildContext context, BudgetGroup group) {
+/// Cycles through theme accent colors by index.
+Color _groupColorByIndex(BuildContext context, int index) {
   final cs = Theme.of(context).colorScheme;
-  return switch (group) {
-    BudgetGroup.nonNegotiables => cs.primary,
-    BudgetGroup.livingExpense => cs.secondary,
-    BudgetGroup.variableOptional => cs.tertiary,
-    BudgetGroup.savings => cs.tertiary,
-  };
+  return [cs.primary, cs.secondary, cs.tertiary, cs.error][index % 4];
 }
 
 /// Editable, right-aligned amount field. Shows formatted thousands when
@@ -895,8 +888,7 @@ class _AddRow extends StatefulWidget {
 
 class _AddRowState extends State<_AddRow> {
   final _amountController = TextEditingController();
-  String? _selectedCategoryId;
-  BudgetGroup _group = BudgetGroup.variableOptional;
+  String _groupId = BudgetGroupDef.idVariableOptional;
   bool _busy = false;
 
   @override
@@ -992,17 +984,14 @@ class _AddRowState extends State<_AddRow> {
       await widget.presenter.setBudget(
         id,
         amount,
-        group: _group,
+        group: _groupId,
         budgetType: BudgetType.variable,
       );
       // Guard the controller writes after the await — the row may have been
       // removed mid-save, in which case the controller is disposed. (C11)
       if (!mounted) return;
       _amountController.clear();
-      setState(() {
-        _selectedCategoryId = null;
-        _group = BudgetGroup.variableOptional;
-      });
+      setState(() => _groupId = BudgetGroupDef.idVariableOptional);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1051,8 +1040,9 @@ class _AddRowState extends State<_AddRow> {
           SizedBox(
             width: _kGroupW,
             child: _GroupDropdown(
-              group: _group,
-              onChanged: (g) => setState(() => _group = g),
+              groupId: _groupId,
+              expenseGroups: widget.presenter.expenseGroups,
+              onChanged: (g) => setState(() => _groupId = g),
             ),
           ),
           SizedBox(
@@ -1124,25 +1114,26 @@ class _AllocationByGroup extends StatelessWidget {
   Widget build(BuildContext context) {
     final totalAllocated = presenter.totalAllocated;
 
-    // Aggregate rows by group, preserving the canonical group order.
-    final order = [..._kExpenseGroups, BudgetGroup.savings];
-    final groups = <({BudgetGroup group, double alloc, double spent})>[];
-    for (final g in order) {
-      final inGroup = rows.where((r) => r.group == g).toList();
+    // Aggregate rows by group, preserving the sorted group order from presenter.
+    final allGroups = presenter.groups;
+    final groups = <({BudgetGroupDef def, double alloc, double spent})>[];
+    for (var i = 0; i < allGroups.length; i++) {
+      final g = allGroups[i];
+      final inGroup = rows.where((r) => r.groupId == g.id).toList();
       if (inGroup.isEmpty) continue;
       groups.add((
-        group: g,
+        def: g,
         alloc: inGroup.fold<double>(0, (s, r) => s + r.allocated),
         spent: inGroup.fold<double>(0, (s, r) => s + r.spent),
       ));
     }
 
     final slices = [
-      for (final g in groups)
+      for (var i = 0; i < groups.length; i++)
         WebChartSlice(
-          label: _kGroupLabel[g.group] ?? g.group.name,
-          value: g.alloc,
-          color: _groupColor(context, g.group),
+          label: groups[i].def.name,
+          value: groups[i].alloc,
+          color: _groupColorByIndex(context, i),
         ),
     ];
 
@@ -1163,6 +1154,7 @@ class _AllocationByGroup extends StatelessWidget {
             groups: groups,
             totalAllocated: totalAllocated,
             twoCol: wide,
+            colorOf: (i) => _groupColorByIndex(context, i),
           );
 
           if (!wide) {
@@ -1190,25 +1182,27 @@ class _AllocationByGroup extends StatelessWidget {
 }
 
 class _GroupLegendGrid extends StatelessWidget {
-  final List<({BudgetGroup group, double alloc, double spent})> groups;
+  final List<({BudgetGroupDef def, double alloc, double spent})> groups;
   final double totalAllocated;
   final bool twoCol;
+  final Color Function(int index) colorOf;
 
   const _GroupLegendGrid({
     required this.groups,
     required this.totalAllocated,
     required this.twoCol,
+    required this.colorOf,
   });
 
   @override
   Widget build(BuildContext context) {
     final items = [
-      for (final g in groups)
+      for (var i = 0; i < groups.length; i++)
         _GroupLegendItem(
-          color: _groupColor(context, g.group),
-          name: _kGroupLabel[g.group] ?? g.group.name,
-          alloc: g.alloc,
-          spent: g.spent,
+          color: colorOf(i),
+          name: groups[i].def.name,
+          alloc: groups[i].alloc,
+          spent: groups[i].spent,
           totalAllocated: totalAllocated,
         ),
     ];

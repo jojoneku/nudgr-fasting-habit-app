@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 
 import '../../../models/finance/bill.dart';
 import '../../../models/finance/budget.dart';
+import '../../../models/finance/budget_group_def.dart';
 import '../../../models/finance/budgeted_expense.dart';
 import '../../../models/finance/finance_category.dart';
 import '../../../models/finance/financial_account.dart';
@@ -188,23 +189,22 @@ abstract final class PreviewSeed {
 
   // ── Budgets (allocation + group) ────────────────────────────────────────────
   static List<Budget> _budgets(String month) {
-    Budget b(String id, String catId, BudgetGroup group, double alloc) =>
-        Budget(
-            id: id,
-            categoryId: catId,
-            month: month,
-            allocatedAmount: alloc,
-            group: group,
-            budgetType: BudgetType.monthly);
+    Budget b(String id, String catId, String group, double alloc) => Budget(
+        id: id,
+        categoryId: catId,
+        month: month,
+        allocatedAmount: alloc,
+        group: group,
+        budgetType: BudgetType.monthly);
 
     return [
-      b('b_bills', 'c_bills', BudgetGroup.nonNegotiables, 10000),
-      b('b_net', 'c_net', BudgetGroup.nonNegotiables, 249),
-      b('b_house', 'c_house', BudgetGroup.livingExpense, 14000),
-      b('b_food', 'c_food', BudgetGroup.livingExpense, 2500),
-      b('b_trans', 'c_trans', BudgetGroup.variableOptional, 1000),
-      b('b_fun', 'c_fun', BudgetGroup.variableOptional, 2000),
-      b('b_health', 'c_health', BudgetGroup.variableOptional, 1000),
+      b('b_bills', 'c_bills', BudgetGroupDef.idNonNegotiables, 10000),
+      b('b_net', 'c_net', BudgetGroupDef.idNonNegotiables, 249),
+      b('b_house', 'c_house', BudgetGroupDef.idLivingExpense, 14000),
+      b('b_food', 'c_food', BudgetGroupDef.idLivingExpense, 2500),
+      b('b_trans', 'c_trans', BudgetGroupDef.idVariableOptional, 1000),
+      b('b_fun', 'c_fun', BudgetGroupDef.idVariableOptional, 2000),
+      b('b_health', 'c_health', BudgetGroupDef.idVariableOptional, 1000),
     ];
   }
 

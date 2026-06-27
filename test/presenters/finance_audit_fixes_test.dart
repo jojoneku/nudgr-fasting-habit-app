@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
+import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
@@ -185,14 +186,14 @@ void main() {
             categoryId: 'sav1',
             month: toMonthKey(DateTime.now()),
             allocatedAmount: 5000,
-            group: BudgetGroup.savings,
+            group: BudgetGroupDef.idSavings,
             budgetType: BudgetType.monthly),
         Budget(
             id: 'b2',
             categoryId: 'sav2',
             month: toMonthKey(DateTime.now()),
             allocatedAmount: 5000,
-            group: BudgetGroup.savings,
+            group: BudgetGroupDef.idSavings,
             budgetType: BudgetType.monthly),
       ];
       when(mockStorage.loadAccounts()).thenAnswer((_) async => accounts);
@@ -210,7 +211,7 @@ void main() {
       // sav1 net = −3000, sav2 net = +3000 → section spent nets to 0.
       expect(budget.contributedTo('sav1'), -3000);
       expect(budget.contributedTo('sav2'), 3000);
-      expect(budget.sectionSpent(BudgetGroup.savings), 0);
+      expect(budget.sectionSpent(BudgetGroupDef.idSavings), 0);
     });
   });
 
@@ -229,7 +230,7 @@ void main() {
                 categoryId: 'rent',
                 month: month,
                 allocatedAmount: 5000,
-                group: BudgetGroup.variableOptional,
+                group: BudgetGroupDef.idVariableOptional,
                 budgetType: BudgetType.monthly),
           ]);
       final p = TreasuryDashboardPresenter(mockStorage);
