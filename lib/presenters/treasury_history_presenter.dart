@@ -107,6 +107,51 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   double get cumulativeNetSavings =>
       _summaries.fold(0.0, (s, m) => s + m.netSavings);
 
+  // ─── Savings contributions (money set aside into pockets) ───────────────────────
+  // Distinct from net savings (the income − expense surplus): this tracks money
+  // that actually moved into a savings/goal/sinking-fund account via a transfer,
+  // so it answers "how much did I put away this month?" rather than "how much of
+  // my income survived?". Derived live from transfers — no category is involved.
+
+  /// Net amount set aside into savings pockets for [month] (transfers in minus
+  /// transfers back out). Computed live so the current, still-open month counts.
+  double monthlySavingsContribution(String month) => _sumSavingsContribution(
+        _allTransactions.where((t) => t.month == month).toList(),
+      );
+
+  /// Per-pocket breakdown for [month], one row per savings/goal/sinking-fund
+  /// account that saw movement, richest first. Carries the account's name and
+  /// colour so the view does no lookups in `build()`.
+  List<SavingsPocketContribution> savingsContributionByPocket(String month) {
+    final byId = _buildSavingsContributionByPocket(
+      _allTransactions.where((t) => t.month == month).toList(),
+    );
+    final rows = <SavingsPocketContribution>[];
+    byId.forEach((accountId, amount) {
+      final acct = _accounts.where((a) => a.id == accountId).firstOrNull;
+      rows.add(SavingsPocketContribution(
+        accountId: accountId,
+        name: acct?.name ?? 'Account',
+        colorHex: acct?.colorHex,
+        amount: amount,
+      ));
+    });
+    rows.sort((a, b) => b.amount.compareTo(a.amount));
+    return rows;
+  }
+
+  /// Average monthly savings contribution across all months with activity.
+  double get averageSavingsContribution {
+    final months = activeMonths;
+    if (months.isEmpty) return 0;
+    final total = months.fold(0.0, (s, m) => s + monthlySavingsContribution(m));
+    return total / months.length;
+  }
+
+  /// Total set aside into pockets across every month with activity.
+  double get cumulativeSavingsContribution =>
+      activeMonths.fold(0.0, (s, m) => s + monthlySavingsContribution(m));
+
   // ─── Sheet-parity matrix (Plan 050 polish) ─────────────────────────────────────
   // Mirrors the Google Sheet's "Historical Summary" tab: months as columns,
   // with per-month Income/Expenses/Net/Savings-Rate/Cumulative, plus a
@@ -127,10 +172,10 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     var cumulative = 0.0;
     final cols = <MonthHistoryColumn>[];
     for (final m in months) {
+      final monthTxns = _allTransactions.where((t) => t.month == m).toList();
       // Exclude internal transfer legs — moving money between your own accounts
       // is neither income nor an expense (mirrors the dashboard cash-flow getters).
-      final txns = _allTransactions
-          .where((t) => t.month == m && t.transferGroupId == null);
+      final txns = monthTxns.where((t) => t.transferGroupId == null);
       final income = txns
           .where((t) => t.type == TransactionType.inflow)
           .fold(0.0, (s, t) => s + t.amount);
@@ -146,6 +191,9 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
         net: net,
         savingsRate: income > 0 ? net / income : null,
         cumulativeNet: cumulative,
+        // Savings contribution needs the transfer legs, so compute from the full
+        // month's transactions rather than the transfer-excluded `txns`.
+        savingsContribution: _sumSavingsContribution(monthTxns),
       ));
     }
     return cols;
@@ -242,9 +290,12 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
       final inflow = _sumType(txns, TransactionType.inflow);
       final outflow = _sumType(txns, TransactionType.outflow);
       final categorySpend = _buildCategorySpend(txns);
+      final savings = _sumSavingsContribution(txns);
       if (_closeEnough(inflow, s.totalInflow) &&
           _closeEnough(outflow, s.totalOutflow) &&
-          _categorySpendClose(categorySpend, s.categorySpend)) {
+          _categorySpendClose(categorySpend, s.categorySpend) &&
+          s.savingsContribution != null &&
+          _closeEnough(savings, s.savingsContribution!)) {
         repaired.add(s);
         continue;
       }
@@ -254,6 +305,7 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
         totalOutflow: outflow,
         netSavings: inflow - outflow,
         categorySpend: categorySpend,
+        savingsContribution: savings,
       ));
     }
     if (!changed) return;
@@ -311,12 +363,50 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
       endingCash: endingCash,
       accountSnapshots: accountSnapshots,
       categorySpend: categorySpend,
+      savingsContribution: _sumSavingsContribution(txns),
     );
   }
 
   double _sumType(List<TransactionRecord> txns, TransactionType type) => txns
       .where((t) => t.type == type && t.transferGroupId == null)
       .fold(0.0, (s, t) => s + t.amount);
+
+  /// Set of account ids that are savings pockets (savings / goal / sinking
+  /// fund), used to attribute transfer legs as savings contributions.
+  Set<String> get _savingsPocketIds =>
+      {for (final a in _accounts.where((a) => a.isSavingsPocket)) a.id};
+
+  /// Net amount moved into savings pockets across [txns]: the inflow leg of a
+  /// transfer that LANDS in a savings/goal/sinking-fund account counts as a
+  /// contribution; an outflow leg LEAVING one counts against it (a withdrawal).
+  /// Transfers between two pockets net to zero — not a new contribution. Only
+  /// transfer legs (transferGroupId != null) are considered; ordinary income or
+  /// spending never touches this figure.
+  double _sumSavingsContribution(List<TransactionRecord> txns) {
+    final pockets = _savingsPocketIds;
+    var total = 0.0;
+    for (final t in txns) {
+      if (t.transferGroupId == null || !pockets.contains(t.accountId)) continue;
+      total += t.type == TransactionType.inflow ? t.amount : -t.amount;
+    }
+    return total;
+  }
+
+  /// Per-pocket net contribution for [txns]: accountId → amount set aside this
+  /// period (negative when more was withdrawn than added). Only pockets with a
+  /// non-zero movement appear.
+  Map<String, double> _buildSavingsContributionByPocket(
+      List<TransactionRecord> txns) {
+    final pockets = _savingsPocketIds;
+    final result = <String, double>{};
+    for (final t in txns) {
+      if (t.transferGroupId == null || !pockets.contains(t.accountId)) continue;
+      final delta = t.type == TransactionType.inflow ? t.amount : -t.amount;
+      result[t.accountId] = (result[t.accountId] ?? 0.0) + delta;
+    }
+    result.removeWhere((_, v) => v == 0.0);
+    return result;
+  }
 
   Map<String, double> _buildAccountSnapshots() {
     return {
@@ -366,6 +456,9 @@ class MonthHistoryColumn {
   final double? savingsRate; // null when no income that month
   final double cumulativeNet;
 
+  /// Net moved into savings/goal/sinking-fund pockets via transfers this month.
+  final double savingsContribution;
+
   const MonthHistoryColumn({
     required this.month,
     required this.income,
@@ -373,6 +466,26 @@ class MonthHistoryColumn {
     required this.net,
     required this.savingsRate,
     required this.cumulativeNet,
+    this.savingsContribution = 0,
+  });
+}
+
+/// One savings-pocket row of a month's contribution breakdown — money set aside
+/// into a single savings/goal/sinking-fund account. Pre-resolved (name, colour)
+/// so the view does zero lookups in `build()`.
+class SavingsPocketContribution {
+  final String accountId;
+  final String name;
+  final String? colorHex;
+
+  /// Net moved into this pocket for the month (negative = net withdrawal).
+  final double amount;
+
+  const SavingsPocketContribution({
+    required this.accountId,
+    required this.name,
+    required this.colorHex,
+    required this.amount,
   });
 }
 
