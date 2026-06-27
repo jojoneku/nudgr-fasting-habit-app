@@ -40,35 +40,23 @@ class AiChatSheet extends StatefulWidget {
   final AiCoachPresenter presenter;
   final AiCoachEntryPoint entryPoint;
 
-  /// Optional message to seed the session with. When the coach is ready it is
-  /// sent automatically; otherwise it is prefilled into the input so the user
-  /// can send it once the model finishes initializing/downloading. Used by the
-  /// hub's docked chat bar to forward what the user typed there.
-  final String? initialText;
-
   const AiChatSheet({
     super.key,
     required this.presenter,
     required this.entryPoint,
-    this.initialText,
   });
 
   static Future<void> show(
     BuildContext context, {
     required AiCoachPresenter presenter,
     AiCoachEntryPoint entryPoint = AiCoachEntryPoint.general,
-    String? initialText,
   }) {
     presenter.openSession(entryPoint);
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => AiChatSheet(
-        presenter: presenter,
-        entryPoint: entryPoint,
-        initialText: initialText,
-      ),
+      builder: (_) => AiChatSheet(presenter: presenter, entryPoint: entryPoint),
     );
   }
 
@@ -82,25 +70,6 @@ class _AiChatSheetState extends State<AiChatSheet> {
   final _focusNode = FocusNode();
 
   AiCoachPresenter get _presenter => widget.presenter;
-
-  @override
-  void initState() {
-    super.initState();
-    final seed = widget.initialText?.trim();
-    if (seed == null || seed.isEmpty) return;
-    _controller.text = seed;
-    // Auto-send once the frame is up, but only when the coach can actually
-    // respond. If the model still needs downloading/initializing, leave the
-    // text prefilled so it isn't lost behind the download prompt.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (_presenter.isModelAvailable &&
-          !_presenter.isResponding &&
-          !_presenter.isInitializing) {
-        _send();
-      }
-    });
-  }
 
   @override
   void dispose() {
