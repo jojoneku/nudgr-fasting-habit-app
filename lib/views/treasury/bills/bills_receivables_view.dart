@@ -160,8 +160,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) =>
-          _QuickPaySheet(card: card, presenter: widget.presenter),
+      builder: (_) => _QuickPaySheet(card: card, presenter: widget.presenter),
     );
   }
 
@@ -810,8 +809,7 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
             if (!_alreadyInLedger) ...[
               const SizedBox(height: 12),
               Builder(builder: (context) {
-                final payers =
-                    widget.presenter.payerAccountsFor(widget.bill);
+                final payers = widget.presenter.payerAccountsFor(widget.bill);
                 if (payers.isEmpty) return const SizedBox.shrink();
                 return DropdownButtonFormField<String>(
                   key: ValueKey(_selectedAccountId),
@@ -1532,8 +1530,8 @@ class _CreditCardsSection extends StatelessWidget {
             padding: const EdgeInsets.only(left: 14),
             child: Text(
               'Live balance · pay anytime',
-              style: TextStyle(
-                  color: colorScheme.onSurfaceVariant, fontSize: 11),
+              style:
+                  TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
             ),
           ),
           children: [
@@ -1591,9 +1589,7 @@ class _CreditCardTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  payable > 0
-                      ? 'Owe ${formatPeso(payable)}'
-                      : 'No balance',
+                  payable > 0 ? 'Owe ${formatPeso(payable)}' : 'No balance',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: payable > 0
                         ? colorScheme.error
@@ -1697,8 +1693,7 @@ class _QuickPaySheetState extends State<_QuickPaySheet> {
   }
 
   Future<void> _confirm() async {
-    final amount =
-        double.tryParse(_amountController.text.replaceAll(',', ''));
+    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
     if (_selectedAccountId == null) return;
     setState(() => _isSubmitting = true);
@@ -1786,8 +1781,8 @@ class _QuickPaySheetState extends State<_QuickPaySheet> {
                     const SizedBox(width: 12),
                     Text(
                       DateFormat('MMMM d, yyyy').format(_date),
-                      style: TextStyle(
-                          color: colorScheme.onSurface, fontSize: 14),
+                      style:
+                          TextStyle(color: colorScheme.onSurface, fontSize: 14),
                     ),
                   ],
                 ),

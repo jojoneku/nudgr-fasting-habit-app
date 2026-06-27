@@ -583,11 +583,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
     // Determine the earliest month to backfill from (one after the oldest
     // existing auto-statement, or the current month when there are none).
-    final existingMonths = _allBills
-        .where(_isAutoStatement)
-        .map((b) => b.month)
-        .toList()
-      ..sort();
+    final existingMonths =
+        _allBills.where(_isAutoStatement).map((b) => b.month).toList()..sort();
     final startMonth = existingMonths.isEmpty
         ? currentMonthKey
         : nextMonth(existingMonths.first);
