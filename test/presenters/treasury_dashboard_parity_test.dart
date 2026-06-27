@@ -4,7 +4,6 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
-import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -36,6 +35,7 @@ TransactionRecord _txn({
   String? transferGroupId,
   bool reimbursable = false,
   String? reimbursementReceivableId,
+  String? receivableId,
 }) =>
     TransactionRecord(
       id: id,
@@ -49,6 +49,7 @@ TransactionRecord _txn({
       transferGroupId: transferGroupId,
       reimbursable: reimbursable,
       reimbursementReceivableId: reimbursementReceivableId,
+      receivableId: receivableId,
     );
 
 void main() {
@@ -275,7 +276,7 @@ void main() {
     });
   });
 
-  group('reimbursable expenses', () {
+  group('reimbursable expenses & loans', () {
     final month = toMonthKey(DateTime.now());
 
     Budget catBudget() => Budget(
@@ -287,8 +288,7 @@ void main() {
           budgetType: BudgetType.monthly,
         );
 
-    test(
-        'reimbursable outflow counts in monthTotalOutflow but NOT in budget spend',
+    test('reimbursable/loan outflow is excluded from expenses and budget',
         () async {
       when(mockStorage.loadBudgets()).thenAnswer((_) async => [catBudget()]);
       when(mockStorage.loadTransactions()).thenAnswer((_) async => [
@@ -302,46 +302,36 @@ void main() {
       final p = TreasuryDashboardPresenter(mockStorage);
       await p.load();
 
-      // Headline Expenses counts BOTH (real cash left the account).
-      expect(p.monthTotalOutflow, 3500);
-      // Budget spend excludes the reimbursable one — it shouldn't eat the
-      // category's budget. Only the 2000 normal outflow counts.
+      // Money you'll get back isn't spending — only the genuine 2000 counts.
+      expect(p.monthTotalOutflow, 2000);
       expect(p.totalBudgetSpent, 2000);
       expect(p.totalBudgetRemaining, 3000);
-      // Pending = the unreimbursed outflow; net-of-reimbursements strips it.
-      expect(p.pendingReimbursableOutflow, 1500);
-      expect(p.monthOutflowNetOfReimbursements, 2000);
     });
 
-    test('a received reimbursement is no longer pending', () async {
-      when(mockStorage.loadBudgets()).thenAnswer((_) async => [catBudget()]);
+    test('a reimbursable/loan repayment is excluded from income', () async {
       when(mockStorage.loadTransactions()).thenAnswer((_) async => [
+            // Salary — real income.
+            _txn(id: 'salary', amount: 40000, type: TransactionType.inflow),
+            // Lent 1500 (reimbursable) and got it back — the settling inflow
+            // references the spawned receivable id.
             _txn(
-                id: 'reimb',
+                id: 'lent',
                 amount: 1500,
                 type: TransactionType.outflow,
                 reimbursable: true,
                 reimbursementReceivableId: 'r1'),
-          ]);
-      when(mockStorage.loadReceivables()).thenAnswer((_) async => [
-            Receivable(
-              id: 'r1',
-              name: 'Client dinner',
-              receivableType: ReceivableType.reimbursement,
-              amount: 1500,
-              expectedDate: DateTime.now(),
-              month: month,
-              categoryId: 'cat',
-              isReceived: true,
-              reimbursementForTxnId: 'reimb',
-            ),
+            _txn(
+                id: 'payback',
+                amount: 1500,
+                type: TransactionType.inflow,
+                receivableId: 'r1'),
           ]);
       final p = TreasuryDashboardPresenter(mockStorage);
       await p.load();
 
-      expect(p.monthTotalOutflow, 1500); // still real cash out
-      expect(p.pendingReimbursableOutflow, 0); // already paid back
-      expect(p.monthOutflowNetOfReimbursements, 1500);
+      // The loan out isn't an expense; its repayment isn't income.
+      expect(p.monthTotalOutflow, 0);
+      expect(p.monthTotalInflow, 40000);
     });
   });
 

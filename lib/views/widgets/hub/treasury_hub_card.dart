@@ -93,11 +93,9 @@ class _Snapshot extends StatelessWidget {
               Expanded(
                 child: _StatCol(
                   label: 'EXPENSE',
-                  // Net of money you expect back (reimbursables / loans): lending
-                  // someone money or fronting a reimbursable cost leaves your
-                  // cash but isn't spending, so it shouldn't inflate this figure.
-                  value: formatPesoCompact(
-                      treasury.monthOutflowNetOfReimbursements),
+                  // monthTotalOutflow already excludes reimbursables/loans (money
+                  // you'll get back isn't spending) and internal transfers.
+                  value: formatPesoCompact(treasury.monthTotalOutflow),
                   color: theme.colorScheme.error,
                   align: CrossAxisAlignment.start,
                 ),
