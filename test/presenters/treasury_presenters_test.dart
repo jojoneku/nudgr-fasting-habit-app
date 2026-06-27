@@ -750,9 +750,9 @@ void main() {
       await presenter.load();
       await _waitForLoad(ledger);
 
-      // Expected back this month so the month-filtered `receivables` getter
-      // surfaces the spawned entry.
-      final expected = DateTime.now();
+      // ASAP (no payback date) — the spawned receivable surfaces in the
+      // transaction's month so it's visible immediately, not hidden in a future
+      // payback month, since the receivables getter is month-filtered.
       final outflow = TransactionRecord(
         id: 'txn-reimb',
         date: DateTime.now(),
@@ -771,7 +771,7 @@ void main() {
       // surfaces who owes you.
       await ledger.addReimbursableExpense(
         outflow,
-        expectedReimbursementDate: expected,
+        expectedReimbursementDate: null,
       );
       final spawned =
           presenter.receivables.firstWhere((r) => r.id == 'rcv-reimb');
@@ -779,6 +779,9 @@ void main() {
       expect(spawned.reimbursementForTxnId, 'txn-reimb');
       expect(spawned.amount, 1200);
       expect(spawned.name, contains('Acme Corp'));
+      // ASAP → bucketed in the outflow's month and has no expected date.
+      expect(spawned.month, toMonthKey(DateTime.now()));
+      expect(spawned.expectedDate, isNull);
 
       // Settle: marking it received writes the offsetting inflow.
       await presenter.markReceivableReceived('rcv-reimb',
@@ -791,6 +794,42 @@ void main() {
       // Cleanup: deleting the outflow tidies up its linked receivable.
       await ledger.deleteTransaction('txn-reimb');
       expect(presenter.receivables.any((r) => r.id == 'rcv-reimb'), isFalse);
+    });
+
+    test('scheduled reimbursement is bucketed into the payback month',
+        () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      // Spent this month, but the company reimburses on a fixed future run.
+      final now = DateTime.now();
+      final payback = DateTime(now.year, now.month + 1, 20);
+      final outflow = TransactionRecord(
+        id: 'txn-sched',
+        date: now,
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 500,
+        type: TransactionType.outflow,
+        description: 'Medicine',
+        month: toMonthKey(now),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-sched',
+      );
+      await ledger.addReimbursableExpense(
+        outflow,
+        expectedReimbursementDate: payback,
+      );
+
+      // Not in the current month's list — it's owed in the payback month.
+      expect(presenter.receivables.any((r) => r.id == 'rcv-sched'), isFalse);
+
+      // It surfaces in the payback month.
+      await presenter.setMonth(toMonthKey(payback));
+      final sched =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-sched');
+      expect(sched.month, toMonthKey(payback));
+      expect(sched.expectedDate, payback);
     });
 
     test('editing a reimbursable expense re-syncs its receivable amount',

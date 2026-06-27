@@ -94,6 +94,8 @@ class _Snapshot extends StatelessWidget {
               Expanded(
                 child: _StatCol(
                   label: 'EXPENSE',
+                  // monthTotalOutflow already excludes reimbursables/loans (money
+                  // you'll get back isn't spending) and internal transfers.
                   value: formatPesoCompact(treasury.monthTotalOutflow),
                   color: theme.colorScheme.error,
                   align: CrossAxisAlignment.start,

@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/credit_finance_charge.dart';
+import 'package:intermittent_fasting/utils/finance_flows.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/treasury_history_backfill.dart';
 
@@ -225,47 +226,26 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get endingCash =>
       totalLiquidCash + pendingReceivables - monthUnpaidBills;
 
-  // Internal transfer legs (transferGroupId != null) are excluded: moving
-  // money between your own accounts is neither income nor an expense. Both
-  // legs would otherwise inflate inflow and outflow equally — net cancels, but
-  // the standalone Income/Expense tiles would read too high.
-  double get monthTotalInflow => _transactions
-      .where((t) =>
-          t.month == _currentMonth &&
-          t.type == TransactionType.inflow &&
-          t.transferGroupId == null)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  // Income/expense exclude internal transfer legs (moving your own money) AND
+  // reimbursables/loans (money you'll get back is an asset, not spending; its
+  // repayment inflow is your own money returning, not income). See
+  // isSpendingOutflow / isIncomeInflow in utils/finance_flows.dart.
 
-  double get monthTotalOutflow => _transactions
-      .where((t) =>
-          t.month == _currentMonth &&
-          t.type == TransactionType.outflow &&
-          t.transferGroupId == null)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  /// Receivable ids spawned by reimbursable/loan outflows — used to exclude
+  /// their repayment inflows from income.
+  Set<String> get _reimbursementIds =>
+      reimbursementReceivableIds(_transactions);
 
-  /// This month's reimbursable outflows that haven't been paid back yet — money
-  /// you spent (so it's in [monthTotalOutflow]) but expect to recover. A
-  /// reimbursable outflow counts as pending until its linked receivable is
-  /// marked received; one with no linked receivable is treated as still owed.
-  double get pendingReimbursableOutflow {
-    final receivedIds = {
-      for (final r in _receivables)
-        if (r.isReceived) r.id,
-    };
+  double get monthTotalInflow {
+    final reimb = _reimbursementIds;
     return _transactions
-        .where((t) =>
-            t.month == _currentMonth &&
-            t.type == TransactionType.outflow &&
-            t.transferGroupId == null &&
-            t.reimbursable &&
-            !receivedIds.contains(t.reimbursementReceivableId))
+        .where((t) => t.month == _currentMonth && isIncomeInflow(t, reimb))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  /// Headline outflow minus the portion you still expect back — the "true cost
-  /// so far" view. Equals [monthTotalOutflow] once everything is reimbursed.
-  double get monthOutflowNetOfReimbursements =>
-      monthTotalOutflow - pendingReimbursableOutflow;
+  double get monthTotalOutflow => _transactions
+      .where((t) => t.month == _currentMonth && isSpendingOutflow(t))
+      .fold(0.0, (sum, t) => sum + t.amount);
 
   /// Sum of top-level, non-liability, non-custodian account balances — the
   /// gross asset base (before deducting money held for others or liabilities).
@@ -449,8 +429,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get todayOutflow {
     final now = DateTime.now();
     return _transactions.where((t) {
-      return t.type == TransactionType.outflow &&
-          t.transferGroupId == null &&
+      return isSpendingOutflow(t) &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -459,9 +438,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   double get todayInflow {
     final now = DateTime.now();
+    final reimb = _reimbursementIds;
     return _transactions.where((t) {
-      return t.type == TransactionType.inflow &&
-          t.transferGroupId == null &&
+      return isIncomeInflow(t, reimb) &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -519,17 +498,14 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       }
       return total;
     }
-    // Reimbursable outflows are excluded from budget spend: money you expect to
-    // recover shouldn't eat the category's budget (it still counts in headline
-    // Expenses via [monthTotalOutflow]). Mirrors the guard in
-    // BudgetPresenter.spentFor / sectionSpent.
+    // Only real spending eats a budget — [isSpendingOutflow] already excludes
+    // reimbursables/loans and transfers (consistent with headline Expenses and
+    // BudgetPresenter.spentFor / sectionSpent).
     return _transactions
         .where((t) =>
             t.month == _currentMonth &&
             t.categoryId == b.categoryId &&
-            t.type == TransactionType.outflow &&
-            t.transferGroupId == null &&
-            !t.reimbursable)
+            isSpendingOutflow(t))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -613,9 +589,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<(FinanceCategory, double)> _categorySpendRanked({required int? limit}) {
     final spendMap = <String, double>{};
     for (final t in _transactions) {
-      if (t.month == _currentMonth &&
-          t.type == TransactionType.outflow &&
-          t.transferGroupId == null) {
+      if (t.month == _currentMonth && isSpendingOutflow(t)) {
         spendMap[t.categoryId] = (spendMap[t.categoryId] ?? 0.0) + t.amount;
       }
     }
@@ -663,8 +637,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       final day = DateTime(now.year, now.month, now.day - (n - 1 - i));
       final total = _transactions
           .where((t) =>
-              t.type == TransactionType.outflow &&
-              t.transferGroupId == null &&
+              isSpendingOutflow(t) &&
               t.date.year == day.year &&
               t.date.month == day.month &&
               t.date.day == day.day)

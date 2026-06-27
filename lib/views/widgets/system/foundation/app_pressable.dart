@@ -41,6 +41,12 @@ class _AppPressableState extends State<AppPressable> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      // Opaque so the ENTIRE wrapped area is a tap target, not just the opaque
+      // child pixels (icons/text). With the default deferToChild, taps landing
+      // on the gaps between children fell through — and when a text field was
+      // focused they only dismissed the keyboard instead of firing onTap, so a
+      // card read as "only the chevron is tappable". (Hub finance card fix.)
+      behavior: HitTestBehavior.opaque,
       onTap: widget.onTap != null ? _handleTap : null,
       onLongPress: widget.onLongPress,
       onTapDown: _onTapDown,

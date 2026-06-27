@@ -663,77 +663,85 @@ class _QuickLogBarState extends State<_QuickLogBar> {
     final cs = Theme.of(context).colorScheme;
     return Material(
       color: cs.surface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
-            AppSpacing.sm,
-            AppSpacing.sm,
-            AppSpacing.sm,
-          ),
-          child: ListenableBuilder(
-            listenable: Listenable.merge([_ledger, _nutrition]),
-            builder: (context, _) {
-              final busy = _sending ||
-                  _nutrition.isChatParsing ||
-                  _ledger.chatState.phase == ChatPhase.classifying;
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildResponseArea(cs),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _ctrl,
-                          focusNode: _focus,
-                          enabled: !busy,
-                          style: AppTextStyles.bodyMedium,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => _send(),
-                          decoration: InputDecoration(
-                            hintText: _hint(),
-                            hintStyle: AppTextStyles.bodyMedium.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                            filled: true,
-                            fillColor: cs.surfaceContainerHigh,
-                            isDense: true,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(24),
-                              borderSide: BorderSide.none,
+      // As a Scaffold bottomNavigationBar, this isn't lifted above the keyboard
+      // automatically — the body shrinks but the bar stays put and gets covered.
+      // Pad by the keyboard inset so the input rides up with the keyboard and
+      // stays visible. Zero when the keyboard is dismissed.
+      child: Padding(
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.sm,
+              AppSpacing.sm,
+              AppSpacing.sm,
+            ),
+            child: ListenableBuilder(
+              listenable: Listenable.merge([_ledger, _nutrition]),
+              builder: (context, _) {
+                final busy = _sending ||
+                    _nutrition.isChatParsing ||
+                    _ledger.chatState.phase == ChatPhase.classifying;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildResponseArea(cs),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _ctrl,
+                            focusNode: _focus,
+                            enabled: !busy,
+                            style: AppTextStyles.bodyMedium,
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _send(),
+                            decoration: InputDecoration(
+                              hintText: _hint(),
+                              hintStyle: AppTextStyles.bodyMedium.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
+                              filled: true,
+                              fillColor: cs.surfaceContainerHigh,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(24),
+                                borderSide: BorderSide.none,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: AppSpacing.xs),
-                      SizedBox(
-                        width: 44,
-                        height: 44,
-                        child: IconButton(
-                          icon: busy
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child:
-                                      CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : const Icon(Icons.send_rounded),
-                          color: cs.primary,
-                          tooltip: 'Log',
-                          onPressed: busy ? null : _send,
+                        const SizedBox(width: AppSpacing.xs),
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
+                            icon: busy
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : const Icon(Icons.send_rounded),
+                            color: cs.primary,
+                            tooltip: 'Log',
+                            onPressed: busy ? null : _send,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
-              );
-            },
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
           ),
         ),
       ),
