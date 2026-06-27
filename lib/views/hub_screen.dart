@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../models/ai_coach_context.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
@@ -31,6 +30,7 @@ import 'quests/quests_tab.dart';
 import 'settings_screen.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/treasury_module_view.dart';
+import 'widgets/ai_chat_sheet.dart';
 import 'widgets/hub/activity_hub_card.dart';
 import 'widgets/hub/body_measurement_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
@@ -99,18 +99,10 @@ class HubScreen extends StatefulWidget {
   State<HubScreen> createState() => _HubScreenState();
 }
 
-class _HubScreenState extends State<HubScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _fabCtrl;
-  bool _isFabOpen = false;
-
+class _HubScreenState extends State<HubScreen> {
   @override
   void initState() {
     super.initState();
-    _fabCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
     widget.deepLinkRoute?.addListener(_handleDeepLink);
     // A deep-link may already be pending from a cold start.
     WidgetsBinding.instance.addPostFrameCallback((_) => _handleDeepLink());
@@ -119,7 +111,6 @@ class _HubScreenState extends State<HubScreen>
   @override
   void dispose() {
     widget.deepLinkRoute?.removeListener(_handleDeepLink);
-    _fabCtrl.dispose();
     super.dispose();
   }
 
@@ -146,21 +137,6 @@ class _HubScreenState extends State<HubScreen>
         _pushQuestsTab(context);
         break;
     }
-  }
-
-  void _toggleFab() {
-    setState(() {
-      _isFabOpen = !_isFabOpen;
-      _isFabOpen ? _fabCtrl.forward() : _fabCtrl.reverse();
-    });
-  }
-
-  void _closeFab() {
-    if (!_isFabOpen) return;
-    setState(() {
-      _isFabOpen = false;
-      _fabCtrl.reverse();
-    });
   }
 
   String _firstName() {
@@ -257,156 +233,83 @@ class _HubScreenState extends State<HubScreen>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: _ExpandableFab(
-        controller: _fabCtrl,
-        isOpen: _isFabOpen,
-        onToggle: _toggleFab,
-      ),
-      bottomNavigationBar: AnimatedBuilder(
-        animation: _fabCtrl,
-        builder: (ctx, _) {
-          final color = Color.lerp(
-            theme.colorScheme.surfaceContainerHigh,
-            theme.colorScheme.primary,
-            _fabCtrl.value,
-          )!;
-          return BottomAppBar(
-            color: color,
-            elevation: 0,
-            height: 56,
-            padding: EdgeInsets.zero,
-            child: const SizedBox.shrink(),
-          );
-        },
-      ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _refresh,
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  pinned: true,
-                  toolbarHeight: 76,
-                  collapsedHeight: 76,
-                  titleSpacing: 0,
-                  surfaceTintColor: Colors.transparent,
-                  backgroundColor: theme.scaffoldBackgroundColor,
-                  title: header,
-                  actions: [
-                    IconButton(
-                      tooltip: 'Settings',
-                      icon: const Icon(Icons.settings_outlined),
-                      onPressed: () => _pushSettings(context),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                  ],
+      bottomNavigationBar: widget.aiCoachPresenter != null
+          ? _HomeChatBar(presenter: widget.aiCoachPresenter!)
+          : null,
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          slivers: [
+            SliverAppBar(
+              pinned: true,
+              toolbarHeight: 76,
+              collapsedHeight: 76,
+              titleSpacing: 0,
+              surfaceTintColor: Colors.transparent,
+              backgroundColor: theme.scaffoldBackgroundColor,
+              title: header,
+              actions: [
+                IconButton(
+                  tooltip: 'Settings',
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => _pushSettings(context),
                 ),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
-                    AppSpacing.sm,
-                    AppSpacing.md,
-                    AppSpacing.xl,
-                  ),
-                  sliver: ListenableBuilder(
-                    listenable: widget.hubPresenter,
-                    builder: (ctx, _) => SliverReorderableList(
-                      itemCount: widget.hubPresenter.cardOrder.length,
-                      onReorder: (old, neo) {
-                        HapticFeedback.mediumImpact();
-                        widget.hubPresenter.reorderCards(old, neo);
-                      },
-                      proxyDecorator: (child, index, animation) => Stack(
-                        children: [
-                          child,
-                          // Border only over the card — stops before the 8px spacing.
-                          Positioned(
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: AppSpacing.sm,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: theme.colorScheme.primary
-                                      .withValues(alpha: 0.5),
-                                  width: 1.5,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      itemBuilder: (ctx, i) {
-                        final type = widget.hubPresenter.cardOrder[i];
-                        return ReorderableDelayedDragStartListener(
-                          key: ValueKey(type),
-                          index: i,
-                          child: Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: AppSpacing.sm),
-                            child: _buildCard(type, ctx),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+                const SizedBox(width: AppSpacing.xs),
               ],
             ),
-          ),
-          // Tap-outside scrim, only while the FAB fan is open.
-          AnimatedBuilder(
-            animation: _fabCtrl,
-            builder: (_, __) {
-              final v = _fabCtrl.value;
-              if (v == 0) return const SizedBox.shrink();
-              return Positioned.fill(
-                child: IgnorePointer(
-                  ignoring: !_isFabOpen,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _closeFab,
-                    child: ColoredBox(
-                      color: Colors.black.withValues(alpha: 0.28 * v),
-                    ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                AppSpacing.sm,
+                AppSpacing.md,
+                AppSpacing.xl,
+              ),
+              sliver: ListenableBuilder(
+                listenable: widget.hubPresenter,
+                builder: (ctx, _) => SliverReorderableList(
+                  itemCount: widget.hubPresenter.cardOrder.length,
+                  onReorder: (old, neo) {
+                    HapticFeedback.mediumImpact();
+                    widget.hubPresenter.reorderCards(old, neo);
+                  },
+                  proxyDecorator: (child, index, animation) => Stack(
+                    children: [
+                      child,
+                      // Border only over the card — stops before the 8px spacing.
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: AppSpacing.sm,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.5),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              );
-            },
-          ),
-          // Fan items live in the body Stack (not inside the FAB) so taps
-          // outside the FAB's tiny hit-test box still register. Rendered above
-          // the scrim so taps reach the items first.
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              ignoring: !_isFabOpen,
-              child: Center(
-                child: _FanLayer(
-                  controller: _fabCtrl,
-                  onClose: _closeFab,
-                  onNutrition: widget.nutritionPresenter != null
-                      ? () => _pushNutritionScreen(context)
-                      : null,
-                  onActivity: widget.activityPresenter != null
-                      ? () => _pushActivityScreen(context)
-                      : null,
-                  onFinance: widget.treasuryPresenter != null
-                      ? () => _pushTreasuryScreen(context)
-                      : null,
-                  onQuests: () => _pushQuestsTab(context),
-                  onFasting: () => _pushTimerTab(context),
+                  itemBuilder: (ctx, i) {
+                    final type = widget.hubPresenter.cardOrder[i];
+                    return ReorderableDelayedDragStartListener(
+                      key: ValueKey(type),
+                      index: i,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        child: _buildCard(type, ctx),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -608,295 +511,104 @@ class _HubScreenState extends State<HubScreen>
   }
 }
 
-// ── Expandable feature FAB ────────────────────────────────────────────────────
+// ── Home chat bar ─────────────────────────────────────────────────────────────
 //
-// Center-docked FAB that fans its items out in a half-arc above when tapped.
-// The FAB and the BottomAppBar share the same animation: grey when closed,
-// primary blue when open.
+// Persistent docked entry into the AI Coach, replacing the old expandable
+// feature FAB. Typing here and sending opens the full [AiChatSheet] (general
+// entry point) and forwards the message; tapping send while empty just opens
+// the coach. Feature navigation now lives on the hub cards themselves.
 
-class _ExpandableFab extends StatelessWidget {
-  const _ExpandableFab({
-    required this.controller,
-    required this.isOpen,
-    required this.onToggle,
-  });
+class _HomeChatBar extends StatefulWidget {
+  const _HomeChatBar({required this.presenter});
 
-  final AnimationController controller;
-  final bool isOpen;
-  final VoidCallback onToggle;
+  final AiCoachPresenter presenter;
 
-  // Wide bell-curve dimensions. Top half (above the bar) renders a Gaussian
-  // bell; bottom half is rectangular and hidden inside the BottomAppBar.
-  static const double _fabWidth = 120;
-  static const double _fabHeight = 70;
-  // Positive values push the FAB down on the y-axis (deeper into the bar,
-  // less visible bump). Negative values lift it up.
-  static const double _fabYOffset = 6;
+  @override
+  State<_HomeChatBar> createState() => _HomeChatBarState();
+}
+
+class _HomeChatBarState extends State<_HomeChatBar> {
+  final _ctrl = TextEditingController();
+  final _focus = FocusNode();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  void _launch({String? text}) {
+    final seed = (text ?? _ctrl.text).trim();
+    _ctrl.clear();
+    _focus.unfocus();
+    AiChatSheet.show(
+      context,
+      presenter: widget.presenter,
+      entryPoint: AiCoachEntryPoint.general,
+      initialText: seed.isEmpty ? null : seed,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Transform.translate(
-      offset: const Offset(0, _fabYOffset),
-      child: SizedBox(
-        width: _fabWidth,
-        height: _fabHeight,
-        child: AnimatedBuilder(
-          animation: controller,
-          builder: (_, __) {
-            final t = controller.value;
-            final bg = Color.lerp(
-              theme.colorScheme.surfaceContainerHigh,
-              theme.colorScheme.primary,
-              t,
-            )!;
-            final fg = Color.lerp(
-              theme.colorScheme.onSurface,
-              theme.colorScheme.onPrimary,
-              t,
-            )!;
-            return ClipPath(
-              clipper: const _BellClipper(),
-              child: Material(
-                color: bg,
-                elevation: 0,
-                child: InkWell(
-                  onTap: onToggle,
-                  child: SizedBox(
-                    width: _fabWidth,
-                    height: _fabHeight,
-                    // Icon sits in the top half, centered on the bell's peak.
-                    child: Align(
-                      alignment: const Alignment(0, -0.5),
-                      child: Transform.rotate(
-                        angle: t * (math.pi / 4),
-                        child: Icon(Icons.add, size: 24, color: fg),
-                      ),
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surface,
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm,
+            AppSpacing.sm,
+            AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.psychology_outlined, color: cs.primary, size: 22),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: TextField(
+                  controller: _ctrl,
+                  focusNode: _focus,
+                  style: AppTextStyles.bodyMedium,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (t) => _launch(text: t),
+                  decoration: InputDecoration(
+                    hintText: 'Ask your coach…',
+                    hintStyle: AppTextStyles.bodyMedium.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                    filled: true,
+                    fillColor: cs.surfaceContainerHigh,
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 10,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
               ),
-            );
-          },
+              const SizedBox(width: AppSpacing.xs),
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  icon: const Icon(Icons.send_rounded),
+                  color: cs.primary,
+                  tooltip: 'Ask your coach',
+                  onPressed: () => _launch(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
-}
-
-/// Renders the fan items as a layer in the body Stack so taps outside the
-/// FAB's small hit-test box still register. Anchored at the bottom-center of
-/// the body, with items radiating up from the bell's visual position.
-class _FanLayer extends StatelessWidget {
-  const _FanLayer({
-    required this.controller,
-    required this.onClose,
-    required this.onNutrition,
-    required this.onActivity,
-    required this.onFinance,
-    required this.onQuests,
-    required this.onFasting,
-  });
-
-  final AnimationController controller;
-  final VoidCallback onClose;
-  final VoidCallback? onNutrition;
-  final VoidCallback? onActivity;
-  final VoidCallback? onFinance;
-  final VoidCallback? onQuests;
-  final VoidCallback? onFasting;
-
-  static const double _layerWidth = 360;
-  static const double _layerHeight = 220;
-  static const double _fanRadius = 150;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = <_FabAction>[
-      _FabAction('Fasting', Icons.timer_outlined, onFasting),
-      _FabAction('Nutrition', Icons.restaurant_outlined, onNutrition),
-      _FabAction('Quests', Icons.assignment_outlined, onQuests),
-      _FabAction('Activity', Icons.directions_run_outlined, onActivity),
-      _FabAction('Finance', Icons.account_balance_outlined, onFinance),
-    ];
-
-    return SizedBox(
-      width: _layerWidth,
-      height: _layerHeight,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (int i = 0; i < items.length; i++)
-            _FanItem(
-              controller: controller,
-              angle: _angleFor(i, items.length),
-              radius: _fanRadius,
-              anchor: const Offset(_layerWidth / 2, _layerHeight),
-              label: items[i].label,
-              icon: items[i].icon,
-              onTap: items[i].cb != null
-                  ? () {
-                      onClose();
-                      items[i].cb!();
-                    }
-                  : null,
-            ),
-        ],
-      ),
-    );
-  }
-
-  // Spread items across an arc above the FAB. 140° = upper-left, 40° =
-  // upper-right (0° points right in math convention; we negate y for screen).
-  double _angleFor(int i, int n) {
-    if (n <= 1) return math.pi / 2;
-    const startDeg = 140.0;
-    const endDeg = 40.0;
-    final t = i / (n - 1);
-    final deg = startDeg + (endDeg - startDeg) * t;
-    return deg * math.pi / 180;
-  }
-}
-
-class _FabAction {
-  const _FabAction(this.label, this.icon, this.cb);
-  final String label;
-  final IconData icon;
-  final VoidCallback? cb;
-}
-
-class _FanItem extends StatelessWidget {
-  const _FanItem({
-    required this.controller,
-    required this.angle,
-    required this.radius,
-    required this.anchor,
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  final AnimationController controller;
-  final double angle; // radians
-  final double radius;
-  final Offset
-      anchor; // (x, y) origin from which items radiate, in parent coords
-  final String label;
-  final IconData icon;
-  final VoidCallback? onTap;
-
-  static const double _itemSize = 48;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (_, __) {
-        final raw = controller.value;
-        // Skip building entirely when fully closed so the label Text is not
-        // in the tree (avoids duplicate matches with hub card titles).
-        if (raw == 0) return const SizedBox.shrink();
-        // easeOutBack gives a small overshoot so items "pop" into place.
-        final t = Curves.easeOutBack.transform(raw);
-        final dx = math.cos(angle) * radius * t;
-        final dy = -math.sin(angle) * radius * t;
-        final left = anchor.dx + dx;
-        final top = anchor.dy + dy - _itemSize / 2;
-        final opacity = raw.clamp(0.0, 1.0);
-        return Positioned(
-          left: left,
-          top: top,
-          child: FractionalTranslation(
-            translation: const Offset(-0.5, 0),
-            child: IgnorePointer(
-              ignoring: raw < 0.4,
-              child: Opacity(
-                opacity: opacity,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Material(
-                      color: theme.colorScheme.primaryContainer,
-                      shape: const CircleBorder(),
-                      elevation: 3,
-                      child: InkWell(
-                        onTap: onTap,
-                        customBorder: const CircleBorder(),
-                        child: SizedBox(
-                          width: _itemSize,
-                          height: _itemSize,
-                          child: Icon(
-                            icon,
-                            size: 22,
-                            color: theme.colorScheme.onPrimaryContainer,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      label,
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w600,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
-
-// Gaussian bell-curve clipper. Top half of the rect renders the bell; bottom
-// half is rectangular and sits embedded in the BottomAppBar. Used by
-// _ExpandableFab.
-class _BellClipper extends CustomClipper<Path> {
-  const _BellClipper();
-
-  // Width of the bell relative to the rect: ~3.6 sigma per half-width keeps
-  // the curve visually grounded by the time it reaches the rect edges.
-  static const double _sigmaDivisor = 3.6;
-  static const int _samples = 72;
-
-  @override
-  Path getClip(Size size) {
-    final w = size.width;
-    final h = size.height;
-    final bumpHeight = h * 0.5;
-    final sigma = w / _sigmaDivisor;
-    final cx = w / 2;
-
-    final path = Path()..moveTo(0, bumpHeight);
-    for (int i = 0; i <= _samples; i++) {
-      final t = i / _samples;
-      final x = w * t;
-      final dx = x - cx;
-      final y =
-          bumpHeight - bumpHeight * math.exp(-(dx * dx) / (2 * sigma * sigma));
-      path.lineTo(x, y);
-    }
-    path
-      ..lineTo(w, bumpHeight)
-      ..lineTo(w, h)
-      ..lineTo(0, h)
-      ..close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(_BellClipper oldClipper) => false;
 }
