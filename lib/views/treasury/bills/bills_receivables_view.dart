@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -151,6 +152,19 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
+  void _showQuickPaySheet(FinancialAccount card) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) =>
+          _QuickPaySheet(card: card, presenter: widget.presenter),
+    );
+  }
+
   void _showFabMenu() {
     final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
@@ -227,6 +241,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
+                    const SizedBox(height: 12),
+                    _CreditCardsSection(
+                      presenter: widget.presenter,
+                      onPayNow: _showQuickPaySheet,
+                    ),
                     const SizedBox(height: 12),
                     IntrinsicHeight(
                       child: Row(
@@ -705,10 +724,14 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
   void initState() {
     super.initState();
     _amountController.text = widget.bill.amount.toStringAsFixed(2);
-    _selectedAccountId = widget.bill.accountId ??
-        (widget.presenter.accounts.isNotEmpty
-            ? widget.presenter.accounts.first.id
-            : null);
+    // For CC/liability bills, restrict payer to non-liability accounts.
+    final payers = widget.presenter.payerAccountsFor(widget.bill);
+    final preferred = widget.bill.accountId;
+    if (preferred != null && payers.any((a) => a.id == preferred)) {
+      _selectedAccountId = preferred;
+    } else if (payers.isNotEmpty) {
+      _selectedAccountId = payers.first.id;
+    }
   }
 
   @override
@@ -784,17 +807,23 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
               subtitle: const Text(
                   "Just mark it paid — don't record a transaction or debit an account."),
             ),
-            if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
+            if (!_alreadyInLedger) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Account'),
-                items: widget.presenter.accounts
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
-              ),
+              Builder(builder: (context) {
+                final payers =
+                    widget.presenter.payerAccountsFor(widget.bill);
+                if (payers.isEmpty) return const SizedBox.shrink();
+                return DropdownButtonFormField<String>(
+                  key: ValueKey(_selectedAccountId),
+                  initialValue: _selectedAccountId,
+                  decoration: const InputDecoration(labelText: 'Pay from'),
+                  items: payers
+                      .map((a) =>
+                          DropdownMenuItem(value: a.id, child: Text(a.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                );
+              }),
             ],
             const SizedBox(height: 12),
             InkWell(
@@ -1433,6 +1462,345 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Credit Cards Live Balance Section ───────────────────────────────────────
+
+class _CreditCardsSection extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final void Function(FinancialAccount card) onPayNow;
+
+  const _CreditCardsSection({
+    required this.presenter,
+    required this.onPayNow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cards = presenter.creditAccounts;
+    if (cards.isEmpty) return const SizedBox.shrink();
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return AppCard(
+      variant: AppCardVariant.outlined,
+      padding: EdgeInsets.zero,
+      child: Theme(
+        data: Theme.of(context).copyWith(
+          dividerColor: Colors.transparent,
+          dividerTheme: const DividerThemeData(thickness: 0, space: 0),
+        ),
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+          minTileHeight: 0,
+          visualDensity: VisualDensity.compact,
+          childrenPadding: EdgeInsets.zero,
+          iconColor: colorScheme.onSurfaceVariant,
+          collapsedIconColor: colorScheme.onSurfaceVariant,
+          title: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: colorScheme.error,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'CREDIT CARDS',
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.0,
+                ),
+              ),
+              const SizedBox(width: 8),
+              AppBadge(
+                text: '${cards.length}',
+                color: colorScheme.error,
+              ),
+            ],
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(left: 14),
+            child: Text(
+              'Live balance · pay anytime',
+              style: TextStyle(
+                  color: colorScheme.onSurfaceVariant, fontSize: 11),
+            ),
+          ),
+          children: [
+            for (int i = 0; i < cards.length; i++) ...[
+              if (i > 0)
+                Divider(
+                  height: 1,
+                  indent: 16,
+                  endIndent: 16,
+                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                ),
+              _CreditCardTile(
+                card: cards[i],
+                onPayNow: () => onPayNow(cards[i]),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CreditCardTile extends StatelessWidget {
+  final FinancialAccount card;
+  final VoidCallback onPayNow;
+
+  const _CreditCardTile({
+    required this.card,
+    required this.onPayNow,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final payable = card.currentPayable;
+    final available = card.availableCredit;
+    final utilization = card.utilization;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  card.name,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  payable > 0
+                      ? 'Owe ${formatPeso(payable)}'
+                      : 'No balance',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: payable > 0
+                        ? colorScheme.error
+                        : colorScheme.onSurfaceVariant,
+                    fontWeight:
+                        payable > 0 ? FontWeight.w600 : FontWeight.normal,
+                  ),
+                ),
+                if (available != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    '${formatPeso(available)} available',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+                if (utilization != null && card.creditLimit != null) ...[
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(2),
+                    child: LinearProgressIndicator(
+                      value: utilization.clamp(0.0, 1.0),
+                      backgroundColor:
+                          colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      color: utilization >= 0.9
+                          ? colorScheme.error
+                          : colorScheme.primary,
+                      minHeight: 4,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          if (payable > 0)
+            TextButton(
+              onPressed: onPayNow,
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.primary,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                minimumSize: const Size(44, 44),
+              ),
+              child: const Text(
+                'Pay Now',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Quick Pay Sheet ──────────────────────────────────────────────────────────
+
+class _QuickPaySheet extends StatefulWidget {
+  final FinancialAccount card;
+  final BillsReceivablesPresenter presenter;
+
+  const _QuickPaySheet({required this.card, required this.presenter});
+
+  @override
+  State<_QuickPaySheet> createState() => _QuickPaySheetState();
+}
+
+class _QuickPaySheetState extends State<_QuickPaySheet> {
+  late final TextEditingController _amountController;
+  String? _selectedAccountId;
+  DateTime _date = DateTime.now();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _amountController = TextEditingController(
+      text: widget.card.currentPayable.toStringAsFixed(2),
+    );
+    // Non-liability accounts only (can't pay a CC from another CC).
+    final payers =
+        widget.presenter.accounts.where((a) => !a.isLiability).toList();
+    _selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
+  Future<void> _confirm() async {
+    final amount =
+        double.tryParse(_amountController.text.replaceAll(',', ''));
+    if (amount == null || amount <= 0) return;
+    if (_selectedAccountId == null) return;
+    setState(() => _isSubmitting = true);
+    try {
+      await widget.presenter.quickPayCard(
+        accountId: widget.card.id,
+        fromAccountId: _selectedAccountId!,
+        amount: amount,
+        date: _date,
+      );
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final payers =
+        widget.presenter.accounts.where((a) => !a.isLiability).toList();
+
+    return Padding(
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pay ${widget.card.name}',
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Current balance: ${formatPeso(widget.card.currentPayable)}',
+              style: TextStyle(
+                color: colorScheme.onSurfaceVariant,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _amountController,
+              label: 'Amount to Pay',
+              prefix: const Text('₱ '),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            if (payers.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                key: ValueKey(_selectedAccountId),
+                initialValue: _selectedAccountId,
+                decoration: const InputDecoration(labelText: 'Pay from'),
+                items: payers
+                    .map((a) =>
+                        DropdownMenuItem(value: a.id, child: Text(a.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedAccountId = v),
+              ),
+            ],
+            const SizedBox(height: 12),
+            InkWell(
+              onTap: _pickDate,
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                height: 52,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colorScheme.outlineVariant),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today_outlined,
+                        color: colorScheme.onSurfaceVariant, size: 18),
+                    const SizedBox(width: 12),
+                    Text(
+                      DateFormat('MMMM d, yyyy').format(_date),
+                      style: TextStyle(
+                          color: colorScheme.onSurface, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            AppPrimaryButton(
+              label: 'Confirm Payment',
+              onPressed: _isSubmitting ? null : _confirm,
+              isLoading: _isSubmitting,
+            ),
+            const SizedBox(height: 8),
+          ],
         ),
       ),
     );
