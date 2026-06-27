@@ -876,8 +876,15 @@ class _AmountFieldState extends State<_AmountField> {
   }
 }
 
-/// Final "Add a category…" row. Captures a name, group + allocation, then
-/// creates the category and sets its budget via the presenter.
+// Sentinel value for the picker's "create a new category" entry.
+const String _kCreateNewCategory = '__create_new__';
+
+/// Final add-budget row. Pick an existing expense category (or create one), set
+/// a group + allocation, then bind the budget to that category via the
+/// presenter. Picking an existing category — rather than typing a free-text
+/// name that always mints a new one — keeps the budget bound to the category
+/// your transactions actually use, so spend tracking matches and no duplicate
+/// categories leak into the ledger. Mirrors the mobile add-budget sheet.
 class _AddRow extends StatefulWidget {
   final BudgetPresenter presenter;
   const _AddRow({required this.presenter});
@@ -887,49 +894,115 @@ class _AddRow extends StatefulWidget {
 }
 
 class _AddRowState extends State<_AddRow> {
-  final _nameController = TextEditingController();
   final _amountController = TextEditingController();
+  String? _selectedCategoryId;
   BudgetGroup _group = BudgetGroup.variableOptional;
   bool _busy = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
     _amountController.dispose();
     super.dispose();
   }
 
-  Future<void> _add() async {
-    final name = _nameController.text.trim();
-    final raw = _amountController.text.replaceAll(RegExp(r'[^0-9.]'), '');
-    final amount = double.tryParse(raw) ?? 0;
-    // Require a name — otherwise a stray amount would create a junk
-    // "New Category" that leaks into the ledger app-wide.
-    if (name.isEmpty) return;
-    setState(() => _busy = true);
-    try {
-      final existing = widget.presenter.expenseCategories;
-      final category = FinanceCategory(
+  /// Expense categories that don't already have a budget this month — those are
+  /// shown as their own rows above, so offering them again here would just be a
+  /// confusing re-edit.
+  List<FinanceCategory> get _availableCategories {
+    final budgeted = <String>{
+      for (final list in widget.presenter.categoriesByGroup.values)
+        for (final c in list) c.id,
+    };
+    return widget.presenter.expenseCategories
+        .where((c) => !budgeted.contains(c.id))
+        .toList();
+  }
+
+  Future<void> _onPick(String value) async {
+    if (value != _kCreateNewCategory) {
+      setState(() => _selectedCategoryId = value);
+      return;
+    }
+    final cat = await _showCreateCategoryDialog();
+    if (cat == null || !mounted) return;
+    // addCategory delegates to the ledger so other presenters pick it up.
+    await widget.presenter.addCategory(cat);
+    if (!mounted) return;
+    setState(() => _selectedCategoryId = cat.id);
+  }
+
+  Future<FinanceCategory?> _showCreateCategoryDialog() async {
+    final nameCtrl = TextEditingController();
+    final colorHex = categoryColorAt(
+      widget.presenter.expenseCategories.length,
+      isExpense: true,
+    );
+    FinanceCategory? build() {
+      final name = nameCtrl.text.trim();
+      if (name.isEmpty) return null;
+      return FinanceCategory(
         id: '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
         name: name,
         type: CategoryType.expense,
         icon: 'tag',
-        colorHex: categoryColorAt(existing.length, isExpense: true),
+        colorHex: colorHex,
       );
-      // addCategory delegates to the ledger so other presenters pick it up.
-      await widget.presenter.addCategory(category);
+    }
+
+    final cat = await showDialog<FinanceCategory>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('New Expense Category'),
+        content: TextField(
+          controller: nameCtrl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(labelText: 'Category name'),
+          onSubmitted: (_) {
+            final c = build();
+            if (c != null) Navigator.pop(ctx, c);
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              final c = build();
+              if (c != null) Navigator.pop(ctx, c);
+            },
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+    nameCtrl.dispose();
+    return cat;
+  }
+
+  Future<void> _add() async {
+    final id = _selectedCategoryId;
+    final raw = _amountController.text.replaceAll(RegExp(r'[^0-9.]'), '');
+    final amount = double.tryParse(raw) ?? 0;
+    if (id == null) return;
+    setState(() => _busy = true);
+    try {
       await widget.presenter.setBudget(
-        category.id,
+        id,
         amount,
         group: _group,
         budgetType: BudgetType.variable,
       );
       // Guard the controller writes after the await — the row may have been
-      // removed mid-save, in which case the controllers are disposed. (C11)
+      // removed mid-save, in which case the controller is disposed. (C11)
       if (!mounted) return;
-      _nameController.clear();
       _amountController.clear();
-      setState(() => _group = BudgetGroup.variableOptional);
+      setState(() {
+        _selectedCategoryId = null;
+        _group = BudgetGroup.variableOptional;
+      });
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -939,6 +1012,18 @@ class _AddRowState extends State<_AddRow> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final available = _availableCategories;
+    final entries = <WebDropdownEntry<String>>[
+      const WebDropdownEntry(
+          value: _kCreateNewCategory, label: '＋ New category…'),
+      for (var i = 0; i < available.length; i++)
+        WebDropdownEntry(
+          value: available[i].id,
+          label: available[i].name,
+          dotColor: resolveSliceColor(available[i].colorHex, i,
+              brightness: theme.brightness),
+        ),
+    ];
 
     return Container(
       decoration: BoxDecoration(
@@ -955,18 +1040,12 @@ class _AddRowState extends State<_AddRow> {
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _nameController,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-              onSubmitted: (_) => _add(),
-              decoration: InputDecoration(
-                isDense: true,
-                border: InputBorder.none,
-                hintText: 'Add a category…',
-                hintStyle: theme.textTheme.bodyMedium
-                    ?.copyWith(color: cs.onSurfaceVariant),
-              ),
+            child: WebSearchableDropdown<String>(
+              value: _selectedCategoryId,
+              entries: entries,
+              hintText: 'Choose a category…',
+              isDense: true,
+              onChanged: _onPick,
             ),
           ),
           SizedBox(
