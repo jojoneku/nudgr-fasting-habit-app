@@ -522,6 +522,14 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   bool get isChatParsing => _isChatParsing;
   String? get chatParseError => _chatParseError;
 
+  /// Dismiss the last chat-parse error (e.g. after the user acknowledges it in
+  /// the hub quick-log bar). No-op when there is nothing to clear.
+  void clearChatParseError() {
+    if (_chatParseError == null) return;
+    _chatParseError = null;
+    safeNotify();
+  }
+
   /// Sum of exercise calories burned from chat messages on [_selectedDate].
   int get selectedDateCaloriesBurned => _chatMessages
       .where((m) => m.kind == ChatMessageKind.exercise)
