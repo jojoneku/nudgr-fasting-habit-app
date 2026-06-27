@@ -166,6 +166,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> setMonth(String month) async {
     _selectedMonth = month;
     await _autoGenerateRecurringIfNeeded(month);
+    // Re-run close-date detection so navigating into the current real month
+    // (e.g., day 1 of a new month) sees the statement without requiring a
+    // full reload.
+    await _autoGenerateCreditStatements();
     safeNotify();
   }
 
