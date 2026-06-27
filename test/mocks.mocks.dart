@@ -884,8 +884,7 @@ class MockStorageService extends _i1.Mock implements _i10.StorageService {
       ) as _i11.Future<List<_i21.Budget>>);
 
   @override
-  _i11.Future<void> saveBudgetGroups(
-          List<_i58.BudgetGroupDef>? groups) =>
+  _i11.Future<void> saveBudgetGroups(List<_i58.BudgetGroupDef>? groups) =>
       (super.noSuchMethod(
         Invocation.method(
           #saveBudgetGroups,
