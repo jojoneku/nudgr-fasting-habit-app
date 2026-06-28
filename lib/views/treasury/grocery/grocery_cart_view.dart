@@ -629,8 +629,25 @@ class _SetBudgetSheetState extends State<_SetBudgetSheet> {
   }
 
   Future<void> _save() async {
-    final amount = double.tryParse(_controller.text.trim());
-    await widget.presenter.setBudget(amount);
+    final text = _controller.text.trim();
+    // Blank intentionally clears the budget (per the field hint). A non-blank
+    // but unparseable value must NOT silently wipe an existing budget — keep it
+    // and let the user correct the input.
+    if (text.isNotEmpty) {
+      final amount = double.tryParse(text.replaceAll(',', ''));
+      if (amount == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Enter a valid amount, or leave blank to remove.'),
+          ),
+        );
+        return;
+      }
+      await widget.presenter.setBudget(amount);
+    } else {
+      await widget.presenter.setBudget(null);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 

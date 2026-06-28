@@ -1030,6 +1030,15 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     _lastCommittedSummary = _summaryFor(draft);
     _chatState = const LedgerChatState.idle();
     _chatHardError = null;
+    // Chat / Quick-Add always logs into the current real month. If the user is
+    // browsing a different month, snap the ledger to "now" so the just-logged
+    // row is actually visible instead of silently landing off-screen (the toast
+    // fired but no row appeared).
+    final nowKey = toMonthKey(now);
+    if (_selectedMonth != nowKey) {
+      _selectedMonth = nowKey;
+      _selectedDate = null; // clear any day filter so the new row isn't hidden
+    }
     safeNotify();
   }
 
