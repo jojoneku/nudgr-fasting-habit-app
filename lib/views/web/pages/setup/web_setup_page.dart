@@ -53,6 +53,17 @@ void _showAccountSheet(
   WebAccountFormDialog.show(context, presenter, existing: existing);
 }
 
+/// Opens the account form pre-bound to [parent] so the user can create a nested
+/// sub-account (savings pocket / goal / time deposit). The form switches to the
+/// sub-account category list when a parentAccountId is set.
+void _showAddSubAccount(
+  BuildContext context,
+  TreasuryDashboardPresenter presenter,
+  FinancialAccount parent,
+) {
+  WebAccountFormDialog.show(context, presenter, parentAccountId: parent.id);
+}
+
 class _SetupBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final LedgerPresenter ledgerPresenter;
@@ -1151,6 +1162,18 @@ class _AccountTableRow extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
+                // Liquid parents (bank/e-wallet/cash) can hold nested pockets
+                // (savings, goals, time deposits). Sub-accounts and non-liquid
+                // roles don't nest further, so the affordance is hidden there.
+                if (!indented && account.isLiquid)
+                  IconButton(
+                    tooltip: 'Add savings pocket / goal',
+                    onPressed: () =>
+                        _showAddSubAccount(context, presenter, account),
+                    icon: const Icon(Icons.add_circle_outline, size: 18),
+                    color: cs.onSurfaceVariant,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 IconButton(
                   tooltip: 'Edit account',
                   onPressed: () =>

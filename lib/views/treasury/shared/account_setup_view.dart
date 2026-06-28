@@ -233,6 +233,29 @@ class _AccountSetupViewState extends State<AccountSetupView> {
     }
   }
 
+  /// Only an editable, top-level liquid account (bank / e-wallet / cash) can
+  /// hold nested pockets (savings, goals, time deposits). Sub-accounts and
+  /// non-liquid roles don't nest further.
+  bool get _canAddPocket =>
+      widget.existing != null &&
+      widget.parentAccountId == null &&
+      widget.existing!.parentAccountId == null &&
+      widget.existing!.isLiquid;
+
+  /// Opens a fresh form bound to this account as the parent so the user can add
+  /// a pocket/goal/time deposit under it. Stacks over the current edit sheet and
+  /// pops back to it on save.
+  void _showAddPocket() {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Add Pocket',
+      body: AccountSetupView(
+        presenter: widget.presenter,
+        parentAccountId: widget.existing!.id,
+      ),
+    );
+  }
+
   Future<void> _confirmDelete() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -327,6 +350,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             isSubmitting: _isSubmitting,
             onSubmit: _submit,
             onDelete: isEdit ? _confirmDelete : null,
+            onAddSubAccount: _canAddPocket ? _showAddPocket : null,
           ),
         ),
       ],
@@ -369,6 +393,10 @@ class _AccountSetupForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback? onDelete;
 
+  /// Opens a nested sub-account (pocket/goal/time deposit) form. Null when the
+  /// account can't hold pockets (not an editable liquid parent).
+  final VoidCallback? onAddSubAccount;
+
   const _AccountSetupForm({
     required this.formKey,
     required this.nameController,
@@ -401,6 +429,7 @@ class _AccountSetupForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.onDelete,
+    required this.onAddSubAccount,
   });
 
   @override
@@ -520,6 +549,16 @@ class _AccountSetupForm extends StatelessWidget {
               onPressed: isSubmitting ? null : onSubmit,
               isLoading: isSubmitting,
             ),
+
+            // Add a nested pocket / goal under this liquid account (edit only).
+            if (onAddSubAccount != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: isSubmitting ? null : onAddSubAccount,
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Add savings pocket / goal'),
+              ),
+            ],
 
             // Delete button (edit only)
             if (onDelete != null) ...[
