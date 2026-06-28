@@ -13,7 +13,9 @@ class TransactionRecord {
   final String month; // 'YYYY-MM' for filtering
   final String? billId; // links to Bill
   final String? receivableId; // links to Receivable
-  final String? transferToAccountId; // outbound leg of transfer
+  // outflow leg: the account money flows TO. inflow leg: the account money came
+  // FROM (mirrors the outflow leg's accountId, set symmetrically by addTransfer).
+  final String? transferToAccountId;
   final String? transferGroupId; // shared by both legs of a transfer pair
   final String? installmentId; // links to Installment
   // Money you spent but expect to recover (e.g. a work expense to be
@@ -135,4 +137,15 @@ class TransactionRecord {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  /// The account from which this transfer originated.
+  /// Outflow leg: own accountId. Inflow leg: transferToAccountId (the source,
+  /// stored symmetrically by addTransfer and back-filled by migration).
+  String? get transferFromAccountId =>
+      type == TransactionType.inflow ? transferToAccountId : accountId;
+
+  /// The account to which this transfer goes.
+  /// Outflow leg: transferToAccountId. Inflow leg: own accountId.
+  String? get transferDestinationAccountId =>
+      type == TransactionType.inflow ? accountId : transferToAccountId;
 }

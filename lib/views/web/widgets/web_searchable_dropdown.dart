@@ -158,7 +158,7 @@ class _WebSearchableDropdownState<T> extends State<WebSearchableDropdown<T>> {
           child: Row(
             children: [
               if (selected?.dotColor != null) ...[
-                _Dot(color: selected!.dotColor!),
+                WebDot(color: selected!.dotColor!),
                 const SizedBox(width: WebInsets.sm),
               ],
               Expanded(
@@ -302,7 +302,7 @@ class _WebSearchableDropdownState<T> extends State<WebSearchableDropdown<T>> {
               child: Row(
                 children: [
                   if (entry.dotColor != null) ...[
-                    _Dot(color: entry.dotColor!),
+                    WebDot(color: entry.dotColor!),
                     const SizedBox(width: WebInsets.sm),
                   ],
                   Expanded(
@@ -328,9 +328,9 @@ class _WebSearchableDropdownState<T> extends State<WebSearchableDropdown<T>> {
   }
 }
 
-class _Dot extends StatelessWidget {
+class WebDot extends StatelessWidget {
   final Color color;
-  const _Dot({required this.color});
+  const WebDot({super.key, required this.color});
 
   @override
   Widget build(BuildContext context) {
