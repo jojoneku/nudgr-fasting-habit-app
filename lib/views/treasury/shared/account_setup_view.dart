@@ -188,7 +188,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         parentAccountId: widget.parentAccountId,
         balance: balance,
         colorHex: _selectedColor,
-        icon: _category.name,
+        // Preserve the existing icon unless the category itself changed —
+        // blindly writing `_category.name` discarded a customised icon. Mirrors
+        // the web form (C5).
+        icon:
+            (widget.existing != null && widget.existing!.category == _category)
+                ? widget.existing!.icon
+                : _category.name,
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
@@ -211,9 +217,43 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       }
 
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Surface persistence failures instead of swallowing them — otherwise a
+      // failed save looks identical to a successful one. Mirrors the delete
+      // handler and the web form's error feedback.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save account: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// Only an editable, top-level liquid account (bank / e-wallet / cash) can
+  /// hold nested pockets (savings, goals, time deposits). Sub-accounts and
+  /// non-liquid roles don't nest further.
+  bool get _canAddPocket =>
+      widget.existing != null &&
+      widget.parentAccountId == null &&
+      widget.existing!.parentAccountId == null &&
+      widget.existing!.isLiquid;
+
+  /// Opens a fresh form bound to this account as the parent so the user can add
+  /// a pocket/goal/time deposit under it. Stacks over the current edit sheet and
+  /// pops back to it on save.
+  void _showAddPocket() {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Add Pocket',
+      body: AccountSetupView(
+        presenter: widget.presenter,
+        parentAccountId: widget.existing!.id,
+      ),
+    );
   }
 
   Future<void> _confirmDelete() async {
@@ -310,6 +350,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
             isSubmitting: _isSubmitting,
             onSubmit: _submit,
             onDelete: isEdit ? _confirmDelete : null,
+            onAddSubAccount: _canAddPocket ? _showAddPocket : null,
           ),
         ),
       ],
@@ -352,6 +393,10 @@ class _AccountSetupForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final VoidCallback? onDelete;
 
+  /// Opens a nested sub-account (pocket/goal/time deposit) form. Null when the
+  /// account can't hold pockets (not an editable liquid parent).
+  final VoidCallback? onAddSubAccount;
+
   const _AccountSetupForm({
     required this.formKey,
     required this.nameController,
@@ -384,6 +429,7 @@ class _AccountSetupForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.onDelete,
+    required this.onAddSubAccount,
   });
 
   @override
@@ -503,6 +549,16 @@ class _AccountSetupForm extends StatelessWidget {
               onPressed: isSubmitting ? null : onSubmit,
               isLoading: isSubmitting,
             ),
+
+            // Add a nested pocket / goal under this liquid account (edit only).
+            if (onAddSubAccount != null) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: isSubmitting ? null : onAddSubAccount,
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Add savings pocket / goal'),
+              ),
+            ],
 
             // Delete button (edit only)
             if (onDelete != null) ...[
@@ -905,8 +961,14 @@ class _StoredInDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Guard against a dangling link: if the previously-stored account was since
+    // deleted/deactivated it won't be in [accounts], and feeding a value with no
+    // matching item trips DropdownButton's "exactly one item" assertion and
+    // crashes the edit sheet. Fall back to "not linked". Mirrors the web form.
+    final safeSelected =
+        accounts.any((a) => a.id == selectedId) ? selectedId : null;
     return DropdownButtonFormField<String>(
-      initialValue: selectedId,
+      initialValue: safeSelected,
       decoration: InputDecoration(
         labelText: 'Stored in account (optional)',
         helperText: 'These funds physically live in this account',

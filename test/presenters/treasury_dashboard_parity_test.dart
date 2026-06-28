@@ -335,46 +335,4 @@ void main() {
       expect(p.monthTotalInflow, 40000);
     });
   });
-
-  group('canAfford', () {
-    // With no bills/receivables/budgets, projectedSpareThisMonth == liquid cash.
-    Future<TreasuryDashboardPresenter> presenterWithCash() async {
-      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
-            _account(id: 'acc1', balance: 10000),
-            _account(id: 'acc2', category: AccountCategory.cash, balance: 2000),
-          ]);
-      final p = TreasuryDashboardPresenter(mockStorage);
-      await p.load();
-      return p;
-    }
-
-    test('yes when amount is well within spare', () async {
-      final p = await presenterWithCash(); // spare = 12000
-      final v = p.canAfford(5000);
-      expect(v.tier, AffordTier.yes); // 5000 <= 12000 * 0.8 (9600)
-      expect(v.spareAfter, 7000);
-      expect(v.accountShortfall, isNull);
-    });
-
-    test('tight when amount is above 80% of spare but still fits', () async {
-      final p = await presenterWithCash(); // spare = 12000
-      final v = p.canAfford(11000);
-      expect(v.tier, AffordTier.tight); // 9600 < 11000 <= 12000
-      expect(v.spareAfter, 1000);
-    });
-
-    test('no when amount exceeds spare', () async {
-      final p = await presenterWithCash(); // spare = 12000
-      final v = p.canAfford(13000);
-      expect(v.tier, AffordTier.no);
-      expect(v.spareAfter, -1000);
-    });
-
-    test('no with shortfall when the chosen account cannot cover it', () async {
-      final p = await presenterWithCash(); // spare = 12000
-      final v = p.canAfford(3000, accountId: 'acc2'); // acc2 has 2000
-      expect(v.tier, AffordTier.no);
-      expect(v.accountShortfall, 1000);
-    });
-  });
 }

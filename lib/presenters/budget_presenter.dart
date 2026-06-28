@@ -519,8 +519,20 @@ class BudgetPresenter extends ChangeNotifier {
       _allBudgets.where((b) => b.month == _selectedMonth).toList();
 
   Future<void> _checkBudgetNotExceededXp() async {
+    if (!_warnedKeysLoaded) return; // don't award before persisted state loads
     if (totalAllocated <= 0) return;
-    if (totalSpent <= totalAllocated) await _stats.addXp(30);
+    if (totalSpent > totalAllocated) return;
+    // Award the "stayed within budget" XP at most ONCE per month. Without a
+    // guard, every setBudget call (including re-saving an unchanged budget, or
+    // the web group-dropdown path) farmed 30 XP each time, corrupting the RPG
+    // economy. Persist the award via the warned-keys set so the cap survives
+    // restarts; the key is namespaced so it never collides with a budget id
+    // ('$month/$budgetId') and the warn/unwarn loop never touches it.
+    final key = '$_selectedMonth/__xp_under_budget__';
+    if (_warnedBudgets.contains(key)) return;
+    _warnedBudgets.add(key);
+    await _storage.saveWarnedBudgetKeys(_warnedBudgets);
+    await _stats.addXp(30);
   }
 }
 

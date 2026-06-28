@@ -42,6 +42,15 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  /// Adopt [month] as the selected month WITHOUT notifying listeners. Safe to
+  /// call from a `build` method (e.g. the web bills page keeps the installment
+  /// view aligned with the month the user is browsing). A no-op — and crucially
+  /// no rebuild loop — when the month already matches.
+  void syncMonth(String month) {
+    if (_selectedMonth == month) return;
+    _selectedMonth = month;
+  }
+
   // ─── Installment views ────────────────────────────────────────────────────────
 
   List<Installment> get installments =>
@@ -68,6 +77,14 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   double remainingAmount(String installmentId) {
     final inst = _findById(installmentId);
     return remainingMonths(installmentId) * inst.monthlyAmount;
+  }
+
+  /// Fraction of payments made (0–1) for [installmentId], for progress bars.
+  /// Kept here so views never compute it in `build`.
+  double paymentProgress(String installmentId) {
+    final inst = _findById(installmentId);
+    if (inst.totalMonths <= 0) return 0.0;
+    return (paidCount(installmentId) / inst.totalMonths).clamp(0.0, 1.0);
   }
 
   double get totalDueThisMonth =>

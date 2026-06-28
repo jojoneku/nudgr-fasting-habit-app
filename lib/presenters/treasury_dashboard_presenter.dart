@@ -22,28 +22,6 @@ class DailySpend {
   const DailySpend(this.date, this.amount);
 }
 
-/// Verdict tier for the dashboard "Can I afford it?" calculator (Plan 042/050).
-enum AffordTier { yes, tight, no }
-
-/// Result of [TreasuryDashboardPresenter.canAfford] — a tier plus the figures
-/// the view needs for its copy. Pure value object; copy strings live in the UI.
-class AffordVerdict {
-  final AffordTier tier;
-
-  /// Projected spare left this month *after* the hypothetical spend.
-  final double spareAfter;
-
-  /// When an account was given and the spend exceeds its spendable balance,
-  /// how much it falls short (else null).
-  final double? accountShortfall;
-
-  const AffordVerdict({
-    required this.tier,
-    required this.spareAfter,
-    this.accountShortfall,
-  });
-}
-
 /// A flattened account-balance row for the web dashboard accounts table.
 /// Liquid rows show [balance] and the [held]-for-others slice; credit rows
 /// show the current payable as [balance] and the available limit as [yours].
@@ -326,44 +304,6 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Current Obligations = outstanding bills.)
   double get currentObligations => monthUnpaidBills;
 
-  /// Projected spare cash for the month after bills, receivables, and budget —
-  /// the "Can I afford it?" baseline. Alias of [forecastedNetBalance], named
-  /// for the UI.
-  double get projectedSpareThisMonth => forecastedNetBalance;
-
-  /// Whether [amount] fits this month. Checks against [projectedSpareThisMonth]
-  /// and, when [accountId] is given, against that account's spendable balance
-  /// (its balance minus any amount held for others on it).
-  AffordVerdict canAfford(double amount, {String? accountId}) {
-    final spare = projectedSpareThisMonth;
-    final spareAfter = spare - amount;
-
-    double? accountShortfall;
-    if (accountId != null) {
-      final account = _accounts.where((a) => a.id == accountId).firstOrNull;
-      if (account != null) {
-        final held = heldAmountByAccountId[accountId] ?? 0.0;
-        final spendable = account.balance - held;
-        if (amount > spendable) accountShortfall = amount - spendable;
-      }
-    }
-
-    final AffordTier tier;
-    if (amount > spare || accountShortfall != null) {
-      tier = AffordTier.no;
-    } else if (amount <= spare * 0.8) {
-      tier = AffordTier.yes;
-    } else {
-      tier = AffordTier.tight;
-    }
-
-    return AffordVerdict(
-      tier: tier,
-      spareAfter: spareAfter,
-      accountShortfall: accountShortfall,
-    );
-  }
-
   /// Flattened account-balance rows for the web dashboard accounts table —
   /// liquid accounts (balance / held / yours) followed by credit accounts
   /// (payable / available limit). Assembly lives here, not in `build()`.
@@ -486,6 +426,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       false;
 
   List<BudgetGroupDef> get budgetGroups => List.unmodifiable(_budgetGroups);
+
+  /// Allocated/spent across EXPENSE budgets only (savings groups excluded).
+  /// The dashboard Budget Overview lists expense groups and shows savings in a
+  /// separate card, so its "Total" row must use these — otherwise the Total
+  /// (which [totalBudgetAllocated]/[totalBudgetSpent] compute over *all* budgets
+  /// for cash forecasting) never reconciles with the rows beneath it.
+  double get totalExpenseBudgetAllocated => _budgets
+      .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
+      .fold(0.0, (sum, b) => sum + b.allocatedAmount);
+
+  double get totalExpenseBudgetSpent => _budgets
+      .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
+      .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
 
   double _budgetSpentFor(Budget b) {
     if (_isSavingsGroup(b.group)) {
@@ -850,6 +803,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _accounts = [..._accounts, account];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
@@ -858,6 +812,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     ];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
   }
 
   /// Throws [StateError('has_sub_accounts')] if the account has sub-accounts.
@@ -874,6 +829,17 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _accounts = _accounts.where((a) => a.id != id).toList();
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
+  }
+
+  /// Account CRUD persists straight to storage, but LedgerPresenter is the
+  /// source of truth and re-mirrors its in-memory accounts onto this dashboard
+  /// (and the budget) on every notify via [_syncFromLedger]. Without telling the
+  /// ledger to re-read, a later unrelated ledger mutation would clobber the
+  /// dashboard back to its stale account list — a just-added account vanishing,
+  /// or a deleted one returning. Reloading keeps all three in step.
+  Future<void> _syncAccountsToLedger() async {
+    await _ledger?.reloadAccounts();
   }
 
   Future<void> load() async {

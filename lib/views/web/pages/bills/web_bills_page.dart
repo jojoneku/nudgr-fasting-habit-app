@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -35,7 +36,10 @@ class WebBillsPage extends StatelessWidget {
       listenable: Listenable.merge([presenter, installmentPresenter]),
       builder: (context, _) => SingleChildScrollView(
         padding: const EdgeInsets.all(WebInsets.xxl),
-        child: _BillsBody(presenter: presenter),
+        child: _BillsBody(
+          presenter: presenter,
+          installmentPresenter: installmentPresenter,
+        ),
       ),
     );
   }
@@ -45,8 +49,12 @@ class WebBillsPage extends StatelessWidget {
 
 class _BillsBody extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
+  final InstallmentPresenter installmentPresenter;
 
-  const _BillsBody({required this.presenter});
+  const _BillsBody({
+    required this.presenter,
+    required this.installmentPresenter,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -114,10 +122,18 @@ class _BillsBody extends StatelessWidget {
         ..add(_WebCreditCardsCard(presenter: presenter, cards: creditCards))
         ..add(const SizedBox(height: WebInsets.xl));
     }
+    // Keep the installment view on the same month the user is browsing here so
+    // "due this month" lines up with the bills above. Logic lives in the
+    // presenter; this is a no-op when the months already match.
+    installmentPresenter.syncMonth(presenter.selectedMonth);
+    final installmentsCard = _InstallmentsCard(presenter: installmentPresenter);
+
     children
       ..add(upcomingCard)
       ..add(const SizedBox(height: WebInsets.xl))
       ..add(receivablesCard)
+      ..add(const SizedBox(height: WebInsets.xl))
+      ..add(installmentsCard)
       ..add(const SizedBox(height: WebInsets.xl))
       ..add(budgetedCard);
 
@@ -1791,6 +1807,545 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : Text(isEdit ? 'Save' : 'Add Set-Aside'),
+        ),
+      ],
+    );
+  }
+}
+
+// ─── Installments card ────────────────────────────────────────────────────────
+
+void _onAddInstallment(BuildContext context, InstallmentPresenter presenter) {
+  showDialog<void>(
+    context: context,
+    builder: (_) => _InstallmentDialog(presenter: presenter),
+  );
+}
+
+/// A purchase split into equal monthly payments (0% card plans, BNPL). Mirrors
+/// the mobile `_InstallmentsSection`: lists the plans with a payment due this
+/// month, shows the monthly cash load, and offers add / edit / delete plus
+/// mark-paid (and undo) wired to [InstallmentPresenter].
+class _InstallmentsCard extends StatelessWidget {
+  final InstallmentPresenter presenter;
+
+  const _InstallmentsCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final due = presenter.dueThisMonth;
+    final load = presenter.monthlyInstallmentLoad;
+    final paidTotal = presenter.totalPaidThisMonth;
+
+    return WebCard(
+      accentColor: cs.secondary,
+      title: 'Installments',
+      description: due.isEmpty
+          ? 'No payments due this month'
+          : '${formatPeso(load)} due across ${due.length} ${due.length == 1 ? 'plan' : 'plans'}',
+      trailing: OutlinedButton.icon(
+        onPressed: () => _onAddInstallment(context, presenter),
+        icon: const Icon(Icons.add, size: 18),
+        label: const Text('Add Installment'),
+      ),
+      child: due.isEmpty
+          ? const _EmptyHint('No installment payments due this month.')
+          : Column(
+              children: [
+                for (var i = 0; i < due.length; i++)
+                  _InstallmentRow(
+                    presenter: presenter,
+                    installment: due[i],
+                    showDivider: i > 0,
+                  ),
+                const SizedBox(height: WebInsets.md),
+                Container(
+                  padding: const EdgeInsets.only(top: WebInsets.md),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                          color: cs.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('MONTHLY LOAD',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.7,
+                          )),
+                      Text('${formatPeso(paidTotal)} / ${formatPeso(load)}',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: cs.secondary,
+                          )),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+class _InstallmentRow extends StatelessWidget {
+  final InstallmentPresenter presenter;
+  final Installment installment;
+  final bool showDivider;
+
+  const _InstallmentRow({
+    required this.presenter,
+    required this.installment,
+    required this.showDivider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final paid = presenter.isPaidForMonth(installment.id);
+    final count = presenter.paidCount(installment.id);
+    final remainingAmt = presenter.remainingAmount(installment.id);
+    final progress = presenter.paymentProgress(installment.id);
+    final accountName = presenter.accountName(installment.accountId);
+
+    return Container(
+      decoration: showDivider
+          ? BoxDecoration(
+              border: Border(
+                top:
+                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+            )
+          : null,
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PaidCheckbox(
+            checked: paid,
+            onTap: paid
+                ? () => presenter.markUnpaid(installment.id)
+                : () => _markPaid(context),
+          ),
+          const SizedBox(width: WebInsets.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        installment.name,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: paid ? cs.onSurfaceVariant : cs.onSurface,
+                          decoration: paid ? TextDecoration.lineThrough : null,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: WebInsets.sm),
+                    WebBadge(
+                      '$count/${installment.totalMonths}',
+                      tone: WebBadgeTone.warning,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(AppRadii.sm),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 4,
+                    backgroundColor: cs.surfaceContainerHighest,
+                    color: cs.secondary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${formatPeso(remainingAmt)} left${accountName != null ? ' · $accountName' : ''}',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: WebInsets.md),
+          Text(
+            '${formatPeso(installment.monthlyAmount)}/mo',
+            style: theme.textTheme.bodyLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              color: paid ? cs.onSurfaceVariant : cs.onSurface,
+            ),
+          ),
+          _RowActions(
+            onEdit: () => _edit(context),
+            onDelete: () => _delete(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _edit(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      builder: (_) =>
+          _InstallmentDialog(presenter: presenter, existing: installment),
+    );
+  }
+
+  Future<void> _markPaid(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final accountName =
+        presenter.accountName(installment.accountId) ?? 'the linked account';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mark installment as paid?'),
+        content: Text(
+            'Record this month\'s ${formatPeso(installment.monthlyAmount)} '
+            'payment for "${installment.name}" on $accountName?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Mark paid')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.markPaid(installment.id);
+    messenger.showSnackBar(
+      SnackBar(
+          content: Text(
+              'Recorded ${formatPeso(installment.monthlyAmount)} for "${installment.name}".')),
+    );
+  }
+
+  Future<void> _delete(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete installment?'),
+        content: Text(
+            'Delete "${installment.name}"? All linked payment transactions '
+            'will also be removed. This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    await presenter.deleteInstallment(installment.id);
+    messenger.showSnackBar(
+        SnackBar(content: Text('Deleted "${installment.name}".')));
+  }
+}
+
+// ─── Add/Edit-installment dialog ──────────────────────────────────────────────
+
+/// Desktop add/edit form for an installment plan. Mirrors the mobile
+/// [AddInstallmentSheet]: Name, Account, Total amount, Months, auto-computed
+/// (editable) Monthly payment, Start month, and an optional Note. Calls
+/// [InstallmentPresenter.addInstallment] / `updateInstallment`.
+class _InstallmentDialog extends StatefulWidget {
+  final InstallmentPresenter presenter;
+  final Installment? existing;
+
+  const _InstallmentDialog({required this.presenter, this.existing});
+
+  @override
+  State<_InstallmentDialog> createState() => _InstallmentDialogState();
+}
+
+class _InstallmentDialogState extends State<_InstallmentDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _totalController = TextEditingController();
+  final _monthlyController = TextEditingController();
+  final _noteController = TextEditingController();
+
+  String? _accountId;
+  int _totalMonths = 12;
+  late String _startMonth;
+  bool _monthlyManuallyEdited = false;
+  bool _isSubmitting = false;
+
+  static const _monthPresets = [3, 6, 12, 24];
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.existing;
+    _startMonth = e?.startMonth ?? widget.presenter.selectedMonth;
+    if (e != null) {
+      _nameController.text = e.name;
+      _totalController.text = _trim(e.totalAmount);
+      _monthlyController.text = _trim(e.monthlyAmount);
+      _noteController.text = e.note ?? '';
+      _accountId = e.accountId;
+      _totalMonths = e.totalMonths;
+      _monthlyManuallyEdited = true;
+    } else {
+      final accounts = widget.presenter.accounts;
+      if (accounts.isNotEmpty) _accountId = accounts.first.id;
+    }
+    _totalController.addListener(_recomputeMonthly);
+  }
+
+  String _trim(double v) =>
+      v == v.roundToDouble() ? v.round().toString() : v.toStringAsFixed(2);
+
+  void _recomputeMonthly() {
+    if (_monthlyManuallyEdited) return;
+    final total = double.tryParse(_totalController.text.replaceAll(',', ''));
+    if (total != null && _totalMonths > 0) {
+      _monthlyController.text = (total / _totalMonths).toStringAsFixed(2);
+    }
+  }
+
+  void _onMonthsChanged(int months) {
+    setState(() {
+      _totalMonths = months;
+      _monthlyManuallyEdited = false;
+    });
+    _recomputeMonthly();
+  }
+
+  void _adjustStartMonth(int delta) {
+    final date = DateTime.parse('$_startMonth-01');
+    final next = DateTime(date.year, date.month + delta);
+    setState(() => _startMonth = toMonthKey(next));
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _totalController.dispose();
+    _monthlyController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (_accountId == null) return;
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _isSubmitting = true);
+    try {
+      final total = double.parse(_totalController.text.replaceAll(',', ''));
+      final monthly = double.parse(_monthlyController.text.replaceAll(',', ''));
+      final note = _noteController.text.trim();
+      final existing = widget.existing;
+      final installment = Installment(
+        id: existing?.id ??
+            '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}',
+        name: _nameController.text.trim(),
+        accountId: _accountId!,
+        totalAmount: total,
+        monthlyAmount: monthly,
+        totalMonths: _totalMonths,
+        startMonth: _startMonth,
+        note: note.isEmpty ? null : note,
+        isActive: existing?.isActive ?? true,
+      );
+      if (existing == null) {
+        await widget.presenter.addInstallment(installment);
+      } else {
+        await widget.presenter.updateInstallment(installment);
+      }
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      messenger.showSnackBar(
+          SnackBar(content: Text('Could not save installment: $e')));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final accounts = widget.presenter.accounts;
+    final isEdit = widget.existing != null;
+    final isCustomMonths = !_monthPresets.contains(_totalMonths);
+
+    return AlertDialog(
+      title: Text(isEdit ? 'Edit Installment' : 'Add Installment'),
+      content: SizedBox(
+        width: 420,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                      labelText: 'Name (e.g. MacBook Pro, Braces)'),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) =>
+                      (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                ),
+                const SizedBox(height: WebInsets.md),
+                if (accounts.isNotEmpty)
+                  DropdownButtonFormField<String>(
+                    initialValue: accounts.any((a) => a.id == _accountId)
+                        ? _accountId
+                        : null,
+                    decoration: const InputDecoration(
+                        labelText: 'Account (Credit / BNPL)'),
+                    items: [
+                      for (final a in accounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
+                    onChanged: (v) => setState(() => _accountId = v),
+                    validator: (v) => v == null ? 'Select an account' : null,
+                  )
+                else
+                  Text(
+                    'Add an account in the app before creating installments.',
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
+                  ),
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _totalController,
+                  decoration: const InputDecoration(
+                      labelText: 'Total amount', prefixText: '₱ '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  validator: (v) {
+                    final p = double.tryParse((v ?? '').replaceAll(',', ''));
+                    if (p == null || p <= 0) return 'Must be > 0';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: WebInsets.md),
+                Text('Number of months',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant)),
+                const SizedBox(height: WebInsets.sm),
+                Wrap(
+                  spacing: WebInsets.sm,
+                  children: [
+                    for (final m in _monthPresets)
+                      ChoiceChip(
+                        label: Text('${m}mo'),
+                        selected: _totalMonths == m,
+                        onSelected: (_) => _onMonthsChanged(m),
+                      ),
+                    SizedBox(
+                      width: 96,
+                      child: TextFormField(
+                        decoration: InputDecoration(
+                          labelText: 'Custom',
+                          isDense: true,
+                          filled: isCustomMonths,
+                        ),
+                        keyboardType: TextInputType.number,
+                        onChanged: (v) {
+                          final parsed = int.tryParse(v);
+                          if (parsed != null && parsed > 0) {
+                            _onMonthsChanged(parsed);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _monthlyController,
+                  decoration: const InputDecoration(
+                      labelText: 'Monthly payment (auto, editable)',
+                      prefixText: '₱ '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  textInputAction: TextInputAction.next,
+                  onChanged: (_) =>
+                      setState(() => _monthlyManuallyEdited = true),
+                  validator: (v) {
+                    final p = double.tryParse((v ?? '').replaceAll(',', ''));
+                    if (p == null || p <= 0) return 'Must be > 0';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: WebInsets.md),
+                Text('Start month',
+                    style: theme.textTheme.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant)),
+                const SizedBox(height: WebInsets.sm),
+                Row(
+                  children: [
+                    IconButton(
+                      onPressed: () => _adjustStartMonth(-1),
+                      icon: const Icon(Icons.chevron_left),
+                      tooltip: 'Previous month',
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(monthLabel(_startMonth),
+                            style: theme.textTheme.bodyMedium),
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _adjustStartMonth(1),
+                      icon: const Icon(Icons.chevron_right),
+                      tooltip: 'Next month',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: WebInsets.md),
+                TextFormField(
+                  controller: _noteController,
+                  decoration: const InputDecoration(
+                      labelText: 'Note (optional, e.g. 0% interest)'),
+                  textInputAction: TextInputAction.done,
+                  onFieldSubmitted: (_) => _submit(),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: _isSubmitting ? null : _submit,
+          child: _isSubmitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(isEdit ? 'Save' : 'Add Installment'),
         ),
       ],
     );

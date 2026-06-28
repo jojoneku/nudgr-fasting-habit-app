@@ -246,6 +246,8 @@ class _ContentColumns extends StatelessWidget {
     final right = <Widget>[
       _IncomeExpensesCard(presenter: presenter),
       _DailySpendingCard(presenter: presenter),
+      if (presenter.creditAccounts.isNotEmpty)
+        _CreditCard(presenter: presenter),
       _WhereMoneyGoesCard(presenter: presenter),
       _SavingsGoalsCard(presenter: presenter),
     ];
@@ -336,6 +338,132 @@ class _IncomeExpensesCard extends StatelessWidget {
         leftLabelFormat: formatPesoCompact,
         height: 220,
       ),
+    );
+  }
+}
+
+// ===========================================================================
+// Credit (cards / lines / BNPL)
+// ===========================================================================
+
+/// Surfaces the credit intelligence the presenter already computes — owed,
+/// utilization, available/limit, and the next due date + minimum due — which the
+/// web dashboard previously hid (it showed only an "available limit" figure in
+/// the accounts card). Mirrors the mobile `_CreditSection`.
+class _CreditCard extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  const _CreditCard({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final accounts = presenter.creditAccounts;
+    final rows = <Widget>[];
+    for (var i = 0; i < accounts.length; i++) {
+      if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));
+      final a = accounts[i];
+      rows.add(_CreditAccountRow(
+        account: a,
+        dueInfo: presenter.creditDueInfo(a),
+        minimumDue: presenter.creditMinimumDue(a),
+      ));
+    }
+
+    return WebCard(
+      title: 'Credit',
+      description:
+          'Owe ${formatPeso(presenter.totalCreditOwed)} · ${formatPeso(presenter.totalCreditAvailable)} available',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: rows,
+      ),
+    );
+  }
+}
+
+class _CreditAccountRow extends StatelessWidget {
+  final FinancialAccount account;
+  final ({String label, bool imminent})? dueInfo;
+  final double? minimumDue;
+
+  const _CreditAccountRow({
+    required this.account,
+    required this.dueInfo,
+    required this.minimumDue,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final utilization = account.utilization;
+    final available = account.availableCredit;
+    final due = dueInfo;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.credit_card_outlined, color: cs.error, size: 18),
+            const SizedBox(width: WebInsets.sm),
+            Expanded(
+              child: Text(
+                account.name,
+                style: theme.textTheme.titleSmall,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text('Owe',
+                    style: theme.textTheme.labelSmall
+                        ?.copyWith(color: cs.onSurfaceVariant)),
+                Text(
+                  formatPeso(account.currentPayable),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: cs.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        if (utilization != null) ...[
+          const SizedBox(height: WebInsets.md),
+          WebProgressBar(
+            value: utilization.clamp(0.0, 1.0),
+            color: utilization >= 0.9 ? cs.error : cs.primary,
+          ),
+          const SizedBox(height: WebInsets.xs),
+          Text(
+            '${formatPeso(available ?? 0)} of ${formatPeso(account.creditLimit ?? 0)} available',
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: cs.onSurfaceVariant),
+          ),
+        ],
+        if (due != null) ...[
+          const SizedBox(height: WebInsets.sm),
+          Row(
+            children: [
+              Icon(Icons.event_outlined,
+                  size: 14,
+                  color: due.imminent ? cs.error : cs.onSurfaceVariant),
+              const SizedBox(width: WebInsets.xs),
+              Text(
+                minimumDue != null
+                    ? '${due.label} · min ${formatPeso(minimumDue!)}'
+                    : due.label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: due.imminent ? cs.error : cs.onSurfaceVariant,
+                  fontWeight: due.imminent ? FontWeight.w600 : FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
     );
   }
 }
