@@ -1377,7 +1377,7 @@ class _DateGroup extends StatelessWidget {
                         context,
                         message: 'Deleted "${deleted.description}"',
                         actionLabel: 'Undo',
-                        onAction: () => presenter.addTransaction(deleted),
+                        onAction: () => presenter.restoreTransaction(deleted),
                       );
                     },
                   ),

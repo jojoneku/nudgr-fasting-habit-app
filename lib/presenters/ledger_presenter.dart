@@ -546,6 +546,25 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     if (isFirstToday) await _stats.addXp(10);
   }
 
+  /// Re-adds a [txn] that was just removed via [deleteTransaction] (an Undo),
+  /// restoring its linked reimbursement receivable too — otherwise undoing a
+  /// reimbursable-expense delete brings the expense back but silently drops the
+  /// "owed to you" tracking. Awards no XP: restoring isn't a fresh log.
+  Future<void> restoreTransaction(TransactionRecord txn) async {
+    _allTransactions = [..._allTransactions, txn];
+    _applyBalanceDelta(txn.accountId, txn.amount, txn.type);
+    safeNotify();
+    await _saveAll();
+    if (txn.reimbursable &&
+        txn.type == TransactionType.outflow &&
+        txn.reimbursementReceivableId != null) {
+      // Re-spawn with no set date so it resurfaces immediately (the original
+      // expected date didn't survive the delete); the id is reused, keeping
+      // the expense↔receivable link intact.
+      await spawnReimbursementReceivable(txn, null);
+    }
+  }
+
   /// Logs a reimbursable outflow — money you spent but expect to recover (e.g.
   /// a work expense). [outflow] must already carry `reimbursable: true` and a
   /// pre-generated `reimbursementReceivableId`. The outflow is persisted as a
@@ -645,6 +664,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     ];
     safeNotify();
     await _saveAll();
+    // Keep a linked reimbursement receivable in step with edits that bypass the
+    // add/edit form — notably the web grid's inline cell edits, which call
+    // updateTransaction directly. Without this, correcting a reimbursable's
+    // amount inline leaves "owed to you" stuck at the old figure. Form paths
+    // also call syncReimbursementReceivable themselves; a double-sync is
+    // idempotent. If the edit flipped it away from a reimbursable outflow,
+    // retire the now-orphaned receivable instead.
+    if (txn.reimbursable &&
+        txn.type == TransactionType.outflow &&
+        txn.reimbursementReceivableId != null) {
+      await syncReimbursementReceivable(txn);
+    } else if (old.reimbursable && old.reimbursementReceivableId != null) {
+      await deleteReimbursementReceivable(old.reimbursementReceivableId!);
+    }
   }
 
   Future<void> deleteTransaction(String id) async {
