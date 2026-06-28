@@ -850,6 +850,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _accounts = [..._accounts, account];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
@@ -858,6 +859,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     ];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
   }
 
   /// Throws [StateError('has_sub_accounts')] if the account has sub-accounts.
@@ -874,6 +876,17 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     _accounts = _accounts.where((a) => a.id != id).toList();
     notifyListeners();
     await _storage.saveAccounts(_accounts);
+    await _syncAccountsToLedger();
+  }
+
+  /// Account CRUD persists straight to storage, but LedgerPresenter is the
+  /// source of truth and re-mirrors its in-memory accounts onto this dashboard
+  /// (and the budget) on every notify via [_syncFromLedger]. Without telling the
+  /// ledger to re-read, a later unrelated ledger mutation would clobber the
+  /// dashboard back to its stale account list — a just-added account vanishing,
+  /// or a deleted one returning. Reloading keeps all three in step.
+  Future<void> _syncAccountsToLedger() async {
+    await _ledger?.reloadAccounts();
   }
 
   Future<void> load() async {
