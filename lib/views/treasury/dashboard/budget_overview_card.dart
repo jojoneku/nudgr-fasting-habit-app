@@ -13,8 +13,10 @@ class BudgetOverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final allocated = presenter.budgetAllocatedByGroup;
     final spent = presenter.budgetSpentByGroup;
-    final totalAllocated = presenter.totalBudgetAllocated;
-    final totalSpent = presenter.totalBudgetSpent;
+    // Expense-only totals so the "Total" row reconciles with the expense-group
+    // rows below it (savings budgets live in a separate card).
+    final totalAllocated = presenter.totalExpenseBudgetAllocated;
+    final totalSpent = presenter.totalExpenseBudgetSpent;
     // Show expense groups only (exclude savings — it has a separate card).
     final expenseGroups =
         presenter.budgetGroups.where((g) => !g.isSavings).toList();

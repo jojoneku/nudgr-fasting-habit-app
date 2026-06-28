@@ -487,6 +487,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   List<BudgetGroupDef> get budgetGroups => List.unmodifiable(_budgetGroups);
 
+  /// Allocated/spent across EXPENSE budgets only (savings groups excluded).
+  /// The dashboard Budget Overview lists expense groups and shows savings in a
+  /// separate card, so its "Total" row must use these — otherwise the Total
+  /// (which [totalBudgetAllocated]/[totalBudgetSpent] compute over *all* budgets
+  /// for cash forecasting) never reconciles with the rows beneath it.
+  double get totalExpenseBudgetAllocated => _budgets
+      .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
+      .fold(0.0, (sum, b) => sum + b.allocatedAmount);
+
+  double get totalExpenseBudgetSpent => _budgets
+      .where((b) => b.month == _currentMonth && !_isSavingsGroup(b.group))
+      .fold(0.0, (sum, b) => sum + _budgetSpentFor(b));
+
   double _budgetSpentFor(Budget b) {
     if (_isSavingsGroup(b.group)) {
       // Savings budgets track NET contributions INTO the target account (here
