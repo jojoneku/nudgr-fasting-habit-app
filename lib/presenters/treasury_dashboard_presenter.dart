@@ -22,28 +22,6 @@ class DailySpend {
   const DailySpend(this.date, this.amount);
 }
 
-/// Verdict tier for the dashboard "Can I afford it?" calculator (Plan 042/050).
-enum AffordTier { yes, tight, no }
-
-/// Result of [TreasuryDashboardPresenter.canAfford] — a tier plus the figures
-/// the view needs for its copy. Pure value object; copy strings live in the UI.
-class AffordVerdict {
-  final AffordTier tier;
-
-  /// Projected spare left this month *after* the hypothetical spend.
-  final double spareAfter;
-
-  /// When an account was given and the spend exceeds its spendable balance,
-  /// how much it falls short (else null).
-  final double? accountShortfall;
-
-  const AffordVerdict({
-    required this.tier,
-    required this.spareAfter,
-    this.accountShortfall,
-  });
-}
-
 /// A flattened account-balance row for the web dashboard accounts table.
 /// Liquid rows show [balance] and the [held]-for-others slice; credit rows
 /// show the current payable as [balance] and the available limit as [yours].
@@ -325,44 +303,6 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// debt. Total debt still lives in [netWorth]. (Mirrors the reference sheet:
   /// Current Obligations = outstanding bills.)
   double get currentObligations => monthUnpaidBills;
-
-  /// Projected spare cash for the month after bills, receivables, and budget —
-  /// the "Can I afford it?" baseline. Alias of [forecastedNetBalance], named
-  /// for the UI.
-  double get projectedSpareThisMonth => forecastedNetBalance;
-
-  /// Whether [amount] fits this month. Checks against [projectedSpareThisMonth]
-  /// and, when [accountId] is given, against that account's spendable balance
-  /// (its balance minus any amount held for others on it).
-  AffordVerdict canAfford(double amount, {String? accountId}) {
-    final spare = projectedSpareThisMonth;
-    final spareAfter = spare - amount;
-
-    double? accountShortfall;
-    if (accountId != null) {
-      final account = _accounts.where((a) => a.id == accountId).firstOrNull;
-      if (account != null) {
-        final held = heldAmountByAccountId[accountId] ?? 0.0;
-        final spendable = account.balance - held;
-        if (amount > spendable) accountShortfall = amount - spendable;
-      }
-    }
-
-    final AffordTier tier;
-    if (amount > spare || accountShortfall != null) {
-      tier = AffordTier.no;
-    } else if (amount <= spare * 0.8) {
-      tier = AffordTier.yes;
-    } else {
-      tier = AffordTier.tight;
-    }
-
-    return AffordVerdict(
-      tier: tier,
-      spareAfter: spareAfter,
-      accountShortfall: accountShortfall,
-    );
-  }
 
   /// Flattened account-balance rows for the web dashboard accounts table —
   /// liquid accounts (balance / held / yours) followed by credit accounts
