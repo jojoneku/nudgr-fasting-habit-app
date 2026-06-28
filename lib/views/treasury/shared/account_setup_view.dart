@@ -188,7 +188,13 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         parentAccountId: widget.parentAccountId,
         balance: balance,
         colorHex: _selectedColor,
-        icon: _category.name,
+        // Preserve the existing icon unless the category itself changed —
+        // blindly writing `_category.name` discarded a customised icon. Mirrors
+        // the web form (C5).
+        icon:
+            (widget.existing != null && widget.existing!.category == _category)
+                ? widget.existing!.icon
+                : _category.name,
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
@@ -211,6 +217,17 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       }
 
       if (mounted) Navigator.pop(context);
+    } catch (e) {
+      // Surface persistence failures instead of swallowing them — otherwise a
+      // failed save looks identical to a successful one. Mirrors the delete
+      // handler and the web form's error feedback.
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not save account: $e'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -905,8 +922,14 @@ class _StoredInDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Guard against a dangling link: if the previously-stored account was since
+    // deleted/deactivated it won't be in [accounts], and feeding a value with no
+    // matching item trips DropdownButton's "exactly one item" assertion and
+    // crashes the edit sheet. Fall back to "not linked". Mirrors the web form.
+    final safeSelected =
+        accounts.any((a) => a.id == selectedId) ? selectedId : null;
     return DropdownButtonFormField<String>(
-      initialValue: selectedId,
+      initialValue: safeSelected,
       decoration: InputDecoration(
         labelText: 'Stored in account (optional)',
         helperText: 'These funds physically live in this account',
