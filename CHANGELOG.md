@@ -13,6 +13,20 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.23] - 2026-06-28
+
+### Added
+- surface credit-card intelligence on the web dashboard
+- installments section on the web bills page
+- create nested sub-accounts (pockets/goals/time deposits)
+- create savings/goal budgets on the web budget page
+
+### Fixed
+- snap to current month on chat-commit; don't wipe cart budget on bad input
+- budget total reconciles with rows + cap setBudget XP
+- account integrity — ledger sync, dropdown crash, icon, errors
+- keep reimbursement receivables in sync on edit & undo
+
 ## [1.1.22] - 2026-06-27
 
 ### Added
@@ -258,7 +272,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.22...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.23...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -282,3 +296,4 @@ distributed via `manifest.json`.
 [1.1.20]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.20
 [1.1.21]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.21
 [1.1.22]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.22
+[1.1.23]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.23
