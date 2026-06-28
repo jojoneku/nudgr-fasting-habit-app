@@ -2862,15 +2862,6 @@ class _TransferAccountCell extends StatelessWidget {
     final cs = theme.colorScheme;
     final brightness = theme.brightness;
 
-    // outflow leg: accountId = from, transferToAccountId = to.
-    // inflow leg: transferToAccountId = from (set by addTransfer), accountId = to.
-    final fromId = txn.type == TransactionType.inflow
-        ? txn.transferToAccountId
-        : txn.accountId;
-    final toId = txn.type == TransactionType.inflow
-        ? txn.accountId
-        : txn.transferToAccountId;
-
     FinancialAccount? acctById(String? id) =>
         id == null ? null : accounts.where((a) => a.id == id).firstOrNull;
 
@@ -2883,17 +2874,10 @@ class _TransferAccountCell extends StatelessWidget {
     Widget chip(FinancialAccount? acct) {
       final dot = dotColor(acct);
       return Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
           if (dot != null) ...[
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: dot,
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
+            WebDot(color: dot),
             const SizedBox(width: WebInsets.xs),
           ],
           Flexible(
@@ -2908,11 +2892,14 @@ class _TransferAccountCell extends StatelessWidget {
       );
     }
 
+    final fromAcct = acctById(txn.transferFromAccountId);
+    final toAcct = acctById(txn.transferDestinationAccountId);
+
     return SizedBox(
       width: width,
       child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: WebInsets.sm,
+          horizontal: WebInsets.md,
           vertical: WebInsets.xs,
         ),
         child: ConstrainedBox(
@@ -2921,7 +2908,7 @@ class _TransferAccountCell extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                Flexible(child: chip(acctById(fromId))),
+                Flexible(child: chip(fromAcct)),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: WebInsets.xs),
                   child: Icon(
@@ -2930,7 +2917,7 @@ class _TransferAccountCell extends StatelessWidget {
                     color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                   ),
                 ),
-                Flexible(child: chip(acctById(toId))),
+                Flexible(child: chip(toAcct)),
               ],
             ),
           ),

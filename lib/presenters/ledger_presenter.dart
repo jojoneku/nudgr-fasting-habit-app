@@ -482,6 +482,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     await _migrateTransferLegCategories();
+    await _migrateTransferInflowPartners();
 
     _isLoading = false;
     _hasLoaded = true;
@@ -505,6 +506,38 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       for (final t in _allTransactions)
         if (t.transferGroupId != null && t.categoryId != transferId)
           t.copyWith(categoryId: transferId)
+        else
+          t,
+    ];
+    await _saveAll();
+  }
+
+  /// Back-fills transferToAccountId on inflow legs that were created before the
+  /// fix that stores it symmetrically. Without this, legacy inflow rows in the
+  /// web ledger display "— → AccountB" instead of "AccountA → AccountB".
+  /// Idempotent: stops as soon as no stray legs remain.
+  Future<void> _migrateTransferInflowPartners() async {
+    final hasStrayInflow = _allTransactions.any((t) =>
+        t.transferGroupId != null &&
+        t.type == TransactionType.inflow &&
+        t.transferToAccountId == null);
+    if (!hasStrayInflow) return;
+
+    // Build a groupId → outflow-accountId lookup in one pass.
+    final fromById = <String, String>{};
+    for (final t in _allTransactions) {
+      if (t.transferGroupId != null && t.type == TransactionType.outflow) {
+        fromById[t.transferGroupId!] = t.accountId;
+      }
+    }
+
+    _allTransactions = [
+      for (final t in _allTransactions)
+        if (t.transferGroupId != null &&
+            t.type == TransactionType.inflow &&
+            t.transferToAccountId == null &&
+            fromById.containsKey(t.transferGroupId))
+          t.copyWith(transferToAccountId: fromById[t.transferGroupId!])
         else
           t,
     ];
