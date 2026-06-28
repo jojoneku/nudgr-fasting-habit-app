@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -892,6 +893,11 @@ class _AddRowState extends State<_AddRow> {
   String? _selectedCategoryId;
   bool _busy = false;
 
+  /// Savings mode mirrors mobile's `_isSavings` segment: the picker swaps to
+  /// savings/goal *accounts* (account ids, not expense categories) and the
+  /// budget is persisted under [BudgetGroupDef.idSavings].
+  bool _isSavings = false;
+
   @override
   void dispose() {
     _amountController.dispose();
@@ -909,6 +915,31 @@ class _AddRowState extends State<_AddRow> {
     return widget.presenter.expenseCategories
         .where((c) => !budgeted.contains(c.id))
         .toList();
+  }
+
+  /// Savings/goal accounts that don't already have a savings budget this month
+  /// (those render as their own rows above).
+  List<FinancialAccount> get _availableSavingsTargets {
+    final budgeted = <String>{
+      for (final entry in widget.presenter.savingsBudgets) entry.account.id,
+    };
+    return widget.presenter.savingsTargets
+        .where((a) => !budgeted.contains(a.id))
+        .toList();
+  }
+
+  /// Switch between expense ↔ savings mode. Crossing invalidates the picked id
+  /// since categories and accounts share the same `categoryId` slot but draw
+  /// from different lists (mirrors the mobile add-budget sheet).
+  void _setSavingsMode(bool savings) {
+    if (savings == _isSavings) return;
+    setState(() {
+      _isSavings = savings;
+      _selectedCategoryId = null;
+      _groupId = savings
+          ? BudgetGroupDef.idSavings
+          : BudgetGroupDef.idVariableOptional;
+    });
   }
 
   Future<void> _onPick(String value) async {
@@ -998,12 +1029,9 @@ class _AddRowState extends State<_AddRow> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+  List<WebDropdownEntry<String>> _expenseEntries(ThemeData theme) {
     final available = _availableCategories;
-    final entries = <WebDropdownEntry<String>>[
+    return [
       const WebDropdownEntry(
           value: _kCreateNewCategory, label: '＋ New category…'),
       for (var i = 0; i < available.length; i++)
@@ -1014,6 +1042,26 @@ class _AddRowState extends State<_AddRow> {
               brightness: theme.brightness),
         ),
     ];
+  }
+
+  List<WebDropdownEntry<String>> _savingsEntries(ThemeData theme) {
+    final available = _availableSavingsTargets;
+    return [
+      for (final a in available)
+        WebDropdownEntry(
+          value: a.id,
+          label: _savingsAccountLabel(a),
+          dotColor: theme.colorScheme.tertiary,
+        ),
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final entries =
+        _isSavings ? _savingsEntries(theme) : _expenseEntries(theme);
 
     return Container(
       decoration: BoxDecoration(
@@ -1029,22 +1077,38 @@ class _AddRowState extends State<_AddRow> {
       ),
       child: Row(
         children: [
+          _AddModeToggle(
+            isSavings: _isSavings,
+            onChanged: _setSavingsMode,
+          ),
+          const SizedBox(width: WebInsets.sm),
           Expanded(
             child: WebSearchableDropdown<String>(
               value: _selectedCategoryId,
               entries: entries,
-              hintText: 'Choose a category…',
+              hintText:
+                  _isSavings ? 'Choose an account…' : 'Choose a category…',
               isDense: true,
               onChanged: _onPick,
             ),
           ),
           SizedBox(
             width: _kGroupW,
-            child: _GroupDropdown(
-              groupId: _groupId,
-              expenseGroups: widget.presenter.expenseGroups,
-              onChanged: (g) => setState(() => _groupId = g),
-            ),
+            // Savings rows are keyed by account id and always belong to the
+            // Savings group — the group is fixed, so show a static label
+            // instead of the expense-group dropdown (matches the data rows).
+            child: _isSavings
+                ? _GroupLabel(
+                    groupId: BudgetGroupDef.idSavings,
+                    groupName: widget.presenter
+                        .budgetGroupLabel(BudgetGroupDef.idSavings),
+                    color: cs.tertiary,
+                  )
+                : _GroupDropdown(
+                    groupId: _groupId,
+                    expenseGroups: widget.presenter.expenseGroups,
+                    onChanged: (g) => setState(() => _groupId = g),
+                  ),
           ),
           SizedBox(
             width: _kAllocW,
@@ -1083,7 +1147,7 @@ class _AddRowState extends State<_AddRow> {
                     )
                   : IconButton(
                       onPressed: _add,
-                      tooltip: 'Add category',
+                      tooltip: _isSavings ? 'Add savings goal' : 'Add category',
                       visualDensity: VisualDensity.compact,
                       style: IconButton.styleFrom(
                         backgroundColor: cs.primary,
@@ -1097,6 +1161,92 @@ class _AddRowState extends State<_AddRow> {
             ),
           ),
           const SizedBox(width: _kActionW),
+        ],
+      ),
+    );
+  }
+}
+
+/// Display label for a savings/goal account in the add-row picker — mirrors the
+/// mobile add-budget sheet (appends the goal target when present).
+String _savingsAccountLabel(FinancialAccount a) {
+  if (a.category == AccountCategory.goal && a.goalTarget != null) {
+    return '${a.name}  ·  goal ${formatPesoCompact(a.goalTarget!)}';
+  }
+  return a.name;
+}
+
+/// Compact Expense ↔ Savings switch that leads the add-row, swapping the picker
+/// between expense categories and savings/goal accounts (web parity with the
+/// mobile add-budget sheet's Savings/Goals segment).
+class _AddModeToggle extends StatelessWidget {
+  final bool isSavings;
+  final ValueChanged<bool> onChanged;
+
+  const _AddModeToggle({required this.isSavings, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    Widget seg(String label, IconData icon, bool savings) {
+      final selected = savings == isSavings;
+      return InkWell(
+        borderRadius: AppRadii.smBorder,
+        onTap: selected ? null : () => onChanged(savings),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: WebInsets.sm,
+            vertical: WebInsets.xs,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                size: 14,
+                color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: WebInsets.xs),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    Color bgFor(bool savings) =>
+        savings == isSavings ? cs.primary : Colors.transparent;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: AppRadii.smBorder,
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      padding: const EdgeInsets.all(2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: bgFor(false),
+              borderRadius: AppRadii.smBorder,
+            ),
+            child: seg('Expense', Icons.shopping_bag_outlined, false),
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: bgFor(true),
+              borderRadius: AppRadii.smBorder,
+            ),
+            child: seg('Savings', Icons.savings_outlined, true),
+          ),
         ],
       ),
     );
