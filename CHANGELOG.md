@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.25] - 2026-06-29
+
+### Fixed
+- stack bills & receivables on mobile, keep side-by-side web-only
+
 ## [1.1.24] - 2026-06-28
 
 ### Added
@@ -277,7 +282,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.24...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.25...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -303,3 +308,4 @@ distributed via `manifest.json`.
 [1.1.22]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.22
 [1.1.23]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.23
 [1.1.24]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.24
+[1.1.25]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.25
