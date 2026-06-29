@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Food glance widget (Plan 039). Taps deep-link to the nutrition screen. -->
+<!-- Food glance widget (Plan 039). Taps deep-link to the nutrition screen.
+     Content is vertically centred (weighted spacer) so it fills the card, and
+     value rows carry zero defaults so the widget never renders blank before the
+     first snapshot push. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/food_root"
     android:layout_width="match_parent"
@@ -17,31 +20,40 @@
         android:letterSpacing="0.12"
         android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/food_calories"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:textColor="@color/widget_on_surface"
-        android:textSize="28sp"
-        android:textStyle="bold" />
-
-    <ProgressBar
-        android:id="@+id/food_progress"
-        style="?android:attr/progressBarStyleHorizontal"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginTop="8dp"
-        android:max="100"
-        android:progressDrawable="@drawable/widget_progress" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/food_protein"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:textColor="@color/widget_on_surface_variant"
-        android:textSize="12sp" />
+        <TextView
+            android:id="@+id/food_calories"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="0 kcal"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/food_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="10dp"
+            android:max="100"
+            android:progressDrawable="@drawable/widget_progress" />
+
+        <TextView
+            android:id="@+id/food_protein"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:text="Protein 0 g"
+            android:textColor="@color/widget_on_surface_variant"
+            android:textSize="12sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/food_signin"
