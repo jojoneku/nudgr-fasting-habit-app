@@ -246,27 +246,16 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                       onPayNow: _showQuickPaySheet,
                     ),
                     const SizedBox(height: 12),
-                    IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: _BillsSection(
-                              presenter: widget.presenter,
-                              onMarkPaid: _showMarkBillPaidSheet,
-                              onEdit: _showAddBillSheet,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _ReceivablesSection(
-                              presenter: widget.presenter,
-                              onMarkReceived: _showMarkReceivedSheet,
-                              onEdit: _showAddReceivableSheet,
-                            ),
-                          ),
-                        ],
-                      ),
+                    _BillsSection(
+                      presenter: widget.presenter,
+                      onMarkPaid: _showMarkBillPaidSheet,
+                      onEdit: _showAddBillSheet,
+                    ),
+                    const SizedBox(height: 12),
+                    _ReceivablesSection(
+                      presenter: widget.presenter,
+                      onMarkReceived: _showMarkReceivedSheet,
+                      onEdit: _showAddReceivableSheet,
                     ),
                     const SizedBox(height: 12),
                     _BudgetedExpensesSection(
