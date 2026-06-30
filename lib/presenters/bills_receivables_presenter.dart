@@ -89,8 +89,15 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Bill getters ────────────────────────────────────────────────────────────
 
+  /// Bills for the selected month, ordered unpaid-first then by due day, so the
+  /// actionable items rise to the top and paid bills sink to the bottom.
   List<Bill> get bills =>
-      _allBills.where((b) => b.month == _selectedMonth).toList();
+      _allBills.where((b) => b.month == _selectedMonth).toList()
+        ..sort((a, b) {
+          if (a.isPaid != b.isPaid) return a.isPaid ? 1 : -1;
+          final byDue = a.dueDay.compareTo(b.dueDay);
+          return byDue != 0 ? byDue : a.name.compareTo(b.name);
+        });
 
   double get totalBillsAmount => bills.fold(0.0, (sum, b) => sum + b.amount);
 
@@ -116,8 +123,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Receivable getters ───────────────────────────────────────────────────────
 
+  /// Receivables for the selected month, ordered not-yet-received-first then by
+  /// expected date (the receivable analog of a due day). Entries with no set
+  /// date ("ASAP") surface ahead of dated ones within the same status bucket.
   List<Receivable> get receivables =>
-      _allReceivables.where((r) => r.month == _selectedMonth).toList();
+      _allReceivables.where((r) => r.month == _selectedMonth).toList()
+        ..sort((a, b) {
+          if (a.isReceived != b.isReceived) return a.isReceived ? 1 : -1;
+          final ad = a.expectedDate;
+          final bd = b.expectedDate;
+          if (ad == null && bd == null) return a.name.compareTo(b.name);
+          if (ad == null) return -1;
+          if (bd == null) return 1;
+          final byDate = ad.compareTo(bd);
+          return byDate != 0 ? byDate : a.name.compareTo(b.name);
+        });
 
   double get totalReceivablesAmount =>
       receivables.fold(0.0, (sum, r) => sum + r.amount);
@@ -158,8 +178,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   // ─── Budgeted Expense getters ─────────────────────────────────────────────────
 
+  /// Budgeted expenses for the selected month, ordered unpaid-first. These have
+  /// no due day, so the secondary sort is alphabetical by name.
   List<BudgetedExpense> get budgetedExpenses =>
-      _allExpenses.where((e) => e.month == _selectedMonth).toList();
+      _allExpenses.where((e) => e.month == _selectedMonth).toList()
+        ..sort((a, b) {
+          if (a.isPaid != b.isPaid) return a.isPaid ? 1 : -1;
+          return a.name.compareTo(b.name);
+        });
 
   // ─── Month navigation ─────────────────────────────────────────────────────────
 
