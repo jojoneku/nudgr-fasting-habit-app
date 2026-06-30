@@ -43,12 +43,21 @@ class FoodWidgetProvider : HomeWidgetProvider() {
             )
         )
 
+        // TEMP DIAGNOSTIC (widget-usability): surface what onUpdate actually
+        // sees so a single screenshot tells us whether the provider runs at all,
+        // whether the app wrote a snapshot, and what data it holds. Remove after.
+        val dbg = "dbg in=${widgetData.wBool("w_signed_in")}" +
+            " fresh=${widgetData.wIsToday()}" +
+            " d=${widgetData.wStr("w_date")}" +
+            " c=${widgetData.wLong("w_food_cals")}" +
+            " g=${widgetData.wLong("w_food_goal")}"
+
         val signedIn = widgetData.wBool("w_signed_in")
         if (!signedIn) {
             views.setViewVisibility(R.id.food_signin, View.VISIBLE)
             views.setTextViewText(R.id.food_calories, "—")
             views.setProgressBar(R.id.food_progress, 100, 0, false)
-            views.setTextViewText(R.id.food_protein, "")
+            views.setTextViewText(R.id.food_protein, dbg)
             appWidgetManager.updateAppWidget(id, views)
             return
         }
@@ -68,10 +77,9 @@ class FoodWidgetProvider : HomeWidgetProvider() {
         )
         val pct = if (goal > 0) ((cals * 100) / goal).coerceIn(0L, 100L).toInt() else 0
         views.setProgressBar(R.id.food_progress, 100, pct, false)
-        views.setTextViewText(
-            R.id.food_protein,
-            if (proteinGoal >= 0) "Protein $protein / $proteinGoal g" else "Protein $protein g"
-        )
+        // TEMP DIAGNOSTIC: show the live snapshot read instead of the protein
+        // line so we can read it off the home screen. Remove after diagnosing.
+        views.setTextViewText(R.id.food_protein, dbg)
         appWidgetManager.updateAppWidget(id, views)
     }
 }

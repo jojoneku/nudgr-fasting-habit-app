@@ -27,11 +27,14 @@
         android:gravity="center_vertical"
         android:orientation="vertical">
 
+        <!-- TEMP DIAGNOSTIC default: if the widget ever shows "STATIC" the
+             provider's onUpdate never ran (OS blocked it / render crashed). The
+             live render always overwrites this. Restore to "0 kcal" after. -->
         <TextView
             android:id="@+id/food_calories"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="0 kcal"
+            android:text="STATIC"
             android:textColor="@color/widget_on_surface"
             android:textSize="26sp"
             android:textStyle="bold" />
