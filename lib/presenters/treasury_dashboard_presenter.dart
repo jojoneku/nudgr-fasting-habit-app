@@ -216,16 +216,26 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   Set<String> get _reimbursementIds =>
       reimbursementReceivableIds(_transactions);
 
+  /// Category ids the user flagged to exclude from cash-flow totals.
+  Set<String> get _excludedCategoryIds =>
+      excludedCashFlowCategoryIds(_categories);
+
   double get monthTotalInflow {
     final reimb = _reimbursementIds;
+    final excluded = _excludedCategoryIds;
     return _transactions
-        .where((t) => t.month == _currentMonth && isIncomeInflow(t, reimb))
+        .where((t) =>
+            t.month == _currentMonth && isIncomeInflow(t, reimb, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  double get monthTotalOutflow => _transactions
-      .where((t) => t.month == _currentMonth && isSpendingOutflow(t))
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double get monthTotalOutflow {
+    final excluded = _excludedCategoryIds;
+    return _transactions
+        .where(
+            (t) => t.month == _currentMonth && isSpendingOutflow(t, excluded))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   /// Sum of top-level, non-liability, non-custodian account balances — the
   /// gross asset base (before deducting money held for others or liabilities).
@@ -370,8 +380,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   double get todayOutflow {
     final now = DateTime.now();
+    final excluded = _excludedCategoryIds;
     return _transactions.where((t) {
-      return isSpendingOutflow(t) &&
+      return isSpendingOutflow(t, excluded) &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -381,8 +392,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get todayInflow {
     final now = DateTime.now();
     final reimb = _reimbursementIds;
+    final excluded = _excludedCategoryIds;
     return _transactions.where((t) {
-      return isIncomeInflow(t, reimb) &&
+      return isIncomeInflow(t, reimb, excluded) &&
           t.date.year == now.year &&
           t.date.month == now.month &&
           t.date.day == now.day;
@@ -460,13 +472,14 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       return total;
     }
     // Only real spending eats a budget — [isSpendingOutflow] already excludes
-    // reimbursables/loans and transfers (consistent with headline Expenses and
-    // BudgetPresenter.spentFor / sectionSpent).
+    // reimbursables/loans, transfers, and excluded-from-totals categories
+    // (consistent with headline Expenses and BudgetPresenter.spentFor).
+    final excluded = _excludedCategoryIds;
     return _transactions
         .where((t) =>
             t.month == _currentMonth &&
             t.categoryId == b.categoryId &&
-            isSpendingOutflow(t))
+            isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -545,9 +558,10 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   bool get hasCategorySpend => categorySpendThisMonth.isNotEmpty;
 
   List<(FinanceCategory, double)> _categorySpendRanked({required int? limit}) {
+    final excluded = _excludedCategoryIds;
     final spendMap = <String, double>{};
     for (final t in _transactions) {
-      if (t.month == _currentMonth && isSpendingOutflow(t)) {
+      if (t.month == _currentMonth && isSpendingOutflow(t, excluded)) {
         spendMap[t.categoryId] = (spendMap[t.categoryId] ?? 0.0) + t.amount;
       }
     }
@@ -591,11 +605,12 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   List<DailySpend> _lastNDaysSpending(int n) {
     final now = DateTime.now();
+    final excluded = _excludedCategoryIds;
     return List.generate(n, (i) {
       final day = DateTime(now.year, now.month, now.day - (n - 1 - i));
       final total = _transactions
           .where((t) =>
-              isSpendingOutflow(t) &&
+              isSpendingOutflow(t, excluded) &&
               t.date.year == day.year &&
               t.date.month == day.month &&
               t.date.day == day.day)

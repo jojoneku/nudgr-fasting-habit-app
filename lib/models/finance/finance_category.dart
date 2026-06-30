@@ -23,6 +23,15 @@ class FinanceCategory {
   final CategoryType type;
   final String icon; // MDI icon name
   final String colorHex;
+
+  /// When true, transactions in this category are excluded from the headline
+  /// income / expense / net cash-flow totals (and from budget spend), the same
+  /// way internal transfers and reimbursables are. They still appear as ledger
+  /// rows — this only affects the aggregate figures. Lets a user mark a
+  /// "Reimbursement" income category (money they fronted and got back) so it
+  /// doesn't inflate Income. Defaults to false (counts normally).
+  final bool excludeFromTotals;
+
   final DateTime updatedAt;
 
   FinanceCategory({
@@ -31,6 +40,7 @@ class FinanceCategory {
     required this.type,
     required this.icon,
     required this.colorHex,
+    this.excludeFromTotals = false,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -44,6 +54,7 @@ class FinanceCategory {
           CategoryType.expense,
       icon: json['icon'] as String,
       colorHex: json['colorHex'] as String,
+      excludeFromTotals: json['excludeFromTotals'] as bool? ?? false,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -55,6 +66,7 @@ class FinanceCategory {
         'type': type.name,
         'icon': icon,
         'colorHex': colorHex,
+        'excludeFromTotals': excludeFromTotals,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -63,6 +75,7 @@ class FinanceCategory {
     CategoryType? type,
     String? icon,
     String? colorHex,
+    bool? excludeFromTotals,
     DateTime? updatedAt,
   }) {
     return FinanceCategory(
@@ -71,6 +84,7 @@ class FinanceCategory {
       type: type ?? this.type,
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
+      excludeFromTotals: excludeFromTotals ?? this.excludeFromTotals,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

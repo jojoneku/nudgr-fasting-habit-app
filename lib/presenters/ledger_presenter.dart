@@ -130,24 +130,33 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Set<String> get _reimbursementIds =>
       reimbursementReceivableIds(_allTransactions);
 
+  /// Category ids the user flagged to exclude from cash-flow totals.
+  Set<String> get _excludedCategoryIds =>
+      excludedCashFlowCategoryIds(_categories);
+
   double get filteredMonthInflow {
     final reimb = _reimbursementIds;
+    final excluded = _excludedCategoryIds;
     return _filteredTransactions
-        .where((t) => isIncomeInflow(t, reimb))
+        .where((t) => isIncomeInflow(t, reimb, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
-  double get filteredMonthOutflow => _filteredTransactions
-      .where(isSpendingOutflow)
-      .fold(0.0, (sum, t) => sum + t.amount);
+  double get filteredMonthOutflow {
+    final excluded = _excludedCategoryIds;
+    return _filteredTransactions
+        .where((t) => isSpendingOutflow(t, excluded))
+        .fold(0.0, (sum, t) => sum + t.amount);
+  }
 
   double get filteredMonthNet => filteredMonthInflow - filteredMonthOutflow;
 
   /// Map of 'yyyy-MM-dd' → total outflow for that day (respects account filter).
   Map<String, double> get dailyOutflowMap {
+    final excluded = _excludedCategoryIds;
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (!isSpendingOutflow(t)) continue;
+      if (!isSpendingOutflow(t, excluded)) continue;
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -159,9 +168,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Map of 'yyyy-MM-dd' → total inflow for that day (respects account filter).
   Map<String, double> get dailyInflowMap {
     final reimb = _reimbursementIds;
+    final excluded = _excludedCategoryIds;
     final map = <String, double>{};
     for (final t in _filteredTransactions) {
-      if (!isIncomeInflow(t, reimb)) continue;
+      if (!isIncomeInflow(t, reimb, excluded)) continue;
       final key = '${t.date.year.toString().padLeft(4, '0')}-'
           '${t.date.month.toString().padLeft(2, '0')}-'
           '${t.date.day.toString().padLeft(2, '0')}';
@@ -291,16 +301,20 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Excludes transfer legs and reimbursable/loan repayments — neither is income.
   double get tableInflow {
     final reimb = _reimbursementIds;
+    final excluded = _excludedCategoryIds;
     return ledgerRowsForMonth
-        .where((r) => isIncomeInflow(r.txn, reimb))
+        .where((r) => isIncomeInflow(r.txn, reimb, excluded))
         .fold(0.0, (sum, r) => sum + r.txn.amount);
   }
 
   /// Outflow subtotal for the current table filter (month/account/category).
   /// Excludes transfer legs and reimbursables/loans — neither is spending.
-  double get tableOutflow => ledgerRowsForMonth
-      .where((r) => isSpendingOutflow(r.txn))
-      .fold(0.0, (sum, r) => sum + r.txn.amount);
+  double get tableOutflow {
+    final excluded = _excludedCategoryIds;
+    return ledgerRowsForMonth
+        .where((r) => isSpendingOutflow(r.txn, excluded))
+        .fold(0.0, (sum, r) => sum + r.txn.amount);
+  }
 
   /// Per-transaction account balance: the involved account's balance
   /// immediately *after* that transaction. Reconstructed by unwinding each

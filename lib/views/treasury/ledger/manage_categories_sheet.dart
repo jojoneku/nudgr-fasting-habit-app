@@ -52,6 +52,10 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
     }
   }
 
+  Future<void> _toggleExclude(FinanceCategory category, bool value) =>
+      widget.presenter
+          .updateCategory(category.copyWith(excludeFromTotals: value));
+
   Future<void> _confirmDelete(
       BuildContext context, FinanceCategory category) async {
     final messenger = ScaffoldMessenger.of(context);
@@ -134,6 +138,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                 accentColor:
                                     Theme.of(context).colorScheme.error,
                                 onDelete: () => _confirmDelete(context, c),
+                                onToggleExclude: (v) => _toggleExclude(c, v),
                               ))
                           .toList(),
                     ),
@@ -154,6 +159,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                 accentColor:
                                     Theme.of(context).colorScheme.tertiary,
                                 onDelete: () => _confirmDelete(context, c),
+                                onToggleExclude: (v) => _toggleExclude(c, v),
                               ))
                           .toList(),
                     ),
@@ -386,16 +392,19 @@ class _CategoryTile extends StatelessWidget {
   final FinanceCategory category;
   final Color accentColor;
   final VoidCallback onDelete;
+  final ValueChanged<bool> onToggleExclude;
 
   const _CategoryTile({
     super.key,
     required this.category,
     required this.accentColor,
     required this.onDelete,
+    required this.onToggleExclude,
   });
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: AppListTile(
@@ -406,24 +415,44 @@ class _CategoryTile extends StatelessWidget {
           iconSize: 18,
         ),
         title: Text(category.name),
-        trailing: Semantics(
-          label: 'Delete ${category.name}',
-          child: SizedBox(
-            width: 44,
-            height: 44,
-            child: InkWell(
-              onTap: onDelete,
-              borderRadius: BorderRadius.circular(22),
-              child: Icon(
-                Icons.delete_outline_rounded,
-                color: Theme.of(context)
-                    .colorScheme
-                    .onSurfaceVariant
-                    .withValues(alpha: 0.5),
-                size: 18,
+        subtitle: category.excludeFromTotals
+            ? Text(
+                'Not counted in income/expense totals',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+                ),
+              )
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Semantics(
+              label: 'Exclude ${category.name} from totals',
+              toggled: category.excludeFromTotals,
+              child: Switch.adaptive(
+                value: category.excludeFromTotals,
+                onChanged: onToggleExclude,
+                activeThumbColor: accentColor,
               ),
             ),
-          ),
+            Semantics(
+              label: 'Delete ${category.name}',
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: InkWell(
+                  onTap: onDelete,
+                  borderRadius: BorderRadius.circular(22),
+                  child: Icon(
+                    Icons.delete_outline_rounded,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.5),
+                    size: 18,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
         onTap: () {},
       ),
