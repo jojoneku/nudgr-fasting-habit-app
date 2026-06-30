@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Expense glance widget (Plan 039). Taps deep-link to the treasury ledger. -->
+<!-- Expense glance widget (Plan 039). Taps deep-link to the treasury ledger.
+     Content is vertically centred so it fills the card; the month value carries
+     a zero default so the widget never renders blank before the first push. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/expense_root"
     android:layout_width="match_parent"
@@ -17,22 +19,30 @@
         android:letterSpacing="0.10"
         android:textStyle="bold" />
 
-    <TextView
-        android:id="@+id/expense_month"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:textColor="@color/widget_on_surface"
-        android:textSize="28sp"
-        android:textStyle="bold" />
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
 
-    <TextView
-        android:id="@+id/expense_today"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
-        android:textColor="@color/widget_on_surface_variant"
-        android:textSize="12sp" />
+        <TextView
+            android:id="@+id/expense_month"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="₱0.00"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="30sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/expense_today"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="@color/widget_on_surface_variant"
+            android:textSize="12sp" />
+    </LinearLayout>
 
     <TextView
         android:id="@+id/expense_signin"
