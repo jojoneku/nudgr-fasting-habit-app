@@ -199,8 +199,11 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   /// One row per spending category (descending by total spend), each carrying
   /// its spend in every active month — the sheet's category breakdown grid.
   List<CategoryHistoryRow> get categoryMatrix {
+    final excluded = _excludedCategoryIds;
     final byCat = <String, Map<String, double>>{};
-    for (final t in _allTransactions.where(isSpendingOutflow)) {
+    final spends =
+        _allTransactions.where((t) => isSpendingOutflow(t, excluded));
+    for (final t in spends) {
       (byCat[t.categoryId] ??= {})[t.month] =
           (byCat[t.categoryId]?[t.month] ?? 0) + t.amount;
     }
@@ -368,15 +371,28 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     );
   }
 
-  /// Real spending in [txns] — excludes transfers and reimbursables/loans.
-  double _sumSpending(Iterable<TransactionRecord> txns) =>
-      txns.where(isSpendingOutflow).fold(0.0, (s, t) => s + t.amount);
+  /// Category ids the user flagged to exclude from cash-flow totals.
+  Set<String> get _excludedCategoryIds =>
+      excludedCashFlowCategoryIds(_categories);
 
-  /// Real income in [txns] — excludes transfers and reimbursable/loan
-  /// repayments. [reimb] from [reimbursementReceivableIds] over all transactions.
-  double _sumIncome(Iterable<TransactionRecord> txns, Set<String> reimb) => txns
-      .where((t) => isIncomeInflow(t, reimb))
-      .fold(0.0, (s, t) => s + t.amount);
+  /// Real spending in [txns] — excludes transfers, reimbursables/loans, and
+  /// categories flagged out of totals.
+  double _sumSpending(Iterable<TransactionRecord> txns) {
+    final excluded = _excludedCategoryIds;
+    return txns
+        .where((t) => isSpendingOutflow(t, excluded))
+        .fold(0.0, (s, t) => s + t.amount);
+  }
+
+  /// Real income in [txns] — excludes transfers, reimbursable/loan repayments,
+  /// and categories flagged out of totals. [reimb] from
+  /// [reimbursementReceivableIds] over all transactions.
+  double _sumIncome(Iterable<TransactionRecord> txns, Set<String> reimb) {
+    final excluded = _excludedCategoryIds;
+    return txns
+        .where((t) => isIncomeInflow(t, reimb, excluded))
+        .fold(0.0, (s, t) => s + t.amount);
+  }
 
   /// Set of account ids that are savings pockets (savings / goal / sinking
   /// fund), used to attribute transfer legs as savings contributions.
@@ -422,8 +438,9 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
   }
 
   Map<String, double> _buildCategorySpend(List<TransactionRecord> txns) {
+    final excluded = _excludedCategoryIds;
     final result = <String, double>{};
-    for (final t in txns.where(isSpendingOutflow)) {
+    for (final t in txns.where((t) => isSpendingOutflow(t, excluded))) {
       result[t.categoryId] = (result[t.categoryId] ?? 0.0) + t.amount;
     }
     return result;

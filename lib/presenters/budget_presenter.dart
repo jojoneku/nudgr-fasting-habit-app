@@ -284,13 +284,12 @@ class BudgetPresenter extends ChangeNotifier {
         .where((b) => b.group == groupId)
         .map((b) => b.categoryId)
         .toSet();
+    final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
             t.month == _selectedMonth &&
-            t.type == TransactionType.outflow &&
-            t.transferGroupId == null &&
-            !t.reimbursable &&
-            catIds.contains(t.categoryId))
+            catIds.contains(t.categoryId) &&
+            isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -324,11 +323,12 @@ class BudgetPresenter extends ChangeNotifier {
 
   double receivedFor(String categoryId) {
     final reimb = reimbursementReceivableIds(_allTransactions);
+    final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
             t.month == _selectedMonth &&
             t.categoryId == categoryId &&
-            isIncomeInflow(t, reimb))
+            isIncomeInflow(t, reimb, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -356,13 +356,12 @@ class BudgetPresenter extends ChangeNotifier {
       // count contributions, not outflows.
       return contributedTo(categoryId);
     }
+    final excluded = excludedCashFlowCategoryIds(_categories);
     return _allTransactions
         .where((t) =>
             t.month == _selectedMonth &&
             t.categoryId == categoryId &&
-            t.type == TransactionType.outflow &&
-            t.transferGroupId == null &&
-            !t.reimbursable)
+            isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
