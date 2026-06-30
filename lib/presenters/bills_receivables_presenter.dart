@@ -226,14 +226,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  /// Marker stored in [Bill.paymentNote] so auto-generated credit statements are
-  /// distinguishable from user-created bills (e.g. excluded from the recurring
-  /// auto-copy guard).
-  static const String _autoStatementMarker = '__auto_statement__';
-
-  bool _isAutoStatement(Bill b) =>
-      b.billType == BillType.creditCard &&
-      b.paymentNote == _autoStatementMarker;
+  bool _isAutoStatement(Bill b) => b.isAutoStatement;
 
   // ─── Bill CRUD ────────────────────────────────────────────────────────────────
 
@@ -668,7 +661,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             month: month,
             categoryId: categoryId,
             accountId: a.id,
-            paymentNote: _autoStatementMarker,
+            paymentNote: Bill.autoStatementNote,
           ),
         ];
         changed = true;

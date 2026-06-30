@@ -98,7 +98,18 @@ class BillListTile extends StatelessWidget {
           ),
         ));
       }
-      if (bill.paymentNote != null && bill.paymentNote!.isNotEmpty) {
+      if (bill.isAutoStatement) {
+        // The note holds an internal marker — show a readable label instead.
+        parts.add(const SizedBox(height: 2));
+        parts.add(Text(
+          'Auto-generated statement',
+          style: TextStyle(
+            color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+          ),
+        ));
+      } else if (bill.paymentNote != null && bill.paymentNote!.isNotEmpty) {
         parts.add(const SizedBox(height: 2));
         parts.add(Text(
           bill.paymentNote!,
