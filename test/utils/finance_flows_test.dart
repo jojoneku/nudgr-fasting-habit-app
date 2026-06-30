@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/utils/finance_flows.dart';
 
@@ -10,12 +11,13 @@ TransactionRecord _txn({
   String? reimbursementReceivableId,
   String? receivableId,
   String? transferGroupId,
+  String categoryId = 'c1',
 }) =>
     TransactionRecord(
       id: id,
       date: DateTime(2026, 3, 1),
       accountId: 'a1',
-      categoryId: 'c1',
+      categoryId: categoryId,
       amount: amount,
       type: type,
       description: 'x',
@@ -24,6 +26,16 @@ TransactionRecord _txn({
       reimbursementReceivableId: reimbursementReceivableId,
       receivableId: receivableId,
       transferGroupId: transferGroupId,
+    );
+
+FinanceCategory _cat(String id, {bool excludeFromTotals = false}) =>
+    FinanceCategory(
+      id: id,
+      name: id,
+      type: CategoryType.income,
+      icon: 'tag',
+      colorHex: '#FFFFFF',
+      excludeFromTotals: excludeFromTotals,
     );
 
 void main() {
@@ -98,6 +110,69 @@ void main() {
             _txn(id: 'i', type: TransactionType.inflow, transferGroupId: 'g'),
             const {}),
         isFalse,
+      );
+    });
+  });
+
+  group('excludeFromTotals categories', () {
+    test('excludedCashFlowCategoryIds collects only flagged ids', () {
+      final ids = excludedCashFlowCategoryIds([
+        _cat('reimb', excludeFromTotals: true),
+        _cat('salary'),
+        _cat('refund', excludeFromTotals: true),
+      ]);
+      expect(ids, {'reimb', 'refund'});
+    });
+
+    test('inflow in an excluded category is not income', () {
+      final excluded = {'reimb'};
+      expect(
+        isIncomeInflow(
+            _txn(
+                id: 'i', type: TransactionType.inflow, categoryId: 'reimb'),
+            const {},
+            excluded),
+        isFalse,
+      );
+      // A non-excluded inflow is still income.
+      expect(
+        isIncomeInflow(
+            _txn(
+                id: 'sal', type: TransactionType.inflow, categoryId: 'salary'),
+            const {},
+            excluded),
+        isTrue,
+      );
+    });
+
+    test('outflow in an excluded category is not spending', () {
+      final excluded = {'rebate'};
+      expect(
+        isSpendingOutflow(
+            _txn(
+                id: 'o', type: TransactionType.outflow, categoryId: 'rebate'),
+            excluded),
+        isFalse,
+      );
+      // A non-excluded outflow is still spending.
+      expect(
+        isSpendingOutflow(
+            _txn(
+                id: 'o2', type: TransactionType.outflow, categoryId: 'food'),
+            excluded),
+        isTrue,
+      );
+    });
+
+    test('empty excluded set leaves classification unchanged', () {
+      expect(
+        isSpendingOutflow(_txn(id: 'o', type: TransactionType.outflow)),
+        isTrue,
+      );
+      expect(
+        isIncomeInflow(
+            _txn(id: 'i', type: TransactionType.inflow), const {}, const {}),
+        isTrue,
       );
     });
   });

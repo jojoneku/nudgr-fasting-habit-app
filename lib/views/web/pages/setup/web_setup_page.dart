@@ -318,6 +318,9 @@ class _CategoriesCardState extends State<_CategoriesCard> {
               ),
             ),
           ),
+          // New categories count toward totals by default — the exclude toggle
+          // lives on the saved rows. Reserve the column to stay aligned.
+          const SizedBox(width: _CatCols.exclude),
           SizedBox(
             width: _CatCols.actions,
             child: Center(
@@ -377,6 +380,7 @@ Color _hexColor(String hex, Color fallback) {
 class _CatCols {
   static const double type = 130;
   static const double color = 70;
+  static const double exclude = 90;
   static const double actions = 56;
 }
 
@@ -406,6 +410,9 @@ class _CategoryTableHeader extends StatelessWidget {
           SizedBox(
               width: _CatCols.color,
               child: h('COLOR', align: TextAlign.center)),
+          SizedBox(
+              width: _CatCols.exclude,
+              child: h('EXCLUDE', align: TextAlign.center)),
           const SizedBox(width: _CatCols.actions),
         ],
       ),
@@ -525,6 +532,19 @@ class _CategoryTableRowState extends State<_CategoryTableRow> {
                 hex: cat.colorHex,
                 onTap: () => widget.ledger.updateCategory(
                     cat.copyWith(colorHex: cycleCategoryColor(cat.colorHex))),
+              ),
+            ),
+          ),
+          SizedBox(
+            width: _CatCols.exclude,
+            child: Center(
+              child: Tooltip(
+                message: 'Exclude from income/expense totals',
+                child: Switch.adaptive(
+                  value: cat.excludeFromTotals,
+                  onChanged: (v) => widget.ledger
+                      .updateCategory(cat.copyWith(excludeFromTotals: v)),
+                ),
               ),
             ),
           ),

@@ -124,10 +124,23 @@ void main() {
         type: CategoryType.expense,
         icon: 'food',
         colorHex: '#F59E0B',
+        excludeFromTotals: true,
       );
       final cat2 = FinanceCategory.fromJson(cat.toJson());
       expect(cat2.type, CategoryType.expense);
       expect(cat2.name, 'Food & Drinks');
+      expect(cat2.excludeFromTotals, isTrue);
+    });
+
+    test('excludeFromTotals defaults to false when absent from json', () {
+      final json = {
+        'id': 'c2',
+        'name': 'Salary',
+        'type': 'income',
+        'icon': 'cash',
+        'colorHex': '#10B981',
+      };
+      expect(FinanceCategory.fromJson(json).excludeFromTotals, isFalse);
     });
   });
 
