@@ -232,8 +232,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get monthTotalOutflow {
     final excluded = _excludedCategoryIds;
     return _transactions
-        .where((t) =>
-            t.month == _currentMonth && isSpendingOutflow(t, excluded))
+        .where(
+            (t) => t.month == _currentMonth && isSpendingOutflow(t, excluded))
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 

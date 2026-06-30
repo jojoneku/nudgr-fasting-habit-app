@@ -128,8 +128,7 @@ void main() {
       final excluded = {'reimb'};
       expect(
         isIncomeInflow(
-            _txn(
-                id: 'i', type: TransactionType.inflow, categoryId: 'reimb'),
+            _txn(id: 'i', type: TransactionType.inflow, categoryId: 'reimb'),
             const {},
             excluded),
         isFalse,
@@ -137,8 +136,7 @@ void main() {
       // A non-excluded inflow is still income.
       expect(
         isIncomeInflow(
-            _txn(
-                id: 'sal', type: TransactionType.inflow, categoryId: 'salary'),
+            _txn(id: 'sal', type: TransactionType.inflow, categoryId: 'salary'),
             const {},
             excluded),
         isTrue,
@@ -149,16 +147,14 @@ void main() {
       final excluded = {'rebate'};
       expect(
         isSpendingOutflow(
-            _txn(
-                id: 'o', type: TransactionType.outflow, categoryId: 'rebate'),
+            _txn(id: 'o', type: TransactionType.outflow, categoryId: 'rebate'),
             excluded),
         isFalse,
       );
       // A non-excluded outflow is still spending.
       expect(
         isSpendingOutflow(
-            _txn(
-                id: 'o2', type: TransactionType.outflow, categoryId: 'food'),
+            _txn(id: 'o2', type: TransactionType.outflow, categoryId: 'food'),
             excluded),
         isTrue,
       );
