@@ -63,8 +63,15 @@ class WeightWidgetProvider : HomeWidgetProvider() {
 
         val weight = widgetData.wStr("w_weight")
         val weightDelta = widgetData.wStr("w_weight_delta")
-        views.setTextViewText(R.id.weight_value, if (weight.isNotEmpty()) weight else "—")
-        views.setTextViewText(R.id.weight_delta, weightDelta)
+        if (weight.isNotEmpty()) {
+            views.setTextViewText(R.id.weight_value, weight)
+            views.setTextViewText(R.id.weight_delta, weightDelta)
+        } else {
+            // No weight logged yet — keep the placeholder + prompt instead of a
+            // bare dash with an empty line under it.
+            views.setTextViewText(R.id.weight_value, "—")
+            views.setTextViewText(R.id.weight_delta, "Tap to log weight")
+        }
 
         appWidgetManager.updateAppWidget(id, views)
     }

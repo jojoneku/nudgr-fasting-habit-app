@@ -78,7 +78,12 @@ class QuestWidgetProvider : HomeWidgetProvider() {
         val next = widgetData.wStr("w_next_quest")
         val nextId = widgetData.wLong("w_next_quest_id", -1L)
         views.setTextViewText(R.id.quest_count, "$done/$total")
-        views.setTextViewText(R.id.quest_next, if (next.isNotEmpty()) next else "All done")
+        val nextLabel = when {
+            next.isNotEmpty() -> next
+            total == 0L -> "No quests yet"
+            else -> "All done"
+        }
+        views.setTextViewText(R.id.quest_next, nextLabel)
 
         if (nextId >= 0) {
             views.setViewVisibility(R.id.btn_quest_done, View.VISIBLE)

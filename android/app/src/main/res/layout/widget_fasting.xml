@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Fasting flagship widget (Plan 039). The Chronometer ticks natively while the
      app is killed; Start/End fire inline actions. Visibility is toggled by
-     FastingWidgetProvider based on the pushed snapshot. -->
+     FastingWidgetProvider based on the pushed snapshot.
+
+     Layout defaults below ARE the empty/uninitialized state: content is
+     vertically centred (weighted spacer) so it fills any card size instead of
+     hugging the top, and the card defaults to a clean "Ready to fast" look
+     (Chronometer + progress hidden) so it never shows a half-rendered state
+     before the first snapshot push. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/fasting_root"
     android:layout_width="match_parent"
@@ -38,42 +44,50 @@
             android:ellipsize="end" />
     </LinearLayout>
 
-    <!-- Live clock (fasting) -->
-    <Chronometer
-        android:id="@+id/fasting_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:textColor="@color/widget_on_surface"
-        android:textSize="34sp"
-        android:textStyle="bold" />
-
-    <!-- Idle state -->
-    <TextView
-        android:id="@+id/fasting_idle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:text="Ready to fast"
-        android:textColor="@color/widget_on_surface"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:visibility="gone" />
-
-    <ProgressBar
-        android:id="@+id/fasting_progress"
-        style="?android:attr/progressBarStyleHorizontal"
+    <!-- Centred content: fills the card vertically so a tall card has no dead
+         space. -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="6dp"
-        android:layout_marginTop="8dp"
-        android:max="100"
-        android:progressDrawable="@drawable/widget_progress" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center_vertical"
+        android:orientation="vertical">
+
+        <!-- Live clock (fasting) -->
+        <Chronometer
+            android:id="@+id/fasting_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="34sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <!-- Idle state (default) -->
+        <TextView
+            android:id="@+id/fasting_idle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Ready to fast"
+            android:textColor="@color/widget_on_surface"
+            android:textSize="26sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/fasting_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:layout_marginTop="10dp"
+            android:max="100"
+            android:progressDrawable="@drawable/widget_progress"
+            android:visibility="gone" />
+    </LinearLayout>
 
     <!-- Footer: streak + action -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="10dp"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -82,6 +96,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:text="Tap to begin"
+            android:maxLines="1"
+            android:ellipsize="end"
             android:textColor="@color/widget_on_surface_variant"
             android:textSize="12sp" />
 
