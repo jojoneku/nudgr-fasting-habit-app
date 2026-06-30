@@ -42,7 +42,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
       _dueDayController.text = b.dueDay.toString();
       // Hide the internal auto-statement marker from the editable note field —
       // it is not a user-facing note. _resolvePaymentNote re-applies it on save.
-      _paymentNoteController.text = b.isAutoStatement ? '' : (b.paymentNote ?? '');
+      _paymentNoteController.text =
+          b.isAutoStatement ? '' : (b.paymentNote ?? '');
       _billType = b.billType;
       _selectedAccountId = b.accountId;
       _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
@@ -76,8 +77,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
   String? _resolvePaymentNote() {
     final typed = _paymentNoteController.text.trim();
     if (typed.isNotEmpty) return typed;
-    if (widget.existing?.isAutoStatement ?? false) return Bill.autoStatementNote;
-    return null;
+    final wasAuto = widget.existing?.isAutoStatement ?? false;
+    return wasAuto ? Bill.autoStatementNote : null;
   }
 
   Future<void> _submit() async {
