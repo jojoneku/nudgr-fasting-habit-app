@@ -76,6 +76,18 @@ class Bill {
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// Sentinel stored in [paymentNote] to flag a credit-card statement that was
+  /// auto-generated from the linked account's billing cycle, as opposed to a
+  /// user-created bill. It is an internal marker only and must never be shown
+  /// to the user — see [isAutoStatement] for the display-side guard.
+  static const String autoStatementNote = '__auto_statement__';
+
+  /// True when this bill is an auto-generated credit-card statement (it carries
+  /// [autoStatementNote] in [paymentNote]). Used to exclude it from the
+  /// recurring auto-copy guard and to suppress the raw marker in the UI.
+  bool get isAutoStatement =>
+      billType == BillType.creditCard && paymentNote == autoStatementNote;
+
   factory Bill.fromJson(Map<String, dynamic> json) {
     return Bill(
       // Null-tolerant: a corrupt cloud row (missing amount/dueDay/etc.) loads

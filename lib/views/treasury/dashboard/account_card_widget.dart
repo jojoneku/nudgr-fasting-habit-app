@@ -76,7 +76,7 @@ class AccountCardWidget extends StatelessWidget {
         hasHeld ? account.balance - heldAmount : account.balance;
     return Semantics(
       label:
-          "${account.name}, ${account.isLiability ? 'Owed' : (hasHeld ? 'Yours' : 'Balance')}: ${formatPesoCompact(shownBalance)}",
+          "${account.name}, ${account.isLiability ? 'Owed' : (hasHeld ? 'Yours' : 'Balance')}: ${formatPeso(shownBalance)}",
       child: AppCard(
         variant: AppCardVariant.elevated,
         padding: EdgeInsets.zero,
@@ -186,20 +186,26 @@ class _CardBalance extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        AppNumberDisplay(
-          value: account.isLiability
-              ? 'Owed: ${formatPesoCompact(account.balance)}'
-              : formatPesoCompact(hasHeld ? yours : account.balance),
-          size: AppNumberSize.body,
-          color: account.isLiability
-              ? colorScheme.error
-              : colorScheme.onSurfaceVariant,
+        // Full peso amounts can be wider than the ~110px 3-column cell, so
+        // scale the number down to fit rather than clip or overflow.
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: AppNumberDisplay(
+            value: account.isLiability
+                ? 'Owed: ${formatPeso(account.balance)}'
+                : formatPeso(hasHeld ? yours : account.balance),
+            size: AppNumberSize.body,
+            color: account.isLiability
+                ? colorScheme.error
+                : colorScheme.onSurfaceVariant,
+          ),
         ),
         if (hasHeld) ...[
           const SizedBox(height: 2),
           Text(
-            'of ${formatPesoCompact(account.balance)} · '
-            '${formatPesoCompact(heldAmount)} held',
+            'of ${formatPeso(account.balance)} · '
+            '${formatPeso(heldAmount)} held',
             style: theme.textTheme.labelSmall?.copyWith(
               color: colorScheme.onSurfaceVariant.withValues(alpha: 0.55),
               fontStyle: FontStyle.italic,

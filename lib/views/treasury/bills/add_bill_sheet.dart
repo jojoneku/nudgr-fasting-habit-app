@@ -40,7 +40,10 @@ class _AddBillSheetState extends State<AddBillSheet> {
       _nameController.text = b.name;
       _amountController.text = b.amount.toStringAsFixed(2);
       _dueDayController.text = b.dueDay.toString();
-      _paymentNoteController.text = b.paymentNote ?? '';
+      // Hide the internal auto-statement marker from the editable note field —
+      // it is not a user-facing note. _resolvePaymentNote re-applies it on save.
+      _paymentNoteController.text =
+          b.isAutoStatement ? '' : (b.paymentNote ?? '');
       _billType = b.billType;
       _selectedAccountId = b.accountId;
       _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
@@ -68,6 +71,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
       .where((c) => c.type == CategoryType.expense)
       .toList();
 
+  /// Resolves the note to persist. A user-typed note wins; otherwise we
+  /// re-apply the auto-statement marker we hid from the field, so editing an
+  /// auto-generated statement's other fields doesn't strip its flag.
+  String? _resolvePaymentNote() {
+    final typed = _paymentNoteController.text.trim();
+    if (typed.isNotEmpty) return typed;
+    final wasAuto = widget.existing?.isAutoStatement ?? false;
+    return wasAuto ? Bill.autoStatementNote : null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSubmitting = true);
@@ -85,9 +98,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
         month: widget.presenter.selectedMonth,
         categoryId: _selectedCategoryId ?? '',
         accountId: _selectedAccountId,
-        paymentNote: _paymentNoteController.text.trim().isEmpty
-            ? null
-            : _paymentNoteController.text.trim(),
+        paymentNote: _resolvePaymentNote(),
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
       );
