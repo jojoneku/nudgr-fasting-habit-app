@@ -1,16 +1,95 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart' show MethodChannel, PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:intl/intl.dart';
 import '../models/quest.dart';
+import 'storage_service.dart';
 
 @pragma('vm:entry-point')
 void notificationTapBackground(NotificationResponse notificationResponse) {
-  // Handle background notification tap
+  // Runs in a background isolate when a quest notification action button is
+  // tapped while the app is terminated. Kept lightweight: it only records the
+  // tap (or reschedules a snooze). The real completion — XP, streak, stat and
+  // achievement checks — is applied through the presenters on next foreground
+  // via WidgetBridgeService.drainPendingActions, so nothing RPG runs here.
+  _handleQuestNotificationAction(notificationResponse);
+}
+
+/// Handles a quest notification action button tap ([NotificationService.
+/// questActionDone] / [questActionSnooze] / [questActionSkip]). Safe to run in
+/// either the background isolate or the foreground (main) isolate.
+Future<void> _handleQuestNotificationAction(
+    NotificationResponse response) async {
+  final actionId = response.actionId;
+  if (actionId == null) return; // body tap, not an action button
+
+  Map<String, dynamic> data = const {};
+  final payload = response.payload;
+  if (payload != null && payload.isNotEmpty) {
+    try {
+      final decoded = jsonDecode(payload);
+      if (decoded is Map<String, dynamic>) data = decoded;
+    } catch (_) {/* non-JSON payload — ignore */}
+  }
+  final questId = data['id'];
+  if (questId is! int) return;
+
+  switch (actionId) {
+    case NotificationService.questActionDone:
+      await _enqueueQuestCompletion(questId);
+      // Foreground: apply immediately. Background: this is null → applied on
+      // next resume via drainPendingActions.
+      NotificationService.onQuestActionDrain?.call();
+      break;
+    case NotificationService.questActionSkip:
+      // cancelNotification:true on the action already dismissed it; skipping is
+      // a no-op on state — the quest simply stays not-done for today.
+      break;
+    case NotificationService.questActionSnooze:
+      await _snoozeQuestNotification(
+          questId, data['title'] as String? ?? 'Quest');
+      break;
+  }
+}
+
+/// Enqueues a `completequest` token onto the shared pending-actions queue — the
+/// same one home-screen widget taps use — so the next foreground drain finishes
+/// it through the real [QuestPresenter]. Deduped by quest id so a double
+/// delivery (or double tap) can't toggle a same-day completion back off.
+Future<void> _enqueueQuestCompletion(int questId) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final queue =
+        prefs.getStringList(StorageService.kWidgetPendingActions) ?? [];
+    final already = queue
+        .any((t) => t.startsWith('completequest|') && t.endsWith('|$questId'));
+    if (!already) {
+      final now = DateTime.now().millisecondsSinceEpoch;
+      queue.add('completequest|$now|$questId');
+      await prefs.setStringList(StorageService.kWidgetPendingActions, queue);
+    }
+  } catch (e) {
+    debugPrint('NotificationService: enqueue quest completion failed: $e');
+  }
+}
+
+/// Reschedules a quest reminder [NotificationService.questSnoozeMinutes] minutes
+/// from now, carrying the same action buttons and payload.
+Future<void> _snoozeQuestNotification(int questId, String title) async {
+  try {
+    final service = NotificationService();
+    await service.init(); // self-heal in this isolate (no-op if initialised)
+    await service.showQuestSnooze(questId, title);
+  } catch (e) {
+    debugPrint('NotificationService: snooze failed: $e');
+  }
 }
 
 /// Outcome of the settings-screen "Test Notification" action, so the UI can
@@ -58,6 +137,25 @@ class NotificationService {
   static const int notifIdBillsReminder = 600;
   // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
   static const int notifIdCreditDueBase = 620;
+
+  // ── Quest notification action buttons ───────────────────────────────────────
+  /// Action button ids on quest notifications. Handled in a background isolate
+  /// (showsUserInterface:false) so tapping them never opens the app.
+  static const String questActionDone = 'quest_action_done';
+  static const String questActionSnooze = 'quest_action_snooze';
+  static const String questActionSkip = 'quest_action_skip';
+
+  /// How long "Snooze" defers a quest reminder.
+  static const int questSnoozeMinutes = 15;
+
+  /// Notification-id offset for a snoozed quest, kept clear of the ranges used
+  /// by the recurring/reminder/one-shot schedules (baseId+0..306, +10000).
+  static const int _questSnoozeIdOffset = 20000;
+
+  /// Set by the app so a foreground action tap drains the pending-actions queue
+  /// immediately instead of waiting for the next resume. Null in a background
+  /// isolate (fresh memory), where the drain happens on next foreground.
+  static void Function()? onQuestActionDrain;
 
   // Budget warnings: stable int in 560–599. Must stay disjoint from the
   // credit-due range above — both derive ids from a hash, and the previous
@@ -193,8 +291,13 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse: (details) {
-        debugPrint('Notification clicked: ${details.payload}');
+      onDidReceiveNotificationResponse: (response) {
+        debugPrint('Notification clicked: ${response.payload}');
+        // Route action-button taps that were delivered to the main isolate
+        // (some Android versions/states) through the same handler.
+        if (response.actionId != null) {
+          _handleQuestNotificationAction(response);
+        }
       },
       onDidReceiveBackgroundNotificationResponse: notificationTapBackground,
     );
@@ -643,6 +746,7 @@ class NotificationService {
       vibrationPattern: Int64List.fromList([0, 500, 250, 500, 250, 500]),
       category: AndroidNotificationCategory.reminder,
       visibility: NotificationVisibility.public,
+      actions: _questActions(),
     );
     final NotificationDetails details =
         NotificationDetails(android: androidDetails);
@@ -656,6 +760,68 @@ class NotificationService {
         await _scheduleBiweeklyQuest(quest, details);
       case RecurrenceType.monthly:
         await _scheduleMonthlyQuest(quest, details);
+    }
+  }
+
+  /// Action buttons shown on quest notifications. [showsUserInterface] is false
+  /// so a tap is handled in the background without opening the app;
+  /// [cancelNotification] dismisses the notification when tapped.
+  List<AndroidNotificationAction> _questActions() => const [
+        AndroidNotificationAction(
+          questActionDone,
+          'Mark as Done',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        AndroidNotificationAction(
+          questActionSnooze,
+          'Snooze 15m',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+        AndroidNotificationAction(
+          questActionSkip,
+          'Skip today',
+          showsUserInterface: false,
+          cancelNotification: true,
+        ),
+      ];
+
+  /// JSON payload carrying the quest identity for the action handler.
+  String _questPayload(Quest quest) =>
+      jsonEncode({'id': quest.id, 'title': quest.title});
+
+  /// Reschedules a single quest reminder [questSnoozeMinutes] minutes from now,
+  /// carrying the same action buttons and payload. Called by the snooze action.
+  Future<void> showQuestSnooze(int questId, String title) async {
+    if (!_isInitialized || !_masterEnabled) return;
+    final when = tz.TZDateTime.now(tz.local)
+        .add(const Duration(minutes: questSnoozeMinutes));
+    final AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdQuests,
+      channelNameQuests,
+      channelDescription: 'Recurring reminders for habits and quests',
+      importance: Importance.max,
+      priority: Priority.max,
+      category: AndroidNotificationCategory.reminder,
+      visibility: NotificationVisibility.public,
+      actions: _questActions(),
+    );
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        questId + _questSnoozeIdOffset,
+        title,
+        "It's time for your quest!",
+        when,
+        NotificationDetails(android: androidDetails),
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: jsonEncode({'id': questId, 'title': title}),
+      );
+    } catch (e) {
+      debugPrint('NotificationService: Error scheduling snooze: $e');
     }
   }
 
@@ -680,6 +846,8 @@ class NotificationService {
           now.add(const Duration(seconds: 1)),
           channelId: channelIdQuests,
           channelName: channelNameQuests,
+          actions: _questActions(),
+          payload: _questPayload(quest),
         );
         scheduledDate = scheduledDate.add(const Duration(days: 7));
       }
@@ -695,6 +863,7 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          payload: _questPayload(quest),
         );
       } catch (e) {
         debugPrint(
@@ -722,6 +891,8 @@ class NotificationService {
         now.add(const Duration(seconds: 1)),
         channelId: channelIdQuests,
         channelName: channelNameQuests,
+        actions: _questActions(),
+        payload: _questPayload(quest),
       );
       scheduledDate = scheduledDate.add(const Duration(days: 7));
     }
@@ -737,6 +908,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: _questPayload(quest),
       );
     } catch (e) {
       debugPrint(
@@ -775,6 +947,8 @@ class NotificationService {
         next,
         channelId: channelIdQuests,
         channelName: channelNameQuests,
+        actions: _questActions(),
+        payload: _questPayload(quest),
       );
       if (quest.reminderMinutes != null && quest.reminderMinutes! > 0) {
         final reminderDate =
@@ -786,6 +960,8 @@ class NotificationService {
           reminderDate,
           channelId: channelIdQuests,
           channelName: channelNameQuests,
+          actions: _questActions(),
+          payload: _questPayload(quest),
         );
       }
       next = next.add(const Duration(days: 14));
@@ -812,6 +988,7 @@ class NotificationService {
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
           matchDateTimeComponents: DateTimeComponents.dayOfMonthAndTime,
+          payload: _questPayload(quest),
         );
       } catch (e) {
         debugPrint(
@@ -851,6 +1028,7 @@ class NotificationService {
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: matchComponent,
+        payload: _questPayload(quest),
       );
     } catch (e) {
       debugPrint(
@@ -883,6 +1061,8 @@ class NotificationService {
     }
     // Immediate one-shots
     await flutterLocalNotificationsPlugin.cancel(baseId + 10000);
+    // Snoozed reminder (from the notification "Snooze 15m" action)
+    await flutterLocalNotificationsPlugin.cancel(baseId + _questSnoozeIdOffset);
   }
 
   /// Schedules a "streak at risk" notification at 9 PM today.
@@ -1252,6 +1432,8 @@ class NotificationService {
     bool fullScreen = false,
     required String channelId,
     required String channelName,
+    List<AndroidNotificationAction>? actions,
+    String? payload,
   }) async {
     // Central backstop: every scheduled notification funnels through here.
     if (!_isInitialized || !_masterEnabled) return;
@@ -1278,6 +1460,7 @@ class NotificationService {
       enableVibration: true,
       visibility: NotificationVisibility.public,
       category: fullScreen ? AndroidNotificationCategory.alarm : null,
+      actions: actions,
     );
     final NotificationDetails details =
         NotificationDetails(android: androidDetails);
@@ -1305,6 +1488,7 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.alarmClock,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
+        payload: payload,
       );
     } catch (e) {
       debugPrint('NotificationService: Error scheduling notification $id: $e');
