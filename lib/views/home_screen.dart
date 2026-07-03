@@ -369,6 +369,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       nutrition: _nutritionPresenter,
     );
     _widgetBridge!.attach();
+    // A quest notification "Mark as Done" tap enqueues onto the same pending-
+    // actions queue; when the tap lands while the app is alive, apply it right
+    // away instead of waiting for the next resume.
+    NotificationService.onQuestActionDrain =
+        () => _widgetBridge?.drainPendingActions();
     await _widgetBridge!.drainPendingActions();
   }
 
