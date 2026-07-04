@@ -115,8 +115,9 @@ class _BillsBody extends StatelessWidget {
       expenses: presenter.budgetedExpenses,
     );
 
-    // One card per row, full-width
-    // (Credit cards → Upcoming → Receivables → Budgeted set-asides → Paid).
+    // Layout (top → bottom): Credit cards → [Upcoming bills | Set-asides] side
+    // by side → Receivables → Installments → Paid. Bills and set-asides pair up
+    // because they're the two "money leaving soon" obligations.
     if (creditCards.isNotEmpty) {
       children
         ..add(_WebCreditCardsCard(presenter: presenter, cards: creditCards))
@@ -129,13 +130,11 @@ class _BillsBody extends StatelessWidget {
     final installmentsCard = _InstallmentsCard(presenter: installmentPresenter);
 
     children
-      ..add(upcomingCard)
+      ..add(_SideBySideCards(left: upcomingCard, right: budgetedCard))
       ..add(const SizedBox(height: WebInsets.xl))
       ..add(receivablesCard)
       ..add(const SizedBox(height: WebInsets.xl))
-      ..add(installmentsCard)
-      ..add(const SizedBox(height: WebInsets.xl))
-      ..add(budgetedCard);
+      ..add(installmentsCard);
 
     if (paid.isNotEmpty) {
       children
@@ -154,6 +153,45 @@ class _BillsBody extends StatelessWidget {
     showDialog<void>(
       context: context,
       builder: (_) => _AddBillDialog(presenter: presenter),
+    );
+  }
+}
+
+/// Places two cards side by side on wide viewports and stacks them (left above
+/// right) once the page gets too narrow for two readable columns. Cards are
+/// top-aligned so a taller card never stretches its shorter neighbour.
+class _SideBySideCards extends StatelessWidget {
+  final Widget left;
+  final Widget right;
+
+  const _SideBySideCards({required this.left, required this.right});
+
+  /// Below this width two columns would each be too cramped, so we stack.
+  static const double _stackBelow = 900;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _stackBelow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              left,
+              const SizedBox(height: WebInsets.xl),
+              right,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: left),
+            const SizedBox(width: WebInsets.xl),
+            Expanded(child: right),
+          ],
+        );
+      },
     );
   }
 }
@@ -1139,6 +1177,8 @@ class _ReceivablesCard extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final pending = receivables.where((r) => !r.isReceived).toList();
+    // Still-pending receivables float to the top; received ones sink below.
+    final ordered = [...pending, ...receivables.where((r) => r.isReceived)];
 
     return WebCard(
       accentColor: Theme.of(context).colorScheme.tertiary,
@@ -1153,10 +1193,10 @@ class _ReceivablesCard extends StatelessWidget {
           ? const _EmptyHint('Nothing owed to you this month.')
           : Column(
               children: [
-                for (var i = 0; i < receivables.length; i++)
+                for (var i = 0; i < ordered.length; i++)
                   _ReceivableRow(
                     presenter: presenter,
-                    receivable: receivables[i],
+                    receivable: ordered[i],
                     showDivider: i > 0,
                   ),
                 if (pending.isNotEmpty) ...[
@@ -1403,6 +1443,9 @@ class _BudgetedExpensesCard extends StatelessWidget {
     final cs = theme.colorScheme;
     final pending = expenses.where((e) => !e.isPaid).toList();
     final pendingTotal = pending.fold(0.0, (sum, e) => sum + e.allocatedAmount);
+    // Unfunded set-asides float to the top; funded ones sink below. Each group
+    // keeps its incoming order (stable partition).
+    final ordered = [...pending, ...expenses.where((e) => e.isPaid)];
 
     return WebCard(
       accentColor: cs.secondary,
@@ -1417,10 +1460,10 @@ class _BudgetedExpensesCard extends StatelessWidget {
           ? const _EmptyHint('No set-asides budgeted this month.')
           : Column(
               children: [
-                for (var i = 0; i < expenses.length; i++)
+                for (var i = 0; i < ordered.length; i++)
                   _BudgetedExpenseRow(
                     presenter: presenter,
-                    expense: expenses[i],
+                    expense: ordered[i],
                     showDivider: i > 0,
                   ),
                 if (pending.isNotEmpty) ...[
@@ -1638,6 +1681,8 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
 
   late SetAsideType _type;
   String? _selectedCategoryId;
+  bool _isRecurring = false;
+  RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
 
   @override
@@ -1653,8 +1698,17 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
               : e.allocatedAmount.toString();
       _noteController.text = e.note ?? '';
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
+      _isRecurring = e.isRecurring;
+      _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
   }
+
+  String _recurrenceLabel(RecurrenceType r) => switch (r) {
+        RecurrenceType.monthly => 'Monthly',
+        RecurrenceType.weekly => 'Weekly',
+        RecurrenceType.yearly => 'Yearly',
+        RecurrenceType.custom => 'Custom',
+      };
 
   @override
   void dispose() {
@@ -1685,6 +1739,8 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           allocatedAmount: amount,
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
       } else {
         await widget.presenter.updateBudgetedExpense(existing.copyWith(
@@ -1693,6 +1749,8 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           allocatedAmount: amount,
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
+          isRecurring: _isRecurring,
+          recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
       }
       if (mounted) Navigator.of(context).pop();
@@ -1782,6 +1840,27 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                   ),
                 ],
                 const SizedBox(height: WebInsets.sm),
+                SwitchListTile(
+                  value: _isRecurring,
+                  onChanged: (v) => setState(() => _isRecurring = v),
+                  title: const Text('Recurring'),
+                  subtitle: const Text('Auto-generate next month'),
+                  contentPadding: EdgeInsets.zero,
+                ),
+                if (_isRecurring) ...[
+                  const SizedBox(height: WebInsets.sm),
+                  DropdownButtonFormField<RecurrenceType>(
+                    initialValue: _recurrenceType,
+                    decoration: const InputDecoration(labelText: 'Recurrence'),
+                    items: RecurrenceType.values
+                        .map((r) => DropdownMenuItem(
+                            value: r, child: Text(_recurrenceLabel(r))))
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _recurrenceType = v ?? _recurrenceType),
+                  ),
+                ],
+                const SizedBox(height: WebInsets.md),
                 Text(
                   'Funding a set-aside later debits a liquid account — the money '
                   'leaves your spendable cash.',
