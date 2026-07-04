@@ -163,6 +163,17 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  /// Guards against writing today's data onto a stale log. When the app stays
+  /// open or backgrounded across midnight, [_todayLog] still holds yesterday's
+  /// date; a copyWith + save would then overwrite yesterday's real totals under
+  /// the wrong key. Reload (or start) today's log first. Yesterday's log is
+  /// already persisted under its own key, so it survives untouched. Mirrors
+  /// NutritionPresenter._ensureTodayLogFresh.
+  Future<void> _ensureTodayLogFresh() async {
+    if (_todayLog.date == _todayKey()) return;
+    _todayLog = await _storage.loadTodayActivityLog();
+  }
+
   Future<void> syncFromHealthConnect() async {
     if (!_isHealthConnectAvailable || !_hasHealthPermission) return;
 
@@ -170,6 +181,7 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     try {
+      await _ensureTodayLogFresh();
       final steps = await _healthService.readTodaySteps(
           sourceId: _preferredStepsSourceId);
       final activeCalories = await _healthService.readTodayActiveCalories();
@@ -199,6 +211,7 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> setManualSteps(int steps) async {
+    await _ensureTodayLogFresh();
     _todayLog = _todayLog.copyWith(
       steps: steps,
       isManualEntry: true,
@@ -342,21 +355,31 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
     final today = _todayKey();
     if (_goalMetDate == today) return; // already awarded today
 
+    // The previous goal-met day, captured before we overwrite it — used to tell
+    // a continued streak (yesterday) from a broken one (a gap).
+    final previousGoalMetDate = _goalMetDate;
     _goalMetDate = today;
     _storage.saveActivityGoalMetDate(today);
-    _onGoalMet();
+    _onGoalMet(previousGoalMetDate);
   }
 
-  void _onGoalMet() {
+  void _onGoalMet(String? previousGoalMetDate) {
     // +25 XP on first goal met each day
     _statsPresenter.addXp(25);
 
     // +1 AGI every 5 consecutive days goal met — update streak first
-    _updateStreakAndAwardAgi();
+    _updateStreakAndAwardAgi(previousGoalMetDate);
   }
 
-  Future<void> _updateStreakAndAwardAgi() async {
-    final streak = await _storage.loadActivityStreak() + 1;
+  Future<void> _updateStreakAndAwardAgi(String? previousGoalMetDate) async {
+    final yesterday = _dayKey(DateTime.now().subtract(const Duration(days: 1)));
+    // Continue the streak only if the goal was also met yesterday; a gap day
+    // breaks it and we start over at 1. Without this reset the streak grew on
+    // cumulative (not consecutive) goal-met days, so "+1 AGI every 5 days"
+    // fired for, e.g., five non-consecutive days.
+    final streak = previousGoalMetDate == yesterday
+        ? await _storage.loadActivityStreak() + 1
+        : 1;
     await _storage.saveActivityStreak(streak);
     if (streak % 5 == 0) {
       await _statsPresenter.awardStat('agi');
@@ -365,4 +388,5 @@ class ActivityPresenter extends ChangeNotifier with SafeNotifier {
   }
 }
 
-String _todayKey() => DateFormat('yyyy-MM-dd').format(DateTime.now());
+String _dayKey(DateTime d) => DateFormat('yyyy-MM-dd').format(d);
+String _todayKey() => _dayKey(DateTime.now());

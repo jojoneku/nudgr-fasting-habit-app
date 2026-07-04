@@ -45,11 +45,14 @@ class LocalStorageService extends StorageService {
   /// `u/$_userId/` to prevent cross-user data leakage on shared devices.
   String? _userId;
 
-  // In-memory ID caches so finance save methods don't re-decode the full blob
-  // just to compute the sync-queue diff. Populated by the matching load() call
-  // and updated on each save. Cleared when the user namespace changes.
-  Set<String>? _cachedTransactionIds;
-  Set<String>? _cachedAccountIds;
+  // Per-group snapshot of the last-persisted finance records, as id → encoded
+  // JSON. Finance saves diff against this so only added/changed/removed records
+  // are marked dirty — marking every record on every save bumped every LWW
+  // timestamp (clobbering other devices' edits) and flooded the sync queue.
+  // Seeded lazily from disk on the first save of each group, invalidated when
+  // the user namespace changes or remote data is applied. Keyed by group name
+  // (e.g. 'transactions'); the inner map keys are record ids.
+  final Map<String, Map<String, String>> _financeSyncCache = {};
 
   /// Scopes a prefs key to the current user. Device-level keys (theme, etc.)
   /// bypass this and use the base constant directly.
@@ -159,8 +162,7 @@ class LocalStorageService extends StorageService {
     }
     _userId = null;
     _syncQueue = null;
-    _cachedTransactionIds = null;
-    _cachedAccountIds = null;
+    _financeSyncCache.clear();
   }
 
   /// Detaches the current user namespace WITHOUT deleting any stored data.
@@ -171,8 +173,7 @@ class LocalStorageService extends StorageService {
   void detachUser() {
     _userId = null;
     _syncQueue = null;
-    _cachedTransactionIds = null;
-    _cachedAccountIds = null;
+    _financeSyncCache.clear();
   }
 
   // ── Local backup export/import (Plan 053 Phase 0.5) ────────────────────────
@@ -239,8 +240,9 @@ class LocalStorageService extends StorageService {
         await prefs.setStringList(key, v.map((e) => e.toString()).toList());
       }
     }
-    _cachedTransactionIds = null;
-    _cachedAccountIds = null;
+    // A raw restore rewrites the finance blobs on disk without going through
+    // the diff, so the next save must re-seed its baseline from the new state.
+    _financeSyncCache.clear();
   }
 
   /// Fired by SyncService after pullAll() — lets home_screen reload presenters.
@@ -256,6 +258,10 @@ class LocalStorageService extends StorageService {
       await block();
     } finally {
       _applyingRemote = false;
+      // Remote writes changed the on-disk finance blobs without diffing, so the
+      // cached baseline is stale — drop it so the next local save re-seeds from
+      // the post-pull state instead of re-queuing the pulled records.
+      _financeSyncCache.clear();
     }
   }
 
@@ -266,20 +272,68 @@ class LocalStorageService extends StorageService {
     }
   }
 
-  /// Lightweight helper: reads a JSON array from [key] and extracts only the
-  /// `id` field of each object. Used to seed the in-memory ID caches without
-  /// deserializing full model objects.
-  Future<Set<String>> _loadIdSetFromKey(String key) async {
+  /// Marks only added / changed / removed finance records dirty by diffing
+  /// [nowById] (record id → encoded JSON) against the last-persisted snapshot
+  /// for [group]. On a cold cache the baseline is seeded from the pre-save
+  /// on-disk state, so even the first save of a session diffs correctly instead
+  /// of re-queuing every record. Unchanged records keep their existing sync
+  /// timestamp, which is what stops a local save from clobbering another
+  /// device's edits under last-write-wins. No-op while applying remote data.
+  Future<void> _diffMarkFinance(
+    String group,
+    String storageKey,
+    String keyPrefix,
+    Map<String, String> nowById,
+  ) async {
+    if (_applyingRemote) {
+      _financeSyncCache[group] = nowById;
+      return;
+    }
+    final baseline =
+        _financeSyncCache[group] ?? await _loadFinanceJsonById(storageKey);
+    for (final id in baseline.keys) {
+      if (!nowById.containsKey(id)) {
+        _syncQueue?.markDirty(SyncDomain.financeRecord, '$keyPrefix/$id',
+            op: SyncOp.delete);
+      }
+    }
+    nowById.forEach((id, encoded) {
+      if (baseline[id] != encoded) {
+        _syncQueue?.markDirty(SyncDomain.financeRecord, '$keyPrefix/$id');
+      }
+    });
+    _financeSyncCache[group] = nowById;
+  }
+
+  /// Reads the stored finance array at [storageKey] and returns record id →
+  /// encoded JSON, without constructing model objects. Used to seed the diff
+  /// baseline on a cold cache. Records key on `id`, except monthly summaries
+  /// which key on `month`.
+  Future<Map<String, String>> _loadFinanceJsonById(String storageKey) async {
     final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_k(key));
+    final raw = prefs.getString(_k(storageKey));
     if (raw == null) return {};
     try {
-      return (jsonDecode(raw) as List)
-          .map((e) => (e as Map<String, dynamic>)['id'] as String)
-          .toSet();
+      final out = <String, String>{};
+      for (final e in jsonDecode(raw) as List) {
+        final m = e as Map<String, dynamic>;
+        final id = (m['id'] ?? m['month']).toString();
+        out[id] = jsonEncode(m);
+      }
+      return out;
     } catch (_) {
       return {};
     }
+  }
+
+  /// Builds the id → encoded-JSON map for [maps] (each already a `toJson()`
+  /// result), matching the shape [_diffMarkFinance] compares against.
+  Map<String, String> _financeJsonById(List<Map<String, dynamic>> maps) {
+    final out = <String, String>{};
+    for (final m in maps) {
+      out[(m['id'] ?? m['month']).toString()] = jsonEncode(m);
+    }
+    return out;
   }
 
   // ── User Stats ───────────────────────────────────────────────────────────────
@@ -949,40 +1003,23 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveAccounts(List<FinancialAccount> accounts) async {
-    if (!_applyingRemote) {
-      final newIds = accounts.map((e) => e.id).toSet();
-      final oldIds = _cachedAccountIds ??
-          await _loadIdSetFromKey(StorageService.keyFinancialAccounts);
-      final removed = oldIds.difference(newIds);
-      for (final id in removed) {
-        _syncQueue?.markDirty(SyncDomain.financeRecord, 'finance_accounts/$id',
-            op: SyncOp.delete);
-      }
-      for (final a in accounts) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_accounts/${a.id}');
-      }
-      _cachedAccountIds = newIds;
-    }
+    final maps = accounts.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('accounts', StorageService.keyFinancialAccounts,
+        'finance_accounts', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyFinancialAccounts),
-        jsonEncode(accounts.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+        _k(StorageService.keyFinancialAccounts), jsonEncode(maps));
   }
 
   @override
   Future<List<FinancialAccount>> loadAccounts() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_k(StorageService.keyFinancialAccounts));
-    if (raw == null) {
-      _cachedAccountIds = {};
-      return [];
-    }
+    if (raw == null) return [];
     try {
-      final list = (jsonDecode(raw) as List)
+      return (jsonDecode(raw) as List)
           .map((e) => FinancialAccount.fromJson(e as Map<String, dynamic>))
           .toList();
-      _cachedAccountIds = list.map((e) => e.id).toSet();
-      return list;
     } catch (e) {
       debugPrint('LocalStorageService: Error loading accounts: $e');
       return [];
@@ -991,44 +1028,22 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveTransactions(List<TransactionRecord> transactions) async {
-    if (!_applyingRemote) {
-      final newIds = transactions.map((e) => e.id).toSet();
-      // Use in-memory cache to avoid a full re-decode just for the diff.
-      // On the very first save in a session _cachedTransactionIds is null —
-      // fall back to a lightweight ID-only parse (no full object construction).
-      final oldIds = _cachedTransactionIds ??
-          await _loadIdSetFromKey(StorageService.keyTransactions);
-      final removed = oldIds.difference(newIds);
-      for (final id in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_transactions/$id',
-            op: SyncOp.delete);
-      }
-      for (final t in transactions) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_transactions/${t.id}');
-      }
-      _cachedTransactionIds = newIds;
-    }
+    final maps = transactions.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('transactions', StorageService.keyTransactions,
+        'finance_transactions', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyTransactions),
-        jsonEncode(transactions.map((e) => e.toJson()).toList()));
+    await prefs.setString(_k(StorageService.keyTransactions), jsonEncode(maps));
   }
 
   @override
   Future<List<TransactionRecord>> loadTransactions() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_k(StorageService.keyTransactions));
-    if (raw == null) {
-      _cachedTransactionIds = {};
-      return [];
-    }
+    if (raw == null) return [];
     try {
-      final list = (jsonDecode(raw) as List)
+      return (jsonDecode(raw) as List)
           .map((e) => TransactionRecord.fromJson(e as Map<String, dynamic>))
           .toList();
-      _cachedTransactionIds = list.map((e) => e.id).toSet();
-      return list;
     } catch (e) {
       debugPrint('LocalStorageService: Error loading transactions: $e');
       return [];
@@ -1037,25 +1052,12 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveFinanceCategories(List<FinanceCategory> categories) async {
-    if (!_applyingRemote) {
-      final existing = await loadFinanceCategories();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(categories.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_categories/$id',
-            op: SyncOp.delete);
-      }
-      for (final c in categories) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_categories/${c.id}');
-      }
-    }
+    final maps = categories.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('categories', StorageService.keyFinanceCategories,
+        'finance_categories', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyFinanceCategories),
-        jsonEncode(categories.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+        _k(StorageService.keyFinanceCategories), jsonEncode(maps));
   }
 
   @override
@@ -1075,24 +1077,11 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveBudgets(List<Budget> budgets) async {
-    if (!_applyingRemote) {
-      final existing = await loadBudgets();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(budgets.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(SyncDomain.financeRecord, 'finance_budgets/$id',
-            op: SyncOp.delete);
-      }
-      for (final b in budgets) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_budgets/${b.id}');
-      }
-    }
+    final maps = budgets.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('budgets', StorageService.keyBudgets,
+        'finance_budgets', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyBudgets),
-        jsonEncode(budgets.map((e) => e.toJson()).toList()));
+    await prefs.setString(_k(StorageService.keyBudgets), jsonEncode(maps));
   }
 
   @override
@@ -1127,25 +1116,15 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveBudgetedExpenses(List<BudgetedExpense> expenses) async {
-    if (!_applyingRemote) {
-      final existing = await loadBudgetedExpenses();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(expenses.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_budgeted_expenses/$id',
-            op: SyncOp.delete);
-      }
-      for (final e in expenses) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_budgeted_expenses/${e.id}');
-      }
-    }
+    final maps = expenses.map((e) => e.toJson()).toList();
+    await _diffMarkFinance(
+        'budgeted_expenses',
+        StorageService.keyBudgetedExpenses,
+        'finance_budgeted_expenses',
+        _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyBudgetedExpenses),
-        jsonEncode(expenses.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+        _k(StorageService.keyBudgetedExpenses), jsonEncode(maps));
   }
 
   @override
@@ -1165,24 +1144,11 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveBills(List<Bill> bills) async {
-    if (!_applyingRemote) {
-      final existing = await loadBills();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(bills.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(SyncDomain.financeRecord, 'finance_bills/$id',
-            op: SyncOp.delete);
-      }
-      for (final b in bills) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_bills/${b.id}');
-      }
-    }
+    final maps = bills.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('bills', StorageService.keyBills, 'finance_bills',
+        _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyBills),
-        jsonEncode(bills.map((e) => e.toJson()).toList()));
+    await prefs.setString(_k(StorageService.keyBills), jsonEncode(maps));
   }
 
   @override
@@ -1202,25 +1168,11 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveReceivables(List<Receivable> receivables) async {
-    if (!_applyingRemote) {
-      final existing = await loadReceivables();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(receivables.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_receivables/$id',
-            op: SyncOp.delete);
-      }
-      for (final r in receivables) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_receivables/${r.id}');
-      }
-    }
+    final maps = receivables.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('receivables', StorageService.keyReceivables,
+        'finance_receivables', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyReceivables),
-        jsonEncode(receivables.map((e) => e.toJson()).toList()));
+    await prefs.setString(_k(StorageService.keyReceivables), jsonEncode(maps));
   }
 
   @override
@@ -1240,25 +1192,11 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveInstallments(List<Installment> installments) async {
-    if (!_applyingRemote) {
-      final existing = await loadInstallments();
-      final removed = existing
-          .map((e) => e.id)
-          .toSet()
-          .difference(installments.map((e) => e.id).toSet());
-      for (final id in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_installments/$id',
-            op: SyncOp.delete);
-      }
-      for (final i in installments) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_installments/${i.id}');
-      }
-    }
+    final maps = installments.map((e) => e.toJson()).toList();
+    await _diffMarkFinance('installments', StorageService.keyInstallments,
+        'finance_installments', _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyInstallments),
-        jsonEncode(installments.map((e) => e.toJson()).toList()));
+    await prefs.setString(_k(StorageService.keyInstallments), jsonEncode(maps));
   }
 
   @override
@@ -1278,25 +1216,17 @@ class LocalStorageService extends StorageService {
 
   @override
   Future<void> saveMonthlySummaries(List<MonthlySummary> summaries) async {
-    if (!_applyingRemote) {
-      final existing = await loadMonthlySummaries();
-      final removed = existing
-          .map((e) => e.month)
-          .toSet()
-          .difference(summaries.map((e) => e.month).toSet());
-      for (final month in removed) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_monthly_summaries/$month',
-            op: SyncOp.delete);
-      }
-      for (final s in summaries) {
-        _syncQueue?.markDirty(
-            SyncDomain.financeRecord, 'finance_monthly_summaries/${s.month}');
-      }
-    }
+    final maps = summaries.map((e) => e.toJson()).toList();
+    // Monthly summaries key on `month` rather than `id`; _financeJsonById and
+    // _loadFinanceJsonById both fall back to `month` so the diff lines up.
+    await _diffMarkFinance(
+        'monthly_summaries',
+        StorageService.keyMonthlySummaries,
+        'finance_monthly_summaries',
+        _financeJsonById(maps));
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_k(StorageService.keyMonthlySummaries),
-        jsonEncode(summaries.map((e) => e.toJson()).toList()));
+    await prefs.setString(
+        _k(StorageService.keyMonthlySummaries), jsonEncode(maps));
   }
 
   @override

@@ -104,6 +104,9 @@ void main() {
 
     test('awards AGI on 5-day streak', () async {
       when(mockStorage.loadActivityStreak()).thenAnswer((_) async => 4);
+      // Goal was met yesterday, so today continues the streak (4 → 5).
+      when(mockStorage.loadActivityGoalMetDate())
+          .thenAnswer((_) async => _yesterdayKey());
       presenter = ActivityPresenter(
         statsPresenter: mockStats,
         healthService: mockHealth,
@@ -118,6 +121,8 @@ void main() {
 
     test('does not award AGI on non-5-day streak', () async {
       when(mockStorage.loadActivityStreak()).thenAnswer((_) async => 3);
+      when(mockStorage.loadActivityGoalMetDate())
+          .thenAnswer((_) async => _yesterdayKey());
       presenter = ActivityPresenter(
         statsPresenter: mockStats,
         healthService: mockHealth,
@@ -125,6 +130,24 @@ void main() {
       );
       await Future.delayed(Duration.zero);
       await presenter.setManualSteps(8000);
+      verifyNever(mockStats.awardStat(any));
+    });
+
+    test('resets streak to 1 after a missed day', () async {
+      when(mockStorage.loadActivityStreak()).thenAnswer((_) async => 4);
+      // Goal last met 3 days ago — the streak is broken, so today restarts at 1
+      // (previously it kept incrementing on non-consecutive days).
+      when(mockStorage.loadActivityGoalMetDate())
+          .thenAnswer((_) async => _daysAgoKey(3));
+      presenter = ActivityPresenter(
+        statsPresenter: mockStats,
+        healthService: mockHealth,
+        storage: mockStorage,
+      );
+      await Future.delayed(Duration.zero);
+      await presenter.setManualSteps(8000);
+      await Future.delayed(Duration.zero);
+      verify(mockStorage.saveActivityStreak(1)).called(1);
       verifyNever(mockStats.awardStat(any));
     });
 
@@ -209,6 +232,46 @@ void main() {
       expect(presenter.todayLog.distanceMeters, 1500.0);
     });
 
+    test('day rollover does not overwrite yesterday\'s log', () async {
+      // Regression (audit #6): when the app is open/backgrounded across
+      // midnight, the cached log holds yesterday's date. A sync must write
+      // today's data under today's key, not overwrite yesterday's totals.
+      final yesterday = _yesterdayKey();
+      var loadCall = 0;
+      when(mockStorage.loadTodayActivityLog()).thenAnswer((_) async {
+        loadCall++;
+        // First load (loadState) returns the stale yesterday-dated log; the
+        // freshness reload returns today's.
+        return loadCall == 1
+            ? ActivityLog.empty(yesterday)
+            : ActivityLog.empty(today);
+      });
+      when(mockHealth.isAvailable()).thenAnswer((_) async => true);
+      when(mockHealth.hasPermissions()).thenAnswer((_) async => true);
+      when(mockHealth.readTodaySteps()).thenAnswer((_) async => 6000);
+      when(mockHealth.readTodayActiveCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayTotalCalories()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayDistance()).thenAnswer((_) async => null);
+      when(mockHealth.readTodayWorkoutDistance()).thenAnswer((_) async => null);
+      when(mockStorage.loadActivityLogKeys()).thenAnswer((_) async => {});
+      when(mockHealth.readRangeDataByDay(any, any)).thenAnswer((_) async => {});
+
+      presenter = ActivityPresenter(
+        statsPresenter: mockStats,
+        healthService: mockHealth,
+        storage: mockStorage,
+      );
+      await Future.delayed(Duration.zero);
+      await presenter.syncFromHealthConnect();
+
+      final saved = verify(mockStorage.saveActivityLog(captureAny))
+          .captured
+          .last as ActivityLog;
+      expect(saved.date, today,
+          reason: 'writes under today, not the stale yesterday key');
+      expect(saved.steps, 6000);
+    });
+
     test('requestHealthPermission syncs after grant', () async {
       when(mockHealth.isAvailable()).thenAnswer((_) async => true);
       when(mockHealth.hasPermissions()).thenAnswer((_) async => false);
@@ -232,6 +295,15 @@ void main() {
     });
   });
 }
+
+String _dayKeyFor(DateTime d) =>
+    '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+String _yesterdayKey() =>
+    _dayKeyFor(DateTime.now().subtract(const Duration(days: 1)));
+
+String _daysAgoKey(int n) =>
+    _dayKeyFor(DateTime.now().subtract(Duration(days: n)));
 
 String _todayKey() {
   final now = DateTime.now();
