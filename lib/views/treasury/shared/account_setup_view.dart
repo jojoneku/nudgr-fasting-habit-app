@@ -73,10 +73,17 @@ class _AccountSetupViewState extends State<AccountSetupView> {
   String? _creditBrand;
   bool _isSubmitting = false;
 
+  /// The parent this account belongs to. When editing an existing sub-account
+  /// the form is often opened without `parentAccountId` (e.g. from the
+  /// dashboard Goals section), so fall back to the account's own stored parent.
+  /// Writing `widget.parentAccountId` (null) on save would detach the pocket
+  /// while the parent's balance still counts it — double-counting net worth.
+  /// Mirrors the web form (Plan 052 C1).
+  String? get _effectiveParentId =>
+      widget.existing?.parentAccountId ?? widget.parentAccountId;
+
   List<AccountCategory> get _availableCategories =>
-      widget.parentAccountId == null
-          ? _topLevelCategories
-          : _subAccountCategories;
+      _effectiveParentId == null ? _topLevelCategories : _subAccountCategories;
 
   bool get _isGoal => _category == AccountCategory.goal;
   bool get _isTimeDeposit => _category == AccountCategory.timeDeposit;
@@ -185,7 +192,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
         id: id,
         name: _nameController.text.trim(),
         category: _category,
-        parentAccountId: widget.parentAccountId,
+        parentAccountId: _effectiveParentId,
         balance: balance,
         colorHex: _selectedColor,
         // Preserve the existing icon unless the category itself changed —
