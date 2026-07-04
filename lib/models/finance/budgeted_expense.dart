@@ -1,3 +1,6 @@
+import 'package:intermittent_fasting/models/finance/bill.dart'
+    show RecurrenceType, recurrenceTypeFromName;
+
 /// Classifies a budgeted set-aside so the UI can group/label it. Replaces the
 /// old reuse of `BillType`, which was bill-oriented and a poor fit here.
 enum SetAsideType { savings, goal, sinkingFund, gift, other }
@@ -36,6 +39,8 @@ class BudgetedExpense {
   final String categoryId;
   final String? note; // e.g. "Cash", "Maya Savings"
   final bool isPaid;
+  final bool isRecurring; // re-created each month via auto-generation
+  final RecurrenceType? recurrenceType;
   final String? transactionId; // linked TransactionRecord
   final DateTime updatedAt;
 
@@ -50,6 +55,8 @@ class BudgetedExpense {
     required this.categoryId,
     this.note,
     this.isPaid = false,
+    this.isRecurring = false,
+    this.recurrenceType,
     this.transactionId,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -66,6 +73,8 @@ class BudgetedExpense {
       categoryId: json['categoryId'] as String,
       note: json['note'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
+      isRecurring: json['isRecurring'] as bool? ?? false,
+      recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
       transactionId: json['transactionId'] as String?,
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
@@ -83,6 +92,8 @@ class BudgetedExpense {
         'categoryId': categoryId,
         'note': note,
         'isPaid': isPaid,
+        'isRecurring': isRecurring,
+        'recurrenceType': recurrenceType?.name,
         'transactionId': transactionId,
         'updatedAt': updatedAt.toIso8601String(),
       };
@@ -97,6 +108,8 @@ class BudgetedExpense {
     String? categoryId,
     String? note,
     bool? isPaid,
+    bool? isRecurring,
+    RecurrenceType? recurrenceType,
     String? transactionId,
     DateTime? updatedAt,
   }) {
@@ -111,6 +124,8 @@ class BudgetedExpense {
       categoryId: categoryId ?? this.categoryId,
       note: note ?? this.note,
       isPaid: isPaid ?? this.isPaid,
+      isRecurring: isRecurring ?? this.isRecurring,
+      recurrenceType: recurrenceType ?? this.recurrenceType,
       transactionId: transactionId ?? this.transactionId,
       updatedAt: updatedAt ?? this.updatedAt,
     );

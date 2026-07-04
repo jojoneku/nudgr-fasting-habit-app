@@ -614,6 +614,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> _autoGenerateRecurringIfNeeded(String month) async {
     await _autoGenerateRecurringBills(month);
     await _autoGenerateRecurringReceivables(month);
+    await _autoGenerateRecurringBudgetedExpenses(month);
   }
 
   /// Snapshots closed credit statements into bills for all months up to today.
@@ -850,5 +851,34 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     });
     _allReceivables = [..._allReceivables, ...copies];
     await _storage.saveReceivables(_allReceivables);
+  }
+
+  Future<void> _autoGenerateRecurringBudgetedExpenses(String month) async {
+    // Only seed a month that has no set-asides yet, so we never duplicate the
+    // user's own entries. Mirrors the recurring-bills flow.
+    final existing = _allExpenses.where((e) => e.month == month).toList();
+    if (existing.isNotEmpty) return;
+
+    final prev = previousMonth(month);
+    final recurringFromPrev =
+        _allExpenses.where((e) => e.month == prev && e.isRecurring).toList();
+    if (recurringFromPrev.isEmpty) return;
+
+    final copies = recurringFromPrev.map((e) => BudgetedExpense(
+          id: _generateId(),
+          name: e.name,
+          budgetedType: e.budgetedType,
+          month: month,
+          // Carry the pre-set next-month amount when the user staged one,
+          // otherwise repeat this month's allocation. Never copy spentAmount —
+          // the new month starts unfunded.
+          allocatedAmount: e.nextMonthAmount ?? e.allocatedAmount,
+          categoryId: e.categoryId,
+          note: e.note,
+          isRecurring: e.isRecurring,
+          recurrenceType: e.recurrenceType,
+        ));
+    _allExpenses = [..._allExpenses, ...copies];
+    await _storage.saveBudgetedExpenses(_allExpenses);
   }
 }
