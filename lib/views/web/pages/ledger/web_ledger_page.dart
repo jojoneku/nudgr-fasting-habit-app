@@ -345,7 +345,16 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   void _editAmount(TransactionRecord t, double value, TransactionType dir) {
     if (value <= 0) return;
     if (t.type == dir && t.amount == value) return;
-    _p.updateTransaction(t.copyWith(type: dir, amount: value));
+    // Flipping direction (outflow <-> inflow) invalidates the category: an
+    // expense category on an income row (or vice versa) falls out of every
+    // category aggregation. Clear it on a type change, matching the modal's
+    // _setType and mobile. A pure amount edit keeps the category.
+    final flippedType = t.type != dir;
+    _p.updateTransaction(t.copyWith(
+      type: dir,
+      amount: value,
+      categoryId: flippedType ? '' : t.categoryId,
+    ));
   }
 
   Future<void> _deleteRow(TransactionRecord t) async {
@@ -396,17 +405,25 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
 
   void _commitDraft() {
     final amount = _draftInflow > 0 ? _draftInflow : _draftOutflow;
-    if (amount <= 0 && _draftDesc.trim().isEmpty) return; // nothing to add
     if (amount <= 0) return; // need a value
     final type =
         _draftInflow > 0 ? TransactionType.inflow : TransactionType.outflow;
     final accountId = _draftAccountId ?? _liquidAccounts.firstOrNull?.id;
     if (accountId == null) return; // no accounts to post to
     final cats = _categoriesFor(type);
-    final categoryId =
-        _draftCategoryId != null && cats.any((c) => c.id == _draftCategoryId)
-            ? _draftCategoryId!
-            : (cats.firstOrNull?.id ?? '');
+    // Require an explicit category when categories exist for this direction —
+    // matches the add-transaction modal. Silently stamping the first expense
+    // category (the old fallback) misattributed spend to a category the user
+    // never chose, and it fell out of the intended category's totals.
+    final picked = _draftCategoryId;
+    if (cats.isNotEmpty &&
+        (picked == null || !cats.any((c) => c.id == picked))) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pick a category before adding the row.')),
+      );
+      return;
+    }
+    final categoryId = picked ?? '';
     final desc = _draftDesc.trim().isEmpty
         ? (_categoryOf(categoryId)?.name ?? 'Transaction')
         : _draftDesc.trim();
