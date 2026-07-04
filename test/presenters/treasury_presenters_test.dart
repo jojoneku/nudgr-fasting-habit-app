@@ -4,6 +4,7 @@ import 'package:mockito/mockito.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
+import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
@@ -745,6 +746,62 @@ void main() {
           verify(mockStorage.saveBills(captureAny)).captured.last as List<Bill>;
       final march = capturedBills.where((b) => b.month == '2026-03').toList();
       expect(march.length, 1);
+    });
+
+    test('recurring set-asides auto-generated when navigating to new month',
+        () async {
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            BudgetedExpense(
+              id: 'e1',
+              name: 'Travel Fund',
+              budgetedType: SetAsideType.savings,
+              month: '2026-02',
+              allocatedAmount: 5000,
+              categoryId: '',
+              isPaid: true, // funded last month — copy must start unfunded
+              spentAmount: 5000,
+              isRecurring: true,
+              recurrenceType: RecurrenceType.monthly,
+            ),
+          ]);
+      await presenter.load();
+      await presenter.setMonth('2026-02');
+      // Navigate to next month — no set-asides exist yet for March.
+      await presenter.setMonth('2026-03');
+
+      final captured = verify(mockStorage.saveBudgetedExpenses(captureAny))
+          .captured
+          .last as List<BudgetedExpense>;
+      final march = captured.where((e) => e.month == '2026-03').toList();
+      expect(march.length, 1);
+      // The fresh copy carries the recurrence but resets funding state.
+      expect(march.single.name, 'Travel Fund');
+      expect(march.single.allocatedAmount, 5000);
+      expect(march.single.isRecurring, isTrue);
+      expect(march.single.isPaid, isFalse);
+      expect(march.single.spentAmount, 0);
+    });
+
+    test('non-recurring set-asides are not carried into the next month',
+        () async {
+      when(mockStorage.loadBudgetedExpenses()).thenAnswer((_) async => [
+            BudgetedExpense(
+              id: 'e1',
+              name: 'One-off Gift',
+              budgetedType: SetAsideType.gift,
+              month: '2026-02',
+              allocatedAmount: 1000,
+              categoryId: '',
+            ),
+          ]);
+      await presenter.load();
+      await presenter.setMonth('2026-02');
+      await presenter.setMonth('2026-03');
+
+      // A one-off set-aside never triggers a save on month navigation — nothing
+      // is carried forward, and March shows no set-asides.
+      verifyNever(mockStorage.saveBudgetedExpenses(any));
+      expect(presenter.budgetedExpenses, isEmpty);
     });
 
     test('reimbursable expense lifecycle: spawn → settle → cleanup', () async {
