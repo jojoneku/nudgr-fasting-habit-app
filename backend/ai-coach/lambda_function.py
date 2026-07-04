@@ -11,6 +11,10 @@ _bedrock = boto3.client("bedrock-runtime", region_name="ap-southeast-1")
 
 _MODEL_ID = os.environ["BEDROCK_MODEL_ID"]
 _DAILY_CAP = int(os.environ.get("DAILY_CAP", "100"))
+# Verbose request logging, OFF by default. Even when enabled it never logs the
+# Authorization header (a live Supabase JWT) or the request body (chat text,
+# food photos, finance data) — only routing metadata.
+_DEBUG_LOGGING = os.environ.get("DEBUG_LOGGING", "").lower() in ("1", "true", "yes")
 _SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
 _SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
 _MAX_TEXT_LEN = 500   # chars; guards prompt-size and injection blast radius
@@ -64,8 +68,11 @@ def _check_rate_limit(token):
     forwarding the user's Bearer token. The SECURITY DEFINER function derives
     the user from auth.uid(), so a caller can only ever bump their own counter.
 
-    Fails open (returns True) on transport/Supabase errors or when rate
-    limiting isn't configured, so a transient infra issue never bricks the app.
+    Returns (True, 0) — fail open — only when rate limiting isn't configured
+    (no Supabase URL/key or no token), an intentional deployment state. On a
+    transport/Supabase error while configured, returns (False, -1) — fail
+    closed — so a broken check can't silently waive the Bedrock billing cap;
+    the handler turns that into a retryable 503.
     """
     if not _SUPABASE_URL or not _SUPABASE_ANON_KEY or not token:
         return True, 0  # not configured / no token → fail open
@@ -85,13 +92,23 @@ def _check_rate_limit(token):
             return count <= _DAILY_CAP, count
     except Exception as e:
         print(f"Rate limit RPC error: {e}")
-        return True, 0  # fail open
+        # Fail CLOSED on a transport/Supabase error: the service is configured
+        # but the check failed, so waiving the cap would leave Bedrock billing
+        # unguarded. count=-1 signals "check unavailable" (retryable), distinct
+        # from an actual cap hit.
+        return False, -1
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
 
 def lambda_handler(event, context):
-    print(f"event: {json.dumps(event)}")
+    if _DEBUG_LOGGING:
+        # Routing metadata only — never headers or body (see _DEBUG_LOGGING).
+        print(json.dumps({
+            "http": (event.get("requestContext") or {}).get("http"),
+            "body_bytes": len(event.get("body") or ""),
+            "isBase64Encoded": event.get("isBase64Encoded"),
+        }))
 
     # Auth: API GW JWT authorizer must have verified the Supabase Bearer token.
     # If user_id is None the authorizer did not run — reject defensively.
@@ -102,6 +119,12 @@ def lambda_handler(event, context):
     # Per-user daily cap — prevents unbounded Bedrock billing.
     allowed, count = _check_rate_limit(_get_bearer_token(event))
     if not allowed:
+        if count < 0:
+            # Rate-limit check failed (transport/Supabase error). Retryable.
+            return _resp(503, {
+                "error": "rate_limit_unavailable",
+                "message": "Service temporarily unavailable. Please try again.",
+            })
         print(f"rate_limit_hit user={user_id} count={count} cap={_DAILY_CAP}")
         return _resp(429, {
             "error": "rate_limit_exceeded",
@@ -115,6 +138,9 @@ def lambda_handler(event, context):
 
     op = body.get("op")
     payload = body.get("payload", {})
+
+    # Operational log: op + user + size only. No headers, no body contents.
+    print(json.dumps({"op": op, "user": user_id, "body_bytes": len(event.get("body") or "")}))
 
     if op == "disambiguateFood":
         return _disambiguate_food(payload)
