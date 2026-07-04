@@ -2859,41 +2859,22 @@ class _TransferAccountCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
     final brightness = theme.brightness;
 
-    FinancialAccount? acctById(String? id) =>
-        id == null ? null : accounts.where((a) => a.id == id).firstOrNull;
-
-    Color? dotColor(FinancialAccount? a) {
-      if (a == null) return null;
-      final idx = accounts.indexOf(a);
-      return resolveSliceColor(a.colorHex, idx, brightness: brightness);
-    }
-
-    Widget chip(FinancialAccount? acct) {
-      final dot = dotColor(acct);
-      return Row(
-        mainAxisSize: MainAxisSize.max,
-        children: [
-          if (dot != null) ...[
-            WebDot(color: dot),
-            const SizedBox(width: WebInsets.xs),
-          ],
-          Flexible(
-            child: Text(
-              acct?.name ?? '—',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: theme.textTheme.bodySmall,
-            ),
-          ),
-        ],
-      );
-    }
-
-    final fromAcct = acctById(txn.transferFromAccountId);
-    final toAcct = acctById(txn.transferDestinationAccountId);
+    // A transfer is stored as two legs sharing a [transferGroupId]. Each leg
+    // touches exactly one account: the outflow leg debits its [accountId], the
+    // inflow leg credits its [accountId]. So we show only the leg's own account
+    // — the row's inflow/outflow column already tells you the direction, and
+    // pairing the two rows shows the full "A → B" picture without cramming both
+    // accounts (and an arrow) into every cell.
+    final acct = accounts.where((a) => a.id == txn.accountId).firstOrNull;
+    final dot = acct == null
+        ? null
+        : resolveSliceColor(
+            acct.colorHex,
+            accounts.indexOf(acct),
+            brightness: brightness,
+          );
 
     return SizedBox(
       width: width,
@@ -2908,16 +2889,18 @@ class _TransferAccountCell extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: Row(
               children: [
-                Flexible(child: chip(fromAcct)),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: WebInsets.xs),
-                  child: Icon(
-                    Icons.arrow_right_alt_rounded,
-                    size: 14,
-                    color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                if (dot != null) ...[
+                  WebDot(color: dot),
+                  const SizedBox(width: WebInsets.xs),
+                ],
+                Flexible(
+                  child: Text(
+                    acct?.name ?? '—',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall,
                   ),
                 ),
-                Flexible(child: chip(toAcct)),
               ],
             ),
           ),
