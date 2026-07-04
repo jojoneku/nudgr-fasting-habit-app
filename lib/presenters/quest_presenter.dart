@@ -193,11 +193,16 @@ class QuestPresenter extends ChangeNotifier {
     final quest = _quests[idx];
     final completionDate = date ?? DateTime.now();
 
-    // Toggle off if already fully completed
+    // Toggle off if already fully completed. Decrement the streak symmetrically
+    // with the increment below — otherwise complete → untick → complete inflates
+    // streakCount by 1 each cycle, which is farmable toward the 21-day linkedStat
+    // award, milestones, and streak freezes (XP itself is already deduped via
+    // _xpAwardedToday).
     if (quest.isCompletedOn(completionDate)) {
       _quests[idx] = quest.copyWith(
         completedDates: List.from(quest.completedDates)
           ..remove(_dateKey(completionDate)),
+        streakCount: quest.streakCount > 0 ? quest.streakCount - 1 : 0,
       );
       notifyListeners();
       await _saveQuests();
