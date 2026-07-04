@@ -179,8 +179,15 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// covers the whole "yours + held" pool.
   double get totalLiquidCash {
     final parents = liquidAccounts.fold(0.0, (sum, a) => sum + a.balance);
-    final held = custodianAccounts.fold(0.0, (sum, a) => sum + a.balance);
-    return parents - held;
+    // Subtract only held money that actually sits INSIDE a liquid parent's
+    // balance (a linked custodian). An unlinked custodian is a standalone
+    // account never counted in `parents`, so subtracting it understated the
+    // total; a custodian linked to a non-liquid account isn't liquid cash
+    // either. heldAmountByAccountId keys held amounts by their linked account.
+    final held = heldAmountByAccountId;
+    final heldInLiquid =
+        liquidAccounts.fold(0.0, (sum, a) => sum + (held[a.id] ?? 0.0));
+    return parents - heldInLiquid;
   }
 
   /// Full real-world balance across parent accounts, including money held
@@ -242,17 +249,28 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Only top-level accounts are summed: sub-account balances are already
   /// reflected in their parent via the propagation rule in
   /// [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
-  double get totalAssets => _accounts
-      .where((a) =>
-          a.isActive &&
-          !a.isLiability &&
-          !a.isCustodian &&
-          a.parentAccountId == null)
-      .fold(0.0, (sum, a) => sum + a.balance);
+  Iterable<FinancialAccount> get _assetAccounts => _accounts.where((a) =>
+      a.isActive &&
+      !a.isLiability &&
+      !a.isCustodian &&
+      a.parentAccountId == null);
+
+  double get totalAssets =>
+      _assetAccounts.fold(0.0, (sum, a) => sum + a.balance);
 
   double get netWorth =>
-      // Custodian balances are money held for others, so subtract them.
-      totalAssets - totalHeldForOthers - totalLiabilities;
+      // Subtract only held money embedded in the asset base — i.e. linked
+      // custodians whose balance sits inside a counted asset account. Unlinked
+      // custodians are excluded from totalAssets entirely, so subtracting them
+      // (as the old totalHeldForOthers did) double-counted and understated net
+      // worth; their cash correctly nets to zero (not an asset, not subtracted).
+      totalAssets - _heldInAssets - totalLiabilities;
+
+  /// Held (custodian) money physically embedded in the [totalAssets] base.
+  double get _heldInAssets {
+    final held = heldAmountByAccountId;
+    return _assetAccounts.fold(0.0, (sum, a) => sum + (held[a.id] ?? 0.0));
+  }
 
   // --- Web dashboard parity getters (Plan 042 §6 / Plan 050) ---
   // Pure computation over already-loaded state; the mobile dashboard can
