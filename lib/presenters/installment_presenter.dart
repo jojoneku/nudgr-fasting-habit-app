@@ -31,6 +31,12 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
   String _selectedMonth = toMonthKey(DateTime.now());
   List<Installment> _installments = [];
 
+  /// Persisted one-time-XP-award guards (see [StorageService.keyAwardedXpKeys]).
+  /// Without this, the completion (+50) and all-due-paid (+20) XP were
+  /// re-awardable via markUnpaid/markPaid cycles.
+  final Set<String> _awardedXpKeys = {};
+  bool _awardedXpLoaded = false;
+
   // ─── Public state ─────────────────────────────────────────────────────────────
 
   bool get isLoading => _isLoading;
@@ -114,8 +120,22 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     _isLoading = true;
     safeNotify();
     _installments = await _storage.loadInstallments();
+    _awardedXpKeys
+      ..clear()
+      ..addAll(await _storage.loadAwardedXpKeys());
+    _awardedXpLoaded = true;
     _isLoading = false;
     safeNotify();
+  }
+
+  /// Grants [xp] for [key] at most once (persisted), so unpay/re-pay cycles
+  /// can't farm the completion / all-due-paid awards.
+  Future<void> _awardOnce(String key, int xp) async {
+    if (!_awardedXpLoaded) return;
+    if (_awardedXpKeys.contains(key)) return;
+    _awardedXpKeys.add(key);
+    await _storage.saveAwardedXpKeys(_awardedXpKeys);
+    await _stats.addXp(xp);
   }
 
   // ─── CRUD ─────────────────────────────────────────────────────────────────────
@@ -170,12 +190,16 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     );
     await _ledger.addTransaction(txn);
 
-    if (count >= inst.totalMonths) await _stats.addXp(50);
+    if (count >= inst.totalMonths) {
+      await _awardOnce('installment.complete/$installmentId', 50);
+    }
 
     final allDuePaid = dueThisMonth.every(
       (i) => i.id == installmentId || isPaidForMonth(i.id),
     );
-    if (allDuePaid && dueThisMonth.isNotEmpty) await _stats.addXp(20);
+    if (allDuePaid && dueThisMonth.isNotEmpty) {
+      await _awardOnce('installment.allDuePaid/$_selectedMonth', 20);
+    }
 
     safeNotify();
   }

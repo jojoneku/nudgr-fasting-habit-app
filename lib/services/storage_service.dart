@@ -60,6 +60,11 @@ abstract class StorageService {
   // warning fires once per month-crossing and survives app restarts (otherwise
   // it re-fired on every cold reopen). Local-only — device UX state.
   static const String keyWarnedBudgetKeys = 'finance.warnedBudgetKeys';
+  // One-time XP awards already granted, keyed by a namespaced string (e.g.
+  // "bills.allPaid/YYYY-MM", "installment.complete/<id>"). Prevents re-awarding
+  // XP via unpay/re-pay cycles. Local-only — device bookkeeping, like
+  // [keyWarnedBudgetKeys]; the stats XP total itself is what syncs.
+  static const String keyAwardedXpKeys = 'rpg.awardedXpKeys';
   static const String keyActivityLogs = 'activityLogs';
   static const String keyActivityGoals = 'activityGoals';
   static const String keyActivityGoalMetDate = 'activityGoalMetDate';
@@ -149,6 +154,9 @@ abstract class StorageService {
   Future<void> saveProteinGoalCreditedDates(Set<String> dates);
   Future<Set<String>> loadWarnedBudgetKeys();
   Future<void> saveWarnedBudgetKeys(Set<String> keys);
+
+  Future<Set<String>> loadAwardedXpKeys();
+  Future<void> saveAwardedXpKeys(Set<String> keys);
   Future<int> loadStreakMilestonePaid();
   Future<void> saveStreakMilestonePaid(int milestone);
 

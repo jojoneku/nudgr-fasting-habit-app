@@ -79,6 +79,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   List<Receivable> _allReceivables = [];
   List<BudgetedExpense> _allExpenses = [];
 
+  /// Persisted one-time-XP-award guards (see [StorageService.keyAwardedXpKeys]).
+  /// Without this, the all-bills-paid +50 XP was re-awardable via unpay/re-pay
+  /// (or by adding one more bill and paying it).
+  final Set<String> _awardedXpKeys = {};
+  bool _awardedXpLoaded = false;
+
   // ─── Public state ────────────────────────────────────────────────────────────
 
   String get selectedMonth => _selectedMonth;
@@ -206,6 +212,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = await _storage.loadBills();
     _allReceivables = await _storage.loadReceivables();
     _allExpenses = await _storage.loadBudgetedExpenses();
+    _awardedXpKeys
+      ..clear()
+      ..addAll(await _storage.loadAwardedXpKeys());
+    _awardedXpLoaded = true;
 
     // One-time removal of stale future-month credit-card statement copies the
     // recurring auto-copy used to proliferate before it excluded credit cards.
@@ -604,11 +614,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   Future<void> _checkAllBillsPaidXp() async {
+    if (!_awardedXpLoaded) return; // don't award before the guard set loads
     final monthBills = bills;
     if (monthBills.isEmpty) return;
     // Re-read updated state — bills getter reads from _allBills which was updated
     final allPaid = monthBills.every((b) => b.isPaid);
-    if (allPaid) await _stats.addXp(50);
+    if (!allPaid) return;
+    // Award the "all bills paid" XP at most once per month. Without the guard,
+    // unpay/re-pay (or adding one more bill and paying it) farmed 50 XP each
+    // time. markUnpaid never rescinds the award — the simplest non-exploitable
+    // rule (you earned it once that month).
+    final key = 'bills.allPaid/$_selectedMonth';
+    if (_awardedXpKeys.contains(key)) return;
+    _awardedXpKeys.add(key);
+    await _storage.saveAwardedXpKeys(_awardedXpKeys);
+    await _stats.addXp(50);
   }
 
   Future<void> _autoGenerateRecurringIfNeeded(String month) async {
