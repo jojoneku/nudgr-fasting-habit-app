@@ -142,7 +142,7 @@ class _MonthEndOutlookRow extends StatelessWidget {
       WebStatTile(
         label: 'Proj. Month-End Cash',
         value: formatPeso(p.forecastedNetBalance),
-        sub: 'After bills & savings',
+        sub: 'After bills, budget & savings',
         icon: Icons.flag_outlined,
         valueColor: p.forecastedNetBalance >= 0 ? cs.tertiary : cs.error,
       ),
