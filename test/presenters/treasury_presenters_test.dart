@@ -564,6 +564,8 @@ void main() {
       when(mockStorage.saveReceivables(any)).thenAnswer((_) async {});
       when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
       when(mockStorage.saveTransactions(any)).thenAnswer((_) async {});
+      when(mockStorage.loadAwardedXpKeys()).thenAnswer((_) async => <String>{});
+      when(mockStorage.saveAwardedXpKeys(any)).thenAnswer((_) async {});
       when(mockStats.addXp(any)).thenAnswer((_) async {});
       when(mockStats.stats).thenReturn(UserStats.initial());
 
@@ -673,6 +675,43 @@ void main() {
       await presenter.markBillPaid('b1', paidAmount: 300, accountId: 'gcash');
 
       verify(mockStats.addXp(50)).called(1);
+    });
+
+    test('all-bills-paid XP is awarded once per month, not re-farmed (audit)',
+        () async {
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            _bill(id: 'b1', amount: 300, isPaid: false, month: '2026-03'),
+          ]);
+      await presenter.load();
+      await presenter.setMonth('2026-03');
+      await _waitForLoad(ledger);
+
+      await presenter.markBillPaid('b1', paidAmount: 300, accountId: 'gcash');
+      // Re-pay the same (already-paid) bill — the farm. All bills are still
+      // "all paid", but the +50 must not be granted again.
+      await presenter.markBillPaid('b1', paidAmount: 300, accountId: 'gcash');
+
+      verify(mockStats.addXp(50)).called(1);
+    });
+
+    test('all-bills-paid XP is not re-awarded after restart (persisted guard)',
+        () async {
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            _bill(id: 'b1', amount: 300, isPaid: false, month: '2026-03'),
+          ]);
+      // This month's award was already granted in a previous session.
+      when(mockStorage.loadAwardedXpKeys())
+          .thenAnswer((_) async => {'bills.allPaid/2026-03'});
+      final freshLedger = LedgerPresenter(mockStorage, mockStats);
+      final freshBills =
+          BillsReceivablesPresenter(mockStorage, freshLedger, mockStats);
+      await freshBills.load();
+      await freshBills.setMonth('2026-03');
+      await _waitForLoad(freshLedger);
+
+      await freshBills.markBillPaid('b1', paidAmount: 300, accountId: 'gcash');
+
+      verifyNever(mockStats.addXp(50));
     });
 
     test(

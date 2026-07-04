@@ -707,6 +707,23 @@ class LocalStorageService extends StorageService {
   }
 
   @override
+  Future<Set<String>> loadAwardedXpKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return (prefs.getStringList(_k(StorageService.keyAwardedXpKeys)) ??
+            const [])
+        .toSet();
+  }
+
+  @override
+  Future<void> saveAwardedXpKeys(Set<String> keys) async {
+    // Local-only bookkeeping (one-time-award guards) — not synced; the stats XP
+    // total is what syncs.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(
+        _k(StorageService.keyAwardedXpKeys), keys.toList());
+  }
+
+  @override
   Future<Set<String>> loadProteinGoalCreditedDates() async {
     final prefs = await SharedPreferences.getInstance();
     return (prefs.getStringList(

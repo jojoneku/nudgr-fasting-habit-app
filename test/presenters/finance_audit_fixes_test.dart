@@ -94,6 +94,8 @@ void main() {
     when(mockStorage.loadMonthlySummaries()).thenAnswer((_) async => []);
     when(mockStorage.loadWarnedBudgetKeys())
         .thenAnswer((_) async => <String>{});
+    when(mockStorage.loadAwardedXpKeys()).thenAnswer((_) async => <String>{});
+    when(mockStorage.saveAwardedXpKeys(any)).thenAnswer((_) async {});
     when(mockStorage.saveMonthlySummaries(any)).thenAnswer((_) async {});
     when(mockStorage.saveAccounts(any)).thenAnswer((_) async {});
     when(mockStorage.saveTransactions(any)).thenAnswer((_) async {});

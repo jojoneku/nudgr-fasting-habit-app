@@ -58,6 +58,8 @@ void main() {
     when(storage.loadBudgetedExpenses()).thenAnswer((_) async => []);
     when(storage.saveBills(any)).thenAnswer((_) async {});
     when(storage.saveReceivables(any)).thenAnswer((_) async {});
+    when(storage.loadAwardedXpKeys()).thenAnswer((_) async => <String>{});
+    when(storage.saveAwardedXpKeys(any)).thenAnswer((_) async {});
     when(stats.addXp(any)).thenAnswer((_) async {});
     when(stats.stats).thenReturn(UserStats.initial());
   }

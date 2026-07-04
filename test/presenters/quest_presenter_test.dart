@@ -268,6 +268,39 @@ void main() {
     });
 
     test(
+        'Given completed today, When toggled off, Then streakCount decrements (audit)',
+        () async {
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [
+            _quest(id: 1, completedDates: [today], streakCount: 5)
+          ]);
+
+      await presenter.completeQuest(1); // toggle off
+
+      expect(presenter.quests.first.streakCount, 4);
+    });
+
+    test('complete -> untick -> complete does not inflate the streak (audit)',
+        () async {
+      final presenter = await _buildPresenter(
+          storage: mockStorage,
+          stats: mockStats,
+          notifications: mockNotifications,
+          quests: [_quest(id: 1, streakCount: 5)]);
+
+      await presenter.completeQuest(1); // 5 -> 6
+      expect(presenter.quests.first.streakCount, 6);
+      await presenter.completeQuest(1); // toggle off: 6 -> 5
+      expect(presenter.quests.first.streakCount, 5);
+      await presenter.completeQuest(1); // 5 -> 6 (not 7)
+      expect(presenter.quests.first.streakCount, 6);
+    });
+
+    test(
         'Given partial completion, When completed, Then streak does NOT increment',
         () async {
       final presenter = await _buildPresenter(
