@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -237,17 +238,15 @@ class _ContentColumns extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Cash Flow leads the left column (matches the Claude reference's top-left
-    // placement) so income/expenses/savings-rate + the month-end sub-stats are
-    // the first thing after the position row and net-worth trend.
-    // Accounts moved up to the _AccountBalancesRow (glanceable cards below the
-    // Month-End Outlook) so balances no longer require scrolling into a column.
-    final left = <Widget>[
+    // One priority-ordered list — the masonry packs each card into whichever
+    // column is currently shortest, so a short card (Cash Flow, Budget Health)
+    // no longer leaves the other column trailing off into whitespace. Order
+    // roughly follows visual priority; balancing decides the final placement.
+    // Accounts already moved up to the _AccountBalancesRow.
+    final cards = <Widget>[
       _CashFlowCard(presenter: presenter),
-      _BudgetHealthCard(presenter: presenter),
-    ];
-    final right = <Widget>[
       _IncomeExpensesCard(presenter: presenter),
+      _BudgetHealthCard(presenter: presenter),
       _DailySpendingCard(presenter: presenter),
       if (presenter.creditAccounts.isNotEmpty)
         _CreditCard(presenter: presenter),
@@ -257,50 +256,144 @@ class _ContentColumns extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < minWidth) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: _interleaveStacked([...left, ...right]),
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _Stack(children: left)),
-            const SizedBox(width: WebInsets.xl),
-            Expanded(child: _Stack(children: right)),
-          ],
+        final columns = constraints.maxWidth < minWidth ? 1 : 2;
+        return _MasonryFlow(
+          columns: columns,
+          columnSpacing: WebInsets.xl,
+          runSpacing: WebInsets.xl,
+          children: cards,
         );
       },
     );
   }
+}
 
-  List<Widget> _interleaveStacked(List<Widget> cards) {
-    final out = <Widget>[];
-    for (var i = 0; i < cards.length; i++) {
-      if (i > 0) out.add(const SizedBox(height: WebInsets.xl));
-      out.add(cards[i]);
-    }
-    return out;
+// ===========================================================================
+// Masonry — height-balanced multi-column flow
+// ===========================================================================
+
+/// Lays [children] out in [columns] equal-width columns, placing each child
+/// into the currently-shortest column. Unlike a fixed two-list split, a short
+/// card doesn't strand the other column in whitespace — the columns stay
+/// balanced. Measures real child heights (charts, variable row counts), so no
+/// height estimation is needed. With `columns == 1` it degrades to a plain
+/// vertical stack.
+class _MasonryFlow extends MultiChildRenderObjectWidget {
+  final int columns;
+  final double columnSpacing;
+  final double runSpacing;
+
+  const _MasonryFlow({
+    required this.columns,
+    required this.columnSpacing,
+    required this.runSpacing,
+    required super.children,
+  });
+
+  @override
+  _RenderMasonry createRenderObject(BuildContext context) => _RenderMasonry(
+        columns: columns,
+        columnSpacing: columnSpacing,
+        runSpacing: runSpacing,
+      );
+
+  @override
+  void updateRenderObject(BuildContext context, _RenderMasonry renderObject) {
+    renderObject
+      ..columns = columns
+      ..columnSpacing = columnSpacing
+      ..runSpacing = runSpacing;
   }
 }
 
-class _Stack extends StatelessWidget {
-  final List<Widget> children;
-  const _Stack({required this.children});
+class _MasonryParentData extends ContainerBoxParentData<RenderBox> {}
+
+class _RenderMasonry extends RenderBox
+    with
+        ContainerRenderObjectMixin<RenderBox, _MasonryParentData>,
+        RenderBoxContainerDefaultsMixin<RenderBox, _MasonryParentData> {
+  _RenderMasonry({
+    required int columns,
+    required double columnSpacing,
+    required double runSpacing,
+  })  : _columns = columns,
+        _columnSpacing = columnSpacing,
+        _runSpacing = runSpacing;
+
+  int _columns;
+  int get columns => _columns;
+  set columns(int value) {
+    if (_columns == value) return;
+    _columns = value;
+    markNeedsLayout();
+  }
+
+  double _columnSpacing;
+  double get columnSpacing => _columnSpacing;
+  set columnSpacing(double value) {
+    if (_columnSpacing == value) return;
+    _columnSpacing = value;
+    markNeedsLayout();
+  }
+
+  double _runSpacing;
+  double get runSpacing => _runSpacing;
+  set runSpacing(double value) {
+    if (_runSpacing == value) return;
+    _runSpacing = value;
+    markNeedsLayout();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final spaced = <Widget>[];
-    for (var i = 0; i < children.length; i++) {
-      if (i > 0) spaced.add(const SizedBox(height: WebInsets.xl));
-      spaced.add(children[i]);
+  void setupParentData(RenderBox child) {
+    if (child.parentData is! _MasonryParentData) {
+      child.parentData = _MasonryParentData();
     }
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: spaced,
-    );
   }
+
+  double _columnWidth(double maxWidth) =>
+      (maxWidth - _columnSpacing * (_columns - 1)) / _columns;
+
+  int _shortestColumn(List<double> heights) {
+    var shortest = 0;
+    for (var c = 1; c < heights.length; c++) {
+      if (heights[c] < heights[shortest]) shortest = c;
+    }
+    return shortest;
+  }
+
+  @override
+  void performLayout() {
+    final maxWidth = constraints.maxWidth;
+    final columnWidth = _columnWidth(maxWidth);
+    final childConstraints =
+        BoxConstraints(minWidth: columnWidth, maxWidth: columnWidth);
+    final heights = List<double>.filled(_columns, 0.0);
+
+    var child = firstChild;
+    while (child != null) {
+      final pd = child.parentData! as _MasonryParentData;
+      child.layout(childConstraints, parentUsesSize: true);
+      final col = _shortestColumn(heights);
+      final dx = col * (columnWidth + _columnSpacing);
+      final dy = heights[col] == 0 ? 0.0 : heights[col] + _runSpacing;
+      pd.offset = Offset(dx, dy);
+      heights[col] = dy + child.size.height;
+      child = pd.nextSibling;
+    }
+
+    final tallest =
+        heights.isEmpty ? 0.0 : heights.reduce((a, b) => a > b ? a : b);
+    size = constraints.constrain(Size(maxWidth, tallest));
+  }
+
+  @override
+  void paint(PaintingContext context, Offset offset) =>
+      defaultPaint(context, offset);
+
+  @override
+  bool hitTestChildren(BoxHitTestResult result, {required Offset position}) =>
+      defaultHitTestChildren(result, position: position);
 }
 
 // ===========================================================================
