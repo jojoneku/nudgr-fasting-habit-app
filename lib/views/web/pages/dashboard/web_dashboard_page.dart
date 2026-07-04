@@ -3,7 +3,6 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-import '../../../../utils/app_radii.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Web Dashboard page (Plan 050-A) — desktop redesign mirroring the Claude
@@ -35,6 +34,8 @@ class WebDashboardPage extends StatelessWidget {
               _PositionRow(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
               _MonthEndOutlookRow(presenter: presenter),
+              const SizedBox(height: WebInsets.xl),
+              _AccountBalancesRow(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
               _NetWorthTrendCard(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
@@ -238,10 +239,11 @@ class _ContentColumns extends StatelessWidget {
     // Cash Flow leads the left column (matches the Claude reference's top-left
     // placement) so income/expenses/savings-rate + the month-end sub-stats are
     // the first thing after the position row and net-worth trend.
+    // Accounts moved up to the _AccountBalancesRow (glanceable cards below the
+    // Month-End Outlook) so balances no longer require scrolling into a column.
     final left = <Widget>[
       _CashFlowCard(presenter: presenter),
       _BudgetHealthCard(presenter: presenter),
-      _AccountsCard(presenter: presenter),
     ];
     final right = <Widget>[
       _IncomeExpensesCard(presenter: presenter),
@@ -576,130 +578,107 @@ class _BudgetHealthCard extends StatelessWidget {
 }
 
 // ===========================================================================
-// Accounts
+// Account balances — glanceable cards below the Month-End Outlook
 // ===========================================================================
 
-class _AccountsCard extends StatelessWidget {
-  final TreasuryDashboardPresenter presenter;
-  const _AccountsCard({required this.presenter});
+IconData _accountIcon(FinancialAccount a) => switch (a.category) {
+      AccountCategory.bank => Icons.account_balance_outlined,
+      AccountCategory.ewallet => Icons.phone_android_outlined,
+      AccountCategory.cash => Icons.payments_outlined,
+      AccountCategory.savings => Icons.savings_outlined,
+      AccountCategory.goal => Icons.flag_outlined,
+      AccountCategory.timeDeposit => Icons.lock_clock_outlined,
+      AccountCategory.investment => Icons.trending_up_rounded,
+      AccountCategory.custodian => Icons.people_outline_rounded,
+      AccountCategory.creditCard => Icons.credit_card_outlined,
+      AccountCategory.creditLine => Icons.credit_score_outlined,
+      AccountCategory.bnpl => Icons.shopping_bag_outlined,
+    };
 
-  IconData _icon(FinancialAccount a) => switch (a.category) {
-        AccountCategory.bank => Icons.account_balance_outlined,
-        AccountCategory.ewallet => Icons.phone_android_outlined,
-        AccountCategory.cash => Icons.payments_outlined,
-        AccountCategory.creditCard => Icons.credit_card_outlined,
-        AccountCategory.creditLine => Icons.credit_score_outlined,
-        AccountCategory.bnpl => Icons.shopping_bag_outlined,
-        _ => Icons.account_balance_wallet_outlined,
-      };
+String _accountCategoryLabel(FinancialAccount a) => switch (a.category) {
+      AccountCategory.bank => 'Bank',
+      AccountCategory.ewallet => 'E-wallet',
+      AccountCategory.cash => 'Cash',
+      AccountCategory.savings => 'Savings',
+      AccountCategory.goal => 'Goal',
+      AccountCategory.timeDeposit => 'Time deposit',
+      AccountCategory.investment => 'Investment',
+      AccountCategory.custodian => 'Custodian',
+      AccountCategory.creditCard => 'Credit card',
+      AccountCategory.creditLine => 'Credit line',
+      AccountCategory.bnpl => 'BNPL',
+    };
+
+/// Renders every liquid + credit account as its own compact balance card in a
+/// responsive grid, placed directly under the Month-End Outlook so the user can
+/// see all balances at a glance without scrolling into the content columns.
+class _AccountBalancesRow extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  const _AccountBalancesRow({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final liquid = presenter.liquidAccounts;
-    final credit = presenter.creditAccounts;
     final held = presenter.heldAmountByAccountId;
+    final accounts = [...presenter.liquidAccounts, ...presenter.creditAccounts];
+    if (accounts.isEmpty) return const SizedBox.shrink();
 
-    final accounts = [...liquid, ...credit];
-    if (accounts.isEmpty) {
-      return const WebCard(
-        title: 'Accounts',
-        description: 'Liquid balances & credit available',
-        child: _CardEmpty(
-          icon: Icons.account_balance_wallet_outlined,
-          text: 'No accounts yet',
+    final tiles = [
+      for (final a in accounts) _tile(context, a, held[a.id] ?? 0),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding:
+              const EdgeInsets.only(bottom: WebInsets.md, left: WebInsets.xs),
+          child: Row(
+            children: [
+              Text('Accounts',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('${formatPeso(presenter.totalLiquidCash)} liquid cash',
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant)),
+            ],
+          ),
         ),
-      );
-    }
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cols = constraints.maxWidth >= 1040
+                ? 4
+                : constraints.maxWidth >= 560
+                    ? 2
+                    : 1;
+            return _GridFlow(
+                columns: cols, spacing: WebInsets.lg, children: tiles);
+          },
+        ),
+      ],
+    );
+  }
 
-    final rows = <Widget>[];
-    for (var i = 0; i < accounts.length; i++) {
-      final a = accounts[i];
-      if (i > 0) {
-        rows.add(Divider(
-            height: WebInsets.xl,
-            color: cs.outlineVariant.withValues(alpha: 0.35)));
-      }
-      final isCredit = a.isLiability;
-      final shownHeld = held[a.id] ?? 0;
-      final value =
-          isCredit ? (a.availableCredit ?? a.balance) : (a.balance - shownHeld);
-      rows.add(Row(
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-            ),
-            child: Icon(_icon(a), size: 18, color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: WebInsets.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(a.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-                if (isCredit)
-                  Text('Available limit',
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: cs.onSurfaceVariant)),
-              ],
-            ),
-          ),
-          Text(
-            formatPeso(value),
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: isCredit ? cs.primary : cs.onSurface,
-            ),
-          ),
-          if (isCredit) ...[
-            const SizedBox(width: WebInsets.sm),
-            const WebBadge('Credit', tone: WebBadgeTone.info),
-          ],
-        ],
-      ));
-    }
-
-    return WebCard(
-      title: 'Accounts',
-      description: 'Liquid balances & credit available',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ...rows,
-          const SizedBox(height: WebInsets.lg),
-          Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: WebInsets.md, vertical: WebInsets.sm),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(AppRadii.md),
-            ),
-            child: Row(
-              children: [
-                Text('LIQUID CASH',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                    )),
-                const Spacer(),
-                Text(formatPeso(presenter.totalLiquidCash),
-                    style: theme.textTheme.titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-        ],
-      ),
+  Widget _tile(BuildContext context, FinancialAccount a, double held) {
+    final cs = Theme.of(context).colorScheme;
+    final isCredit = a.isLiability;
+    // Credit shows what's still available to spend; liquid shows spendable cash
+    // (balance minus any amount ring-fenced by linked custodians / holds).
+    final value =
+        isCredit ? (a.availableCredit ?? a.balance) : (a.balance - held);
+    final sub = isCredit
+        ? 'Available credit'
+        : (held > 0
+            ? '${_accountCategoryLabel(a)} · ${formatPeso(held)} held'
+            : _accountCategoryLabel(a));
+    return WebStatTile(
+      label: a.name,
+      value: formatPeso(value),
+      sub: sub,
+      icon: _accountIcon(a),
+      valueColor: isCredit ? cs.primary : null,
     );
   }
 }
