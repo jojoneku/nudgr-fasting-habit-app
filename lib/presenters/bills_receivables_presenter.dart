@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Lifecycle status of a bill relative to today — drives the web status badge
 /// so the view never computes due-date conditionals in `build` (Rule 1).
@@ -206,6 +207,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allReceivables = await _storage.loadReceivables();
     _allExpenses = await _storage.loadBudgetedExpenses();
 
+    // One-time removal of stale future-month credit-card statement copies the
+    // recurring auto-copy used to proliferate before it excluded credit cards.
+    await _cleanupFutureRecurringCreditStatements();
+
     // Schedule or cancel monthly bills reminder based on user preferences.
     final prefs = await _storage.loadNotificationPreferences();
     if (prefs.billsReminderEnabled && _allBills.isNotEmpty) {
@@ -227,6 +232,39 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   }
 
   bool _isAutoStatement(Bill b) => b.isAutoStatement;
+
+  /// SharedPreferences flag gating the one-time cleanup below so it runs once
+  /// (on the upgrade that shipped the fix) and never deletes a recurring
+  /// credit-card bill a user might deliberately create in a future month later.
+  static const String _kFutureRecurringCcCleanupDone =
+      'bills.cleanup.future_recurring_cc_v1';
+
+  /// Removes the stale future-month credit-card statement copies left behind by
+  /// the old recurring auto-copy (which proliferated a frozen amount onto every
+  /// future month). Scoped tightly to avoid touching anything the user acted on:
+  /// only future-month, recurring, credit-card, unpaid, un-transacted bills.
+  /// Runs at most once; safely no-ops in tests where SharedPreferences is absent.
+  Future<void> _cleanupFutureRecurringCreditStatements() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_kFutureRecurringCcCleanupDone) ?? false) return;
+      final currentMonth = toMonthKey(DateTime.now());
+      final before = _allBills.length;
+      _allBills = _allBills
+          .where((b) => !(b.billType == BillType.creditCard &&
+              b.isRecurring &&
+              !b.isPaid &&
+              b.transactionId == null &&
+              b.month.compareTo(currentMonth) > 0))
+          .toList();
+      if (_allBills.length != before) {
+        await _storage.saveBills(_allBills);
+      }
+      await prefs.setBool(_kFutureRecurringCcCleanupDone, true);
+    } catch (e) {
+      debugPrint('BillsReceivablesPresenter: CC cleanup skipped: $e');
+    }
+  }
 
   // ─── Bill CRUD ────────────────────────────────────────────────────────────────
 
@@ -749,8 +787,16 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (existing.isNotEmpty) return;
 
     final prev = previousMonth(month);
-    final recurringFromPrev =
-        _allBills.where((b) => b.month == prev && b.isRecurring).toList();
+    // Credit-card statements are handled by the live auto-statement snapshot
+    // (real balance for the current month, nothing for the future). Copying a
+    // recurring credit-card bill forward would stamp a frozen amount onto every
+    // future month the user opens — the proliferation bug — so exclude them.
+    final recurringFromPrev = _allBills
+        .where((b) =>
+            b.month == prev &&
+            b.isRecurring &&
+            b.billType != BillType.creditCard)
+        .toList();
     if (recurringFromPrev.isEmpty) return;
 
     final copies = recurringFromPrev.map((b) => Bill(
