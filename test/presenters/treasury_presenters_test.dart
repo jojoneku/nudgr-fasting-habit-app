@@ -662,6 +662,53 @@ void main() {
           isFalse);
     });
 
+    test(
+        'payerAccountsFor excludes the liability itself for a statement bill '
+        '(web mark-paid contract — audit #5)', () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(
+                id: 'gcash', category: AccountCategory.ewallet, balance: 5000),
+            _account(
+                id: 'cc', category: AccountCategory.creditCard, balance: 3000),
+          ]);
+      final freshLedger = LedgerPresenter(mockStorage, mockStats);
+      final freshBills =
+          BillsReceivablesPresenter(mockStorage, freshLedger, mockStats);
+      await freshBills.load();
+      await _waitForLoad(freshLedger);
+
+      final statementBill =
+          _bill(id: 'stmt', amount: 1000, month: '2026-03', accountId: 'cc');
+      final payers = freshBills.payerAccountsFor(statementBill);
+
+      expect(payers.any((a) => a.id == 'cc'), isFalse,
+          reason: 'never offer the liability account as its own payer');
+      expect(payers.any((a) => a.id == 'gcash'), isTrue);
+    });
+
+    test('markBillPaid throws if a liability statement is paid from itself',
+        () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(
+                id: 'cc', category: AccountCategory.creditCard, balance: 3000),
+          ]);
+      when(mockStorage.loadBills()).thenAnswer((_) async => [
+            _bill(id: 'stmt', amount: 1000, month: '2026-03', accountId: 'cc'),
+          ]);
+      final freshLedger = LedgerPresenter(mockStorage, mockStats);
+      final freshBills =
+          BillsReceivablesPresenter(mockStorage, freshLedger, mockStats);
+      await freshBills.load();
+      await freshBills.setMonth('2026-03');
+      await _waitForLoad(freshLedger);
+
+      expect(
+        () =>
+            freshBills.markBillPaid('stmt', paidAmount: 1000, accountId: 'cc'),
+        throwsArgumentError,
+      );
+    });
+
     test('markBillPaid awards XP when all bills are paid', () async {
       when(mockStorage.loadBills()).thenAnswer((_) async => [
             _bill(id: 'b1', amount: 300, isPaid: false, month: '2026-03'),
