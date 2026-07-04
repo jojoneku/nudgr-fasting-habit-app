@@ -1044,21 +1044,23 @@ class _BillRow extends StatelessWidget {
   }
 
   Future<void> _markPaid(BuildContext context) async {
-    // Mirror the mobile mark-paid: pay the full billed amount from the bill's
-    // preferred account, falling back to the first active liquid (asset)
-    // account — never a liability/credit or inactive account.
-    final fallback =
-        presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
-    final accountId =
-        bill.accountId ?? (fallback.isNotEmpty ? fallback.first.id : null);
+    // Eligible funding accounts. payerAccountsFor excludes the liability itself
+    // for a credit-card / credit-line / BNPL statement bill (you can't pay a
+    // statement from the account it belongs to — markBillPaid throws for that),
+    // which the old code hit by defaulting to bill.accountId. Restrict to
+    // active liquid accounts as the fundable set.
+    final payers = presenter
+        .payerAccountsFor(bill)
+        .where((a) => a.isActive && a.isLiquid)
+        .toList();
     final messenger = ScaffoldMessenger.of(context);
-    final accountName = _accountName(accountId) ?? 'your account';
 
     // Marking paid moves real money out of an account and can't be undone in
-    // one click — confirm, and show exactly which account is debited (it may be
-    // a silent fallback the user never picked). (Plan 052 U1/U2) The "already
-    // in ledger" toggle skips recording entirely for expenses logged manually.
+    // one click — confirm, let the user pick which account is debited, and
+    // default to the first eligible one. (Plan 052 U1/U2) The "already in
+    // ledger" toggle skips recording entirely for expenses logged manually.
     var alreadyInLedger = false;
+    String? selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -1071,8 +1073,20 @@ class _BillRow extends StatelessWidget {
               Text(alreadyInLedger
                   ? 'Mark "${bill.name}" (${formatPeso(bill.amount)}) as paid '
                       'without recording a transaction.'
-                  : 'Pay ${formatPeso(bill.amount)} for "${bill.name}" from '
-                      '$accountName? This debits the account balance.'),
+                  : 'Pay ${formatPeso(bill.amount)} for "${bill.name}". '
+                      'This debits the selected account.'),
+              if (!alreadyInLedger) ...[
+                const SizedBox(height: WebInsets.md),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedAccountId,
+                  decoration: const InputDecoration(labelText: 'Pay from'),
+                  items: [
+                    for (final a in payers)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (v) => setLocalState(() => selectedAccountId = v),
+                ),
+              ],
               const SizedBox(height: 4),
               CheckboxListTile(
                 value: alreadyInLedger,
@@ -1099,24 +1113,35 @@ class _BillRow extends StatelessWidget {
     if (confirmed != true) return;
 
     // An account is only required when we're actually recording the payment.
-    if (!alreadyInLedger && accountId == null) {
+    if (!alreadyInLedger && selectedAccountId == null) {
       messenger.showSnackBar(
-        const SnackBar(content: Text('Add an account before marking paid.')),
+        const SnackBar(
+            content: Text('Add a funding account before marking paid.')),
       );
       return;
     }
 
-    await presenter.markBillPaid(
-      bill.id,
-      paidAmount: bill.amount,
-      accountId: alreadyInLedger ? null : accountId,
-      recordInLedger: !alreadyInLedger,
-    );
+    try {
+      await presenter.markBillPaid(
+        bill.id,
+        paidAmount: bill.amount,
+        accountId: alreadyInLedger ? null : selectedAccountId,
+        recordInLedger: !alreadyInLedger,
+      );
+    } catch (e) {
+      // Surface the failure instead of discarding the Future — a rejected
+      // payer (or any error) would otherwise leave the bill silently unpaid.
+      messenger.showSnackBar(
+        SnackBar(content: Text('Could not mark "${bill.name}" paid: $e')),
+      );
+      return;
+    }
+    final payerName = _accountName(selectedAccountId) ?? 'your account';
     messenger.showSnackBar(
       SnackBar(
           content: Text(alreadyInLedger
               ? 'Marked "${bill.name}" paid.'
-              : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $accountName.')),
+              : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.')),
     );
   }
 }
