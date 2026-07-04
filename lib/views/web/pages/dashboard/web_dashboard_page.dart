@@ -57,7 +57,6 @@ class _PositionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final p = presenter;
     final net = p.netWorth;
     final delta = p.monthNetCashFlow;
@@ -84,12 +83,14 @@ class _PositionRow extends StatelessWidget {
         sub: 'Cash, savings & goals',
         icon: Icons.savings_outlined,
       ),
+      // Budget Allocated (this month's total planned spend) replaces the old
+      // "Current Obligations" tile, which was a straight alias of the Month-End
+      // Outlook's "Upcoming Bills" figure and so duplicated it.
       WebStatTile(
-        label: 'Current Obligations',
-        value: formatPeso(p.currentObligations),
-        sub: 'Unpaid bills this month',
-        icon: Icons.receipt_long_outlined,
-        valueColor: cs.error,
+        label: 'Budget Allocated',
+        value: formatPeso(p.totalBudgetAllocated),
+        sub: 'Planned spend this month',
+        icon: Icons.pie_chart_outline_rounded,
       ),
     ];
 
