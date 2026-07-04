@@ -6,15 +6,19 @@ import '../models/sync_queue_entry.dart';
 
 /// Tracks pending local writes to push to Supabase.
 /// Also stores per-domain timestamps for last-write-wins comparisons.
-/// Capped at 1000 entries; deduplicates by (domain, key) keeping latest op.
+///
+/// Backed by a map keyed by `domain::key`, so [markDirty] and [removeEntries]
+/// are O(1) and the queue naturally deduplicates to the latest op per record.
+/// There is deliberately NO size cap: with diff-based dirty marking upstream,
+/// only genuinely-changed records are enqueued, and a large offline backlog is
+/// exactly what must survive to reach the cloud — silently evicting it would
+/// strand edits permanently.
 ///
 /// Keys are scoped to [userId] when provided via [load] so multiple users on
 /// the same device never share queue or timestamp state.
 class SyncQueue {
-  static const int _maxEntries = 1000;
-
   String? _userId;
-  final List<SyncQueueEntry> _entries = [];
+  final Map<String, SyncQueueEntry> _entryByKey = {};
   final Map<String, DateTime> _timestamps = {};
   bool _loaded = false;
   bool _flushScheduled = false;
@@ -24,11 +28,13 @@ class SyncQueue {
   String get _timestampsKey =>
       _userId != null ? 'u/$_userId/syncTimestamps' : 'syncTimestamps';
 
+  String _entryKey(SyncDomain domain, String key) => '${domain.name}::$key';
+
   Future<void> load({String? userId}) async {
     if (_loaded && _userId == userId) return;
     _userId = userId;
     _loaded = true;
-    _entries.clear();
+    _entryByKey.clear();
     _timestamps.clear();
     final prefs = await SharedPreferences.getInstance();
 
@@ -37,12 +43,19 @@ class SyncQueue {
       try {
         for (final item in jsonDecode(raw) as List) {
           final m = item as Map<String, dynamic>;
-          _entries.add(SyncQueueEntry(
+          final entry = SyncQueueEntry(
             domain: SyncDomain.values.byName(m['domain'] as String),
             key: m['key'] as String,
             op: SyncOp.values.byName(m['op'] as String),
             queuedAt: DateTime.parse(m['queuedAt'] as String),
-          ));
+          );
+          final k = _entryKey(entry.domain, entry.key);
+          // Restoring an older persisted queue may hold duplicates for one
+          // record; keep the most recently queued op.
+          final existing = _entryByKey[k];
+          if (existing == null || entry.queuedAt.isAfter(existing.queuedAt)) {
+            _entryByKey[k] = entry;
+          }
         }
       } catch (e) {
         debugPrint('SyncQueue: failed to restore pending queue: $e');
@@ -61,29 +74,30 @@ class SyncQueue {
     }
   }
 
-  int get pendingCount => _entries.length;
+  int get pendingCount => _entryByKey.length;
 
-  List<SyncQueueEntry> get entries => List.unmodifiable(_entries);
+  List<SyncQueueEntry> get entries => List.unmodifiable(_entryByKey.values);
 
   void markDirty(SyncDomain domain, String key, {SyncOp op = SyncOp.upsert}) {
-    _entries.removeWhere((e) => e.domain == domain && e.key == key);
-    _entries.add(SyncQueueEntry(
+    _entryByKey[_entryKey(domain, key)] = SyncQueueEntry(
       domain: domain,
       key: key,
       op: op,
       queuedAt: DateTime.now(),
-    ));
-    if (_entries.length > _maxEntries) {
-      _entries.removeRange(0, _entries.length - _maxEntries);
-    }
+    );
     setTimestamp(domain, key, time: DateTime.now());
     _scheduleFlush();
   }
 
   void removeEntries(List<SyncQueueEntry> processed) {
     for (final e in processed) {
-      _entries.removeWhere((q) =>
-          q.domain == e.domain && q.key == e.key && q.queuedAt == e.queuedAt);
+      final k = _entryKey(e.domain, e.key);
+      final current = _entryByKey[k];
+      // Only drop the entry if it hasn't been re-dirtied since we snapshotted
+      // it for push (a newer queuedAt means a fresh edit still needs to sync).
+      if (current != null && current.queuedAt == e.queuedAt) {
+        _entryByKey.remove(k);
+      }
     }
     _scheduleFlush();
   }
@@ -99,23 +113,22 @@ class SyncQueue {
   }
 
   void clear() {
-    _entries.clear();
+    _entryByKey.clear();
     _scheduleFlush();
   }
 
   /// Clears all in-memory state on sign-out. Persisted prefs keys under the
   /// user prefix are wiped by [LocalStorageService.clearUserData].
   void clearAll() {
-    _entries.clear();
+    _entryByKey.clear();
     _timestamps.clear();
     _loaded = false;
     _userId = null;
   }
 
   /// Coalesces persistence. A single save can mark hundreds of records dirty in
-  /// one synchronous burst (e.g. [LocalStorageService.saveTransactions] marks
-  /// every transaction); without this, each call would do two full jsonEncode +
-  /// prefs writes, jamming the main isolate and making edits feel like they
+  /// one synchronous burst; without this, each call would do two full jsonEncode
+  /// + prefs writes, jamming the main isolate and making edits feel like they
   /// hang. Instead we flush once on the next microtask, after the burst settles.
   void _scheduleFlush() {
     if (_flushScheduled) return;
@@ -129,7 +142,7 @@ class SyncQueue {
 
   Future<void> _persist() async {
     final prefs = await SharedPreferences.getInstance();
-    final list = _entries
+    final list = _entryByKey.values
         .map((e) => {
               'domain': e.domain.name,
               'key': e.key,

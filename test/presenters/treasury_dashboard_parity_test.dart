@@ -17,6 +17,7 @@ FinancialAccount _account({
   required String id,
   AccountCategory category = AccountCategory.ewallet,
   double balance = 0,
+  String? linkedAccountId,
 }) =>
     FinancialAccount(
       id: id,
@@ -25,6 +26,7 @@ FinancialAccount _account({
       balance: balance,
       colorHex: '#FFFFFF',
       icon: 'wallet',
+      linkedAccountId: linkedAccountId,
     );
 
 TransactionRecord _txn({
@@ -274,6 +276,50 @@ void main() {
       expect(p.budgetedExpensesRemaining, 1000);
       // 10000 liquid − 0 bills − 1000 set-aside − 3000 remaining budget = 6000.
       expect(p.forecastedNetBalance, 6000);
+    });
+  });
+
+  group('custodian KPIs (audit #8)', () {
+    test('unlinked custodian does not reduce totalLiquidCash or netWorth',
+        () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(
+                id: 'gcash', category: AccountCategory.ewallet, balance: 5000),
+            // Standalone custodian — its balance is NOT inside any liquid
+            // account, so it must not be subtracted.
+            _account(
+                id: 'cust', category: AccountCategory.custodian, balance: 2000),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      expect(p.totalLiquidCash, 5000,
+          reason: 'unlinked custodian was never in the liquid parent sum');
+      expect(p.netWorth, 5000,
+          reason:
+              'unlinked custodian is not in totalAssets, so not subtracted');
+      // Display figure still reports everything held for others.
+      expect(p.totalHeldForOthers, 2000);
+    });
+
+    test('linked custodian reduces totalLiquidCash and netWorth exactly once',
+        () async {
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            // Bank balance includes the 2000 held for someone else.
+            _account(id: 'bank', category: AccountCategory.bank, balance: 8000),
+            _account(
+                id: 'cust',
+                category: AccountCategory.custodian,
+                balance: 2000,
+                linkedAccountId: 'bank'),
+          ]);
+      final p = TreasuryDashboardPresenter(mockStorage);
+      await p.load();
+
+      // 8000 in the bank, 2000 of which isn't yours.
+      expect(p.totalLiquidCash, 6000);
+      expect(p.netWorth, 6000);
+      expect(p.heldAmountByAccountId['bank'], 2000);
     });
   });
 
