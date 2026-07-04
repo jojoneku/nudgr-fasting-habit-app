@@ -137,15 +137,4 @@ class TransactionRecord {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-
-  /// The account from which this transfer originated.
-  /// Outflow leg: own accountId. Inflow leg: transferToAccountId (the source,
-  /// stored symmetrically by addTransfer and back-filled by migration).
-  String? get transferFromAccountId =>
-      type == TransactionType.inflow ? transferToAccountId : accountId;
-
-  /// The account to which this transfer goes.
-  /// Outflow leg: transferToAccountId. Inflow leg: own accountId.
-  String? get transferDestinationAccountId =>
-      type == TransactionType.inflow ? accountId : transferToAccountId;
 }
