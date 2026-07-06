@@ -50,8 +50,17 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   Future<void> Function(TransactionRecord outflow, DateTime? expectedDate)?
       onSpawnReimbursementReceivable;
   Future<void> Function(String receivableId)? onDeleteReimbursementReceivable;
-  Future<void> Function(TransactionRecord outflow)?
-      onUpdateReimbursementReceivable;
+  Future<void> Function(
+    TransactionRecord outflow, {
+    bool updateExpectedDate,
+    DateTime? expectedDate,
+  })? onUpdateReimbursementReceivable;
+
+  /// Resolves the expected payback date of the receivable linked to a
+  /// reimbursable expense — the date lives on the receivable, not the txn, so
+  /// the edit form reads it back through here to pre-fill the picker.
+  DateTime? Function(String receivableId)?
+      reimbursementReceivableExpectedDateResolver;
 
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
@@ -646,10 +655,28 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Re-syncs the linked receivable's amount/name after a reimbursable [outflow]
   /// is edited. No-op when no bills presenter is wired.
-  Future<void> syncReimbursementReceivable(TransactionRecord outflow) async {
+  ///
+  /// Pass [updateExpectedDate] true (from the edit form) to also write the
+  /// user's chosen [expectedDate] — null meaning "ASAP" — so the payback date
+  /// can be changed. Amount-only callers (e.g. inline grid edits) leave it
+  /// false so the existing schedule is untouched.
+  Future<void> syncReimbursementReceivable(
+    TransactionRecord outflow, {
+    bool updateExpectedDate = false,
+    DateTime? expectedDate,
+  }) async {
     final sync = onUpdateReimbursementReceivable;
-    if (sync != null) await sync(outflow);
+    if (sync != null) {
+      await sync(outflow,
+          updateExpectedDate: updateExpectedDate, expectedDate: expectedDate);
+    }
   }
+
+  /// Expected payback date of the receivable linked to a reimbursable expense,
+  /// or null when unset ("ASAP") / no bills presenter is wired. The edit form
+  /// uses this to pre-fill the date the transaction record itself doesn't store.
+  DateTime? reimbursementReceivableExpectedDate(String receivableId) =>
+      reimbursementReceivableExpectedDateResolver?.call(receivableId);
 
   Future<void> addTransfer({
     required String fromAccountId,

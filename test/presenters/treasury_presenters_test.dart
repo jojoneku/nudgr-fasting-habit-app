@@ -1011,6 +1011,91 @@ void main() {
       expect(synced.name, contains('Team dinner'));
     });
 
+    test('editing a reimbursable expense can change (and clear) its payback date',
+        () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      final now = DateTime.now();
+      final outflow = TransactionRecord(
+        id: 'txn-date',
+        date: now,
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 700,
+        type: TransactionType.outflow,
+        description: 'Supplies',
+        month: toMonthKey(now),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-date',
+      );
+      // Starts ASAP → bucketed in the expense's month, no date.
+      await ledger.addReimbursableExpense(outflow,
+          expectedReimbursementDate: null);
+      final asap = presenter.receivables.firstWhere((r) => r.id == 'rcv-date');
+      expect(asap.expectedDate, isNull);
+      expect(asap.month, toMonthKey(now));
+      // The edit form reads the date back through the ledger resolver.
+      expect(ledger.reimbursementReceivableExpectedDate('rcv-date'), isNull);
+
+      // Edit: set a fixed payback date in a future month. It must move there.
+      final payback = DateTime(now.year, now.month + 2, 10);
+      await ledger.updateTransaction(outflow);
+      await ledger.syncReimbursementReceivable(outflow,
+          updateExpectedDate: true, expectedDate: payback);
+      expect(ledger.reimbursementReceivableExpectedDate('rcv-date'), payback);
+      await presenter.setMonth(toMonthKey(payback));
+      final scheduled =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-date');
+      expect(scheduled.expectedDate, payback);
+      expect(scheduled.month, toMonthKey(payback));
+
+      // Edit again: clear the date back to ASAP — it returns to the expense's
+      // month, not stuck in the old payback month.
+      await ledger.syncReimbursementReceivable(outflow,
+          updateExpectedDate: true, expectedDate: null);
+      expect(ledger.reimbursementReceivableExpectedDate('rcv-date'), isNull);
+      await presenter.setMonth(toMonthKey(now));
+      final backToAsap =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-date');
+      expect(backToAsap.expectedDate, isNull);
+      expect(backToAsap.month, toMonthKey(now));
+    });
+
+    test('amount-only sync preserves the receivable payback date', () async {
+      await presenter.load();
+      await _waitForLoad(ledger);
+
+      final now = DateTime.now();
+      final payback = DateTime(now.year, now.month + 1, 5);
+      final outflow = TransactionRecord(
+        id: 'txn-keepdate',
+        date: now,
+        accountId: 'gcash',
+        categoryId: 'food',
+        amount: 300,
+        type: TransactionType.outflow,
+        description: 'Parts',
+        month: toMonthKey(now),
+        reimbursable: true,
+        reimbursementReceivableId: 'rcv-keepdate',
+      );
+      await ledger.addReimbursableExpense(outflow,
+          expectedReimbursementDate: payback);
+
+      // An amount-only sync (e.g. inline grid edit) must not disturb the date.
+      final edited = outflow.copyWith(amount: 999);
+      await ledger.syncReimbursementReceivable(edited);
+      expect(
+          ledger.reimbursementReceivableExpectedDate('rcv-keepdate'), payback);
+      await presenter.setMonth(toMonthKey(payback));
+      final kept =
+          presenter.receivables.firstWhere((r) => r.id == 'rcv-keepdate');
+      expect(kept.amount, 999);
+      expect(kept.expectedDate, payback);
+      expect(kept.month, toMonthKey(payback));
+    });
+
     test('owed total tracks authoritative receivable state, not inflow legs',
         () async {
       await presenter.load();

@@ -97,6 +97,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _transferToAccountId = existing.transferToAccountId;
         _reimbursable = existing.reimbursable;
         _owedByController.text = existing.owedBy ?? '';
+        // The expected payback date lives on the linked receivable, not on the
+        // transaction — load it so editing a scheduled reimbursable doesn't
+        // silently show (and re-save) "ASAP". Null stays "ASAP".
+        final receivableId = existing.reimbursementReceivableId;
+        if (existing.reimbursable && receivableId != null) {
+          _expectedReimbursementDate = widget.presenter
+              .reimbursementReceivableExpectedDate(receivableId);
+        }
       }
     } else {
       if (widget.initialDate != null) _date = widget.initialDate!;
@@ -234,7 +242,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             await widget.presenter
                 .spawnReimbursementReceivable(txn, expectedDate);
           } else if (isReimbursable) {
-            await widget.presenter.syncReimbursementReceivable(txn);
+            // Propagate the (possibly changed or cleared) payback date so the
+            // edit actually updates the receivable's schedule, not just its
+            // amount/name.
+            await widget.presenter.syncReimbursementReceivable(
+              txn,
+              updateExpectedDate: true,
+              expectedDate: expectedDate,
+            );
           }
         } else if (isReimbursable) {
           await widget.presenter.addReimbursableExpense(

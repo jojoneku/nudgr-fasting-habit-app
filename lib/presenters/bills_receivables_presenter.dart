@@ -41,6 +41,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _ledger.onSpawnReimbursementReceivable = createReimbursementReceivable;
     _ledger.onDeleteReimbursementReceivable = deleteReceivable;
     _ledger.onUpdateReimbursementReceivable = updateReimbursementReceivable;
+    _ledger.reimbursementReceivableExpectedDateResolver =
+        reimbursementReceivableExpectedDate;
   }
 
   final StorageService _storage;
@@ -416,7 +418,18 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// drifts from what you actually spent. No-op if the receivable is gone or
   /// has already been received (don't disturb a settled payback). Wired onto
   /// the ledger as [LedgerPresenter.onUpdateReimbursementReceivable].
-  Future<void> updateReimbursementReceivable(TransactionRecord outflow) async {
+  ///
+  /// The expected payback date lives only on the receivable, not the outflow.
+  /// Amount-only syncs (e.g. the web grid's inline edit) leave [updateExpectedDate]
+  /// false so the existing schedule is preserved; the edit form passes it true
+  /// with the user's chosen [expectedDate] (null = "ASAP") so the date can
+  /// actually be changed, re-bucketing the entry into the payback month — or
+  /// back into the expense's own month for ASAP (mirrors create).
+  Future<void> updateReimbursementReceivable(
+    TransactionRecord outflow, {
+    bool updateExpectedDate = false,
+    DateTime? expectedDate,
+  }) async {
     final receivableId = outflow.reimbursementReceivableId;
     if (receivableId == null) return;
     final existing =
@@ -426,8 +439,22 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       name: _reimbursementReceivableName(outflow),
       amount: outflow.amount,
       categoryId: outflow.categoryId,
+      expectedDate: updateExpectedDate ? expectedDate : existing.expectedDate,
+      month: updateExpectedDate
+          ? (expectedDate != null ? toMonthKey(expectedDate) : outflow.month)
+          : existing.month,
     ));
   }
+
+  /// Expected payback date of the reimbursement receivable linked to a
+  /// reimbursable expense, or null when none is set ("ASAP") or the receivable
+  /// no longer exists. Lets the ledger edit form pre-fill the date it does not
+  /// itself store — the receivable is the source of truth.
+  DateTime? reimbursementReceivableExpectedDate(String receivableId) =>
+      _allReceivables
+          .where((r) => r.id == receivableId)
+          .firstOrNull
+          ?.expectedDate;
 
   /// Display name for a reimbursement receivable: prefers "<who owes you> —
   /// <expense>", falling back to the expense description, then a generic label.
