@@ -13,6 +13,11 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.35] - 2026-07-06
+
+### Fixed
+- allow changing a reimbursable expense's expected payback date
+
 ## [1.1.34] - 2026-07-04
 
 ### Added
@@ -345,7 +350,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.34...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.35...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -381,3 +386,4 @@ distributed via `manifest.json`.
 [1.1.32]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.32
 [1.1.33]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.33
 [1.1.34]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.34
+[1.1.35]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.35
