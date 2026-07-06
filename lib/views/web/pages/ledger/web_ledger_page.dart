@@ -3143,6 +3143,14 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
       _categoryId = t.categoryId;
       _reimbursable = t.reimbursable;
       _owedByController.text = t.owedBy ?? '';
+      // The expected payback date lives on the linked receivable, not the txn —
+      // load it so editing a scheduled reimbursable doesn't show (and re-save)
+      // "ASAP". Null stays "ASAP".
+      final receivableId = t.reimbursementReceivableId;
+      if (t.reimbursable && receivableId != null) {
+        _expectedReimbursementDate =
+            _p.reimbursementReceivableExpectedDate(receivableId);
+      }
     }
   }
 
@@ -3274,7 +3282,14 @@ class _AddTransactionDialogState extends State<_AddTransactionDialog> {
           if (isReimbursable && oldReceivableId == null) {
             await _p.spawnReimbursementReceivable(txn, expectedDate);
           } else if (isReimbursable) {
-            await _p.syncReimbursementReceivable(txn);
+            // Propagate the (possibly changed or cleared) payback date so the
+            // edit actually updates the receivable's schedule, not just its
+            // amount/name.
+            await _p.syncReimbursementReceivable(
+              txn,
+              updateExpectedDate: true,
+              expectedDate: expectedDate,
+            );
           }
         } else if (isReimbursable) {
           await _p.addReimbursableExpense(
