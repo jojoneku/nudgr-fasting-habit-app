@@ -170,6 +170,63 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return match?.name;
   }
 
+  /// Money still to move *into* each funding account this month: the sum of
+  /// still-due bills paid from it plus still-unfunded set-asides assigned to it.
+  /// This answers "how much do I need to have in Maya to cover what's coming?"
+  ///
+  /// Buckets by [Bill.accountId] / [BudgetedExpense.accountId]; items with no
+  /// assigned account fall into a single trailing `account == null` bucket.
+  /// Sorted by descending total, with the unassigned bucket always last. All
+  /// aggregation lives here so the view can render without doing math. (Rule 1)
+  List<
+      ({
+        FinancialAccount? account,
+        double billsDue,
+        double setAsides,
+        double total,
+        int count,
+      })> fundingBreakdown() {
+    // key: accountId or '' for unassigned → mutable running totals.
+    final bills = <String, double>{};
+    final setAsides = <String, double>{};
+    final counts = <String, int>{};
+
+    for (final b in this.bills.where((b) => !b.isPaid)) {
+      final key = b.accountId ?? '';
+      bills[key] = (bills[key] ?? 0) + b.amount;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+    for (final e in budgetedExpenses.where((e) => !e.isPaid)) {
+      final key = e.accountId ?? '';
+      setAsides[key] = (setAsides[key] ?? 0) + e.allocatedAmount;
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+
+    final keys = {...bills.keys, ...setAsides.keys};
+    final rows = [
+      for (final key in keys)
+        (
+          account: key.isEmpty
+              ? null
+              : accounts.where((a) => a.id == key).firstOrNull,
+          billsDue: bills[key] ?? 0,
+          setAsides: setAsides[key] ?? 0,
+          total: (bills[key] ?? 0) + (setAsides[key] ?? 0),
+          count: counts[key] ?? 0,
+        ),
+    ];
+
+    // Largest obligation first; the unassigned bucket (null account) sinks to
+    // the bottom regardless of size so real accounts lead.
+    rows.sort((a, b) {
+      if ((a.account == null) != (b.account == null)) {
+        return a.account == null ? 1 : -1;
+      }
+      return b.total.compareTo(a.total);
+    });
+    return rows;
+  }
+
   /// Lifecycle status of a bill relative to today, used to drive the web status
   /// badge without conditionals in `build`.
   BillStatus billStatus(Bill bill) {
@@ -549,26 +606,50 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _notifyDependents();
   }
 
+  /// Marks a set-aside funded. Setting money aside is normally a *transfer*
+  /// between your own accounts: cash leaves [accountId] (the funding source) and
+  /// lands in [toAccountId] (a savings/goal destination), so it must never count
+  /// as spending — hence the transfer, not an outflow. When [toAccountId] is null
+  /// (or equals the source) it falls back to a plain outflow, for one-off plans
+  /// that really are spent (gifts, etc.).
   Future<void> markExpensePaid(
     String expenseId, {
     required double paidAmount,
     required String accountId,
+    String? toAccountId,
     DateTime? paidDate,
   }) async {
     final expense = _allExpenses.firstWhere((e) => e.id == expenseId);
-    final txn = _buildOutflowTxn(
-      id: _generateId(),
-      amount: paidAmount,
-      accountId: accountId,
-      categoryId: expense.categoryId,
-      description: expense.name,
-      date: paidDate ?? DateTime.now(),
-    );
-    await _ledger.addTransaction(txn);
+    final date = paidDate ?? DateTime.now();
+
+    String? txnId;
+    if (toAccountId != null && toAccountId != accountId) {
+      // Transfer legs carry the reserved transfer category (neither income nor
+      // expense) and a shared group id; the expense keeps no single txn id, the
+      // same way a credit-card bill paid via transfer does.
+      await _ledger.addTransfer(
+        fromAccountId: accountId,
+        toAccountId: toAccountId,
+        amount: paidAmount,
+        description: expense.name,
+        date: date,
+      );
+    } else {
+      final txn = _buildOutflowTxn(
+        id: _generateId(),
+        amount: paidAmount,
+        accountId: accountId,
+        categoryId: expense.categoryId,
+        description: expense.name,
+        date: date,
+      );
+      await _ledger.addTransaction(txn);
+      txnId = txn.id;
+    }
     _updateExpense(expense.copyWith(
       isPaid: true,
       spentAmount: paidAmount,
-      transactionId: txn.id,
+      transactionId: txnId,
     ));
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
@@ -922,6 +1003,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           allocatedAmount: e.nextMonthAmount ?? e.allocatedAmount,
           categoryId: e.categoryId,
           note: e.note,
+          accountId: e.accountId,
           isRecurring: e.isRecurring,
           recurrenceType: e.recurrenceType,
         ));

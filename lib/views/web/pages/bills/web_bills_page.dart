@@ -131,7 +131,18 @@ class _BillsBody extends StatelessWidget {
 
     children
       ..add(_SideBySideCards(left: upcomingCard, right: budgetedCard))
-      ..add(const SizedBox(height: WebInsets.xl))
+      ..add(const SizedBox(height: WebInsets.xl));
+
+    // How much still needs to land in each funding account to cover the unpaid
+    // bills + unfunded set-asides above. Hidden when nothing is outstanding.
+    final breakdown = presenter.fundingBreakdown();
+    if (breakdown.isNotEmpty) {
+      children
+        ..add(_ByAccountCard(presenter: presenter, rows: breakdown))
+        ..add(const SizedBox(height: WebInsets.xl));
+    }
+
+    children
       ..add(receivablesCard)
       ..add(const SizedBox(height: WebInsets.xl))
       ..add(installmentsCard);
@@ -158,8 +169,10 @@ class _BillsBody extends StatelessWidget {
 }
 
 /// Places two cards side by side on wide viewports and stacks them (left above
-/// right) once the page gets too narrow for two readable columns. Cards are
-/// top-aligned so a taller card never stretches its shorter neighbour.
+/// right) once the page gets too narrow for two readable columns. On wide
+/// viewports both cards stretch to the taller one's height (via IntrinsicHeight)
+/// so the shorter list no longer leaves a ragged bottom edge next to its
+/// neighbour.
 class _SideBySideCards extends StatelessWidget {
   final Widget left;
   final Widget right;
@@ -183,13 +196,15 @@ class _SideBySideCards extends StatelessWidget {
             ],
           );
         }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: left),
-            const SizedBox(width: WebInsets.xl),
-            Expanded(child: right),
-          ],
+        return IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(child: left),
+              const SizedBox(width: WebInsets.xl),
+              Expanded(child: right),
+            ],
+          ),
         );
       },
     );
@@ -1525,6 +1540,146 @@ class _BudgetedExpensesCard extends StatelessWidget {
   }
 }
 
+// ─── By-account funding breakdown ─────────────────────────────────────────────
+
+/// Summarises how much cash still needs to be in each funding account to cover
+/// the unpaid bills + unfunded set-asides for the month — the "fund Maya with
+/// ₱X so I can pay what's due" view. Reads the pre-aggregated rows from
+/// [BillsReceivablesPresenter.fundingBreakdown]; no math happens here. (Rule 1)
+class _ByAccountCard extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final List<
+      ({
+        FinancialAccount? account,
+        double billsDue,
+        double setAsides,
+        double total,
+        int count,
+      })> rows;
+
+  const _ByAccountCard({required this.presenter, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final grandTotal = rows.fold(0.0, (sum, r) => sum + r.total);
+
+    return WebCard(
+      accentColor: cs.primary,
+      title: 'By Account',
+      description: 'How much to move into each account to cover what\'s due',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (var i = 0; i < rows.length; i++)
+            _ByAccountRow(row: rows[i], showDivider: i > 0),
+          const SizedBox(height: WebInsets.md),
+          Container(
+            padding: const EdgeInsets.only(top: WebInsets.md),
+            decoration: BoxDecoration(
+              border: Border(
+                top:
+                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('TOTAL TO MOVE',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: cs.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.7,
+                    )),
+                Text(formatPeso(grandTotal),
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: cs.primary,
+                    )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ByAccountRow extends StatelessWidget {
+  final ({
+    FinancialAccount? account,
+    double billsDue,
+    double setAsides,
+    double total,
+    int count,
+  }) row;
+  final bool showDivider;
+
+  const _ByAccountRow({required this.row, required this.showDivider});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final unassigned = row.account == null;
+    final name = row.account?.name ?? 'Unassigned';
+    final detail = [
+      '${row.count} ${row.count == 1 ? 'item' : 'items'}',
+      if (row.billsDue > 0) '${formatPeso(row.billsDue)} bills',
+      if (row.setAsides > 0) '${formatPeso(row.setAsides)} set-asides',
+    ].join(' · ');
+
+    return Container(
+      decoration: showDivider
+          ? BoxDecoration(
+              border: Border(
+                top:
+                    BorderSide(color: cs.outlineVariant.withValues(alpha: 0.5)),
+              ),
+            )
+          : null,
+      padding: const EdgeInsets.symmetric(vertical: WebInsets.md),
+      child: Row(
+        children: [
+          Icon(
+            unassigned
+                ? Icons.help_outline_rounded
+                : Icons.account_balance_wallet_outlined,
+            size: 18,
+            color: unassigned ? cs.onSurfaceVariant : cs.primary,
+          ),
+          const SizedBox(width: WebInsets.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(name,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w600),
+                    overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(
+                  unassigned ? '$detail · no account set' : detail,
+                  style: theme.textTheme.bodySmall
+                      ?.copyWith(color: cs.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: WebInsets.md),
+          Text(formatPeso(row.total),
+              style: theme.textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: unassigned ? cs.onSurface : cs.primary,
+              )),
+        ],
+      ),
+    );
+  }
+}
+
 class _BudgetedExpenseRow extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final BudgetedExpense expense;
@@ -1541,9 +1696,13 @@ class _BudgetedExpenseRow extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final funded = expense.isPaid;
-    final subtitle = expense.note == null || expense.note!.trim().isEmpty
-        ? expense.budgetedType.label
-        : '${expense.budgetedType.label} · ${expense.note!.trim()}';
+    final accountName = presenter.accountName(expense.accountId);
+    final subtitle = [
+      expense.budgetedType.label,
+      if (expense.note != null && expense.note!.trim().isNotEmpty)
+        expense.note!.trim(),
+      if (accountName != null) accountName,
+    ].join(' · ');
 
     return Container(
       decoration: showDivider
@@ -1637,49 +1796,110 @@ class _BudgetedExpenseRow extends StatelessWidget {
   }
 
   Future<void> _markFunded(BuildContext context) async {
-    // Funding a set-aside posts an outflow from a liquid account — the money
-    // leaves your spendable cash (into savings / the planned spend), exactly
-    // like the mobile "mark paid" flow.
-    final fallback =
+    // Setting money aside is a transfer between your own accounts: it leaves the
+    // funding source and lands in a savings/goal destination. The dialog lets you
+    // pick both (plus a "spend instead" option for one-off plans), mirroring the
+    // mobile flow.
+    final payers =
         presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
-    final accountId = fallback.isNotEmpty ? fallback.first.id : null;
     final messenger = ScaffoldMessenger.of(context);
-    if (accountId == null) {
+    if (payers.isEmpty) {
       messenger.showSnackBar(
         const SnackBar(content: Text('Add an account before funding.')),
       );
       return;
     }
 
-    final accountName = presenter.accountName(accountId) ?? 'your account';
+    // Destinations you can park money in — asset accounts, savings/goals first.
+    final destinations =
+        presenter.accounts.where((a) => a.isActive && !a.isLiability).toList()
+          ..sort((a, b) {
+            int rank(FinancialAccount x) => switch (x.category) {
+                  AccountCategory.savings => 0,
+                  AccountCategory.goal => 1,
+                  AccountCategory.timeDeposit => 2,
+                  AccountCategory.investment => 3,
+                  _ => 4,
+                };
+            return rank(a).compareTo(rank(b));
+          });
+
+    // Source defaults to the assigned account (if still valid), else first liquid.
+    String? fromId = payers.any((a) => a.id == expense.accountId)
+        ? expense.accountId
+        : payers.first.id;
+    // Destination defaults to the first savings/goal account that isn't the
+    // source; null means "spend it" (a plain outflow, no transfer).
+    String? toId =
+        destinations.where((a) => a.id != fromId).map((a) => a.id).firstOrNull;
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Fund this set-aside?'),
-        content: Text(
-            'Move ${formatPeso(expense.allocatedAmount)} for "${expense.name}" '
-            'out of $accountName? This debits the account balance.'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
-          FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Fund')),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocalState) => AlertDialog(
+          title: const Text('Fund this set-aside?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Move ${formatPeso(expense.allocatedAmount)} for '
+                  '"${expense.name}" from one account into another. Setting money '
+                  'aside is recorded as a transfer, not spending.'),
+              const SizedBox(height: WebInsets.md),
+              DropdownButtonFormField<String>(
+                initialValue: fromId,
+                decoration: const InputDecoration(labelText: 'Fund from'),
+                items: [
+                  for (final a in payers)
+                    DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setLocalState(() {
+                  fromId = v;
+                  if (toId == fromId) toId = null; // can't transfer to itself
+                }),
+              ),
+              const SizedBox(height: WebInsets.md),
+              DropdownButtonFormField<String>(
+                initialValue: toId,
+                decoration: const InputDecoration(labelText: 'Set aside into'),
+                items: [
+                  const DropdownMenuItem<String>(
+                      value: null, child: Text('Spend it (no transfer)')),
+                  for (final a in destinations)
+                    if (a.id != fromId)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setLocalState(() => toId = v),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Fund')),
+          ],
+        ),
       ),
     );
-    if (confirmed != true) return;
+    if (confirmed != true || fromId == null) return;
 
     await presenter.markExpensePaid(
       expense.id,
       paidAmount: expense.allocatedAmount,
-      accountId: accountId,
+      accountId: fromId!,
+      toAccountId: toId,
     );
+    final fromName = presenter.accountName(fromId) ?? 'your account';
+    final toName = presenter.accountName(toId);
     messenger.showSnackBar(
       SnackBar(
-          content: Text(
-              'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $accountName.')),
+        content: Text(toName != null
+            ? 'Transferred ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName to $toName.'
+            : 'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName.'),
+      ),
     );
   }
 }
@@ -1706,6 +1926,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
 
   late SetAsideType _type;
   String? _selectedCategoryId;
+  String? _selectedAccountId;
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
@@ -1723,6 +1944,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
               : e.allocatedAmount.toString();
       _noteController.text = e.note ?? '';
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
+      _selectedAccountId = e.accountId;
       _isRecurring = e.isRecurring;
       _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
@@ -1764,6 +1986,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           allocatedAmount: amount,
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
+          accountId: _selectedAccountId,
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
@@ -1774,6 +1997,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           allocatedAmount: amount,
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
+          accountId: _selectedAccountId,
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
@@ -1792,6 +2016,11 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final categories = _expenseCategories;
+    // Set-asides are funded out of spendable cash, so only offer liquid
+    // accounts — funding debits one of these (mirrors the mark-funded flow).
+    final liquidAccounts = widget.presenter.accounts
+        .where((a) => a.isActive && a.isLiquid)
+        .toList();
     final isEdit = widget.existing != null;
 
     return AlertDialog(
@@ -1846,6 +2075,24 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                   textInputAction: TextInputAction.done,
                   onFieldSubmitted: (_) => _submit(),
                 ),
+                if (liquidAccounts.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue:
+                        liquidAccounts.any((a) => a.id == _selectedAccountId)
+                            ? _selectedAccountId
+                            : null,
+                    decoration: const InputDecoration(
+                        labelText: 'Fund from account (optional)'),
+                    items: [
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('None')),
+                      for (final a in liquidAccounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
+                    onChanged: (v) => setState(() => _selectedAccountId = v),
+                  ),
+                ],
                 if (categories.isNotEmpty) ...[
                   const SizedBox(height: WebInsets.md),
                   DropdownButtonFormField<String>(

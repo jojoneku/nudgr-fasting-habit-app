@@ -10,12 +10,17 @@ class BudgetedExpenseTile extends StatelessWidget {
   final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
+  /// Resolved name of the funding account this set-aside is assigned to, shown
+  /// under the progress bar. Null when no account is set.
+  final String? accountName;
+
   const BudgetedExpenseTile({
     super.key,
     required this.expense,
     required this.onMarkPaid,
     this.onEdit,
     this.onDelete,
+    this.accountName,
   });
 
   String _typeLabel(SetAsideType type) => switch (type) {
@@ -82,6 +87,22 @@ class BudgetedExpenseTile extends StatelessWidget {
               expense.note!,
               style:
                   TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
+            ),
+          ],
+          if (accountName != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.account_balance_wallet_outlined,
+                    size: 12, color: colorScheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text(
+                  'Fund from $accountName',
+                  style: TextStyle(
+                      color: colorScheme.onSurfaceVariant, fontSize: 11),
+                ),
+              ],
             ),
           ],
         ],

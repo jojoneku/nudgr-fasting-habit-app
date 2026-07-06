@@ -520,6 +520,7 @@ class _BudgetedExpensesSection extends StatelessWidget {
           .map((e) => BudgetedExpenseTile(
                 key: ValueKey(e.id),
                 expense: e,
+                accountName: presenter.accountName(e.accountId),
                 onMarkPaid: () => onMarkPaid(e),
                 onEdit: () => onEdit(e),
                 onDelete: () => presenter.deleteBudgetedExpense(e.id),
@@ -962,7 +963,7 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
             if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedAccountId,
+                initialValue: _selectedAccountId,
                 decoration: const InputDecoration(labelText: 'Account'),
                 items: widget.presenter.accounts
                     .map((a) =>
@@ -1024,16 +1025,47 @@ class _MarkExpensePaidSheet extends StatefulWidget {
 class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
   final _amountController = TextEditingController();
   String? _selectedAccountId;
+  String? _selectedToAccountId;
   DateTime _paidDate = DateTime.now();
   bool _isSubmitting = false;
+
+  /// Asset accounts money can be set aside into (savings/goals first), used to
+  /// populate the "Set aside into" transfer destination.
+  List<FinancialAccount> get _destinations {
+    final list = widget.presenter.accounts
+        .where((a) => a.isActive && !a.isLiability)
+        .toList()
+      ..sort((a, b) {
+        int rank(FinancialAccount x) => switch (x.category) {
+              AccountCategory.savings => 0,
+              AccountCategory.goal => 1,
+              AccountCategory.timeDeposit => 2,
+              AccountCategory.investment => 3,
+              _ => 4,
+            };
+        return rank(a).compareTo(rank(b));
+      });
+    return list;
+  }
 
   @override
   void initState() {
     super.initState();
     _amountController.text = widget.expense.allocatedAmount.toStringAsFixed(2);
-    _selectedAccountId = widget.presenter.accounts.isNotEmpty
-        ? widget.presenter.accounts.first.id
-        : null;
+    // Default to the account the set-aside is assigned to, falling back to the
+    // first account when none is set (or it no longer exists).
+    final accounts = widget.presenter.accounts;
+    final assigned = widget.expense.accountId;
+    _selectedAccountId =
+        assigned != null && accounts.any((a) => a.id == assigned)
+            ? assigned
+            : (accounts.isNotEmpty ? accounts.first.id : null);
+    // Destination defaults to the first savings/goal asset that isn't the
+    // source; null means "spend it" (plain outflow, no transfer).
+    _selectedToAccountId = _destinations
+        .where((a) => a.id != _selectedAccountId)
+        .map((a) => a.id)
+        .firstOrNull;
   }
 
   @override
@@ -1062,6 +1094,7 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
         widget.expense.id,
         paidAmount: amount,
         accountId: _selectedAccountId!,
+        toAccountId: _selectedToAccountId,
         paidDate: _paidDate,
       );
       if (mounted) Navigator.pop(context);
@@ -1099,13 +1132,31 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
             if (widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Account'),
+                initialValue: _selectedAccountId,
+                decoration: const InputDecoration(labelText: 'Fund from'),
                 items: widget.presenter.accounts
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
                     .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
+                onChanged: (v) => setState(() {
+                  _selectedAccountId = v;
+                  if (_selectedToAccountId == v) {
+                    _selectedToAccountId = null; // can't transfer to itself
+                  }
+                }),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _selectedToAccountId,
+                decoration: const InputDecoration(labelText: 'Set aside into'),
+                items: [
+                  const DropdownMenuItem<String>(
+                      value: null, child: Text('Spend it (no transfer)')),
+                  for (final a in _destinations)
+                    if (a.id != _selectedAccountId)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setState(() => _selectedToAccountId = v),
               ),
             ],
             const SizedBox(height: 12),
@@ -1167,6 +1218,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
 
   SetAsideType _budgetedType = SetAsideType.other;
   String? _selectedCategoryId;
+  String? _selectedAccountId;
   bool _isSubmitting = false;
 
   @override
@@ -1179,6 +1231,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
       _noteController.text = e.note ?? '';
       _budgetedType = e.budgetedType;
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
+      _selectedAccountId = e.accountId;
     }
   }
 
@@ -1207,6 +1260,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
         note: _noteController.text.trim().isEmpty
             ? null
             : _noteController.text.trim(),
+        accountId: _selectedAccountId,
       );
       if (widget.existing != null) {
         await widget.presenter.updateBudgetedExpense(expense);
@@ -1224,6 +1278,10 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
     final colorScheme = Theme.of(context).colorScheme;
     final expenseCategories = widget.presenter.categories
         .where((c) => c.type == CategoryType.expense)
+        .toList();
+    // Only liquid accounts can fund a set-aside — funding it later debits one.
+    final liquidAccounts = widget.presenter.accounts
+        .where((a) => a.isActive && a.isLiquid)
         .toList();
 
     return Padding(
@@ -1286,6 +1344,24 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
                 label: 'Note (optional)',
                 textInputAction: TextInputAction.done,
               ),
+              if (liquidAccounts.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue:
+                      liquidAccounts.any((a) => a.id == _selectedAccountId)
+                          ? _selectedAccountId
+                          : null,
+                  decoration: const InputDecoration(
+                      labelText: 'Fund from account (optional)'),
+                  items: [
+                    const DropdownMenuItem<String>(
+                        value: null, child: Text('None')),
+                    for (final a in liquidAccounts)
+                      DropdownMenuItem(value: a.id, child: Text(a.name)),
+                  ],
+                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                ),
+              ],
               if (expenseCategories.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text('Category',
