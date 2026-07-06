@@ -26,6 +26,12 @@ SetAsideType setAsideTypeFromName(String? name) {
   return SetAsideType.other;
 }
 
+/// copyWith sentinel: distinguishes "leave [accountId] as is" (omit the
+/// argument) from "clear it" (pass an explicit `null`). Mirrors the pattern in
+/// bill.dart so picking "None" in the editor can actually null the account back
+/// out — `field ?? this.field` never could.
+const Object _kUnset = Object();
+
 // Planned spending commitments (Family Support, Braces Sinking Fund, EF top-up).
 // These appear in the Bills & Receivables sheet under "BUDGETED EXPENSE".
 class BudgetedExpense {
@@ -38,6 +44,7 @@ class BudgetedExpense {
   final double spentAmount; // actual expense recorded
   final String categoryId;
   final String? note; // e.g. "Cash", "Maya Savings"
+  final String? accountId; // funding account this set-aside is moved from
   final bool isPaid;
   final bool isRecurring; // re-created each month via auto-generation
   final RecurrenceType? recurrenceType;
@@ -54,6 +61,7 @@ class BudgetedExpense {
     this.spentAmount = 0,
     required this.categoryId,
     this.note,
+    this.accountId,
     this.isPaid = false,
     this.isRecurring = false,
     this.recurrenceType,
@@ -72,6 +80,7 @@ class BudgetedExpense {
       spentAmount: (json['spentAmount'] as num?)?.toDouble() ?? 0,
       categoryId: json['categoryId'] as String,
       note: json['note'] as String?,
+      accountId: json['accountId'] as String?,
       isPaid: json['isPaid'] as bool? ?? false,
       isRecurring: json['isRecurring'] as bool? ?? false,
       recurrenceType: recurrenceTypeFromName(json['recurrenceType'] as String?),
@@ -91,6 +100,7 @@ class BudgetedExpense {
         'spentAmount': spentAmount,
         'categoryId': categoryId,
         'note': note,
+        'accountId': accountId,
         'isPaid': isPaid,
         'isRecurring': isRecurring,
         'recurrenceType': recurrenceType?.name,
@@ -107,6 +117,7 @@ class BudgetedExpense {
     double? spentAmount,
     String? categoryId,
     String? note,
+    Object? accountId = _kUnset,
     bool? isPaid,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
@@ -123,6 +134,8 @@ class BudgetedExpense {
       spentAmount: spentAmount ?? this.spentAmount,
       categoryId: categoryId ?? this.categoryId,
       note: note ?? this.note,
+      accountId:
+          identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       isPaid: isPaid ?? this.isPaid,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
