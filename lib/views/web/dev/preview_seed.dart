@@ -211,7 +211,8 @@ abstract final class PreviewSeed {
   // ── Budgeted expenses (spent) ────────────────────────────────────────────────
   static List<BudgetedExpense> _budgetedExpenses(String month) {
     BudgetedExpense e(
-            String id, String name, String catId, double alloc, double spent) =>
+            String id, String name, String catId, double alloc, double spent,
+            {String? accountId}) =>
         BudgetedExpense(
           id: id,
           name: name,
@@ -220,15 +221,18 @@ abstract final class PreviewSeed {
           allocatedAmount: alloc,
           spentAmount: spent,
           categoryId: catId,
+          accountId: accountId,
         );
 
     return [
-      e('be_bills', 'Bills & Utilities', 'c_bills', 10000, 2738),
-      e('be_net', 'Internet', 'c_net', 249, 0),
-      e('be_house', 'Household Expenses', 'c_house', 14000, 7997),
+      e('be_bills', 'Bills & Utilities', 'c_bills', 10000, 2738,
+          accountId: 'a_maya'),
+      e('be_net', 'Internet', 'c_net', 249, 0, accountId: 'a_maya'),
+      e('be_house', 'Household Expenses', 'c_house', 14000, 7997,
+          accountId: 'a_save'),
       e('be_food', 'Food & Drinks', 'c_food', 2500, 804),
       e('be_trans', 'Transportation', 'c_trans', 1000, 276),
-      e('be_fun', 'Guilt-Free / Fun', 'c_fun', 2000, 0),
+      e('be_fun', 'Guilt-Free / Fun', 'c_fun', 2000, 0, accountId: 'a_save'),
       e('be_health', 'Health & Wellness', 'c_health', 1000, 774),
     ];
   }
