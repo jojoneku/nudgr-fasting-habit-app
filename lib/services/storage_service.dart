@@ -87,6 +87,11 @@ abstract class StorageService {
   static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
+  // First-run onboarding gate — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]. Must
+  // be evaluable before sign-in and must survive sign-out/account switch, so it
+  // is excluded from user-data scoping and from every SyncDomain. See
+  // openspec/changes/redesign-onboarding-awakening.
+  static const String kOnboardingComplete = 'onboardingComplete';
   // Home-screen widget bridge — DEVICE-LEVEL / UNSCOPED keys. They must survive
   // without a userId so the headless isolate (which has no auth session) can
   // re-scope storage and queue inline actions. See docs/android_widgets_spec.md.
@@ -243,6 +248,10 @@ abstract class StorageService {
   //  Theme
   Future<void> saveThemeMode(String mode);
   Future<String?> loadThemeMode();
+
+  //  First-run onboarding gate (device-level / unscoped)
+  Future<void> saveOnboardingComplete(bool value);
+  Future<bool> loadOnboardingComplete();
 
   //  Settings flags
   Future<void> saveUseCloudAi(bool value);

@@ -30,12 +30,14 @@ import '../services/sync_service.dart';
 import '../services/sync_queue.dart';
 import '../services/widget_bridge_service.dart';
 import '../presenters/auth_presenter.dart';
+import '../presenters/onboarding_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/sync_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/update_presenter.dart';
 import 'auth/login_view.dart';
 import 'hub_screen.dart';
+import 'onboarding/onboarding_flow.dart';
 import 'widgets/update_prompt.dart';
 
 class AppShell extends StatefulWidget {
@@ -73,6 +75,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final GroceryCartPresenter _groceryCartPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
   late final AuthPresenter _authPresenter;
+  late final OnboardingPresenter _onboardingPresenter;
   late HubPresenter _hubPresenter;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
@@ -161,6 +164,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       quests: _questPresenter,
       treasury: _treasuryPresenter,
     );
+    _onboardingPresenter = OnboardingPresenter(
+      storage: _storage,
+      nutrition: _nutritionPresenter!,
+      fasting: _fastingPresenter,
+      quests: _questPresenter,
+      notifications: NotificationService(),
+      auth: _authPresenter,
+    );
     WidgetsBinding.instance.addObserver(this);
     // Run heavy I/O after the first frame so the widget tree renders first.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -171,15 +182,28 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _syncQueue!.load(); // restore persisted queue before auth
       await _authService.init(); // init Supabase + restore session
       _authPresenter.init();
+      final onboarded = await _storage.loadOnboardingComplete();
       if (_authPresenter.isSignedIn && _authPresenter.userId != null) {
         await _initSync(_authPresenter.userId!);
+        // Users already signed in predate the onboarding gate — mark them
+        // complete so the Awakening flow never appears for them.
+        if (!onboarded) await _storage.saveOnboardingComplete(true);
       } else if (mounted) {
-        // New/unauthenticated session — show welcome screen.
-        // onFirstSignIn callback handles sync init if user signs in.
-        await LoginView.show(context, _authPresenter);
-        // If the user chose "Log in later" (guest mode), still wire the
+        // Guest / signed-out. Awaken only genuine new users: the gate is unset
+        // AND there is no pre-existing local profile (an upgrading guest already
+        // has one and must not be forced through onboarding). The flow owns the
+        // sign-in step; onFirstSignIn handles sync init if the user signs in.
+        final hasLocalProfile = (await _storage.loadTdeeProfile()) != null;
+        if (!onboarded && !hasLocalProfile) {
+          await OnboardingFlow.show(context, _onboardingPresenter);
+        } else {
+          if (!onboarded) await _storage.saveOnboardingComplete(true);
+          if (mounted) await LoginView.show(context, _authPresenter);
+        }
+        // Guest finish (skip / complete / "log in later"): still wire the
         // home-screen widgets so they reflect local data — sign-in only adds
-        // cloud sync, not whether widgets work.
+        // cloud sync. If the user signed in during the flow, onFirstSignIn
+        // already ran _initSync (which reloads + wires), so skip it here.
         if (mounted && !_authPresenter.isSignedIn) {
           await _reloadAll();
           await _setupWidgetBridge();
@@ -218,6 +242,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _groceryCartPresenter.dispose();
     _aiCoachPresenter.dispose();
     _authPresenter.dispose();
+    _onboardingPresenter.dispose();
     _hubPresenter.dispose();
     _syncService?.dispose();
     _syncPresenter?.dispose();
@@ -460,6 +485,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           updatePresenter: widget.updatePresenter,
           deepLinkRoute: _deepLinkRoute,
           localStorage: _storage,
+          onboardingPresenter: _onboardingPresenter,
         ),
         if (widget.updatePresenter != null)
           Positioned(

@@ -1,0 +1,44 @@
+schema: spec-driven
+
+context: |
+  App: Gamified intermittent-fasting app (Nudgr · Focus) — Solo Leveling RPG framing,
+  evolving into the "Nudgr" design language. Flutter (Dart 3+), MVP architecture with
+  ChangeNotifier presenters. Layers: models/ (immutable data + fromJson/toJson),
+  views/ (dumb UI, ListenableBuilder), presenters/ (all state + RPG math),
+  services/ (I/O — StorageService, NotificationService), utils/ (pure fns).
+
+  Non-negotiables:
+  - No calculations/conditionals in build(); delegate to presenter getters.
+  - All persistence through the StorageService abstract interface.
+  - RPG math (XP, levels, streaks, TDEE) lives only in presenters/models.
+  - Constructor injection only — no GetIt/global locators.
+  - Touch targets >= 44x44px; primary actions in the bottom 30% of the screen.
+  - Animations 150-300ms micro / <=400ms max.
+  - Dual theme (dark default + light). Widgets read Theme.of(context)
+    (colorScheme.*, scaffoldBackgroundColor, textTheme.*) — never hardcode
+    AppColors/AppColorsLight tokens inside widgets. Tokens live in lib/app_colors.dart;
+    direct token use only in lib/views/fasting_app.dart (theme construction).
+
+  Design language (Nudgr, from the redesign reference in "D:\Download\Test (1)"):
+  - Type: Plus Jakarta Sans (400-800). Iconography: Phosphor.
+  - Domain-semantic accents: Fast=blue #2E90FA, Food=teal #26C6DA, Move=green #46BD6B,
+    Weight=purple #926AFA, Treasury/System=gold #FFCA28, Bills=orange #FF8A4C,
+    Danger=red #F6685E. Blue is the default primary action; gold is reserved for
+    "System notice" / status-window / quest moments.
+  - Dark values canonical; light values derived to preserve contrast relationships.
+  - Mirror the reference; never delete existing app features/components just because
+    they are absent from the reference.
+
+  Workflow: conventional commits. Feature branches off `dev`; PRs target `dev`
+  (repo auto-promotes dev->main). One PR per feature. `dart format` + `flutter analyze`
+  clean before commit. Legacy docs/*_spec.md and .claude/plans/ remain as-is;
+  OpenSpec is the source of truth for new work going forward.
+
+# Per-artifact rules (optional)
+rules:
+  proposal:
+    - Always include a "Non-goals" section.
+    - Frame the redesign as restyle + finally-implement, not a net-new flow.
+  tasks:
+    - Order tasks so shared-widget extraction and storage/presenter land before UI.
+    - Each task should be independently verifiable (test or manual smoke).

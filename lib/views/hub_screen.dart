@@ -14,6 +14,7 @@ import '../presenters/hub_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
+import '../presenters/onboarding_presenter.dart';
 import '../presenters/quest_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
@@ -71,6 +72,7 @@ class HubScreen extends StatefulWidget {
     this.updatePresenter,
     this.deepLinkRoute,
     this.localStorage,
+    this.onboardingPresenter,
   });
 
   final HubPresenter hubPresenter;
@@ -91,6 +93,7 @@ class HubScreen extends StatefulWidget {
   final SyncPresenter? syncPresenter;
   final SettingsPresenter settingsPresenter;
   final UpdatePresenter? updatePresenter;
+  final OnboardingPresenter? onboardingPresenter;
 
   /// Set by [AppShell] when a home-screen widget is tapped; the hub consumes it
   /// and navigates to the matching screen.
@@ -485,6 +488,7 @@ class _HubScreenState extends State<HubScreen> {
           aiCoachPresenter: widget.aiCoachPresenter,
           updatePresenter: widget.updatePresenter,
           localStorage: widget.localStorage,
+          onboardingPresenter: widget.onboardingPresenter,
         ),
       ),
     );

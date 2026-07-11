@@ -24,6 +24,33 @@ void main() {
     svc = LocalStorageService();
   });
 
+  // ── Onboarding gate (device-level / unscoped) ────────────────────────────────
+
+  group('StorageService — onboarding gate', () {
+    test('defaults to false when unset', () async {
+      expect(await svc.loadOnboardingComplete(), false);
+    });
+
+    test('save / load round-trip', () async {
+      await svc.saveOnboardingComplete(true);
+      expect(await svc.loadOnboardingComplete(), true);
+    });
+
+    test('is unscoped — survives setUserId (device-level, like theme)',
+        () async {
+      await svc.saveOnboardingComplete(true);
+      await svc.setUserId('user-123');
+      expect(await svc.loadOnboardingComplete(), true);
+    });
+
+    test('survives clearUserData (never wiped on account removal)', () async {
+      await svc.setUserId('user-123');
+      await svc.saveOnboardingComplete(true);
+      await svc.clearUserData();
+      expect(await svc.loadOnboardingComplete(), true);
+    });
+  });
+
   // ── Activity ────────────────────────────────────────────────────────────────
 
   group('StorageService — activity', () {

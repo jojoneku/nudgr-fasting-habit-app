@@ -761,6 +761,41 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (categoryId == null) return;
     var changed = false;
 
+    // ── De-duplicate statement bills. A card should carry at most one bill per
+    // month. Duplicates arose (seen on BNPL cards like ShopeePay) when an
+    // auto-statement coexisted with another bill for the same card+month — a
+    // manual bill the user added, or a stray second auto-statement. Because the
+    // generator below only recognises *auto-statements* when deciding whether
+    // one already exists, deleting the redundant auto copy just brought it back
+    // on the next load. Drop the unpaid, un-transacted auto-statement whenever
+    // another bill already covers that card+month; paid or transacted
+    // statements are authoritative and never removed.
+    final covered =
+        <String>{}; // 'accountId|month' held by a non-removable bill
+    String? billKey(Bill b) =>
+        b.accountId == null ? null : '${b.accountId}|${b.month}';
+    bool isRemovableAuto(Bill b) =>
+        _isAutoStatement(b) && !b.isPaid && b.transactionId == null;
+    for (final b in _allBills) {
+      final key = billKey(b);
+      if (key != null && !isRemovableAuto(b)) covered.add(key);
+    }
+    final duplicateIds = <String>{};
+    for (final b in _allBills) {
+      if (!isRemovableAuto(b)) continue;
+      final key = billKey(b);
+      if (key == null) continue;
+      if (covered.contains(key)) {
+        duplicateIds.add(b.id); // another bill already covers this card+month
+      } else {
+        covered.add(key); // this auto-statement is the sole keeper
+      }
+    }
+    if (duplicateIds.isNotEmpty) {
+      _allBills = _allBills.where((b) => !duplicateIds.contains(b.id)).toList();
+      changed = true;
+    }
+
     final creditAccts = _ledger.accounts.where((a) =>
         a.isActive &&
         a.isLiability &&
@@ -806,6 +841,14 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           continue;
         }
         if (existing != null) continue;
+
+        // A non-auto bill already tracks this card for the month (a manual
+        // statement, or a recurring credit-card bill). Generating an
+        // auto-statement on top would duplicate it — and keep coming back after
+        // the user deletes the auto copy — so skip. (dupe-statement bug)
+        final userBillCoversCard = _allBills.any((b) =>
+            !_isAutoStatement(b) && b.accountId == a.id && b.month == month);
+        if (userBillCoversCard) continue;
 
         // For current month: statement day must have passed.
         if (isCurrentMonth && now.day < a.statementDay!.clamp(1, 28)) continue;
@@ -870,13 +913,46 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final account =
         _ledger.accounts.where((a) => a.id == accountId).firstOrNull;
     if (account == null || !account.isLiability) return;
+    final when = date ?? DateTime.now();
     await _ledger.addTransfer(
       fromAccountId: fromAccountId,
       toAccountId: accountId,
       amount: amount,
       description: '${account.name} payment',
-      date: date ?? DateTime.now(),
+      date: when,
     );
+
+    // Reconcile the statement bill so a card paid from here doesn't keep
+    // showing as "due". If this payment cleared the card (nothing left owed),
+    // mark this month's unpaid statement bill(s) for it paid. Partial payments
+    // leave the bill open — you still owe. Mirrors the clear-on-load
+    // reconciliation in [_autoGenerateCreditStatements].
+    final stillOwed = _ledger.accounts
+            .where((a) => a.id == accountId)
+            .firstOrNull
+            ?.currentPayable ??
+        0;
+    if (stillOwed <= 0) {
+      final month = toMonthKey(when);
+      final statements = _allBills
+          .where((b) =>
+              b.accountId == accountId &&
+              b.month == month &&
+              !b.isPaid &&
+              b.billType == BillType.creditCard)
+          .toList();
+      for (final b in statements) {
+        _updateBill(b.copyWith(
+          isPaid: true,
+          paidDate: when,
+          paidAmount: b.amount,
+        ));
+      }
+      if (statements.isNotEmpty) {
+        safeNotify();
+        await _storage.saveBills(_allBills);
+      }
+    }
     await _notifyDependents();
   }
 
