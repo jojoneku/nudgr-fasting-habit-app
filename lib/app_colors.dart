@@ -1,204 +1,190 @@
 import 'package:flutter/material.dart';
-// ignore_for_file: unused_element
+import 'design_tokens_nudgr.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NEUTRAL (GREY) SCALE — Base for all tiering
+// SEMANTIC COLOR TOKENS — Nudgr design system (see docs/design_system_nudgr_spec.md)
 // ─────────────────────────────────────────────────────────────────────────────
-// Derived from Material grey scale, used as foundation for all surfaces
-class _GreyScale {
-  static const Color grey0 = Color(0xFFFFFFFF); // brightest
-  static const Color grey50 = Color(0xFFFAFAFA);
-  static const Color grey100 = Color(0xFFF5F5F5);
-  static const Color grey200 = Color(0xFFEEEEEE);
-  static const Color grey300 = Color(0xFFE0E0E0);
-  static const Color grey400 = Color(0xFFBDBDBD);
-  static const Color grey500 = Color(0xFF9E9E9E); // base reference
-  static const Color grey600 = Color(0xFF757575);
-  static const Color grey700 = Color(0xFF616161);
-  static const Color grey800 = Color(0xFF424242);
-  static const Color grey900 = Color(0xFF212121); // darkest
-  static const Color grey950 = Color(0xFF0A0A0A);
-}
+// Raw values live in design_tokens_nudgr.dart (NudgrDark / NudgrLight). These
+// classes are the semantic layer app_theme.dart maps into the M3 ColorScheme.
+// Widgets NEVER read AppColors/AppColorsLight directly — they read
+// Theme.of(context) (colorScheme.*, textTheme.*) and context.appColors.
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ACCENT SCALES — Derived from base colors via lightness/saturation
+// LIGHT MODE — derived palette (near-white, deeper accents for AA contrast)
 // ─────────────────────────────────────────────────────────────────────────────
-class _BlueScale {
-  // Sky blue family, derived from hue ~210
-  static const Color scale50 = Color(0xFFE3F2FD);
-  static const Color scale100 = Color(0xFFBBDEFB);
-  static const Color scale200 = Color(0xFF90CAF9);
-  static const Color scale300 = Color(0xFF64B5F6);
-  static const Color scale400 = Color(0xFF42A5F5);
-  static const Color scale500 = Color(0xFF2196F3); // base
-  static const Color scale600 = Color(0xFF1E88E5);
-  static const Color scale700 = Color(0xFF1976D2);
-  static const Color scale800 = Color(0xFF1565C0);
-  static const Color scale900 = Color(0xFF0D47A1);
-}
-
-class _TealScale {
-  // Mana teal/cyan family, derived from hue ~180
-  static const Color scale50 = Color(0xFFE0F2F1);
-  static const Color scale100 = Color(0xFFB2DFDB);
-  static const Color scale200 = Color(0xFF80CBC4);
-  static const Color scale300 = Color(0xFF4DB6AC);
-  static const Color scale400 = Color(0xFF26C6DA);
-  static const Color scale500 = Color(0xFF00BCD4); // base
-  static const Color scale600 = Color(0xFF00ACC1);
-  static const Color scale700 = Color(0xFF0097A7);
-  static const Color scale800 = Color(0xFF00838F);
-  static const Color scale900 = Color(0xFF006064);
-}
-
-class _RedScale {
-  // Ember red family, derived from hue ~0
-  static const Color scale50 = Color(0xFFFFEBEE);
-  static const Color scale100 = Color(0xFFFFCDD2);
-  static const Color scale200 = Color(0xFFEF9A9A);
-  static const Color scale300 = Color(0xFFE57373);
-  static const Color scale400 = Color(0xFFEF5350);
-  static const Color scale500 = Color(0xFFF44336); // base
-  static const Color scale600 = Color(0xFFE53935);
-  static const Color scale700 = Color(0xFFD32F2F);
-  static const Color scale800 = Color(0xFFC62828);
-  static const Color scale900 = Color(0xFFB71C1C);
-}
-
-class _GreenScale {
-  // Forest green family, derived from hue ~120
-  static const Color scale50 = Color(0xFFE8F5E9);
-  static const Color scale100 = Color(0xFFC8E6C9);
-  static const Color scale200 = Color(0xFFA5D6A7);
-  static const Color scale300 = Color(0xFF81C784);
-  static const Color scale400 = Color(0xFF66BB6A);
-  static const Color scale500 = Color(0xFF4CAF50); // base
-  static const Color scale600 = Color(0xFF43A047);
-  static const Color scale700 = Color(0xFF388E3C);
-  static const Color scale800 = Color(0xFF2E7D32);
-  static const Color scale900 = Color(0xFF1B5E20);
-}
-
-class _AmberScale {
-  // Warm amber family, derived from hue ~45
-  static const Color scale50 = Color(0xFFFFF8E1);
-  static const Color scale100 = Color(0xFFFFECB3);
-  static const Color scale200 = Color(0xFFFFE082);
-  static const Color scale300 = Color(0xFFFFD54F);
-  static const Color scale400 = Color(0xFFFFCA28);
-  static const Color scale500 = Color(0xFFFFC107); // base
-  static const Color scale600 = Color(0xFFFFB300);
-  static const Color scale700 = Color(0xFFFFA000);
-  static const Color scale800 = Color(0xFFFF8F00);
-  static const Color scale900 = Color(0xFFFF6F00);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// LIGHT MODE (Future) — Inverse of dark mode
-// ─────────────────────────────────────────────────────────────────────────────
-// Color tiering: grey-50 (background) → grey-0 (elevated surfaces)
-// Text: dark greys for proper contrast on light backgrounds
 class AppColorsLight {
-  // ── SURFACES ──────────────────────────────────────────────────────────────
-  // Strict tiering: background (lightest) → surface (white) → variant (light grey)
-  static const Color background = _GreyScale.grey50; // Lightest (bg)
-  static const Color surface = _GreyScale.grey0; // Elevated (cards)
-  static const Color surfaceVariant = _GreyScale.grey100; // Mid-tone (disabled)
-  static const Color surfaceHigh = _GreyScale.grey200; // Hover/focus states
+  // ── SURFACES (ascending elevation) ──────────────────────────────────────
+  static const Color page = NudgrLight.page; // deepest well / scaffold shell
+  static const Color background = NudgrLight.screen; // scaffold / screen base
+  static const Color sheet = NudgrLight.sheet; // bottom sheets, modals
+  static const Color shell = NudgrLight.shell; // tab bar chrome
+  static const Color surface = NudgrLight.card; // cards, tiles, list items
+  static const Color surfaceVariant = NudgrLight.input; // inputs, card-on-card
+  static const Color surfaceHigh = NudgrLight.track; // tracks / highest
+
+  // ── BORDERS ────────────────────────────────────────────────────────────
+  static const Color borderCard = NudgrLight.borderCard;
+  static const Color borderInner = NudgrLight.borderInner;
 
   // ── ACCENT COLORS ─────────────────────────────────────────────────────────
-  // Darkened for AA+ contrast on light backgrounds
-  static const Color primary = _BlueScale.scale800; // Dark blue
-  static const Color accent = _TealScale.scale800; // Dark teal
-  static const Color secondary =
-      _TealScale.scale700; // Even darker for better contrast
+  static const Color primary = NudgrLight.fast; // Fast · Blue
+  static const Color accent = NudgrLight.food; // Food · Teal
+  static const Color secondary = NudgrLight.food;
 
-  static const Color danger = _RedScale.scale700; // Dark red
-  static const Color success = _GreenScale.scale700; // Dark green
-  static const Color gold = _AmberScale.scale600; // Dark amber
+  static const Color danger = NudgrLight.danger;
+  static const Color success = NudgrLight.move;
+  static const Color gold = NudgrLight.gold;
 
   // ── TEXT ──────────────────────────────────────────────────────────────────
-  static const Color textPrimary = _GreyScale.grey900; // Black (high emphasis)
-  static const Color textSecondary =
-      _GreyScale.grey600; // Dark grey (low emphasis)
+  static const Color textPrimary = NudgrLight.textPrimary;
+  static const Color textSecondary = NudgrLight.textSecondary;
 
-  static const Color error = _RedScale.scale700; // Same as danger
-  static const Color neutral = _GreyScale.grey500; // Base grey
+  static const Color error = NudgrLight.danger;
+  static const Color neutral = NudgrLight.textTertiary;
 
   // ── GLOWS (for shadows/effects) ───────────────────────────────────────────
-  static const Color accentGlow = Color(0x2D00ACC1); // accent @ 20%
-  static const Color successGlow = Color(0x2D388E3C); // success @ 20%
-  static const Color dangerGlow = Color(0x2DD32F2F); // danger @ 20%
+  static const Color accentGlow = Color(0x2D0AACBF); // accent @ ~18%
+  static const Color successGlow = Color(0x2D2EA055); // success @ ~18%
+  static const Color dangerGlow = Color(0x2DD84840); // danger @ ~18%
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DARK MODE (Default) — Solo Leveling RPG Aesthetic
+// DARK MODE (Default) — Solo Leveling RPG aesthetic, premium near-black
 // ─────────────────────────────────────────────────────────────────────────────
-// Color tiering: grey-900 (background) → grey-800 (elevated surfaces)
-// Accent colors: tinted to 500/600 range for vibrancy without hallation
 class AppColors {
-  // ── SURFACES ──────────────────────────────────────────────────────────────
-  // Strict tiering ensures proper visual hierarchy and contrast
-  static const Color background = _GreyScale.grey900; // Darkest (bg)
-  static const Color surface = _GreyScale.grey800; // Elevated (cards)
+  // ── SURFACES (ascending elevation) ──────────────────────────────────────
+  static const Color page = NudgrDark.page; // #0A0A0B deepest well
+  static const Color background = NudgrDark.screen; // #131315 scaffold / screen
+  static const Color sheet = NudgrDark.sheet; // #171718 bottom sheets, modals
+  static const Color shell = NudgrDark.shell; // #0E0E10 tab bar chrome
+  static const Color surface = NudgrDark.card; // #1C1C20 cards, tiles
   static const Color surfaceVariant =
-      _GreyScale.grey700; // Mid-tone (disabled, tertiary)
-  static const Color surfaceHigh = _GreyScale.grey600; // Hover/focus states
+      NudgrDark.input; // #252628 inputs, card-on-card
+  static const Color surfaceHigh = NudgrDark.track; // #26262A tracks / highest
+
+  // ── BORDERS ────────────────────────────────────────────────────────────
+  static const Color borderCard = NudgrDark.borderCard;
+  static const Color borderInner = NudgrDark.borderInner;
 
   // ── ACCENT COLORS ─────────────────────────────────────────────────────────
-  // Tinted at 500-600 range: bright enough for vibrancy, toned enough for comfort
-  static const Color primary = _BlueScale.scale500; // Sky Blue
-  static const Color accent = _TealScale.scale500; // Mana Teal
-  static const Color secondary =
-      _TealScale.scale400; // Soft Cyan (slightly lighter)
+  static const Color primary = NudgrDark.fast; // Fast · Blue
+  static const Color accent = NudgrDark.food; // Food · Teal
+  static const Color secondary = NudgrDark.food;
 
-  static const Color danger = _RedScale.scale500; // Ember Red
-  static const Color success = _GreenScale.scale500; // Forest Green
-  static const Color gold = _AmberScale.scale400; // Warm Amber
+  static const Color danger = NudgrDark.danger;
+  static const Color success = NudgrDark.move;
+  static const Color gold = NudgrDark.gold;
 
   // ── TEXT ──────────────────────────────────────────────────────────────────
-  static const Color textPrimary = _GreyScale.grey0; // White (high emphasis)
-  static const Color textSecondary =
-      _GreyScale.grey400; // Light grey (low emphasis)
+  static const Color textPrimary = NudgrDark.textPrimary;
+  static const Color textSecondary = NudgrDark.textSecondary;
 
-  static const Color error = _RedScale.scale500; // Same as danger
-  static const Color neutral = _GreyScale.grey500; // Base grey
+  static const Color error = NudgrDark.danger;
+  static const Color neutral = NudgrDark.textTertiary;
 
   // ── GLOWS (for shadows/effects) ───────────────────────────────────────────
-  // Used in TextStyle shadows or BoxDecoration for glow effects
-  static const Color accentGlow = Color(0x4D00BCD4); // accent @ 30%
-  static const Color successGlow = Color(0x334CAF50); // success @ 20%
-  static const Color dangerGlow = Color(0x33F44336); // danger @ 20%
+  static const Color accentGlow = Color(0x4D26C6DA); // accent @ 30%
+  static const Color successGlow = Color(0x3346BD6B); // success @ 20%
+  static const Color dangerGlow = Color(0x33F6685E); // danger @ 20%
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// THEME EXTENSION — custom semantic tokens not covered by M3 ColorScheme
+// THEME EXTENSION — domain-semantic tokens not covered by M3 ColorScheme
 // ─────────────────────────────────────────────────────────────────────────────
+// Domain colors: Fast/Food/Move/Bills/Treasury/Weight. Legacy aliases
+// (success/gold/orange/purple) are retained and re-pointed to the new hues so
+// existing call sites (context.appColors.*) keep working unchanged.
 class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   const AppThemeExtension({
+    // Legacy aliases (kept for backwards compatibility)
     required this.success,
     required this.gold,
     required this.orange,
     required this.purple,
+    // Domain accents
+    required this.fast,
+    required this.food,
+    required this.move,
+    required this.bills,
+    required this.treasury,
+    required this.weight,
+    // Ring / bar track fills
+    required this.fastTrack,
+    required this.foodTrack,
+    required this.moveTrack,
+    // Extra text tiers
+    required this.textTertiary,
+    required this.textMuted,
+    required this.textInactive,
+    // Extra border
+    required this.borderSheet,
   });
 
+  // Legacy aliases → success == move, gold == treasury, orange == bills,
+  // purple == weight.
   final Color success;
   final Color gold;
-  final Color orange; // energy / heat / extended fasting / utility
-  final Color purple; // RPG advanced / debt / ketosis
+  final Color orange; // == bills (energy / heat / warning)
+  final Color purple; // == weight (RPG advanced / ketosis)
+
+  // Domain accents
+  final Color fast; // Blue
+  final Color food; // Teal
+  final Color move; // Green
+  final Color bills; // Orange
+  final Color treasury; // Gold
+  final Color weight; // Purple
+
+  // Track fills (dim background behind ring arcs / progress bars)
+  final Color fastTrack;
+  final Color foodTrack;
+  final Color moveTrack;
+
+  // Text tiers beyond onSurface / onSurfaceVariant
+  final Color textTertiary;
+  final Color textMuted;
+  final Color textInactive;
+
+  final Color borderSheet;
 
   static const dark = AppThemeExtension(
-    success: AppColors.success,
-    gold: AppColors.gold,
-    orange: Color(0xFFFF7043), // Deep Orange 400 — vibrant on dark bg
-    purple: Color(0xFFAB47BC), // Purple 400 — vibrant on dark bg
+    success: NudgrDark.move,
+    gold: NudgrDark.gold,
+    orange: NudgrDark.bills,
+    purple: NudgrDark.weight,
+    fast: NudgrDark.fast,
+    food: NudgrDark.food,
+    move: NudgrDark.move,
+    bills: NudgrDark.bills,
+    treasury: NudgrDark.gold,
+    weight: NudgrDark.weight,
+    fastTrack: NudgrDark.fastTrack,
+    foodTrack: NudgrDark.foodTrack,
+    moveTrack: NudgrDark.moveTrack,
+    textTertiary: NudgrDark.textTertiary,
+    textMuted: NudgrDark.textMuted,
+    textInactive: NudgrDark.textInactive,
+    borderSheet: NudgrDark.borderSheet,
   );
 
   static const light = AppThemeExtension(
-    success: AppColorsLight.success,
-    gold: AppColorsLight.gold,
-    orange: Color(0xFFE64A19), // Deep Orange 700 — AA contrast on light bg
-    purple: Color(0xFF7B1FA2), // Purple 800 — AA contrast on light bg
+    success: NudgrLight.move,
+    gold: NudgrLight.gold,
+    orange: NudgrLight.bills,
+    purple: NudgrLight.weight,
+    fast: NudgrLight.fast,
+    food: NudgrLight.food,
+    move: NudgrLight.move,
+    bills: NudgrLight.bills,
+    treasury: NudgrLight.gold,
+    weight: NudgrLight.weight,
+    fastTrack: NudgrLight.fastTrack,
+    foodTrack: NudgrLight.foodTrack,
+    moveTrack: NudgrLight.moveTrack,
+    textTertiary: NudgrLight.textTertiary,
+    textMuted: NudgrLight.textMuted,
+    textInactive: NudgrLight.textInactive,
+    borderSheet: NudgrLight.borderSheet,
   );
 
   @override
@@ -207,12 +193,38 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     Color? gold,
     Color? orange,
     Color? purple,
+    Color? fast,
+    Color? food,
+    Color? move,
+    Color? bills,
+    Color? treasury,
+    Color? weight,
+    Color? fastTrack,
+    Color? foodTrack,
+    Color? moveTrack,
+    Color? textTertiary,
+    Color? textMuted,
+    Color? textInactive,
+    Color? borderSheet,
   }) =>
       AppThemeExtension(
         success: success ?? this.success,
         gold: gold ?? this.gold,
         orange: orange ?? this.orange,
         purple: purple ?? this.purple,
+        fast: fast ?? this.fast,
+        food: food ?? this.food,
+        move: move ?? this.move,
+        bills: bills ?? this.bills,
+        treasury: treasury ?? this.treasury,
+        weight: weight ?? this.weight,
+        fastTrack: fastTrack ?? this.fastTrack,
+        foodTrack: foodTrack ?? this.foodTrack,
+        moveTrack: moveTrack ?? this.moveTrack,
+        textTertiary: textTertiary ?? this.textTertiary,
+        textMuted: textMuted ?? this.textMuted,
+        textInactive: textInactive ?? this.textInactive,
+        borderSheet: borderSheet ?? this.borderSheet,
       );
 
   @override
@@ -223,6 +235,19 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       gold: Color.lerp(gold, other.gold, t)!,
       orange: Color.lerp(orange, other.orange, t)!,
       purple: Color.lerp(purple, other.purple, t)!,
+      fast: Color.lerp(fast, other.fast, t)!,
+      food: Color.lerp(food, other.food, t)!,
+      move: Color.lerp(move, other.move, t)!,
+      bills: Color.lerp(bills, other.bills, t)!,
+      treasury: Color.lerp(treasury, other.treasury, t)!,
+      weight: Color.lerp(weight, other.weight, t)!,
+      fastTrack: Color.lerp(fastTrack, other.fastTrack, t)!,
+      foodTrack: Color.lerp(foodTrack, other.foodTrack, t)!,
+      moveTrack: Color.lerp(moveTrack, other.moveTrack, t)!,
+      textTertiary: Color.lerp(textTertiary, other.textTertiary, t)!,
+      textMuted: Color.lerp(textMuted, other.textMuted, t)!,
+      textInactive: Color.lerp(textInactive, other.textInactive, t)!,
+      borderSheet: Color.lerp(borderSheet, other.borderSheet, t)!,
     );
   }
 }
