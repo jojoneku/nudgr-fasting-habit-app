@@ -6,6 +6,7 @@ import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
+import '../presenters/onboarding_presenter.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/sync_presenter.dart';
@@ -15,6 +16,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_spacing.dart';
 import 'auth/login_view.dart';
+import 'onboarding/onboarding_flow.dart';
 import 'settings/notification_settings_sheet.dart';
 import 'settings/restore_backup_sheet.dart';
 import 'stats_view.dart';
@@ -34,6 +36,7 @@ class SettingsScreen extends StatelessWidget {
     this.storageService,
     this.notificationService,
     this.localStorage,
+    this.onboardingPresenter,
   });
 
   final FastingPresenter fastingPresenter;
@@ -50,6 +53,9 @@ class SettingsScreen extends StatelessWidget {
   /// Concrete storage for the cloud-backup restore flow (needs
   /// export/import helpers not on the abstract [StorageService]).
   final LocalStorageService? localStorage;
+
+  /// Drives the "Replay the Awakening" entry — reused instance owned by AppShell.
+  final OnboardingPresenter? onboardingPresenter;
 
   @override
   Widget build(BuildContext context) {
@@ -583,6 +589,20 @@ class SettingsScreen extends StatelessWidget {
     return AppGroupedListSection(
       title: 'About',
       children: [
+        if (onboardingPresenter != null)
+          AppListTile(
+            insetGrouped: true,
+            leading: const AppIconBadge(icon: Icons.auto_awesome),
+            title: const Text('Replay the Awakening'),
+            subtitle: const Text('Re-run first-run setup, prefilled'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              final op = onboardingPresenter!;
+              op.prefillFromSavedProfile();
+              op.goToStep(0);
+              OnboardingFlow.show(context, op);
+            },
+          ),
         AppListTile(
           insetGrouped: true,
           leading: const AppIconBadge(icon: Icons.info_outline),

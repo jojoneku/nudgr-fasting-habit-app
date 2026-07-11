@@ -1543,6 +1543,23 @@ class LocalStorageService extends StorageService {
     return prefs.getString(StorageService.kThemeMode);
   }
 
+  // ── Onboarding gate (device-level, unscoped, never synced) ───────────────────
+  // Deliberately bypasses [_k] and is absent from [_kUserDataKeys], so it is
+  // evaluable before sign-in and survives detachUser/clearUserData — a fresh
+  // device for an existing account still awakens (welcome-back fast-forwards it).
+
+  @override
+  Future<void> saveOnboardingComplete(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(StorageService.kOnboardingComplete, value);
+  }
+
+  @override
+  Future<bool> loadOnboardingComplete() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(StorageService.kOnboardingComplete) ?? false;
+  }
+
   // ── Home-screen widget bridge (device-level, unscoped, never synced) ─────────
 
   @override
