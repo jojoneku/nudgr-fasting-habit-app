@@ -283,6 +283,24 @@ void main() {
     });
   });
 
+  group('review edit navigation', () {
+    test('advance is a normal next() when not editing', () {
+      expect(p.step, 0);
+      p.advance();
+      expect(p.step, 1);
+    });
+
+    test('editStep jumps to the step; the next advance returns to Review', () {
+      p.editStep(2);
+      expect(p.step, 2);
+      p.advance();
+      expect(p.step, OnboardingPresenter.reviewStep);
+      // Subsequent advances resume stepping forward normally.
+      p.advance();
+      expect(p.step, OnboardingPresenter.reviewStep + 1);
+    });
+  });
+
   group('notifications', () {
     test('requestNotifications never throws on denial/error', () async {
       notifications.throwOnRequest = true;

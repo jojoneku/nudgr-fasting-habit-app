@@ -73,7 +73,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     // Sign-in just completed while on the Identity step: fast-forward if a cloud
     // profile was pulled, otherwise advance into the profile steps.
     if (!_wasSignedIn && p.isSignedIn && p.step == 1) {
-      if (!p.cloudProfileFound) p.next();
+      if (!p.cloudProfileFound) p.advance();
     }
     _wasSignedIn = p.isSignedIn;
     setState(() {});
@@ -123,9 +123,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             children: [
               _TopBar(
                 step: p.step,
-                showBack: p.step > 0 && p.step <= 6,
+                showBack: p.step > 0,
                 onBack: p.back,
-                onSkip: _skipAndClose,
+                onSkip: p.advance, // skip THIS step (advance); not a full bail
               ),
               Expanded(
                 child: AnimatedSwitcher(
@@ -154,7 +154,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       5 => _statusWindow(),
       6 => _protocol(),
       7 => _summons(),
-      8 => _firstQuest(),
+      8 => _review(),
+      9 => _firstQuest(),
       _ => const SizedBox.shrink(),
     };
   }
@@ -211,7 +212,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   // ── Step 0 · Awakening ────────────────────────────────────────────────────────
   Widget _awakening() {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final fast = context.appColors.fast;
     return _stepScaffold(
       body: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
@@ -220,52 +221,28 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
-              width: 108,
-              height: 108,
+              width: 88,
+              height: 88,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    gold.withValues(alpha: 0.28),
-                    gold.withValues(alpha: 0)
-                  ],
-                ),
+                color: fast.withValues(alpha: 0.12),
               ),
-              child: Center(
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: gold.withValues(alpha: 0.5), width: 1.5),
-                  ),
-                  child: Icon(Icons.auto_awesome, color: gold, size: 28),
-                ),
-              ),
+              child: Icon(Icons.bolt, color: fast, size: 38),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'SYSTEM NOTICE',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: gold,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 3,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              'You have been chosen as a Player.',
+              "Let's set you up",
               textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
+              style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
-                height: 1.25,
+                height: 1.2,
+                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: AppSpacing.md),
             Text(
-              "Accept to begin your awakening — we'll build your profile and "
-              'set your first protocol.',
+              'A quick setup builds your profile, sets your daily targets, and '
+              'picks your first fasting protocol.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
@@ -277,12 +254,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       ),
       cta: Column(
         children: [
-          _GoldButton(
-              label: 'Accept', icon: Icons.arrow_forward, onPressed: p.next),
+          AppPrimaryButton(label: 'Get started', onPressed: p.advance),
           const SizedBox(height: AppSpacing.sm),
           TextButton(
             onPressed: _skipAndClose,
-            child: const Text('Skip awakening'),
+            child: const Text('Skip for now'),
           ),
         ],
       ),
@@ -296,7 +272,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _heading('Welcome back, Hunter',
+            _heading('Welcome back',
                 'We found your record in the cloud. Pick up right where you left off.'),
             _InfoBanner(
               icon: Icons.cloud_done,
@@ -316,8 +292,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Claim your identity',
-              'Sign in to sync across devices — or walk alone and stay fully on-device.'),
+          _heading('Sign in',
+              'Sync across devices — or continue on this device only.'),
+          _InfoBanner(
+            icon: Icons.shield_outlined,
+            color: context.appColors.fast,
+            text: 'Guest mode keeps everything on your device. '
+                'You can sign in later without losing data.',
+          ),
+        ],
+      ),
+      cta: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
           AppPrimaryButton(
             label: 'Continue with Google',
             leading: Icons.login,
@@ -328,18 +315,10 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           AppSecondaryButton(
             label: 'Walk alone for now',
             leading: Icons.directions_walk,
-            onPressed: p.authLoading ? null : p.next,
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          _InfoBanner(
-            icon: Icons.shield_outlined,
-            color: context.appColors.fast,
-            text: 'Guest mode keeps everything on your device. '
-                'You can sign in later without losing data.',
+            onPressed: p.authLoading ? null : p.advance,
           ),
         ],
       ),
-      cta: const SizedBox.shrink(),
     );
   }
 
@@ -349,7 +328,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Your vessel', 'The basics behind your energy math.'),
+          _heading('About you', 'The basics behind your calorie math.'),
           BodyStatsForm(
             weightCtrl: _weightCtrl,
             heightCtrl: _heightCtrl,
@@ -366,7 +345,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         label: 'Continue',
         onPressed: () {
           _syncBodyFromControllers();
-          if (_bodyValid) p.next();
+          if (_bodyValid) p.advance();
         },
       ),
     );
@@ -378,14 +357,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Training load', 'How active is a typical week?'),
+          _heading('Activity level', 'How active is a typical week?'),
           ActivityLevelSelector(
             selected: p.activityLevel,
             onChanged: p.setActivity,
           ),
         ],
       ),
-      cta: AppPrimaryButton(label: 'Continue', onPressed: p.next),
+      cta: AppPrimaryButton(label: 'Continue', onPressed: p.advance),
     );
   }
 
@@ -421,7 +400,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Choose your path', "We'll size your targets around it."),
+          _heading('Your goal', "We'll size your targets around it."),
           for (final g in goals)
             _SelectCard(
               icon: g.icon,
@@ -433,9 +412,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         ],
       ),
       cta: AppPrimaryButton(
-        label: 'Reveal my stats',
-        leading: Icons.auto_awesome,
-        onPressed: p.canRevealStats ? p.next : null,
+        label: 'See my targets',
+        onPressed: p.canRevealStats ? p.advance : null,
       ),
     );
   }
@@ -443,13 +421,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
   // ── Step 5 · Status Window ─────────────────────────────────────────────────────
   Widget _statusWindow() {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
     final profile = p.previewProfile;
     if (profile == null) {
       return _stepScaffold(
-        body: _heading('Your starting stats',
-            'Complete the earlier steps to see your numbers.'),
-        cta: AppSecondaryButton(label: 'Back', onPressed: p.back),
+        body: _heading('Your daily targets',
+            'Add your body details to see your numbers — or continue and set them later.'),
+        cta: Column(
+          children: [
+            AppPrimaryButton(
+                label: 'Add my details', onPressed: () => p.goToStep(2)),
+            const SizedBox(height: AppSpacing.sm),
+            AppSecondaryButton(label: 'Continue', onPressed: p.advance),
+          ],
+        ),
       );
     }
     return _stepScaffold(
@@ -457,18 +441,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Center(
-            child: Text(
-              'STATUS WINDOW',
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: gold,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          Center(
-            child: Text('Your starting stats',
+            child: Text('Your daily targets',
                 style: theme.textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800)),
           ),
@@ -534,7 +507,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ]),
         ],
       ),
-      cta: AppPrimaryButton(label: 'Looks right — continue', onPressed: p.next),
+      cta: AppPrimaryButton(
+          label: 'Looks right — continue', onPressed: p.advance),
     );
   }
 
@@ -562,7 +536,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             ),
         ],
       ),
-      cta: AppPrimaryButton(label: 'Continue', onPressed: p.next),
+      cta: AppPrimaryButton(label: 'Continue', onPressed: p.advance),
     );
   }
 
@@ -585,7 +559,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             child: Icon(Icons.notifications_active, color: fast, size: 32),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Let the System summon you',
+          Text('Stay on track',
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineSmall
                   ?.copyWith(fontWeight: FontWeight.w800)),
@@ -612,20 +586,80 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             label: 'Allow notifications',
             onPressed: () async {
               await p.requestNotifications();
-              p.next();
+              p.advance();
             },
           ),
           const SizedBox(height: AppSpacing.sm),
-          TextButton(onPressed: p.next, child: const Text('Not now')),
+          TextButton(onPressed: p.advance, child: const Text('Not now')),
         ],
       ),
     );
   }
 
-  // ── Step 8 · First Quest ───────────────────────────────────────────────────────
+  // ── Step 8 · Review ─────────────────────────────────────────────────────────
+  Widget _review() {
+    final profile = p.previewProfile;
+    final proto = FastingProtocol.all.firstWhere(
+      (x) => x.hours == p.protocolHours,
+      orElse: () => FastingProtocol.all[2],
+    );
+    return _stepScaffold(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _heading('Review your setup', 'Tap Edit to change anything.'),
+          _ReviewRow(
+              label: 'Account',
+              value: p.identitySummary,
+              onEdit: () => p.editStep(1)),
+          _ReviewRow(
+              label: 'About you',
+              value: _bodySummary(),
+              onEdit: () => p.editStep(2)),
+          _ReviewRow(
+              label: 'Activity',
+              value: p.activityLevel.label,
+              onEdit: () => p.editStep(3)),
+          _ReviewRow(
+              label: 'Goal',
+              value: _goalLabel(p.goal),
+              onEdit: () => p.editStep(4)),
+          _ReviewRow(
+              label: 'Daily target',
+              value: profile != null
+                  ? '${profile.targetCalories} kcal'
+                  : 'Not set',
+              onEdit: () => p.editStep(4)),
+          _ReviewRow(
+              label: 'Protocol',
+              value: '${proto.rpgName} · ${proto.ratio}',
+              onEdit: () => p.editStep(6)),
+        ],
+      ),
+      cta: AppPrimaryButton(label: 'Confirm & finish', onPressed: p.advance),
+    );
+  }
+
+  String _bodySummary() {
+    final w = p.weightKg, h = p.heightCm, a = p.ageYears;
+    if (w == null || h == null || a == null) return 'Not set';
+    final sex = p.sex.isEmpty
+        ? ''
+        : '${p.sex[0].toUpperCase()}${p.sex.substring(1)} · ';
+    return '$a yrs · $sex${_trimNum(h)} cm · ${_trimNum(w)} kg';
+  }
+
+  static String _goalLabel(String goal) => switch (goal) {
+        'cut' => 'Cut',
+        'bulk' => 'Lean gain',
+        'recomp' => 'Recomp',
+        _ => 'Maintain',
+      };
+
+  // ── Step 9 · First Quest ───────────────────────────────────────────────────────
   Widget _firstQuest() {
     final theme = Theme.of(context);
-    final gold = context.appColors.gold;
+    final fast = context.appColors.fast;
     return _stepScaffold(
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -636,30 +670,14 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
             height: 84,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: RadialGradient(
-                colors: [
-                  gold.withValues(alpha: 0.3),
-                  gold.withValues(alpha: 0)
-                ],
-              ),
+              color: fast.withValues(alpha: 0.12),
             ),
-            child: Center(
-              child: Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: gold,
-                ),
-                child: Icon(Icons.description,
-                    color: theme.colorScheme.onPrimaryContainer, size: 28),
-              ),
-            ),
+            child: Icon(Icons.check_circle, color: fast, size: 40),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('NEW QUEST',
+          Text("YOU'RE ALL SET",
               style: theme.textTheme.labelSmall?.copyWith(
-                color: gold,
+                color: theme.colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 2,
               )),
@@ -687,7 +705,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('First Quest · Start a fast',
+                      Text('Start your first fast',
                           style: theme.textTheme.bodyMedium
                               ?.copyWith(fontWeight: FontWeight.w700)),
                       Text(_protocolName(p.protocolHours),
@@ -788,14 +806,16 @@ class _TopBar extends StatelessWidget {
           SizedBox(
             width: 64,
             height: 48,
-            child: step == 8
-                ? null
-                : TextButton(
+            // Per-step skip on the input steps only (Identity … Summons).
+            // Awakening has its own bail; Review and First Quest have none.
+            child: (step >= 1 && step < OnboardingPresenter.reviewStep)
+                ? TextButton(
                     onPressed: onSkip,
                     child: Text('Skip',
                         style: TextStyle(
                             color: theme.colorScheme.onSurfaceVariant)),
-                  ),
+                  )
+                : null,
           ),
         ],
       ),
@@ -803,41 +823,46 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-// ── Gold system-moment button (Awakening) ──────────────────────────────────────
-class _GoldButton extends StatelessWidget {
+// ── Review row (label · value · Edit) ──────────────────────────────────────────
+class _ReviewRow extends StatelessWidget {
   final String label;
-  final IconData icon;
-  final VoidCallback onPressed;
-  const _GoldButton({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
+  final String value;
+  final VoidCallback onEdit;
+  const _ReviewRow(
+      {required this.label, required this.value, required this.onEdit});
 
   @override
   Widget build(BuildContext context) {
-    final gold = context.appColors.gold;
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: gold,
-          foregroundColor: const Color(0xFF2A1A00),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-        onPressed: onPressed,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(label,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-            const SizedBox(width: 8),
-            Icon(icon, size: 18),
-          ],
-        ),
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(AppSpacing.md, 10, AppSpacing.sm, 10),
+      constraints: const BoxConstraints(minHeight: 56),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label.toUpperCase(),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      letterSpacing: 0.5,
+                    )),
+                const SizedBox(height: 2),
+                Text(value,
+                    style: theme.textTheme.bodyMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          TextButton(onPressed: onEdit, child: const Text('Edit')),
+        ],
       ),
     );
   }

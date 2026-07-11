@@ -19,18 +19,39 @@ flag MUST be evaluable before sign-in, MUST survive sign-out / account switch (i
 - **THEN** the flag remains true and the flow does not reappear on next launch
 
 ### Requirement: Step flow and navigation
-The flow SHALL present nine ordered steps — Awakening, Identity, Vessel, Training, Path,
-Status Window, Protocol, Summons, First Quest. Every step MUST expose a **Skip** control
-(≥44×44px). **Back** MUST NOT lose values already entered, because draft state lives in the
-presenter rather than in widget state.
+The flow SHALL present ordered steps — Awakening, Identity, Vessel, Training, Path, Status Window,
+Protocol, Summons, **Review**, First Quest. Each input step (Identity through Summons) MUST expose a
+per-step **Skip** control (≥44×44px) that advances to the next step (skipping only that step, not the
+whole flow). **Back** MUST be available on every step after the first and MUST NOT lose values
+already entered, because draft state lives in the presenter rather than in widget state.
 
 #### Scenario: Forward and back preserve draft
 - **WHEN** the user enters body values on Vessel, advances, then returns via Back
 - **THEN** the previously entered values are still present
 
-#### Scenario: Skip is always available
-- **WHEN** any step is displayed
-- **THEN** a Skip control is visible and meets the 44×44px minimum touch target
+#### Scenario: Per-step skip advances without exiting
+- **WHEN** the user taps Skip on an input step
+- **THEN** the flow moves to the next step and does not exit or mark onboarding complete
+
+#### Scenario: A skipped input step does not dead-end the Status Window
+- **WHEN** the body step was skipped and the Status Window is reached
+- **THEN** the Status Window still offers a way to add details or continue
+
+### Requirement: Review before finish
+Before the finishing step, the flow SHALL present a **Review** step summarising every input —
+account/identity, body basics, activity level, goal, computed daily target, and fasting protocol.
+Each summarised item MUST offer an **Edit** action that jumps to its step; after editing, the next
+advance MUST return directly to the Review step rather than continuing forward. Confirming Review
+proceeds to the finish.
+
+#### Scenario: Review lists all inputs
+- **WHEN** the Review step is shown
+- **THEN** it displays the account, body, activity, goal, daily target, and protocol values (or
+  "Not set" for anything skipped)
+
+#### Scenario: Edit returns to Review
+- **WHEN** the user taps Edit on an item, changes it, and advances
+- **THEN** the flow returns to the Review step with the updated value shown
 
 ### Requirement: Identity step and guest mode
 The Identity step SHALL offer **Continue with Google** and **Walk alone for now** (guest). Choosing
@@ -107,12 +128,14 @@ SHALL award no XP. Re-running the flow MUST NOT seed the quest again or re-award
 - **WHEN** the flow is re-run after already being completed
 - **THEN** no additional starter quest is created
 
-### Requirement: Skip preserves current defaults
-Skipping at any step SHALL mark `onboardingComplete` true, keep today's defaults (2,000 kcal simple
-goal, 16h fasting), land on the Hub, and prevent the flow from reappearing.
+### Requirement: Bail preserves current defaults
+Bailing out of the whole flow (the "Skip for now" action on the first screen) SHALL mark
+`onboardingComplete` true, keep today's defaults (2,000 kcal simple goal, 16h fasting), land on the
+Hub, and prevent the flow from reappearing. (This is distinct from per-step Skip, which only
+advances one step.)
 
-#### Scenario: Skip from any step
-- **WHEN** the user skips at any step
+#### Scenario: Bail from the first screen
+- **WHEN** the user taps "Skip for now" on the first screen
 - **THEN** the app lands on the Hub with today's defaults and the flow never reappears
 
 ### Requirement: Replay from Settings

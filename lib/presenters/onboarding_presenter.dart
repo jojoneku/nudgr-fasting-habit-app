@@ -43,10 +43,17 @@ class OnboardingPresenter extends ChangeNotifier {
   final NotificationService _notifications;
   final AuthPresenter _auth;
 
-  static const int lastStep = 8;
+  static const int lastStep = 9;
+
+  /// Index of the Review step (all inputs summarised before the finish).
+  static const int reviewStep = 8;
 
   int _step = 0;
   int get step => _step;
+
+  // When the user taps "Edit" on the Review step, the next advance jumps back to
+  // Review instead of stepping forward — so editing one field returns you here.
+  bool _returnToReview = false;
 
   // ── Draft (mirrors TdeeSetupScreen state; commit reuses existing math) ───────
   double? _weightKg;
@@ -84,6 +91,28 @@ class OnboardingPresenter extends ChangeNotifier {
     _step = step.clamp(0, lastStep);
     notifyListeners();
   }
+
+  /// Advances one step — but if the user is editing a field from Review, jumps
+  /// straight back to Review. Used by every step's primary/skip control so both
+  /// "continue" and "skip this step" honour the edit-return.
+  void advance() {
+    if (_returnToReview) {
+      _returnToReview = false;
+      goToStep(reviewStep);
+      return;
+    }
+    next();
+  }
+
+  /// Jump to [step] to edit it, remembering to return to Review afterwards.
+  void editStep(int step) {
+    _returnToReview = true;
+    goToStep(step);
+  }
+
+  /// One-line identity summary for the Review step.
+  String get identitySummary =>
+      isSignedIn ? (_auth.userEmail ?? 'Signed in') : 'Guest — on this device';
 
   // ── Draft mutations ────────────────────────────────────────────────────────
   void setBody(
