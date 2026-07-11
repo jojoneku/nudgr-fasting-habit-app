@@ -430,7 +430,10 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
         );
       case 0:
       default:
-        return WebDashboardPage(presenter: widget.dashPresenter);
+        return WebDashboardPage(
+          presenter: widget.dashPresenter,
+          billsPresenter: widget.billsPresenter,
+        );
     }
   }
 
