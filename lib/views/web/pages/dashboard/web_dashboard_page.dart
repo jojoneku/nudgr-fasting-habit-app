@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -11,7 +12,17 @@ import '../../widgets/web_widgets.dart';
 /// [TreasuryDashboardPresenter]; layout-only logic lives here, never math.
 class WebDashboardPage extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
-  const WebDashboardPage({super.key, required this.presenter});
+
+  /// Bills presenter — owns the credit-card payment path ([quickPayCard]) that
+  /// the Credit card's "Pay Now" button routes through, so paying also
+  /// reconciles the matching statement bill.
+  final BillsReceivablesPresenter billsPresenter;
+
+  const WebDashboardPage({
+    super.key,
+    required this.presenter,
+    required this.billsPresenter,
+  });
 
   /// Below this width the two content columns stack into one.
   static const double _twoColMin = 920;
@@ -40,7 +51,11 @@ class WebDashboardPage extends StatelessWidget {
               const SizedBox(height: WebInsets.xl),
               _NetWorthTrendCard(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
-              _ContentColumns(presenter: presenter, minWidth: _twoColMin),
+              _ContentColumns(
+                presenter: presenter,
+                billsPresenter: billsPresenter,
+                minWidth: _twoColMin,
+              ),
             ],
           ),
         );
@@ -85,13 +100,14 @@ class _PositionRow extends StatelessWidget {
         sub: 'Cash, savings & goals',
         icon: Icons.savings_outlined,
       ),
-      // Budget Allocated (this month's total planned spend) replaces the old
-      // "Current Obligations" tile, which was a straight alias of the Month-End
-      // Outlook's "Upcoming Bills" figure and so duplicated it.
+      // Budget Left — how much of this month's plan is still unspent. Shown
+      // instead of total allocated so it reconciles with the Month-End Outlook:
+      // this same remaining figure is what "Proj. Month-End Cash" reserves, so
+      // as you spend it down the forecast reflects your real spendable cash.
       WebStatTile(
-        label: 'Budget Allocated',
-        value: formatPeso(p.totalBudgetAllocated),
-        sub: 'Planned spend this month',
+        label: 'Budget Left',
+        value: formatPeso(p.totalBudgetRemaining),
+        sub: 'Left to spend this month',
         icon: Icons.pie_chart_outline_rounded,
       ),
     ];
@@ -233,8 +249,13 @@ class _NetWorthTrendCard extends StatelessWidget {
 
 class _ContentColumns extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
+  final BillsReceivablesPresenter billsPresenter;
   final double minWidth;
-  const _ContentColumns({required this.presenter, required this.minWidth});
+  const _ContentColumns({
+    required this.presenter,
+    required this.billsPresenter,
+    required this.minWidth,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -249,7 +270,7 @@ class _ContentColumns extends StatelessWidget {
       _BudgetHealthCard(presenter: presenter),
       _DailySpendingCard(presenter: presenter),
       if (presenter.creditAccounts.isNotEmpty)
-        _CreditCard(presenter: presenter),
+        _CreditCard(presenter: presenter, billsPresenter: billsPresenter),
       _WhereMoneyGoesCard(presenter: presenter),
       _SavingsGoalsCard(presenter: presenter),
     ];
@@ -448,7 +469,8 @@ class _IncomeExpensesCard extends StatelessWidget {
 /// the accounts card). Mirrors the mobile `_CreditSection`.
 class _CreditCard extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
-  const _CreditCard({required this.presenter});
+  final BillsReceivablesPresenter billsPresenter;
+  const _CreditCard({required this.presenter, required this.billsPresenter});
 
   @override
   Widget build(BuildContext context) {
@@ -458,6 +480,8 @@ class _CreditCard extends StatelessWidget {
       if (i > 0) rows.add(const SizedBox(height: WebInsets.lg));
       final a = accounts[i];
       rows.add(_CreditAccountRow(
+        presenter: presenter,
+        billsPresenter: billsPresenter,
         account: a,
         dueInfo: presenter.creditDueInfo(a),
         minimumDue: presenter.creditMinimumDue(a),
@@ -477,15 +501,93 @@ class _CreditCard extends StatelessWidget {
 }
 
 class _CreditAccountRow extends StatelessWidget {
+  final TreasuryDashboardPresenter presenter;
+  final BillsReceivablesPresenter billsPresenter;
   final FinancialAccount account;
   final ({String label, bool imminent})? dueInfo;
   final double? minimumDue;
 
   const _CreditAccountRow({
+    required this.presenter,
+    required this.billsPresenter,
     required this.account,
     required this.dueInfo,
     required this.minimumDue,
   });
+
+  Future<void> _payNow(BuildContext context) async {
+    final funders = presenter.liquidAccounts;
+    final messenger = ScaffoldMessenger.of(context);
+    if (funders.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('No liquid account to pay from.')),
+      );
+      return;
+    }
+    var fromId = funders.first.id;
+    final amountController = TextEditingController(
+      text: account.currentPayable.toStringAsFixed(2),
+    );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setLocalState) => AlertDialog(
+          title: Text('Pay ${account.name}'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('You owe ${formatPeso(account.currentPayable)}. '
+                  'This transfers from the funding account and lowers what you owe.'),
+              const SizedBox(height: WebInsets.md),
+              TextField(
+                controller: amountController,
+                autofocus: true,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Amount'),
+              ),
+              const SizedBox(height: WebInsets.md),
+              DropdownButtonFormField<String>(
+                initialValue: fromId,
+                decoration: const InputDecoration(labelText: 'Pay from'),
+                items: [
+                  for (final a in funders)
+                    DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setLocalState(() => fromId = v ?? fromId),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Pay'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (confirmed == true) {
+      final amount = double.tryParse(amountController.text.trim()) ?? 0;
+      if (amount > 0) {
+        await billsPresenter.quickPayCard(
+          accountId: account.id,
+          fromAccountId: fromId,
+          amount: amount,
+        );
+        messenger.showSnackBar(
+          SnackBar(
+              content: Text('Paid ${formatPeso(amount)} to ${account.name}.')),
+        );
+      }
+    }
+    amountController.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -559,6 +661,18 @@ class _CreditAccountRow extends StatelessWidget {
             ],
           ),
         ],
+        const SizedBox(height: WebInsets.md),
+        Align(
+          alignment: Alignment.centerRight,
+          // Disabled when nothing is owed — an overpaid or cleared card has
+          // currentPayable == 0, so there is nothing to pay.
+          child: FilledButton.tonalIcon(
+            onPressed:
+                account.currentPayable > 0 ? () => _payNow(context) : null,
+            icon: const Icon(Icons.send_rounded, size: 16),
+            label: const Text('Pay Now'),
+          ),
+        ),
       ],
     );
   }

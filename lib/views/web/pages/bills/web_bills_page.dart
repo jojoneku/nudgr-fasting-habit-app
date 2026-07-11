@@ -899,6 +899,14 @@ class _UpcomingCard extends StatelessWidget {
       title: 'Upcoming',
       description:
           '${formatPeso(dueTotal)} across ${unpaid.length} ${unpaid.length == 1 ? 'bill' : 'bills'}',
+      trailing: TextButton.icon(
+        onPressed: () => showDialog<void>(
+          context: context,
+          builder: (_) => _AddBillDialog(presenter: presenter),
+        ),
+        icon: const Icon(Icons.add_rounded, size: 18),
+        label: const Text('Add bill'),
+      ),
       child: unpaid.isEmpty
           ? const _EmptyHint('No bills due — you are all caught up.')
           : Column(
@@ -1110,10 +1118,16 @@ class _BillRow extends StatelessWidget {
 
     // Marking paid moves real money out of an account and can't be undone in
     // one click — confirm, let the user pick which account is debited, and
-    // default to the first eligible one. (Plan 052 U1/U2) The "already in
-    // ledger" toggle skips recording entirely for expenses logged manually.
+    // default to the account set on the bill when it's a valid payer, falling
+    // back to the first eligible one. (Plan 052 U1/U2) Preferring bill.accountId
+    // is safe here because payerAccountsFor already drops the liability itself
+    // for credit-card/BNPL statement bills, so it can never re-select it. The
+    // "already in ledger" toggle skips recording entirely for manual expenses.
     var alreadyInLedger = false;
     String? selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
+    if (bill.accountId != null && payers.any((a) => a.id == bill.accountId)) {
+      selectedAccountId = bill.accountId;
+    }
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
