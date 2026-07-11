@@ -1,32 +1,36 @@
 import 'package:flutter/material.dart';
 
-/// Curated 10-color palettes — muted/tinted for dark backgrounds.
-/// Expense uses warm tones; income uses cool tones so they're always
-/// visually distinct from each other at a glance.
+/// Curated 10-color qualitative palettes, harmonised with the Nudgr design
+/// system (see docs/design_system_nudgr_spec.md) so charts read as one system.
+/// The first entries anchor on the domain hues (Fast/Food/Move/Bills/Treasury/
+/// Weight/Danger); the tail extends with harmonised tints for wide separation.
+/// Expense leans warm, income leans cool, so the two are distinct at a glance.
+/// Tuned for the near-black (#0A0A0B) dark background; `resolveSliceColor`
+/// deepens them for light mode.
 const List<String> kExpensePalette = [
-  '#EF9A9A', // soft red
-  '#FFCC80', // warm amber
-  '#80CBC4', // teal
-  '#CE93D8', // lavender
-  '#F48FB1', // rose
-  '#FFE082', // golden
+  '#F6685E', // danger red
+  '#FF8A4C', // bills orange
+  '#FFCA28', // treasury gold
+  '#926AFA', // weight purple
+  '#26C6DA', // food teal
+  '#46BD6B', // move green
+  '#F48FB1', // rose (extends warm range)
+  '#5BAAF5', // fast light blue
+  '#FFB37A', // bills light / peach
   '#9FA8DA', // periwinkle
-  '#BCAAA4', // warm brown
-  '#80DEEA', // cyan mist
-  '#A5D6A7', // soft green
 ];
 
 const List<String> kIncomePalette = [
-  '#A5D6A7', // soft green
+  '#46BD6B', // move green
+  '#26C6DA', // food teal
+  '#2E90FA', // fast blue
+  '#6FCB8A', // move light
+  '#5BAAF5', // fast light blue
+  '#926AFA', // weight purple
   '#80DEEA', // cyan mist
-  '#80CBC4', // teal
-  '#B3E5FC', // sky
-  '#C5E1A5', // lime
-  '#FFE082', // gold
-  '#DCEDC8', // light green
-  '#B2EBF2', // aqua
-  '#9FA8DA', // periwinkle
-  '#F0F4C3', // yellow-green
+  '#FFCA28', // treasury gold (warm accent for variety)
+  '#A5D6A7', // soft green
+  '#6FA8E8', // sky (deepened to stay < 0.65 luminance guard)
 ];
 
 /// Returns a color hex string for a category at [index] within its type.
@@ -48,7 +52,7 @@ String categoryColorAt(int index, {required bool isExpense}) {
     1.0,
     hue,
     0.45, // 45% saturation — visible but not vibrating
-    0.68, // 68% lightness — readable on #0A0E14 background
+    0.68, // 68% lightness — readable on #0A0A0B background
   ).toColor();
 
   return '#${color.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
