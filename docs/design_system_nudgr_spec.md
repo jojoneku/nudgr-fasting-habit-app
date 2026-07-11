@@ -99,6 +99,16 @@ Format: **primary** (main), **light** (on-dark text variant / deep-for-light), *
 - Domain color is never the *only* signal (pair with icon/label) — colorblind safety.
 - Preserve reduced-motion behavior; this spec changes color only.
 
+## Web companion
+
+The Treasury web build (`TreasuryWebApp`) previously used a separate "Pondr"
+token set (`lib/views/web/design/web_theme.dart`). It is now **unified** onto
+these Nudgr tokens: `buildWebDarkTheme`/`buildWebLightTheme` source every value
+from `NudgrDark`/`NudgrLight` and inject `AppThemeExtension`, so web and mobile
+share one identity. The web keeps a desktop-tuned light arrangement (grey page
+`#F0F0F5` + white cards) and uses the spec's deep `fast-light` `#1860C8` as the
+action/primary color for AA button contrast on white.
+
 ## Out of scope
 
 - No layout, navigation, or component-structure changes (the Directions doc's fan-FAB / grid concepts are not part of this).
