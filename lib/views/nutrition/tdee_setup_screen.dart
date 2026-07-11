@@ -4,6 +4,7 @@ import '../../models/meal_slot.dart';
 import '../../models/tdee_profile.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
+import 'widgets/tdee_step_forms.dart';
 
 class TdeeSetupScreen extends StatefulWidget {
   final NutritionPresenter presenter;
@@ -196,43 +197,12 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
               ),
         ),
         const SizedBox(height: 20),
-        Row(children: [
-          Expanded(
-              child: AppTextField(
-                  controller: _weightCtrl,
-                  label: 'Weight',
-                  suffix: const Text('kg'),
-                  keyboardType: TextInputType.number)),
-          const SizedBox(width: 12),
-          Expanded(
-              child: AppTextField(
-                  controller: _heightCtrl,
-                  label: 'Height',
-                  suffix: const Text('cm'),
-                  keyboardType: TextInputType.number)),
-          const SizedBox(width: 12),
-          Expanded(
-              child: AppTextField(
-                  controller: _ageCtrl,
-                  label: 'Age',
-                  suffix: const Text('yrs'),
-                  keyboardType: TextInputType.number)),
-        ]),
-        const SizedBox(height: 20),
-        Text(
-          'Sex',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 10),
-        AppSegmentedControl<String>(
-          segments: const [
-            (value: 'male', label: 'Male', icon: null),
-            (value: 'female', label: 'Female', icon: null),
-          ],
-          selected: _sex,
-          onChanged: (v) => setState(() => _sex = v),
+        BodyStatsForm(
+          weightCtrl: _weightCtrl,
+          heightCtrl: _heightCtrl,
+          ageCtrl: _ageCtrl,
+          sex: _sex,
+          onSexChanged: (v) => setState(() => _sex = v),
         ),
       ],
     );
@@ -249,13 +219,10 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
               ),
         ),
         const SizedBox(height: 20),
-        ...ActivityLevel.values.map((level) => _RadioTile(
-              label: level.label,
-              subtitle: _activityDescription(level),
-              value: level,
-              groupValue: _activityLevel,
-              onChanged: (v) => setState(() => _activityLevel = v!),
-            )),
+        ActivityLevelSelector(
+          selected: _activityLevel,
+          onChanged: (v) => setState(() => _activityLevel = v),
+        ),
       ],
     );
   }
@@ -272,7 +239,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
                 ),
           ),
           const SizedBox(height: 20),
-          _RadioTile(
+          TdeeRadioTile<String>(
             label: 'Cut — Lose weight',
             subtitle: 'Calorie deficit',
             value: 'cut',
@@ -280,14 +247,14 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
             onChanged: (v) => _onGoalChanged(v!),
           ),
           if (_goal == 'cut') _buildAdjPicker(isCut: true),
-          _RadioTile(
+          TdeeRadioTile<String>(
             label: 'Maintain',
             subtitle: 'Hold current weight',
             value: 'maintain',
             groupValue: _goal,
             onChanged: (v) => _onGoalChanged(v!),
           ),
-          _RadioTile(
+          TdeeRadioTile<String>(
             label: 'Bulk — Gain muscle',
             subtitle: 'Calorie surplus',
             value: 'bulk',
@@ -555,19 +522,6 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     );
     if (mounted) Navigator.pop(context);
   }
-
-  String _activityDescription(ActivityLevel level) {
-    switch (level) {
-      case ActivityLevel.sedentary:
-        return 'Little or no exercise';
-      case ActivityLevel.lightlyActive:
-        return '1–3 days/week';
-      case ActivityLevel.moderatelyActive:
-        return '3–5 days/week';
-      case ActivityLevel.veryActive:
-        return '6–7 days/week';
-    }
-  }
 }
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
@@ -696,82 +650,6 @@ class _ReviewRow extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ─── Radio Tile ───────────────────────────────────────────────────────────────
-
-class _RadioTile<T> extends StatelessWidget {
-  final String label;
-  final String? subtitle;
-  final T value;
-  final T groupValue;
-  final void Function(T?) onChanged;
-  const _RadioTile({
-    required this.label,
-    this.subtitle,
-    required this.value,
-    required this.groupValue,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final gold = context.appColors.gold;
-    final selected = value == groupValue;
-    return GestureDetector(
-      onTap: () => onChanged(value),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: selected
-              ? gold.withValues(alpha: 0.1)
-              : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: selected
-                ? gold.withValues(alpha: 0.5)
-                : theme.colorScheme.outlineVariant,
-          ),
-        ),
-        child: Row(
-          children: [
-            Radio<T>(
-              value: value,
-              groupValue: groupValue,
-              onChanged: onChanged,
-              activeColor: gold,
-              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: selected ? gold : theme.colorScheme.onSurface,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
-                  if (subtitle != null)
-                    Text(
-                      subtitle!,
-                      style: TextStyle(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontSize: 11),
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
