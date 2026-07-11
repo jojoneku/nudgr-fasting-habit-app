@@ -124,7 +124,7 @@ abstract final class AppTextStyles {
         labelSmall: labelSmall,
       );
 
-  /// Legacy mono helper — kept for backwards compatibility.
+  /// Monospace helper — JetBrains Mono, per the Nudgr design system.
   static TextStyle mono({TextStyle? textStyle}) =>
-      GoogleFonts.robotoMono(textStyle: textStyle);
+      GoogleFonts.jetBrainsMono(textStyle: textStyle);
 }

@@ -46,13 +46,15 @@ ThemeData buildDarkTheme() {
     scaffoldBackgroundColor: AppColors.background,
     colorScheme: base.colorScheme.copyWith(
       surface: AppColors.surface,
-      surfaceContainerLowest: AppColors.background,
+      surfaceContainerLowest: AppColors.page,
       surfaceContainerLow: AppColors.surface,
       surfaceContainer: AppColors.surfaceVariant,
       surfaceContainerHigh: AppColors.surfaceVariant,
       surfaceContainerHighest: AppColors.surfaceHigh,
       onSurface: AppColors.textPrimary,
       onSurfaceVariant: AppColors.textSecondary,
+      outline: AppColors.borderCard,
+      outlineVariant: AppColors.borderInner,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColors.background,
@@ -76,8 +78,8 @@ ThemeData buildDarkTheme() {
       }),
     ),
     bottomSheetTheme: base.bottomSheetTheme.copyWith(
-      backgroundColor: AppColors.background,
-      modalBackgroundColor: AppColors.background,
+      backgroundColor: AppColors.sheet,
+      modalBackgroundColor: AppColors.sheet,
       surfaceTintColor: Colors.transparent,
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
@@ -138,6 +140,8 @@ ThemeData buildLightTheme() {
       surfaceContainerHighest: AppColorsLight.surfaceHigh,
       onSurface: AppColorsLight.textPrimary,
       onSurfaceVariant: AppColorsLight.textSecondary,
+      outline: AppColorsLight.borderCard,
+      outlineVariant: AppColorsLight.borderInner,
     ),
     appBarTheme: const AppBarTheme(
       backgroundColor: AppColorsLight.surface,
@@ -161,8 +165,8 @@ ThemeData buildLightTheme() {
       }),
     ),
     bottomSheetTheme: base.bottomSheetTheme.copyWith(
-      backgroundColor: AppColorsLight.surface,
-      modalBackgroundColor: AppColorsLight.surface,
+      backgroundColor: AppColorsLight.sheet,
+      modalBackgroundColor: AppColorsLight.sheet,
       surfaceTintColor: Colors.transparent,
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
