@@ -8,6 +8,7 @@ class PartialRingPainter extends CustomPainter {
     required this.progressColor,
     required this.strokeWidth,
     required this.reverse,
+    this.gapFraction = 0.2,
   });
 
   final double progress;
@@ -16,7 +17,9 @@ class PartialRingPainter extends CustomPainter {
   final double strokeWidth;
   final bool reverse;
 
-  static const double _gapFraction = 0.2; // 20% gap at bottom
+  /// Fraction of the circle (0–1) left open at the bottom. Defaults to `0.2`
+  /// (20% gap) to preserve the timer/activity look; pass `0` for a full circle.
+  final double gapFraction;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -30,9 +33,9 @@ class PartialRingPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    const gapAngle = 2 * math.pi * _gapFraction;
-    const startAngle = math.pi / 2 + gapAngle / 2;
-    const sweepAngle = 2 * math.pi - gapAngle;
+    final gapAngle = 2 * math.pi * gapFraction;
+    final startAngle = math.pi / 2 + gapAngle / 2;
+    final sweepAngle = 2 * math.pi - gapAngle;
 
     canvas.drawArc(rect, startAngle, sweepAngle, false, paintBase);
 
@@ -82,6 +85,7 @@ class PartialRingPainter extends CustomPainter {
     return oldDelegate.progress != progress ||
         oldDelegate.trackColor != trackColor ||
         oldDelegate.progressColor != progressColor ||
-        oldDelegate.reverse != reverse;
+        oldDelegate.reverse != reverse ||
+        oldDelegate.gapFraction != gapFraction;
   }
 }

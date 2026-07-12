@@ -33,8 +33,11 @@ class HubPresenter extends ChangeNotifier {
   final QuestPresenter _quests;
   final TreasuryDashboardPresenter? _treasury;
 
-  List<HubCardType> _cardOrder =
-      HubCardType.values.where((t) => t != HubCardType.stats).toList();
+  // Body is folded into the Weight slot (rendered as a 2-up tile), so it is not
+  // a standalone card in the order. Stats/Character is surfaced (de-prioritised).
+  List<HubCardType> _cardOrder = HubCardType.values
+      .where((t) => t != HubCardType.bodyMeasurements)
+      .toList();
   List<HubCardType>? _manualOrder;
   bool _pendingRecompute = false;
 
@@ -69,15 +72,17 @@ class HubPresenter extends ChangeNotifier {
       active.add(HubCardType.treasury);
     }
 
+    // Hero + Quests + Finance lead; preserved/secondary features sit lower.
+    // Body is folded into the Weight slot; Stats/Character is de-prioritised.
     final base = _manualOrder ??
         const [
+          HubCardType.quests,
+          HubCardType.treasury,
+          HubCardType.weightLog,
+          HubCardType.fasting,
           HubCardType.nutrition,
           HubCardType.activity,
-          HubCardType.treasury,
-          HubCardType.quests,
-          HubCardType.fasting,
-          HubCardType.weightLog,
-          HubCardType.bodyMeasurements,
+          HubCardType.stats,
         ];
 
     final newOrder = [

@@ -86,6 +86,9 @@ abstract class StorageService {
   static const String keyFoodFeedback = 'nutrition.foodFeedback';
   static const String kThemeMode = 'themeMode';
   static const String kUseCloudAi = 'useCloudAi';
+  // Hub hero-ring slot config — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]
+  // (it's a UI layout preference). Empty/absent ⇒ auto-resolved default.
+  static const String kHeroSlots = 'hub.heroSlots';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   // First-run onboarding gate — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]. Must
   // be evaluable before sign-in and must survive sign-out/account switch, so it
@@ -248,6 +251,11 @@ abstract class StorageService {
   //  Theme
   Future<void> saveThemeMode(String mode);
   Future<String?> loadThemeMode();
+
+  //  Hub hero-ring slot config (device-level / unscoped). Stored as enum names;
+  //  an empty list means "not configured" (auto-resolve the default).
+  Future<void> saveHeroSlots(List<String> slots);
+  Future<List<String>> loadHeroSlots();
 
   //  First-run onboarding gate (device-level / unscoped)
   Future<void> saveOnboardingComplete(bool value);

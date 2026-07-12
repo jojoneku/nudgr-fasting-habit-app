@@ -15,6 +15,7 @@ import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../utils/app_spacing.dart';
+import '../utils/hub_hero_slots.dart';
 import 'auth/login_view.dart';
 import 'onboarding/onboarding_flow.dart';
 import 'settings/notification_settings_sheet.dart';
@@ -79,6 +80,7 @@ class SettingsScreen extends StatelessWidget {
               builder: (context, _) => AppGroupedList(
                 sections: [
                   _accountGroupSection(context),
+                  _hubRingsSection(context),
                   if (authPresenter.isSignedIn) _cloudAiSection(context),
                   if (nutritionPresenter != null) _foodLearningSection(context),
                   _dataSection(context),
@@ -268,6 +270,76 @@ class SettingsScreen extends StatelessWidget {
       children: children,
     );
   }
+
+  AppGroupedListSection _hubRingsSection(BuildContext context) {
+    final theme = Theme.of(context);
+    // Show the resolved slots so the controls reflect what the Hub renders,
+    // including the non-faster macro-split default when unconfigured.
+    final slots = resolveHeroSlots(
+      configured: settingsPresenter.heroSlots,
+      hasEverFasted: fastingPresenter.history.isNotEmpty,
+    );
+
+    final children = <Widget>[
+      for (var i = 0; i < slots.length; i++)
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm,
+          ),
+          child: Row(
+            children: [
+              AppIconBadge(icon: _heroSlotIcon(slots[i])),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('Ring ${i + 1}', style: theme.textTheme.bodyLarge),
+              ),
+              DropdownButton<HubHeroSlot>(
+                value: slots[i],
+                underline: const SizedBox.shrink(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  final next = List<HubHeroSlot>.from(slots);
+                  next[i] = value;
+                  settingsPresenter.setHeroSlots(next);
+                },
+                items: [
+                  for (final s in HubHeroSlot.values)
+                    DropdownMenuItem(value: s, child: Text(_heroSlotLabel(s))),
+                ],
+              ),
+            ],
+          ),
+        ),
+      if (settingsPresenter.heroSlots != null)
+        AppListTile(
+          leading: const AppIconBadge(icon: Icons.restart_alt),
+          title: const Text('Reset to default'),
+          onTap: () => settingsPresenter.setHeroSlots(null),
+        ),
+    ];
+
+    return AppGroupedListSection(
+      title: 'Hub rings',
+      footer: 'Choose the metric each hero ring shows. Non-fasters default the '
+          'first ring to the macro split.',
+      children: children,
+    );
+  }
+
+  static IconData _heroSlotIcon(HubHeroSlot slot) => switch (slot) {
+        HubHeroSlot.fast => Icons.timer_outlined,
+        HubHeroSlot.food => Icons.restaurant,
+        HubHeroSlot.move => Icons.directions_run,
+        HubHeroSlot.macros => Icons.egg_alt_outlined,
+      };
+
+  static String _heroSlotLabel(HubHeroSlot slot) => switch (slot) {
+        HubHeroSlot.fast => 'Fast',
+        HubHeroSlot.food => 'Food',
+        HubHeroSlot.move => 'Move',
+        HubHeroSlot.macros => 'Macros',
+      };
 
   AppGroupedListSection _cloudAiSection(BuildContext context) {
     final theme = Theme.of(context);
