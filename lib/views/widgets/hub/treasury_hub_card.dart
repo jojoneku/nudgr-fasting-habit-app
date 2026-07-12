@@ -1,12 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../models/finance/bill.dart';
-import '../../../models/finance/finance_parse_result.dart';
 import '../../../presenters/bills_receivables_presenter.dart';
-import '../../../presenters/ledger_presenter.dart';
 import '../../../presenters/treasury_dashboard_presenter.dart';
-import '../../treasury/ledger/add_transaction_sheet.dart';
-import '../finance/ledger_chat_panel.dart';
 import '../system/system.dart';
 import '../../../app_colors.dart';
 import '../../../utils/app_spacing.dart';
@@ -19,18 +15,11 @@ class TreasuryHubCard extends StatelessWidget {
     super.key,
     required this.treasury,
     required this.onNavigate,
-    this.ledger,
     this.bills,
   });
 
   final TreasuryDashboardPresenter treasury;
   final VoidCallback onNavigate;
-
-  /// When provided, a compact chat bar is shown so an expense can be logged
-  /// straight from the hub without opening the full Treasury module. The chat
-  /// pipeline (parse → clarify → confirm) is the same one the Ledger uses; this
-  /// is just a second, condensed entry point onto it.
-  final LedgerPresenter? ledger;
 
   /// When provided, upcoming bills expose a Pay action (gated behind a confirm
   /// sheet — never a silent money mutation).
@@ -43,8 +32,8 @@ class TreasuryHubCard extends StatelessWidget {
       builder: (context, _) {
         final isActive = treasury.hasBillImminent;
         // The header + overview navigate into the module; the bill list (with
-        // Pay actions) and the chat bar below must NOT, so we wrap only the top
-        // region in the tap target instead of the whole AppCard.
+        // Pay actions) must NOT, so we wrap only the top region in the tap
+        // target instead of the whole AppCard.
         return AppCard(
           padding: const EdgeInsets.symmetric(
             horizontal: AppSpacing.md,
@@ -77,10 +66,6 @@ class TreasuryHubCard extends StatelessWidget {
               if (treasury.upcomingBills.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.md),
                 _UpcomingBills(treasury: treasury, bills: bills),
-              ],
-              if (ledger != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                _QuickLogChat(ledger: ledger!),
               ],
             ],
           ),
@@ -404,168 +389,6 @@ class _PayBillSheetState extends State<_PayBillSheet> {
               : Text('Confirm payment · ${formatPeso(widget.bill.amount)}'),
         ),
       ],
-    );
-  }
-}
-
-// ── Quick-log chat ────────────────────────────────────────────────────────────
-//
-// A condensed view onto [LedgerPresenter]'s chat pipeline, embedded in the hub
-// card. Sending runs the same parse → clarify → confirm loop as the Ledger;
-// because it's the same presenter instance, an unfinished conversation started
-// here is picked up seamlessly if the user then opens the full module.
-
-class _QuickLogChat extends StatefulWidget {
-  const _QuickLogChat({required this.ledger});
-
-  final LedgerPresenter ledger;
-
-  @override
-  State<_QuickLogChat> createState() => _QuickLogChatState();
-}
-
-class _QuickLogChatState extends State<_QuickLogChat> {
-  final _ctrl = TextEditingController();
-  final _focus = FocusNode();
-  bool _sending = false;
-  String? _lastToastSummary;
-
-  LedgerPresenter get ledger => widget.ledger;
-
-  @override
-  void initState() {
-    super.initState();
-    ledger.addListener(_onLedgerChange);
-  }
-
-  @override
-  void dispose() {
-    ledger.removeListener(_onLedgerChange);
-    _ctrl.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  /// Mirrors the side effects the Ledger view runs on presenter changes:
-  /// surface the post-commit toast, and when the AI can't auto-resolve (or AI
-  /// is unavailable) open the prefilled form sheet. Both are guarded on route
-  /// currency so they don't double up with the Ledger view when the full module
-  /// is open on top of the hub.
-  void _onLedgerChange() {
-    if (!mounted) return;
-    final isCurrent = ModalRoute.of(context)?.isCurrent ?? true;
-    if (!isCurrent) return;
-
-    final summary = ledger.lastCommittedSummary;
-    if (summary != null && summary != _lastToastSummary) {
-      _lastToastSummary = summary;
-      AppToast.success(context, summary);
-      ledger.clearLastCommittedSummary();
-    }
-
-    final prefill = ledger.pendingFormPrefill;
-    if (prefill != null) {
-      ledger.consumeFormPrefill();
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _openFormSheet(prefill);
-      });
-    }
-  }
-
-  Future<void> _send() async {
-    final text = _ctrl.text.trim();
-    if (text.isEmpty || _sending) return;
-    setState(() => _sending = true);
-    try {
-      _ctrl.clear();
-      await ledger.sendChatInput(text);
-    } finally {
-      if (mounted) setState(() => _sending = false);
-    }
-  }
-
-  void _openFormSheet(ParsedTransaction prefill) {
-    AppBottomSheet.show(
-      context: context,
-      title: 'Log Transaction',
-      body: AddTransactionSheet(
-        presenter: ledger,
-        prefill: prefill,
-        initialDate: ledger.selectedDate,
-      ),
-    );
-  }
-
-  String _hint(LedgerPresenter p) {
-    if (!p.isSelectedDateToday) return 'Open Finance to log on that day';
-    if (p.chatState.phase == ChatPhase.clarifying) return 'Reply…';
-    return 'Log an expense…';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: ledger,
-      builder: (context, _) {
-        final cs = Theme.of(context).colorScheme;
-        final state = ledger.chatState;
-        // Quick logging stamps "today", so it's gated to the current day; the
-        // full form (reachable via the card header) handles back-dated entries.
-        final canSend = ledger.isSelectedDateToday;
-        final classifying = state.phase == ChatPhase.classifying;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            LedgerChatPanel(ledger: ledger),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    enabled: canSend && !classifying,
-                    style: AppTextStyles.bodyMedium,
-                    decoration: InputDecoration(
-                      hintText: _hint(ledger),
-                      hintStyle: AppTextStyles.bodyMedium.copyWith(
-                        color: cs.onSurfaceVariant,
-                      ),
-                      filled: true,
-                      fillColor: cs.surfaceContainerHigh,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(22),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
-                      isDense: true,
-                    ),
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: (_) => _send(),
-                  ),
-                ),
-                const SizedBox(width: 4),
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: IconButton(
-                    icon: _sending || classifying
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.send),
-                    onPressed: canSend && !classifying ? _send : null,
-                    tooltip: 'Send',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
     );
   }
 }

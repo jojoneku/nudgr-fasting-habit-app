@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import '../models/chat_message.dart';
 import '../models/finance/finance_parse_result.dart';
+import '../models/quest.dart';
 import '../presenters/activity_presenter.dart';
 import '../presenters/ai_coach_presenter.dart';
 import '../presenters/auth_presenter.dart';
@@ -379,7 +380,7 @@ class _HubScreenState extends State<HubScreen> {
       HubCardType.quests => QuestsHubCard(
           quests: widget.questPresenter,
           onNavigate: () => _pushQuestsTab(context),
-          onMarkComplete: () => _markNextQuestDone(context),
+          onCompleteQuest: (quest) => _markQuestDone(context, quest),
         ),
       HubCardType.activity => widget.activityPresenter != null
           ? ActivityHubCard(
@@ -390,7 +391,6 @@ class _HubScreenState extends State<HubScreen> {
       HubCardType.treasury => widget.treasuryPresenter != null
           ? TreasuryHubCard(
               treasury: widget.treasuryPresenter!,
-              ledger: widget.ledgerPresenter,
               bills: widget.billsPresenter,
               onNavigate: () => _pushTreasuryScreen(context),
             )
@@ -561,9 +561,7 @@ class _HubScreenState extends State<HubScreen> {
     }
   }
 
-  Future<void> _markNextQuestDone(BuildContext context) async {
-    final quest = widget.questPresenter.nextUrgentQuest;
-    if (quest == null) return;
+  Future<void> _markQuestDone(BuildContext context, Quest quest) async {
     final (xp, isCrit) = await widget.questPresenter.completeQuest(quest.id);
     if (context.mounted) {
       final label = isCrit ? 'Critical! +$xp XP' : '+$xp XP';
