@@ -12,12 +12,14 @@ class QuestsHubCard extends StatelessWidget {
     super.key,
     required this.quests,
     required this.onNavigate,
-    required this.onMarkComplete,
+    required this.onCompleteQuest,
   });
 
   final QuestPresenter quests;
   final VoidCallback onNavigate;
-  final VoidCallback onMarkComplete;
+
+  /// Completes a specific surfaced quest (per-row check action).
+  final void Function(Quest quest) onCompleteQuest;
 
   @override
   Widget build(BuildContext context) {
@@ -38,8 +40,8 @@ class QuestsHubCard extends StatelessWidget {
             isActive: isActive,
           ),
           child: isActive
-              ? _ActiveSnapshot(quests: quests, onMarkComplete: onMarkComplete)
-              : _IdleSnapshot(quests: quests),
+              ? _ActiveSnapshot(quests: quests, onComplete: onCompleteQuest)
+              : _IdleSnapshot(quests: quests, onComplete: onCompleteQuest),
         );
       },
     );
@@ -47,8 +49,9 @@ class QuestsHubCard extends StatelessWidget {
 }
 
 class _IdleSnapshot extends StatelessWidget {
-  const _IdleSnapshot({required this.quests});
+  const _IdleSnapshot({required this.quests, required this.onComplete});
   final QuestPresenter quests;
+  final void Function(Quest quest) onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -85,6 +88,7 @@ class _IdleSnapshot extends StatelessWidget {
           ...preview.map((q) => _QuoteItem(
                 quest: q,
                 accent: theme.colorScheme.secondary,
+                onComplete: () => onComplete(q),
               )),
           if (active.length > preview.length)
             _SeeMore(
@@ -98,9 +102,9 @@ class _IdleSnapshot extends StatelessWidget {
 }
 
 class _ActiveSnapshot extends StatelessWidget {
-  const _ActiveSnapshot({required this.quests, required this.onMarkComplete});
+  const _ActiveSnapshot({required this.quests, required this.onComplete});
   final QuestPresenter quests;
-  final VoidCallback onMarkComplete;
+  final void Function(Quest quest) onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -111,31 +115,20 @@ class _ActiveSnapshot extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Each surfaced quest carries its own check → completes THAT quest in
+        // place (clearer than one button that doesn't name its target). Capped
+        // at 3 to avoid crowding; the rest are reachable via the card.
         ...preview.map((q) => _QuoteItem(
               quest: q,
               accent: theme.colorScheme.error,
               showXp: true,
+              onComplete: () => onComplete(q),
             )),
         if (overdue.length > preview.length)
           _SeeMore(
             count: overdue.length - preview.length,
             color: theme.colorScheme.error,
             suffix: 'overdue',
-          ),
-        // Single primary micro-action: complete the surfaced (top) quest in
-        // place. The presenter notifies, so the card refreshes immediately.
-        if (quests.nextUrgentQuest != null)
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: onMarkComplete,
-              icon: const Icon(Icons.check_circle_outline, size: 18),
-              label: const Text('Mark done'),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(44, 40),
-                foregroundColor: theme.colorScheme.secondary,
-              ),
-            ),
           ),
       ],
     );
@@ -183,11 +176,13 @@ class _QuoteItem extends StatelessWidget {
     required this.quest,
     required this.accent,
     this.showXp = false,
+    this.onComplete,
   });
 
   final Quest quest;
   final Color accent;
   final bool showXp;
+  final VoidCallback? onComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -260,6 +255,19 @@ class _QuoteItem extends StatelessWidget {
                 value: '${quest.xpReward} XP',
                 color: AppStatColor.warning,
                 size: AppStatSize.small,
+              ),
+            ],
+            if (onComplete != null) ...[
+              const SizedBox(width: 2),
+              IconButton(
+                onPressed: onComplete,
+                icon: const Icon(Icons.check_circle_outline),
+                iconSize: 22,
+                color: accent,
+                tooltip: 'Mark "${quest.title}" done',
+                visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               ),
             ],
           ],

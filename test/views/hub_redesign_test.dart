@@ -53,25 +53,27 @@ void main() {
   });
 
   group('Quests micro-action', () {
-    testWidgets('Mark done completes the surfaced quest in place',
+    testWidgets('per-quest check completes that specific quest in place',
         (tester) async {
       final quests = MockQuestPresenter();
-      final q = _quest();
+      final q = _quest(id: 7, title: 'Drink 2L water');
       when(quests.hasUrgentQuest).thenReturn(true);
       when(quests.todayOverdueQuests).thenReturn([q]);
       when(quests.nextUrgentQuest).thenReturn(q);
 
-      var marked = false;
+      Quest? completed;
       await tester.pumpWidget(_wrap(QuestsHubCard(
         quests: quests,
         onNavigate: () {},
-        onMarkComplete: () => marked = true,
+        onCompleteQuest: (quest) => completed = quest,
       )));
       await tester.pump();
 
-      expect(find.text('Mark done'), findsOneWidget);
-      await tester.tap(find.text('Mark done'));
-      expect(marked, isTrue);
+      // One surfaced quest → exactly one check control (no generic button).
+      expect(find.text('Mark done'), findsNothing);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.check_circle_outline));
+      expect(completed?.id, 7);
     });
   });
 
