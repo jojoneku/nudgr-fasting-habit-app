@@ -14,6 +14,7 @@ class AppRingProgress extends StatelessWidget {
     this.primaryColor,
     this.trackColor,
     this.reversed = false,
+    this.gapFraction = 0.2,
   });
 
   final double value;
@@ -24,6 +25,10 @@ class AppRingProgress extends StatelessWidget {
   final Color? primaryColor;
   final Color? trackColor;
   final bool reversed;
+
+  /// Fraction of the circle left open at the bottom. Defaults to `0.2` (the
+  /// timer/activity look); pass `0` for a full circle (Hub ring hero).
+  final double gapFraction;
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +51,7 @@ class AppRingProgress extends StatelessWidget {
               trackColor: resolvedTrack,
               strokeWidth: strokeWidth,
               reverse: reversed,
+              gapFraction: gapFraction,
             ),
           ),
           if (center != null) center!,

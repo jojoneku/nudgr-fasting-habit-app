@@ -1543,6 +1543,24 @@ class LocalStorageService extends StorageService {
     return prefs.getString(StorageService.kThemeMode);
   }
 
+  // ── Hub hero slots (device-level, not user-scoped) ───────────────────────────
+
+  @override
+  Future<void> saveHeroSlots(List<String> slots) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (slots.isEmpty) {
+      await prefs.remove(StorageService.kHeroSlots);
+    } else {
+      await prefs.setStringList(StorageService.kHeroSlots, slots);
+    }
+  }
+
+  @override
+  Future<List<String>> loadHeroSlots() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getStringList(StorageService.kHeroSlots) ?? const [];
+  }
+
   // ── Onboarding gate (device-level, unscoped, never synced) ───────────────────
   // Deliberately bypasses [_k] and is absent from [_kUserDataKeys], so it is
   // evaluable before sign-in and survives detachUser/clearUserData — a fresh
