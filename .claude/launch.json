@@ -61,6 +61,22 @@
         "windows"
       ],
       "port": 0
+    },
+    {
+      "name": "Hub Preview (web-server)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main_hub_preview.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8092",
+        "--web-hostname",
+        "localhost"
+      ],
+      "port": 8092
     }
   ]
 }

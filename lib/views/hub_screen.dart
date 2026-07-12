@@ -26,21 +26,24 @@ import '../services/local_storage_service.dart';
 import '../services/widget_bridge_service.dart';
 import 'activity/activity_permission_screen.dart';
 import 'activity/activity_screen.dart';
-import 'nutrition/log_meal_sheet.dart';
 import 'nutrition/nutrition_screen.dart';
 import 'quests/quests_tab.dart';
 import 'settings_screen.dart';
+import 'stats_view.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/ledger/add_transaction_sheet.dart';
 import 'treasury/treasury_module_view.dart';
 import 'widgets/finance/ledger_chat_panel.dart';
 import 'widgets/hub/activity_hub_card.dart';
-import 'widgets/hub/body_measurement_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
+import 'widgets/hub/hub_coach_line.dart';
+import 'widgets/hub/hub_rings_hero.dart';
+import 'widgets/hub/hub_streak_pill.dart';
 import 'widgets/hub/nutrition_hub_card.dart';
 import 'widgets/hub/quests_hub_card.dart';
+import 'widgets/hub/stats_hub_card.dart';
 import 'widgets/hub/treasury_hub_card.dart';
-import 'widgets/hub/weight_hub_card.dart';
+import 'widgets/hub/weight_body_hub_card.dart';
 import 'nutrition/measurement_log_screen.dart';
 import 'nutrition/weight_log_screen.dart';
 import 'widgets/system/overlays/app_bottom_sheet.dart';
@@ -262,6 +265,8 @@ class _HubScreenState extends State<HubScreen> {
               backgroundColor: theme.scaffoldBackgroundColor,
               title: header,
               actions: [
+                HubStreakPill(nutrition: widget.nutritionPresenter),
+                const SizedBox(width: AppSpacing.xs),
                 IconButton(
                   tooltip: 'Settings',
                   icon: const Icon(Icons.settings_outlined),
@@ -270,10 +275,39 @@ class _HubScreenState extends State<HubScreen> {
                 const SizedBox(width: AppSpacing.xs),
               ],
             ),
+            // Fixed leading content above the reorderable card stack: the
+            // three-ring hero + the adaptive coaching line. Not reorderable.
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
                 AppSpacing.sm,
+                AppSpacing.md,
+                0,
+              ),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    HubRingsHero(
+                      fasting: widget.fastingPresenter,
+                      nutrition: widget.nutritionPresenter,
+                      activity: widget.activityPresenter,
+                      settings: widget.settingsPresenter,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                    HubCoachLine(
+                      aiCoach: widget.aiCoachPresenter,
+                      nutrition: widget.nutritionPresenter,
+                      treasury: widget.treasuryPresenter,
+                    ),
+                    const SizedBox(height: AppSpacing.md),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.md,
+                0,
                 AppSpacing.md,
                 AppSpacing.xl,
               ),
@@ -357,22 +391,25 @@ class _HubScreenState extends State<HubScreen> {
           ? TreasuryHubCard(
               treasury: widget.treasuryPresenter!,
               ledger: widget.ledgerPresenter,
+              bills: widget.billsPresenter,
               onNavigate: () => _pushTreasuryScreen(context),
             )
           : const SizedBox.shrink(),
-      HubCardType.stats => const SizedBox.shrink(),
+      HubCardType.stats => widget.authPresenter != null
+          ? StatsHubCard(
+              stats: widget.statsPresenter,
+              onNavigate: () => _pushStatsScreen(context),
+            )
+          : const SizedBox.shrink(),
       HubCardType.weightLog => widget.nutritionPresenter != null
-          ? WeightHubCard(
+          ? WeightBodyHubCard(
               nutrition: widget.nutritionPresenter!,
-              onNavigate: () => _pushWeightLogScreen(context),
+              onOpenBody: () => _pushBodyMeasurementScreen(context),
+              onOpenWeight: () => _pushWeightLogScreen(context),
             )
           : const SizedBox.shrink(),
-      HubCardType.bodyMeasurements => widget.nutritionPresenter != null
-          ? BodyMeasurementHubCard(
-              nutrition: widget.nutritionPresenter!,
-              onNavigate: () => _pushBodyMeasurementScreen(context),
-            )
-          : const SizedBox.shrink(),
+      // Body is folded into the Weight slot (2-up tile); not a standalone card.
+      HubCardType.bodyMeasurements => const SizedBox.shrink(),
     };
   }
 
@@ -472,6 +509,26 @@ class _HubScreenState extends State<HubScreen> {
     );
   }
 
+  void _pushStatsScreen(BuildContext context) {
+    final auth = widget.authPresenter;
+    if (auth == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: StatsView(
+            presenter: widget.statsPresenter,
+            fastingPresenter: widget.fastingPresenter,
+            authPresenter: auth,
+            settingsPresenter: widget.settingsPresenter,
+            syncPresenter: widget.syncPresenter,
+            aiCoachPresenter: widget.aiCoachPresenter,
+          ),
+        ),
+      ),
+    );
+  }
+
   void _pushSettings(BuildContext context) {
     final auth = widget.authPresenter;
     if (auth == null) return;
@@ -502,16 +559,6 @@ class _HubScreenState extends State<HubScreen> {
       AppToast.success(
           context, xp > 0 ? 'Fast complete! +$xp XP' : 'Fast ended');
     }
-  }
-
-  void _showLogMealSheet(BuildContext context) {
-    final n = widget.nutritionPresenter;
-    if (n == null) return;
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => LogMealSheet(presenter: n),
-    );
   }
 
   Future<void> _markNextQuestDone(BuildContext context) async {

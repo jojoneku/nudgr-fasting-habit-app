@@ -38,7 +38,7 @@ class QuestsHubCard extends StatelessWidget {
             isActive: isActive,
           ),
           child: isActive
-              ? _ActiveSnapshot(quests: quests)
+              ? _ActiveSnapshot(quests: quests, onMarkComplete: onMarkComplete)
               : _IdleSnapshot(quests: quests),
         );
       },
@@ -98,8 +98,9 @@ class _IdleSnapshot extends StatelessWidget {
 }
 
 class _ActiveSnapshot extends StatelessWidget {
-  const _ActiveSnapshot({required this.quests});
+  const _ActiveSnapshot({required this.quests, required this.onMarkComplete});
   final QuestPresenter quests;
+  final VoidCallback onMarkComplete;
 
   @override
   Widget build(BuildContext context) {
@@ -120,6 +121,21 @@ class _ActiveSnapshot extends StatelessWidget {
             count: overdue.length - preview.length,
             color: theme.colorScheme.error,
             suffix: 'overdue',
+          ),
+        // Single primary micro-action: complete the surfaced (top) quest in
+        // place. The presenter notifies, so the card refreshes immediately.
+        if (quests.nextUrgentQuest != null)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: onMarkComplete,
+              icon: const Icon(Icons.check_circle_outline, size: 18),
+              label: const Text('Mark done'),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(44, 40),
+                foregroundColor: theme.colorScheme.secondary,
+              ),
+            ),
           ),
       ],
     );

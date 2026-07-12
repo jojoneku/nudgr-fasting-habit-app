@@ -60,6 +60,67 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
 
+  // ── Hub nudge ───────────────────────────────────────────────────────────────
+
+  String? _hubNudge;
+  bool _isGeneratingNudge = false;
+
+  /// One-line coaching nudge for the Hub. Returns the last AI-generated nudge
+  /// when available, otherwise a state-aware rules-based fallback. Never null so
+  /// the Hub always has a line to show immediately, off the build path.
+  String get hubNudge => _hubNudge ?? _fallbackNudge();
+
+  /// Generates a fresh Hub nudge via the coach model, off the build path. The
+  /// Hub shows the cached/fallback line until this completes; a failure keeps
+  /// the fallback. No-op when the model is unavailable or a chat is responding.
+  /// Uses a throwaway one-shot prompt — it does NOT touch the chat history.
+  Future<void> refreshHubNudge() async {
+    if (_isGeneratingNudge || _isResponding || !isModelAvailable) return;
+    _isGeneratingNudge = true;
+    try {
+      final buffer = StringBuffer();
+      final prompt = AiChatMessage.user(
+        'In one short sentence (max 18 words), give me one specific, '
+        'encouraging coaching nudge based on my current status. No preamble.',
+      );
+      await for (final token in _service.respond(
+        messages: [prompt],
+        context: _buildContext(),
+      )) {
+        if (isDisposed) return; // hub gone mid-stream — stop
+        buffer.write(token);
+      }
+      final text = buffer.toString().trim();
+      if (text.isNotEmpty) {
+        _hubNudge = text;
+        safeNotify();
+      }
+    } catch (e) {
+      debugPrint('AiCoachPresenter.refreshHubNudge error: $e');
+      // Keep the fallback line.
+    } finally {
+      _isGeneratingNudge = false;
+    }
+  }
+
+  /// Rules-based fallback nudge derived from the current fasting/nutrition
+  /// state — always meaningful even when the model is absent.
+  String _fallbackNudge() {
+    if (_fasting.isFasting && !_fasting.isOvertime) {
+      return 'You are mid-fast — stay steady and keep your streak alive.';
+    }
+    final n = _nutrition;
+    if (n != null && n.todayCalories > 0) {
+      if (n.todayCalories > n.effectiveGoal) {
+        return 'Over on calories today — ease up tonight and hydrate.';
+      }
+      if (n.isCalorieGoalMet) {
+        return 'Calories on target — great discipline today.';
+      }
+    }
+    return 'Small, consistent choices are how you level up.';
+  }
+
   // ── Session ───────────────────────────────────────────────────────────────
 
   /// Open a new chat session scoped to [entryPoint].
