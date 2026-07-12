@@ -65,6 +65,18 @@ void main() {
       expect(snapshot.finance.markers['daysInMonth'], 31);
     });
 
+    test('nutrition section rounds fat markers to whole grams', () {
+      final snapshot = InsightSnapshotBuilder.build(
+        const InsightSnapshotInputs(
+          sevenDayAvgFatGrams: 89.6,
+          fatTargetGrams: 70.4,
+        ),
+        fixedNow,
+      );
+      expect(snapshot.nutrition.markers['sevenDayAvgFatGrams'], 90);
+      expect(snapshot.nutrition.markers['fatTargetGrams'], 70);
+    });
+
     test('body section rounds weight to 1 decimal', () {
       final snapshot = InsightSnapshotBuilder.build(
         const InsightSnapshotInputs(

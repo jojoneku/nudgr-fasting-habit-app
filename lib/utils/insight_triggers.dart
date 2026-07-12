@@ -66,10 +66,11 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
     id: 'nutrition.fatTrend',
     mood: InsightMood.neutral,
     cooldown: const Duration(days: 3),
-    // No 7-day fat-average marker exists yet — NutritionPresenter only
-    // exposes today's fat total, not a 7-day aggregate vs target (see Plan
-    // 057 Phase 1 report). Wired into the table per spec; stays dormant
-    // until a data source is added.
+    // Active as of Plan 057 Phase 3: NutritionPresenter now exposes
+    // `sevenDayAvgFatGrams` (rolling 7-day average) and `fatTargetGrams`
+    // (daily fat goal), both baked into the nutrition section by
+    // InsightSnapshotBuilder. Fires when the 7-day fat average has run
+    // > 25% over target.
     test: (s) {
       final avg = _num(s.nutrition.markers, 'sevenDayAvgFatGrams');
       final target = _num(s.nutrition.markers, 'fatTargetGrams');

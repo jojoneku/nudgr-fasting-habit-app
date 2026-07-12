@@ -28,6 +28,8 @@ class InsightSnapshotInputs {
     this.todayCalories,
     this.effectiveGoal,
     this.sevenDayAvgCalories,
+    this.sevenDayAvgFatGrams,
+    this.fatTargetGrams,
     this.proteinHitRate7d,
     this.loggingConsistency7d,
     this.logStreak,
@@ -76,6 +78,14 @@ class InsightSnapshotInputs {
 
   /// NutritionPresenter.sevenDayAvgCalories (BodyCompositionCalculator)
   final int? sevenDayAvgCalories;
+
+  /// NutritionPresenter.sevenDayAvgFatGrams — rolling 7-day average fat
+  /// intake in grams. Null when nothing has been logged.
+  final double? sevenDayAvgFatGrams;
+
+  /// NutritionPresenter.fatTargetGrams — daily fat goal in grams, or null
+  /// when no fat goal is set.
+  final double? fatTargetGrams;
 
   /// NutritionPresenter.proteinHitRate7d — null when no protein goal is set.
   final double? proteinHitRate7d;
@@ -178,6 +188,11 @@ abstract final class InsightSnapshotBuilder {
         'todayCalories': i.todayCalories,
         'effectiveGoal': i.effectiveGoal,
         'sevenDayAvgCalories': i.sevenDayAvgCalories,
+        // Rounded to whole grams before hashing so sub-gram jitter in the
+        // 7-day average can't look like a state change (same rationale as
+        // kcal/currency rounding elsewhere in this builder).
+        'sevenDayAvgFatGrams': i.sevenDayAvgFatGrams?.round(),
+        'fatTargetGrams': i.fatTargetGrams?.round(),
         'proteinHitRate7d': i.proteinHitRate7d,
         'loggingConsistency7d': i.loggingConsistency7d,
         'logStreak': i.logStreak,

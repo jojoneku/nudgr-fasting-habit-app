@@ -263,20 +263,72 @@ void main() {
     });
   });
 
-  group('always-dormant triggers (no backing data source yet)', () {
-    test('nutrition.fatTrend never fires — no 7d fat marker exists', () {
+  group('nutrition.fatTrend', () {
+    test('fires when 7d fat avg runs >25% over target', () {
+      // target 70g → threshold 87.5g; 90g avg is over.
       expect(
         fires(
           'nutrition.fatTrend',
           const InsightSnapshotInputs(
-            todayCalories: 5000,
-            effectiveGoal: 100,
+            sevenDayAvgFatGrams: 90,
+            fatTargetGrams: 70,
+          ),
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not fire at or under the 25% threshold', () {
+      // target 70g → threshold 87.5g; 87g avg rounds to 87, under threshold.
+      expect(
+        fires(
+          'nutrition.fatTrend',
+          const InsightSnapshotInputs(
+            sevenDayAvgFatGrams: 87,
+            fatTargetGrams: 70,
           ),
         ),
         isFalse,
       );
     });
 
+    test('does not fire when at target', () {
+      expect(
+        fires(
+          'nutrition.fatTrend',
+          const InsightSnapshotInputs(
+            sevenDayAvgFatGrams: 70,
+            fatTargetGrams: 70,
+          ),
+        ),
+        isFalse,
+      );
+    });
+
+    test('missing target does not fire', () {
+      expect(
+        fires('nutrition.fatTrend',
+            const InsightSnapshotInputs(sevenDayAvgFatGrams: 200)),
+        isFalse,
+      );
+    });
+
+    test('missing average does not fire', () {
+      expect(
+        fires('nutrition.fatTrend',
+            const InsightSnapshotInputs(fatTargetGrams: 70)),
+        isFalse,
+      );
+    });
+
+    test('is neutral mood with a 3-day cooldown', () {
+      final trigger = triggerById('nutrition.fatTrend');
+      expect(trigger.mood, InsightMood.neutral);
+      expect(trigger.cooldown, const Duration(days: 3));
+    });
+  });
+
+  group('always-dormant triggers (no backing data source yet)', () {
     test('quests.slipping never fires — no 7d completion-rate marker exists',
         () {
       expect(
