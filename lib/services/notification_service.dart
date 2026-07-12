@@ -763,14 +763,23 @@ class NotificationService {
     }
   }
 
-  /// Action buttons shown on quest notifications. [showsUserInterface] is false
-  /// so a tap is handled in the background without opening the app;
-  /// [cancelNotification] dismisses the notification when tapped.
+  /// Action buttons shown on quest notifications.
+  ///
+  /// "Mark as Done" uses [showsUserInterface] = true: the tap is delivered to
+  /// the FOREGROUND isolate (bringing the app forward), where `onQuestActionDrain`
+  /// is wired so the completion applies immediately (and the UI reflects it).
+  /// With `showsUserInterface: false` the tap runs in a background isolate where
+  /// that hook is null, so completion was only queued and deferred to the next
+  /// app resume — which made the button appear to do nothing.
+  ///
+  /// Snooze/Skip stay background-only ([showsUserInterface] = false): Snooze
+  /// reschedules a notification and Skip is a no-op on state, so neither needs
+  /// the app open. [cancelNotification] dismisses the notification on tap.
   List<AndroidNotificationAction> _questActions() => const [
         AndroidNotificationAction(
           questActionDone,
           'Mark as Done',
-          showsUserInterface: false,
+          showsUserInterface: true,
           cancelNotification: true,
         ),
         AndroidNotificationAction(
