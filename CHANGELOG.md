@@ -13,6 +13,13 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.42] - 2026-07-12
+
+### Fixed
+- show paid/received items as deactivated, not just struck out
+- make quest "Mark as Done" action actually complete
+- per-quest check on Quests card instead of one ambiguous button
+
 ## [1.1.41] - 2026-07-12
 
 - Maintenance and internal improvements.
@@ -381,7 +388,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.41...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.42...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -424,3 +431,4 @@ distributed via `manifest.json`.
 [1.1.39]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.39
 [1.1.40]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.40
 [1.1.41]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.41
+[1.1.42]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.42
