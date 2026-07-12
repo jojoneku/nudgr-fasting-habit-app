@@ -7,7 +7,15 @@ class GoalProgressCard extends StatelessWidget {
   final FinancialAccount account;
   final VoidCallback? onTap;
 
-  const GoalProgressCard({super.key, required this.account, this.onTap});
+  /// When set, a "Fund" action is shown that transfers cash into this pocket.
+  final VoidCallback? onFund;
+
+  const GoalProgressCard({
+    super.key,
+    required this.account,
+    this.onTap,
+    this.onFund,
+  });
 
   Color _parseColor(BuildContext context) {
     try {
@@ -69,6 +77,23 @@ class GoalProgressCard extends StatelessWidget {
                   size: AppNumberSize.body,
                   color: color,
                 ),
+                if (onFund != null) ...[
+                  const SizedBox(width: 4),
+                  TextButton(
+                    onPressed: onFund,
+                    style: TextButton.styleFrom(
+                      foregroundColor: color,
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      minimumSize: const Size(44, 36),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text(
+                      'Fund',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
               ],
             ),
             if (account.goalTarget != null) ...[

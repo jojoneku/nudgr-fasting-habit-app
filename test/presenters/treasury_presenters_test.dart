@@ -386,6 +386,52 @@ void main() {
       expect(bpi.balance, 5500);
     });
 
+    test('fundGoal moves cash into a goal pocket (incl. sub-account)',
+        () async {
+      // A goal pocket modeled as a SUB-ACCOUNT of bpi — the case the generic
+      // transfer picker can't reach. Funding it debits the source and credits
+      // the pocket, propagating to the pocket's parent.
+      when(mockStorage.loadAccounts()).thenAnswer((_) async => [
+            _account(
+                id: 'gcash', category: AccountCategory.ewallet, balance: 1000),
+            _account(id: 'bpi', category: AccountCategory.bank, balance: 5000),
+            _account(
+                id: 'vac',
+                name: 'Vacation',
+                category: AccountCategory.goal,
+                balance: 0,
+                parentAccountId: 'bpi'),
+          ]);
+      final ledger = LedgerPresenter(mockStorage, mockStats);
+      await _waitForLoad(ledger);
+      final dash = TreasuryDashboardPresenter(mockStorage, ledger);
+
+      await dash.fundGoal(
+        fromAccountId: 'gcash',
+        toAccountId: 'vac',
+        amount: 300,
+        description: 'Fund Vacation',
+      );
+
+      final accounts = {for (final a in ledger.accounts) a.id: a.balance};
+      expect(accounts['vac'], 300); // pocket funded (sub-account reachable)
+      expect(accounts['gcash'], 700); // source debited
+      expect(accounts['bpi'], 5300); // propagated to the pocket's parent
+    });
+
+    test('fundGoal is a no-op for non-positive amounts', () async {
+      await _waitForLoad(presenter);
+      final dash = TreasuryDashboardPresenter(mockStorage, presenter);
+      await dash.fundGoal(
+        fromAccountId: 'gcash',
+        toAccountId: 'bpi',
+        amount: 0,
+        description: 'noop',
+      );
+      final gcash = presenter.accounts.firstWhere((a) => a.id == 'gcash');
+      expect(gcash.balance, 1000); // unchanged
+    });
+
     test('filteredMonthOutflow/Inflow exclude transfer legs', () async {
       final now = DateTime.now();
       final month = toMonthKey(now);

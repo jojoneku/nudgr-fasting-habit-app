@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/account_card_widget.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/budget_overview_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/cash_summary_banner.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/fund_goal_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
@@ -38,6 +39,14 @@ class TreasuryDashboardView extends StatelessWidget {
     );
   }
 
+  void _showFundGoalSheet(BuildContext context, FinancialAccount goal) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Fund ${goal.name}',
+      body: FundGoalSheet(presenter: presenter, goal: goal),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -55,6 +64,7 @@ class TreasuryDashboardView extends StatelessWidget {
             presenter: presenter,
             onAddAccount: () => _showAccountSheet(context),
             onEditAccount: (account) => _showAccountSheet(context, account),
+            onFundGoal: (goal) => _showFundGoalSheet(context, goal),
             onAddGoalSavings: () => _showGoalSavingsSheet(context),
           ),
           floatingActionButton: _AddAccountFab(
@@ -89,12 +99,14 @@ class _DashboardScrollBody extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final VoidCallback onAddAccount;
   final ValueChanged<FinancialAccount> onEditAccount;
+  final ValueChanged<FinancialAccount> onFundGoal;
   final VoidCallback onAddGoalSavings;
 
   const _DashboardScrollBody({
     required this.presenter,
     required this.onAddAccount,
     required this.onEditAccount,
+    required this.onFundGoal,
     required this.onAddGoalSavings,
   });
 
@@ -138,6 +150,7 @@ class _DashboardScrollBody extends StatelessWidget {
           _GoalSection(
             presenter: presenter,
             onEdit: onEditAccount,
+            onFund: onFundGoal,
             onAdd: onAddGoalSavings,
           ),
           const SizedBox(height: 16),
@@ -211,11 +224,13 @@ class _LiquidAccountsRow extends StatelessWidget {
 class _GoalSection extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final ValueChanged<FinancialAccount> onEdit;
+  final ValueChanged<FinancialAccount> onFund;
   final VoidCallback onAdd;
 
   const _GoalSection({
     required this.presenter,
     required this.onEdit,
+    required this.onFund,
     required this.onAdd,
   });
 
@@ -256,6 +271,10 @@ class _GoalSection extends StatelessWidget {
                       onTap: () {
                         HapticFeedback.selectionClick();
                         onEdit(goals[i]);
+                      },
+                      onFund: () {
+                        HapticFeedback.selectionClick();
+                        onFund(goals[i]);
                       },
                     ),
                     if (i < goals.length - 1)

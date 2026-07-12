@@ -161,6 +161,28 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
 
+  /// Fund a savings / goal / sinking-fund pocket. Funding is just a transfer:
+  /// cash moves from a liquid account into the pocket, routed through the ledger
+  /// so it posts proper double-entry and counts as a savings contribution.
+  /// Works for sub-account pockets too — which the generic transfer picker
+  /// can't reach — because the destination is fixed to [toAccountId] here.
+  Future<void> fundGoal({
+    required String fromAccountId,
+    required String toAccountId,
+    required double amount,
+    required String description,
+  }) async {
+    final ledger = _ledger;
+    if (ledger == null || amount <= 0 || fromAccountId == toAccountId) return;
+    await ledger.addTransfer(
+      fromAccountId: fromAccountId,
+      toAccountId: toAccountId,
+      amount: amount,
+      description: description,
+      date: DateTime.now(),
+    );
+  }
+
   /// Total set aside in savings + goal pockets — powers the Setup
   /// "Savings & Goals" KPI. Matches the set of accounts the Setup page groups
   /// under that heading ([savingsAccounts] + [goalAccounts]).
