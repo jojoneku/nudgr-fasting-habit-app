@@ -56,13 +56,20 @@ class MacroSplitRing extends StatelessWidget {
               strokeWidth: strokeWidth,
             ),
             child: Center(
-              child: Icon(
-                Icons.egg_alt_outlined,
-                size: 22,
-                color: idle
-                    ? carbsColor.withValues(alpha: 0.55)
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
+              child: idle
+                  ? Icon(
+                      Icons.egg_alt_outlined,
+                      size: 22,
+                      color: carbsColor.withValues(alpha: 0.55),
+                    )
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _macroText(theme, 'P', protein, proteinColor),
+                        _macroText(theme, 'C', carbs, carbsColor),
+                        _macroText(theme, 'F', fat, fatColor),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -73,6 +80,19 @@ class MacroSplitRing extends StatelessWidget {
               ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
         ),
       ],
+    );
+  }
+
+  /// One compact, color-coded macro value (e.g. `P 128`) for the ring center.
+  Widget _macroText(ThemeData theme, String label, double grams, Color color) {
+    return Text(
+      '$label ${grams.round()}',
+      style: theme.textTheme.labelSmall?.copyWith(
+        fontSize: 9,
+        height: 1.3,
+        fontWeight: FontWeight.w700,
+        color: color,
+      ),
     );
   }
 }
