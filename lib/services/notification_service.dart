@@ -129,11 +129,15 @@ class NotificationService {
   static const String channelIdFinance = 'finance_channel_v1';
   static const String channelNameFinance = 'Finance Alerts';
 
+  static const String channelIdDailyBrief = 'daily_brief';
+  static const String channelNameDailyBrief = 'System Analysis';
+
   // ── Notification ID constants ───────────────────────────────────────────────
   static const int notifIdLevelUp = 500;
   static const int notifIdRankPromotion = 501;
   static const int notifIdWeightReminder = 510;
   static const int notifIdCalorieGoal = 511;
+  static const int notifIdDailyBrief = 512;
   static const int notifIdBillsReminder = 600;
   // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
   static const int notifIdCreditDueBase = 620;
@@ -399,6 +403,18 @@ class NotificationService {
           importance: Importance.max,
           playSound: true,
           enableVibration: false,
+        ),
+      );
+
+      // 7. System Analysis (morning daily-brief reminder)
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelIdDailyBrief,
+          channelNameDailyBrief,
+          description: 'Morning reminder that your System Analysis is ready',
+          importance: Importance.max,
+          playSound: true,
+          enableVibration: true,
         ),
       );
 
@@ -1235,6 +1251,64 @@ class NotificationService {
     if (!_isInitialized) return;
     _invalidateSchedule('weightReminder');
     await flutterLocalNotificationsPlugin.cancel(notifIdWeightReminder);
+  }
+
+  /// Schedule a daily "System Analysis ready" reminder at [time]. Fires daily
+  /// via [DateTimeComponents.time] — persists across app restarts. The brief
+  /// itself is generated lazily on the next app open/resume (see
+  /// [InsightsPresenter.generateDailyBriefIfDue]); this only nudges the user to
+  /// open the Hub. Mirrors [scheduleWeightReminder].
+  Future<void> scheduleDailyBriefReminder(TimeOfDay time) async {
+    if (!_isInitialized || !_masterEnabled) return;
+    if (!_scheduleChanged('dailyBrief', '${time.hour}:${time.minute}')) {
+      return;
+    }
+    await flutterLocalNotificationsPlugin.cancel(notifIdDailyBrief);
+
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduled = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, time.hour, time.minute);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdDailyBrief,
+      channelNameDailyBrief,
+      channelDescription: 'Morning reminder that your System Analysis is ready',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: true,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        notifIdDailyBrief,
+        'System Analysis ready',
+        'Your morning briefing awaits in the Hub.',
+        scheduled,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+      );
+      debugPrint(
+          'NotificationService: Daily brief reminder scheduled for ${time.hour}:${time.minute.toString().padLeft(2, '0')} daily');
+    } catch (e) {
+      debugPrint(
+          'NotificationService: Error scheduling daily brief reminder: $e');
+    }
+  }
+
+  Future<void> cancelDailyBriefReminder() async {
+    if (!_isInitialized) return;
+    _invalidateSchedule('dailyBrief');
+    await flutterLocalNotificationsPlugin.cancel(notifIdDailyBrief);
   }
 
   Future<void> showCalorieGoalNotification(int calories, int goal) async {

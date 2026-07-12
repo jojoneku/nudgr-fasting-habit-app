@@ -13,6 +13,7 @@ import '../presenters/fasting_presenter.dart';
 import '../presenters/grocery_cart_presenter.dart';
 import '../presenters/hub_presenter.dart';
 import '../presenters/installment_presenter.dart';
+import '../presenters/insights_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/onboarding_presenter.dart';
@@ -63,6 +64,7 @@ class HubScreen extends StatefulWidget {
     this.nutritionPresenter,
     this.activityPresenter,
     this.aiCoachPresenter,
+    this.insightsPresenter,
     this.treasuryPresenter,
     this.ledgerPresenter,
     this.billsPresenter,
@@ -86,6 +88,7 @@ class HubScreen extends StatefulWidget {
   final NutritionPresenter? nutritionPresenter;
   final ActivityPresenter? activityPresenter;
   final AiCoachPresenter? aiCoachPresenter;
+  final InsightsPresenter? insightsPresenter;
   final TreasuryDashboardPresenter? treasuryPresenter;
   final LedgerPresenter? ledgerPresenter;
   final BillsReceivablesPresenter? billsPresenter;
@@ -296,7 +299,7 @@ class _HubScreenState extends State<HubScreen> {
                     ),
                     const SizedBox(height: AppSpacing.md),
                     HubCoachLine(
-                      aiCoach: widget.aiCoachPresenter,
+                      insights: widget.insightsPresenter,
                       nutrition: widget.nutritionPresenter,
                       treasury: widget.treasuryPresenter,
                     ),

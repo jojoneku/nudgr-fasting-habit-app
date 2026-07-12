@@ -16,6 +16,12 @@ class NotificationPreferences {
   final TimeOfDay weightReminderTime; // default 08:00
   final bool calorieGoalEnabled;
 
+  // ── System ─────────────────────────────────────────────────────────────────
+  /// Morning "System Analysis ready" reminder. Default OFF so existing users
+  /// aren't surprised by a new daily notification.
+  final bool dailyBriefEnabled;
+  final TimeOfDay dailyBriefTime; // default 07:30
+
   // ── Quests ─────────────────────────────────────────────────────────────────
   final bool questNotificationsEnabled;
   final bool streakAtRiskEnabled;
@@ -33,6 +39,8 @@ class NotificationPreferences {
     this.weightReminderEnabled = false,
     this.weightReminderTime = const TimeOfDay(hour: 8, minute: 0),
     this.calorieGoalEnabled = true,
+    this.dailyBriefEnabled = false,
+    this.dailyBriefTime = const TimeOfDay(hour: 7, minute: 30),
     this.questNotificationsEnabled = true,
     this.streakAtRiskEnabled = true,
     this.billsReminderEnabled = true,
@@ -46,6 +54,8 @@ class NotificationPreferences {
   factory NotificationPreferences.fromJson(Map<String, dynamic> json) {
     final hourRaw = json['weightReminderHour'] as int? ?? 8;
     final minRaw = json['weightReminderMinute'] as int? ?? 0;
+    final briefHour = json['dailyBriefHour'] as int? ?? 7;
+    final briefMin = json['dailyBriefMinute'] as int? ?? 30;
     return NotificationPreferences(
       masterEnabled: json['masterEnabled'] as bool? ?? true,
       levelUpEnabled: json['levelUpEnabled'] as bool? ?? true,
@@ -53,6 +63,8 @@ class NotificationPreferences {
       weightReminderEnabled: json['weightReminderEnabled'] as bool? ?? false,
       weightReminderTime: TimeOfDay(hour: hourRaw, minute: minRaw),
       calorieGoalEnabled: json['calorieGoalEnabled'] as bool? ?? true,
+      dailyBriefEnabled: json['dailyBriefEnabled'] as bool? ?? false,
+      dailyBriefTime: TimeOfDay(hour: briefHour, minute: briefMin),
       questNotificationsEnabled:
           json['questNotificationsEnabled'] as bool? ?? true,
       streakAtRiskEnabled: json['streakAtRiskEnabled'] as bool? ?? true,
@@ -73,6 +85,9 @@ class NotificationPreferences {
         'weightReminderHour': weightReminderTime.hour,
         'weightReminderMinute': weightReminderTime.minute,
         'calorieGoalEnabled': calorieGoalEnabled,
+        'dailyBriefEnabled': dailyBriefEnabled,
+        'dailyBriefHour': dailyBriefTime.hour,
+        'dailyBriefMinute': dailyBriefTime.minute,
         'questNotificationsEnabled': questNotificationsEnabled,
         'streakAtRiskEnabled': streakAtRiskEnabled,
         'billsReminderEnabled': billsReminderEnabled,
@@ -88,6 +103,8 @@ class NotificationPreferences {
     bool? weightReminderEnabled,
     TimeOfDay? weightReminderTime,
     bool? calorieGoalEnabled,
+    bool? dailyBriefEnabled,
+    TimeOfDay? dailyBriefTime,
     bool? questNotificationsEnabled,
     bool? streakAtRiskEnabled,
     bool? billsReminderEnabled,
@@ -103,6 +120,8 @@ class NotificationPreferences {
             weightReminderEnabled ?? this.weightReminderEnabled,
         weightReminderTime: weightReminderTime ?? this.weightReminderTime,
         calorieGoalEnabled: calorieGoalEnabled ?? this.calorieGoalEnabled,
+        dailyBriefEnabled: dailyBriefEnabled ?? this.dailyBriefEnabled,
+        dailyBriefTime: dailyBriefTime ?? this.dailyBriefTime,
         questNotificationsEnabled:
             questNotificationsEnabled ?? this.questNotificationsEnabled,
         streakAtRiskEnabled: streakAtRiskEnabled ?? this.streakAtRiskEnabled,

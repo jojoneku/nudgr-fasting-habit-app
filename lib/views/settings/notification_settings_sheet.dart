@@ -101,6 +101,10 @@ class _NotificationSettingsSheetState
       await widget.notifications
           .scheduleBillsReminder(_prefs.billsReminderDayOfMonth);
     }
+    if (_prefs.dailyBriefEnabled) {
+      await widget.notifications
+          .scheduleDailyBriefReminder(_prefs.dailyBriefTime);
+    }
     await widget.onMasterReenabled?.call();
     await _loadSystemStatus();
   }
@@ -137,6 +141,28 @@ class _NotificationSettingsSheetState
 
   Future<void> _toggleCalorieGoal(bool v) async {
     await _updatePrefs(_prefs.copyWith(calorieGoalEnabled: v));
+  }
+
+  Future<void> _toggleDailyBrief(bool v) async {
+    await _updatePrefs(_prefs.copyWith(dailyBriefEnabled: v));
+    if (v) {
+      await widget.notifications
+          .scheduleDailyBriefReminder(_prefs.dailyBriefTime);
+    } else {
+      await widget.notifications.cancelDailyBriefReminder();
+    }
+  }
+
+  Future<void> _pickDailyBriefTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _prefs.dailyBriefTime,
+    );
+    if (picked == null || !mounted) return;
+    await _updatePrefs(_prefs.copyWith(dailyBriefTime: picked));
+    if (_prefs.dailyBriefEnabled) {
+      await widget.notifications.scheduleDailyBriefReminder(picked);
+    }
   }
 
   Future<void> _toggleQuestNotifications(bool v) async {
@@ -331,6 +357,30 @@ class _NotificationSettingsSheetState
                         value: _prefs.calorieGoalEnabled,
                         onChanged: _toggleCalorieGoal,
                       ),
+                      const SizedBox(height: 16),
+
+                      // ── System ──────────────────────────────────────────────
+                      const _SectionHeader(label: 'System'),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Daily brief reminder'),
+                        subtitle: const Text(
+                            'Morning nudge that your System Analysis is ready'),
+                        value: _prefs.dailyBriefEnabled,
+                        onChanged: _toggleDailyBrief,
+                      ),
+                      if (_prefs.dailyBriefEnabled)
+                        ListTile(
+                          contentPadding: const EdgeInsets.only(left: 16),
+                          leading: const Icon(Icons.access_time_outlined),
+                          title: const Text('Briefing time'),
+                          subtitle: Text(
+                            _prefs.dailyBriefTime.format(context),
+                          ),
+                          trailing: const Icon(Icons.chevron_right, size: 18),
+                          onTap: _pickDailyBriefTime,
+                          minTileHeight: 48,
+                        ),
                       const SizedBox(height: 16),
 
                       // ── Finance ─────────────────────────────────────────────
