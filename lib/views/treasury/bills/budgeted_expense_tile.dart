@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
+import 'package:intermittent_fasting/utils/app_motion.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -41,106 +42,109 @@ class BudgetedExpenseTile extends StatelessWidget {
         ? (expense.spentAmount / expense.allocatedAmount).clamp(0.0, 1.0)
         : 0.0;
 
-    return AppListTile(
-      key: ValueKey('tile_${expense.id}'),
-      leading: AppIconBadge(
-        icon: Icons.savings_outlined,
-        color: goldColor,
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              expense.name,
-              style: TextStyle(
-                color: expense.isPaid
-                    ? colorScheme.onSurfaceVariant
-                    : colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                decoration: expense.isPaid ? TextDecoration.lineThrough : null,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          AppBadge(
-            text: _typeLabel(expense.budgetedType),
+    // Funded set-asides read as clearly deactivated (dimmed), not just struck out.
+    return AnimatedOpacity(
+        opacity: expense.isPaid ? 0.5 : 1.0,
+        duration: AppMotion.appear,
+        child: AppListTile(
+          key: ValueKey('tile_${expense.id}'),
+          leading: AppIconBadge(
+            icon: Icons.savings_outlined,
             color: goldColor,
           ),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const SizedBox(height: 4),
-          AppLinearProgress(
-            value: progress,
-            label: '${formatPeso(expense.spentAmount)} spent',
-            valueText: 'of ${formatPeso(expense.allocatedAmount)}',
-            color: isOver ? colorScheme.error : colorScheme.primary,
-            height: 6,
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  expense.name,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AppBadge(
+                text: _typeLabel(expense.budgetedType),
+                color: goldColor,
+              ),
+            ],
           ),
-          if (expense.note != null && expense.note!.isNotEmpty) ...[
-            const SizedBox(height: 4),
-            Text(
-              expense.note!,
-              style:
-                  TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
-            ),
-          ],
-          if (accountName != null) ...[
-            const SizedBox(height: 4),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.account_balance_wallet_outlined,
-                    size: 12, color: colorScheme.onSurfaceVariant),
-                const SizedBox(width: 4),
+          subtitle: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 4),
+              AppLinearProgress(
+                value: progress,
+                label: '${formatPeso(expense.spentAmount)} spent',
+                valueText: 'of ${formatPeso(expense.allocatedAmount)}',
+                color: isOver ? colorScheme.error : colorScheme.primary,
+                height: 6,
+              ),
+              if (expense.note != null && expense.note!.isNotEmpty) ...[
+                const SizedBox(height: 4),
                 Text(
-                  'Fund from $accountName',
+                  expense.note!,
                   style: TextStyle(
                       color: colorScheme.onSurfaceVariant, fontSize: 11),
                 ),
               ],
-            ),
-          ],
-        ],
-      ),
-      trailing: expense.isPaid
-          ? Icon(Icons.check_circle, color: context.appColors.success, size: 24)
-          : SizedBox(
-              height: 44,
-              child: TextButton(
-                onPressed: onMarkPaid,
-                style: TextButton.styleFrom(
-                  foregroundColor: colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+              if (accountName != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.account_balance_wallet_outlined,
+                        size: 12, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Fund from $accountName',
+                      style: TextStyle(
+                          color: colorScheme.onSurfaceVariant, fontSize: 11),
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  'Mark Paid',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              ],
+            ],
+          ),
+          trailing: expense.isPaid
+              ? Icon(Icons.check_circle,
+                  color: context.appColors.success, size: 24)
+              : SizedBox(
+                  height: 44,
+                  child: TextButton(
+                    onPressed: onMarkPaid,
+                    style: TextButton.styleFrom(
+                      foregroundColor: colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                    child: const Text(
+                      'Mark Paid',
+                      style:
+                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-      onLongPress: onEdit != null || onDelete != null
-          ? () => _showContextMenu(context)
-          : null,
-      onDelete: onDelete != null
-          ? () async {
-              final confirmed = await AppConfirmDialog.confirm(
-                context: context,
-                title: 'Delete Expense',
-                body: 'Delete "${expense.name}"?',
-                confirmLabel: 'Delete',
-                cancelLabel: 'Cancel',
-                isDestructive: true,
-              );
-              if (confirmed) onDelete!();
-              return confirmed;
-            }
-          : null,
-    );
+          onLongPress: onEdit != null || onDelete != null
+              ? () => _showContextMenu(context)
+              : null,
+          onDelete: onDelete != null
+              ? () async {
+                  final confirmed = await AppConfirmDialog.confirm(
+                    context: context,
+                    title: 'Delete Expense',
+                    body: 'Delete "${expense.name}"?',
+                    confirmLabel: 'Delete',
+                    cancelLabel: 'Cancel',
+                    isDestructive: true,
+                  );
+                  if (confirmed) onDelete!();
+                  return confirmed;
+                }
+              : null,
+        ));
   }
 
   void _showContextMenu(BuildContext context) {

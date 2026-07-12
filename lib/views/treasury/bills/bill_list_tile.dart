@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/utils/app_motion.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -123,89 +124,89 @@ class BillListTile extends StatelessWidget {
       );
     }
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        AppListTile(
-          key: ValueKey('tile_${bill.id}'),
-          leading: AppIconBadge(
-            icon: Icons.receipt_outlined,
-            color: typeColor,
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  bill.name,
-                  style: TextStyle(
-                    color: bill.isPaid
-                        ? colorScheme.onSurfaceVariant
-                        : colorScheme.onSurface,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    decoration: bill.isPaid ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 4),
-              AppBadge(
-                text: _billTypeLabel(bill.billType),
+    // Paid bills read as clearly deactivated (dimmed), not just struck out.
+    return AnimatedOpacity(
+        opacity: bill.isPaid ? 0.5 : 1.0,
+        duration: AppMotion.appear,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AppListTile(
+              key: ValueKey('tile_${bill.id}'),
+              leading: AppIconBadge(
+                icon: Icons.receipt_outlined,
                 color: typeColor,
               ),
-            ],
-          ),
-          subtitle: subtitleWidget,
-          trailing: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                formatPeso(bill.amount),
-                style: TextStyle(
-                  color: bill.isPaid
-                      ? colorScheme.onSurfaceVariant
-                      : colorScheme.onSurface,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  decoration: bill.isPaid ? TextDecoration.lineThrough : null,
-                ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      bill.name,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  AppBadge(
+                    text: _billTypeLabel(bill.billType),
+                    color: typeColor,
+                  ),
+                ],
               ),
-              if (bill.isPaid)
-                Icon(Icons.check_circle,
-                    color: context.appColors.success, size: 18)
-              else
-                TextButton(
-                  onPressed: onMarkPaid,
-                  style: TextButton.styleFrom(
-                    foregroundColor: colorScheme.primary,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    minimumSize: const Size(44, 44),
+              subtitle: subtitleWidget,
+              trailing: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatPeso(bill.amount),
+                    style: TextStyle(
+                      color: colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
-                  child: const Text(
-                    'Mark Paid',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-                  ),
-                ),
-            ],
-          ),
-          onLongPress: onEdit != null ? () => _showContextMenu(context) : null,
-          onDelete: onDelete != null
-              ? () async {
-                  final confirmed = await AppConfirmDialog.confirm(
-                    context: context,
-                    title: 'Delete Bill',
-                    body: 'Delete "${bill.name}"?',
-                    confirmLabel: 'Delete',
-                    cancelLabel: 'Cancel',
-                    isDestructive: true,
-                  );
-                  if (confirmed) onDelete!();
-                  return confirmed;
-                }
-              : null,
-        ),
-      ],
-    );
+                  if (bill.isPaid)
+                    Icon(Icons.check_circle,
+                        color: context.appColors.success, size: 18)
+                  else
+                    TextButton(
+                      onPressed: onMarkPaid,
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        minimumSize: const Size(44, 44),
+                      ),
+                      child: const Text(
+                        'Mark Paid',
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                ],
+              ),
+              onLongPress:
+                  onEdit != null ? () => _showContextMenu(context) : null,
+              onDelete: onDelete != null
+                  ? () async {
+                      final confirmed = await AppConfirmDialog.confirm(
+                        context: context,
+                        title: 'Delete Bill',
+                        body: 'Delete "${bill.name}"?',
+                        confirmLabel: 'Delete',
+                        cancelLabel: 'Cancel',
+                        isDestructive: true,
+                      );
+                      if (confirmed) onDelete!();
+                      return confirmed;
+                    }
+                  : null,
+            ),
+          ],
+        ));
   }
 
   void _showContextMenu(BuildContext context) {

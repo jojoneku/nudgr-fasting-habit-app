@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
+import 'package:intermittent_fasting/utils/app_motion.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -79,87 +80,84 @@ class ReceivableListTile extends StatelessWidget {
       );
     }
 
-    return AppListTile(
-      key: ValueKey('tile_${receivable.id}'),
-      leading: AppIconBadge(
-        icon: Icons.account_balance_wallet_outlined,
-        color: typeColor,
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              receivable.name,
-              style: TextStyle(
-                color: receivable.isReceived
-                    ? colorScheme.onSurfaceVariant
-                    : colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-                decoration:
-                    receivable.isReceived ? TextDecoration.lineThrough : null,
-              ),
-            ),
-          ),
-          const SizedBox(width: 4),
-          AppBadge(
-            text: _typeLabel(receivable.receivableType),
+    // Received items read as clearly deactivated (dimmed), not just struck out.
+    return AnimatedOpacity(
+        opacity: receivable.isReceived ? 0.5 : 1.0,
+        duration: AppMotion.appear,
+        child: AppListTile(
+          key: ValueKey('tile_${receivable.id}'),
+          leading: AppIconBadge(
+            icon: Icons.account_balance_wallet_outlined,
             color: typeColor,
           ),
-        ],
-      ),
-      subtitle: subtitleWidget,
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            formatPeso(receivable.amount),
-            style: TextStyle(
-              color: receivable.isReceived
-                  ? colorScheme.onSurfaceVariant
-                  : colorScheme.onSurface,
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
-              decoration:
-                  receivable.isReceived ? TextDecoration.lineThrough : null,
-            ),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  receivable.name,
+                  style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              AppBadge(
+                text: _typeLabel(receivable.receivableType),
+                color: typeColor,
+              ),
+            ],
           ),
-          if (receivable.isReceived)
-            Icon(Icons.check_circle, color: context.appColors.success, size: 18)
-          else
-            TextButton(
-              onPressed: onMarkReceived,
-              style: TextButton.styleFrom(
-                foregroundColor: context.appColors.success,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                minimumSize: const Size(44, 44),
+          subtitle: subtitleWidget,
+          trailing: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                formatPeso(receivable.amount),
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 13,
+                ),
               ),
-              child: const Text(
-                'Mark Received',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-              ),
-            ),
-        ],
-      ),
-      onLongPress: onEdit != null || onDelete != null
-          ? () => _showContextMenu(context)
-          : null,
-      onDelete: onDelete != null
-          ? () async {
-              final confirmed = await AppConfirmDialog.confirm(
-                context: context,
-                title: 'Delete Receivable',
-                body: 'Delete "${receivable.name}"?',
-                confirmLabel: 'Delete',
-                cancelLabel: 'Cancel',
-                isDestructive: true,
-              );
-              if (confirmed) onDelete!();
-              return confirmed;
-            }
-          : null,
-    );
+              if (receivable.isReceived)
+                Icon(Icons.check_circle,
+                    color: context.appColors.success, size: 18)
+              else
+                TextButton(
+                  onPressed: onMarkReceived,
+                  style: TextButton.styleFrom(
+                    foregroundColor: context.appColors.success,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    minimumSize: const Size(44, 44),
+                  ),
+                  child: const Text(
+                    'Mark Received',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                ),
+            ],
+          ),
+          onLongPress: onEdit != null || onDelete != null
+              ? () => _showContextMenu(context)
+              : null,
+          onDelete: onDelete != null
+              ? () async {
+                  final confirmed = await AppConfirmDialog.confirm(
+                    context: context,
+                    title: 'Delete Receivable',
+                    body: 'Delete "${receivable.name}"?',
+                    confirmLabel: 'Delete',
+                    cancelLabel: 'Cancel',
+                    isDestructive: true,
+                  );
+                  if (confirmed) onDelete!();
+                  return confirmed;
+                }
+              : null,
+        ));
   }
 
   void _showContextMenu(BuildContext context) {
