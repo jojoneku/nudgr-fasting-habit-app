@@ -200,7 +200,8 @@ void main() {
   });
 
   group('daily brief', () {
-    test('generates once/day; second call same day no-ops; next day regenerates',
+    test(
+        'generates once/day; second call same day no-ops; next day regenerates',
         () async {
       final p = build();
       p.inputs = benign;
@@ -298,8 +299,7 @@ void main() {
       await p.init();
       await p.refresh();
 
-      final nudge =
-          p.recent.firstWhere((i) => i.kind == InsightKind.nudge);
+      final nudge = p.recent.firstWhere((i) => i.kind == InsightKind.nudge);
       expect(nudge.source, InsightSource.rules);
       verifyNever(cloud.respond(
         messages: anyNamed('messages'),
@@ -357,6 +357,56 @@ void main() {
       expect(p.hasUnread, isFalse);
       // Watermark persisted in the cooldown map under the reserved key.
       expect(cooldowns!.containsKey('_lastRead'), isTrue);
+      p.dispose();
+    });
+  });
+
+  group('re-entrancy', () {
+    // A phrasing service that yields after a delay, widening the window where
+    // two overlapping callers can both slip past the once-a-day / hash gate.
+    MockAiCoachService slowAi(String out) {
+      final ai = MockAiCoachService();
+      when(ai.isAvailable).thenReturn(true);
+      when(ai.respond(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+      )).thenAnswer((_) async* {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        yield out;
+      });
+      return ai;
+    }
+
+    test('concurrent generateDailyBriefIfDue generates at most one brief',
+        () async {
+      final p = build(onDeviceAi: slowAi('brief text'));
+      p.inputs = benign;
+      await p.init();
+
+      // Two callers in the same turn, before either has set _lastBriefDate.
+      final f1 = p.generateDailyBriefIfDue();
+      final f2 = p.generateDailyBriefIfDue();
+      await Future.wait([f1, f2]);
+
+      expect(
+        p.recent.where((i) => i.kind == InsightKind.dailyBrief).length,
+        1,
+        reason: 'daily brief must generate at most once/day even under overlap',
+      );
+      p.dispose();
+    });
+
+    test('concurrent refresh does not double-fire a nudge', () async {
+      final p = build(onDeviceAi: slowAi('phrased'));
+      p.inputs = billInputs; // fires finance.billImminent
+      await p.init();
+
+      final f1 = p.refresh();
+      final f2 = p.refresh();
+      await Future.wait([f1, f2]);
+
+      expect(nudgeCount(p), 1,
+          reason: 'overlapping refreshes must coalesce, not double-fire');
       p.dispose();
     });
   });

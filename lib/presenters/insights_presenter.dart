@@ -125,6 +125,16 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
   bool _isGenerating = false;
   bool _pendingRecompute = false;
   bool _refreshRequestedBeforeInit = false;
+  // Re-entrancy guards. Both [refresh] and [generateDailyBriefIfDue] await
+  // slow AI phrasing calls; the Hub mount, home-screen lifecycle-resume, and
+  // source-change microtask can all invoke them while a previous call is still
+  // in flight. Without these, two overlapping calls each pass their once-a-day
+  // / hash gate (which isn't updated until after the await) and both generate —
+  // producing duplicate briefs/nudges. [_refreshPending] re-runs a single
+  // coalesced refresh for any change that landed mid-flight.
+  bool _refreshInFlight = false;
+  bool _refreshPending = false;
+  bool _briefInFlight = false;
   int _idCounter = 0;
 
   // ── Read surface (Hub) ──────────────────────────────────────────────────
@@ -133,8 +143,8 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
   /// else today's brief, else the most recent insight of any age, else null.
   Insight? get current {
     final now = _clock();
-    final todayNudge = _firstWhere(
-        (i) => i.kind == InsightKind.nudge && _isSameLocalDay(i.createdAt, now));
+    final todayNudge = _firstWhere((i) =>
+        i.kind == InsightKind.nudge && _isSameLocalDay(i.createdAt, now));
     if (todayNudge != null) return todayNudge;
     final brief = dailyBrief;
     if (brief != null) return brief;
@@ -242,6 +252,26 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
       _refreshRequestedBeforeInit = true;
       return;
     }
+    // Coalesce overlapping calls: if one is already running, ask it to run once
+    // more when it finishes (so a change that landed mid-flight isn't missed)
+    // instead of racing a second concurrent pass that would double-fire nudges.
+    if (_refreshInFlight) {
+      _refreshPending = true;
+      return;
+    }
+    _refreshInFlight = true;
+    try {
+      await _refreshOnce();
+      while (_refreshPending && !isDisposed) {
+        _refreshPending = false;
+        await _refreshOnce();
+      }
+    } finally {
+      _refreshInFlight = false;
+    }
+  }
+
+  Future<void> _refreshOnce() async {
     final now = _clock();
     final snapshot = InsightSnapshotBuilder.build(buildSnapshotInputs(), now);
     final newHashes = snapshot.sectionHashes;
@@ -304,9 +334,16 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
   /// (on-device → cloud → template). Never throws.
   Future<void> generateDailyBriefIfDue() async {
     if (!_initialized) return;
+    // Guard against overlapping callers (hub mount + lifecycle resume + the
+    // once-per-day home-screen call). `_lastBriefDate` is only set after the
+    // phrasing await, so without this two concurrent calls would both pass the
+    // once-a-day check and generate a duplicate brief (and a duplicate LLM
+    // call).
+    if (_briefInFlight) return;
     final now = _clock();
     if (_lastBriefDate != null && _isSameLocalDay(_lastBriefDate!, now)) return;
 
+    _briefInFlight = true;
     _isGenerating = true;
     safeNotify();
     try {
@@ -331,6 +368,7 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
       await _persistInsights();
       await _storage.saveLastDailyBriefDate(now);
     } finally {
+      _briefInFlight = false;
       _isGenerating = false;
       safeNotify();
     }
@@ -376,7 +414,8 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
     if (onDevice != null && onDevice.isAvailable) {
       final text = await _collect(
           onDevice, instruction, snapshot, changedSections, directive);
-      if (text != null && text.isNotEmpty) return (text, InsightSource.onDevice);
+      if (text != null && text.isNotEmpty)
+        return (text, InsightSource.onDevice);
     }
 
     final cloud = _cloudAi;
@@ -415,12 +454,10 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
       prompt.write(digest);
 
       final buffer = StringBuffer();
-      final stream = service
-          .respond(
-            messages: [AiChatMessage.user(prompt.toString())],
-            context: const AiCoachContext(entryPoint: AiCoachEntryPoint.general),
-          )
-          .timeout(_kPhraseTimeout);
+      final stream = service.respond(
+        messages: [AiChatMessage.user(prompt.toString())],
+        context: const AiCoachContext(entryPoint: AiCoachEntryPoint.general),
+      ).timeout(_kPhraseTimeout);
       await for (final token in stream) {
         if (isDisposed) return null;
         buffer.write(token);
