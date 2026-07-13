@@ -322,6 +322,17 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   int get sevenDayAvgCalories =>
       BodyCompositionCalculator.sevenDayAvgCalories(history);
 
+  /// Rolling 7-day average fat intake in grams (Plan 057 — feeds the
+  /// `nutrition.fatTrend` insight trigger). See
+  /// [BodyCompositionCalculator.sevenDayAvgFatGrams].
+  double get sevenDayAvgFatGrams =>
+      BodyCompositionCalculator.sevenDayAvgFatGrams(history);
+
+  /// Daily fat-gram target, or null when no fat goal is set. Exposed as a
+  /// double (grams) for the Insight Engine's `fatTargetGrams` marker; the
+  /// existing [fatGoal] getter rounds to an int for UI display.
+  double? get fatTargetGrams => _goals.fatGrams;
+
   double? get proteinHitRate7d => BodyCompositionCalculator.proteinHitRate7d(
         goals: _goals,
         history: history,

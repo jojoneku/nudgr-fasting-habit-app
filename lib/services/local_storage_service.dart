@@ -34,6 +34,7 @@ import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
 import '../models/body_measurement_entry.dart';
 import '../models/weight_entry.dart';
+import '../models/insight.dart';
 import 'storage_service.dart';
 import 'sync_queue.dart';
 
@@ -145,6 +146,10 @@ class LocalStorageService extends StorageService {
     StorageService.keyGroceryPriceMemory,
     StorageService.keyGroceryBudget,
     StorageService.keyGroceryTripHistory,
+    StorageService.keyInsightBaselineHashes,
+    StorageService.keyInsights,
+    StorageService.keyInsightCooldowns,
+    StorageService.keyLastDailyBriefDate,
   ];
 
   /// Removes all `u/$userId/` prefixed prefs keys and resets the user
@@ -1527,6 +1532,98 @@ class LocalStorageService extends StorageService {
       debugPrint('LocalStorageService: Error parsing trip history: $e');
       return [];
     }
+  }
+
+  // ── Insight Engine (Plan 057) ────────────────────────────────────────────────
+  // User-scoped like nutrition/finance/activity data — generated from the
+  // user's own cross-module state, so it migrates and is wiped the same way.
+
+  @override
+  Future<Map<String, String>?> loadInsightBaselineHashes() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyInsightBaselineHashes));
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, v as String));
+    } catch (e) {
+      debugPrint(
+          'LocalStorageService: Error loading insight baseline hashes: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> saveInsightBaselineHashes(Map<String, String> hashes) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _k(StorageService.keyInsightBaselineHashes), jsonEncode(hashes));
+    _markDirty(SyncDomain.userProfile, 'default');
+  }
+
+  @override
+  Future<List<Insight>> loadInsights() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyInsights));
+    if (raw == null) return [];
+    try {
+      return (jsonDecode(raw) as List)
+          .map((e) => Insight.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading insights: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveInsights(List<Insight> insights) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_k(StorageService.keyInsights),
+        jsonEncode(insights.map((e) => e.toJson()).toList()));
+    _markDirty(SyncDomain.userProfile, 'default');
+  }
+
+  @override
+  Future<Map<String, DateTime>?> loadInsightCooldowns() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyInsightCooldowns));
+    if (raw == null) return null;
+    try {
+      return (jsonDecode(raw) as Map<String, dynamic>)
+          .map((k, v) => MapEntry(k, DateTime.parse(v as String)));
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading insight cooldowns: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> saveInsightCooldowns(Map<String, DateTime> cooldowns) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_k(StorageService.keyInsightCooldowns),
+        jsonEncode(cooldowns.map((k, v) => MapEntry(k, v.toIso8601String()))));
+    _markDirty(SyncDomain.userProfile, 'default');
+  }
+
+  @override
+  Future<DateTime?> loadLastDailyBriefDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyLastDailyBriefDate));
+    if (raw == null) return null;
+    try {
+      return DateTime.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  @override
+  Future<void> saveLastDailyBriefDate(DateTime date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _k(StorageService.keyLastDailyBriefDate), date.toIso8601String());
+    _markDirty(SyncDomain.userProfile, 'default');
   }
 
   // ── Theme (device-level, not user-scoped) ────────────────────────────────────

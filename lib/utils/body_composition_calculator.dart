@@ -185,6 +185,16 @@ abstract final class BodyCompositionCalculator {
     return (days.fold(0, (s, l) => s + l.totalCalories) / days.length).round();
   }
 
+  /// Average fat grams over the last (up to) 7 logged days. Mirrors
+  /// [sevenDayAvgCalories]: only days with something logged (calories > 0)
+  /// count, so a run of empty days can't drag the average toward zero.
+  /// Returns 0 when nothing is logged — callers treat that as "no data".
+  static double sevenDayAvgFatGrams(List<DailyNutritionLog> history) {
+    final days = history.take(7).where((l) => l.totalCalories > 0).toList();
+    if (days.isEmpty) return 0;
+    return days.fold(0.0, (s, l) => s + l.totalFat) / days.length;
+  }
+
   static double? proteinHitRate7d({
     required NutritionGoals goals,
     required List<DailyNutritionLog> history,
