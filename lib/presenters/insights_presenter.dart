@@ -414,8 +414,9 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
     if (onDevice != null && onDevice.isAvailable) {
       final text = await _collect(
           onDevice, instruction, snapshot, changedSections, directive);
-      if (text != null && text.isNotEmpty)
+      if (text != null && text.isNotEmpty) {
         return (text, InsightSource.onDevice);
+      }
     }
 
     final cloud = _cloudAi;
