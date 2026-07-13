@@ -22,23 +22,27 @@ void main() {
   group('nutrition.overGoal', () {
     test('does not fire at or under the 10% threshold', () {
       expect(
-        fires('nutrition.overGoal',
-            const InsightSnapshotInputs(todayCalories: 2200, effectiveGoal: 2000)),
+        fires(
+            'nutrition.overGoal',
+            const InsightSnapshotInputs(
+                todayCalories: 2200, effectiveGoal: 2000)),
         isFalse,
       );
     });
 
     test('fires just over the 10% threshold', () {
       expect(
-        fires('nutrition.overGoal',
-            const InsightSnapshotInputs(todayCalories: 2201, effectiveGoal: 2000)),
+        fires(
+            'nutrition.overGoal',
+            const InsightSnapshotInputs(
+                todayCalories: 2201, effectiveGoal: 2000)),
         isTrue,
       );
     });
 
     test('missing data does not fire', () {
-      expect(fires('nutrition.overGoal', const InsightSnapshotInputs()),
-          isFalse);
+      expect(
+          fires('nutrition.overGoal', const InsightSnapshotInputs()), isFalse);
     });
   });
 
@@ -70,8 +74,8 @@ void main() {
 
     test('missing budget does not fire', () {
       expect(
-        fires('finance.spendPace',
-            const InsightSnapshotInputs(monthSpent: 6000)),
+        fires(
+            'finance.spendPace', const InsightSnapshotInputs(monthSpent: 6000)),
         isFalse,
       );
     });
@@ -179,8 +183,7 @@ void main() {
     });
 
     test('missing data does not fire', () {
-      expect(fires('body.weightStale', const InsightSnapshotInputs()),
-          isFalse);
+      expect(fires('body.weightStale', const InsightSnapshotInputs()), isFalse);
     });
   });
 

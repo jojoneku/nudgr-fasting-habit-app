@@ -5,8 +5,7 @@ void main() {
   final fixedNow = DateTime(2026, 7, 12, 21, 30); // evening, so hour = 21
 
   group('InsightSnapshotBuilder.build — maps inputs to sections', () {
-    test('fasting section carries isFasting/streak/goalHours + localHour',
-        () {
+    test('fasting section carries isFasting/streak/goalHours + localHour', () {
       final snapshot = InsightSnapshotBuilder.build(
         const InsightSnapshotInputs(
           isFasting: false,
@@ -108,8 +107,8 @@ void main() {
         fixedNow,
       );
       expect(snapshot.quests.markers, {'dueTodayCount': 3, 'hasUrgent': true});
-      expect(snapshot.activity.markers,
-          {'stepsToday': 8000, 'steps7dAvg': 7000});
+      expect(
+          snapshot.activity.markers, {'stepsToday': 8000, 'steps7dAvg': 7000});
     });
   });
 
@@ -173,8 +172,7 @@ void main() {
       expect(before.rpg.hash, after.rpg.hash);
     });
 
-    test('identical inputs at the same instant produce identical hashes',
-        () {
+    test('identical inputs at the same instant produce identical hashes', () {
       const inputs = InsightSnapshotInputs(
         isFasting: false,
         fastingStreak: 2,
@@ -196,8 +194,7 @@ void main() {
         ),
         fixedNow,
       );
-      final digest =
-          snapshot.toPromptDigest(changedSections: {'nutrition'});
+      final digest = snapshot.toPromptDigest(changedSections: {'nutrition'});
       final lines = digest.split('\n');
       expect(lines.length, snapshot.sections.length);
       expect(lines.any((l) => l.startsWith('Nutrition [NEW]:')), isTrue);

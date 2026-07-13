@@ -1601,10 +1601,8 @@ class LocalStorageService extends StorageService {
   @override
   Future<void> saveInsightCooldowns(Map<String, DateTime> cooldowns) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-        _k(StorageService.keyInsightCooldowns),
-        jsonEncode(
-            cooldowns.map((k, v) => MapEntry(k, v.toIso8601String()))));
+    await prefs.setString(_k(StorageService.keyInsightCooldowns),
+        jsonEncode(cooldowns.map((k, v) => MapEntry(k, v.toIso8601String()))));
     _markDirty(SyncDomain.userProfile, 'default');
   }
 

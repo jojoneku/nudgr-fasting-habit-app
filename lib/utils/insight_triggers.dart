@@ -40,8 +40,7 @@ class InsightTrigger {
 
 num? _num(Map<String, Object?> markers, String key) => markers[key] as num?;
 
-bool? _bool(Map<String, Object?> markers, String key) =>
-    markers[key] as bool?;
+bool? _bool(Map<String, Object?> markers, String key) => markers[key] as bool?;
 
 final List<InsightTrigger> _kTriggers = <InsightTrigger>[
   InsightTrigger(

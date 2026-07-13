@@ -74,16 +74,16 @@ class InsightSnapshot {
 
   factory InsightSnapshot.fromJson(Map<String, dynamic> json) =>
       InsightSnapshot(
-        fasting: SnapshotSection.fromJson(
-            json['fasting'] as Map<String, dynamic>),
-        nutrition: SnapshotSection.fromJson(
-            json['nutrition'] as Map<String, dynamic>),
-        finance: SnapshotSection.fromJson(
-            json['finance'] as Map<String, dynamic>),
+        fasting:
+            SnapshotSection.fromJson(json['fasting'] as Map<String, dynamic>),
+        nutrition:
+            SnapshotSection.fromJson(json['nutrition'] as Map<String, dynamic>),
+        finance:
+            SnapshotSection.fromJson(json['finance'] as Map<String, dynamic>),
         quests:
             SnapshotSection.fromJson(json['quests'] as Map<String, dynamic>),
-        activity: SnapshotSection.fromJson(
-            json['activity'] as Map<String, dynamic>),
+        activity:
+            SnapshotSection.fromJson(json['activity'] as Map<String, dynamic>),
         body: SnapshotSection.fromJson(json['body'] as Map<String, dynamic>),
         rpg: SnapshotSection.fromJson(json['rpg'] as Map<String, dynamic>),
       );
