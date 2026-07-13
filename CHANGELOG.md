@@ -13,6 +13,17 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.43] - 2026-07-13
+
+### Added
+- hub coach line rework, daily brief sheet, app wiring (plan 057 phase 4)
+- add InsightsPresenter engine (plan 057 phase 3)
+- add insight persistence to StorageService (plan 057 phase 2)
+- add snapshot/insight models and pure utils (plan 057 phase 1)
+
+### Fixed
+- guard brief generation and refresh against re-entrancy
+
 ## [1.1.42] - 2026-07-12
 
 ### Fixed
@@ -388,7 +399,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.42...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.43...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -432,3 +443,4 @@ distributed via `manifest.json`.
 [1.1.40]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.40
 [1.1.41]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.41
 [1.1.42]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.42
+[1.1.43]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.43
