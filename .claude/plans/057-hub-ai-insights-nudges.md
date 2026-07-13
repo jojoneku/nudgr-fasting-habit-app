@@ -1,6 +1,6 @@
 # Plan 057 — Hub AI Insights & Nudges
 
-> Status: PROPOSED · Authored: 2026-07-12
+> Status: IMPLEMENTED · Authored: 2026-07-12 · Updated: 2026-07-12
 > Related: [docs/ai_coach_spec.md](../../docs/ai_coach_spec.md), [docs/trends_projections_spec.md](../../docs/trends_projections_spec.md), Plans 019 (AI Coach), 027 (Notifications), 045 (Trends)
 
 ## Current State (audit findings)
@@ -245,14 +245,14 @@ and can optionally accept the snapshot digest for richer chat context.
 
 ## Implementation Order
 
-1. [ ] **Models** — `InsightSnapshot`, `SnapshotSection`, `Insight` (+ `fromJson`/`toJson`, canonical serialization with rounding rules)
-2. [ ] **Utils** — `insight_hash.dart` (stable hash), `insight_snapshot_builder.dart` (pure builder from presenter values), `insight_triggers.dart` (rule set + cooldown evaluation). Unit tests: hash stability, trigger truth tables, cooldown math
-3. [ ] **StorageService** — new keys + `LocalStorageService` impl + tests
-4. [ ] **InsightsPresenter** — refresh/hash-gate flow, daily-brief-if-due, tier routing with template fallback, ring-buffer persistence. Tests with fake services (Null AI + fake storage)
-5. [ ] **Views** — upgrade `HubCoachLine` (reads `InsightsPresenter`, unread badge, tap target ≥ 44 px) + `DailyBriefSheet` (brief + recent nudges, RPG "System Analysis" framing, theme-aware colors only)
-6. [ ] **Wiring** — construct in `home_screen.dart` (constructor injection, listens to source presenters with the same debounced-microtask pattern as `HubPresenter`), lifecycle hook for `generateDailyBriefIfDue()`, morning notification schedule + settings toggle
-7. [ ] **Fixes along the way** — populate `monthBudget`/`monthSpent` in `AiCoachPresenter._buildContext()`; pass cloud service as chat fallback tier
-8. [ ] **UX verification** — over-goal day shows urgent nudge; unchanged state shows cached line with zero model calls (assert via debug log); brief generates once/day
+1. [x] **Models** — `InsightSnapshot`, `SnapshotSection`, `Insight` (+ `fromJson`/`toJson`, canonical serialization with rounding rules)
+2. [x] **Utils** — `insight_hash.dart` (stable hash), `insight_snapshot_builder.dart` (pure builder from presenter values), `insight_triggers.dart` (rule set + cooldown evaluation). Unit tests: hash stability, trigger truth tables, cooldown math
+3. [x] **StorageService** — new keys + `LocalStorageService` impl + tests
+4. [x] **InsightsPresenter** — refresh/hash-gate flow, daily-brief-if-due, tier routing with template fallback, ring-buffer persistence. Tests with fake services (Null AI + fake storage)
+5. [x] **Views** — upgrade `HubCoachLine` (reads `InsightsPresenter`, unread badge, tap target ≥ 44 px) + `DailyBriefSheet` (brief + recent nudges, RPG "System Analysis" framing, theme-aware colors only)
+6. [x] **Wiring** — construct in `home_screen.dart` (constructor injection, listens to source presenters with the same debounced-microtask pattern as `HubPresenter`), lifecycle hook for `generateDailyBriefIfDue()`, morning notification schedule + settings toggle
+7. [x] **Fixes along the way** — populate `monthBudget`/`monthSpent` in `AiCoachPresenter._buildContext()`; pass cloud service as chat fallback tier
+8. [x] **UX verification** — over-goal day shows urgent nudge; unchanged state shows cached line with zero model calls (assert via debug log); brief generates once/day
 
 ## RPG Impact
 
@@ -272,11 +272,17 @@ and can optionally accept the snapshot digest for richer chat context.
 
 ## Acceptance Criteria
 
-- [ ] Hub always shows a meaningful line with **zero AI configured** (rules + templates), and it changes with state (over-goal day ≠ on-track day)
-- [ ] With unchanged data, re-opening the Hub performs **no model call and no regeneration** (hash gate verified by test)
-- [ ] Daily Brief generates at most once per local calendar day and survives app restart
-- [ ] Over-eating and overspending conditions each produce a nudge, at most once per cooldown window
-- [ ] Cloud tier used only when opted-in + signed in; digest contains no raw entries/memos
-- [ ] All logic lives in utils/presenters — no calculations in `build()`; views are `ListenableBuilder` only
-- [ ] Theme-aware colors only in new widgets; tap targets ≥ 44 px
-- [ ] Unit tests: snapshot hashing, trigger table, cooldowns, once-per-day brief, tier fallback chain
+- [x] Hub always shows a meaningful line with **zero AI configured** (rules + templates), and it changes with state (over-goal day ≠ on-track day)
+- [x] With unchanged data, re-opening the Hub performs **no model call and no regeneration** (hash gate verified by test)
+- [x] Daily Brief generates at most once per local calendar day and survives app restart
+- [x] Over-eating and overspending conditions each produce a nudge, at most once per cooldown window
+- [x] Cloud tier used only when opted-in + signed in; digest contains no raw entries/memos
+- [x] All logic lives in utils/presenters — no calculations in `build()`; views are `ListenableBuilder` only
+- [x] Theme-aware colors only in new widgets; tap targets ≥ 44 px
+- [x] Unit tests: snapshot hashing, trigger table, cooldowns, once-per-day brief, tier fallback chain
+
+> Note: `quests.slipping` is implemented and unit-tested but stays permanently
+> dormant — see [docs/insights_spec.md](../../docs/insights_spec.md#trigger-table)
+> — pending a `QuestPresenter` 7-day completion-rate aggregate that doesn't
+> exist yet. This is a scoped deviation from the original trigger table, not a
+> gap in this plan's own acceptance criteria.
