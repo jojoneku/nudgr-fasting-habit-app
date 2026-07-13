@@ -2,6 +2,19 @@ bool isSameDay(DateTime a, DateTime b) {
   return a.year == b.year && a.month == b.month && a.day == b.day;
 }
 
+/// Compact relative-day label for timestamps: "Today", "Yesterday", or "Nd
+/// ago". Pure — pass [now] in tests. Keyed on the local calendar date so it
+/// matches the app's day-boundary convention.
+String relativeDayLabel(DateTime date, {DateTime? now}) {
+  final ref = now ?? DateTime.now();
+  final today = DateTime(ref.year, ref.month, ref.day);
+  final that = DateTime(date.year, date.month, date.day);
+  final diff = today.difference(that).inDays;
+  if (diff <= 0) return 'Today';
+  if (diff == 1) return 'Yesterday';
+  return '${diff}d ago';
+}
+
 String formatTimeWithDay(DateTime dateTime, DateTime referenceDate) {
   int hour = dateTime.hour;
   String period = hour >= 12 ? 'PM' : 'AM';
