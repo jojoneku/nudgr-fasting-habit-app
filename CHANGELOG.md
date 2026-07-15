@@ -13,6 +13,13 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.44] - 2026-07-15
+
+### Fixed
+- file credit statements under their real due month
+- persist hub module order across app restarts
+- report cloud coach failures accurately, never as insights
+
 ## [1.1.43] - 2026-07-13
 
 ### Added
@@ -399,7 +406,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.43...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.44...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -444,3 +451,4 @@ distributed via `manifest.json`.
 [1.1.41]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.41
 [1.1.42]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.42
 [1.1.43]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.43
+[1.1.44]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.44
