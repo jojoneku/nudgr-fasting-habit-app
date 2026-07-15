@@ -75,6 +75,21 @@ FinancialAccount _card(String id, double balance) => FinancialAccount(
       paymentDueDay: 15,
     );
 
+/// A "shifted" card: the payment-due day is on/before the statement day, so
+/// the payment for a cycle rolls into the following month. statementDay 1
+/// keeps generation deterministic (the close day has always passed).
+FinancialAccount _shiftedCard(String id, double balance) => FinancialAccount(
+      id: id,
+      name: id,
+      category: AccountCategory.creditCard,
+      balance: balance,
+      colorHex: '#FFFFFF',
+      icon: 'creditCard',
+      creditLimit: 10000,
+      statementDay: 1,
+      paymentDueDay: 1,
+    );
+
 FinancialAccount _bank(String id, double balance) => FinancialAccount(
       id: id,
       name: id,
@@ -275,6 +290,97 @@ void main() {
     });
   });
 
+  group('statement due-month filing', () {
+    Future<BillsReceivablesPresenter> buildWithAccounts(
+      List<FinancialAccount> accounts,
+      List<Bill> bills,
+    ) async {
+      stubStorage(bills);
+      when(storage.loadAccounts()).thenAnswer((_) async => accounts);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      final presenter = BillsReceivablesPresenter(storage, ledger, stats);
+      await presenter.load();
+      return presenter;
+    }
+
+    test('due day after close → statement files under the cycle month',
+        () async {
+      final presenter = await buildWithAccounts([_card('cc', 500)], []);
+
+      final stmt = presenter.allBillsForTest
+          .firstWhere((b) => b.accountId == 'cc' && b.isAutoStatement);
+      expect(stmt.month, _monthKey(0));
+      expect(stmt.amount, 500);
+    });
+
+    test('due day on/before close → statement files under the NEXT month',
+        () async {
+      final presenter = await buildWithAccounts([_shiftedCard('cc', 500)], []);
+
+      final stmt = presenter.allBillsForTest
+          .firstWhere((b) => b.accountId == 'cc' && b.isAutoStatement);
+      expect(stmt.month, _monthKey(1),
+          reason: 'payment is due next month — filing it under the cycle '
+              'month makes it instantly overdue');
+      expect(stmt.amount, 500);
+      // Nothing left behind in the cycle month.
+      expect(
+        presenter.allBillsForTest
+            .where((b) => b.accountId == 'cc' && b.month == _monthKey(0)),
+        isEmpty,
+      );
+    });
+
+    test('migration relocates a mis-filed unpaid statement, no duplicate',
+        () async {
+      // Pre-fix state: the shifted card's statement was filed under the cycle
+      // (current) month, where it read as overdue.
+      final presenter = await buildWithAccounts(
+        [_shiftedCard('cc', 500)],
+        [_statement(id: 'legacy', accountId: 'cc', month: _monthKey(0))],
+      );
+
+      final statements = presenter.allBillsForTest
+          .where((b) => b.accountId == 'cc' && b.isAutoStatement)
+          .toList();
+      expect(statements, hasLength(1),
+          reason: 'the generator must not duplicate the relocated bill');
+      expect(statements.single.id, 'legacy');
+      expect(statements.single.month, _monthKey(1));
+    });
+
+    test('paid legacy statement at the cycle month suppresses ₱0 backfill',
+        () async {
+      // Two settled cycles recorded under the old scheme (cycle month).
+      final presenter = await buildWithAccounts(
+        [_shiftedCard('cc', 500)],
+        [
+          _statement(
+              id: 'old-2', accountId: 'cc', month: _monthKey(-2), isPaid: true),
+          _statement(
+              id: 'old-1', accountId: 'cc', month: _monthKey(-1), isPaid: true),
+        ],
+      );
+
+      // The -1 cycle is already covered by its legacy paid bill — no ₱0
+      // placeholder may appear in the current month.
+      expect(
+        presenter.allBillsForTest.where((b) =>
+            b.accountId == 'cc' && b.month == _monthKey(0) && b.amount == 0),
+        isEmpty,
+      );
+      // The current cycle's live statement lands in next month as usual.
+      final current = presenter.allBillsForTest.firstWhere((b) =>
+          b.accountId == 'cc' && b.month == _monthKey(1) && b.isAutoStatement);
+      expect(current.amount, 500);
+    });
+  });
+
   group('quickPayCard statement reconciliation', () {
     Future<BillsReceivablesPresenter> buildWithCard(List<Bill> bills) async {
       stubStorage(bills);
@@ -303,6 +409,32 @@ void main() {
       final bill = presenter.bills.firstWhere((b) => b.id == 'auto');
       expect(bill.isPaid, isTrue,
           reason: 'clearing the card should reconcile its statement bill');
+    });
+
+    test('clearing a shifted card reconciles its next-month statement',
+        () async {
+      stubStorage([]);
+      when(storage.loadAccounts()).thenAnswer(
+          (_) async => [_shiftedCard('sp', 500), _bank('gcash', 5000)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      final presenter = BillsReceivablesPresenter(storage, ledger, stats);
+      await presenter.load(); // auto-generates the statement under next month
+
+      await presenter.quickPayCard(
+          accountId: 'sp', fromAccountId: 'gcash', amount: 500);
+
+      final stmt = presenter.allBillsForTest.firstWhere(
+          (b) => b.accountId == 'sp' && b.isAutoStatement,
+          orElse: () => fail('statement bill missing'));
+      expect(stmt.month, _monthKey(1));
+      expect(stmt.isPaid, isTrue,
+          reason: 'clearing the card must settle the statement even though '
+              'it is filed under next month');
     });
 
     test('leaves the statement unpaid on a partial payment', () async {
