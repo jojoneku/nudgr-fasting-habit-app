@@ -206,6 +206,7 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
     _lastRead = cooldowns.remove(_kLastReadKey);
     _cooldowns = cooldowns;
     _lastBriefDate = results[3] as DateTime?;
+    await _purgeLegacyErrorInsights();
 
     _initialized = true;
     if (_refreshRequestedBeforeInit) {
@@ -214,6 +215,32 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
     } else {
       safeNotify();
     }
+  }
+
+  /// One-time migration: before failures were typed stream errors, a failed
+  /// cloud call yielded its error prose as tokens, and [_collect] persisted it
+  /// as a real insight — so "Cloud coach unreachable…" got stored and shown in
+  /// the Hub coach line indefinitely. Drop any such stored lines; if today's
+  /// brief was one of them, forget the brief date so a clean brief regenerates.
+  Future<void> _purgeLegacyErrorInsights() async {
+    const legacyErrorTexts = {
+      'Cloud coach unreachable. Check your connection and try again.',
+      'Cloud AI Coach is not configured. Sign in and enable Cloud AI in '
+          'Settings.',
+    };
+    final now = _clock();
+    var removedTodaysBrief = false;
+    final before = _insights.length;
+    _insights.removeWhere((i) {
+      if (!legacyErrorTexts.contains(i.text.trim())) return false;
+      removedTodaysBrief = removedTodaysBrief ||
+          (i.kind == InsightKind.dailyBrief &&
+              _isSameLocalDay(i.createdAt, now));
+      return true;
+    });
+    if (_insights.length == before) return;
+    if (removedTodaysBrief) _lastBriefDate = null;
+    await _persistInsights();
   }
 
   @override

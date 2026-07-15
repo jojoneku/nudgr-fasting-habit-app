@@ -108,6 +108,11 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           return byDue != 0 ? byDue : a.name.compareTo(b.name);
         });
 
+  /// Every stored bill regardless of month — assertions across month
+  /// boundaries (e.g. statement due-month filing) need the unfiltered list.
+  @visibleForTesting
+  List<Bill> get allBillsForTest => List.unmodifiable(_allBills);
+
   double get totalBillsAmount => bills.fold(0.0, (sum, b) => sum + b.amount);
 
   double get totalBillsPaid => bills
@@ -289,7 +294,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     }
 
     // Snapshot closed credit statements into bills, reconcile paid-off cards,
-    // and (re)schedule per-account due-date reminders.
+    // and (re)schedule per-account due-date reminders. The one-time relocation
+    // of mis-filed shifted-card statements must run first or the generator
+    // would duplicate them under the corrected due month.
+    await _migrateShiftedStatementDueMonths();
     await _autoGenerateCreditStatements();
     await _syncCreditDueReminders(prefs.billsReminderEnabled);
 
@@ -332,6 +340,69 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       await prefs.setBool(_kFutureRecurringCcCleanupDone, true);
     } catch (e) {
       debugPrint('BillsReceivablesPresenter: CC cleanup skipped: $e');
+    }
+  }
+
+  /// SharedPreferences flag gating the one-time relocation below.
+  static const String _kShiftedStatementMonthMigrationDone =
+      'bills.migration.shifted_cc_statement_month_v1';
+
+  /// One-time migration for cards whose payment-due day is on/before the
+  /// statement day ("shifted" cards, e.g. closes the 15th / due the 4th).
+  /// Before the due-month fix, their auto-statements were filed under the
+  /// cycle month, so a statement created on close day instantly showed as
+  /// overdue even though it's due next month. Relocate unpaid, un-transacted
+  /// auto-statements one month forward (their true due month); paid or
+  /// transacted statements are records the user acted on and stay put — the
+  /// generator's legacy guard recognises them at the old location. Without
+  /// this, the fixed generator would create a duplicate next-month statement
+  /// alongside the mis-filed one.
+  Future<void> _migrateShiftedStatementDueMonths() async {
+    if (_ledger.isLoading) return; // accounts unknown — retry next load
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.getBool(_kShiftedStatementMonthMigrationDone) ?? false) return;
+
+      var changed = false;
+      final currentMonthKey = toMonthKey(DateTime.now());
+      final shiftedAccounts = _ledger.accounts.where((a) =>
+          a.isLiability &&
+          a.statementDay != null &&
+          a.paymentDueDay != null &&
+          a.paymentDueDay!.clamp(1, 28) <= a.statementDay!.clamp(1, 28));
+      for (final a in shiftedAccounts) {
+        // Only current-or-past months: a future-month statement can only have
+        // been filed by the fixed generator (already at its due month), so it
+        // must never move — this also keeps the migration harmless if the
+        // flag is ever lost (fresh device restoring synced bills). Newest
+        // first so a bill never finds its target month transiently occupied
+        // by the not-yet-moved bill of the following cycle.
+        final toMove = _allBills
+            .where((b) =>
+                _isAutoStatement(b) &&
+                b.accountId == a.id &&
+                !b.isPaid &&
+                b.transactionId == null &&
+                b.month.compareTo(currentMonthKey) <= 0)
+            .toList()
+          ..sort((x, y) => y.month.compareTo(x.month));
+        for (final b in toMove) {
+          final target = nextMonth(b.month);
+          final occupied = _allBills.any(
+              (o) => o.id != b.id && o.accountId == a.id && o.month == target);
+          if (occupied) continue;
+          _allBills = [
+            for (final x in _allBills)
+              x.id == b.id ? x.copyWith(month: target) : x
+          ];
+          changed = true;
+        }
+      }
+      if (changed) await _storage.saveBills(_allBills);
+      await prefs.setBool(_kShiftedStatementMonthMigrationDone, true);
+    } catch (e) {
+      debugPrint('BillsReceivablesPresenter: statement month migration '
+          'skipped: $e');
     }
   }
 
@@ -748,7 +819,13 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   /// Snapshots closed credit statements into bills for all months up to today.
   /// Runs close-date detection across every month since the oldest existing
   /// statement, so a multi-month gap (app was closed on statement day) gets
-  /// backfilled on the next open. Never generates for future months.
+  /// backfilled on the next open. Never generates for future cycle months.
+  ///
+  /// The bill is filed under the month its payment is DUE, which is the cycle
+  /// month only when the due day falls after the statement close; when the due
+  /// day is on/before the close (e.g. closes the 15th, due the 4th) payment
+  /// belongs to the following month — filing it under the cycle month made it
+  /// show as overdue the moment it was generated.
   ///
   /// Current month: uses live `currentPayable`.
   /// Past months: generates a ₱0 placeholder only when a balance still exists
@@ -822,12 +899,24 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       final isCurrentMonth = month == currentMonthKey;
 
       for (final a in creditAccts) {
+        final stmtDay = a.statementDay!.clamp(1, 28);
+        final dueDay = a.paymentDueDay!.clamp(1, 28);
+        // The cycle closing in [month] is payable within the same month only
+        // when the due day falls after the statement close (closes 1st → due
+        // 15th). Otherwise payment rolls into the following month (closes
+        // 15th → due 4th of NEXT month); filing the bill under the cycle
+        // month would make it read as overdue the moment it is generated.
+        final dueMonth = dueDay > stmtDay ? month : nextMonth(month);
+
         final existing = _allBills
             .where((b) =>
-                _isAutoStatement(b) && b.accountId == a.id && b.month == month)
+                _isAutoStatement(b) &&
+                b.accountId == a.id &&
+                b.month == dueMonth)
             .firstOrNull;
 
-        // Reconcile current-month statement when the card is fully cleared.
+        // Reconcile the statement of the cycle that closed this month when
+        // the card is fully cleared.
         if (isCurrentMonth &&
             existing != null &&
             !existing.isPaid &&
@@ -842,16 +931,29 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         }
         if (existing != null) continue;
 
-        // A non-auto bill already tracks this card for the month (a manual
+        // Legacy guard (pre due-month fix): a shifted card's past cycle may
+        // still carry its settled statement under the cycle month itself.
+        // Recognise it so backfill doesn't stack a ₱0 placeholder for a cycle
+        // the user already handled.
+        if (!isCurrentMonth && dueMonth != month) {
+          final legacyCovers = _allBills.any((b) =>
+              _isAutoStatement(b) &&
+              b.accountId == a.id &&
+              b.month == month &&
+              (b.isPaid || b.transactionId != null));
+          if (legacyCovers) continue;
+        }
+
+        // A non-auto bill already tracks this card for the due month (a manual
         // statement, or a recurring credit-card bill). Generating an
         // auto-statement on top would duplicate it — and keep coming back after
         // the user deletes the auto copy — so skip. (dupe-statement bug)
         final userBillCoversCard = _allBills.any((b) =>
-            !_isAutoStatement(b) && b.accountId == a.id && b.month == month);
+            !_isAutoStatement(b) && b.accountId == a.id && b.month == dueMonth);
         if (userBillCoversCard) continue;
 
         // For current month: statement day must have passed.
-        if (isCurrentMonth && now.day < a.statementDay!.clamp(1, 28)) continue;
+        if (isCurrentMonth && now.day < stmtDay) continue;
         // For either month type: skip if nothing is currently owed (no point
         // generating a ₱0 placeholder — the card was either fully paid or never
         // used in that cycle).
@@ -867,8 +969,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             name: '${a.name} statement',
             billType: BillType.creditCard,
             amount: amount,
-            dueDay: a.paymentDueDay!.clamp(1, 28),
-            month: month,
+            dueDay: dueDay,
+            month: dueMonth,
             categoryId: categoryId,
             accountId: a.id,
             paymentNote: Bill.autoStatementNote,
@@ -934,12 +1036,17 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         0;
     if (stillOwed <= 0) {
       final month = toMonthKey(when);
+      // A shifted card's statement (due day on/before close day) is filed
+      // under the month AFTER the cycle it closed in, so also reconcile an
+      // unpaid auto-statement sitting in next month — that's the bill this
+      // payment just settled.
+      final next = nextMonth(month);
       final statements = _allBills
           .where((b) =>
               b.accountId == accountId &&
-              b.month == month &&
               !b.isPaid &&
-              b.billType == BillType.creditCard)
+              b.billType == BillType.creditCard &&
+              (b.month == month || (b.month == next && b.isAutoStatement)))
           .toList();
       for (final b in statements) {
         _updateBill(b.copyWith(

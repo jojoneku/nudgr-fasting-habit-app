@@ -1601,6 +1601,27 @@ class MockStorageService extends _i1.Mock implements _i12.StorageService {
       ) as _i13.Future<List<String>>);
 
   @override
+  _i13.Future<void> saveHubCardOrder(List<String>? order) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #saveHubCardOrder,
+          [order],
+        ),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
+  _i13.Future<List<String>> loadHubCardOrder() => (super.noSuchMethod(
+        Invocation.method(
+          #loadHubCardOrder,
+          [],
+        ),
+        returnValue: _i13.Future<List<String>>.value(<String>[]),
+        returnValueForMissingStub: _i13.Future<List<String>>.value(<String>[]),
+      ) as _i13.Future<List<String>>);
+
+  @override
   _i13.Future<void> saveOnboardingComplete(bool? value) => (super.noSuchMethod(
         Invocation.method(
           #saveOnboardingComplete,
@@ -2332,6 +2353,27 @@ class MockNotificationService extends _i1.Mock
   _i13.Future<void> cancelWeightReminder() => (super.noSuchMethod(
         Invocation.method(
           #cancelWeightReminder,
+          [],
+        ),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
+  _i13.Future<void> scheduleDailyBriefReminder(_i42.TimeOfDay? time) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #scheduleDailyBriefReminder,
+          [time],
+        ),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
+  _i13.Future<void> cancelDailyBriefReminder() => (super.noSuchMethod(
+        Invocation.method(
+          #cancelDailyBriefReminder,
           [],
         ),
         returnValue: _i13.Future<void>.value(),
@@ -4081,6 +4123,13 @@ class MockQuestPresenter extends _i1.Mock implements _i58.QuestPresenter {
 /// See the documentation for Mockito's code generation for more information.
 class MockHubPresenter extends _i1.Mock implements _i59.HubPresenter {
   @override
+  _i13.Future<void> get restored => (super.noSuchMethod(
+        Invocation.getter(#restored),
+        returnValue: _i13.Future<void>.value(),
+        returnValueForMissingStub: _i13.Future<void>.value(),
+      ) as _i13.Future<void>);
+
+  @override
   List<_i59.HubCardType> get cardOrder => (super.noSuchMethod(
         Invocation.getter(#cardOrder),
         returnValue: <_i59.HubCardType>[],
@@ -4534,6 +4583,13 @@ class MockNutritionPresenter extends _i1.Mock
         returnValue: 0,
         returnValueForMissingStub: 0,
       ) as int);
+
+  @override
+  double get sevenDayAvgFatGrams => (super.noSuchMethod(
+        Invocation.getter(#sevenDayAvgFatGrams),
+        returnValue: 0.0,
+        returnValueForMissingStub: 0.0,
+      ) as double);
 
   @override
   double get loggingConsistency7d => (super.noSuchMethod(

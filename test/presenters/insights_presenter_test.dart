@@ -338,6 +338,64 @@ void main() {
       p.dispose();
     });
 
+    test('init purges legacy persisted error-text insights', () async {
+      // Before AiCoachException, a failed cloud call yielded its error prose
+      // as tokens and it got persisted as a real insight — reproduce that
+      // stored state and assert init cleans it up.
+      insights = [
+        Insight(
+          id: 'bad-nudge',
+          kind: InsightKind.nudge,
+          mood: InsightMood.urgent,
+          text: 'Cloud coach unreachable. Check your connection and try '
+              'again.',
+          triggerId: 'finance.billImminent',
+          createdAt: now,
+          source: InsightSource.cloud,
+        ),
+        Insight(
+          id: 'good',
+          kind: InsightKind.nudge,
+          mood: InsightMood.neutral,
+          text: 'real nudge',
+          createdAt: now.subtract(const Duration(days: 1)),
+          source: InsightSource.rules,
+        ),
+      ];
+      final p = build();
+      await p.init();
+      expect(p.recent.length, 1);
+      expect(p.recent.first.id, 'good');
+      expect(insights.length, 1); // purge persisted
+      p.dispose();
+    });
+
+    test('purging an error-text daily brief lets today\'s brief regenerate',
+        () async {
+      insights = [
+        Insight(
+          id: 'bad-brief',
+          kind: InsightKind.dailyBrief,
+          mood: InsightMood.neutral,
+          text: 'Cloud coach unreachable. Check your connection and try '
+              'again.',
+          createdAt: now,
+          source: InsightSource.cloud,
+        ),
+      ];
+      briefDate = now; // brief already "generated" today — by the bad text
+      final p = build();
+      p.inputs = benign;
+      await p.init();
+      expect(p.dailyBrief, isNull);
+
+      await p.generateDailyBriefIfDue(); // must NOT no-op on the stale date
+      expect(p.dailyBrief, isNotNull);
+      expect(p.dailyBrief!.source, InsightSource.rules);
+      expect(p.dailyBrief!.text, isNot(contains('unreachable')));
+      p.dispose();
+    });
+
     test('hasUnread + markRead watermark', () async {
       insights = [
         Insight(
