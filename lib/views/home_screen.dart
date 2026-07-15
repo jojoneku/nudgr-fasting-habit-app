@@ -177,6 +177,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       onSignOut: _tearDownSync,
     );
     _hubPresenter = HubPresenter(
+      storage: _storage,
       fasting: _fastingPresenter,
       quests: _questPresenter,
       treasury: _treasuryPresenter,

@@ -128,6 +128,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }
 
       _updateLastMessage(buffer.toString(), isStreaming: false);
+    } on AiCoachException catch (e) {
+      // Typed failure from the service — the message already says exactly
+      // what went wrong (connection vs auth vs rate-limit vs server error).
+      _errorMessage = e.userMessage;
+      _updateLastMessage('', isStreaming: false);
+      debugPrint('AiCoachPresenter.send coach error: $e');
     } catch (e) {
       _errorMessage = 'Something went wrong. Try again.';
       _updateLastMessage('', isStreaming: false);

@@ -90,6 +90,9 @@ abstract class StorageService {
   // Hub hero-ring slot config — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]
   // (it's a UI layout preference). Empty/absent ⇒ auto-resolved default.
   static const String kHeroSlots = 'hub.heroSlots';
+  // Hub card (module) order — DEVICE-LEVEL / UNSCOPED, like [kHeroSlots].
+  // Stored as HubCardType enum names. Empty/absent ⇒ default priority order.
+  static const String kHubCardOrder = 'hub.cardOrder';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   // First-run onboarding gate — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]. Must
   // be evaluable before sign-in and must survive sign-out/account switch, so it
@@ -274,6 +277,11 @@ abstract class StorageService {
   //  an empty list means "not configured" (auto-resolve the default).
   Future<void> saveHeroSlots(List<String> slots);
   Future<List<String>> loadHeroSlots();
+
+  //  Hub card (module) order (device-level / unscoped). Stored as enum names;
+  //  an empty list means "not configured" (use the default priority order).
+  Future<void> saveHubCardOrder(List<String> order);
+  Future<List<String>> loadHubCardOrder();
 
   //  First-run onboarding gate (device-level / unscoped)
   Future<void> saveOnboardingComplete(bool value);

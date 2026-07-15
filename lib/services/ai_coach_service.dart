@@ -14,6 +14,24 @@ import '../models/food_search_candidate.dart';
 /// Tier of the active AI Coach service.
 enum AiCoachTier { onDevice, cloud }
 
+/// Thrown into the [AiCoachService.respond] stream when a response could not
+/// be produced. Carries a user-facing message that matches the actual failure
+/// (transport vs auth vs rate-limit vs server error) so the UI never blames
+/// the user's connection for a failure that wasn't one.
+///
+/// Failures MUST surface as stream errors, never as yielded text: consumers
+/// like the Insight Engine collect yielded tokens as AI content and would
+/// otherwise persist the error prose as a coaching insight.
+class AiCoachException implements Exception {
+  const AiCoachException(this.userMessage);
+
+  /// Short, plain-language explanation safe to show directly in the UI.
+  final String userMessage;
+
+  @override
+  String toString() => 'AiCoachException: $userMessage';
+}
+
 /// Abstract interface for all AI Coach implementations.
 ///
 /// Implementations:
