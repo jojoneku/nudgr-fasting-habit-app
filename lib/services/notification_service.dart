@@ -474,8 +474,7 @@ class NotificationService {
       final launchDetails = await flutterLocalNotificationsPlugin
           .getNotificationAppLaunchDetails();
       if (launchDetails?.didNotificationLaunchApp ?? false) {
-        _handleInstallApkPayload(
-            launchDetails!.notificationResponse?.payload);
+        _handleInstallApkPayload(launchDetails!.notificationResponse?.payload);
       }
     } catch (e) {
       debugPrint('NotificationService: launch-details check failed: $e');
