@@ -8,10 +8,11 @@ import '../../../utils/app_spacing.dart';
 import '../../../utils/app_text_styles.dart';
 import '../system/system.dart';
 
-/// Compact 2-up row pairing Weight and Body. The Weight tile reveals an inline
-/// single-value quick-entry on tap (Save/Cancel → `logWeight`); the Body tile
-/// opens the full multi-field measurement entry (body tracks more than one
-/// value, so an inline field can't capture it).
+/// Compact 2-up row pairing Weight and Body. Both tiles navigate on tap like
+/// every other hub card: Weight opens the weight-log screen, Body opens the
+/// multi-field measurement entry. The Weight tile keeps its inline quick-entry
+/// (Save/Cancel → `logWeight`) behind the edit icon button or a long-press —
+/// and on plain tap while no weight is logged yet ("Tap to add").
 class WeightBodyHubCard extends StatelessWidget {
   const WeightBodyHubCard({
     super.key,
@@ -25,8 +26,9 @@ class WeightBodyHubCard extends StatelessWidget {
   /// Opens the full body-measurement entry screen.
   final VoidCallback onOpenBody;
 
-  /// Optional: open the full weight-log screen (e.g. long-press / header),
-  /// distinct from the inline quick-entry.
+  /// Optional: open the full weight-log screen (tile tap), distinct from the
+  /// inline quick-entry (edit icon / long-press). When null the tile falls
+  /// back to inline quick-entry on tap.
   final VoidCallback? onOpenWeight;
 
   @override
@@ -104,25 +106,37 @@ class _WeightTileState extends State<_WeightTile> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // Tap navigates to the weight-log screen like every other hub card; the
+    // inline quick-entry lives behind the edit icon / long-press. Before the
+    // first weight exists ("Tap to add"), tap goes straight to quick-entry.
+    final open = widget.onOpenFull;
+    final tapOpensFull = open != null && widget.nutrition.latestWeight != null;
+
     return AppCard(
-      onTap: _editing ? null : _beginEdit,
+      onTap: _editing ? null : (tapOpensFull ? open : _beginEdit),
+      onLongPress: _editing ? null : _beginEdit,
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
         vertical: AppSpacing.lg,
       ),
-      child: _editing ? _editor(theme) : _snapshot(theme),
+      child: _editing ? _editor(theme) : _snapshot(theme, tapOpensFull),
     );
   }
 
-  Widget _snapshot(ThemeData theme) {
+  Widget _snapshot(ThemeData theme, bool tapOpensFull) {
     final c = context.appColors;
     final latest = widget.nutrition.latestWeight;
     final delta = widget.nutrition.weightDelta;
 
-    return Column(
+    final column = Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _TileLabel(label: 'WEIGHT', trailing: Icons.edit_outlined),
+        // When tap navigates, the corner pencil is the interactive overlay
+        // button below instead of a static trailing icon.
+        _TileLabel(
+          label: 'WEIGHT',
+          trailing: tapOpensFull ? null : Icons.edit_outlined,
+        ),
         const SizedBox(height: 4),
         if (latest == null)
           Text(
@@ -150,6 +164,37 @@ class _WeightTileState extends State<_WeightTile> {
                   ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
         ],
+      ],
+    );
+
+    if (!tapOpensFull) return column;
+
+    // Quick-entry affordance once tap navigates: a 44px edit target overlaid
+    // on the tile's empty top-right corner. Offsets stay small — hits outside
+    // the Stack's bounds are ignored, so big negative offsets would shrink
+    // the effective target.
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        column,
+        Positioned(
+          top: -6,
+          right: -6,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: IconButton(
+              tooltip: 'Log weight',
+              padding: EdgeInsets.zero,
+              icon: Icon(
+                Icons.edit_outlined,
+                size: 16,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              onPressed: _beginEdit,
+            ),
+          ),
+        ),
       ],
     );
   }
