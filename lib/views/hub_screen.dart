@@ -281,10 +281,13 @@ class _HubScreenState extends State<HubScreen> {
             ),
             // Fixed leading content above the reorderable card stack: the
             // three-ring hero + the adaptive coaching line. Not reorderable.
+            // Top inset must exceed the hero rings' glow reach (~2× glow
+            // sigma): the pinned app bar above is opaque and shears off any
+            // halo that bleeds under it.
             SliverPadding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.md,
-                AppSpacing.sm,
+                AppSpacing.md,
                 AppSpacing.md,
                 0,
               ),
