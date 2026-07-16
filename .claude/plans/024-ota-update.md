@@ -9,8 +9,10 @@
 > - Download uses the existing `http` package (streamed, with progress) instead of `dio`;
 >   the client follows GitHub's 302 → signed-CDN redirect, which is what broke the old
 >   open-in-browser flow.
-> - Install goes through `open_file_plus` (its bundled FileProvider), so no manual
+> - Install goes through `open_filex` (its bundled FileProvider), so no manual
 >   FileProvider block in the manifest — only `REQUEST_INSTALL_PACKAGES` was added.
+>   (`open_file_plus` was tried first but still ships Flutter v1-embedding code that
+>   no longer compiles on Flutter 3.44+.)
 > - Version comparison stays semver-string based (`APP_VERSION` dart-define), not
 >   `package_info_plus` build numbers. Dismissal remains session-only.
 
