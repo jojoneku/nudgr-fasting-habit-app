@@ -5,6 +5,7 @@ import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart' show MethodChannel, PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:open_file_plus/open_file_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -19,7 +20,27 @@ void notificationTapBackground(NotificationResponse notificationResponse) {
   // tap (or reschedules a snooze). The real completion — XP, streak, stat and
   // achievement checks — is applied through the presenters on next foreground
   // via WidgetBridgeService.drainPendingActions, so nothing RPG runs here.
+  if (_handleInstallApkPayload(notificationResponse.payload)) return;
   _handleQuestNotificationAction(notificationResponse);
+}
+
+/// Routes an OTA "update ready" notification tap to the package installer.
+/// Returns true when [payload] was an install payload (handled or not), so
+/// callers skip the quest routing.
+bool _handleInstallApkPayload(String? payload) {
+  if (payload == null ||
+      !payload.startsWith(NotificationService.installApkPayloadPrefix)) {
+    return false;
+  }
+  final path =
+      payload.substring(NotificationService.installApkPayloadPrefix.length);
+  OpenFile.open(path).then((result) {
+    debugPrint(
+        'NotificationService: install tap → ${result.type} ${result.message}');
+  }).catchError((e) {
+    debugPrint('NotificationService: install tap failed: $e');
+  });
+  return true;
 }
 
 /// Handles a quest notification action button tap ([NotificationService.
@@ -132,12 +153,20 @@ class NotificationService {
   static const String channelIdDailyBrief = 'daily_brief';
   static const String channelNameDailyBrief = 'System Analysis';
 
+  static const String channelIdUpdate = 'update_channel';
+  static const String channelNameUpdate = 'App Updates';
+
+  /// Payload prefix on the "update ready" notification; the rest of the
+  /// payload is the absolute path of the downloaded APK.
+  static const String installApkPayloadPrefix = 'install_apk:';
+
   // ── Notification ID constants ───────────────────────────────────────────────
   static const int notifIdLevelUp = 500;
   static const int notifIdRankPromotion = 501;
   static const int notifIdWeightReminder = 510;
   static const int notifIdCalorieGoal = 511;
   static const int notifIdDailyBrief = 512;
+  static const int notifIdUpdateReady = 513;
   static const int notifIdBillsReminder = 600;
   // Per-credit-account due reminders occupy 620–719 (id derived from accountId).
   static const int notifIdCreditDueBase = 620;
@@ -297,6 +326,7 @@ class NotificationService {
       initializationSettings,
       onDidReceiveNotificationResponse: (response) {
         debugPrint('Notification clicked: ${response.payload}');
+        if (_handleInstallApkPayload(response.payload)) return;
         // Route action-button taps that were delivered to the main isolate
         // (some Android versions/states) through the same handler.
         if (response.actionId != null) {
@@ -418,11 +448,38 @@ class NotificationService {
         ),
       );
 
+      // 8. App Updates (OTA download-complete → install)
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          channelIdUpdate,
+          channelNameUpdate,
+          description: 'New version downloaded and ready to install',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: false,
+        ),
+      );
+
       debugPrint('NotificationService: Channels created.');
     }
 
     _isInitialized = true;
     debugPrint('NotificationService: Initialized');
+
+    // A tap that launched the app from a terminated state is not delivered to
+    // onDidReceiveNotificationResponse — it arrives here. Route update-ready
+    // taps to the installer so the notification works after the app was
+    // swiped away too.
+    try {
+      final launchDetails = await flutterLocalNotificationsPlugin
+          .getNotificationAppLaunchDetails();
+      if (launchDetails?.didNotificationLaunchApp ?? false) {
+        _handleInstallApkPayload(
+            launchDetails!.notificationResponse?.payload);
+      }
+    } catch (e) {
+      debugPrint('NotificationService: launch-details check failed: $e');
+    }
   }
 
   /// Requests the POST_NOTIFICATIONS + exact-alarm permissions. Returns
@@ -1309,6 +1366,40 @@ class NotificationService {
     if (!_isInitialized) return;
     _invalidateSchedule('dailyBrief');
     await flutterLocalNotificationsPlugin.cancel(notifIdDailyBrief);
+  }
+
+  // ── OTA update notifications ─────────────────────────────────────────────────
+
+  /// Fired when an update APK finishes downloading (even if the app is
+  /// backgrounded). Tapping it routes the APK path straight to the package
+  /// installer via [installApkPayloadPrefix].
+  Future<void> showUpdateReadyNotification(
+      String version, String apkPath) async {
+    if (!_isInitialized || !_masterEnabled) return;
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdUpdate,
+      channelNameUpdate,
+      channelDescription: 'New version downloaded and ready to install',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: false,
+    );
+    await flutterLocalNotificationsPlugin.show(
+      notifIdUpdateReady,
+      'System Patch Ready',
+      'Nudgr v$version downloaded — tap to install.',
+      const NotificationDetails(android: androidDetails),
+      payload: '$installApkPayloadPrefix$apkPath',
+    );
+    debugPrint(
+        'NotificationService: Update-ready notification shown for v$version');
+  }
+
+  Future<void> cancelUpdateReadyNotification() async {
+    if (!_isInitialized) return;
+    await flutterLocalNotificationsPlugin.cancel(notifIdUpdateReady);
   }
 
   Future<void> showCalorieGoalNotification(int calories, int goal) async {
