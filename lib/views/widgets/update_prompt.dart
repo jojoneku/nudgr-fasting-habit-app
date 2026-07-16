@@ -58,8 +58,8 @@ class _UpdatePromptState extends State<UpdatePrompt> {
     }
   }
 
-  String _subtitle(UpdateManifest? manifest) {
-    final version = manifest?.version;
+  String _subtitle() {
+    final version = _presenter.latestManifest?.version;
     switch (_presenter.state) {
       case UpdateFlowState.downloading:
         final progress = _presenter.downloadProgress;
@@ -112,9 +112,8 @@ class _UpdatePromptState extends State<UpdatePrompt> {
           return const SizedBox.shrink();
         }
 
-        final manifest = _presenter.latestManifest;
         final theme = Theme.of(context);
-        final subtitle = _subtitle(manifest);
+        final subtitle = _subtitle();
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
