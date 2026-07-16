@@ -5,7 +5,7 @@ import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:flutter/services.dart' show MethodChannel, PlatformException;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -34,7 +34,7 @@ bool _handleInstallApkPayload(String? payload) {
   }
   final path =
       payload.substring(NotificationService.installApkPayloadPrefix.length);
-  OpenFile.open(path).then((result) {
+  OpenFilex.open(path).then((result) {
     debugPrint(
         'NotificationService: install tap → ${result.type} ${result.message}');
   }).catchError((e) {

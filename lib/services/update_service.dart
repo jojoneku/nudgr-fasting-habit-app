@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:open_file_plus/open_file_plus.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 
 class UpdateManifest {
@@ -166,7 +166,7 @@ class UpdateService {
   /// Returns null on success, or a user-facing error message.
   Future<String?> openApkInstaller(String apkPath) async {
     try {
-      final result = await OpenFile.open(apkPath);
+      final result = await OpenFilex.open(apkPath);
       if (result.type == ResultType.done) return null;
       return result.message;
     } catch (e) {
