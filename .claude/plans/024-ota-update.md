@@ -1,6 +1,18 @@
 # Plan 024 — OTA Self-Update
 
 > Status: IMPLEMENTED (`lib/services/update_service.dart` + `lib/presenters/update_presenter.dart`)
+>
+> Implementation notes (differs from the original draft below):
+> - Hosting is **GitHub Releases**, not Supabase Storage — CI uploads `app-release.apk` +
+>   `manifest.json` as release assets; the manifest URL points at
+>   `releases/latest/download/manifest.json`.
+> - Download uses the existing `http` package (streamed, with progress) instead of `dio`;
+>   the client follows GitHub's 302 → signed-CDN redirect, which is what broke the old
+>   open-in-browser flow.
+> - Install goes through `open_file_plus` (its bundled FileProvider), so no manual
+>   FileProvider block in the manifest — only `REQUEST_INSTALL_PACKAGES` was added.
+> - Version comparison stays semver-string based (`APP_VERSION` dart-define), not
+>   `package_info_plus` build numbers. Dismissal remains session-only.
 
 ## Goal
 Deliver a zero-USB update flow: new APK built → pushed to Supabase Storage → app detects it on
