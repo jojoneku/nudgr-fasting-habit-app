@@ -16,6 +16,7 @@ import 'food_library_screen.dart';
 import 'food_photo_sheet.dart';
 import 'nutrition_history_screen.dart';
 import 'nutrition_settings_sheet.dart';
+import 'widgets/eaten_today_hero.dart';
 import '../widgets/system/system.dart';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -124,7 +125,10 @@ class _NutritionBody extends StatelessWidget {
             ),
             ListenableBuilder(
               listenable: presenter,
-              builder: (_, __) => _StatSection(presenter: presenter),
+              builder: (_, __) => EatenTodayHero(
+                presenter: presenter,
+                onTap: () => _showNutritionDetailSheet(context, presenter),
+              ),
             ),
             Expanded(
               child: ListenableBuilder(
@@ -325,201 +329,6 @@ void _showNutritionDetailSheet(
     title: 'Breakdown',
     body: _NutritionDetailBody(presenter: presenter),
   );
-}
-
-class _StatSection extends StatelessWidget {
-  final NutritionPresenter presenter;
-  const _StatSection({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final p = presenter;
-    final cs = Theme.of(context).colorScheme;
-    final burned = p.selectedDateCaloriesBurned;
-    final barColor = p.isOverGoal ? cs.error : cs.primary;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        onTap: () => _showNutritionDetailSheet(context, p),
-        child: Row(
-          children: [
-            // ── Calories side (60%) ─────────────────────────────────────────
-            Expanded(
-              flex: 3,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'CALORIES',
-                    style: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  AppLinearProgress(
-                    value: p.netCalorieProgress,
-                    color: barColor,
-                    height: 3,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _StatCell(
-                        value: '${p.todayCalories}',
-                        label: 'Eaten',
-                        color: cs.onSurface,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.remainingCalories}',
-                        label: 'Left',
-                        color: cs.onSurface,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: burned > 0 ? '$burned' : '—',
-                        label: 'Burned',
-                        color: cs.onSurface,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            // ── Divider ────────────────────────────────────────────────────
-            Container(
-              width: 1,
-              height: 56,
-              margin: const EdgeInsets.symmetric(horizontal: 12),
-              color: cs.outlineVariant,
-            ),
-            // ── Macros side (40%) ──────────────────────────────────────────
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'MACROS',
-                    style: TextStyle(
-                      color: cs.onSurfaceVariant,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0.6,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _StatCell(
-                        value: '${p.todayProtein.round()}g',
-                        label: 'Protein',
-                        color: cs.onSurface,
-                        barColor: cs.primary,
-                        progress: p.proteinProgress,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.todayCarbs.round()}g',
-                        label: 'Carbs',
-                        color: cs.onSurface,
-                        barColor: context.appColors.gold,
-                        progress: p.carbsProgress,
-                      ),
-                      const _ColDivider(),
-                      _StatCell(
-                        value: '${p.todayFat.round()}g',
-                        label: 'Fat',
-                        color: cs.onSurface,
-                        barColor: cs.error,
-                        progress: p.fatProgress,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ColDivider extends StatelessWidget {
-  const _ColDivider();
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 1,
-        height: 36,
-        margin: const EdgeInsets.symmetric(horizontal: 6),
-        color: Theme.of(context).colorScheme.outlineVariant,
-      );
-}
-
-class _StatCell extends StatelessWidget {
-  final String value;
-  final String label;
-  final Color color;
-  final Color? barColor;
-  final double? progress;
-  const _StatCell({
-    required this.value,
-    required this.label,
-    required this.color,
-    this.barColor,
-    this.progress,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (progress != null) ...[
-            AppLinearProgress(
-              value: progress!,
-              color: barColor ?? color,
-              height: 3,
-            ),
-            const SizedBox(height: 8),
-          ],
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                height: 1,
-              ),
-              maxLines: 1,
-            ),
-          ),
-          const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              label,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 10,
-              ),
-              maxLines: 1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 // ─── Nutrition Detail Body ────────────────────────────────────────────────────

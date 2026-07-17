@@ -519,6 +519,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   bool get isSelectedDateToday =>
       _dateFmt.format(_selectedDate) == _dateFmt.format(DateTime.now());
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
+
+  /// The selected day's log entries ordered newest-first — the source for the
+  /// redesigned "Today's log" list (Nudgr nutrition redesign). Each message is
+  /// one logged food entry/meal or exercise; ordering is display-only.
+  List<ChatMessage> get logEntriesNewestFirst =>
+      _chatMessages.reversed.toList(growable: false);
+
   bool get isChatParsing => _isChatParsing;
   String? get chatParseError => _chatParseError;
 

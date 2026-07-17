@@ -41,16 +41,22 @@ sheet; plus photo source/preview/estimate sheets, a save-as-template sheet, and 
 
 ## Decisions
 
-### D1 — Render the log from persisted `_todayLog`, not `chatMessages`
-The "Today's log" list is built from the day's persisted `FoodEntry` records (and exercise
-entries), so it is a true daily record independent of ephemeral chat state.
-- *Why:* the reference is a log, not a transcript; persisted entries survive app restarts and match
-  the hero totals exactly.
-- *Alternative rejected:* keep rendering `chatMessages` — leaks conversational artifacts into a
-  "record" view and breaks on history days with no chat.
-- *Consequence:* per-entry actions bind to **entry-level** presenter methods. Where only
-  chat-scoped methods exist today, add thin entry-id-keyed shims that reuse the same internal
-  mutation paths (no new business logic).
+### D1 — Render the log from `chatMessages` (restyle, not re-source)
+The "Today's log" list is built from `NutritionPresenter.chatMessages` — each message is one logged
+food entry/meal (or exercise) — restyled from a chat bubble into a structured entry card. This is a
+**presentation** change, not a data-source change.
+- *Why (revised during implementation):* `chatMessages` already IS the per-entry model that carries
+  the display metadata the reference card needs — name/raw text, per-item macros, estimation
+  **source** (Cloud/Local/Library), **alternatives**, `needsConfirmation`, photo thumbnail, and
+  exercise details — and it is persisted and kept in sync with `_todayLog` via
+  `_reconcileChatWithLog`. The raw `FoodEntry` records in `_todayLog` do NOT carry source/
+  alternatives/photo, so rendering from them would drop capability.
+- *Consequence:* per-entry actions bind to the existing **message-keyed** presenter methods
+  (`removeChatMessage`, `markChatMessageDisliked`, `saveFoodTemplate`, `editAllChatFoodItems`, …) —
+  no new business logic and no shims needed. Newest-first ordering is a thin presenter getter over
+  `chatMessages`. History days with no chat simply show the empty state.
+- *Alternative rejected:* re-source from `_todayLog` — loses source/alternatives/photo metadata and
+  forces duplicating the edit/delete/learn plumbing.
 
 ### D2 — Flat "Today's log", no meal-slot grouping
 Render the day's entries as a single flat list ordered newest-first, with no Breakfast/Lunch/

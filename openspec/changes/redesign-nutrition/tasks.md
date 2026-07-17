@@ -1,8 +1,8 @@
 ## 1. Presenter & util groundwork (land before UI)
 
-- [ ] 1.1 Add a read-only `NutritionPresenter` getter returning the selected day's food entries as a single flat list ordered newest-first (no meal-slot grouping), plus the day's total kcal. Reuse existing `_todayLog` accessors; unit-test ordering + total.
-- [ ] 1.2 Add read-only hero getters if missing: eaten kcal, left-of-goal (vs `effectiveGoal`), calorie progress, `isOverGoal`, per-macro grams + progress, burned kcal. Reuse existing getters where present; unit-test any new one.
-- [ ] 1.3 Add thin entry-level action shims keyed by `FoodEntry.id` for Edit / Delete(+undo) / Wrong(dislike) / Save-as-template that reuse existing internal `_todayLog` mutation paths (no new resolution logic). Unit-test delete+undo and save-as-template. Do NOT regenerate `test/mocks.mocks.dart` — hand-fake collaborators.
+- [x] 1.1 Add a read-only `NutritionPresenter` getter returning `chatMessages` ordered newest-first for the "Today's log" list (no meal-slot grouping). Day total reuses existing `todayCalories`. Unit-test ordering.
+- [x] 1.2 Confirm hero getters exist (eaten `todayCalories`, `remainingCalories`, `calorieProgress`, `isOverGoal`, `todayProtein/Carbs/Fat` + `proteinProgress/carbsProgress/fatProgress`, `selectedDateCaloriesBurned`); add only if missing. All present — no new getters needed.
+- [ ] 1.3 Entry actions bind to existing message-keyed presenter methods (`removeChatMessage`, `markChatMessageDisliked`, `saveFoodTemplate`, `editAllChatFoodItems`) — no new shims. Add undo for delete at the view layer. Do NOT regenerate `test/mocks.mocks.dart` — hand-fake collaborators.
 
 ## 2. Shared widget extraction (no visual change yet)
 
@@ -11,8 +11,8 @@
 
 ## 3. EATEN TODAY hero (restyle of the stat card)
 
-- [ ] 3.1 Build `eaten_today_hero.dart` — gradient card: "EATEN TODAY" label, big eaten kcal, left-of-goal in the domain accent, calorie progress bar, P/C/F columns with mini-bars. Theme tokens only; Material icons.
-- [ ] 3.2 Wire over-goal state (danger color) and keep tap → existing breakdown sheet (which still shows Burned + per-macro detail). Verify under/over-goal and tap-through.
+- [x] 3.1 Build `eaten_today_hero.dart` — gradient card: "EATEN TODAY" label, big eaten kcal, left-of-goal in the domain accent, calorie progress bar, P/C/F columns with mini-bars. Theme tokens only; Material icons.
+- [x] 3.2 Wire over-goal state (danger color) and keep tap → existing breakdown sheet (which still shows Burned + per-macro detail). Verify under/over-goal and tap-through. [analyze clean; on-device visual smoke pending]
 
 ## 4. Today's log (flat list)
 
