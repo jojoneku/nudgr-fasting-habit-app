@@ -67,14 +67,27 @@ Dinner/Snack section headers. A presenter getter returns the day's entries in di
 - *Alternatives rejected:* (a) meal-slot grouping by time-of-day inference; (b) composer meal-slot
   tabs that persist a slot. Both add meal-slot concepts the product does not want.
 
-### D3 — Composer sheet wraps the existing analysis pipeline
-The composer is a stateful bottom-sheet with phases compose → analyzing → estimate, driven by the
-presenter's existing parse/analyze/commit methods. "Log it" commits to `_todayLog`; "Edit" returns
-to an editable state. Edit-from-entry (D1) opens the composer pre-filled and commits as a replace.
-- *Why:* reuse the proven resolution/learning pipeline; only the presentation moves.
-- *Consequence:* the inline `_FoodAnalysisCard` edit/alternatives/dislike affordances are relocated —
-  estimate-time editing + alternatives live in the composer; post-log Edit/Wrong live in the entry
-  `⋯` menu.
+### D3 — Composer commits through the chat path (revised during implementation)
+The composer is a bottom-sheet opened from the pinned bar; it reuses the current input bar's
+behaviors — typed food/exercise via `parseChat`, `addManualFoodEntry`, `addMealFromTemplate`, photo
+via `showFoodPhotoSheet` — plus quick-add chips and typed-name autosuggest (superset, per user).
+- *Why (revised):* there are **two logging sinks** — `chatMessages` (created by `parseChat` /
+  `addManualFoodEntry`; carries source/alternatives/photo/exercise metadata) and `_todayLog` (the
+  calorie/macro totals). The estimate/cart methods (`parseMeal`→`confirmParsedMeal`,
+  `estimateMeal`→`confirmAiEstimate`, as used by the existing `LogMealSheet`) commit to `_todayLog`
+  **without** creating a `ChatMessage`; `_reconcileChatWithLog` only backfills chat rows on
+  load/date-change, not immediately. Since the log list (D1) renders `chatMessages` and **exercise
+  entries exist only as chat messages** (never in `_todayLog`), the composer must commit via the
+  chat path so logged items appear immediately.
+- *Trade-off (deviation from reference):* `parseChat` commits atomically, so the reference's
+  *in-sheet* "estimate → Log it/Edit" preview is not reproduced without a no-commit preview mode on
+  the presenter — explicitly a **non-goal** (no presenter behavior change). Instead: type →
+  "Analyzing…" → logged, with an **undo** toast; review/adjust happens via the entry's Edit
+  (inline, `editAllChatFoodItems`) and Wrong (`swapChatFoodAlternative` / `markChatMessageDisliked`)
+  in the `⋯` menu. Net logging experience is equivalent; the estimate step moves from pre-log to
+  post-log. Accepted 2026-07-18.
+- *Consequence:* the `LogMealSheet` (estimate/cart, `_todayLog`-only) is **not** adopted as the
+  composer — it would desync from the chat-based log list.
 
 ### D4 — Widget extraction
 Break the monolith into `lib/views/nutrition/widgets/`: `eaten_today_hero.dart`,
