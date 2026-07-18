@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddInstallmentSheet extends StatefulWidget {
@@ -119,11 +120,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Name
-          _FieldLabel('Name'),
+          const _FieldLabel('Name'),
           TextFormField(
             controller: _nameCtrl,
             decoration:
-                const InputDecoration(hintText: 'e.g. MacBook Pro, Braces'),
+                sheetFieldDecoration(context, hint: 'e.g. MacBook Pro, Braces'),
             textInputAction: TextInputAction.next,
             textCapitalization: TextCapitalization.words,
             validator: (v) =>
@@ -132,10 +133,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Account
-          _FieldLabel('Account (Credit / BNPL)'),
+          const _FieldLabel('Account (Credit / BNPL)'),
           DropdownButtonFormField<String>(
             initialValue: _accountId,
-            decoration: const InputDecoration(hintText: 'Select account'),
+            decoration: sheetFieldDecoration(context, hint: 'Select account'),
             items: widget.presenter.accounts.map((a) {
               return DropdownMenuItem(value: a.id, child: Text(a.name));
             }).toList(),
@@ -145,10 +146,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Total Amount
-          _FieldLabel('Total Amount'),
+          const _FieldLabel('Total Amount'),
           TextFormField(
             controller: _totalCtrl,
-            decoration: const InputDecoration(hintText: '0.00'),
+            decoration: sheetFieldDecoration(context,
+                hint: '0.00', prefixText: '₱ ', emphasize: true),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: amountInputFormatters,
             textInputAction: TextInputAction.next,
@@ -161,7 +163,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Number of months
-          _FieldLabel('Number of Months'),
+          const _FieldLabel('Number of Months'),
           _MonthsSelector(
             selected: _totalMonths,
             onChanged: _onMonthsChanged,
@@ -169,10 +171,11 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Monthly Amount
-          _FieldLabel('Monthly Payment (auto-computed, editable)'),
+          const _FieldLabel('Monthly Payment (auto-computed, editable)'),
           TextFormField(
             controller: _monthlyCtrl,
-            decoration: const InputDecoration(hintText: '0.00'),
+            decoration:
+                sheetFieldDecoration(context, hint: '0.00', prefixText: '₱ '),
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: amountInputFormatters,
             textInputAction: TextInputAction.next,
@@ -186,7 +189,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Start Month
-          _FieldLabel('Start Month'),
+          const _FieldLabel('Start Month'),
           _StartMonthSelector(
             selectedMonth: _startMonth,
             onAdjust: _adjustStartMonth,
@@ -194,7 +197,7 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           const SizedBox(height: 16),
 
           // Note
-          _FieldLabel('Note (optional)'),
+          const _FieldLabel('Note (optional)'),
           AppTextField(
             controller: _noteCtrl,
             hint: 'e.g. 0% interest, 12 months',
@@ -256,24 +259,14 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   }
 }
 
+/// Thin wrapper over the shared [SheetFieldLabel] so existing `_FieldLabel(...)`
+/// call sites in this sheet pick up the reference uppercase-label styling.
 class _FieldLabel extends StatelessWidget {
   final String text;
   const _FieldLabel(this.text);
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurfaceVariant,
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SheetFieldLabel(text);
 }
 
 class _MonthsSelector extends StatelessWidget {
