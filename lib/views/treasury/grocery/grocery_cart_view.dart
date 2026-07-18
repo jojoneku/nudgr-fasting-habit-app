@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
 import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
@@ -193,7 +194,7 @@ class _BreakdownLine extends StatelessWidget {
     ];
     if (presenter.hasEstimates) {
       parts.add(_chip(context, '~${formatPeso(presenter.estimatedTotal)} est',
-          cs.secondary));
+          context.appColors.fast));
     }
     if (presenter.unpricedCount > 0) {
       parts
@@ -319,7 +320,7 @@ class _CartItemTile extends StatelessWidget {
         break;
       case PriceState.remembered:
         subtitle = '~${formatPeso(item.unitPrice!)} $suffix · tap to confirm';
-        subtitleColor = cs.secondary;
+        subtitleColor = context.appColors.fast;
         break;
       case PriceState.unknown:
         subtitle = 'No price · tap to add';
@@ -387,7 +388,7 @@ class _CartItemTile extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: item.priceState == PriceState.remembered
-                        ? cs.secondary
+                        ? context.appColors.fast
                         : cs.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
