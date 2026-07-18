@@ -125,6 +125,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   // log atomically).
   _ResolvedChatFood? _pendingResolved;
   String? _pendingText;
+  // Set when the pending estimate came from a photo — carries the thumbnail so
+  // commit can attach it, and discard can delete the orphaned file.
+  String? _pendingThumbPath;
   // ── Matcher feedback (telemetry, local-only) ─────────────────────────────
   // Loaded once from storage on init; appended to in-memory and persisted on
   // every event so the curation backlog survives app restarts.
@@ -1279,18 +1282,36 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     final resolved = _pendingResolved;
     final text = _pendingText;
     if (resolved == null || text == null) return null;
+    final thumb = _pendingThumbPath;
     _pendingResolved = null;
     _pendingText = null;
+    _pendingThumbPath = null;
     safeNotify();
     return _commitFoodChat(
-        text, resolved.entries, resolved.alts, resolved.rawTexts);
+      text,
+      resolved.entries,
+      resolved.alts,
+      resolved.rawTexts,
+      photoThumbnailPath: thumb,
+    );
   }
 
-  /// Drop the pending estimate without logging it (composer Edit / Cancel).
+  /// Drop the pending estimate without logging it (Edit / Cancel). Deletes an
+  /// un-committed photo thumbnail so retakes don't leak files.
   void discardPendingChat() {
-    if (_pendingResolved == null && _pendingText == null) return;
+    if (_pendingResolved == null &&
+        _pendingText == null &&
+        _pendingThumbPath == null) {
+      return;
+    }
+    final thumb = _pendingThumbPath;
     _pendingResolved = null;
     _pendingText = null;
+    _pendingThumbPath = null;
+    if (thumb != null) {
+      // ignore: unawaited_futures
+      _photoStore.delete(thumb);
+    }
     safeNotify();
   }
 
@@ -1300,7 +1321,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   bool get isPhotoParsing => _isPhotoParsing;
 
   /// User-facing error from the last photo parse, or null. Cleared on the next
-  /// [parsePhoto] call.
+  /// [resolvePhotoPreview] call.
   String? get photoParseError => _photoParseError;
 
   void clearPhotoParseError() {
@@ -1314,16 +1335,19 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   Future<String?> resolvePhotoThumbnail(String relativePath) =>
       _photoStore.absolutePath(relativePath);
 
-  /// Log a meal from a photo (+ optional [caption]). Compresses the image,
-  /// sends it to the cloud vision endpoint, and commits the detected items
-  /// through the same pipeline as text logging.
+  /// Resolve a meal from a photo (+ optional [caption]) into a pending estimate
+  /// for review — WITHOUT logging. Compresses the image, sends it to the cloud
+  /// vision endpoint, and stages the detected items (+ thumbnail) as the pending
+  /// estimate. The caller shows the estimate and calls [commitPendingChat] to
+  /// log or [discardPendingChat] to drop it.
   ///
   /// Photo items are tagged [EstimationSource.photoAi] and are NEVER promoted
   /// into the personal dictionary (§0.2) — vision estimates are the least
   /// verified input, so they must not silently bypass the DB. The whole flow
   /// is disposal-safe (§0.4): dismissing the sheet mid-call must not notify a
   /// disposed presenter.
-  Future<void> parsePhoto(Uint8List imageBytes, {String? caption}) async {
+  Future<void> resolvePhotoPreview(Uint8List imageBytes,
+      {String? caption}) async {
     if (_isPhotoParsing) return;
     final cloud = _cloudAi;
     if (cloud == null || !cloud.isAvailable) {
@@ -1350,7 +1374,8 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       // (HTTP code / body snippet / exception) is the only breadcrumb we get
       // from a release build that has no attached console.
       if (result.status != PhotoParseStatus.ok) {
-        debugPrint('NutritionPresenter: parsePhoto status=${result.status.name}'
+        debugPrint(
+            'NutritionPresenter: resolvePhotoPreview status=${result.status.name}'
             '${result.httpStatus != null ? ' http=${result.httpStatus}' : ''}'
             '${result.detail != null ? ' detail=${result.detail}' : ''}');
       }
@@ -1454,20 +1479,21 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       }
       if (isDisposed) return;
 
-      await _commitFoodChat(
-        captionLabel,
-        commitEntries,
-        commitAlts,
-        commitRaw,
-        photoThumbnailPath: thumbPath,
+      // Stage as the pending estimate for review — commit happens on "Log it".
+      _pendingResolved = (
+        entries: commitEntries,
+        alts: commitAlts,
+        rawTexts: commitRaw,
       );
+      _pendingText = captionLabel;
+      _pendingThumbPath = thumbPath;
     } on TimeoutException {
       if (isDisposed) return;
       _photoParseError = 'Photo analysis timed out. Please try again.';
     } catch (e) {
       if (isDisposed) return;
       _photoParseError = "Couldn't analyse this photo. Please try again.";
-      debugPrint('NutritionPresenter: parsePhoto error: $e');
+      debugPrint('NutritionPresenter: resolvePhotoPreview error: $e');
     } finally {
       if (!isDisposed) {
         _isPhotoParsing = false;

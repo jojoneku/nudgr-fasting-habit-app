@@ -5246,13 +5246,13 @@ class MockNutritionPresenter extends _i1.Mock
       ) as _i13.Future<String?>);
 
   @override
-  _i13.Future<void> parsePhoto(
+  _i13.Future<void> resolvePhotoPreview(
     _i47.Uint8List? imageBytes, {
     String? caption,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
-          #parsePhoto,
+          #resolvePhotoPreview,
           [imageBytes],
           {#caption: caption},
         ),

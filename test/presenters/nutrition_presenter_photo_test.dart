@@ -149,14 +149,33 @@ void main() {
     when(mockCloud.downloadProgress).thenReturn(null);
   });
 
-  group('parsePhoto', () {
-    test('commits a photo-sourced food item with a thumbnail', () async {
+  group('photo logging (resolve → review → commit)', () {
+    test('resolve stages a pending estimate WITHOUT logging', () async {
       when(mockCloud.parseFoodFromImage(any, any, any))
           .thenAnswer((_) async => _okResult());
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
+
+      // Estimate is staged for review — nothing logged yet.
+      expect(presenter.hasPendingChat, isTrue);
+      expect(presenter.pendingChatEntries, hasLength(1));
+      expect(presenter.chatMessages, isEmpty);
+      expect(presenter.todayCalories, 0);
+      expect(photoStore.saves, 1); // thumbnail prepared during resolve
+      expect(presenter.photoParseError, isNull);
+    });
+
+    test('commit logs the reviewed photo estimate with its thumbnail',
+        () async {
+      when(mockCloud.parseFoodFromImage(any, any, any))
+          .thenAnswer((_) async => _okResult());
+      final presenter = buildPresenter();
+      await Future.delayed(Duration.zero);
+
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
+      await presenter.commitPendingChat();
 
       expect(presenter.chatMessages, hasLength(1));
       final msg = presenter.chatMessages.first;
@@ -164,8 +183,23 @@ void main() {
       expect(msg.photoThumbnailPath, photoStore.lastSavedPath);
       expect(msg.foodItems.single.estimationSource, EstimationSource.photoAi);
       expect(presenter.todayCalories, 320);
-      expect(photoStore.saves, 1);
-      expect(presenter.photoParseError, isNull);
+      expect(presenter.hasPendingChat, isFalse);
+    });
+
+    test('discard drops the estimate and deletes the orphan thumbnail',
+        () async {
+      when(mockCloud.parseFoodFromImage(any, any, any))
+          .thenAnswer((_) async => _okResult());
+      final presenter = buildPresenter();
+      await Future.delayed(Duration.zero);
+
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
+      presenter.discardPendingChat();
+
+      expect(presenter.hasPendingChat, isFalse);
+      expect(presenter.chatMessages, isEmpty);
+      expect(presenter.todayCalories, 0);
+      expect(photoStore.deleted, contains(photoStore.lastSavedPath));
     });
 
     test('does NOT auto-learn a photo item into the personal dictionary',
@@ -177,7 +211,7 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       verifyNever(mockStorage.savePersonalDict(any));
     });
@@ -192,7 +226,8 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      final future = presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      final future =
+          presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
       presenter.dispose();
 
       await expectLater(future, completes);
@@ -205,7 +240,7 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       expect(presenter.photoParseError, contains('limit'));
       expect(presenter.chatMessages, isEmpty);
@@ -217,7 +252,7 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       expect(presenter.photoParseError, isNotNull);
       expect(presenter.chatMessages, isEmpty);
@@ -227,7 +262,7 @@ void main() {
       final presenter = buildPresenter(withCloud: false);
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       expect(presenter.photoParseError, contains('Cloud AI'));
       expect(presenter.chatMessages, isEmpty);
@@ -240,7 +275,7 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       expect(presenter.photoParseError, contains('connection'));
       expect(presenter.chatMessages, isEmpty);
@@ -256,7 +291,7 @@ void main() {
       final presenter = buildPresenter();
       await Future.delayed(Duration.zero);
 
-      await presenter.parsePhoto(Uint8List.fromList([1, 2, 3]));
+      await presenter.resolvePhotoPreview(Uint8List.fromList([1, 2, 3]));
 
       expect(presenter.photoParseError, isNotNull);
       expect(presenter.photoParseError, isNot(contains('connection')));

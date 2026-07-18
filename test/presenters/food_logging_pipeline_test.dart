@@ -25,8 +25,6 @@ import 'package:intermittent_fasting/models/meal_slot.dart';
 import 'package:intermittent_fasting/models/estimation_source.dart';
 import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/food_db_entry.dart';
-import 'package:intermittent_fasting/models/food_parse_result.dart';
-import 'package:intermittent_fasting/models/food_search_candidate.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';

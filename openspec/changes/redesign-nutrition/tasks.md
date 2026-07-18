@@ -31,7 +31,7 @@
 
 ## 6. Photo logging & remaining sheets (More.dc.html style)
 
-- [x] 6.1 Restyle `food_photo_sheet.dart`: source (Take photo / Choose from gallery) → preview (photo + note + Retake/Analyze). The reference "estimate" step maps to the committed log entry — `parsePhoto` commits atomically (no in-sheet preview), preserving `photoAi` attribution + no auto-learn. Retake loops back to the source picker. [analyze clean; on-device smoke pending]
+- [x] 6.1 Restyle `food_photo_sheet.dart`: source (Take photo / Choose from gallery) → preview (photo + note + Retake/Analyze) → **estimate** (items + P/C/F + total + Log it/Edit) → commit. Presenter split `parsePhoto`→`resolvePhotoPreview` (resolves to a pending estimate, no logging) + shared `commitPendingChat` (attaches thumbnail); discard deletes the orphan thumbnail. Log-it shows a "Logged" undo toast. `photoAi` attribution + no auto-learn preserved. 10 photo tests green. [analyze clean; on-device smoke pending]
 - [x] 6.2 First-run "Set up smart logging" modal restyled (on-device/cloud option rows + Download AI / Skip) in the composer. Save-as-template ported to the full reference "Library · save as template" sheet (`save_as_template_sheet.dart`: name field + included items + total + Save to library).
 - [ ] 6.3 Verify photo capture → estimate → log, save-as-template round-trip, and first-run download/skip on-device.
 
