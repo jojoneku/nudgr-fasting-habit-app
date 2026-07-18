@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-import 'package:intermittent_fasting/views/treasury/dashboard/account_card_widget.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/budget_overview_card.dart';
-import 'package:intermittent_fasting/views/treasury/dashboard/cash_summary_banner.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/cashflow_strip.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_accounts_list.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
@@ -79,8 +81,10 @@ class _AddAccountFab extends StatelessWidget {
       backgroundColor: colorScheme.primary,
       foregroundColor: colorScheme.onPrimary,
       icon: const Icon(Icons.add),
-      label: const Text('Add Account',
-          style: TextStyle(fontWeight: FontWeight.w600)),
+      label: const Text(
+        'Add Account',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
     );
   }
 }
@@ -101,25 +105,30 @@ class _DashboardScrollBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CashSummaryBanner(presenter: presenter),
-          const SizedBox(height: 8),
-          MetricCardsGrid(presenter: presenter),
+          const _GreetingHeader(),
+          const SizedBox(height: 14),
+          NetWorthHero(presenter: presenter),
+          const SizedBox(height: 12),
+          CashflowStrip(presenter: presenter),
           const SizedBox(height: 16),
           if (!presenter.hasAccounts)
             _EmptyAccountsCard(onAddAccount: onAddAccount)
-          else ...[
-            AppSection(
-              title: 'Accounts',
-              child: _LiquidAccountsRow(
-                presenter: presenter,
-                onEdit: onEditAccount,
-              ),
+          else
+            DashboardAccountsList(
+              accounts: presenter.liquidAccounts,
+              heldByAccountId: presenter.heldAmountByAccountId,
+              totalLiquidCash: presenter.totalLiquidCash,
+              onEdit: onEditAccount,
             ),
-          ],
+          const SizedBox(height: 16),
+          // Retained from the pre-redesign dashboard: exact month figures plus
+          // Ending Cash / Forecast, which the hero + strip summarize but don't
+          // enumerate. Kept per the "don't drop existing features" rule.
+          MetricCardsGrid(presenter: presenter),
           const SizedBox(height: 16),
           SpendingAnalyticsCard(presenter: presenter),
           const SizedBox(height: 16),
@@ -174,36 +183,70 @@ class _EmptyAccountsCard extends StatelessWidget {
   }
 }
 
-class _LiquidAccountsRow extends StatelessWidget {
-  final TreasuryDashboardPresenter presenter;
-  final ValueChanged<FinancialAccount> onEdit;
-
-  const _LiquidAccountsRow({required this.presenter, required this.onEdit});
+/// Greeting line + "Synced" status pill at the top of the dashboard body.
+/// The "Treasury" title itself is provided by the module app bar. The pill is a
+/// static status indicator for this increment (live sync state is wired later).
+class _GreetingHeader extends StatelessWidget {
+  const _GreetingHeader();
 
   @override
   Widget build(BuildContext context) {
-    final accounts = presenter.liquidAccounts;
-    final held = presenter.heldAmountByAccountId;
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        crossAxisSpacing: 4,
-        mainAxisSpacing: 4,
-        mainAxisExtent: 90,
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            _greeting(),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        const _SyncedPill(),
+      ],
+    );
+  }
+}
+
+/// Time-of-day greeting (pure presentation).
+String _greeting() {
+  final hour = DateTime.now().hour;
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
+class _SyncedPill extends StatelessWidget {
+  const _SyncedPill();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final green = context.appColors.success;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: green.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
       ),
-      itemCount: accounts.length,
-      itemBuilder: (context, index) {
-        return AccountCardWidget(
-          account: accounts[index],
-          heldAmount: held[accounts[index].id] ?? 0.0,
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onEdit(accounts[index]);
-          },
-        );
-      },
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: green, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'Synced',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: green,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -263,8 +306,9 @@ class _GoalSection extends StatelessWidget {
                         height: 1,
                         indent: 16,
                         endIndent: 16,
-                        color:
-                            colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        color: colorScheme.outlineVariant.withValues(
+                          alpha: 0.4,
+                        ),
                       ),
                   ],
                 ],
@@ -354,9 +398,12 @@ class _CreditAccountCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text('Owe',
-                      style: theme.textTheme.labelSmall
-                          ?.copyWith(color: cs.onSurfaceVariant)),
+                  Text(
+                    'Owe',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
                   AppNumberDisplay(
                     value: formatPeso(account.currentPayable),
                     size: AppNumberSize.body,
@@ -380,17 +427,20 @@ class _CreditAccountCard extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               '${formatPeso(available ?? 0)} of ${formatPeso(account.creditLimit ?? 0)} available',
-              style: theme.textTheme.labelSmall
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
             ),
           ],
           if (dueInfo != null) ...[
             const SizedBox(height: 8),
             Row(
               children: [
-                Icon(Icons.event_outlined,
-                    size: 14,
-                    color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant),
+                Icon(
+                  Icons.event_outlined,
+                  size: 14,
+                  color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   minimumDue != null
@@ -398,8 +448,9 @@ class _CreditAccountCard extends StatelessWidget {
                       : dueInfo!.label,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
-                    fontWeight:
-                        dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: dueInfo!.imminent
+                        ? FontWeight.w600
+                        : FontWeight.w400,
                   ),
                 ),
               ],
@@ -435,8 +486,11 @@ class _HeldFundsCard extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
               child: Row(
                 children: [
-                  Icon(Icons.swap_horiz_rounded,
-                      color: colorScheme.onSurfaceVariant, size: 16),
+                  Icon(
+                    Icons.swap_horiz_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                    size: 16,
+                  ),
                   const SizedBox(width: 6),
                   Text(
                     'Not included in net worth',
@@ -476,8 +530,11 @@ class _HeldFundsCard extends StatelessWidget {
                       color: colorScheme.onSurfaceVariant,
                     ),
                     const SizedBox(width: 4),
-                    Icon(Icons.chevron_right,
-                        color: colorScheme.onSurfaceVariant, size: 16),
+                    Icon(
+                      Icons.chevron_right,
+                      color: colorScheme.onSurfaceVariant,
+                      size: 16,
+                    ),
                   ],
                 ),
               ),
