@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/update_presenter.dart';
 import '../services/local_storage_service.dart';
+import '../services/notification_service.dart';
 import '../services/update_service.dart';
 import 'app_theme.dart';
 import 'home_screen.dart';
@@ -47,6 +48,7 @@ class _FastingAppState extends State<FastingApp> {
       updateService: updateService,
       storage: _storage,
       currentVersion: _currentVersion,
+      notifications: NotificationService(),
     );
 
     // Check for updates after first frame

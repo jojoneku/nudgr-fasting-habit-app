@@ -28,6 +28,7 @@ import '../models/notification_preferences.dart';
 import '../models/personal_food_entry.dart';
 import '../models/body_measurement_entry.dart';
 import '../models/weight_entry.dart';
+import '../models/insight.dart';
 
 abstract class StorageService {
   static const String keyIsFasting = 'isFasting';
@@ -89,6 +90,9 @@ abstract class StorageService {
   // Hub hero-ring slot config — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]
   // (it's a UI layout preference). Empty/absent ⇒ auto-resolved default.
   static const String kHeroSlots = 'hub.heroSlots';
+  // Hub card (module) order — DEVICE-LEVEL / UNSCOPED, like [kHeroSlots].
+  // Stored as HubCardType enum names. Empty/absent ⇒ default priority order.
+  static const String kHubCardOrder = 'hub.cardOrder';
   static const String kAiPromptSkippedAt = 'aiPromptSkippedAt';
   // First-run onboarding gate — DEVICE-LEVEL / UNSCOPED, like [kThemeMode]. Must
   // be evaluable before sign-in and must survive sign-out/account switch, so it
@@ -110,6 +114,13 @@ abstract class StorageService {
   static const String keyGroceryPriceMemory = 'grocery_price_memory';
   static const String keyGroceryBudget = 'grocery_budget';
   static const String keyGroceryTripHistory = 'grocery_trip_history';
+  // Insight Engine (Plan 057) — per-domain snapshot hash baseline, the ring
+  // buffer of generated insights/nudges, per-trigger cooldown timestamps, and
+  // the last local calendar date a daily brief was generated.
+  static const String keyInsightBaselineHashes = 'insight_baseline_hashes';
+  static const String keyInsights = 'insights';
+  static const String keyInsightCooldowns = 'insight_cooldowns';
+  static const String keyLastDailyBriefDate = 'last_daily_brief_date';
 
   //  User Stats
   Future<void> saveUserStats(UserStats stats);
@@ -248,6 +259,16 @@ abstract class StorageService {
   Future<void> saveGroceryTripHistory(List<SavedTrip> trips);
   Future<List<SavedTrip>> loadGroceryTripHistory();
 
+  //  Insight Engine (Plan 057)
+  Future<Map<String, String>?> loadInsightBaselineHashes();
+  Future<void> saveInsightBaselineHashes(Map<String, String> hashes);
+  Future<List<Insight>> loadInsights();
+  Future<void> saveInsights(List<Insight> insights);
+  Future<Map<String, DateTime>?> loadInsightCooldowns();
+  Future<void> saveInsightCooldowns(Map<String, DateTime> cooldowns);
+  Future<DateTime?> loadLastDailyBriefDate();
+  Future<void> saveLastDailyBriefDate(DateTime date);
+
   //  Theme
   Future<void> saveThemeMode(String mode);
   Future<String?> loadThemeMode();
@@ -256,6 +277,11 @@ abstract class StorageService {
   //  an empty list means "not configured" (auto-resolve the default).
   Future<void> saveHeroSlots(List<String> slots);
   Future<List<String>> loadHeroSlots();
+
+  //  Hub card (module) order (device-level / unscoped). Stored as enum names;
+  //  an empty list means "not configured" (use the default priority order).
+  Future<void> saveHubCardOrder(List<String> order);
+  Future<List<String>> loadHubCardOrder();
 
   //  First-run onboarding gate (device-level / unscoped)
   Future<void> saveOnboardingComplete(bool value);

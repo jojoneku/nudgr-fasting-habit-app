@@ -134,22 +134,62 @@ class CloudAiCoachService implements AiCoachService {
       return;
     }
 
-    final result = await _call('respond', {
-      'context': _contextToJson(context),
-      'messages': messages
-          .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
-          .map((m) => {
-                'role': m.role == AiChatRole.user ? 'user' : 'assistant',
-                'text': m.text,
-              })
-          .toList(),
+    final body = jsonEncode({
+      'op': 'respond',
+      'payload': {
+        'context': _contextToJson(context),
+        'messages': messages
+            .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
+            .map((m) => {
+                  'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+                  'text': m.text,
+                })
+            .toList(),
+      },
     });
 
-    if (result == null) {
-      yield 'Cloud coach unreachable. Check your connection and try again.';
-      return;
+    http.Response response;
+    try {
+      response = await http
+          .post(Uri.parse(_endpoint), headers: _headers, body: body)
+          .timeout(const Duration(seconds: _timeoutSeconds));
+    } catch (e) {
+      // Transport-level failure: no connection, DNS, or the request timed out
+      // before any response. The only case where "check your connection" is
+      // the honest diagnosis.
+      debugPrint('CloudAiCoachService[respond] network error: $e');
+      throw const AiCoachException(
+          'Cloud coach unreachable. Check your connection and try again.');
     }
-    yield (result['response'] as String?) ?? '';
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw const AiCoachException(
+          'Your session has expired. Sign in again to use the cloud coach.');
+    }
+    if (response.statusCode == 429) {
+      throw const AiCoachException(
+          'The cloud coach hit its daily limit. Try again tomorrow.');
+    }
+    if (response.statusCode != 200) {
+      // Reached the backend, but it errored (5xx, unhandled op, …). The
+      // connection is fine — do NOT tell the user to check it.
+      debugPrint('CloudAiCoachService[respond] '
+          'server error HTTP ${response.statusCode}: ${response.body}');
+      throw const AiCoachException(
+          'The cloud coach had a hiccup on our end. Try again in a moment.');
+    }
+
+    final String text;
+    try {
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      text = (result['response'] as String?) ?? '';
+    } catch (e) {
+      // 200 OK but the body wasn't the JSON shape we expected.
+      debugPrint('CloudAiCoachService[respond] parse error: $e');
+      throw const AiCoachException(
+          'The cloud coach sent back something unreadable. Try again.');
+    }
+    yield text;
   }
 
   // ── Parse food ────────────────────────────────────────────────────────────

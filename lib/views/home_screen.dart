@@ -9,6 +9,7 @@ import '../presenters/bills_receivables_presenter.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/grocery_cart_presenter.dart';
+import '../presenters/insights_presenter.dart';
 import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
@@ -74,6 +75,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   late final InstallmentPresenter _installmentPresenter;
   late final GroceryCartPresenter _groceryCartPresenter;
   late final AiCoachPresenter _aiCoachPresenter;
+  late final InsightsPresenter _insightsPresenter;
   late final AuthPresenter _authPresenter;
   late final OnboardingPresenter _onboardingPresenter;
   late HubPresenter _hubPresenter;
@@ -153,6 +155,21 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       fasting: _fastingPresenter,
       nutrition: _nutritionPresenter,
       service: _onDeviceAi,
+      treasury: _treasuryPresenter,
+      budget: _budgetPresenter,
+      cloudFallback: _cloudAi,
+    );
+    _insightsPresenter = InsightsPresenter(
+      storage: _storage,
+      fasting: _fastingPresenter,
+      stats: _statsPresenter,
+      quests: _questPresenter,
+      nutrition: _nutritionPresenter,
+      treasury: _treasuryPresenter,
+      budget: _budgetPresenter,
+      activity: _activityPresenter,
+      onDeviceAi: _onDeviceAi,
+      cloudAi: _cloudAi,
     );
     _authPresenter = AuthPresenter(
       _authService,
@@ -160,6 +177,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       onSignOut: _tearDownSync,
     );
     _hubPresenter = HubPresenter(
+      storage: _storage,
       fasting: _fastingPresenter,
       quests: _questPresenter,
       treasury: _treasuryPresenter,
@@ -178,6 +196,9 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       await _foodDb.init(); // copy asset → documents dir if needed
       await _onDeviceAi.init(); // silently loads Qwen if already installed
       _nutritionPresenter?.initAi(); // notifies UI when AI state changes
+      await _insightsPresenter.init(); // load persisted insights/baseline
+      unawaited(_insightsPresenter
+          .generateDailyBriefIfDue()); // once-per-day, off the build path
 
       await _syncQueue!.load(); // restore persisted queue before auth
       await _authService.init(); // init Supabase + restore session
@@ -241,6 +262,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _installmentPresenter.dispose();
     _groceryCartPresenter.dispose();
     _aiCoachPresenter.dispose();
+    _insightsPresenter.dispose();
     _authPresenter.dispose();
     _onboardingPresenter.dispose();
     _hubPresenter.dispose();
@@ -443,6 +465,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _fastingPresenter.loadState();
       _syncService?.pushPending();
       _syncService?.pullIfStale();
+      // Re-scan the Insight Engine on resume: refresh is hash-gated (near-zero
+      // cost when nothing changed) and the brief is once-per-day. Both fire and
+      // forget — neither throws.
+      _insightsPresenter.refresh();
+      _insightsPresenter.generateDailyBriefIfDue();
       // Apply any widget-tap actions queued while the app was backgrounded,
       // then refresh the widgets.
       _widgetBridge?.drainPendingActions();
@@ -472,6 +499,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
           nutritionPresenter: _nutritionPresenter,
           activityPresenter: _activityPresenter,
           aiCoachPresenter: _aiCoachPresenter,
+          insightsPresenter: _insightsPresenter,
           treasuryPresenter: _treasuryPresenter,
           ledgerPresenter: _ledgerPresenter,
           billsPresenter: _billsPresenter,

@@ -4,9 +4,11 @@ import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
+import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
+import '../presenters/treasury_dashboard_presenter.dart';
 import '../services/ai_coach_service.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
@@ -18,8 +20,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _stats;
   final FastingPresenter _fasting;
   final NutritionPresenter? _nutrition;
+  final TreasuryDashboardPresenter? _treasury;
+  final BudgetPresenter? _budget;
 
   AiCoachService _service;
+
+  /// Optional cloud tier used only when the primary [_service] is unavailable
+  /// (e.g. the on-device model isn't downloaded). Chat falls back to this for
+  /// that response; the primary service is preferred whenever it's ready.
+  final AiCoachService? _cloudFallback;
+
   AiCoachTier _activeTier = AiCoachTier.onDevice;
 
   AiCoachEntryPoint _entryPoint = AiCoachEntryPoint.general;
@@ -34,9 +44,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     required FastingPresenter fasting,
     NutritionPresenter? nutrition,
     AiCoachService? service,
+    TreasuryDashboardPresenter? treasury,
+    BudgetPresenter? budget,
+    AiCoachService? cloudFallback,
   })  : _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
+        _treasury = treasury,
+        _budget = budget,
+        _cloudFallback = cloudFallback,
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
     // the internal init. Only auto-init when no service is provided.
@@ -51,7 +67,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   List<AiChatMessage> get messages => List.unmodifiable(_messages);
   bool get isResponding => _isResponding;
-  bool get isModelAvailable => _service.isAvailable;
+  bool get isModelAvailable =>
+      _service.isAvailable || (_cloudFallback?.isAvailable ?? false);
   int? get downloadProgress => _service.downloadProgress;
   bool get isDownloading => downloadProgress != null;
   bool get isInitializing => _isInitializing;
@@ -59,67 +76,6 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   AiCoachEntryPoint get entryPoint => _entryPoint;
   String? get errorMessage => _errorMessage;
   bool get isThinkingEnabled => _isThinkingEnabled;
-
-  // ── Hub nudge ───────────────────────────────────────────────────────────────
-
-  String? _hubNudge;
-  bool _isGeneratingNudge = false;
-
-  /// One-line coaching nudge for the Hub. Returns the last AI-generated nudge
-  /// when available, otherwise a state-aware rules-based fallback. Never null so
-  /// the Hub always has a line to show immediately, off the build path.
-  String get hubNudge => _hubNudge ?? _fallbackNudge();
-
-  /// Generates a fresh Hub nudge via the coach model, off the build path. The
-  /// Hub shows the cached/fallback line until this completes; a failure keeps
-  /// the fallback. No-op when the model is unavailable or a chat is responding.
-  /// Uses a throwaway one-shot prompt — it does NOT touch the chat history.
-  Future<void> refreshHubNudge() async {
-    if (_isGeneratingNudge || _isResponding || !isModelAvailable) return;
-    _isGeneratingNudge = true;
-    try {
-      final buffer = StringBuffer();
-      final prompt = AiChatMessage.user(
-        'In one short sentence (max 18 words), give me one specific, '
-        'encouraging coaching nudge based on my current status. No preamble.',
-      );
-      await for (final token in _service.respond(
-        messages: [prompt],
-        context: _buildContext(),
-      )) {
-        if (isDisposed) return; // hub gone mid-stream — stop
-        buffer.write(token);
-      }
-      final text = buffer.toString().trim();
-      if (text.isNotEmpty) {
-        _hubNudge = text;
-        safeNotify();
-      }
-    } catch (e) {
-      debugPrint('AiCoachPresenter.refreshHubNudge error: $e');
-      // Keep the fallback line.
-    } finally {
-      _isGeneratingNudge = false;
-    }
-  }
-
-  /// Rules-based fallback nudge derived from the current fasting/nutrition
-  /// state — always meaningful even when the model is absent.
-  String _fallbackNudge() {
-    if (_fasting.isFasting && !_fasting.isOvertime) {
-      return 'You are mid-fast — stay steady and keep your streak alive.';
-    }
-    final n = _nutrition;
-    if (n != null && n.todayCalories > 0) {
-      if (n.todayCalories > n.effectiveGoal) {
-        return 'Over on calories today — ease up tonight and hydrate.';
-      }
-      if (n.isCalorieGoalMet) {
-        return 'Calories on target — great discipline today.';
-      }
-    }
-    return 'Small, consistent choices are how you level up.';
-  }
 
   // ── Session ───────────────────────────────────────────────────────────────
 
@@ -151,7 +107,16 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       final context = _buildContext();
       final buffer = StringBuffer();
 
-      await for (final token in _service.respond(
+      // Prefer the primary (on-device) service; fall back to the cloud tier for
+      // this response when the primary isn't ready but the cloud is available.
+      final service = _service.isAvailable
+          ? _service
+          : (_cloudFallback?.isAvailable ?? false)
+              ? _cloudFallback!
+              : _service;
+      _activeTier = service.tier;
+
+      await for (final token in service.respond(
         messages: _userVisibleMessages(),
         context: context,
         isThinking: _isThinkingEnabled,
@@ -163,6 +128,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       }
 
       _updateLastMessage(buffer.toString(), isStreaming: false);
+    } on AiCoachException catch (e) {
+      // Typed failure from the service — the message already says exactly
+      // what went wrong (connection vs auth vs rate-limit vs server error).
+      _errorMessage = e.userMessage;
+      _updateLastMessage('', isStreaming: false);
+      debugPrint('AiCoachPresenter.send coach error: $e');
     } catch (e) {
       _errorMessage = 'Something went wrong. Try again.';
       _updateLastMessage('', isStreaming: false);
@@ -272,6 +243,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       todayProtein: n?.todayProtein,
       todayCarbs: n?.todayCarbs,
       todayFat: n?.todayFat,
+      monthBudget: _budget?.totalAllocated,
+      monthSpent: _treasury?.monthTotalOutflow,
     );
   }
 

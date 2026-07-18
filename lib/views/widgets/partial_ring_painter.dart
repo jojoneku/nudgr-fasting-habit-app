@@ -9,7 +9,8 @@ class PartialRingPainter extends CustomPainter {
     required this.strokeWidth,
     required this.reverse,
     this.gapFraction = 0.2,
-  });
+    double? glowSigma,
+  }) : glowSigma = glowSigma ?? strokeWidth;
 
   final double progress;
   final Color trackColor;
@@ -20,6 +21,12 @@ class PartialRingPainter extends CustomPainter {
   /// Fraction of the circle (0–1) left open at the bottom. Defaults to `0.2`
   /// (20% gap) to preserve the timer/activity look; pass `0` for a full circle.
   final double gapFraction;
+
+  /// Blur sigma of the glow behind the progress arc. Defaults to
+  /// [strokeWidth] so the halo stays proportional to the ring: a fixed large
+  /// sigma on small rings (Hub hero, 8px stroke) bled far past the widget and
+  /// was sheared off by the opaque pinned app bar above it.
+  final double glowSigma;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -45,7 +52,7 @@ class PartialRingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, glowSigma);
 
     final paintProgress = Paint()
       ..color = progressColor
@@ -86,6 +93,7 @@ class PartialRingPainter extends CustomPainter {
         oldDelegate.trackColor != trackColor ||
         oldDelegate.progressColor != progressColor ||
         oldDelegate.reverse != reverse ||
-        oldDelegate.gapFraction != gapFraction;
+        oldDelegate.gapFraction != gapFraction ||
+        oldDelegate.glowSigma != glowSigma;
   }
 }

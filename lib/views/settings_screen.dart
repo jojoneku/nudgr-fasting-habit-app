@@ -684,45 +684,7 @@ class SettingsScreen extends StatelessWidget {
                 ? '$version · update to $remoteVersion available'
                 : version,
           ),
-          trailing: hasUpdate
-              ? FilledButton.tonal(
-                  onPressed: apkUrl == null
-                      ? null
-                      : () async {
-                          final ok = await launchUrl(
-                            Uri.parse(apkUrl),
-                            mode: LaunchMode.externalApplication,
-                          );
-                          if (!context.mounted) return;
-                          if (ok) {
-                            AppToast.success(
-                                context, 'Opening download in browser…');
-                          } else {
-                            AppToast.error(
-                                context, 'Could not open the update link.');
-                          }
-                        },
-                  child: const Text('Update'),
-                )
-              : (up?.isChecking ?? false)
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : TextButton(
-                      onPressed: up == null
-                          ? null
-                          : () async {
-                              await up.checkForUpdates();
-                              if (!context.mounted) return;
-                              if (!up.updateAvailable) {
-                                AppToast.show(
-                                    context, 'You’re on the latest version.');
-                              }
-                            },
-                      child: const Text('Check'),
-                    ),
+          trailing: _versionTrailing(context, up, apkUrl),
         ),
         if (hasUpdate)
           AppListTile(
@@ -742,6 +704,83 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  /// Trailing action for the Version tile, mirroring the update-flow states:
+  /// Check → Update (in-app download) → progress → Install / Retry.
+  Widget? _versionTrailing(
+      BuildContext context, UpdatePresenter? up, String? apkUrl) {
+    if (up == null) return null;
+
+    if (up.updateAvailable) {
+      switch (up.state) {
+        case UpdateFlowState.downloading:
+          return SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              value: up.downloadProgress,
+            ),
+          );
+        case UpdateFlowState.readyToInstall:
+          return FilledButton.tonal(
+            onPressed: () async {
+              final error = await up.installUpdate();
+              if (!context.mounted) return;
+              if (error != null) {
+                AppToast.error(context, 'Could not open installer: $error');
+              }
+            },
+            child: const Text('Install'),
+          );
+        case UpdateFlowState.error:
+          return FilledButton.tonal(
+            onPressed: up.downloadUpdate,
+            child: const Text('Retry'),
+          );
+        default:
+          return FilledButton.tonal(
+            onPressed: () async {
+              if (up.canSelfUpdate) {
+                up.downloadUpdate();
+                return;
+              }
+              // Non-Android fallback: open the release URL externally.
+              if (apkUrl == null) return;
+              final ok = await launchUrl(
+                Uri.parse(apkUrl),
+                mode: LaunchMode.externalApplication,
+              );
+              if (!context.mounted) return;
+              if (ok) {
+                AppToast.success(context, 'Opening download in browser…');
+              } else {
+                AppToast.error(context, 'Could not open the update link.');
+              }
+            },
+            child: const Text('Update'),
+          );
+      }
+    }
+
+    if (up.isChecking) {
+      return const SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      );
+    }
+    return TextButton(
+      onPressed: () async {
+        await up.checkForUpdates();
+        if (!context.mounted) return;
+        if (!up.updateAvailable) {
+          AppToast.show(context, 'You’re on the latest version.');
+        }
+      },
+      child: const Text('Check'),
     );
   }
 
