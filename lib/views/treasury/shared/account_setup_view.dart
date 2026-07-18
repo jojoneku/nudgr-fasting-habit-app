@@ -6,6 +6,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 const _colorOptions = [
@@ -456,7 +457,7 @@ class _AccountSetupForm extends StatelessWidget {
                   TextFormField(
                     controller: nameController,
                     decoration:
-                        const InputDecoration(labelText: 'Account Name'),
+                        sheetFieldDecoration(context, label: 'Account Name'),
                     validator: (v) => (v == null || v.trim().isEmpty)
                         ? 'Enter account name'
                         : null,
@@ -479,8 +480,9 @@ class _AccountSetupForm extends StatelessWidget {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           inputFormatters: amountInputFormatters,
-                          decoration: InputDecoration(
-                            labelText: balanceLabel,
+                          decoration: sheetFieldDecoration(
+                            context,
+                            label: balanceLabel,
                             prefixText: '₱ ',
                           ),
                         ),
@@ -515,8 +517,9 @@ class _AccountSetupForm extends StatelessWidget {
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 inputFormatters: amountInputFormatters,
-                decoration: const InputDecoration(
-                  labelText: 'Goal Target',
+                decoration: sheetFieldDecoration(
+                  context,
+                  label: 'Goal Target',
                   prefixText: '₱ ',
                 ),
               ),
@@ -616,7 +619,7 @@ class _CategoryDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     return DropdownButtonFormField<AccountCategory>(
       initialValue: value,
-      decoration: const InputDecoration(labelText: 'Category'),
+      decoration: sheetFieldDecoration(context, label: 'Category'),
       items: categories
           .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
           .toList(),
@@ -858,8 +861,9 @@ class _CreditDetailsCard extends StatelessWidget {
           // Brand preset — seeds the finance rate when picked.
           DropdownButtonFormField<String?>(
             initialValue: creditBrand,
-            decoration: const InputDecoration(
-              labelText: 'Card type (optional)',
+            decoration: sheetFieldDecoration(
+              context,
+              label: 'Card type (optional)',
               helperText: 'Pick a card to prefill its finance rate',
             ),
             items: [
@@ -880,8 +884,9 @@ class _CreditDetailsCard extends StatelessWidget {
             controller: creditLimitController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: amountInputFormatters,
-            decoration: const InputDecoration(
-              labelText: 'Credit Limit',
+            decoration: sheetFieldDecoration(
+              context,
+              label: 'Credit Limit',
               prefixText: '₱ ',
             ),
           ),
@@ -910,8 +915,9 @@ class _CreditDetailsCard extends StatelessWidget {
             controller: financeRateController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: amountInputFormatters,
-            decoration: const InputDecoration(
-              labelText: 'Monthly finance rate',
+            decoration: sheetFieldDecoration(
+              context,
+              label: 'Monthly finance rate',
               suffixText: '% / mo',
               helperText: 'Interest on unpaid balance (BSP cap 3%)',
             ),
@@ -939,7 +945,7 @@ class _DayOfMonthDropdown extends StatelessWidget {
     return DropdownButtonFormField<int?>(
       initialValue: value,
       isExpanded: true,
-      decoration: InputDecoration(labelText: label),
+      decoration: sheetFieldDecoration(context, label: label),
       items: [
         DropdownMenuItem<int?>(
           value: null,
@@ -976,14 +982,10 @@ class _StoredInDropdown extends StatelessWidget {
         accounts.any((a) => a.id == selectedId) ? selectedId : null;
     return DropdownButtonFormField<String>(
       initialValue: safeSelected,
-      decoration: InputDecoration(
-        labelText: 'Stored in account (optional)',
+      decoration: sheetFieldDecoration(
+        context,
+        label: 'Stored in account (optional)',
         helperText: 'These funds physically live in this account',
-        helperStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context)
-                .colorScheme
-                .onSurfaceVariant
-                .withValues(alpha: 0.6)),
       ),
       items: [
         DropdownMenuItem<String>(

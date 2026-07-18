@@ -45,6 +45,7 @@ InputDecoration sheetFieldDecoration(
   String? counterText,
   Widget? prefix,
   String? prefixText,
+  String? suffixText,
   Widget? suffixIcon,
   bool emphasize = false,
 }) {
@@ -64,6 +65,7 @@ InputDecoration sheetFieldDecoration(
     counterText: counterText,
     prefix: prefix,
     prefixText: prefixText,
+    suffixText: suffixText,
     suffixIcon: suffixIcon,
     filled: true,
     fillColor: cs.surfaceContainerHigh,

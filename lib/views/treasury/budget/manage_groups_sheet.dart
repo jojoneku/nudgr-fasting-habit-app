@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class ManageGroupsSheet extends StatefulWidget {
@@ -23,8 +24,9 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            hintText: 'Group name',
+          decoration: sheetFieldDecoration(
+            context,
+            hint: 'Group name',
           ),
         ),
         actions: [
@@ -56,7 +58,7 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Group name'),
+          decoration: sheetFieldDecoration(context, hint: 'Group name'),
         ),
         actions: [
           TextButton(
