@@ -16,6 +16,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
@@ -81,7 +82,10 @@ Matcher _calApprox(int expected, {double pct = 0.15}) => predicate<int>(
 
 // ── Presenter factory ─────────────────────────────────────────────────────────
 
-const _today = '2026-05-27';
+// Must be the real current day: the presenter's day-rollover guard
+// (_ensureTodayLogFresh) compares _todayLog.date to DateTime.now(); a stale
+// constant makes it think the day rolled over and reload/reset mid-test.
+final _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
 /// Creates a [NutritionPresenter] with all storage methods stubbed.
 /// Pass [localAi] / [cloudAi] / [foodDb] to inject specific mock instances;
@@ -752,6 +756,28 @@ void main() {
       expect(p.hasPendingChat, isFalse);
       expect(p.todayLog.allEntries, isEmpty);
       expect(p.chatMessages, isEmpty);
+    });
+
+    test('CONTROL: two atomic parseChat calls are additive', () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      await p.parseChat('100g white rice');
+      expect(p.chatMessages, hasLength(2));
+      expect(p.todayLog.allEntries, hasLength(2));
+    });
+
+    test('logging two meals via the composer is ADDITIVE', () async {
+      final p = await _makePresenter();
+
+      await p.previewChat('100g chicken breast');
+      await p.commitPendingChat();
+
+      await p.previewChat('100g white rice');
+      await p.commitPendingChat();
+
+      // Both meals must survive — the second must not replace the first.
+      expect(p.chatMessages, hasLength(2));
+      expect(p.todayLog.allEntries, hasLength(2));
     });
   });
 
