@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -64,7 +65,19 @@ class _BudgetViewState extends State<BudgetView> {
                 presenter: widget.presenter,
                 onManageGroups: _showManageGroups,
               ),
-              _SummaryBanner(presenter: widget.presenter),
+              if (hasAny)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                  child: Column(
+                    children: [
+                      _BudgetPaceHero(presenter: widget.presenter),
+                      if (widget.presenter.isCurrentMonth) ...[
+                        const SizedBox(height: 10),
+                        _SafeToSpendCallout(presenter: widget.presenter),
+                      ],
+                    ],
+                  ),
+                ),
               Expanded(
                 child: hasAny
                     ? ListView(
@@ -177,64 +190,187 @@ class _MonthSelector extends StatelessWidget {
   }
 }
 
-// ─── Summary Banner ───────────────────────────────────────────────────────────
+// ─── Pace Ring Hero ───────────────────────────────────────────────────────────
 
-class _SummaryBanner extends StatelessWidget {
+/// The pace-aware budget hero (`Nutrition Focus Treasury.dc.html`, Frame 4): a
+/// spent-percentage ring beside the SPENT / of-allocated figures and an
+/// "Ahead of pace" / "Over pace" pill. Conveys the old summary banner's
+/// allocated + spent + remaining relationship in one glance.
+class _BudgetPaceHero extends StatelessWidget {
   final BudgetPresenter presenter;
 
-  const _SummaryBanner({required this.presenter});
+  const _BudgetPaceHero({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final appColors = context.appColors;
     final allocated = presenter.totalAllocated;
     final spent = presenter.totalSpent;
-    final remaining = presenter.totalRemaining;
-    final isOver = remaining < 0;
+    final pct = presenter.percentUsed;
+    final over = spent > allocated && allocated > 0;
+    final ringColor = over ? cs.error : appColors.fast;
+
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      child: Row(
+        children: [
+          AppRingProgress(
+            value: pct.clamp(0.0, 1.0),
+            size: 104,
+            strokeWidth: 12,
+            primaryColor: ringColor,
+            center: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '${(pct * 100).round()}%',
+                  style: theme.textTheme.titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  'spent',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: appColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'SPENT',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: appColors.textMuted,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  formatPeso(spent),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+                Text(
+                  'of ${formatPeso(allocated)}',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: appColors.textMuted),
+                ),
+                if (presenter.isCurrentMonth) ...[
+                  const SizedBox(height: 10),
+                  _PacePill(ahead: presenter.isAheadOfPace, over: over),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PacePill extends StatelessWidget {
+  final bool ahead;
+  final bool over;
+
+  const _PacePill({required this.ahead, required this.over});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final good = ahead && !over;
+    final color = good ? context.appColors.success : cs.error;
+    final label = over
+        ? 'Over budget'
+        : ahead
+            ? 'Ahead of pace'
+            : 'Over pace';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+              good
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.warning_amber_rounded,
+              size: 13,
+              color: color),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Blue-tinted "safe to spend / day" callout — remaining budget spread over the
+/// days left this month. Shown only for the current month.
+class _SafeToSpendCallout extends StatelessWidget {
+  final BudgetPresenter presenter;
+
+  const _SafeToSpendCallout({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final blue = context.appColors.fast;
+    final days = presenter.daysLeftInSelectedMonth;
 
     return Container(
-      width: double.infinity,
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      decoration: BoxDecoration(
+        color: blue.withValues(alpha: 0.07),
+        border: Border.all(color: blue.withValues(alpha: 0.22)),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
+          Icon(Icons.savings_outlined, size: 20, color: blue),
+          const SizedBox(width: 12),
           Expanded(
-            child: AppNumberDisplay(
-              value: formatPesoCompact(allocated),
-              label: 'Allocated',
-              size: AppNumberSize.body,
-              color: cs.primary,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 32,
-            color: cs.outlineVariant.withValues(alpha: 0.5),
-          ),
-          Expanded(
-            child: AppNumberDisplay(
-              value: formatPesoCompact(spent),
-              label: 'Spent',
-              size: AppNumberSize.body,
-              color: cs.onSurface,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 32,
-            color: cs.outlineVariant.withValues(alpha: 0.5),
-          ),
-          Expanded(
-            child: AppNumberDisplay(
-              value: formatPesoCompact(remaining.abs()),
-              label: isOver ? 'Over by' : 'Remaining',
-              size: AppNumberSize.body,
-              color: isOver ? cs.error : cs.tertiary,
-              textAlign: TextAlign.center,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Safe to spend · ${days == 0 ? 'last day' : '$days days left'}',
+                  style: theme.textTheme.labelSmall
+                      ?.copyWith(color: context.appColors.textMuted),
+                ),
+                const SizedBox(height: 1),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: formatPeso(presenter.safeToSpendPerDay),
+                        style: theme.textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      TextSpan(
+                        text: ' / day',
+                        style: theme.textTheme.labelSmall
+                            ?.copyWith(color: context.appColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
