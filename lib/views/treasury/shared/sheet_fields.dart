@@ -41,6 +41,7 @@ InputDecoration sheetFieldDecoration(
   BuildContext context, {
   String? hint,
   String? label,
+  String? helperText,
   Widget? prefix,
   String? prefixText,
   Widget? suffixIcon,
@@ -58,6 +59,7 @@ InputDecoration sheetFieldDecoration(
     // Persistent floating label for controls (dropdowns nested in builders)
     // where a separate [SheetFieldLabel] above isn't structurally convenient.
     labelText: label,
+    helperText: helperText,
     prefix: prefix,
     prefixText: prefixText,
     suffixIcon: suffixIcon,
