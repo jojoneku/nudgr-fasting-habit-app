@@ -42,6 +42,7 @@ InputDecoration sheetFieldDecoration(
   String? hint,
   String? label,
   String? helperText,
+  String? counterText,
   Widget? prefix,
   String? prefixText,
   Widget? suffixIcon,
@@ -60,6 +61,7 @@ InputDecoration sheetFieldDecoration(
     // where a separate [SheetFieldLabel] above isn't structurally convenient.
     labelText: label,
     helperText: helperText,
+    counterText: counterText,
     prefix: prefix,
     prefixText: prefixText,
     suffixIcon: suffixIcon,

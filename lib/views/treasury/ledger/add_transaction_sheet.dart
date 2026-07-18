@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddTransactionSheet extends StatefulWidget {
@@ -548,10 +549,8 @@ class _AmountField extends StatelessWidget {
       controller: controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: amountInputFormatters,
-      decoration: const InputDecoration(
-        labelText: 'Amount',
-        prefixText: '₱ ',
-      ),
+      decoration: sheetFieldDecoration(context,
+          label: 'Amount', prefixText: '₱ ', emphasize: true),
       validator: (v) {
         if (v == null || v.isEmpty) return 'Enter an amount';
         final parsed = double.tryParse(v);
@@ -582,7 +581,7 @@ class _AccountDropdown extends StatelessWidget {
     return DropdownButtonFormField<String>(
       initialValue: value,
       hint: Text(label),
-      decoration: InputDecoration(labelText: label),
+      decoration: sheetFieldDecoration(context, label: label),
       items: accounts
           .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
           .toList(),
@@ -643,9 +642,7 @@ class _DescriptionField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLength: 60,
-      decoration: const InputDecoration(
-        labelText: 'Description',
-      ),
+      decoration: sheetFieldDecoration(context, label: 'Description'),
       validator: (v) =>
           (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
     );
@@ -709,9 +706,7 @@ class _NoteField extends StatelessWidget {
     return TextFormField(
       controller: controller,
       maxLines: 2,
-      decoration: const InputDecoration(
-        labelText: 'Note (optional)',
-      ),
+      decoration: sheetFieldDecoration(context, label: 'Note (optional)'),
     );
   }
 }
@@ -862,11 +857,8 @@ class _ReimbursableField extends StatelessWidget {
               child: TextFormField(
                 controller: owedByController,
                 maxLength: 40,
-                decoration: const InputDecoration(
-                  labelText: 'Who owes you? (optional)',
-                  isDense: true,
-                  counterText: '',
-                ),
+                decoration: sheetFieldDecoration(context,
+                    label: 'Who owes you? (optional)', counterText: ''),
               ),
             ),
           ],
