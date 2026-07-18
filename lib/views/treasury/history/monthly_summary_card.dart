@@ -40,6 +40,16 @@ class MonthlySummaryCard extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
+              if (summary.savingsRate != null) ...[
+                Text(
+                  '${(summary.savingsRate! * 100).round()}% saved',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: netColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
               if (isLive) ...[
                 AppBadge(
                   text: 'LIVE',

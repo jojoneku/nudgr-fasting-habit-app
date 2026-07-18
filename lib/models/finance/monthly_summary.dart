@@ -50,6 +50,11 @@ class MonthlySummary {
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
+  /// Share of the month's income kept as net savings ([netSavings] /
+  /// [totalInflow]), 0–1. Null when there was no income to divide by, so the UI
+  /// can show "—" instead of a divide-by-zero. Powers the History "N% saved".
+  double? get savingsRate => totalInflow > 0 ? netSavings / totalInflow : null;
+
   MonthlySummary copyWith({
     double? totalInflow,
     double? totalOutflow,
