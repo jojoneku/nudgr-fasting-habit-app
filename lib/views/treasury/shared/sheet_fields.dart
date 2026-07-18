@@ -40,6 +40,7 @@ class SheetFieldLabel extends StatelessWidget {
 InputDecoration sheetFieldDecoration(
   BuildContext context, {
   String? hint,
+  String? label,
   Widget? prefix,
   String? prefixText,
   Widget? suffixIcon,
@@ -54,6 +55,9 @@ InputDecoration sheetFieldDecoration(
   final idle = emphasize ? blue : cs.outlineVariant.withValues(alpha: 0.6);
   return InputDecoration(
     hintText: hint,
+    // Persistent floating label for controls (dropdowns nested in builders)
+    // where a separate [SheetFieldLabel] above isn't structurally convenient.
+    labelText: label,
     prefix: prefix,
     prefixText: prefixText,
     suffixIcon: suffixIcon,

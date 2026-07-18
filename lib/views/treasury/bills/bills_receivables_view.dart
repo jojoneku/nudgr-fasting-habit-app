@@ -12,6 +12,7 @@ import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
@@ -868,7 +869,7 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
                 return DropdownButtonFormField<String>(
                   key: ValueKey(_selectedAccountId),
                   initialValue: _selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Pay from'),
+                  decoration: sheetFieldDecoration(context, label: 'Pay from'),
                   items: payers
                       .map((a) =>
                           DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -1028,7 +1029,7 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Account'),
+                decoration: sheetFieldDecoration(context, label: 'Account'),
                 items: widget.presenter.accounts
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -1197,7 +1198,7 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Fund from'),
+                decoration: sheetFieldDecoration(context, label: 'Fund from'),
                 items: widget.presenter.accounts
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -1212,7 +1213,8 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _selectedToAccountId,
-                decoration: const InputDecoration(labelText: 'Set aside into'),
+                decoration:
+                    sheetFieldDecoration(context, label: 'Set aside into'),
                 items: [
                   const DropdownMenuItem<String>(
                       value: null, child: Text('Spend it (no transfer)')),
@@ -1372,7 +1374,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
               const SizedBox(height: 16),
               TextFormField(
                 controller: _nameController,
-                decoration: const InputDecoration(labelText: 'Name'),
+                decoration: sheetFieldDecoration(context, label: 'Name'),
                 textInputAction: TextInputAction.next,
                 validator: (v) =>
                     (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
@@ -1380,8 +1382,10 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
               const SizedBox(height: 12),
               TextFormField(
                 controller: _amountController,
-                decoration: const InputDecoration(
-                    labelText: 'Allocated Amount', prefixText: '₱ '),
+                decoration: sheetFieldDecoration(context,
+                    label: 'Allocated Amount',
+                    prefixText: '₱ ',
+                    emphasize: true),
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.next,
@@ -1394,7 +1398,7 @@ class _AddBudgetedExpenseSheetState extends State<_AddBudgetedExpenseSheet> {
               const SizedBox(height: 12),
               DropdownButtonFormField<SetAsideType>(
                 initialValue: _budgetedType,
-                decoration: const InputDecoration(labelText: 'Type'),
+                decoration: sheetFieldDecoration(context, label: 'Type'),
                 items: SetAsideType.values
                     .map(
                         (t) => DropdownMenuItem(value: t, child: Text(t.label)))
@@ -1883,7 +1887,7 @@ class _QuickPaySheetState extends State<_QuickPaySheet> {
               DropdownButtonFormField<String>(
                 key: ValueKey(_selectedAccountId),
                 initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Pay from'),
+                decoration: sheetFieldDecoration(context, label: 'Pay from'),
                 items: payers
                     .map((a) =>
                         DropdownMenuItem(value: a.id, child: Text(a.name)))
