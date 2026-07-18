@@ -678,6 +678,42 @@ void main() {
     });
   });
 
+  // ── DELETE + UNDO (Nudgr nutrition redesign) ──────────────────────────────────
+
+  group('Delete + undo', () {
+    test('restoreChatMessage re-adds the entry and its calories', () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      expect(p.chatMessages, hasLength(1));
+
+      final msg = p.chatMessages.single;
+      final calWith = p.todayCalories;
+      expect(calWith, greaterThan(0));
+
+      await p.removeChatMessage(msg.id);
+      expect(p.chatMessages, isEmpty);
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.todayCalories, 0);
+
+      await p.restoreChatMessage(msg);
+      expect(p.chatMessages, hasLength(1));
+      expect(p.chatMessages.single.id, msg.id);
+      expect(p.todayLog.allEntries, hasLength(1));
+      expect(p.todayCalories, calWith);
+    });
+
+    test('restoreChatMessage is a no-op if the message is still present',
+        () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      final msg = p.chatMessages.single;
+
+      await p.restoreChatMessage(msg); // not removed — must not duplicate
+      expect(p.chatMessages, hasLength(1));
+      expect(p.todayLog.allEntries, hasLength(1));
+    });
+  });
+
   // ── TIER PRIORITY ───────────────────────────────────────────────────────────
 
   group('Tier priority — cloud > local > NLP', () {

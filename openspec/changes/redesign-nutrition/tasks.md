@@ -2,7 +2,7 @@
 
 - [x] 1.1 Add a read-only `NutritionPresenter` getter returning `chatMessages` ordered newest-first for the "Today's log" list (no meal-slot grouping). Day total reuses existing `todayCalories`. Unit-test ordering.
 - [x] 1.2 Confirm hero getters exist (eaten `todayCalories`, `remainingCalories`, `calorieProgress`, `isOverGoal`, `todayProtein/Carbs/Fat` + `proteinProgress/carbsProgress/fatProgress`, `selectedDateCaloriesBurned`); add only if missing. All present — no new getters needed.
-- [ ] 1.3 Entry actions bind to existing message-keyed presenter methods (`removeChatMessage`, `markChatMessageDisliked`, `saveFoodTemplate`, `editAllChatFoodItems`) — no new shims. Add undo for delete at the view layer. Do NOT regenerate `test/mocks.mocks.dart` — hand-fake collaborators.
+- [x] 1.3 Entry actions bind to existing message-keyed presenter methods (`removeChatMessage`, `markChatMessageDisliked`, `saveFoodTemplate`, `editAllChatFoodItems`). Added one additive presenter method `restoreChatMessage` for delete-undo (mirrors `removeChatMessage`), covered by 2 unit tests in `food_logging_pipeline_test.dart` (23/23 green). Did NOT regenerate `test/mocks.mocks.dart`.
 
 ## 2. Shared widget extraction (no visual change yet)
 
@@ -18,7 +18,7 @@
 
 - [x] 4.1 Build `nutrition_log_list.dart` rendering the presenter's flat entry list (§1.1): "Today's log" label + day total kcal, then `_LogEntryCard`s newest-first — no meal-slot section headers. [analyze clean; on-device smoke pending]
 - [x] 4.2 `_LogEntryCard`: name, sub-line (amount/grams · time), source badge (Cloud/Local/Library), kcal, P/C/F macro dots, new-entry emphasis, and low-confidence/needs-review indicator. [analyze clean; on-device smoke pending]
-- [x] 4.3 Entry `⋯` menu expands to Edit / Save / Wrong / Delete (≥44px targets); wire to the §1.3 shims. Delete uses a SnackBar (no restore — presenter has no undo hook, out of scope). [analyze clean; on-device smoke pending]
+- [x] 4.3 Entry `⋯` menu expands to Edit / Save / Wrong / Delete (≥44px targets). Delete shows a SnackBar with an **Undo** action backed by `restoreChatMessage` (see §1.3). [analyze clean; on-device smoke pending]
 - [x] 4.4 Empty state: "Log food or exercise below" (today) / "Nothing logged" (past day). Verify grouping, subtotals, and each menu action on a seeded day. [analyze clean; on-device smoke pending]
 
 ## 5. Logging composer sheet

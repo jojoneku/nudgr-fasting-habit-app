@@ -244,16 +244,23 @@ class _FoodEntryCardState extends State<_FoodEntryCard> {
 
   Future<void> _onDelete() async {
     final messenger = ScaffoldMessenger.of(context);
-    final name = widget.message.rawText;
-    await widget.presenter.removeChatMessage(widget.message.id);
+    final msg = widget.message;
+    final name = msg.rawText;
+    await widget.presenter.removeChatMessage(msg.id);
     if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('Removed · $name'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Removed · $name'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => widget.presenter.restoreChatMessage(msg),
+          ),
+        ),
+      );
   }
 
   Future<void> _saveAsTemplate() async {
@@ -612,16 +619,23 @@ class _ExerciseEntryCardState extends State<_ExerciseEntryCard> {
 
   Future<void> _onDelete() async {
     final messenger = ScaffoldMessenger.of(context);
-    final name = widget.message.exerciseEntry?.name ?? 'Exercise';
-    await widget.presenter.removeChatMessage(widget.message.id);
+    final msg = widget.message;
+    final name = msg.exerciseEntry?.name ?? 'Exercise';
+    await widget.presenter.removeChatMessage(msg.id);
     if (!mounted) return;
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('Removed · $name'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    messenger
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('Removed · $name'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () => widget.presenter.restoreChatMessage(msg),
+          ),
+        ),
+      );
   }
 
   @override

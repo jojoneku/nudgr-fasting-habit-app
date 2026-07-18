@@ -2368,6 +2368,44 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     ]);
   }
 
+  /// Undo counterpart to [removeChatMessage] — re-inserts a previously removed
+  /// chat message and re-adds its food entries to [_todayLog]. Used by the
+  /// "Undo" affordance on delete (Nudgr nutrition redesign). Ordering is
+  /// restored by timestamp, so the exact prior index is not required. The
+  /// photo thumbnail file was deleted on removal, so a restored photo entry
+  /// falls back to the camera placeholder (its nutrition data is intact).
+  Future<void> restoreChatMessage(ChatMessage msg) async {
+    if (_chatMessages.any((m) => m.id == msg.id)) return; // already present
+    if (msg.kind == ChatMessageKind.food && msg.foodItems.isNotEmpty) {
+      await _ensureTodayLogFresh();
+      final entries = [
+        for (final item in msg.foodItems)
+          FoodEntry(
+            id: item.entryId,
+            name: item.name,
+            calories: item.calories,
+            protein: item.protein,
+            carbs: item.carbs,
+            fat: item.fat,
+            grams: item.grams,
+            estimationSource: item.estimationSource,
+            confidence: item.confidence,
+            loggedAt: msg.timestamp,
+          ),
+      ];
+      _todayLog = _todayLog.addEntries(entries, msg.mealSlot);
+    }
+    _chatMessages
+      ..add(msg)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    safeNotify();
+    await Future.wait([
+      if (msg.kind == ChatMessageKind.food)
+        _storage.saveNutritionLog(_todayLog),
+      _persistChatMessages(),
+    ]);
+  }
+
   /// Re-parse [newText] for item at [itemIndex] in [messageId], update in-place.
   /// If [newText] parses to multiple items, the single item is replaced by all of them.
   Future<void> editChatFoodItem(
