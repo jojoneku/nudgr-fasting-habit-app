@@ -8,10 +8,9 @@ import '../../../app_colors.dart';
 import '../../../models/chat_message.dart';
 import '../../../models/estimation_source.dart';
 import '../../../models/food_db_entry.dart';
-import '../../../models/food_entry.dart';
-import '../../../models/food_template.dart';
 import '../../../presenters/nutrition_presenter.dart';
 import '../../widgets/system/system.dart';
+import 'save_as_template_sheet.dart';
 
 /// "Today's log" list for the redesigned Nutrition screen (Nudgr redesign).
 ///
@@ -264,70 +263,17 @@ class _FoodEntryCardState extends State<_FoodEntryCard> {
   }
 
   Future<void> _saveAsTemplate() async {
-    final rawText = widget.message.rawText;
-    final suggested = rawText.length > 40 ? rawText.substring(0, 40) : rawText;
-    final nameCtrl = TextEditingController(text: suggested);
     final messenger = ScaffoldMessenger.of(context);
-    final cs = Theme.of(context).colorScheme;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text('Save as template',
-            style: TextStyle(color: cs.onSurface, fontSize: 15)),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          style: TextStyle(color: cs.onSurface),
-          decoration: InputDecoration(
-            hintText: 'Template name',
-            hintStyle: TextStyle(color: cs.onSurfaceVariant),
-            filled: true,
-            fillColor: cs.surfaceContainerHighest,
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide.none),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('Save', style: TextStyle(color: cs.primary)),
-          ),
-        ],
-      ),
+    final savedName = await showSaveAsTemplateSheet(
+      context,
+      widget.presenter,
+      widget.message,
     );
-
-    nameCtrl.dispose();
-    if (confirmed != true || !mounted) return;
-
-    final items = widget.message.foodItems;
-    final template = FoodTemplate(
-      id: FoodEntry.generateId(),
-      name: nameCtrl.text.trim().isEmpty ? suggested : nameCtrl.text.trim(),
-      isMeal: items.length > 1,
-      entries: items
-          .map((item) => FoodEntry(
-                id: item.entryId,
-                name: item.name,
-                calories: item.calories,
-                protein: item.protein,
-                carbs: item.carbs,
-                fat: item.fat,
-                loggedAt: DateTime.now(),
-              ))
-          .toList(),
-    );
-    await widget.presenter.saveFoodTemplate(template);
-    if (!mounted) return;
+    if (savedName == null || !mounted) return;
     setState(() => _menuOpen = false);
     messenger.showSnackBar(
       SnackBar(
-        content: Text('Saved "${template.name}" to library'),
+        content: Text('Saved "$savedName" to library'),
         behavior: SnackBarBehavior.floating,
       ),
     );
