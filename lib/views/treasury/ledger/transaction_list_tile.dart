@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -51,7 +52,9 @@ class TransactionListTile extends StatelessWidget {
 
   IconData _categoryIcon() {
     if (txn.type == TransactionType.transfer) return Icons.swap_horiz_rounded;
-    return Icons.label_outline_rounded;
+    // Reference-style glyph inferred from the category name (fork-knife, car,
+    // briefcase, …); falls back to a per-type default when unmatched.
+    return categoryIcon(category?.name, category?.type ?? CategoryType.expense);
   }
 
   @override
