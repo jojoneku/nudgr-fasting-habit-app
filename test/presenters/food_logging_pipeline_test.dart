@@ -714,6 +714,47 @@ void main() {
     });
   });
 
+  // ── COMPOSER REVIEW FLOW (resolve → preview → commit) ─────────────────────────
+
+  group('Composer review flow', () {
+    test('previewChat resolves WITHOUT logging', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+
+      expect(p.hasPendingChat, isTrue);
+      expect(p.pendingChatEntries, isNotEmpty);
+      // Nothing committed yet — log + feed are still empty.
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.chatMessages, isEmpty);
+      expect(p.todayCalories, 0);
+    });
+
+    test('commitPendingChat logs the reviewed estimate', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      final kcal = p.pendingChatEntries.fold<int>(0, (s, e) => s + e.calories);
+
+      await p.commitPendingChat();
+
+      expect(p.hasPendingChat, isFalse);
+      expect(p.todayLog.allEntries, hasLength(1));
+      expect(p.chatMessages, hasLength(1)); // creates the log-entry row
+      expect(p.todayCalories, kcal);
+    });
+
+    test('discardPendingChat drops the estimate without logging', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      expect(p.hasPendingChat, isTrue);
+
+      p.discardPendingChat();
+
+      expect(p.hasPendingChat, isFalse);
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.chatMessages, isEmpty);
+    });
+  });
+
   // ── TIER PRIORITY ───────────────────────────────────────────────────────────
 
   group('Tier priority — cloud > local > NLP', () {

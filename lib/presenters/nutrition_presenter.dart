@@ -40,6 +40,13 @@ import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
 import '../utils/safe_notifier.dart';
 
+/// Resolved (but not yet committed) food items from a chat/composer submission.
+typedef _ResolvedChatFood = ({
+  List<FoodEntry> entries,
+  List<List<ChatFoodAlternative>> alts,
+  List<String> rawTexts,
+});
+
 class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _statsPresenter;
   final FastingPresenter _fastingPresenter;
@@ -111,6 +118,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   List<ChatMessage> _chatMessages = [];
   bool _isChatParsing = false;
   String? _chatParseError;
+
+  // Pending estimate for the composer's review step (Nudgr redesign): resolved
+  // by [previewChat] but not yet logged. Committed by [commitPendingChat] or
+  // dropped by [discardPendingChat]. Exercise inputs never populate this (they
+  // log atomically).
+  _ResolvedChatFood? _pendingResolved;
+  String? _pendingText;
   // ── Matcher feedback (telemetry, local-only) ─────────────────────────────
   // Loaded once from storage on init; appended to in-memory and persisted on
   // every event so the curation backlog survives app restarts.
@@ -1206,6 +1220,79 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
+  // ── Composer review flow (resolve → preview → commit) ──────────────────────
+
+  /// True when a resolved-but-unlogged estimate is awaiting review.
+  bool get hasPendingChat => _pendingResolved != null;
+
+  /// The pending estimate's entries (for the composer to render); empty if none.
+  List<FoodEntry> get pendingChatEntries =>
+      _pendingResolved?.entries ?? const [];
+
+  /// Per-item alternatives for the pending estimate (parallel to entries).
+  List<List<ChatFoodAlternative>> get pendingChatAlternatives =>
+      _pendingResolved?.alts ?? const [];
+
+  /// Resolve [text] into a pending estimate for review WITHOUT logging it.
+  /// Food → populates [pendingChatEntries] (caller shows the estimate card).
+  /// Exercise → logged atomically (no estimate step). On failure sets
+  /// [chatParseError]. Nothing is committed to the log for food until
+  /// [commitPendingChat] is called.
+  Future<void> previewChat(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || _isChatParsing) return;
+    if (trimmed.length > _maxChatInputLength) {
+      _chatParseError =
+          'Input too long ($_maxChatInputLength char limit). Split into smaller messages.';
+      safeNotify();
+      return;
+    }
+    _isChatParsing = true;
+    _chatParseError = null;
+    _pendingResolved = null;
+    _pendingText = null;
+    safeNotify();
+
+    try {
+      if (ExerciseNlpParser.looksLikeExercise(trimmed)) {
+        await _parseChatAsExercise(trimmed); // atomic — no review step
+      } else {
+        final resolved = await _resolveChatFood(trimmed);
+        if (resolved != null) {
+          _pendingResolved = resolved;
+          _pendingText = trimmed;
+        }
+      }
+    } catch (e) {
+      _chatParseError = 'Something went wrong. Please try again.';
+      debugPrint('NutritionPresenter: previewChat error: $e');
+    } finally {
+      _isChatParsing = false;
+      safeNotify();
+    }
+  }
+
+  /// Commit the pending estimate to today's log (creates the log entry). No-op
+  /// when there is no pending estimate.
+  Future<void> commitPendingChat() async {
+    final resolved = _pendingResolved;
+    final text = _pendingText;
+    if (resolved == null || text == null) return;
+    _pendingResolved = null;
+    _pendingText = null;
+    safeNotify();
+    await _commitFoodChat(
+        text, resolved.entries, resolved.alts, resolved.rawTexts);
+  }
+
+  /// Drop the pending estimate without logging it (composer Edit / Cancel).
+  void discardPendingChat() {
+    if (_pendingResolved == null && _pendingText == null) return;
+    _pendingResolved = null;
+    _pendingText = null;
+    safeNotify();
+  }
+
   // ── Photo food logging (Plan 029) ─────────────────────────────────────────
 
   /// True while a photo is being compressed + analysed by the vision endpoint.
@@ -1388,7 +1475,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
-  Future<void> _parseChatAsFood(String text) async {
+  /// Resolve [text] into food entries WITHOUT committing — shared by the atomic
+  /// [_parseChatAsFood] (used by [parseChat]) and the review flow [previewChat].
+  /// Returns null and sets [_chatParseError] when nothing could be identified.
+  Future<_ResolvedChatFood?> _resolveChatFood(String text) async {
     // Plan 026/027 — tiered single-call pipeline.
     //   Path A (cloud, Plan 026): Bedrock single call extracts + resolves +
     //     estimates macros for off-DB foods. Highest quality.
@@ -1403,9 +1493,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     if ((_cloudAi?.isAvailable ?? false)) {
       final cloudResult = await _tryCloudParseFood(text);
       if (cloudResult != null) {
-        await _commitFoodChat(
-            text, cloudResult.entries, cloudResult.alts, cloudResult.rawTexts);
-        return;
+        return (
+          entries: cloudResult.entries,
+          alts: cloudResult.alts,
+          rawTexts: cloudResult.rawTexts,
+        );
       }
     }
 
@@ -1413,9 +1505,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     if (_ai.isAvailable) {
       final localResult = await _tryLocalParseFood(text);
       if (localResult != null) {
-        await _commitFoodChat(
-            text, localResult.entries, localResult.alts, localResult.rawTexts);
-        return;
+        return (
+          entries: localResult.entries,
+          alts: localResult.alts,
+          rawTexts: localResult.rawTexts,
+        );
       }
     }
 
@@ -1439,7 +1533,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       final nlpResult = FoodNlpParser.parse(text);
       if (nlpResult.isEmpty) {
         _chatParseError = 'Could not identify any food items.';
-        return;
+        return null;
       }
       items = nlpResult.items
           .map((p) => ExtractedFoodItem(
@@ -1536,12 +1630,21 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       );
     }
 
-    await _commitFoodChat(
-      text,
-      entries,
-      altsList,
-      [for (final item in items) item.rawText],
+    return (
+      entries: entries,
+      alts: altsList,
+      rawTexts: [for (final item in items) item.rawText],
     );
+  }
+
+  /// Atomic food logging (type → log in one step) — used by [parseChat] and the
+  /// Hub quick-log. Resolves then immediately commits.
+  Future<void> _parseChatAsFood(String text) async {
+    final resolved = await _resolveChatFood(text);
+    if (resolved != null) {
+      await _commitFoodChat(
+          text, resolved.entries, resolved.alts, resolved.rawTexts);
+    }
   }
 
   // ── On-device single-call path (Plan 027 §2.1) ───────────────────────────

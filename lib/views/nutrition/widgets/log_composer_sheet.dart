@@ -53,6 +53,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
   List<String> _suggestions = const [];
 
   bool _analyzing = false;
+  bool _showEstimate = false;
   String? _error;
   bool _aiPromptShown = false;
 
@@ -75,6 +76,8 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     _suggestTimer?.cancel();
     _ctrl.removeListener(_onInputChanged);
     _focus.removeListener(_onInputChanged);
+    // Drop any un-logged estimate if the sheet closes without "Log it".
+    widget.presenter.discardPendingChat();
     _ctrl.dispose();
     _focus.dispose();
     super.dispose();
@@ -172,17 +175,40 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
       _analyzing = true;
       _error = null;
     });
-    await widget.presenter.parseChat(text);
+    // Resolve WITHOUT logging — food yields an estimate to review; exercise is
+    // logged directly (no estimate step).
+    await widget.presenter.previewChat(text);
     if (!mounted) return;
     final err = widget.presenter.chatParseError;
-    if (err == null) {
-      Navigator.of(context).pop();
-    } else {
+    if (err != null) {
       setState(() {
         _analyzing = false;
         _error = err;
       });
+    } else if (widget.presenter.hasPendingChat) {
+      setState(() {
+        _analyzing = false;
+        _showEstimate = true;
+      });
+    } else {
+      Navigator.of(context).pop(); // exercise logged atomically
     }
+  }
+
+  /// Commit the reviewed estimate to the log, then close.
+  Future<void> _logEstimate() async {
+    await widget.presenter.commitPendingChat();
+    if (mounted) Navigator.of(context).pop();
+  }
+
+  /// Discard the estimate and return to the input to re-describe the meal.
+  void _editEstimate() {
+    widget.presenter.discardPendingChat();
+    setState(() {
+      _showEstimate = false;
+      _analyzing = false;
+    });
+    _focus.requestFocus();
   }
 
   void _quick(String text) {
@@ -333,111 +359,283 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
                   ],
                 ),
               ),
-            if (!_analyzing) ...[
-              // Quick-add chips + secondary entry points.
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final chip in _quickChips)
+            if (_showEstimate && widget.presenter.hasPendingChat)
+              _buildEstimateCard(cs)
+            else ...[
+              if (!_analyzing) ...[
+                // Quick-add chips + secondary entry points.
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final chip in _quickChips)
+                      _ComposerChip(
+                        icon: chip.icon,
+                        label: chip.label,
+                        onTap: _canLog ? () => _quick(chip.label) : null,
+                      ),
                     _ComposerChip(
-                      icon: chip.icon,
-                      label: chip.label,
-                      onTap: _canLog ? () => _quick(chip.label) : null,
+                      icon: Icons.grid_view_outlined,
+                      label: 'Templates',
+                      onTap: _canLog ? _showTemplates : null,
                     ),
-                  _ComposerChip(
-                    icon: Icons.grid_view_outlined,
-                    label: 'Templates',
-                    onTap: _canLog ? _showTemplates : null,
+                    _ComposerChip(
+                      icon: Icons.edit_outlined,
+                      label: 'Manual',
+                      onTap: _canLog ? _showManualAdd : null,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (showSuggestions) _buildSuggestionStrip(cs),
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 14, right: 6),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _focus.hasFocus && _canLog
+                              ? cs.primary
+                              : cs.outlineVariant,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.photo_camera_outlined,
+                                color: cs.onSurfaceVariant),
+                            onPressed: _canLog ? _openPhotoSheet : null,
+                            tooltip: 'Log from photo',
+                            constraints: const BoxConstraints(
+                                minWidth: 44, minHeight: 44),
+                          ),
+                          Expanded(
+                            child: TextField(
+                              controller: _ctrl,
+                              focusNode: _focus,
+                              enabled: _canLog && !_analyzing,
+                              autofocus: true,
+                              style:
+                                  TextStyle(color: cs.onSurface, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: hint,
+                                hintStyle: TextStyle(
+                                    color: cs.onSurfaceVariant, fontSize: 13),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 8),
+                              ),
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _send(),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  _ComposerChip(
-                    icon: Icons.edit_outlined,
-                    label: 'Manual',
-                    onTap: _canLog ? _showManualAdd : null,
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: _canLog && !_analyzing ? () => _send() : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: _canLog && !_analyzing
+                            ? cs.primary
+                            : cs.surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        Icons.arrow_upward,
+                        color: _canLog && !_analyzing
+                            ? cs.onPrimary
+                            : cs.onSurfaceVariant,
+                        size: 20,
+                      ),
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
             ],
-            if (showSuggestions) _buildSuggestionStrip(cs),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.only(left: 14, right: 6),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: _focus.hasFocus && _canLog
-                            ? cs.primary
-                            : cs.outlineVariant,
-                        width: 1.5,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.photo_camera_outlined,
-                              color: cs.onSurfaceVariant),
-                          onPressed: _canLog ? _openPhotoSheet : null,
-                          tooltip: 'Log from photo',
-                          constraints:
-                              const BoxConstraints(minWidth: 44, minHeight: 44),
-                        ),
-                        Expanded(
-                          child: TextField(
-                            controller: _ctrl,
-                            focusNode: _focus,
-                            enabled: _canLog && !_analyzing,
-                            autofocus: true,
-                            style: TextStyle(color: cs.onSurface, fontSize: 14),
-                            decoration: InputDecoration(
-                              hintText: hint,
-                              hintStyle: TextStyle(
-                                  color: cs.onSurfaceVariant, fontSize: 13),
-                              border: InputBorder.none,
-                              isDense: true,
-                              contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 8),
-                            ),
-                            textInputAction: TextInputAction.send,
-                            onSubmitted: (_) => _send(),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _canLog && !_analyzing ? () => _send() : null,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: _canLog && !_analyzing
-                          ? cs.primary
-                          : cs.surfaceContainerHigh,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Icon(
-                      Icons.arrow_upward,
-                      color: _canLog && !_analyzing
-                          ? cs.onPrimary
-                          : cs.onSurfaceVariant,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
     );
   }
+
+  Widget _buildEstimateCard(ColorScheme cs) {
+    final entries = widget.presenter.pendingChatEntries;
+    final totalKcal = entries.fold<int>(0, (s, e) => s + e.calories);
+    final p = entries.fold<double>(0, (s, e) => s + (e.protein ?? 0));
+    final c = entries.fold<double>(0, (s, e) => s + (e.carbs ?? 0));
+    final f = entries.fold<double>(0, (s, e) => s + (e.fat ?? 0));
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, size: 14, color: cs.primary),
+              const SizedBox(width: 7),
+              Text(
+                'ESTIMATE',
+                style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final e in entries)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          e.name,
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _macroSub(e.protein, e.carbs, e.fat),
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '${e.calories}',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Divider(height: 1, color: cs.outlineVariant),
+          const SizedBox(height: 11),
+          Row(
+            children: [
+              _dot(cs.primary, '${p.round()}P'),
+              const SizedBox(width: 11),
+              _dot(context.appColors.gold, '${c.round()}C'),
+              const SizedBox(width: 11),
+              _dot(cs.error, '${f.round()}F'),
+              const Spacer(),
+              Text(
+                '$totalKcal ',
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              Text('kcal',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  height: 46,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13)),
+                    ),
+                    onPressed: _logEstimate,
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Log it',
+                        style: TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 9),
+              SizedBox(
+                height: 46,
+                width: 104,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: cs.onSurfaceVariant,
+                    side: BorderSide(color: cs.outlineVariant),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(13)),
+                  ),
+                  onPressed: _editEstimate,
+                  icon: const Icon(Icons.edit_outlined, size: 15),
+                  label: const Text('Edit'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _macroSub(double? p, double? c, double? f) {
+    final parts = <String>[];
+    if (p != null) parts.add('P${p.round()}');
+    if (c != null) parts.add('C${c.round()}');
+    if (f != null) parts.add('F${f.round()}');
+    return parts.join(' · ');
+  }
+
+  Widget _dot(Color color, String label) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      );
 
   Widget _buildSuggestionStrip(ColorScheme cs) {
     return Padding(
