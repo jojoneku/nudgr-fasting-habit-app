@@ -5,37 +5,47 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../presenters/nutrition_presenter.dart';
 
-/// Plan 029 — photo food logging entry point.
+/// Plan 029 — photo food logging entry point (restyled to Nudgr "More" spec).
 ///
-/// Two steps: pick a source (camera / gallery), then preview the shot with an
-/// optional caption before sending it to the vision endpoint. The parse runs
-/// inside the preview sheet so progress and errors stay local; on success the
-/// items appear in the chat feed via [NutritionPresenter.parsePhoto].
+/// Two steps: pick a source (Take photo / Choose from gallery), then preview
+/// the shot with an optional note before analysing. "Retake" loops back to the
+/// source picker; "Analyze photo" runs the vision parse inside the preview
+/// sheet so progress and errors stay local. On success the detected items
+/// commit via [NutritionPresenter.parsePhoto] and appear in the log.
 Future<void> showFoodPhotoSheet(
   BuildContext context,
   NutritionPresenter presenter,
 ) async {
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    showDragHandle: true,
-    builder: (ctx) => const _SourcePicker(),
-  );
-  if (source == null || !context.mounted) return;
+  // Loop so "Retake" from the preview returns to the source picker.
+  while (true) {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => const _SourcePicker(),
+    );
+    if (source == null || !context.mounted) return;
 
-  final XFile? picked = await _pick(source);
-  if (picked == null || !context.mounted) return;
+    final XFile? picked = await _pick(source);
+    if (picked == null || !context.mounted) return;
 
-  final bytes = await picked.readAsBytes();
-  if (!context.mounted) return;
+    final bytes = await picked.readAsBytes();
+    if (!context.mounted) return;
 
-  await showModalBottomSheet<void>(
-    context: context,
-    isScrollControlled: true,
-    isDismissible: true,
-    useSafeArea: true,
-    builder: (ctx) => _PhotoPreviewSheet(bytes: bytes, presenter: presenter),
-  );
+    final outcome = await showModalBottomSheet<_PreviewOutcome>(
+      context: context,
+      isScrollControlled: true,
+      isDismissible: true,
+      useSafeArea: true,
+      builder: (ctx) => _PhotoPreviewSheet(bytes: bytes, presenter: presenter),
+    );
+    if (outcome != _PreviewOutcome.retake) return;
+    if (!context.mounted) return;
+  }
 }
+
+/// Result of the preview sheet — whether the user asked to retake or the flow
+/// is otherwise finished (logged or dismissed).
+enum _PreviewOutcome { retake, done }
 
 Future<XFile?> _pick(ImageSource source) async {
   try {
@@ -60,7 +70,7 @@ class _SourcePicker extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return SafeArea(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -68,8 +78,8 @@ class _SourcePicker extends StatelessWidget {
               'Log a meal photo',
               style: TextStyle(
                 color: cs.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 16),
@@ -78,9 +88,9 @@ class _SourcePicker extends StatelessWidget {
               label: 'Take photo',
               onTap: () => Navigator.of(context).pop(ImageSource.camera),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 9),
             _SourceTile(
-              icon: Icons.photo_library_outlined,
+              icon: Icons.image_outlined,
               label: 'Choose from gallery',
               onTap: () => Navigator.of(context).pop(ImageSource.gallery),
             ),
@@ -105,7 +115,7 @@ class _SourceTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Material(
-      color: cs.surfaceContainerHigh,
+      color: cs.surfaceContainerLow,
       borderRadius: BorderRadius.circular(14),
       child: InkWell(
         borderRadius: BorderRadius.circular(14),
@@ -113,13 +123,21 @@ class _SourceTile extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(minHeight: 56),
           padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant),
+          ),
           child: Row(
             children: [
-              Icon(icon, color: cs.primary),
+              Icon(icon, color: cs.primary, size: 22),
               const SizedBox(width: 14),
               Text(
                 label,
-                style: TextStyle(color: cs.onSurface, fontSize: 15),
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -163,7 +181,7 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
     if (!mounted) return;
     final err = widget.presenter.photoParseError;
     if (err == null) {
-      Navigator.of(context).pop();
+      Navigator.of(context).pop(_PreviewOutcome.done);
     } else {
       setState(() {
         _submitting = false;
@@ -188,25 +206,54 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
         children: [
           Center(
             child: Container(
-              width: 40,
+              width: 38,
               height: 4,
               decoration: BoxDecoration(
                 color: cs.outlineVariant,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(999),
               ),
             ),
           ),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
-              child: Image.memory(
-                widget.bytes,
-                fit: BoxFit.cover,
-                width: double.infinity,
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 280),
+                  child: Image.memory(
+                    widget.bytes,
+                    fit: BoxFit.cover,
+                    width: double.infinity,
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                left: 12,
+                bottom: 10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.photo_camera_outlined,
+                          size: 11, color: Colors.white),
+                      SizedBox(width: 5),
+                      Text('Meal photo',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 14),
           TextField(
@@ -238,30 +285,33 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
+              SizedBox(
+                width: 96,
                 child: OutlinedButton(
-                  onPressed:
-                      _submitting ? null : () => Navigator.of(context).pop(),
+                  onPressed: _submitting
+                      ? null
+                      : () => Navigator.of(context).pop(_PreviewOutcome.retake),
                   style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(50),
                   ),
-                  child: const Text('Cancel'),
+                  child: const Text('Retake'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: FilledButton(
+                child: FilledButton.icon(
                   onPressed: _submitting ? null : _submit,
                   style: FilledButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
+                    minimumSize: const Size.fromHeight(50),
                   ),
-                  child: _submitting
+                  icon: _submitting
                       ? const SizedBox(
-                          width: 20,
-                          height: 20,
+                          width: 18,
+                          height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text('Log'),
+                      : const Icon(Icons.auto_awesome_outlined, size: 18),
+                  label: Text(_submitting ? 'Analyzing…' : 'Analyze photo'),
                 ),
               ),
             ],
