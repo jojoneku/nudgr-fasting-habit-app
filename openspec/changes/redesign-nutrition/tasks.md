@@ -25,7 +25,7 @@
 
 - [x] 5.1 Build `log_composer_sheet.dart` bottom-sheet: compose → analyzing → committed (parseChat commits atomically, no in-sheet estimate/cart preview per design D3); pinned "Log a meal or exercise…" bar opens it. [analyze clean; on-device smoke pending]
 - [x] 5.2 Compose phase: text input (autofocus) + quick-add chips + autosuggest; submit → analyzing indicator; error state on failure (retry inline; entry review is post-log via Edit/Wrong). [analyze clean; on-device smoke pending]
-- [ ] 5.3 Estimate phase — SUPERSEDED by design D3: parseChat commits atomically via the chat path (no in-sheet estimate → Log it). Review is post-log via the entry's Edit/Wrong. Not built by design.
+- [x] 5.3 Estimate phase BUILT (D3 revised): `parseChat` split into resolve → preview → commit. `previewChat` resolves without logging; composer shows an ESTIMATE card (items + P/C/F + total + Log it/Edit) after a draft bubble + "Analyzing…"; input row persists ("Add another item…"); Log it commits via `commitPendingChat` with a "Logged" undo toast; Edit returns to compose; exercise still logs atomically. Pipeline tests cover resolve/commit/discard + additivity.
 - [ ] 5.4 Edit-from-entry — the card's Edit is INLINE (`_FoodEditField` + `editAllChatFoodItems`) per the entry-card spec, not a composer re-open. Not built as a composer flow by design.
 - [x] 5.5 First-run gate: when neither cloud nor on-device AI is available (and not skipped within cool-down), opening the composer first shows the "Set up smart logging" modal. [analyze clean; on-device smoke pending]
 
