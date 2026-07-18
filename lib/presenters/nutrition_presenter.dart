@@ -1272,16 +1272,17 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
   }
 
-  /// Commit the pending estimate to today's log (creates the log entry). No-op
-  /// when there is no pending estimate.
-  Future<void> commitPendingChat() async {
+  /// Commit the pending estimate to today's log (creates the log entry).
+  /// Returns the new entry's id for undo, or null when there was nothing pending
+  /// or logging was gated. No-op when there is no pending estimate.
+  Future<String?> commitPendingChat() async {
     final resolved = _pendingResolved;
     final text = _pendingText;
-    if (resolved == null || text == null) return;
+    if (resolved == null || text == null) return null;
     _pendingResolved = null;
     _pendingText = null;
     safeNotify();
-    await _commitFoodChat(
+    return _commitFoodChat(
         text, resolved.entries, resolved.alts, resolved.rawTexts);
   }
 
@@ -2171,7 +2172,10 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   /// Shared commit path for both cloud and on-device branches. Adds
   /// entries to today's log, builds the chat message, persists, and runs
   /// streak/goal checks.
-  Future<void> _commitFoodChat(
+  /// Commits [entries] to today's log and appends the chat/log-entry row.
+  /// Returns the created message's id (for undo), or null if the IF-Sync gate
+  /// blocked logging.
+  Future<String?> _commitFoodChat(
     String text,
     List<FoodEntry> entries,
     List<List<ChatFoodAlternative>> altsList,
@@ -2186,7 +2190,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         // ignore: unawaited_futures
         _photoStore.delete(photoThumbnailPath);
       }
-      return;
+      return null;
     }
 
     // Refresh today's log if midnight crossed mid-parse.
@@ -2219,6 +2223,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       _persistChatMessages(),
     ]);
     await _applyLogSideEffects(_todayLog.date);
+    return msg.id;
   }
 
   Future<void> _parseChatAsExercise(String text) async {

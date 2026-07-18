@@ -55,6 +55,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
   bool _analyzing = false;
   bool _showEstimate = false;
   String? _error;
+  String? _draftText; // echoed as a chat bubble during analyze/estimate
   bool _aiPromptShown = false;
 
   static const _quickChips = <_QuickChip>[
@@ -174,7 +175,9 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     setState(() {
       _analyzing = true;
       _error = null;
+      _draftText = text;
     });
+    _ctrl.clear();
     // Resolve WITHOUT logging — food yields an estimate to review; exercise is
     // logged directly (no estimate step).
     await widget.presenter.previewChat(text);
@@ -195,10 +198,29 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     }
   }
 
-  /// Commit the reviewed estimate to the log, then close.
+  /// Commit the reviewed estimate to the log, then close with an undo toast.
   Future<void> _logEstimate() async {
-    await widget.presenter.commitPendingChat();
-    if (mounted) Navigator.of(context).pop();
+    final messenger = ScaffoldMessenger.of(context);
+    final kcal = widget.presenter.pendingChatEntries
+        .fold<int>(0, (s, e) => s + e.calories);
+    final id = await widget.presenter.commitPendingChat();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    if (id != null) {
+      messenger
+        ..clearSnackBars()
+        ..showSnackBar(
+          SnackBar(
+            content: Text('Logged · $kcal kcal'),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () => widget.presenter.removeChatMessage(id),
+            ),
+          ),
+        );
+    }
   }
 
   /// Discard the estimate and return to the input to re-describe the meal.
@@ -207,6 +229,8 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     setState(() {
       _showEstimate = false;
       _analyzing = false;
+      if (_draftText != null) _ctrl.text = _draftText!;
+      _draftText = null;
     });
     _focus.requestFocus();
   }
@@ -257,11 +281,13 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     final showSuggestions =
         _canLog && _suggestions.isNotEmpty && _focus.hasFocus;
 
-    final hint = !isToday
-        ? 'Log food for ${DateFormat.MMMd().format(widget.presenter.selectedDate)}…'
-        : _locked
-            ? 'Fasting — logging paused'
-            : 'Log food or exercise…';
+    final hint = _showEstimate
+        ? 'Add another item…'
+        : !isToday
+            ? 'Log food for ${DateFormat.MMMd().format(widget.presenter.selectedDate)}…'
+            : _locked
+                ? 'Fasting — logging paused'
+                : 'Log food or exercise…';
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
@@ -312,6 +338,8 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
               ],
             ),
             const SizedBox(height: 6),
+            if (_draftText != null && (_analyzing || _showEstimate))
+              _buildDraftBubble(cs),
             if (_analyzing)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -359,112 +387,147 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
                   ],
                 ),
               ),
-            if (_showEstimate && widget.presenter.hasPendingChat)
-              _buildEstimateCard(cs)
-            else ...[
-              if (!_analyzing) ...[
-                // Quick-add chips + secondary entry points.
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    for (final chip in _quickChips)
-                      _ComposerChip(
-                        icon: chip.icon,
-                        label: chip.label,
-                        onTap: _canLog ? () => _quick(chip.label) : null,
-                      ),
-                    _ComposerChip(
-                      icon: Icons.grid_view_outlined,
-                      label: 'Templates',
-                      onTap: _canLog ? _showTemplates : null,
-                    ),
-                    _ComposerChip(
-                      icon: Icons.edit_outlined,
-                      label: 'Manual',
-                      onTap: _canLog ? _showManualAdd : null,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (showSuggestions) _buildSuggestionStrip(cs),
-              Row(
+            if (_showEstimate && widget.presenter.hasPendingChat) ...[
+              _buildEstimateCard(cs),
+              const SizedBox(height: 12),
+            ],
+            if (!_analyzing && !_showEstimate) ...[
+              // Quick-add chips + secondary entry points.
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.only(left: 14, right: 6),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: _focus.hasFocus && _canLog
-                              ? cs.primary
-                              : cs.outlineVariant,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.photo_camera_outlined,
-                                color: cs.onSurfaceVariant),
-                            onPressed: _canLog ? _openPhotoSheet : null,
-                            tooltip: 'Log from photo',
-                            constraints: const BoxConstraints(
-                                minWidth: 44, minHeight: 44),
-                          ),
-                          Expanded(
-                            child: TextField(
-                              controller: _ctrl,
-                              focusNode: _focus,
-                              enabled: _canLog && !_analyzing,
-                              autofocus: true,
-                              style:
-                                  TextStyle(color: cs.onSurface, fontSize: 14),
-                              decoration: InputDecoration(
-                                hintText: hint,
-                                hintStyle: TextStyle(
-                                    color: cs.onSurfaceVariant, fontSize: 13),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 8),
-                              ),
-                              textInputAction: TextInputAction.send,
-                              onSubmitted: (_) => _send(),
-                            ),
-                          ),
-                        ],
-                      ),
+                  for (final chip in _quickChips)
+                    _ComposerChip(
+                      icon: chip.icon,
+                      label: chip.label,
+                      onTap: _canLog ? () => _quick(chip.label) : null,
                     ),
+                  _ComposerChip(
+                    icon: Icons.grid_view_outlined,
+                    label: 'Templates',
+                    onTap: _canLog ? _showTemplates : null,
                   ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _canLog && !_analyzing ? () => _send() : null,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: _canLog && !_analyzing
-                            ? cs.primary
-                            : cs.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Icon(
-                        Icons.arrow_upward,
-                        color: _canLog && !_analyzing
-                            ? cs.onPrimary
-                            : cs.onSurfaceVariant,
-                        size: 20,
-                      ),
-                    ),
+                  _ComposerChip(
+                    icon: Icons.edit_outlined,
+                    label: 'Manual',
+                    onTap: _canLog ? _showManualAdd : null,
                   ),
                 ],
               ),
+              const SizedBox(height: 12),
             ],
+            if (showSuggestions) _buildSuggestionStrip(cs),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.only(left: 14, right: 6),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _focus.hasFocus && _canLog
+                            ? cs.primary
+                            : cs.outlineVariant,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: Icon(Icons.photo_camera_outlined,
+                              color: cs.onSurfaceVariant),
+                          onPressed: _canLog ? _openPhotoSheet : null,
+                          tooltip: 'Log from photo',
+                          constraints:
+                              const BoxConstraints(minWidth: 44, minHeight: 44),
+                        ),
+                        Expanded(
+                          child: TextField(
+                            controller: _ctrl,
+                            focusNode: _focus,
+                            enabled: _canLog && !_analyzing,
+                            autofocus: true,
+                            style: TextStyle(color: cs.onSurface, fontSize: 14),
+                            decoration: InputDecoration(
+                              hintText: hint,
+                              hintStyle: TextStyle(
+                                  color: cs.onSurfaceVariant, fontSize: 13),
+                              border: InputBorder.none,
+                              isDense: true,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 8),
+                            ),
+                            textInputAction: TextInputAction.send,
+                            onSubmitted: (_) => _send(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _canLog && !_analyzing ? () => _send() : null,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: _canLog && !_analyzing
+                          ? cs.primary
+                          : cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.arrow_upward,
+                      color: _canLog && !_analyzing
+                          ? cs.onPrimary
+                          : cs.onSurfaceVariant,
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  /// The user's submission echoed as a right-aligned chat bubble while the
+  /// estimate is being prepared/reviewed (mirrors the reference composer).
+  Widget _buildDraftBubble(ColorScheme cs) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 11),
+      child: Align(
+        alignment: Alignment.centerRight,
+        child: ConstrainedBox(
+          constraints:
+              BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.78),
+          child: Container(
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHigh,
+              border: Border.all(color: cs.outlineVariant),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(16),
+                bottomRight: Radius.circular(6),
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Text(
+              _draftText!,
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 14,
+                height: 1.35,
+              ),
+            ),
+          ),
         ),
       ),
     );
