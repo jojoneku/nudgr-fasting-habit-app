@@ -1236,6 +1236,30 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   List<List<ChatFoodAlternative>> get pendingChatAlternatives =>
       _pendingResolved?.alts ?? const [];
 
+  /// Total calories of the pending estimate (0 when none). Keeps the estimate
+  /// card's totals out of `build()` (architecture rule 1).
+  int get pendingChatTotalCalories =>
+      pendingChatEntries.fold(0, (s, e) => s + e.calories);
+
+  /// Summed macros (grams) of the pending estimate; zeros when none.
+  ({double protein, double carbs, double fat}) get pendingChatMacros {
+    var p = 0.0, c = 0.0, f = 0.0;
+    for (final e in pendingChatEntries) {
+      p += e.protein ?? 0;
+      c += e.carbs ?? 0;
+      f += e.fat ?? 0;
+    }
+    return (protein: p, carbs: c, fat: f);
+  }
+
+  /// Clears all three pending-estimate fields together — the single source of
+  /// truth so previewChat/commit/discard can't desync them.
+  void _clearPending() {
+    _pendingResolved = null;
+    _pendingText = null;
+    _pendingThumbPath = null;
+  }
+
   /// Resolve [text] into a pending estimate for review WITHOUT logging it.
   /// Food → populates [pendingChatEntries] (caller shows the estimate card).
   /// Exercise → logged atomically (no estimate step). On failure sets
@@ -1252,8 +1276,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
     _isChatParsing = true;
     _chatParseError = null;
-    _pendingResolved = null;
-    _pendingText = null;
+    _clearPending();
     safeNotify();
 
     try {
@@ -1283,9 +1306,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     final text = _pendingText;
     if (resolved == null || text == null) return null;
     final thumb = _pendingThumbPath;
-    _pendingResolved = null;
-    _pendingText = null;
-    _pendingThumbPath = null;
+    _clearPending();
     safeNotify();
     return _commitFoodChat(
       text,
@@ -1305,9 +1326,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       return;
     }
     final thumb = _pendingThumbPath;
-    _pendingResolved = null;
-    _pendingText = null;
-    _pendingThumbPath = null;
+    _clearPending();
     if (thumb != null) {
       // ignore: unawaited_futures
       _photoStore.delete(thumb);
@@ -1359,6 +1378,7 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
     _isPhotoParsing = true;
     _photoParseError = null;
+    _clearPending(); // don't inherit a stale text/photo estimate
     safeNotify();
 
     try {

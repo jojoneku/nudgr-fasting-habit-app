@@ -162,6 +162,7 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
   final _captionCtrl = TextEditingController();
   bool _submitting = false;
   bool _showEstimate = false;
+  bool _committing = false; // guards double-tap on "Log it"
   String? _error;
 
   @override
@@ -203,9 +204,10 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
 
   /// Commit the reviewed photo estimate to the log, then close.
   Future<void> _logPhoto() async {
+    if (_committing) return; // guard double-tap
+    _committing = true;
     final messenger = ScaffoldMessenger.of(context);
-    final kcal = widget.presenter.pendingChatEntries
-        .fold<int>(0, (s, e) => s + e.calories);
+    final kcal = widget.presenter.pendingChatTotalCalories;
     final id = await widget.presenter.commitPendingChat();
     if (!mounted) return;
     Navigator.of(context).pop(_PreviewOutcome.done);
@@ -372,10 +374,11 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
   /// (mirrors the reference and the text composer's estimate card).
   List<Widget> _buildEstimate(ColorScheme cs) {
     final entries = widget.presenter.pendingChatEntries;
-    final totalKcal = entries.fold<int>(0, (s, e) => s + e.calories);
-    final p = entries.fold<double>(0, (s, e) => s + (e.protein ?? 0));
-    final c = entries.fold<double>(0, (s, e) => s + (e.carbs ?? 0));
-    final f = entries.fold<double>(0, (s, e) => s + (e.fat ?? 0));
+    final totalKcal = widget.presenter.pendingChatTotalCalories;
+    final macros = widget.presenter.pendingChatMacros;
+    final p = macros.protein;
+    final c = macros.carbs;
+    final f = macros.fat;
 
     return [
       Row(

@@ -54,6 +54,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
 
   bool _analyzing = false;
   bool _showEstimate = false;
+  bool _committing = false; // guards double-tap on "Log it"
   String? _error;
   String? _draftText; // echoed as a chat bubble during analyze/estimate
   bool _aiPromptShown = false;
@@ -184,9 +185,12 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     if (!mounted) return;
     final err = widget.presenter.chatParseError;
     if (err != null) {
+      // Put the text back so the user can fix it instead of retyping.
+      _ctrl.text = _draftText ?? '';
       setState(() {
         _analyzing = false;
         _error = err;
+        _draftText = null;
       });
     } else if (widget.presenter.hasPendingChat) {
       setState(() {
@@ -200,9 +204,10 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
 
   /// Commit the reviewed estimate to the log, then close with an undo toast.
   Future<void> _logEstimate() async {
+    if (_committing) return; // guard double-tap
+    _committing = true;
     final messenger = ScaffoldMessenger.of(context);
-    final kcal = widget.presenter.pendingChatEntries
-        .fold<int>(0, (s, e) => s + e.calories);
+    final kcal = widget.presenter.pendingChatTotalCalories;
     final id = await widget.presenter.commitPendingChat();
     if (!mounted) return;
     Navigator.of(context).pop();
@@ -535,10 +540,11 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
 
   Widget _buildEstimateCard(ColorScheme cs) {
     final entries = widget.presenter.pendingChatEntries;
-    final totalKcal = entries.fold<int>(0, (s, e) => s + e.calories);
-    final p = entries.fold<double>(0, (s, e) => s + (e.protein ?? 0));
-    final c = entries.fold<double>(0, (s, e) => s + (e.carbs ?? 0));
-    final f = entries.fold<double>(0, (s, e) => s + (e.fat ?? 0));
+    final totalKcal = widget.presenter.pendingChatTotalCalories;
+    final macros = widget.presenter.pendingChatMacros;
+    final p = macros.protein;
+    final c = macros.carbs;
+    final f = macros.fat;
 
     return Container(
       decoration: BoxDecoration(
