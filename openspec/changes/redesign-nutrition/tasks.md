@@ -39,5 +39,5 @@
 
 - [x] 7.1 Header: "Nutrition" title + Cloud/Local pill (from AI-tier state) + history + library (+ settings) controls + conditional back control; kept week arrows + month picker on the date strip. [analyze clean; on-device smoke pending]
 - [x] 7.2 Ensure exercise entries render as log entries (activity name, stats, −burned kcal) and update the hero's burned value (via `selectedDateCaloriesBurned`). [analyze clean; on-device smoke pending]
-- [ ] 7.3 Light/dark pass: confirm all new widgets read `Theme.of(context)`/`context.appColors`, Material icons only, no hardcoded `AppColors*` in widgets; check contrast in both themes.
-- [ ] 7.4 `dart format` + `flutter analyze` clean; run the nutrition test suite; on-device eyes-on smoke of the full feature-parity checklist (design.md). Open PR to `dev`.
+- [x] 7.3 Light/dark pass: all new nutrition widgets read `Theme.of(context)`/`context.appColors` — grep confirms **zero** hardcoded `AppColors.`/`AppColorsLight.` in `lib/views/nutrition/`; Material icons only. [contrast eyes-on in both themes pending on-device]
+- [ ] 7.4 `dart format` + `flutter analyze` clean ✓; nutrition + view test suite green (355/355) ✓; PR to `dev` open (#497) ✓. **Remaining: on-device eyes-on smoke of the full feature-parity checklist (design.md)** — can't be driven in this environment; blocks merge.
