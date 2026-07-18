@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/views/treasury/dashboard/budget_overview_ca
 import 'package:intermittent_fasting/views/treasury/dashboard/cashflow_strip.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/dashboard_accounts_list.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/goals_savings_screen.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/category_pie_chart_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dart';
@@ -269,11 +270,34 @@ class _GoalSection extends StatelessWidget {
 
     return AppSection(
       title: 'Goals & Savings',
-      trailing: IconButton(
-        icon: Icon(Icons.add, size: 20, color: colorScheme.primary),
-        tooltip: 'Add Goal or Savings',
-        onPressed: onAdd,
-        visualDensity: VisualDensity.compact,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => GoalsSavingsScreen(
+                    presenter: presenter,
+                    onEdit: onEdit,
+                    onAdd: onAdd,
+                  ),
+                ),
+              );
+            },
+            style: TextButton.styleFrom(
+              visualDensity: VisualDensity.compact,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+            ),
+            child: const Text('See all'),
+          ),
+          IconButton(
+            icon: Icon(Icons.add, size: 20, color: colorScheme.primary),
+            tooltip: 'Add Goal or Savings',
+            onPressed: onAdd,
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
       ),
       child: goals.isEmpty
           ? AppCard(
