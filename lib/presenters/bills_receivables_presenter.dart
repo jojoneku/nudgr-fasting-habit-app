@@ -135,6 +135,54 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return billsNm + receivablesNm + expensesNm;
   }
 
+  // ─── Due-soon hero (Nudgr redesign) ───────────────────────────────────────────
+
+  /// The soonest-due unpaid bill in the selected month, or null when none is
+  /// unpaid. [bills] is already ordered unpaid-first then by due day, so the
+  /// first unpaid entry is the most imminent.
+  Bill? get imminentUnpaidBill => bills.where((b) => !b.isPaid).firstOrNull;
+
+  /// [bill]'s due date, derived from its month + dueDay. The due day is clamped
+  /// to the month length (day 31 in a 30-day month), and a malformed month key
+  /// falls back to the current year/month.
+  DateTime billDueDate(Bill bill) {
+    final now = DateTime.now();
+    final parts = bill.month.split('-');
+    final year = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? now.year;
+    final mon = int.tryParse(parts.length > 1 ? parts[1] : '') ?? now.month;
+    final lastDay = DateTime(year, mon + 1, 0).day;
+    return DateTime(year, mon, bill.dueDay.clamp(1, lastDay));
+  }
+
+  /// Whole days until [bill]'s due date relative to today. Negative when
+  /// overdue. The bill's own month is honoured so a past-month unpaid bill reads
+  /// as overdue and a future-month one as far off.
+  int billDaysUntilDue(Bill bill) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return billDueDate(bill).difference(today).inDays;
+  }
+
+  /// Due-status descriptor for the bills hero: a human label, whether the bill
+  /// is overdue, and whether it is imminent (due within 3 days or overdue).
+  ({String label, bool overdue, bool imminent}) billDueInfo(Bill bill) {
+    final d = billDaysUntilDue(bill);
+    if (d < 0) {
+      final n = -d;
+      return (
+        label: n == 1 ? 'Overdue by 1 day' : 'Overdue by $n days',
+        overdue: true,
+        imminent: true,
+      );
+    }
+    final label = d == 0
+        ? 'Due today'
+        : d == 1
+            ? 'Due tomorrow'
+            : 'Due in $d days';
+    return (label: label, overdue: false, imminent: d <= 3);
+  }
+
   // ─── Receivable getters ───────────────────────────────────────────────────────
 
   /// Receivables for the selected month, ordered not-yet-received-first then by

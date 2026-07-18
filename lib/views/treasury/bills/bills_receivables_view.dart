@@ -17,6 +17,7 @@ import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
+import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
 import 'package:intermittent_fasting/views/treasury/bills/installment_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/receivable_list_tile.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -240,6 +241,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   children: [
+                    _DueSoonHeroSection(
+                      presenter: widget.presenter,
+                      onMarkPaid: _showMarkBillPaidSheet,
+                      onEdit: _showAddBillSheet,
+                    ),
                     const SizedBox(height: 12),
                     _CreditCardsSection(
                       presenter: widget.presenter,
@@ -281,6 +287,54 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─── Due-Soon Hero ────────────────────────────────────────────────────────────
+
+/// Spotlights the most imminent unpaid bill (due within a week or overdue) as a
+/// bills-accent gradient card with a Mark-paid action. Renders nothing when no
+/// bill is due soon. All figures/labels come from [BillsReceivablesPresenter].
+class _DueSoonHeroSection extends StatelessWidget {
+  final BillsReceivablesPresenter presenter;
+  final void Function(Bill) onMarkPaid;
+  final void Function([Bill?]) onEdit;
+
+  const _DueSoonHeroSection({
+    required this.presenter,
+    required this.onMarkPaid,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bill = presenter.imminentUnpaidBill;
+    if (bill == null) return const SizedBox.shrink();
+    // Spotlight only genuinely due-soon or overdue bills, not far-off ones.
+    if (presenter.billDaysUntilDue(bill) > 7) return const SizedBox.shrink();
+
+    final due = presenter.billDueInfo(bill);
+    final categoryName = presenter.categories
+        .where((c) => c.id == bill.categoryId)
+        .firstOrNull
+        ?.name;
+    final subtitle = [
+      if (categoryName != null && categoryName.isNotEmpty) categoryName,
+      'due ${DateFormat('MMM d').format(presenter.billDueDate(bill))}',
+    ].join(' · ');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: DueSoonHero(
+        billName: bill.name,
+        amount: bill.amount,
+        dueLabel: due.label,
+        subtitle: subtitle,
+        overdue: due.overdue,
+        onMarkPaid: () => onMarkPaid(bill),
+        onEdit: () => onEdit(bill),
+      ),
     );
   }
 }
