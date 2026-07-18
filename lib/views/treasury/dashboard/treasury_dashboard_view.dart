@@ -448,9 +448,8 @@ class _CreditAccountCard extends StatelessWidget {
                       : dueInfo!.label,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
-                    fontWeight: dueInfo!.imminent
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                    fontWeight:
+                        dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
                   ),
                 ),
               ],

@@ -43,8 +43,8 @@ class DashboardAccountRow {
 
 class TreasuryDashboardPresenter extends ChangeNotifier {
   TreasuryDashboardPresenter(StorageService storage, [LedgerPresenter? ledger])
-    : _storage = storage,
-      _ledger = ledger {
+      : _storage = storage,
+        _ledger = ledger {
     load();
     _ledger?.addListener(_syncFromLedger);
   }
@@ -132,8 +132,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final label = diff == 0
         ? 'Due today'
         : diff == 1
-        ? 'Due tomorrow'
-        : 'Due in $diff days';
+            ? 'Due tomorrow'
+            : 'Due in $diff days';
     return (label: label, imminent: diff <= 3);
   }
 
@@ -165,9 +165,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// "Savings & Goals" KPI. Matches the set of accounts the Setup page groups
   /// under that heading ([savingsAccounts] + [goalAccounts]).
   double get totalSavingsAndGoals => [
-    ...savingsAccounts,
-    ...goalAccounts,
-  ].fold(0.0, (sum, a) => sum + a.balance);
+        ...savingsAccounts,
+        ...goalAccounts,
+      ].fold(0.0, (sum, a) => sum + a.balance);
 
   /// Count of all active accounts (every role + sub-accounts) — for the Setup
   /// "Accounts" KPI tile.
@@ -256,12 +256,12 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// reflected in their parent via the propagation rule in
   /// [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
   Iterable<FinancialAccount> get _assetAccounts => _accounts.where(
-    (a) =>
-        a.isActive &&
-        !a.isLiability &&
-        !a.isCustodian &&
-        a.parentAccountId == null,
-  );
+        (a) =>
+            a.isActive &&
+            !a.isLiability &&
+            !a.isCustodian &&
+            a.parentAccountId == null,
+      );
 
   double get totalAssets =>
       _assetAccounts.fold(0.0, (sum, a) => sum + a.balance);
@@ -411,28 +411,24 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get todayOutflow {
     final now = DateTime.now();
     final excluded = _excludedCategoryIds;
-    return _transactions
-        .where((t) {
-          return isSpendingOutflow(t, excluded) &&
-              t.date.year == now.year &&
-              t.date.month == now.month &&
-              t.date.day == now.day;
-        })
-        .fold(0.0, (sum, t) => sum + t.amount);
+    return _transactions.where((t) {
+      return isSpendingOutflow(t, excluded) &&
+          t.date.year == now.year &&
+          t.date.month == now.month &&
+          t.date.day == now.day;
+    }).fold(0.0, (sum, t) => sum + t.amount);
   }
 
   double get todayInflow {
     final now = DateTime.now();
     final reimb = _reimbursementIds;
     final excluded = _excludedCategoryIds;
-    return _transactions
-        .where((t) {
-          return isIncomeInflow(t, reimb, excluded) &&
-              t.date.year == now.year &&
-              t.date.month == now.month &&
-              t.date.day == now.day;
-        })
-        .fold(0.0, (sum, t) => sum + t.amount);
+    return _transactions.where((t) {
+      return isIncomeInflow(t, reimb, excluded) &&
+          t.date.year == now.year &&
+          t.date.month == now.month &&
+          t.date.day == now.day;
+    }).fold(0.0, (sum, t) => sum + t.amount);
   }
 
   /// A bill is overdue when it's unpaid and its due date has passed. The bill's
@@ -726,8 +722,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         if (summary == null) continue;
         // Prefer the stored net worth (set at close or via the legacy import);
         // fall back to reconstructing from the account snapshot.
-        final value =
-            summary.netWorth ??
+        final value = summary.netWorth ??
             (summary.accountSnapshots.isEmpty
                 ? null
                 : _netWorthFromSnapshot(summary.accountSnapshots));

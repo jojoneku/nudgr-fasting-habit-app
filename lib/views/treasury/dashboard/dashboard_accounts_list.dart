@@ -48,9 +48,9 @@ class _DashboardAccountsListState extends State<DashboardAccountsList> {
       trailing: Text(
         '${formatPeso(widget.totalLiquidCash)} liquid',
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: context.appColors.textMuted,
-          fontWeight: FontWeight.w700,
-        ),
+              color: context.appColors.textMuted,
+              fontWeight: FontWeight.w700,
+            ),
       ),
       child: Column(
         children: [
@@ -210,29 +210,29 @@ class _ExpanderRow extends StatelessWidget {
 }
 
 IconData _accountIcon(AccountCategory category) => switch (category) {
-  AccountCategory.bank => Icons.account_balance_outlined,
-  AccountCategory.ewallet => Icons.phone_android_outlined,
-  AccountCategory.cash => Icons.payments_outlined,
-  AccountCategory.savings => Icons.savings_outlined,
-  AccountCategory.goal => Icons.flag_outlined,
-  AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-  AccountCategory.creditCard => Icons.credit_card_outlined,
-  AccountCategory.creditLine => Icons.credit_score_outlined,
-  AccountCategory.bnpl => Icons.shopping_bag_outlined,
-  AccountCategory.investment => Icons.trending_up_rounded,
-  AccountCategory.custodian => Icons.swap_horiz_rounded,
-};
+      AccountCategory.bank => Icons.account_balance_outlined,
+      AccountCategory.ewallet => Icons.phone_android_outlined,
+      AccountCategory.cash => Icons.payments_outlined,
+      AccountCategory.savings => Icons.savings_outlined,
+      AccountCategory.goal => Icons.flag_outlined,
+      AccountCategory.timeDeposit => Icons.lock_clock_outlined,
+      AccountCategory.creditCard => Icons.credit_card_outlined,
+      AccountCategory.creditLine => Icons.credit_score_outlined,
+      AccountCategory.bnpl => Icons.shopping_bag_outlined,
+      AccountCategory.investment => Icons.trending_up_rounded,
+      AccountCategory.custodian => Icons.swap_horiz_rounded,
+    };
 
 String _accountCategoryLabel(AccountCategory category) => switch (category) {
-  AccountCategory.bank => 'Bank',
-  AccountCategory.ewallet => 'eWallet',
-  AccountCategory.cash => 'Cash',
-  AccountCategory.savings => 'Savings',
-  AccountCategory.goal => 'Goal',
-  AccountCategory.timeDeposit => 'Time deposit',
-  AccountCategory.creditCard => 'Credit card',
-  AccountCategory.creditLine => 'Credit line',
-  AccountCategory.bnpl => 'BNPL',
-  AccountCategory.investment => 'Investment',
-  AccountCategory.custodian => 'External',
-};
+      AccountCategory.bank => 'Bank',
+      AccountCategory.ewallet => 'eWallet',
+      AccountCategory.cash => 'Cash',
+      AccountCategory.savings => 'Savings',
+      AccountCategory.goal => 'Goal',
+      AccountCategory.timeDeposit => 'Time deposit',
+      AccountCategory.creditCard => 'Credit card',
+      AccountCategory.creditLine => 'Credit line',
+      AccountCategory.bnpl => 'BNPL',
+      AccountCategory.investment => 'Investment',
+      AccountCategory.custodian => 'External',
+    };
