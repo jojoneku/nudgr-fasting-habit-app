@@ -194,7 +194,7 @@ class _TypeSegment extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
           curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
           decoration: BoxDecoration(
             color: selected ? color : Colors.transparent,
             borderRadius: BorderRadius.circular(9),

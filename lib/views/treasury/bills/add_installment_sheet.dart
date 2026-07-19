@@ -207,38 +207,59 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Monthly Amount
-          const _FieldLabel('Monthly Payment (auto-computed, editable)'),
-          TextFormField(
-            controller: _monthlyCtrl,
-            decoration:
-                sheetFieldDecoration(context, hint: '0.00', prefixText: '₱ '),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: amountInputFormatters,
-            textInputAction: TextInputAction.next,
-            onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
-            validator: (v) {
-              final p = double.tryParse(v ?? '');
-              if (p == null || p <= 0) return 'Must be > 0';
-              return null;
-            },
+          // Monthly payment (auto-computed, editable) + start month, side by side.
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _FieldLabel('Monthly Payment'),
+                    TextFormField(
+                      controller: _monthlyCtrl,
+                      decoration: sheetFieldDecoration(context,
+                          hint: '0.00', prefixText: '₱ '),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: amountInputFormatters,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) =>
+                          setState(() => _monthlyManuallyEdited = true),
+                      validator: (v) {
+                        final p = double.tryParse(v ?? '');
+                        if (p == null || p <= 0) return 'Must be > 0';
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const _FieldLabel('Start Month'),
+                    _StartMonthSelector(
+                      selectedMonth: _startMonth,
+                      onAdjust: _adjustStartMonth,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
-          // Start Month
-          const _FieldLabel('Start Month'),
-          _StartMonthSelector(
-            selectedMonth: _startMonth,
-            onAdjust: _adjustStartMonth,
-          ),
-          const SizedBox(height: 16),
-
-          // Note
+          // Note — outline field box like the rest of the form.
           const _FieldLabel('Note (optional)'),
-          AppTextField(
+          TextFormField(
             controller: _noteCtrl,
-            hint: 'e.g. 0% interest, 12 months',
-            maxLines: 2,
+            decoration: sheetFieldDecoration(context,
+                hint: 'e.g. 0% interest, 12 months'),
             textInputAction: TextInputAction.done,
           ),
         ],
@@ -415,16 +436,39 @@ class _CustomMonthsFieldState extends State<_CustomMonthsField> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      child: AppTextField(
+    final cs = Theme.of(context).colorScheme;
+    final active = widget.selected != null;
+    // Chip-shaped box so it lines up with the preset month chips beside it.
+    return Container(
+      width: 76,
+      decoration: BoxDecoration(
+        color: active
+            ? cs.primary.withValues(alpha: 0.15)
+            : cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: active ? cs.primary : cs.outlineVariant),
+      ),
+      child: TextField(
         controller: _ctrl,
-        hint: 'Custom',
         keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
           LengthLimitingTextInputFormatter(3),
         ],
+        style: TextStyle(
+          color: active ? cs.primary : cs.onSurface,
+          fontWeight: active ? FontWeight.w700 : FontWeight.w400,
+          fontSize: 13,
+        ),
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+          border: InputBorder.none,
+          hintText: 'Custom',
+          hintStyle: TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+        ),
         onChanged: (v) {
           final parsed = int.tryParse(v);
           if (parsed != null && parsed > 0) widget.onChanged(parsed);
@@ -453,30 +497,33 @@ class _StartMonthSelector extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 44,
-            height: 44,
+            width: 34,
+            height: 46,
             child: IconButton(
+              padding: EdgeInsets.zero,
               icon:
                   Icon(Icons.chevron_left, color: colorScheme.onSurfaceVariant),
               onPressed: () => onAdjust(-1),
             ),
           ),
           Expanded(
-            child: Center(
-              child: Text(
-                monthLabel(selectedMonth),
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
+            child: Text(
+              monthLabel(selectedMonth),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
           SizedBox(
-            width: 44,
-            height: 44,
+            width: 34,
+            height: 46,
             child: IconButton(
+              padding: EdgeInsets.zero,
               icon: Icon(Icons.chevron_right,
                   color: colorScheme.onSurfaceVariant),
               onPressed: () => onAdjust(1),

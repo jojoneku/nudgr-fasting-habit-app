@@ -1,11 +1,13 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -92,6 +94,33 @@ class _AddBillSheetState extends State<AddBillSheet> {
     return null;
   }
 
+  /// The month this bill belongs to (existing bill's month, or the month the
+  /// user is currently viewing for a new one), as a real date anchor. The due
+  /// date picker is constrained to this month so it stays a day-of-month choice
+  /// (no accidental month change) while reading as a calendar, not a 1–31 list.
+  DateTime get _dueMonthAnchor {
+    final key = widget.existing?.month ?? widget.presenter.selectedMonth;
+    return DateTime.tryParse('$key-01') ?? DateTime.now();
+  }
+
+  DateTime _resolveDueDate() {
+    final a = _dueMonthAnchor;
+    final lastDay = DateTime(a.year, a.month + 1, 0).day;
+    return DateTime(a.year, a.month, _dueDay.clamp(1, lastDay));
+  }
+
+  Future<void> _pickDueDate() async {
+    final a = _dueMonthAnchor;
+    final lastDay = DateTime(a.year, a.month + 1, 0).day;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _resolveDueDate(),
+      firstDate: DateTime(a.year, a.month, 1),
+      lastDate: DateTime(a.year, a.month, lastDay),
+    );
+    if (picked != null) setState(() => _dueDay = picked.day);
+  }
+
   Future<void> _pickAccount() async {
     final choice = await showAccountPicker(
       context,
@@ -157,16 +186,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
         RecurrenceType.custom => 'Custom',
       };
 
-  static String _ordinal(int day) {
-    if (day >= 11 && day <= 13) return '${day}th';
-    return switch (day % 10) {
-      1 => '${day}st',
-      2 => '${day}nd',
-      3 => '${day}rd',
-      _ => '${day}th',
-    };
-  }
-
   Widget _buildForm(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -186,13 +205,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
             ),
-          ),
-          const SizedBox(height: 12),
-
-          // Bill type selector
-          _BillTypeSelector(
-            value: _billType,
-            onChanged: (v) => setState(() => _billType = v),
           ),
           const SizedBox(height: 12),
 
@@ -222,16 +234,17 @@ class _AddBillSheetState extends State<AddBillSheet> {
               const SizedBox(width: 12),
               Expanded(
                 child: SheetLabeledField(
-                  label: 'Due Day',
-                  child: DropdownButtonFormField<int>(
-                    initialValue: _dueDay,
-                    isExpanded: true,
-                    decoration: sheetFieldDecoration(context),
-                    items: [
-                      for (int d = 1; d <= 31; d++)
-                        DropdownMenuItem(value: d, child: Text(_ordinal(d))),
-                    ],
-                    onChanged: (v) => setState(() => _dueDay = v ?? _dueDay),
+                  label: 'Due Date',
+                  child: SheetPickerBox(
+                    onTap: _pickDueDate,
+                    trailingIcon: Icons.calendar_today_outlined,
+                    child: Text(
+                      DateFormat('MMM d').format(_resolveDueDate()),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          TextStyle(color: colorScheme.onSurface, fontSize: 14),
+                    ),
                   ),
                 ),
               ),
@@ -249,35 +262,29 @@ class _AddBillSheetState extends State<AddBillSheet> {
             ),
           ],
 
-          // Category chips
+          // Category — account-style picker (icon + name), optional.
           if (_expenseCategories.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Category',
-                style: TextStyle(
-                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _expenseCategories.map((cat) {
-                final isSelected = _selectedCategoryId == cat.id;
-                return ChoiceChip(
-                  label: Text(cat.name),
-                  selected: isSelected,
-                  // Tap again to clear — a bill needn't carry a category.
-                  onSelected: (_) => setState(
-                      () => _selectedCategoryId = isSelected ? null : cat.id),
-                );
-              }).toList(),
+            SheetLabeledField(
+              label: 'Category',
+              child: CategoryPickerField(
+                categories: _expenseCategories,
+                selectedId: _selectedCategoryId,
+                placeholder: 'None',
+                onChanged: (id) => setState(() => _selectedCategoryId = id),
+              ),
             ),
           ],
 
-          // Payment note
+          // Payment note — outline field box like the rest of the form.
           const SizedBox(height: 12),
-          AppTextField(
-            controller: _paymentNoteController,
+          SheetLabeledField(
             label: 'Payment Note (optional)',
-            textInputAction: TextInputAction.done,
+            child: TextFormField(
+              controller: _paymentNoteController,
+              decoration: sheetFieldDecoration(context),
+              textInputAction: TextInputAction.done,
+            ),
           ),
 
           // Recurring toggle
@@ -289,6 +296,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
             subtitle: Text('Auto-generate next month',
                 style: TextStyle(
                     color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            secondary:
+                Icon(Icons.autorenew_rounded, color: colorScheme.primary),
             contentPadding: EdgeInsets.zero,
           ),
           if (_isRecurring) ...[
@@ -382,49 +391,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _BillTypeSelector extends StatelessWidget {
-  final BillType value;
-  final ValueChanged<BillType> onChanged;
-
-  const _BillTypeSelector({required this.value, required this.onChanged});
-
-  static const _labels = {
-    BillType.installment: 'Installment',
-    BillType.creditCard: 'Credit Card',
-    BillType.subscription: 'Subscription',
-    BillType.insurance: 'Insurance',
-    BillType.govtContribution: 'Govt Contrib',
-    BillType.utility: 'Utility',
-    BillType.other: 'Other',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Bill Type',
-            style:
-                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: BillType.values.map((t) {
-            final isSelected = value == t;
-            return ChoiceChip(
-              label: Text(_labels[t]!),
-              selected: isSelected,
-              onSelected: (_) => onChanged(t),
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 }

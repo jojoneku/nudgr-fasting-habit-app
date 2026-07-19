@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -164,13 +165,6 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
           ),
           const SizedBox(height: 12),
 
-          // Receivable type selector
-          _ReceivableTypeSelector(
-            value: _receivableType,
-            onChanged: (v) => setState(() => _receivableType = v),
-          ),
-          const SizedBox(height: 12),
-
           // Amount + Date
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,31 +192,15 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
               Expanded(
                 child: SheetLabeledField(
                   label: 'Date',
-                  child: InkWell(
+                  child: SheetPickerBox(
                     onTap: _pickDate,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      height: 56,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: colorScheme.outlineVariant),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_outlined,
-                              color: colorScheme.onSurfaceVariant, size: 16),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              DateFormat('MMM d').format(_expectedDate),
-                              style: TextStyle(
-                                  color: colorScheme.onSurface, fontSize: 13),
-                            ),
-                          ),
-                        ],
-                      ),
+                    trailingIcon: Icons.calendar_today_outlined,
+                    child: Text(
+                      DateFormat('MMM d').format(_expectedDate),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          TextStyle(color: colorScheme.onSurface, fontSize: 14),
                     ),
                   ),
                 ),
@@ -230,26 +208,17 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
             ],
           ),
 
-          // Category chips
+          // Category — account-style picker (icon + name), optional.
           if (_incomeCategories.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Category',
-                style: TextStyle(
-                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _incomeCategories.map((cat) {
-                final isSelected = _selectedCategoryId == cat.id;
-                return ChoiceChip(
-                  label: Text(cat.name),
-                  selected: isSelected,
-                  // Tap again to clear the category.
-                  onSelected: (_) => setState(
-                      () => _selectedCategoryId = isSelected ? null : cat.id),
-                );
-              }).toList(),
+            SheetLabeledField(
+              label: 'Category',
+              child: CategoryPickerField(
+                categories: _incomeCategories,
+                selectedId: _selectedCategoryId,
+                placeholder: 'None',
+                onChanged: (id) => setState(() => _selectedCategoryId = id),
+              ),
             ),
           ],
 
@@ -354,46 +323,6 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _ReceivableTypeSelector extends StatelessWidget {
-  final ReceivableType value;
-  final ValueChanged<ReceivableType> onChanged;
-
-  const _ReceivableTypeSelector({required this.value, required this.onChanged});
-
-  static const _labels = {
-    ReceivableType.salary: 'Salary',
-    ReceivableType.reimbursement: 'Reimbursement',
-    ReceivableType.business: 'Business',
-    ReceivableType.other: 'Other',
-  };
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Type',
-            style:
-                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: ReceivableType.values.map((t) {
-            final isSelected = value == t;
-            return ChoiceChip(
-              label: Text(_labels[t]!),
-              selected: isSelected,
-              onSelected: (_) => onChanged(t),
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 }

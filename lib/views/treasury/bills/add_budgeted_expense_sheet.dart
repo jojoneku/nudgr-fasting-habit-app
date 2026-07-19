@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -121,7 +122,6 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
   }
 
   Widget _buildForm(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final expenseCategories = widget.presenter.categories
         .where((c) => c.type == CategoryType.expense)
         .toList();
@@ -174,10 +174,13 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
             ),
           ),
           const SizedBox(height: 12),
-          AppTextField(
-            controller: _noteController,
+          SheetLabeledField(
             label: 'Note (optional)',
-            textInputAction: TextInputAction.done,
+            child: TextFormField(
+              controller: _noteController,
+              decoration: sheetFieldDecoration(context),
+              textInputAction: TextInputAction.done,
+            ),
           ),
           if (liquidAccounts.isNotEmpty) ...[
             const SizedBox(height: 12),
@@ -190,22 +193,14 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
           ],
           if (expenseCategories.isNotEmpty) ...[
             const SizedBox(height: 16),
-            Text('Category',
-                style: TextStyle(
-                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: expenseCategories.map((cat) {
-                final isSelected = _selectedCategoryId == cat.id;
-                return ChoiceChip(
-                  label: Text(cat.name),
-                  selected: isSelected,
-                  onSelected: (_) => setState(
-                      () => _selectedCategoryId = isSelected ? null : cat.id),
-                );
-              }).toList(),
+            SheetLabeledField(
+              label: 'Category',
+              child: CategoryPickerField(
+                categories: expenseCategories,
+                selectedId: _selectedCategoryId,
+                placeholder: 'None',
+                onChanged: (id) => setState(() => _selectedCategoryId = id),
+              ),
             ),
           ],
         ],
