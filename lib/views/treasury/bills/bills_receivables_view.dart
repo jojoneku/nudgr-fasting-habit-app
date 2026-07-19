@@ -7,22 +7,29 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
-import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
+import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/month_year_picker.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
-import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
-import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
-import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
-import 'package:intermittent_fasting/views/treasury/bills/installment_list_tile.dart';
-import 'package:intermittent_fasting/views/treasury/bills/receivable_list_tile.dart';
+import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dart';
+import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
+import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
+/// The redesigned Bills tab: a swipeable due-soon stack, Pending/Paid/
+/// Installments chips, a unified "Coming up" timeline, and titled sections of
+/// Pay/Receive cards for bills, receivables, budgeted expenses, and
+/// installments. The "Bills" title + month·year picker live in the shared
+/// Treasury app bar (see `TreasuryModuleView`); credit cards live on the
+/// Dashboard under Accounts.
 class BillsReceivablesView extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final InstallmentPresenter installmentPresenter;
@@ -45,10 +52,14 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     widget.installmentPresenter.load();
   }
 
+  /// Month is owned by the in-page picker (the shared app bar is hidden on this
+  /// tab). Keep the bills and installment presenters in step.
   void _setMonth(String month) {
     widget.presenter.setMonth(month);
     widget.installmentPresenter.setMonth(month);
   }
+
+  // ─── Sheets ────────────────────────────────────────────────────────────────
 
   void _showAddBillSheet([Bill? existing]) {
     showModalBottomSheet(
@@ -154,18 +165,6 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
-  void _showQuickPaySheet(FinancialAccount card) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) => _QuickPaySheet(card: card, presenter: widget.presenter),
-    );
-  }
-
   void _showFabMenu() {
     final colorScheme = Theme.of(context).colorScheme;
     showModalBottomSheet(
@@ -221,66 +220,259 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
+  // ─── Helpers ─────────────────────────────────────────────────────────────
+
+  /// Resolves the category icon + theme-aware color for [categoryId]. Falls back
+  /// to a type-appropriate icon and [fallback] color when the item has no linked
+  /// category. Mirrors the ledger tiles' in-widget icon/color resolution.
+  ({IconData icon, Color color}) _catVisual(
+    String categoryId,
+    int index, {
+    required Color fallback,
+  }) {
+    final cat = widget.presenter.categoryById(categoryId);
+    final icon = categoryIcon(cat?.name, cat?.type ?? CategoryType.expense);
+    final color = cat != null
+        ? resolveSliceColor(cat.colorHex, index,
+            brightness: Theme.of(context).brightness)
+        : fallback;
+    return (icon: icon, color: color);
+  }
+
+  void _onComingUpTap(ComingUpItem item) {
+    final s = item.source;
+    if (s is Bill) {
+      if (!s.isPaid) _showMarkBillPaidSheet(s);
+    } else if (s is Receivable) {
+      if (!s.isReceived) _showMarkReceivedSheet(s);
+    } else if (s is BudgetedExpense) {
+      if (!s.isPaid) _showMarkExpensePaidSheet(s);
+    } else if (s is Installment) {
+      if (!widget.installmentPresenter.isPaidForMonth(s.id)) {
+        _showMarkInstallmentPaidSheet(s);
+      }
+    }
+  }
+
+  Future<void> _confirmDelete({
+    required String title,
+    required String body,
+    required VoidCallback onConfirm,
+  }) async {
+    final ok = await AppConfirmDialog.confirm(
+      context: context,
+      title: title,
+      body: body,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      isDestructive: true,
+    );
+    if (ok) onConfirm();
+  }
+
+  // ─── Sections ────────────────────────────────────────────────────────────
+
+  Widget _billsSection() {
+    final bills = widget.presenter.bills;
+    return _Section(
+      title: 'Bills',
+      count: bills.length,
+      emptyMessage: 'No bills this month',
+      children: [
+        for (int i = 0; i < bills.length; i++) _cardPad(_billCard(bills[i], i)),
+      ],
+    );
+  }
+
+  Widget _billCard(Bill b, int i) {
+    final v = _catVisual(b.categoryId, i, fallback: context.appColors.bills);
+    return ObligationCard(
+      key: ValueKey('bill_${b.id}'),
+      icon: v.icon,
+      iconColor: v.color,
+      name: b.name,
+      amount: b.amount,
+      dateLabel:
+          'due ${DateFormat('MMM d').format(widget.presenter.billDueDate(b))}',
+      actionLabel: 'Pay',
+      done: b.isPaid,
+      onAction: b.isPaid ? null : () => _showMarkBillPaidSheet(b),
+      onEdit: () => _showAddBillSheet(b),
+      onDelete: () => _confirmDelete(
+        title: 'Delete Bill',
+        body: 'Delete "${b.name}"?',
+        onConfirm: () => widget.presenter.deleteBill(b.id),
+      ),
+    );
+  }
+
+  Widget _receivablesSection() {
+    final receivables = widget.presenter.receivables;
+    return _Section(
+      title: 'Receivables',
+      count: receivables.length,
+      emptyMessage: 'No receivables this month',
+      children: [
+        for (int i = 0; i < receivables.length; i++)
+          _cardPad(_receivableCard(receivables[i], i)),
+      ],
+    );
+  }
+
+  Widget _receivableCard(Receivable r, int i) {
+    final v = _catVisual(r.categoryId, i, fallback: context.appColors.success);
+    final date = r.expectedDate;
+    final dateLabel =
+        date == null ? 'ASAP' : 'exp ${DateFormat('MMM d').format(date)}';
+    return ObligationCard(
+      key: ValueKey('rec_${r.id}'),
+      icon: v.icon,
+      iconColor: v.color,
+      name: r.name,
+      amount: r.amount,
+      dateLabel: dateLabel,
+      isInflow: true,
+      actionLabel: 'Receive',
+      done: r.isReceived,
+      onAction: r.isReceived ? null : () => _showMarkReceivedSheet(r),
+      onEdit: () => _showAddReceivableSheet(r),
+      onDelete: () => _confirmDelete(
+        title: 'Delete Receivable',
+        body: 'Delete "${r.name}"?',
+        onConfirm: () => widget.presenter.deleteReceivable(r.id),
+      ),
+    );
+  }
+
+  Widget _budgetedSection() {
+    final expenses = widget.presenter.budgetedExpenses;
+    return _Section(
+      title: 'Budgeted',
+      count: expenses.length,
+      emptyMessage: 'No budgeted expenses this month',
+      children: [
+        for (int i = 0; i < expenses.length; i++)
+          _cardPad(_budgetedCard(expenses[i], i)),
+      ],
+    );
+  }
+
+  Widget _budgetedCard(BudgetedExpense e, int i) {
+    final v = _catVisual(e.categoryId, i, fallback: context.appColors.gold);
+    return ObligationCard(
+      key: ValueKey('bud_${e.id}'),
+      icon: v.icon,
+      iconColor: v.color,
+      name: e.name,
+      amount: e.allocatedAmount,
+      dateLabel: e.budgetedType.label,
+      actionLabel: 'Fund',
+      done: e.isPaid,
+      onAction: e.isPaid ? null : () => _showMarkExpensePaidSheet(e),
+      onEdit: () => _showAddBudgetedExpenseSheet(e),
+      onDelete: () => _confirmDelete(
+        title: 'Delete Budgeted Expense',
+        body: 'Delete "${e.name}"?',
+        onConfirm: () => widget.presenter.deleteBudgetedExpense(e.id),
+      ),
+    );
+  }
+
+  Widget _installmentsSection() {
+    final installments = widget.installmentPresenter.dueThisMonth;
+    return _Section(
+      title: 'Installments',
+      count: installments.length,
+      emptyMessage: 'No installments due this month',
+      children: [
+        for (int i = 0; i < installments.length; i++)
+          _cardPad(_installmentCard(installments[i])),
+      ],
+    );
+  }
+
+  Widget _installmentCard(Installment inst) {
+    final paidThisMonth = widget.installmentPresenter.isPaidForMonth(inst.id);
+    final count = widget.installmentPresenter.paidCount(inst.id);
+    final dateLabel = paidThisMonth
+        ? 'paid · $count/${inst.totalMonths}'
+        : 'payment ${count + 1}/${inst.totalMonths}';
+    return ObligationCard(
+      key: ValueKey('inst_${inst.id}'),
+      icon: Icons.credit_score_outlined,
+      iconColor: context.appColors.purple,
+      name: inst.name,
+      amount: inst.monthlyAmount,
+      dateLabel: dateLabel,
+      actionLabel: 'Pay',
+      done: paidThisMonth,
+      onAction:
+          paidThisMonth ? null : () => _showMarkInstallmentPaidSheet(inst),
+      onEdit: () => _showAddInstallmentSheet(inst),
+      onDelete: () => _confirmDelete(
+        title: 'Delete Installment',
+        body:
+            'Delete "${inst.name}"? All linked payment transactions will also be removed.',
+        onConfirm: () => widget.installmentPresenter.deleteInstallment(inst.id),
+      ),
+    );
+  }
+
+  Widget _cardPad(Widget child) =>
+      Padding(padding: const EdgeInsets.only(bottom: 8), child: child);
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable:
           Listenable.merge([widget.presenter, widget.installmentPresenter]),
       builder: (context, _) {
+        final imminent = widget.presenter.imminentUnpaidBills;
+        final comingUp =
+            widget.presenter.comingUpItems(widget.installmentPresenter);
         return Scaffold(
-          body: Column(
-            children: [
-              _MonthSelector(
-                selectedMonth: widget.presenter.selectedMonth,
-                onChanged: _setMonth,
-              ),
-              _StatsBar(
-                presenter: widget.presenter,
-                installmentPresenter: widget.installmentPresenter,
-              ),
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  children: [
-                    _DueSoonHeroSection(
-                      presenter: widget.presenter,
-                      onMarkPaid: _showMarkBillPaidSheet,
-                      onEdit: _showAddBillSheet,
-                    ),
-                    const SizedBox(height: 12),
-                    _CreditCardsSection(
-                      presenter: widget.presenter,
-                      onPayNow: _showQuickPaySheet,
-                    ),
-                    const SizedBox(height: 12),
-                    _BillsSection(
-                      presenter: widget.presenter,
-                      onMarkPaid: _showMarkBillPaidSheet,
-                      onEdit: _showAddBillSheet,
-                    ),
-                    const SizedBox(height: 12),
-                    _ReceivablesSection(
-                      presenter: widget.presenter,
-                      onMarkReceived: _showMarkReceivedSheet,
-                      onEdit: _showAddReceivableSheet,
-                    ),
-                    const SizedBox(height: 12),
-                    _BudgetedExpensesSection(
-                      presenter: widget.presenter,
-                      onMarkPaid: _showMarkExpensePaidSheet,
-                      onEdit: _showAddBudgetedExpenseSheet,
-                    ),
-                    const SizedBox(height: 12),
-                    _InstallmentsSection(
-                      presenter: widget.installmentPresenter,
-                      onMarkPaid: _showMarkInstallmentPaidSheet,
-                      onEdit: _showAddInstallmentSheet,
-                    ),
-                    const SizedBox(height: 80),
-                  ],
+          body: SafeArea(
+            bottom: false,
+            child: Column(
+              children: [
+                _BillsHeader(
+                  monthKey: widget.presenter.selectedMonth,
+                  onMonthChanged: _setMonth,
                 ),
-              ),
-            ],
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                    children: [
+                      DueSoonStack(
+                        presenter: widget.presenter,
+                        onMarkPaid: _showMarkBillPaidSheet,
+                        onEdit: _showAddBillSheet,
+                      ),
+                      if (imminent.isNotEmpty) const SizedBox(height: 16),
+                      _StatChips(
+                        presenter: widget.presenter,
+                        installmentPresenter: widget.installmentPresenter,
+                      ),
+                      if (comingUp.isNotEmpty) ...[
+                        const SizedBox(height: 20),
+                        const _SectionLabel('Coming up'),
+                        const SizedBox(height: 10),
+                        ComingUpTimeline(
+                            items: comingUp, onTap: _onComingUpTap),
+                      ],
+                      const SizedBox(height: 20),
+                      _billsSection(),
+                      const SizedBox(height: 18),
+                      _receivablesSection(),
+                      const SizedBox(height: 18),
+                      _budgetedSection(),
+                      const SizedBox(height: 18),
+                      _installmentsSection(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: _showFabMenu,
@@ -292,151 +484,149 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   }
 }
 
-// ─── Due-Soon Hero ────────────────────────────────────────────────────────────
+// ─── In-page header ───────────────────────────────────────────────────────────
 
-/// Spotlights the most imminent unpaid bill (due within a week or overdue) as a
-/// bills-accent gradient card with a Mark-paid action. Renders nothing when no
-/// bill is due soon. All figures/labels come from [BillsReceivablesPresenter].
-class _DueSoonHeroSection extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
-  final void Function(Bill) onMarkPaid;
-  final void Function([Bill?]) onEdit;
+/// The in-page Bills header — a large left-aligned "Bills" title with the
+/// month·year picker on the right. Replaces the shared Treasury app bar, which
+/// is hidden on this tab so the reference's header layout can show.
+class _BillsHeader extends StatelessWidget {
+  final String monthKey;
+  final ValueChanged<String> onMonthChanged;
 
-  const _DueSoonHeroSection({
-    required this.presenter,
-    required this.onMarkPaid,
-    required this.onEdit,
+  const _BillsHeader({required this.monthKey, required this.onMonthChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 12, 4),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Bills',
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 26,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ),
+          MonthYearPill(monthKey: monthKey, onChanged: onMonthChanged),
+        ],
+      ),
+    );
+  }
+}
+
+// ─── Section scaffolding ──────────────────────────────────────────────────────
+
+/// A plain bold section label (e.g. "Coming up").
+class _SectionLabel extends StatelessWidget {
+  final String text;
+
+  const _SectionLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface,
+        fontSize: 15,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+/// A titled list section: bold title + count, then its cards (or an empty note).
+class _Section extends StatelessWidget {
+  final String title;
+  final int count;
+  final String emptyMessage;
+  final List<Widget> children;
+
+  const _Section({
+    required this.title,
+    required this.count,
+    required this.emptyMessage,
+    required this.children,
   });
 
   @override
   Widget build(BuildContext context) {
-    final bill = presenter.imminentUnpaidBill;
-    if (bill == null) return const SizedBox.shrink();
-    // Spotlight only genuinely due-soon or overdue bills, not far-off ones.
-    if (presenter.billDaysUntilDue(bill) > 7) return const SizedBox.shrink();
-
-    final due = presenter.billDueInfo(bill);
-    final categoryName = presenter.categories
-        .where((c) => c.id == bill.categoryId)
-        .firstOrNull
-        ?.name;
-    final subtitle = [
-      if (categoryName != null && categoryName.isNotEmpty) categoryName,
-      'due ${DateFormat('MMM d').format(presenter.billDueDate(bill))}',
-    ].join(' · ');
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 12),
-      child: DueSoonHero(
-        billName: bill.name,
-        amount: bill.amount,
-        dueLabel: due.label,
-        subtitle: subtitle,
-        overdue: due.overdue,
-        onMarkPaid: () => onMarkPaid(bill),
-        onEdit: () => onEdit(bill),
-      ),
-    );
-  }
-}
-
-// ─── Month Selector ───────────────────────────────────────────────────────────
-
-class _MonthSelector extends StatelessWidget {
-  final String selectedMonth;
-  final ValueChanged<String> onChanged;
-
-  const _MonthSelector({required this.selectedMonth, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Container(
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon:
-                  Icon(Icons.chevron_left, color: colorScheme.onSurfaceVariant),
-              onPressed: () => onChanged(previousMonth(selectedMonth)),
-            ),
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10, left: 2),
+          child: Row(
+            children: [
+              _SectionLabel(title),
+              if (count > 0) ...[
+                const SizedBox(width: 8),
+                Text(
+                  '$count',
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ],
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-              ),
-            ),
+        ),
+        if (children.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 2, bottom: 4),
             child: Text(
-              monthLabel(selectedMonth),
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              emptyMessage,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12.5),
             ),
-          ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: Icon(Icons.chevron_right,
-                  color: colorScheme.onSurfaceVariant),
-              onPressed: () => onChanged(nextMonth(selectedMonth)),
-            ),
-          ),
-        ],
-      ),
+          )
+        else
+          ...children,
+      ],
     );
   }
 }
 
-// ─── Stats Bar ────────────────────────────────────────────────────────────────
+// ─── Stat chips (Pending / Paid / Installments) ───────────────────────────────
 
-class _StatsBar extends StatelessWidget {
+class _StatChips extends StatelessWidget {
   final BillsReceivablesPresenter presenter;
   final InstallmentPresenter installmentPresenter;
 
-  const _StatsBar(
+  const _StatChips(
       {required this.presenter, required this.installmentPresenter});
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    return Container(
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
-          _StatChip(
-            label: 'Pending',
-            value: formatPesoCompact(presenter.totalBillsPending),
-            color: colorScheme.error,
-          ),
-          const SizedBox(width: 8),
-          _StatChip(
-            label: 'Paid',
-            value: formatPesoCompact(presenter.totalBillsPaid),
-            color: context.appColors.success,
-          ),
-          const SizedBox(width: 8),
-          _StatChip(
-            label: 'Installments',
-            value: formatPesoCompact(installmentPresenter.totalDueThisMonth),
-            color: colorScheme.primary,
-          ),
-        ],
-      ),
+    final colorScheme = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        _StatChip(
+          label: 'Pending',
+          value: formatPesoCompact(presenter.totalBillsPending),
+          color: colorScheme.error,
+        ),
+        const SizedBox(width: 8),
+        _StatChip(
+          label: 'Paid',
+          value: formatPesoCompact(presenter.totalBillsPaid),
+          color: context.appColors.success,
+        ),
+        const SizedBox(width: 8),
+        _StatChip(
+          label: 'Installments',
+          value: formatPesoCompact(installmentPresenter.totalDueThisMonth),
+          color: colorScheme.primary,
+        ),
+      ],
     );
   }
 }
@@ -453,10 +643,10 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 11),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Column(
@@ -464,289 +654,13 @@ class _StatChip extends StatelessWidget {
           children: [
             Text(value,
                 style: TextStyle(
-                    color: color, fontWeight: FontWeight.w700, fontSize: 13)),
+                    color: color, fontWeight: FontWeight.w800, fontSize: 14)),
+            const SizedBox(height: 1),
             Text(label,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 10)),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Bills Section ────────────────────────────────────────────────────────────
-
-class _BillsSection extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
-  final ValueChanged<Bill> onMarkPaid;
-  final ValueChanged<Bill> onEdit;
-
-  const _BillsSection({
-    required this.presenter,
-    required this.onMarkPaid,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final bills = presenter.bills;
-    final paidCount = bills.where((b) => b.isPaid).length;
-
-    return _SectionCard(
-      title: 'Bills',
-      count: bills.length,
-      subtitle: '$paidCount/${bills.length} paid',
-      accentColor: colorScheme.error,
-      initiallyExpanded: true,
-      emptyIcon: Icons.receipt_outlined,
-      emptyMessage: 'No bills for this month',
-      children: bills
-          .map((bill) => BillListTile(
-                key: ValueKey(bill.id),
-                bill: bill,
-                onMarkPaid: () => onMarkPaid(bill),
-                onEdit: () => onEdit(bill),
-                onDelete: () => presenter.deleteBill(bill.id),
-              ))
-          .toList(),
-    );
-  }
-}
-
-// ─── Receivables Section ──────────────────────────────────────────────────────
-
-class _ReceivablesSection extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
-  final ValueChanged<Receivable> onMarkReceived;
-  final ValueChanged<Receivable> onEdit;
-
-  const _ReceivablesSection({
-    required this.presenter,
-    required this.onMarkReceived,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final receivables = presenter.receivables;
-    final receivedCount = receivables.where((r) => r.isReceived).length;
-
-    return _SectionCard(
-      title: 'Receivables',
-      count: receivables.length,
-      subtitle: '$receivedCount/${receivables.length} received',
-      accentColor: context.appColors.success,
-      initiallyExpanded: true,
-      emptyIcon: Icons.account_balance_wallet_outlined,
-      emptyMessage: 'No receivables for this month',
-      children: receivables
-          .map((r) => ReceivableListTile(
-                key: ValueKey(r.id),
-                receivable: r,
-                onMarkReceived: () => onMarkReceived(r),
-                onEdit: () => onEdit(r),
-                onDelete: () => presenter.deleteReceivable(r.id),
-              ))
-          .toList(),
-    );
-  }
-}
-
-// ─── Budgeted Expenses Section ────────────────────────────────────────────────
-
-class _BudgetedExpensesSection extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
-  final ValueChanged<BudgetedExpense> onMarkPaid;
-  final ValueChanged<BudgetedExpense> onEdit;
-
-  const _BudgetedExpensesSection({
-    required this.presenter,
-    required this.onMarkPaid,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final expenses = presenter.budgetedExpenses;
-    final paidCount = expenses.where((e) => e.isPaid).length;
-
-    return _SectionCard(
-      title: 'Budgeted Expenses',
-      count: expenses.length,
-      subtitle: '$paidCount/${expenses.length} paid',
-      accentColor: context.appColors.gold,
-      initiallyExpanded: false,
-      emptyIcon: Icons.savings_outlined,
-      emptyMessage: 'No budgeted expenses for this month',
-      children: expenses
-          .map((e) => BudgetedExpenseTile(
-                key: ValueKey(e.id),
-                expense: e,
-                accountName: presenter.accountName(e.accountId),
-                onMarkPaid: () => onMarkPaid(e),
-                onEdit: () => onEdit(e),
-                onDelete: () => presenter.deleteBudgetedExpense(e.id),
-              ))
-          .toList(),
-    );
-  }
-}
-
-// ─── Installments Section ─────────────────────────────────────────────────────
-
-class _InstallmentsSection extends StatelessWidget {
-  final InstallmentPresenter presenter;
-  final ValueChanged<Installment> onMarkPaid;
-  final ValueChanged<Installment> onEdit;
-
-  const _InstallmentsSection({
-    required this.presenter,
-    required this.onMarkPaid,
-    required this.onEdit,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final installments = presenter.dueThisMonth;
-    final paidCount =
-        installments.where((i) => presenter.isPaidForMonth(i.id)).length;
-    final subtitle = installments.isEmpty
-        ? 'None due this month'
-        : '$paidCount/${installments.length} paid · ${formatPeso(presenter.totalDueThisMonth)} due';
-
-    return _SectionCard(
-      title: 'Installments',
-      count: installments.length,
-      subtitle: subtitle,
-      accentColor: context.appColors.purple,
-      initiallyExpanded: installments.isNotEmpty,
-      emptyIcon: Icons.credit_score_outlined,
-      emptyMessage: 'No installments due this month',
-      children: installments.map((i) {
-        final account =
-            presenter.accounts.where((a) => a.id == i.accountId).firstOrNull;
-        return InstallmentListTile(
-          key: ValueKey(i.id),
-          installment: i,
-          presenter: presenter,
-          account: account,
-          onMarkPaid: () => onMarkPaid(i),
-          onEdit: () => onEdit(i),
-          onDelete: () => _confirmDelete(context, presenter, i),
-        );
-      }).toList(),
-    );
-  }
-
-  void _confirmDelete(
-    BuildContext context,
-    InstallmentPresenter presenter,
-    Installment installment,
-  ) {
-    AppConfirmDialog.confirm(
-      context: context,
-      title: 'Delete Installment',
-      body:
-          'Delete "${installment.name}"? All linked payment transactions will also be removed.',
-      confirmLabel: 'Delete',
-      cancelLabel: 'Cancel',
-      isDestructive: true,
-    ).then((confirmed) {
-      if (confirmed) presenter.deleteInstallment(installment.id);
-    });
-  }
-}
-
-// ─── Section Card (expandable) ────────────────────────────────────────────────
-
-class _SectionCard extends StatelessWidget {
-  final String title;
-  final int count;
-  final String subtitle;
-  final Color accentColor;
-  final bool initiallyExpanded;
-  final IconData emptyIcon;
-  final String emptyMessage;
-  final List<Widget> children;
-
-  const _SectionCard({
-    required this.title,
-    required this.count,
-    required this.subtitle,
-    required this.accentColor,
-    required this.initiallyExpanded,
-    required this.emptyIcon,
-    required this.emptyMessage,
-    required this.children,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      padding: EdgeInsets.zero,
-      child: Theme(
-        data: theme.copyWith(
-          dividerColor: Colors.transparent,
-          dividerTheme: const DividerThemeData(thickness: 0, space: 0),
-        ),
-        child: ExpansionTile(
-          initiallyExpanded: initiallyExpanded,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-          minTileHeight: 0,
-          visualDensity: VisualDensity.compact,
-          childrenPadding: EdgeInsets.zero,
-          title: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: accentColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                title,
-                style: TextStyle(
-                  color: theme.colorScheme.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppBadge(
-                text: '$count',
-                color: accentColor,
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(left: 14),
-            child: Text(
-              subtitle,
-              style: TextStyle(
-                  color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
-            ),
-          ),
-          iconColor: theme.colorScheme.onSurfaceVariant,
-          collapsedIconColor: theme.colorScheme.onSurfaceVariant,
-          children: children.isEmpty
-              ? [
-                  AppEmptyState(
-                    icon: emptyIcon,
-                    title: emptyMessage,
-                    iconSize: 40,
-                  ),
-                ]
-              : children,
         ),
       ),
     );
@@ -1593,342 +1507,6 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Credit Cards Live Balance Section ───────────────────────────────────────
-
-class _CreditCardsSection extends StatelessWidget {
-  final BillsReceivablesPresenter presenter;
-  final void Function(FinancialAccount card) onPayNow;
-
-  const _CreditCardsSection({
-    required this.presenter,
-    required this.onPayNow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cards = presenter.creditAccounts;
-    if (cards.isEmpty) return const SizedBox.shrink();
-    final colorScheme = Theme.of(context).colorScheme;
-
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      padding: EdgeInsets.zero,
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          dividerColor: Colors.transparent,
-          dividerTheme: const DividerThemeData(thickness: 0, space: 0),
-        ),
-        child: ExpansionTile(
-          initiallyExpanded: true,
-          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-          minTileHeight: 0,
-          visualDensity: VisualDensity.compact,
-          childrenPadding: EdgeInsets.zero,
-          iconColor: colorScheme.onSurfaceVariant,
-          collapsedIconColor: colorScheme.onSurfaceVariant,
-          title: Row(
-            children: [
-              Container(
-                width: 4,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: colorScheme.error,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Text(
-                'CREDIT CARDS',
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(width: 8),
-              AppBadge(
-                text: '${cards.length}',
-                color: colorScheme.error,
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(left: 14),
-            child: Text(
-              'Live balance · pay anytime',
-              style:
-                  TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 11),
-            ),
-          ),
-          children: [
-            for (int i = 0; i < cards.length; i++) ...[
-              if (i > 0)
-                Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: colorScheme.outlineVariant.withValues(alpha: 0.4),
-                ),
-              _CreditCardTile(
-                card: cards[i],
-                onPayNow: () => onPayNow(cards[i]),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CreditCardTile extends StatelessWidget {
-  final FinancialAccount card;
-  final VoidCallback onPayNow;
-
-  const _CreditCardTile({
-    required this.card,
-    required this.onPayNow,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final payable = card.currentPayable;
-    final available = card.availableCredit;
-    final utilization = card.utilization;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  card.name,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  payable > 0 ? 'Owe ${formatPeso(payable)}' : 'No balance',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: payable > 0
-                        ? colorScheme.error
-                        : colorScheme.onSurfaceVariant,
-                    fontWeight:
-                        payable > 0 ? FontWeight.w600 : FontWeight.normal,
-                  ),
-                ),
-                if (available != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                    '${formatPeso(available)} available',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-                if (utilization != null && card.creditLimit != null) ...[
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(2),
-                    child: LinearProgressIndicator(
-                      value: utilization.clamp(0.0, 1.0),
-                      backgroundColor:
-                          colorScheme.outlineVariant.withValues(alpha: 0.3),
-                      color: utilization >= 0.9
-                          ? colorScheme.error
-                          : colorScheme.primary,
-                      minHeight: 4,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          if (payable > 0)
-            TextButton(
-              onPressed: onPayNow,
-              style: TextButton.styleFrom(
-                foregroundColor: colorScheme.primary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                minimumSize: const Size(44, 44),
-              ),
-              child: const Text(
-                'Pay Now',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Quick Pay Sheet ──────────────────────────────────────────────────────────
-
-class _QuickPaySheet extends StatefulWidget {
-  final FinancialAccount card;
-  final BillsReceivablesPresenter presenter;
-
-  const _QuickPaySheet({required this.card, required this.presenter});
-
-  @override
-  State<_QuickPaySheet> createState() => _QuickPaySheetState();
-}
-
-class _QuickPaySheetState extends State<_QuickPaySheet> {
-  late final TextEditingController _amountController;
-  String? _selectedAccountId;
-  DateTime _date = DateTime.now();
-  bool _isSubmitting = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _amountController = TextEditingController(
-      text: widget.card.currentPayable.toStringAsFixed(2),
-    );
-    // Non-liability accounts only (can't pay a CC from another CC).
-    final payers =
-        widget.presenter.accounts.where((a) => !a.isLiability).toList();
-    _selectedAccountId = payers.isNotEmpty ? payers.first.id : null;
-  }
-
-  @override
-  void dispose() {
-    _amountController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) setState(() => _date = picked);
-  }
-
-  Future<void> _confirm() async {
-    final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
-    if (amount == null || amount <= 0) return;
-    if (_selectedAccountId == null) return;
-    setState(() => _isSubmitting = true);
-    try {
-      await widget.presenter.quickPayCard(
-        accountId: widget.card.id,
-        fromAccountId: _selectedAccountId!,
-        amount: amount,
-        date: _date,
-      );
-      if (mounted) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _isSubmitting = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final payers =
-        widget.presenter.accounts.where((a) => !a.isLiability).toList();
-
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Pay ${widget.card.name}',
-              style: TextStyle(
-                color: colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              'Current balance: ${formatPeso(widget.card.currentPayable)}',
-              style: TextStyle(
-                color: colorScheme.onSurfaceVariant,
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount to Pay',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            if (payers.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedAccountId),
-                initialValue: _selectedAccountId,
-                decoration: sheetFieldDecoration(context, label: 'Pay from'),
-                items: payers
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
-              ),
-            ],
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(
-                      DateFormat('MMMM d, yyyy').format(_date),
-                      style:
-                          TextStyle(color: colorScheme.onSurface, fontSize: 14),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: 'Confirm Payment',
-              onPressed: _isSubmitting ? null : _confirm,
-              isLoading: _isSubmitting,
-            ),
-            const SizedBox(height: 8),
-          ],
         ),
       ),
     );

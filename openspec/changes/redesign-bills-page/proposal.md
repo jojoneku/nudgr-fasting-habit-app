@@ -16,9 +16,10 @@ installments, quick-pay) is preserved, just re-homed and re-skinned.
 
 ## What Changes
 
-- **Header into the app bar.** On the Bills tab the shared Treasury app bar title becomes **"Bills"**
-  (left-aligned) and a **month + year picker** pill moves into the app bar actions (top-right).
-  Other tabs keep the `TREASURY` title. The inline `_MonthSelector` is removed from the Bills body.
+- **In-page header (app bar hidden).** On the Bills tab the shared Treasury app bar is **hidden**, and
+  the Bills body renders its own header per the reference: a large left-aligned **"Bills"** title with
+  a **month + year picker** pill at top-right. Other tabs keep the `TREASURY` app bar. The old inline
+  `_MonthSelector` is removed; the month is driven by the in-page picker.
 - **Swipeable due-soon stack.** Replace the single hero with a horizontally **swipeable stack** of the
   due-soon/overdue unpaid bills (reusing the existing `DueSoonHero` card inside a `PageView` with page
   dots and a stacked-behind visual). Each card keeps Mark-paid + edit, routing to the existing sheets.

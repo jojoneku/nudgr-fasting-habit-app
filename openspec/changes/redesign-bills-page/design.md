@@ -26,11 +26,13 @@ already turn those into a Material icon + a theme-aware color.
 
 ## Decisions
 
-- **App-bar title/actions are tab-derived in `TreasuryModuleView`.** The state rebuilds on tab change
-  (a `setState` in the existing `_onTabChanged`, plus firing on `indexIsChanging` for a prompt swap).
-  Title = `index == 2 ? 'Bills' (left-aligned) : 'TREASURY' (centered)`; on the Bills tab the actions
-  carry a `MonthYearPill` bound to `billsPresenter` via `ListenableBuilder`. *Alternative:* per-tab
-  `Scaffold`/`AppBar` — rejected (the module intentionally shares one app bar).
+- **App bar hidden on the Bills tab; header moves in-page.** `TreasuryModuleView` rebuilds on tab
+  change (a `setState` in the existing `_onTabChanged`) and passes `appBar: index == 2 ? null : AppBar('TREASURY')`.
+  The Bills view renders its own header (a large left-aligned "Bills" title + a `MonthYearPill` at
+  top-right) wrapped in `SafeArea` since there's no app bar to clear the status bar. The picker sets the
+  month on both the bills and installment presenters (the view owns both). *Alternative:* rename the
+  shared app bar title to "Bills" and put the pill in its actions — was the first cut, changed per the
+  user's request to hide the app bar so the reference's in-page header shows.
 - **Month + year picker is a shared widget.** `MonthYearPill(monthKey, onChanged)` shows
   `MMM yyyy` + a caret and opens a bottom sheet with a year stepper (◀ 2026 ▶) and a 3×4 month grid.
   Selecting a month calls back into the module, which sets the month on **both** the bills and

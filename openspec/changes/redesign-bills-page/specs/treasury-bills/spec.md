@@ -2,13 +2,14 @@
 
 ### Requirement: Bills header with month·year picker
 
-On the Bills tab the shared Treasury app bar SHALL show a left-aligned **"Bills"** title with a
-**month + year picker** in its top-right actions; other tabs keep the centered `TREASURY` title.
+On the Bills tab the shared Treasury app bar SHALL be hidden and the Bills body SHALL render its own
+header: a left-aligned **"Bills"** title with a **month + year picker** at top-right. Other tabs keep
+the centered `TREASURY` app bar.
 
-#### Scenario: Title and picker on the Bills tab
+#### Scenario: In-page header on the Bills tab
 - **WHEN** the Bills tab is active
-- **THEN** the app bar title reads "Bills" (left-aligned) and a month·year picker pill (e.g. "Jun
-  2026") appears at top-right showing the presenter's selected month
+- **THEN** no shared app bar is shown; instead the page shows a large left-aligned "Bills" title and a
+  month·year picker pill (e.g. "Jun 2026") at top-right reflecting the presenter's selected month
 
 #### Scenario: Picking a month and year
 - **WHEN** the user taps the picker and selects a different month and/or year
@@ -16,7 +17,7 @@ On the Bills tab the shared Treasury app bar SHALL show a left-aligned **"Bills"
 
 #### Scenario: Other tabs unaffected
 - **WHEN** any non-Bills Treasury tab is active
-- **THEN** the app bar shows the centered `TREASURY` title with no month picker
+- **THEN** the shared centered `TREASURY` app bar is shown with no month picker
 
 ### Requirement: Swipeable due-soon stack
 

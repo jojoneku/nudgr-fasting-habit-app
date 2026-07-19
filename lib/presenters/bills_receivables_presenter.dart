@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -15,11 +16,54 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Lifecycle status of a bill relative to today — drives the web status badge
 /// so the view never computes due-date conditionals in `build` (Rule 1).
 enum BillStatus { paid, overdue, dueSoon, unpaid }
+
+/// The obligation type behind one "Coming up" timeline row — drives the row's
+/// accent dot and the sheet the view routes its action to.
+enum ComingUpKind { bill, receivable, budgeted, installment }
+
+/// One entry in the unified "Coming up" timeline — a pure value type merged
+/// across bills, receivables, budgeted expenses, and installments so the view
+/// renders the timeline without doing the merge/sort/slice in `build` (Rule 1).
+///
+/// Carries no Flutter types (keeping the presenter UI-free); [source] holds the
+/// originating model (Bill/Receivable/BudgetedExpense/Installment) so the view
+/// can route the row's tap back to the right existing sheet.
+class ComingUpItem {
+  final ComingUpKind kind;
+  final String name;
+  final double amount;
+
+  /// True for money coming *in* (receivables) — the view renders a `+` and the
+  /// success color; false for outflows (bills, set-asides, installments).
+  final bool isInflow;
+
+  /// Due/expected date when the item has one (bills, dated receivables); null
+  /// for undated items (set-asides, installments), which sort to the end.
+  final DateTime? date;
+
+  /// Pre-formatted date/relation label, e.g. "Jun 28 · 3 days",
+  /// "ASAP · incoming", "This month".
+  final String dateLabel;
+
+  /// The originating model, so the view can resolve the row's action.
+  final Object source;
+
+  const ComingUpItem({
+    required this.kind,
+    required this.name,
+    required this.amount,
+    required this.isInflow,
+    required this.date,
+    required this.dateLabel,
+    required this.source,
+  });
+}
 
 class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   BillsReceivablesPresenter(
@@ -95,6 +139,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   List<FinancialAccount> get accounts => _ledger.accounts;
   List<FinanceCategory> get categories => _ledger.categories;
+
+  /// The category for [id], or null when unknown — lets a bill/receivable card
+  /// resolve its icon and color from the linked category without scanning the
+  /// list in `build`.
+  FinanceCategory? categoryById(String id) =>
+      _ledger.categories.where((c) => c.id == id).firstOrNull;
 
   // ─── Bill getters ────────────────────────────────────────────────────────────
 
@@ -181,6 +231,96 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
             ? 'Due tomorrow'
             : 'Due in $d days';
     return (label: label, overdue: false, imminent: d <= 3);
+  }
+
+  /// Every unpaid bill that is overdue or due within a week, soonest-first — the
+  /// data behind the swipeable due-soon stack at the top of the Bills tab. Empty
+  /// when nothing is imminent, so the stack renders nothing.
+  List<Bill> get imminentUnpaidBills =>
+      bills.where((b) => !b.isPaid && billDaysUntilDue(b) <= 7).toList()
+        ..sort((a, b) => billDaysUntilDue(a).compareTo(billDaysUntilDue(b)));
+
+  // ─── Coming up (unified timeline) ─────────────────────────────────────────────
+
+  /// The next few things across every obligation type, merged into one
+  /// timeline: unpaid bills, un-received receivables, unpaid budgeted expenses,
+  /// and due-but-unpaid installments. Sorted soonest-first with undated items
+  /// (set-asides, installments) last, capped at five. Installments live in a
+  /// separate presenter, so it is passed in rather than injected. The whole
+  /// merge/sort/slice lives here so the view never computes it in `build`.
+  List<ComingUpItem> comingUpItems(InstallmentPresenter installments) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final items = <ComingUpItem>[];
+
+    for (final b in bills.where((b) => !b.isPaid)) {
+      final due = billDueDate(b);
+      items.add(ComingUpItem(
+        kind: ComingUpKind.bill,
+        name: b.name,
+        amount: b.amount,
+        isInflow: false,
+        date: due,
+        dateLabel: _comingUpBillLabel(due.difference(today).inDays, due),
+        source: b,
+      ));
+    }
+    for (final r in receivables.where((r) => !r.isReceived)) {
+      final d = r.expectedDate;
+      items.add(ComingUpItem(
+        kind: ComingUpKind.receivable,
+        name: r.name,
+        amount: r.amount,
+        isInflow: true,
+        date: d,
+        dateLabel: d == null
+            ? 'ASAP · incoming'
+            : '${DateFormat('MMM d').format(d)} · incoming',
+        source: r,
+      ));
+    }
+    for (final e in budgetedExpenses.where((e) => !e.isPaid)) {
+      items.add(ComingUpItem(
+        kind: ComingUpKind.budgeted,
+        name: e.name,
+        amount: e.allocatedAmount,
+        isInflow: false,
+        date: null,
+        dateLabel: 'Set aside',
+        source: e,
+      ));
+    }
+    for (final i in installments.dueThisMonth
+        .where((i) => !installments.isPaidForMonth(i.id))) {
+      items.add(ComingUpItem(
+        kind: ComingUpKind.installment,
+        name: i.name,
+        amount: i.monthlyAmount,
+        isInflow: false,
+        date: null,
+        dateLabel: 'This month',
+        source: i,
+      ));
+    }
+
+    // Dated items first, ascending; undated (set-asides, installments) last so
+    // concrete due dates lead the timeline.
+    items.sort((a, b) {
+      if (a.date == null && b.date == null) return 0;
+      if (a.date == null) return 1;
+      if (b.date == null) return -1;
+      return a.date!.compareTo(b.date!);
+    });
+    return items.take(5).toList();
+  }
+
+  /// Short "MMM d · <relation>" label for a coming-up bill row.
+  String _comingUpBillLabel(int days, DateTime due) {
+    final md = DateFormat('MMM d').format(due);
+    if (days < 0) return '$md · overdue';
+    if (days == 0) return '$md · today';
+    if (days == 1) return '$md · tomorrow';
+    return '$md · $days days';
   }
 
   // ─── Receivable getters ───────────────────────────────────────────────────────

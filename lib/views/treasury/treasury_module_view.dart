@@ -60,6 +60,9 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   }
 
   void _onTabChanged() {
+    // Rebuild so the shared app bar can hide on the Bills tab (which renders its
+    // own in-page "Bills" header + month picker) and reappear on every other.
+    if (mounted) setState(() {});
     if (_tabController.indexIsChanging) return;
     // Each tab keeps its own presenter cache. Reload on focus so cross-tab
     // mutations (e.g. mark-paid in Bills, transfer in Ledger) show up without
@@ -91,18 +94,24 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    // The Bills tab renders its own in-page "Bills" header + month·year picker
+    // (per the Nudgr reference), so the shared app bar is hidden there.
+    final showAppBar = _tabController.index != 2;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        title: Text(
-          'TREASURY',
-          style: theme.textTheme.titleSmall?.copyWith(
-            letterSpacing: 2.0,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      appBar: showAppBar
+          ? AppBar(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              title: Text(
+                'TREASURY',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  letterSpacing: 2.0,
+                ),
+              ),
+              centerTitle: true,
+            )
+          : null,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainer,
@@ -134,7 +143,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         controller: _tabController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          TreasuryDashboardView(presenter: widget.dashPresenter),
+          TreasuryDashboardView(
+            presenter: widget.dashPresenter,
+            billsPresenter: widget.billsPresenter,
+          ),
           LedgerView(presenter: widget.ledgerPresenter),
           BillsReceivablesView(
             presenter: widget.billsPresenter,
