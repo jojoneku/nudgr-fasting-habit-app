@@ -26,50 +26,53 @@ class MetricCardsGrid extends StatelessWidget {
             ? colorScheme.error
             : colorScheme.onSurfaceVariant);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              _MetricCard(
-                label: 'ENDING CASH',
-                value: formatPeso(presenter.endingCash),
-                color: colorScheme.primary,
-                icon: Icons.account_balance_wallet_outlined,
-              ),
-              const SizedBox(height: 8),
-              _MetricCard(
-                label: 'MONTH OUT',
-                value: formatPeso(presenter.monthTotalOutflow),
-                color: colorScheme.error,
-                icon: Icons.arrow_upward_rounded,
-              ),
-            ],
+    return AppSection(
+      title: 'Month Outlook',
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _MetricCard(
+                  label: 'ENDING CASH',
+                  value: formatPeso(presenter.endingCash),
+                  color: colorScheme.primary,
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  label: 'MONTH OUT',
+                  value: formatPeso(presenter.monthTotalOutflow),
+                  color: colorScheme.error,
+                  icon: Icons.arrow_upward_rounded,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            children: [
-              _MetricCard(
-                label: 'MONTH IN',
-                value: formatPeso(presenter.monthTotalInflow),
-                color: colorScheme.tertiary,
-                icon: Icons.arrow_downward_rounded,
-              ),
-              const SizedBox(height: 8),
-              _MetricCard(
-                label: fourthLabel.toUpperCase(),
-                value: fourthValue,
-                color: fourthColor,
-                icon: presenter.hasBudget
-                    ? Icons.track_changes_outlined
-                    : Icons.credit_card_outlined,
-              ),
-            ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              children: [
+                _MetricCard(
+                  label: 'MONTH IN',
+                  value: formatPeso(presenter.monthTotalInflow),
+                  color: colorScheme.tertiary,
+                  icon: Icons.arrow_downward_rounded,
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  label: fourthLabel.toUpperCase(),
+                  value: fourthValue,
+                  color: fourthColor,
+                  icon: presenter.hasBudget
+                      ? Icons.track_changes_outlined
+                      : Icons.credit_card_outlined,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
