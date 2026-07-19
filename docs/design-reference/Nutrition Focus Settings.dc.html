@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Settings &amp; TDEE setup</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:920px; line-height:1.5;">The nutrition config that drives every goal number: tracking mode, the TDEE wizard that computes your target, macro targets, the fasting lock, overshoot penalty, and the on-device AI Coach. Top row is the Settings sheet; bottom row is the 4-step TDEE wizard.</div>
+</div>
+
+<!-- ROW 1 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Settings</div><div style="font-size:14px; color:#5C6068;">tracking mode · goal · macros · AI coach</div></div>
+</div>
+
+<!-- ============ SETTINGS · STANDARD ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Standard mode</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="height:5px;"></div>
+    <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:8px auto 14px;"></div>
+    <div style="padding:0 20px; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:21px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Settings</span><i class="ph ph-x" style="font-size:18px; color:#8C9097;"></i></div>
+    <div style="padding:16px 20px 0; height:calc(100% - 72px); overflow:hidden;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:10px;">Tracking mode</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Simple</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">Manual calorie + macro goals</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:rgba(33,150,243,.1); border:1px solid rgba(33,150,243,.5); border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #2196F3; display:flex; align-items:center; justify-content:center;"><div style="width:8px; height:8px; border-radius:50%; background:#2196F3;"></div></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#5BAAF5;">Standard</div><div style="font-size:10.5px; color:#8FB9E8; margin-top:1px;">TDEE goal · macros from wizard · fasting lock</div></div></div>
+      </div>
+      <!-- TDEE card -->
+      <div style="margin-top:18px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:14px 15px;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">TDEE profile</div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:7px;"><span style="font-size:26px; font-weight:800; color:#5BAAF5; letter-spacing:-.02em;">2,098</span><span style="font-size:12px; font-weight:600; color:#7E828A;">kcal/day</span></div>
+        <div style="font-size:10.5px; font-weight:700; letter-spacing:.06em; color:#7E828A; margin-top:3px;">CUT · −300 KCAL</div>
+        <div style="margin-top:12px; height:42px; border-radius:12px; border:1px solid rgba(33,150,243,.5); display:flex; align-items:center; justify-content:center;"><span style="font-size:12.5px; font-weight:700; color:#5BAAF5;">Edit TDEE profile</span></div>
+      </div>
+      <!-- toggles -->
+      <div style="margin-top:18px; display:flex; align-items:center; gap:12px;"><div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Lock logging during fast</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">Pause logging while fasting window is active</div></div><div style="width:44px; height:26px; border-radius:999px; background:rgba(33,150,243,.4); position:relative;"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#5BAAF5;"></div></div></div>
+      <div style="margin-top:16px; display:flex; align-items:center; gap:12px;"><div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Overshoot penalty</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">−5 HP when you exceed 120% of goal</div></div><div style="width:44px; height:26px; border-radius:999px; background:#2C2D2F; position:relative;"><div style="position:absolute; left:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#6E727A;"></div></div></div>
+      <!-- AI coach -->
+      <div style="margin-top:20px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:10px;">AI coach</div>
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:13px 14px; display:flex; align-items:center; gap:11px;"><div style="width:34px; height:34px; border-radius:10px; background:rgba(33,150,243,.12); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-brain" style="font-size:17px; color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:700; color:#F2F2F3;">Qwen3 0.6B</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">Ready · meal parsing &amp; coaching</div></div><span style="background:rgba(76,175,80,.14); border-radius:999px; padding:3px 9px; font-size:10.5px; font-weight:700; color:#7FCB82;">Ready</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SETTINGS · SIMPLE ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Simple mode</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:13px auto 14px;"></div>
+    <div style="padding:0 20px; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:21px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Settings</span><i class="ph ph-x" style="font-size:18px; color:#8C9097;"></i></div>
+    <div style="padding:16px 20px 0;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:10px;">Tracking mode</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; align-items:center; gap:11px; background:rgba(33,150,243,.1); border:1px solid rgba(33,150,243,.5); border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #2196F3; display:flex; align-items:center; justify-content:center;"><div style="width:8px; height:8px; border-radius:50%; background:#2196F3;"></div></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#5BAAF5;">Simple</div><div style="font-size:10.5px; color:#8FB9E8; margin-top:1px;">Manual calorie + macro goals — quick &amp; minimal</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Standard</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">TDEE goal · macros from wizard · fasting lock</div></div></div>
+      </div>
+      <div style="margin-top:20px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:9px;">Daily calorie goal</div>
+      <div style="height:50px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="flex:1; font-size:16px; font-weight:700; color:#F2F2F3;">2,000</span><span style="font-size:12px; color:#7E828A;">kcal / day</span></div>
+      <div style="margin-top:18px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:9px;">Macro targets <span style="font-weight:600; text-transform:none; letter-spacing:0;">(optional, g)</span></div>
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Protein</div><div style="font-size:16px; font-weight:700; color:#4DA3FF; margin-top:3px;">140</div></div>
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Carbs</div><div style="font-size:16px; font-weight:700; color:#FFC107; margin-top:3px;">200</div></div>
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Fat</div><div style="font-size:16px; font-weight:700; color:#FF6B6B; margin-top:3px;">67</div></div>
+      </div>
+      <div style="margin-top:20px; display:flex; align-items:center; gap:12px;"><div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Overshoot penalty</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">−5 HP when you exceed 120% of goal</div></div><div style="width:44px; height:26px; border-radius:999px; background:rgba(33,150,243,.4); position:relative;"><div style="position:absolute; right:3px; top:3px; width:20px; height:20px; border-radius:50%; background:#5BAAF5;"></div></div></div>
+    </div>
+    <div style="position:absolute; bottom:18px; left:20px; right:20px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Save</span></div>
+  </div>
+</div>
+
+<!-- ROW 2 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1000px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">TDEE wizard</div><div style="font-size:14px; color:#5C6068;">body stats → activity → goal → review</div></div>
+</div>
+
+<!-- ============ TDEE STEP 1 ============ -->
+<div style="position:absolute; left:40px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Step 1 · Body stats</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:18px; font-weight:800; color:#F7F7F8;">TDEE Setup</span><span style="font-size:12px; font-weight:600; color:#7E828A; margin-left:auto;">Step 1 of 4</span></div>
+    <!-- step indicator -->
+    <div style="padding:18px 20px 0; display:flex; gap:8px;"><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div></div>
+    <div style="padding:30px 20px 0;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Body stats</div>
+      <div style="display:flex; gap:10px; margin-top:16px;">
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Weight</div><div style="display:flex; align-items:baseline; gap:3px; margin-top:3px;"><span style="font-size:18px; font-weight:700; color:#F2F2F3;">80</span><span style="font-size:11px; color:#7E828A;">kg</span></div></div>
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Height</div><div style="display:flex; align-items:baseline; gap:3px; margin-top:3px;"><span style="font-size:18px; font-weight:700; color:#F2F2F3;">182</span><span style="font-size:11px; color:#7E828A;">cm</span></div></div>
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 12px;"><div style="font-size:10px; color:#7E828A;">Age</div><div style="display:flex; align-items:baseline; gap:3px; margin-top:3px;"><span style="font-size:18px; font-weight:700; color:#F2F2F3;">28</span><span style="font-size:11px; color:#7E828A;">yrs</span></div></div>
+      </div>
+      <div style="margin-top:22px; font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Sex</div>
+      <div style="margin-top:10px; display:flex; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:4px;">
+        <div style="flex:1; height:40px; border-radius:9px; background:#2196F3; display:flex; align-items:center; justify-content:center;"><span style="font-size:13.5px; font-weight:700; color:#fff;">Male</span></div>
+        <div style="flex:1; height:40px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:13.5px; font-weight:700; color:#9BA0A8;">Female</span></div>
+      </div>
+    </div>
+    <div style="position:absolute; bottom:18px; left:20px; right:20px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Next</span></div>
+  </div>
+</div>
+
+<!-- ============ TDEE STEP 2 ============ -->
+<div style="position:absolute; left:420px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Step 2 · Activity</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:18px; font-weight:800; color:#F7F7F8;">TDEE Setup</span><span style="font-size:12px; font-weight:600; color:#7E828A; margin-left:auto;">Step 2 of 4</span></div>
+    <div style="padding:18px 20px 0; display:flex; gap:8px;"><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div></div>
+    <div style="padding:30px 20px 0;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:16px;">Activity level</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; align-items:center; gap:11px; background:rgba(33,150,243,.1); border:1px solid rgba(33,150,243,.5); border-radius:12px; padding:12px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #2196F3; display:flex; align-items:center; justify-content:center;"><div style="width:8px; height:8px; border-radius:50%; background:#2196F3;"></div></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#5BAAF5;">Sedentary</div><div style="font-size:10.5px; color:#8FB9E8; margin-top:1px;">Little or no exercise</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:12px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Lightly active</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">1–3 days/week</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:12px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Moderately active</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">3–5 days/week</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:12px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Very active</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">6–7 days/week</div></div></div>
+      </div>
+    </div>
+    <div style="position:absolute; bottom:18px; left:20px; right:20px; display:flex; gap:12px;"><div style="flex:1; height:52px; border-radius:14px; border:1px solid #2E2F31; display:flex; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:700; color:#C9CDD3;">Back</span></div><div style="flex:2; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Next</span></div></div>
+  </div>
+</div>
+
+<!-- ============ TDEE STEP 3 ============ -->
+<div style="position:absolute; left:800px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Step 3 · Goal</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:18px; font-weight:800; color:#F7F7F8;">TDEE Setup</span><span style="font-size:12px; font-weight:600; color:#7E828A; margin-left:auto;">Step 3 of 4</span></div>
+    <div style="padding:18px 20px 0; display:flex; gap:8px;"><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2C2D2F;"></div></div>
+    <div style="padding:26px 20px 0;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:14px;">Goal</div>
+      <div style="display:flex; flex-direction:column; gap:9px;">
+        <div style="display:flex; align-items:center; gap:11px; background:rgba(33,150,243,.1); border:1px solid rgba(33,150,243,.5); border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #2196F3; display:flex; align-items:center; justify-content:center;"><div style="width:8px; height:8px; border-radius:50%; background:#2196F3;"></div></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#5BAAF5;">Cut — Lose weight</div><div style="font-size:10.5px; color:#8FB9E8; margin-top:1px;">Calorie deficit</div></div></div>
+        <!-- adjustment chips -->
+        <div style="padding:4px 2px 4px;">
+          <div style="font-size:10px; font-weight:700; color:#7E828A; margin-bottom:8px;">Daily deficit</div>
+          <div style="display:flex; gap:6px;">
+            <div style="flex:1; border-radius:10px; background:#1D1D1E; border:1px solid #2A2A2B; padding:8px 4px; text-align:center;"><div style="font-size:11px; font-weight:600; color:#C9CDD3;">Mild</div><div style="font-size:10px; color:#7E828A;">−200</div></div>
+            <div style="flex:1; border-radius:10px; background:rgba(33,150,243,.12); border:1.2px solid rgba(33,150,243,.6); padding:8px 4px; text-align:center;"><div style="font-size:11px; font-weight:700; color:#5BAAF5;">Moderate</div><div style="font-size:10px; color:#8FB9E8;">−300</div></div>
+            <div style="flex:1; border-radius:10px; background:#1D1D1E; border:1px solid #2A2A2B; padding:8px 4px; text-align:center;"><div style="font-size:11px; font-weight:600; color:#C9CDD3;">Hard</div><div style="font-size:10px; color:#7E828A;">−500</div></div>
+            <div style="flex:1; border-radius:10px; background:#1D1D1E; border:1px solid #2A2A2B; padding:8px 4px; text-align:center;"><div style="font-size:11px; font-weight:600; color:#C9CDD3;">Custom</div><div style="font-size:10px; color:#7E828A;">deficit</div></div>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Maintain</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">Hold current weight</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:11px 13px;"><div style="width:18px; height:18px; border-radius:50%; border:2px solid #4A4B4D;"></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#C9CDD3;">Bulk — Gain muscle</div><div style="font-size:10.5px; color:#7E828A; margin-top:1px;">Calorie surplus</div></div></div>
+      </div>
+    </div>
+    <div style="position:absolute; bottom:18px; left:20px; right:20px; display:flex; gap:12px;"><div style="flex:1; height:52px; border-radius:14px; border:1px solid #2E2F31; display:flex; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:700; color:#C9CDD3;">Back</span></div><div style="flex:2; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Next</span></div></div>
+  </div>
+</div>
+
+<!-- ============ TDEE STEP 4 ============ -->
+<div style="position:absolute; left:1180px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Step 4 · Review</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:18px; font-weight:800; color:#F7F7F8;">TDEE Setup</span><span style="font-size:12px; font-weight:600; color:#7E828A; margin-left:auto;">Step 4 of 4</span></div>
+    <div style="padding:18px 20px 0; display:flex; gap:8px;"><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div><div style="flex:1; height:3px; border-radius:2px; background:#2196F3;"></div></div>
+    <div style="padding:24px 20px 0;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:14px;">Review</div>
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="font-size:12px; color:#7E828A;">BMR</span><span style="font-size:12px; font-weight:700; color:#F2F2F3;">1,920 kcal</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="font-size:12px; color:#7E828A;">Activity</span><span style="font-size:12px; font-weight:700; color:#F2F2F3;">Sedentary</span></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:8px;"><span style="font-size:12px; color:#7E828A;">TDEE</span><span style="font-size:12px; font-weight:700; color:#F2F2F3;">2,398 kcal</span></div>
+        <div style="display:flex; justify-content:space-between;"><span style="font-size:12px; color:#7E828A;">Adjustment</span><span style="font-size:12px; font-weight:700; color:#F2F2F3;">−300 kcal</span></div>
+        <div style="height:1px; background:#2A2A2B; margin:13px 0;"></div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Target</div>
+        <div style="display:flex; align-items:baseline; gap:6px; margin-top:5px;"><span style="font-size:30px; font-weight:800; color:#5BAAF5; letter-spacing:-.03em;">2,098</span><span style="font-size:12px; font-weight:600; color:#7E828A;">kcal / day</span></div>
+        <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin:16px 0 9px;">Macro targets (g)</div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1; background:#151516; border:1px solid #2A2A2B; border-radius:11px; padding:9px 11px;"><div style="font-size:10px; color:#7E828A;">Protein</div><div style="font-size:15px; font-weight:700; color:#4DA3FF; margin-top:2px;">140</div></div>
+          <div style="flex:1; background:#151516; border:1px solid #2A2A2B; border-radius:11px; padding:9px 11px;"><div style="font-size:10px; color:#7E828A;">Carbs</div><div style="font-size:15px; font-weight:700; color:#FFC107; margin-top:2px;">200</div></div>
+          <div style="flex:1; background:#151516; border:1px solid #2A2A2B; border-radius:11px; padding:9px 11px;"><div style="font-size:10px; color:#7E828A;">Fat</div><div style="font-size:15px; font-weight:700; color:#FF6B6B; margin-top:2px;">60</div></div>
+        </div>
+        <div style="font-size:10px; color:#7E828A; margin-top:8px;">Pre-filled from TDEE — adjust if needed.</div>
+      </div>
+    </div>
+    <div style="position:absolute; bottom:18px; left:20px; right:20px; display:flex; gap:12px;"><div style="flex:1; height:52px; border-radius:14px; border:1px solid #2E2F31; display:flex; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:700; color:#C9CDD3;">Back</span></div><div style="flex:2; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><i class="ph-bold ph-check" style="font-size:15px; color:#fff;"></i><span style="font-size:15px; font-weight:700; color:#fff;">Confirm</span></div></div>
+  </div>
+</div>
+
+<!-- ROW 3 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1872px; width:1560px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">App settings · notifications · restore backup</div><div style="font-size:14px; color:#5C6068;">account, sync, cloud AI, food learning, data, about — and all notification categories</div></div>
+</div>
+
+<!-- ============ APP SETTINGS · MAIN ============ -->
+<div style="position:absolute; left:40px; top:1914px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">App settings</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 22px 0;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Settings</span></div>
+
+    <div style="padding:12px 16px 0; display:flex; flex-direction:column; gap:2px; overflow:hidden; max-height:620px;">
+
+      <!-- ACCOUNT section label -->
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; padding:0 4px; margin-bottom:6px;">Account</div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden; margin-bottom:9px;">
+        <!-- user row -->
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+          <div style="width:36px; height:36px; border-radius:50%; background:rgba(46,144,250,.18); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><span style="font-size:14px; font-weight:800; color:#5BAAF5;">M</span></div>
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">migs@gmail.com</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Signed in</div></div>
+          <i class="ph-fill ph-check-circle" style="font-size:15px; color:#46BD6B;"></i>
+        </div>
+        <!-- sync -->
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph-fill ph-cloud-check" style="font-size:16px; color:#46BD6B;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Synced 2 min ago</div></div><div style="background:#1E1E22; border:1px solid #2A2A2E; border-radius:8px; padding:4px 10px;"><span style="font-size:11px; font-weight:700; color:#C9CDD3;">Sync Now</span></div></div>
+        <!-- character -->
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-shield" style="font-size:16px; color:#9A9FA8;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Character</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Level 21 · 2,840 XP</div></div><i class="ph ph-caret-right" style="font-size:13px; color:#6A6E76;"></i></div>
+        <!-- notifications -->
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-bell" style="font-size:16px; color:#9A9FA8;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Notification preferences</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Level-up, quests, weight, finance</div></div><i class="ph ph-caret-right" style="font-size:13px; color:#6A6E76;"></i></div>
+        <!-- theme -->
+        <div style="display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-palette" style="font-size:16px; color:#9A9FA8;"></i><span style="flex:1; font-size:13px; font-weight:600; color:#F2F2F3;">Theme</span>
+          <div style="display:flex; gap:4px; background:#141414; border-radius:9px; padding:3px;">
+            <div style="padding:5px 9px; border-radius:7px; background:#2E90FA;"><span style="font-size:10.5px; font-weight:700; color:#fff;">Auto</span></div>
+            <div style="padding:5px 9px;"><span style="font-size:10.5px; font-weight:600; color:#9A9FA8;">Light</span></div>
+            <div style="padding:5px 9px;"><span style="font-size:10.5px; font-weight:600; color:#9A9FA8;">Dark</span></div>
+          </div>
+        </div>
+        <!-- sign out -->
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px;"><i class="ph ph-sign-out" style="font-size:16px; color:#F6685E;"></i><span style="flex:1; font-size:13px; font-weight:600; color:#F6685E;">Sign Out</span></div>
+      </div>
+
+      <!-- CLOUD AI -->
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; padding:0 4px; margin-bottom:6px;">Cloud AI</div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:13px 14px; margin-bottom:9px; display:flex; align-items:center; gap:11px;">
+        <div style="width:34px; height:34px; border-radius:10px; background:rgba(46,144,250,.12); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-cloud" style="font-size:17px; color:#5BAAF5;"></i></div>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:700; color:#F2F2F3;">Cloud AI Coach</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Claude Haiku · primary food parser</div></div>
+        <div style="width:44px; height:25px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2.5px; width:20px; height:20px; border-radius:50%; background:#fff;"></div></div>
+      </div>
+
+      <!-- FOOD LEARNING -->
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; padding:0 4px; margin-bottom:6px;">Food learning</div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:12px 14px; margin-bottom:9px; display:flex; align-items:center; gap:11px;">
+        <i class="ph ph-book-open" style="font-size:16px; color:#9A9FA8;"></i>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Learned foods</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">47 saved</div></div>
+        <div style="background:#1E1E22; border:1px solid #2A2A2E; border-radius:8px; padding:4px 10px;"><span style="font-size:11px; font-weight:700; color:#C9CDD3;">Reset</span></div>
+      </div>
+
+      <!-- DATA -->
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; padding:0 4px; margin-bottom:6px;">Data</div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden;">
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-upload-simple" style="font-size:15px; color:#9A9FA8;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Export data</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Copy to clipboard</div></div><i class="ph ph-caret-right" style="font-size:13px; color:#6A6E76;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-download-simple" style="font-size:15px; color:#26C6DA;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Import data</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Restore from clipboard</div></div><i class="ph ph-caret-right" style="font-size:13px; color:#6A6E76;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-clock-counter-clockwise" style="font-size:15px; color:#26C6DA;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Restore from cloud backup</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Roll back to an earlier snapshot</div></div><i class="ph ph-caret-right" style="font-size:13px; color:#6A6E76;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; padding:12px 14px;"><i class="ph ph-trash" style="font-size:15px; color:#F6685E;"></i><span style="flex:1; font-size:13px; font-weight:600; color:#F6685E;">Clear all data</span></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ============ NOTIFICATIONS SHEET ============ -->
+<div style="position:absolute; left:420px; top:1914px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Notification preferences</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Settings</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:68px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; overflow:hidden;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:12px auto 0;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 18px 0;"><span style="font-size:16px; font-weight:800; color:#F7F7F8;">Notification Preferences</span><i class="ph ph-x" style="font-size:17px; color:#9A9FA8;"></i></div>
+
+      <div style="padding:12px 18px 0; overflow:hidden; max-height:580px; display:flex; flex-direction:column; gap:0;">
+
+        <!-- master switch -->
+        <div style="display:flex; align-items:center; gap:11px; padding:10px 0; border-bottom:1px solid #26262A; margin-bottom:4px;">
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Allow notifications</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">Master switch for all app alerts</div></div>
+          <div style="width:44px; height:25px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2.5px; width:20px; height:20px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+
+        <!-- CHARACTER ACHIEVEMENTS -->
+        <div style="font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; margin:8px 0 4px;">Character achievements</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Level-up notifications</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Alert when you gain a level</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Rank promotion</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Alert when you advance to a new rank</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+
+        <!-- QUESTS -->
+        <div style="font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; margin:8px 0 4px;">Quests</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Quest reminders</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Scheduled alerts for active quests</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Streak-at-risk alerts</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Alert when an overdue quest risks your streak</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+
+        <!-- NUTRITION -->
+        <div style="font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; margin:8px 0 4px;">Nutrition</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Weight log reminder</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Daily reminder to log your weight</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+        <!-- reminder time (sub-item) -->
+        <div style="display:flex; align-items:center; gap:9px; padding:7px 0 7px 14px; border-bottom:1px solid #1E1E22;"><i class="ph ph-clock" style="font-size:13px; color:#9A9FA8;"></i><span style="flex:1; font-size:12px; color:#C9CDD3;">Reminder time</span><span style="font-size:12px; font-weight:700; color:#F2F2F3;">8:00 AM</span><i class="ph ph-caret-right" style="font-size:11px; color:#6A6E76; margin-left:4px;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Calorie goal alert</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Notify when daily goal is reached</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#232327; border:1px solid #2E2E33; position:relative;"><div style="position:absolute; left:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#83878F;"></div></div>
+        </div>
+
+        <!-- FINANCE -->
+        <div style="font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#9A9FA8; margin:8px 0 4px;">Finance</div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Monthly bills reminder</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Remind you to check unpaid bills</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+        <!-- day selector (sub-item) -->
+        <div style="display:flex; align-items:center; gap:9px; padding:7px 0 7px 14px; border-bottom:1px solid #1E1E22;"><span style="flex:1; font-size:12px; color:#C9CDD3;">Remind on day</span><div style="width:28px; height:28px; border-radius:8px; background:#202024; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-minus" style="font-size:10px; color:#9A9FA8;"></i></div><span style="font-size:13px; font-weight:700; color:#F2F2F3; min-width:16px; text-align:center;">1</span><div style="width:28px; height:28px; border-radius:8px; background:#202024; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-plus" style="font-size:10px; color:#9A9FA8;"></i></div><span style="font-size:12px; color:#83878F; margin-left:4px;">of month</span></div>
+        <div style="display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #1E1E22;">
+          <div style="flex:1;"><div style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Budget warnings</div><div style="font-size:10px; color:#83878F; margin-top:1px;">Alert when spending nears limit</div></div>
+          <div style="width:40px; height:23px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:19px; height:19px; border-radius:50%; background:#fff;"></div></div>
+        </div>
+        <!-- budget % slider (sub-item) -->
+        <div style="padding:7px 0 0 14px;"><div style="font-size:11.5px; color:#C9CDD3; margin-bottom:5px;">Warn at <span style="font-weight:700; color:#F2F2F3;">80%</span> of limit</div><div style="height:4px; background:#26262A; border-radius:999px; overflow:hidden; position:relative;"><div style="width:80%; height:100%; background:#2E90FA; border-radius:999px;"></div><div style="position:absolute; left:79%; top:-5px; width:14px; height:14px; border-radius:50%; background:#fff; border:2px solid #2E90FA; box-shadow:0 2px 4px rgba(0,0,0,.3);"></div></div></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ RESTORE BACKUP SHEET ============ -->
+<div style="position:absolute; left:800px; top:1914px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Restore from cloud backup</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Settings</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:68px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; overflow:hidden;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;"><span style="font-size:16px; font-weight:800; color:#F7F7F8;">Restore Backup</span><i class="ph ph-x" style="font-size:17px; color:#9A9FA8;"></i></div>
+      <div style="font-size:12px; color:#9A9FA8; line-height:1.5; margin-bottom:14px;">These are daily immutable snapshots saved to the cloud. Restoring rolls back ALL local data to that point — your current progress will be replaced.</div>
+
+      <!-- backup list -->
+      <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;">
+        <!-- most recent -->
+        <div style="background:#202024; border:1px solid #2E90FA; border-radius:14px; padding:13px 14px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;"><span style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Jun 27, 2026 · 11:52 PM</span><div style="background:rgba(46,144,250,.18); border-radius:999px; padding:2px 8px;"><span style="font-size:9.5px; font-weight:700; color:#5BAAF5;">Latest</span></div></div>
+          <div style="font-size:10.5px; color:#83878F;">247 KB · Level 21 · 12-day streak · 94 weight entries</div>
+        </div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:13px 14px;">
+          <div style="font-size:13.5px; font-weight:700; color:#F2F2F3; margin-bottom:4px;">Jun 26, 2026 · 11:48 PM</div>
+          <div style="font-size:10.5px; color:#83878F;">245 KB · Level 21 · 11-day streak</div>
+        </div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:13px 14px;">
+          <div style="font-size:13.5px; font-weight:700; color:#F2F2F3; margin-bottom:4px;">Jun 25, 2026 · 11:51 PM</div>
+          <div style="font-size:10.5px; color:#83878F;">244 KB · Level 21 · 10-day streak</div>
+        </div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:13px 14px;">
+          <div style="font-size:13.5px; font-weight:700; color:#F2F2F3; margin-bottom:4px;">Jun 24, 2026 · 11:44 PM</div>
+          <div style="font-size:10.5px; color:#83878F;">242 KB · Level 20 · 9-day streak</div>
+        </div>
+      </div>
+
+      <!-- warning -->
+      <div style="background:rgba(246,104,94,.08); border:1px solid rgba(246,104,94,.28); border-radius:12px; padding:11px 13px; display:flex; align-items:flex-start; gap:9px; margin-bottom:14px;"><i class="ph-fill ph-warning" style="font-size:14px; color:#F6685E; flex-shrink:0; margin-top:1px;"></i><span style="font-size:11.5px; color:#C9897A; line-height:1.45;">This will overwrite everything. Your current state is NOT automatically saved first.</span></div>
+
+      <!-- CTA -->
+      <div style="height:50px; border-radius:14px; background:rgba(246,104,94,.14); border:1px solid rgba(246,104,94,.35); display:flex; align-items:center; justify-content:center; gap:8px;"><i class="ph ph-clock-counter-clockwise" style="font-size:16px; color:#F6685E;"></i><span style="font-size:14.5px; font-weight:700; color:#F6685E;">Restore Jun 27 snapshot</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

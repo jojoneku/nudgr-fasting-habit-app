@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;-webkit-font-smoothing:antialiased;}
+  @keyframes scSheetUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+  @keyframes scFade{from{opacity:0;}to{opacity:1;}}
+  @keyframes scPop{0%{transform:scale(.96);opacity:0;}100%{transform:scale(1);opacity:1;}}
+  @keyframes scSpin{to{transform:rotate(360deg);}}
+  @keyframes scDot{0%,80%,100%{opacity:.25;}40%{opacity:1;}}
+  .sc-spin{animation:scSpin .8s linear infinite;}
+  .sc-tap{cursor:pointer; transition:transform .08s ease, background .15s ease, border-color .15s ease;}
+  .sc-tap:active{transform:scale(.97);}
+  input.sc-in{background:transparent; border:none; outline:none; color:#F2F2F3; font-family:'Plus Jakarta Sans',sans-serif; font-size:14px; width:100%;}
+  input.sc-in::placeholder{color:#797D85;}
+  .sc-scroll{scrollbar-width:none; -ms-overflow-style:none;}
+  .sc-scroll::-webkit-scrollbar{width:0; height:0; display:none;}
+</style>
+</helmet>
+
+<div style="min-height:100vh; background:#0A0A0B; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px; padding:28px 16px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="text-align:center;">
+    <div style="font-size:12px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#5C6068;">Nudgr · Focus — interactive</div>
+    <div style="font-size:13px; color:#797D85; margin-top:5px;">Tap the input or a quick-add chip → review the estimate → Log it.</div>
+  </div>
+
+  <!-- PHONE -->
+  <div style="width:360px; height:780px; background:#141414; border-radius:46px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.4), 0 50px 90px -40px rgba(0,0,0,.8);">
+
+    <!-- status bar -->
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 28px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- ============ TODAY ============ -->
+    <sc-if value="{{ isToday }}" hint-placeholder-val="{{ true }}">
+    <div style="display:flex; flex-direction:column; height:calc(100% - 38px);">
+      <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;">
+        <span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div>
+          <i class="ph ph-clock-counter-clockwise sc-tap" style="font-size:20px; color:#8C9097;" onClick="{{ goHistory }}"></i>
+          <i class="ph ph-bookmark-simple sc-tap" style="font-size:20px; color:#8C9097;" onClick="{{ goLibrary }}"></i>
+        </div>
+      </div>
+      <!-- date strip -->
+      <div style="padding:15px 18px 0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0 4px 9px;"><span style="font-size:12px; font-weight:700; color:#7A7F87; letter-spacing:.04em;">June 2026</span><i class="ph ph-calendar-blank" style="font-size:15px; color:#7A7F87;"></i></div>
+        <div style="display:flex; justify-content:space-between; gap:4px;">
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">M</div><div style="font-size:15px; font-weight:700; color:#B6BAC1; margin-top:3px;">22</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">T</div><div style="font-size:15px; font-weight:700; color:#B6BAC1; margin-top:3px;">23</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">W</div><div style="font-size:15px; font-weight:700; color:#B6BAC1; margin-top:3px;">24</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">T</div><div style="font-size:15px; font-weight:700; color:#B6BAC1; margin-top:3px;">25</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">F</div><div style="font-size:15px; font-weight:700; color:#B6BAC1; margin-top:3px;">26</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0; border-radius:13px; background:#2196F3; box-shadow:0 6px 16px -5px rgba(33,150,243,.6);"><div style="font-size:10px; font-weight:700; color:rgba(255,255,255,.8);">S</div><div style="font-size:15px; font-weight:800; color:#fff; margin-top:3px;">27</div></div>
+          <div style="flex:1; text-align:center; padding:7px 0;"><div style="font-size:10px; font-weight:700; color:#6E727A;">S</div><div style="font-size:15px; font-weight:700; color:#54585F; margin-top:3px;">28</div></div>
+        </div>
+      </div>
+      <!-- hero -->
+      <div style="margin:14px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">{{ eatenStr }}</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div></div>
+          <div style="text-align:right; padding-top:4px;"><div style="font-size:22px; font-weight:800; color:#5BAAF5; letter-spacing:-.02em;">{{ remStr }}</div><div style="font-size:11px; font-weight:600; color:#7E828A; margin-top:1px;">left of 2,098</div></div>
+        </div>
+        <div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:{{ calPct }}; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5); border-radius:999px; transition:width .5s ease;"></div></div>
+        <div style="display:flex; gap:9px; margin-top:13px;">
+          <div style="flex:1;"><span style="font-size:13px; font-weight:800; color:#F2F2F3;">{{ pStr }}<span style="font-size:10px; color:#7E828A; font-weight:600;">g</span></span><div style="margin-top:5px; height:4px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:{{ pPct }}; height:100%; background:#4DA3FF; transition:width .5s ease;"></div></div><div style="font-size:10px; font-weight:600; color:#7E828A; margin-top:5px;">Protein</div></div>
+          <div style="flex:1;"><span style="font-size:13px; font-weight:800; color:#F2F2F3;">{{ cStr }}<span style="font-size:10px; color:#7E828A; font-weight:600;">g</span></span><div style="margin-top:5px; height:4px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:{{ cPct }}; height:100%; background:#FFC107; transition:width .5s ease;"></div></div><div style="font-size:10px; font-weight:600; color:#7E828A; margin-top:5px;">Carbs</div></div>
+          <div style="flex:1;"><span style="font-size:13px; font-weight:800; color:#F2F2F3;">{{ fStr }}<span style="font-size:10px; color:#7E828A; font-weight:600;">g</span></span><div style="margin-top:5px; height:4px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:{{ fPct }}; height:100%; background:#FF6B6B; transition:width .5s ease;"></div></div><div style="font-size:10px; font-weight:600; color:#7E828A; margin-top:5px;">Fat</div></div>
+        </div>
+      </div>
+
+      <!-- toast -->
+      <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+        <div style="margin:12px 18px 0; background:rgba(76,175,80,.1); border:1px solid rgba(76,175,80,.3); border-radius:14px; padding:11px 14px; display:flex; align-items:center; gap:10px; animation:scPop .25s ease;"><div style="width:24px; height:24px; border-radius:50%; background:#4CAF50; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-check" style="font-size:13px; color:#fff;"></i></div><div style="flex:1; font-size:13px; font-weight:700; color:#A5D6A7;">{{ toast }}</div><sc-if value="{{ hasUndo }}" hint-placeholder-val="{{ true }}"><span class="sc-tap" style="font-size:12px; font-weight:700; color:#7E828A;" onClick="{{ undo }}">Undo</span></sc-if></div>
+      </sc-if>
+
+      <!-- meal section -->
+      <div style="padding:16px 22px 0;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's log</span><span style="font-size:12px; font-weight:700; color:#7E828A;">{{ eatenStr }} kcal</span></div></div>
+      <div class="sc-scroll" style="padding:11px 18px 90px; display:flex; flex-direction:column; gap:9px; flex:1; min-height:0; overflow-y:auto;">
+        <sc-for list="{{ entries }}" as="e" hint-placeholder-count="2">
+          <div style="background:#1D1D1E; border:1px solid {{ e.border }}; border-radius:17px; padding:13px 15px; box-shadow:{{ e.glow }};">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+              <div style="flex:1;">
+                <div style="font-size:14.5px; font-weight:700; color:#F2F2F3; line-height:1.25;">{{ e.name }}</div>
+                <div style="display:flex; align-items:center; gap:8px; margin-top:5px;">
+                  <span style="font-size:11px; color:#797D85;">{{ e.sub }}</span>
+                  <span style="display:inline-flex; align-items:center; gap:3px; background:{{ e.srcBg }}; border-radius:6px; padding:2px 6px;"><i class="{{ e.srcIcon }}" style="font-size:10px; color:{{ e.srcColor }};"></i><span style="font-size:9.5px; font-weight:700; color:{{ e.srcColor }};">{{ e.srcLabel }}</span></span>
+                </div>
+              </div>
+              <div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3; letter-spacing:-.01em;">{{ e.kcalStr }}</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> {{ e.p }}P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> {{ e.c }}C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> {{ e.f }}F</span><div style="flex:1;"></div><i class="ph ph-dots-three sc-tap" style="font-size:18px; color:{{ e.dotsColor }};" onClick="{{ e.toggle }}"></i></div>
+            <sc-if value="{{ e.menuOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; gap:7px; margin-top:11px; padding-top:11px; border-top:1px solid #2A2A2B;">
+                <div class="sc-tap" style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;" onClick="{{ e.edit }}"><i class="ph ph-pencil-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Edit</span></div>
+                <div class="sc-tap" style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;" onClick="{{ e.save }}"><i class="ph ph-bookmark-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Save</span></div>
+                <div class="sc-tap" style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;" onClick="{{ e.wrong }}"><i class="ph ph-thumbs-down" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Wrong</span></div>
+                <div class="sc-tap" style="flex:1; height:36px; border-radius:10px; background:rgba(244,67,54,.12); display:flex; align-items:center; justify-content:center; gap:5px;" onClick="{{ e.del }}"><i class="ph ph-trash" style="font-size:14px; color:#FF6B6B;"></i><span style="font-size:11.5px; font-weight:700; color:#FF6B6B;">Delete</span></div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+
+      <!-- input bar -->
+      <div style="position:absolute; bottom:62px; left:0; right:0; height:36px; background:linear-gradient(transparent,#141414); pointer-events:none;"></div>
+      <div class="sc-tap" style="position:absolute; bottom:18px; left:16px; right:16px; height:52px; background:#202021; border:1px solid #313132; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;" onClick="{{ openComposer }}">
+        <i class="ph ph-camera" style="font-size:20px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">Log a meal or exercise…</span>
+        <div style="width:38px; height:38px; border-radius:12px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -5px rgba(33,150,243,.6);"><i class="ph-fill ph-arrow-up" style="font-size:17px; color:#fff;"></i></div>
+      </div>
+
+      <!-- ===== COMPOSER SHEET ===== -->
+      <sc-if value="{{ composerOpen }}" hint-placeholder-val="{{ false }}">
+        <div>
+          <div style="position:absolute; inset:0; background:rgba(0,0,0,.55); animation:scFade .2s ease;" onClick="{{ closeComposer }}"></div>
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; animation:scSheetUp .28s cubic-bezier(.22,1,.36,1); box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+            <div style="display:flex; align-items:center; justify-content:space-between; padding:0 2px 6px;"><div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto;"></div></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Log a meal</span><span class="sc-tap" style="font-size:13px; font-weight:700; color:#797D85;" onClick="{{ closeComposer }}">Cancel</span></div>
+
+            <!-- draft bubble -->
+            <sc-if value="{{ hasDraftBubble }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; justify-content:flex-end; margin-bottom:11px;"><div style="max-width:82%; background:#202021; border:1px solid #313132; border-radius:16px 16px 6px 16px; padding:11px 14px;"><span style="font-size:14px; color:#E7E7E9; line-height:1.35;">{{ draft }}</span></div></div>
+            </sc-if>
+
+            <!-- analyzing -->
+            <sc-if value="{{ isAnalyzing }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex; align-items:center; gap:9px; padding:10px 4px 14px;"><div class="sc-spin" style="width:16px; height:16px; border-radius:50%; border:2px solid #2E2F31; border-top-color:#5BAAF5;"></div><span style="font-size:13px; color:#9BA0A8; font-weight:600;">Analyzing your meal…</span></div>
+            </sc-if>
+
+            <!-- estimate -->
+            <sc-if value="{{ hasEstimate }}" hint-placeholder-val="{{ false }}">
+              <div style="background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:15px 16px 14px; animation:scPop .25s ease; margin-bottom:6px;">
+                <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><i class="ph-fill ph-sparkle" style="font-size:13px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#5BAAF5;">Estimate</span></div>
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                  <sc-for list="{{ estItems }}" as="it" hint-placeholder-count="3">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">{{ it.name }}</div><div style="font-size:10px; color:#797D85; margin-top:2px;">{{ it.sub }}</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">{{ it.kcalStr }}</span></div>
+                  </sc-for>
+                </div>
+                <div style="margin-top:13px; padding-top:12px; border-top:1px solid #2E2F31; display:flex; align-items:center; justify-content:space-between;">
+                  <div style="display:flex; align-items:center; gap:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> {{ estP }}P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> {{ estC }}C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> {{ estF }}F</span></div>
+                  <span style="font-size:16px; font-weight:800; color:#F2F2F3;">{{ estTotalStr }} <span style="font-size:11px; color:#797D85; font-weight:600;">kcal</span></span>
+                </div>
+                <div style="margin-top:13px; display:flex; gap:9px;">
+                  <div class="sc-tap" style="flex:1; height:44px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);" onClick="{{ logIt }}"><i class="ph-bold ph-check" style="font-size:15px; color:#fff;"></i><span style="font-size:14px; font-weight:700; color:#fff;">Log it</span></div>
+                  <div class="sc-tap" style="width:104px; height:44px; border-radius:13px; background:#252628; display:flex; align-items:center; justify-content:center; gap:6px;" onClick="{{ adjust }}"><i class="ph ph-pencil-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Edit</span></div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- quick chips (compose phase) -->
+            <sc-if value="{{ isCompose }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:13px;">
+                  <div class="sc-tap" style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;" onClick="{{ quickEggs }}"><i class="ph-fill ph-egg" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">2 eggs &amp; toast</span></div>
+                  <div class="sc-tap" style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;" onClick="{{ quickCoffee }}"><i class="ph-fill ph-coffee" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">Flat white</span></div>
+                  <div class="sc-tap" style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;" onClick="{{ quickRice }}"><i class="ph-fill ph-bowl-food" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">Rice &amp; chicken</span></div>
+                </div>
+              </div>
+            </sc-if>
+
+            <!-- input row -->
+            <div style="height:52px; background:#202021; border:1.5px solid {{ inputBorder }}; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;">
+              <i class="ph ph-camera" style="font-size:20px; color:#8C9097;"></i>
+              <input class="sc-in" value="{{ draft }}" placeholder="{{ inputPlaceholder }}" onInput="{{ onDraftInput }}" onKeyDown="{{ onKeyDown }}" autofocus="{{ true }}">
+              <div class="sc-tap" style="width:38px; height:38px; border-radius:12px; background:{{ sendBg }}; display:flex; align-items:center; justify-content:center;" onClick="{{ send }}"><i class="ph-fill ph-arrow-up" style="font-size:17px; color:#fff;"></i></div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ============ HISTORY ============ -->
+    <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+    <div style="display:flex; flex-direction:column; height:calc(100% - 38px);">
+      <div style="padding:12px 22px 6px; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left sc-tap" style="font-size:20px; color:#8C9097;" onClick="{{ goToday }}"></i><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">History</span></div>
+
+      <div class="sc-scroll" style="flex:1; min-height:0; overflow-y:auto; padding:6px 18px 28px;">
+
+        <!-- GOAL STATUS CARD -->
+        <div style="position:relative; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:15px 16px 15px 18px; overflow:hidden;">
+          <div style="position:absolute; left:0; top:0; bottom:0; width:4px; background:#5BAAF5;"></div>
+          <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:11px; font-weight:600; color:#9BA0A8;">Cut · 2,098 target</span><span style="display:inline-flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-check-circle" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:10.5px; font-weight:700; color:#5BAAF5;">On track</span></span></div>
+          <div style="display:flex; align-items:baseline; gap:6px; margin-top:11px;"><span style="font-size:34px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; line-height:1;">1,842</span><span style="font-size:12px; font-weight:600; color:#7E828A;">kcal</span></div>
+          <div style="font-size:11px; color:#7E828A; margin-top:2px;">7-day average</div>
+          <div style="font-size:12px; font-weight:700; color:#5BAAF5; margin-top:7px;">−256 kcal vs target</div>
+        </div>
+
+        <!-- KPI TILES -->
+        <div style="display:flex; gap:8px; margin-top:11px;">
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:11px 12px 12px;"><i class="ph ph-fire" style="font-size:15px; color:#5BAAF5;"></i><div style="font-size:15px; font-weight:800; color:#F2F2F3; letter-spacing:-.02em; margin-top:7px;">−256</div><div style="font-size:9.5px; color:#7E828A; margin-top:5px; line-height:1.2;">Avg vs target</div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:11px 12px 12px;"><i class="ph ph-trophy" style="font-size:15px; color:#5BAAF5;"></i><div style="font-size:15px; font-weight:800; color:#F2F2F3; letter-spacing:-.02em; margin-top:7px;">5/7</div><div style="font-size:9.5px; color:#7E828A; margin-top:5px; line-height:1.2;">Protein goal hit</div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:11px 12px 12px;"><i class="ph-fill ph-flame" style="font-size:15px; color:#FF8A4C;"></i><div style="font-size:15px; font-weight:800; color:#F2F2F3; letter-spacing:-.02em; margin-top:7px;">12<span style="font-size:10px; color:#7E828A; font-weight:600;">d</span></div><div style="font-size:9.5px; color:#7E828A; margin-top:5px; line-height:1.2;">Log streak</div></div>
+        </div>
+
+        <!-- CALORIE TREND -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Calorie trend</span><span style="font-size:11px; font-weight:600; color:#7E828A;">14 days</span></div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px 14px 13px;">
+          <div style="position:relative; height:118px;">
+            <div style="position:absolute; left:0; right:0; bottom:76.8%; height:7.7%; background:rgba(33,150,243,.10);"></div>
+            <div style="position:absolute; left:0; right:0; bottom:80.7%; border-top:1px dashed rgba(91,170,245,.5);"></div>
+            <div style="position:absolute; inset:0; display:flex; align-items:flex-end; gap:3px;">
+              <div style="flex:1; height:73%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:80%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,#42A5F5,#1E88E5);"></div>
+              <div style="flex:1; height:68%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:86%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,#FF6B6B,#E53935);"></div>
+              <div style="flex:1; height:65%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:75%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:70%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:77%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,#42A5F5,#1E88E5);"></div>
+              <div style="flex:1; height:61%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:58%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:89%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,#FF6B6B,#E53935);"></div>
+              <div style="flex:1; height:57%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:68%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28);"></div>
+              <div style="flex:1; height:22%; border-radius:3px 3px 0 0; background:rgba(91,170,245,.28); border:1px solid rgba(91,170,245,.7);"></div>
+            </div>
+          </div>
+          <div style="display:flex; gap:3px; margin-top:7px;">
+            <span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">S</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">M</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">T</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">W</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">T</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">F</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">S</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">S</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">M</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">T</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">W</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">T</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:700; color:#6E727A;">F</span><span style="flex:1; text-align:center; font-size:8.5px; font-weight:800; color:#5BAAF5;">S</span>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; margin-top:12px;">
+            <span style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600; color:#9BA0A8;"><span style="width:8px; height:8px; border-radius:50%; background:#42A5F5;"></span>On track</span>
+            <span style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600; color:#9BA0A8;"><span style="width:8px; height:8px; border-radius:50%; background:rgba(91,170,245,.28);"></span>Under</span>
+            <span style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600; color:#9BA0A8;"><span style="width:8px; height:8px; border-radius:50%; background:#E53935;"></span>Over</span>
+            <span style="display:flex; align-items:center; gap:5px; font-size:10px; font-weight:600; color:#9BA0A8;"><span style="width:14px; height:8px; border-radius:2px; background:rgba(33,150,243,.18);"></span>Target band</span>
+          </div>
+        </div>
+
+        <!-- GOAL CHECKS -->
+        <div style="margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Goal checks</span></div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:4px 15px;">
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #262627;"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:11px; color:#7E828A;">Protein goal</div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">5/7 days met</div></div></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #262627;"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:11px; color:#7E828A;">Logging streak</div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">7/7 days logged</div></div></div>
+          <div style="display:flex; align-items:center; gap:12px; padding:11px 0;"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:11px; color:#7E828A;">Weight trend</div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Trending down ↓</div></div></div>
+        </div>
+
+        <!-- MACRO AVERAGES -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Macro averages</span><span style="font-size:11px; font-weight:600; color:#7E828A;">7d avg</span></div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px 15px 14px;">
+          <div style="display:flex; height:7px; border-radius:4px; overflow:hidden;"><div style="flex:118; background:#4DA3FF;"></div><div style="flex:168; background:#FFC107;"></div><div style="flex:56; background:#FF6B6B;"></div></div>
+          <div style="display:flex; gap:10px; margin-top:15px;">
+            <div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#4DA3FF;">118<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:1px;">Protein</div><div style="margin-top:6px; height:3px; background:rgba(77,163,255,.18); border-radius:999px; overflow:hidden;"><div style="width:84%; height:100%; background:#4DA3FF;"></div></div><div style="font-size:9px; color:#7E828A; margin-top:4px;">of 140g</div></div>
+            <div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#FFC107;">168<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:1px;">Carbs</div><div style="margin-top:6px; height:3px; background:rgba(255,193,7,.18); border-radius:999px; overflow:hidden;"><div style="width:80%; height:100%; background:#FFC107;"></div></div><div style="font-size:9px; color:#7E828A; margin-top:4px;">of 210g</div></div>
+            <div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#FF6B6B;">56<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:1px;">Fat</div><div style="margin-top:6px; height:3px; background:rgba(255,107,107,.18); border-radius:999px; overflow:hidden;"><div style="width:80%; height:100%; background:#FF6B6B;"></div></div><div style="font-size:9px; color:#7E828A; margin-top:4px;">of 70g</div></div>
+          </div>
+        </div>
+
+        <!-- WEIGHT -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Weight</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">View all</span></div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px 15px 13px;">
+          <div style="display:flex; align-items:center; gap:10px;"><span style="font-size:24px; font-weight:800; color:#F2F2F3; letter-spacing:-.02em;">72.4 <span style="font-size:13px; color:#7E828A;">kg</span></span><span style="background:rgba(33,150,243,.14); border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; color:#5BAAF5;">−0.6 kg</span></div>
+          <svg viewBox="0 0 300 56" preserveAspectRatio="none" width="100%" height="56" style="margin-top:10px; display:block;">
+            <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(91,170,245,.22)"></stop><stop offset="1" stop-color="rgba(91,170,245,0)"></stop></linearGradient></defs>
+            <path d="M0,12 L50,16 L100,20 L150,26 L200,32 L250,38 L300,42 L300,56 L0,56 Z" fill="url(#wg)"></path>
+            <polyline points="0,12 50,16 100,20 150,26 200,32 250,38 300,42" fill="none" stroke="#5BAAF5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            <circle cx="300" cy="42" r="3.5" fill="#5BAAF5"></circle>
+          </svg>
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:7px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; color:#E7E7E9;">72.4 kg</span><span style="font-size:11px; color:#7E828A;">Today</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; color:#E7E7E9;">72.7 kg</span><span style="font-size:11px; color:#7E828A;">2d ago</span></div>
+            <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; color:#E7E7E9;">73.0 kg</span><span style="font-size:11px; color:#7E828A;">5d ago</span></div>
+          </div>
+        </div>
+
+        <!-- BODY MEASUREMENTS -->
+        <div style="display:flex; align-items:center; justify-content:space-between; margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Body measurements</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">View all</span></div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px;">
+          <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:22px; font-weight:800; color:#F2F2F3; letter-spacing:-.02em;">Waist 81 <span style="font-size:12px; color:#7E828A;">cm</span></span><span style="background:rgba(33,150,243,.14); border-radius:999px; padding:3px 9px; font-size:11px; font-weight:700; color:#5BAAF5;">~18% BF</span></div>
+          <div style="margin-top:9px;"><span style="display:inline-flex; background:rgba(33,150,243,.12); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:600; color:#5BAAF5;">Waist trending down ↓</span></div>
+          <div style="font-size:11px; color:#7E828A; margin-top:10px;">Logged Jun 24, 2026</div>
+        </div>
+
+        <!-- RECENT DAYS -->
+        <div style="margin:20px 2px 10px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Recent days</span></div>
+        <div style="display:flex; gap:6px; margin-bottom:11px;">
+          <span style="padding:6px 12px; border-radius:999px; background:rgba(33,150,243,.15); border:1px solid #2196F3; font-size:11.5px; font-weight:600; color:#5BAAF5;">Newest</span>
+          <span style="padding:6px 12px; border-radius:999px; background:#252628; font-size:11.5px; font-weight:500; color:#9BA0A8;">Oldest</span>
+          <span style="padding:6px 12px; border-radius:999px; background:#252628; font-size:11.5px; font-weight:500; color:#9BA0A8;">Cal ↑</span>
+          <span style="padding:6px 12px; border-radius:999px; background:#252628; font-size:11.5px; font-weight:500; color:#9BA0A8;">Cal ↓</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:9px;">
+          <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:13px 15px 14px;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Fri, Jun 26</div><div style="font-size:10px; color:#7E828A; margin-top:2px;">4 entries</div></div><div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#F2F2F3;">1,760 <span style="font-size:10px; color:#7E828A; font-weight:600;">kcal</span></div><span style="display:inline-block; margin-top:4px; background:rgba(255,255,255,.06); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; color:#9BA0A8;">84%</span></div></div>
+            <div style="margin-top:10px; height:3px; background:#2C2D2F; border-radius:999px; overflow:hidden;"><div style="width:84%; height:100%; background:#5BAAF5;"></div></div>
+            <div style="display:flex; gap:6px; margin-top:9px;"><span style="background:rgba(77,163,255,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#4DA3FF;">P 132g</span><span style="background:rgba(255,193,7,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FFC107;">C 150g</span><span style="background:rgba(255,107,107,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FF6B6B;">F 58g</span></div>
+          </div>
+          <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:13px 15px 14px;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Thu, Jun 25</div><div style="font-size:10px; color:#7E828A; margin-top:2px;">3 entries</div></div><div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#F2F2F3;">1,470 <span style="font-size:10px; color:#7E828A; font-weight:600;">kcal</span></div><span style="display:inline-block; margin-top:4px; background:rgba(255,255,255,.06); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; color:#9BA0A8;">70%</span></div></div>
+            <div style="margin-top:10px; height:3px; background:#2C2D2F; border-radius:999px; overflow:hidden;"><div style="width:70%; height:100%; background:#5BAAF5;"></div></div>
+            <div style="display:flex; gap:6px; margin-top:9px;"><span style="background:rgba(77,163,255,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#4DA3FF;">P 110g</span><span style="background:rgba(255,193,7,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FFC107;">C 120g</span><span style="background:rgba(255,107,107,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FF6B6B;">F 44g</span></div>
+          </div>
+          <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:13px 15px 14px;">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Wed, Jun 24</div><div style="font-size:10px; color:#7E828A; margin-top:2px;">5 entries</div></div><div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#F2F2F3;">2,310 <span style="font-size:10px; color:#7E828A; font-weight:600;">kcal</span></div><span style="display:inline-block; margin-top:4px; background:rgba(244,67,54,.14); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:700; color:#FF6B6B;">110%</span></div></div>
+            <div style="margin-top:10px; height:3px; background:#2C2D2F; border-radius:999px; overflow:hidden;"><div style="width:100%; height:100%; background:#FF6B6B;"></div></div>
+            <div style="display:flex; gap:6px; margin-top:9px;"><span style="background:rgba(77,163,255,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#4DA3FF;">P 150g</span><span style="background:rgba(255,193,7,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FFC107;">C 210g</span><span style="background:rgba(255,107,107,.12); border-radius:999px; padding:2px 8px; font-size:10px; font-weight:600; color:#FF6B6B;">F 70g</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ============ LIBRARY ============ -->
+    <sc-if value="{{ isLibrary }}" hint-placeholder-val="{{ false }}">
+    <div>
+      <div style="padding:12px 22px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left sc-tap" style="font-size:20px; color:#8C9097;" onClick="{{ goToday }}"></i><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Library</span></div>
+      <div style="margin:16px 18px 0; height:46px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; display:flex; align-items:center; gap:10px; padding:0 14px;"><i class="ph ph-magnifying-glass" style="font-size:17px; color:#797D85;"></i><span style="font-size:14px; color:#797D85;">Search saved foods &amp; meals</span></div>
+      <div style="margin:14px 18px 0; display:flex; gap:8px;">
+        <div style="padding:7px 15px; border-radius:999px; background:#2196F3; font-size:12px; font-weight:700; color:#fff;">Meals</div>
+        <div style="padding:7px 15px; border-radius:999px; background:#1D1D1E; border:1px solid #2A2A2B; font-size:12px; font-weight:700; color:#9BA0A8;">Foods</div>
+        <div style="padding:7px 15px; border-radius:999px; background:#1D1D1E; border:1px solid #2A2A2B; font-size:12px; font-weight:700; color:#9BA0A8;">Recent</div>
+      </div>
+      <div class="sc-scroll" style="padding:16px 18px 0; display:flex; flex-direction:column; gap:9px; max-height:530px; overflow-y:auto;">
+        <sc-for list="{{ library }}" as="m" hint-placeholder-count="4">
+          <div class="sc-tap" style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:14px 15px;" onClick="{{ m.add }}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;"><div style="flex:1;"><div style="display:flex; align-items:center; gap:7px;"><i class="ph-fill ph-bowl-food" style="font-size:14px; color:#FFC107;"></i><span style="font-size:14.5px; font-weight:700; color:#F2F2F3;">{{ m.name }}</span></div><div style="font-size:11px; color:#797D85; margin-top:4px;">{{ m.sub }}</div></div><div style="width:30px; height:30px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-plus" style="font-size:14px; color:#5BAAF5;"></i></div></div>
+            <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:12px; font-weight:800; color:#F2F2F3;">{{ m.kcalStr }} <span style="font-size:10px; color:#797D85; font-weight:600;">kcal</span></span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> {{ m.p }}P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> {{ m.c }}C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> {{ m.f }}F</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'today',
+    composerOpen: false,
+    phase: 'compose',      // compose | analyzing | estimate
+    draft: '',
+    estimate: null,
+    toast: null,
+    openMenuId: null,
+    editingId: null,
+    entries: [
+      { id: 1, name: 'White rice, fried fish & uni', sub: '237g · 9:16 AM', kcal: 431, p: 29, c: 46, f: 15, source: 'cloud', isNew: false },
+      { id: 2, name: 'Bear Brand milk powder', sub: '30g · 9:40 AM', kcal: 150, p: 4, c: 22, f: 5, source: 'local', isNew: false },
+    ],
+  };
+
+  _id = 100;
+  _toastTimer = null;
+
+  // ── derived totals ──────────────────────────────────────────────
+  get _totals() {
+    return this.state.entries.reduce(
+      (a, e) => ({ kcal: a.kcal + e.kcal, p: a.p + e.p, c: a.c + e.c, f: a.f + e.f }),
+      { kcal: 0, p: 0, c: 0, f: 0 }
+    );
+  }
+  _comma(n) { return Math.round(n).toLocaleString('en-US'); }
+  _pct(v, goal) { return Math.min(100, Math.round((v / goal) * 100)) + '%'; }
+
+  // ── estimate builder (demo NLP) ─────────────────────────────────
+  _estimateFor(text) {
+    const t = (text || '').toLowerCase();
+    const items = [];
+    if (/egg/.test(t))                     items.push({ name: 'Fried eggs ×2', sub: 'P13 · C1 · F15', kcal: 180, p: 13, c: 1, f: 15 });
+    if (/toast|bread/.test(t))             items.push({ name: 'Toast ×2', sub: 'P8 · C30 · F4', kcal: 180, p: 8, c: 30, f: 4 });
+    if (/flat white|latte|coffee|cappu/.test(t)) items.push({ name: 'Flat white · oat', sub: 'P6 · C12 · F7', kcal: 120, p: 6, c: 12, f: 7 });
+    if (/chicken|adobo/.test(t))           items.push({ name: 'Chicken adobo', sub: 'P40 · C8 · F30', kcal: 470, p: 40, c: 8, f: 30 });
+    if (/rice/.test(t))                    items.push({ name: 'White rice 1 cup', sub: 'P4 · C45 · F0', kcal: 205, p: 4, c: 45, f: 0 });
+    if (/milk/.test(t))                    items.push({ name: 'Milk powder 30g', sub: 'P4 · C22 · F5', kcal: 150, p: 4, c: 22, f: 5 });
+    if (/banana/.test(t))                  items.push({ name: 'Banana', sub: 'P1 · C27 · F0', kcal: 105, p: 1, c: 27, f: 0 });
+    if (items.length === 0) {
+      const nm = (text || 'Meal').trim();
+      items.push({ name: nm.charAt(0).toUpperCase() + nm.slice(1), sub: 'P12 · C30 · F8', kcal: 250, p: 12, c: 30, f: 8 });
+    }
+    const tot = items.reduce((a, i) => ({ kcal: a.kcal + i.kcal, p: a.p + i.p, c: a.c + i.c, f: a.f + i.f }), { kcal: 0, p: 0, c: 0, f: 0 });
+    let name;
+    if (items.length === 1) name = items[0].name;
+    else { const nm = (text || '').trim(); name = nm ? nm.charAt(0).toUpperCase() + nm.slice(1) : 'Meal'; }
+    return { items, total: tot.kcal, p: tot.p, c: tot.c, f: tot.f, name };
+  }
+
+  // ── actions ─────────────────────────────────────────────────────
+  openComposer = () => this.setState({ composerOpen: true, phase: 'compose', draft: '', estimate: null, editingId: null });
+  closeComposer = () => this.setState({ composerOpen: false, phase: 'compose', draft: '', estimate: null, editingId: null });
+  onDraftInput = (e) => this.setState({ draft: e.target.value });
+  onKeyDown = (e) => { if (e.key === 'Enter') this.send(); };
+
+  send = () => {
+    const text = (this.state.draft || '').trim();
+    if (!text || this.state.phase === 'analyzing') return;
+    this.setState({ phase: 'analyzing' });
+    setTimeout(() => {
+      if (!this.state.composerOpen) return;
+      this.setState({ phase: 'estimate', estimate: this._estimateFor(text) });
+    }, 950);
+  };
+
+  _quick = (text) => { this.setState({ draft: text }, () => this.send()); };
+  quickEggs = () => this._quick('2 eggs, 2 toast and a flat white');
+  quickCoffee = () => this._quick('a flat white with oat milk');
+  quickRice = () => this._quick('chicken adobo with rice');
+
+  adjust = () => this.setState({ phase: 'compose' });
+
+  logIt = () => {
+    const est = this.state.estimate;
+    if (!est) return;
+    const editId = this.state.editingId;
+    const made = {
+      name: est.name,
+      sub: `${est.items.length} item${est.items.length > 1 ? 's' : ''} · 9:50 AM`,
+      kcal: est.total, p: est.p, c: est.c, f: est.f, source: 'cloud',
+    };
+    let entries, toast, undoFn;
+    if (editId) {
+      entries = this.state.entries.map((e) => (e.id === editId ? { ...e, ...made, isNew: true } : { ...e, isNew: false }));
+      toast = `Updated · ${this._comma(est.total)} kcal`;
+      undoFn = null;
+    } else {
+      const id = ++this._id;
+      entries = [{ id, ...made, isNew: true }, ...this.state.entries.map((e) => ({ ...e, isNew: false }))];
+      toast = `Logged · ${this._comma(est.total)} kcal`;
+      undoFn = () => this.setState((st) => ({ entries: st.entries.filter((e) => e.id !== id) }));
+    }
+    this.setState({ entries, composerOpen: false, phase: 'compose', draft: '', estimate: null, editingId: null });
+    this._showToast(toast, undoFn);
+  };
+
+  undo = () => {
+    const fn = this._undoFn;
+    this._undoFn = null;
+    clearTimeout(this._toastTimer);
+    if (fn) fn();
+    this.setState({ toast: null });
+  };
+
+  _showToast(text, undoFn) {
+    this._undoFn = undoFn || null;
+    clearTimeout(this._toastTimer);
+    this.setState({ toast: text });
+    this._toastTimer = setTimeout(() => { this._undoFn = null; this.setState({ toast: null }); }, 4000);
+  }
+
+  addFromLibrary = (m) => {
+    const id = ++this._id;
+    const entry = { id, name: m.name, sub: '9:50 AM', kcal: m.kcal, p: m.p, c: m.c, f: m.f, source: 'library', isNew: true };
+    const entries = [entry, ...this.state.entries.map((e) => ({ ...e, isNew: false }))];
+    this.setState({ entries, screen: 'today' });
+    this._showToast(`${m.name} logged · ${this._comma(m.kcal)} kcal`, () => this.setState((st) => ({ entries: st.entries.filter((e) => e.id !== id) })));
+  };
+
+  toggleMenu = (id) => this.setState((s) => ({ openMenuId: s.openMenuId === id ? null : id }));
+
+  deleteEntry = (id) => {
+    const idx = this.state.entries.findIndex((e) => e.id === id);
+    if (idx < 0) return;
+    const removed = this.state.entries[idx];
+    const entries = this.state.entries.filter((e) => e.id !== id);
+    this.setState({ entries, openMenuId: null });
+    this._showToast(`Removed · ${removed.name}`, () => this.setState((st) => {
+      const arr = [...st.entries];
+      arr.splice(Math.min(idx, arr.length), 0, removed);
+      return { entries: arr };
+    }));
+  };
+
+  saveEntry = (e) => { this.setState({ openMenuId: null }); this._showToast(`Saved “${e.name}” to library`, null); };
+  wrongEntry = (e) => { this.setState({ openMenuId: null }); this._showToast('Thanks — we’ll improve the match', null); };
+  editEntry = (e) => this.setState({ composerOpen: true, phase: 'compose', draft: e.name, estimate: null, editingId: e.id, openMenuId: null });
+
+  _srcMeta(src) {
+    if (src === 'library') return { label: 'Library', color: '#FFCA28', bg: 'rgba(255,202,40,.12)', icon: 'ph-fill ph-bookmark-simple' };
+    if (src === 'local')   return { label: 'Local', color: '#9BA0A8', bg: 'rgba(255,255,255,.06)', icon: 'ph-bold ph-device-mobile' };
+    return { label: 'Cloud', color: '#5BAAF5', bg: 'rgba(33,150,243,.14)', icon: 'ph-fill ph-cloud' };
+  }
+
+  goToday = () => this.setState({ screen: 'today' });
+  goHistory = () => this.setState({ screen: 'history' });
+  goLibrary = () => this.setState({ screen: 'library' });
+
+  renderVals() {
+    const s = this.state;
+    const t = this._totals;
+    const GOAL = 2098, PG = 140, CG = 210, FG = 70;
+    const est = s.estimate;
+    const lib = [
+      { name: 'Rice & fried fish bowl', sub: '3 items · used 14×', kcal: 431, p: 29, c: 46, f: 15 },
+      { name: 'Eggs & toast combo', sub: '3 items · used 31×', kcal: 480, p: 27, c: 43, f: 37 },
+      { name: 'Bear Brand milk powder', sub: 'Single food · used 8×', kcal: 150, p: 4, c: 22, f: 5 },
+      { name: 'Chicken adobo & rice', sub: '2 items · used 22×', kcal: 1000, p: 84, c: 82, f: 42 },
+    ];
+
+    return {
+      isToday: s.screen === 'today',
+      isHistory: s.screen === 'history',
+      isLibrary: s.screen === 'library',
+
+      eatenStr: this._comma(t.kcal),
+      remStr: this._comma(Math.max(0, GOAL - t.kcal)),
+      calPct: this._pct(t.kcal, GOAL),
+      pStr: Math.round(t.p), cStr: Math.round(t.c), fStr: Math.round(t.f),
+      pPct: this._pct(t.p, PG), cPct: this._pct(t.c, CG), fPct: this._pct(t.f, FG),
+
+      entries: s.entries.map((e) => {
+        const m = this._srcMeta(e.source);
+        return {
+          ...e,
+          kcalStr: this._comma(e.kcal),
+          border: e.isNew ? 'rgba(33,150,243,.4)' : '#2A2A2B',
+          glow: e.isNew ? '0 0 0 3px rgba(33,150,243,.08)' : 'none',
+          srcLabel: m.label, srcColor: m.color, srcBg: m.bg, srcIcon: m.icon,
+          menuOpen: s.openMenuId === e.id,
+          dotsColor: s.openMenuId === e.id ? '#5BAAF5' : '#6E727A',
+          toggle: () => this.toggleMenu(e.id),
+          edit: () => this.editEntry(e),
+          save: () => this.saveEntry(e),
+          wrong: () => this.wrongEntry(e),
+          del: () => this.deleteEntry(e.id),
+        };
+      }),
+
+      toast: s.toast,
+      hasUndo: !!s.toast && !!this._undoFn,
+
+      composerOpen: s.composerOpen,
+      isCompose: s.phase === 'compose',
+      isAnalyzing: s.phase === 'analyzing',
+      hasEstimate: s.phase === 'estimate' && !!est,
+      hasDraftBubble: (s.phase === 'analyzing' || s.phase === 'estimate') && !!(s.draft || '').trim(),
+      draft: s.draft,
+      estItems: est ? est.items.map((i) => ({ ...i, kcalStr: this._comma(i.kcal) })) : [],
+      estTotalStr: est ? this._comma(est.total) : '',
+      estP: est ? est.p : 0, estC: est ? est.c : 0, estF: est ? est.f : 0,
+
+      inputPlaceholder: s.phase === 'estimate' ? 'Add another item…' : 'What did you eat?',
+      inputBorder: s.phase === 'compose' ? '#2196F3' : '#313132',
+      sendBg: (s.draft || '').trim() ? '#2196F3' : '#3A3B3D',
+
+      library: lib.map((m) => ({ ...m, kcalStr: this._comma(m.kcal), add: () => this.addFromLibrary(m) })),
+
+      openComposer: this.openComposer,
+      closeComposer: this.closeComposer,
+      onDraftInput: this.onDraftInput,
+      onKeyDown: this.onKeyDown,
+      send: this.send,
+      quickEggs: this.quickEggs, quickCoffee: this.quickCoffee, quickRice: this.quickRice,
+      adjust: this.adjust, logIt: this.logIt, undo: this.undo,
+      goToday: this.goToday, goHistory: this.goHistory, goLibrary: this.goLibrary,
+    };
+  }
+}
+</script>
+</body>
+</html>

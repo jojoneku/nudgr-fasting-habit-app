@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1700px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Tracking · capture · library · setup</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:940px; line-height:1.5;">The remaining nutrition surfaces, in the Focus style. Top row: the weight &amp; body-measurement logs that History links to. Bottom row: photo logging (snap → estimate), saving a meal as a template, and the first-run AI setup.</div>
+</div>
+
+<!-- ROW 1 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1700px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Body tracking</div><div style="font-size:14px; color:#5C6068;">weight &amp; measurements — opened from History</div></div>
+</div>
+
+<!-- ============ WEIGHT LOG ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Weight log</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Weight log</span></div>
+    <div style="padding:16px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 12px;"><div style="font-size:10px; color:#7E828A;">Current</div><div style="font-size:16px; font-weight:800; color:#F2F2F3; margin-top:3px;">72.4<span style="font-size:11px; color:#7E828A; font-weight:600;">kg</span></div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 12px;"><div style="font-size:10px; color:#7E828A;">Total change</div><div style="font-size:16px; font-weight:800; color:#5BAAF5; margin-top:3px;">−2.6<span style="font-size:11px; color:#7E828A; font-weight:600;">kg</span></div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 12px;"><div style="font-size:10px; color:#7E828A;">Entries</div><div style="font-size:16px; font-weight:800; color:#F2F2F3; margin-top:3px;">18</div></div>
+    </div>
+    <div style="margin:14px 18px 0; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:14px 15px;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Trend</div>
+      <svg viewBox="0 0 300 120" preserveAspectRatio="none" width="100%" height="120" style="margin-top:10px; display:block;">
+        <defs><linearGradient id="wgl" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(91,170,245,.22)"></stop><stop offset="1" stop-color="rgba(91,170,245,0)"></stop></linearGradient></defs>
+        <path d="M0,22 L43,30 L86,28 L129,46 L172,58 L215,74 L258,82 L300,96 L300,120 L0,120 Z" fill="url(#wgl)"></path>
+        <polyline points="0,22 43,30 86,28 129,46 172,58 215,74 258,82 300,96" fill="none" stroke="#5BAAF5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline>
+        <circle cx="300" cy="96" r="3.5" fill="#5BAAF5"></circle>
+      </svg>
+    </div>
+    <div style="padding:16px 22px 8px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Entries</span></div>
+    <div style="padding:0 18px; display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; align-items:center; padding:11px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">72.4 kg</span><span style="font-size:11px; color:#7E828A;">Today</span><i class="ph ph-x" style="font-size:13px; color:#5A5E66; margin-left:12px;"></i></div>
+      <div style="display:flex; align-items:center; padding:11px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">72.7 kg</span><span style="font-size:11px; color:#7E828A;">2d ago</span><i class="ph ph-x" style="font-size:13px; color:#5A5E66; margin-left:12px;"></i></div>
+      <div style="display:flex; align-items:center; padding:11px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">73.0 kg</span><span style="font-size:11px; color:#7E828A;">5d ago</span><i class="ph ph-x" style="font-size:13px; color:#5A5E66; margin-left:12px;"></i></div>
+    </div>
+    <div style="position:absolute; bottom:24px; right:22px; width:56px; height:56px; border-radius:18px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -8px rgba(33,150,243,.7);"><i class="ph-bold ph-plus" style="font-size:24px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ============ LOG WEIGHT SHEET ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Log weight</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Weight log</span></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 18px 18px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 14px;"></div>
+      <div style="font-size:15px; font-weight:800; color:#F2F2F3; margin-bottom:18px;">Log weight</div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:22px;">
+        <div style="width:44px; height:44px; border-radius:14px; background:#202021; border:1px solid #313132; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-minus" style="font-size:18px; color:#9BA0A8;"></i></div>
+        <div style="text-align:center;"><div style="display:flex; align-items:baseline; gap:4px;"><span style="font-size:46px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; line-height:1;">72.4</span><span style="font-size:15px; font-weight:600; color:#7E828A;">kg</span></div></div>
+        <div style="width:44px; height:44px; border-radius:14px; background:#202021; border:1px solid #313132; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-plus" style="font-size:18px; color:#9BA0A8;"></i></div>
+      </div>
+      <div style="margin-top:20px; display:flex; align-items:center; gap:10px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px; padding:13px 14px;"><i class="ph ph-calendar-blank" style="font-size:17px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#E7E7E9;">Today · Jun 28, 2026</span><i class="ph ph-caret-right" style="font-size:14px; color:#5A5E66;"></i></div>
+      <div style="margin-top:18px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Save entry</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BODY MEASUREMENTS ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Body measurements</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Measurements</span></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:20px; padding:16px 17px;">
+      <div style="display:flex; align-items:flex-start; justify-content:space-between;"><div><div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#7E828A;">Waist</div><div style="display:flex; align-items:baseline; gap:6px; margin-top:5px;"><span style="font-size:38px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; line-height:.9;">81</span><span style="font-size:13px; font-weight:600; color:#7E828A;">cm</span></div></div><span style="background:rgba(33,150,243,.14); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:700; color:#5BAAF5;">~18% BF</span></div>
+      <div style="margin-top:12px;"><span style="display:inline-flex; background:rgba(33,150,243,.12); border-radius:999px; padding:4px 10px; font-size:11px; font-weight:600; color:#5BAAF5;">Waist trending down ↓</span></div>
+    </div>
+    <div style="padding:16px 22px 8px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">History</span></div>
+    <div style="padding:0 18px; display:flex; flex-direction:column; gap:8px;">
+      <div style="padding:12px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><div style="display:flex; align-items:center;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">Waist 81 · Neck 38 cm</span><span style="font-size:11px; color:#7E828A;">Jun 24</span></div><div style="font-size:10.5px; color:#7E828A; margin-top:3px;">~18% body fat</div></div>
+      <div style="padding:12px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><div style="display:flex; align-items:center;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">Waist 82 · Neck 38 cm</span><span style="font-size:11px; color:#7E828A;">Jun 17</span></div><div style="font-size:10.5px; color:#7E828A; margin-top:3px;">~19% body fat</div></div>
+      <div style="padding:12px 14px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px;"><div style="display:flex; align-items:center;"><span style="flex:1; font-size:14px; font-weight:600; color:#F2F2F3;">Waist 84 · Neck 39 cm</span><span style="font-size:11px; color:#7E828A;">Jun 10</span></div><div style="font-size:10.5px; color:#7E828A; margin-top:3px;">~20% body fat</div></div>
+    </div>
+    <div style="position:absolute; bottom:24px; right:22px; width:56px; height:56px; border-radius:18px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -8px rgba(33,150,243,.7);"><i class="ph-bold ph-plus" style="font-size:24px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ============ LOG MEASUREMENT SHEET ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Log measurement</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Measurements</span></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 18px 18px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 14px;"></div>
+      <div style="font-size:15px; font-weight:800; color:#F2F2F3; margin-bottom:6px;">Log measurement</div>
+      <div style="font-size:10.5px; color:#7E828A; margin-bottom:12px;">Waist + neck (+ hips) drive the body-fat estimate. The rest track progress.</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1; background:#1D1D1E; border:1.5px solid #2196F3; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Waist</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">81</span><span style="font-size:10px; color:#7E828A;">cm</span></div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Neck</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">38</span><span style="font-size:10px; color:#7E828A;">cm</span></div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Hips</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#5A5E66;">—</span></div></div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Chest</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">102</span><span style="font-size:10px; color:#7E828A;">cm</span></div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Bicep</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">36</span><span style="font-size:10px; color:#7E828A;">cm</span></div></div>
+          <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; padding:8px 10px;"><div style="font-size:9.5px; color:#7E828A;">Thigh</div><div style="display:flex; align-items:baseline; gap:2px; margin-top:2px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">58</span><span style="font-size:10px; color:#7E828A;">cm</span></div></div>
+        </div>
+      </div>
+      <div style="margin-top:8px; height:40px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:11px; display:flex; align-items:center; padding:0 12px;"><i class="ph ph-note-pencil" style="font-size:15px; color:#797D85;"></i><span style="flex:1; font-size:13px; color:#797D85; margin-left:9px;">Add notes (optional)</span></div>
+      <div style="margin-top:11px; background:rgba(33,150,243,.08); border:1px solid rgba(33,150,243,.25); border-radius:13px; padding:11px 14px; display:flex; align-items:center; gap:11px;"><i class="ph-fill ph-calculator" style="font-size:17px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:10.5px; color:#8FB9E8;">Estimated body fat (Navy)</div><div style="font-size:17px; font-weight:800; color:#5BAAF5; margin-top:1px;">~18%</div></div></div>
+      <div style="margin-top:11px; display:flex; align-items:center; gap:10px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:13px; padding:11px 14px;"><i class="ph ph-calendar-blank" style="font-size:16px; color:#8C9097;"></i><span style="flex:1; font-size:13.5px; color:#E7E7E9;">Today · Jun 28, 2026</span></div>
+      <div style="margin-top:13px; height:50px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:700; color:#fff;">Save measurement</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1000px; width:1700px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Capture · library · setup</div><div style="font-size:14px; color:#5C6068;">photo logging · save a template · first-run AI</div></div>
+</div>
+
+<!-- ============ PHOTO · SOURCE ============ -->
+<div style="position:absolute; left:40px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Photo · source</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 18px 20px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 16px;"></div>
+      <div style="font-size:15px; font-weight:800; color:#F2F2F3; text-align:center; margin-bottom:16px;">Log a meal photo</div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:16px 16px; margin-bottom:9px;"><i class="ph ph-camera" style="font-size:22px; color:#5BAAF5;"></i><span style="font-size:15px; font-weight:600; color:#F2F2F3;">Take photo</span></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:16px 16px;"><i class="ph ph-image" style="font-size:22px; color:#5BAAF5;"></i><span style="font-size:15px; font-weight:600; color:#F2F2F3;">Choose from gallery</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PHOTO · PREVIEW ============ -->
+<div style="position:absolute; left:420px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Photo · preview</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 18px 18px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 14px;"></div>
+      <div style="height:230px; border-radius:16px; overflow:hidden; background:linear-gradient(140deg,#3a2f24,#241c16); display:flex; align-items:center; justify-content:center; position:relative;">
+        <i class="ph-fill ph-bowl-food" style="font-size:60px; color:rgba(255,200,120,.35);"></i>
+        <div style="position:absolute; bottom:10px; left:12px; display:flex; align-items:center; gap:5px; background:rgba(0,0,0,.45); border-radius:999px; padding:4px 10px;"><i class="ph-fill ph-camera" style="font-size:11px; color:#fff;"></i><span style="font-size:10px; font-weight:700; color:#fff;">Meal photo</span></div>
+      </div>
+      <div style="margin-top:13px; height:50px; background:#202021; border:1px solid #313132; border-radius:14px; display:flex; align-items:center; padding:0 14px;"><span style="flex:1; font-size:13.5px; color:#797D85;">Add a note (optional) — e.g. “no rice”</span></div>
+      <div style="margin-top:14px; display:flex; gap:10px;"><div style="width:88px; height:50px; border-radius:13px; border:1px solid #2E2F31; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Retake</span></div><div style="flex:1; height:50px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><i class="ph-fill ph-sparkle" style="font-size:15px; color:#fff;"></i><span style="font-size:14px; font-weight:700; color:#fff;">Analyze photo</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PHOTO · ESTIMATE ============ -->
+<div style="position:absolute; left:800px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Photo · estimate</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:flex-end; gap:8px; margin-bottom:11px;"><div style="width:46px; height:46px; border-radius:12px; background:linear-gradient(140deg,#3a2f24,#241c16); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-bowl-food" style="font-size:22px; color:rgba(255,200,120,.4);"></i></div></div>
+      <div style="background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:15px 16px 14px;">
+        <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><i class="ph-fill ph-sparkle" style="font-size:13px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#5BAAF5;">From photo</span></div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Grilled chicken</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P38 · C0 · F12</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">260</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Steamed rice</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P4 · C45 · F0</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">205</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Mixed greens</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P2 · C6 · F3</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">55</span></div>
+        </div>
+        <div style="margin-top:13px; padding-top:12px; border-top:1px solid #2E2F31; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 44P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 51C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 15F</span></div><span style="font-size:16px; font-weight:800; color:#F2F2F3;">520 <span style="font-size:11px; color:#797D85; font-weight:600;">kcal</span></span></div>
+        <div style="margin-top:13px; display:flex; gap:9px;"><div style="flex:1; height:44px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><i class="ph-bold ph-check" style="font-size:15px; color:#fff;"></i><span style="font-size:14px; font-weight:700; color:#fff;">Log it</span></div><div style="width:104px; height:44px; border-radius:13px; background:#252628; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph ph-pencil-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Edit</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LIBRARY · SAVE AS TEMPLATE ============ -->
+<div style="position:absolute; left:1180px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Library · save as template</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 18px 18px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 14px;"></div>
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:15px;"><i class="ph-fill ph-bookmark-simple" style="font-size:16px; color:#FFCA28;"></i><span style="font-size:15px; font-weight:800; color:#F2F2F3;">Save as template</span></div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin-bottom:8px;">Template name</div>
+      <div style="height:50px; background:#202021; border:1.5px solid #2196F3; border-radius:14px; display:flex; align-items:center; padding:0 14px; box-shadow:0 0 0 4px rgba(33,150,243,.1);"><span style="flex:1; font-size:14px; color:#F2F2F3;">Rice &amp; fried fish bowl<span style="display:inline-block; width:1.5px; height:16px; background:#5BAAF5; margin-left:2px; vertical-align:-3px;"></span></span></div>
+      <div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin:18px 0 9px;">Includes 3 items</div>
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:6px 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #262627;"><span style="font-size:13.5px; color:#E7E7E9;">White rice 136g</span><span style="font-size:13px; font-weight:700; color:#F2F2F3;">176</span></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0; border-bottom:1px solid #262627;"><span style="font-size:13.5px; color:#E7E7E9;">Fried fish 56g</span><span style="font-size:13px; font-weight:700; color:#F2F2F3;">175</span></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:9px 0;"><span style="font-size:13.5px; color:#E7E7E9;">Sea urchin uni 40g</span><span style="font-size:13px; font-weight:700; color:#F2F2F3;">80</span></div>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-top:12px; padding:0 2px;"><span style="font-size:12px; font-weight:700; color:#7E828A;">Total</span><span style="font-size:15px; font-weight:800; color:#F2F2F3;">431 <span style="font-size:11px; color:#797D85; font-weight:600;">kcal</span></span></div>
+      <div style="margin-top:16px; display:flex; gap:10px;"><div style="width:90px; height:50px; border-radius:13px; border:1px solid #2E2F31; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Cancel</span></div><div style="flex:1; height:50px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><span style="font-size:14px; font-weight:700; color:#fff;">Save to library</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FIRST-RUN AI SETUP ============ -->
+<div style="position:absolute; left:1560px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">First-run · AI setup</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.62); display:flex; align-items:center; justify-content:center; padding:0 22px;">
+      <div style="width:100%; background:#1B1B1C; border:1px solid #2E2F31; border-radius:22px; padding:20px 19px;">
+        <div style="width:46px; height:46px; border-radius:14px; background:rgba(33,150,243,.12); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-sparkle" style="font-size:22px; color:#5BAAF5;"></i></div>
+        <div style="font-size:18px; font-weight:800; color:#F7F7F8; margin-top:14px; letter-spacing:-.01em;">Set up smart logging</div>
+        <div style="font-size:13px; color:#9BA0A8; margin-top:7px; line-height:1.5;">Logging works best with AI to read your meal descriptions.</div>
+        <div style="margin-top:16px; display:flex; flex-direction:column; gap:9px;">
+          <div style="display:flex; align-items:flex-start; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph-fill ph-device-mobile" style="font-size:18px; color:#5BAAF5; margin-top:1px;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">On-device AI</div><div style="font-size:11px; color:#7E828A; margin-top:2px;">~586 MB · works offline · private</div></div></div>
+          <div style="display:flex; align-items:flex-start; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph-fill ph-cloud" style="font-size:18px; color:#5BAAF5; margin-top:1px;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Cloud AI</div><div style="font-size:11px; color:#7E828A; margin-top:2px;">Sign in for higher-quality estimates</div></div></div>
+        </div>
+        <div style="font-size:11px; color:#B0612F; margin-top:13px; line-height:1.45;">Without AI, logging falls back to keyword matching — lower accuracy.</div>
+        <div style="margin-top:16px; height:50px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><i class="ph ph-download-simple" style="font-size:16px; color:#fff;"></i><span style="font-size:14.5px; font-weight:700; color:#fff;">Download AI</span></div>
+        <div style="margin-top:11px; text-align:center;"><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip for now</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
