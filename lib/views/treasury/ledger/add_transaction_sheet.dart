@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
+import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -9,6 +10,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -40,6 +42,7 @@ class AddTransactionSheet extends StatefulWidget {
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
+  final _amountFocus = FocusNode();
   final _descriptionController = TextEditingController();
   final _noteController = TextEditingController();
   final _owedByController = TextEditingController();
@@ -64,6 +67,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   void initState() {
     super.initState();
     _syncFromPresenter();
+    _amountFocus.addListener(_onAmountFocusChange);
     widget.presenter.addListener(_onPresenterChange);
     // LedgerPresenter may have stale accounts if they were added/edited via
     // TreasuryDashboardPresenter. Reload from storage; the listener will
@@ -142,9 +146,26 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     setState(_syncFromPresenter);
   }
 
+  // Drives the operator strip (visible only while the amount field is focused)
+  // and folds any typed expression down to its result on blur.
+  void _onAmountFocusChange() {
+    if (!mounted) return;
+    if (!_amountFocus.hasFocus) {
+      final text = _amountController.text;
+      final value = text.isEmpty ? null : evalAmountExpression(text);
+      if (value != null) {
+        final formatted = formatEvaluatedAmount(value);
+        if (formatted != text) _amountController.text = formatted;
+      }
+    }
+    setState(() {});
+  }
+
   @override
   void dispose() {
     widget.presenter.removeListener(_onPresenterChange);
+    _amountFocus.removeListener(_onAmountFocusChange);
+    _amountFocus.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
     _noteController.dispose();
@@ -176,11 +197,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           const SnackBar(content: Text('Select a destination account')));
       return;
     }
+    // The amount is a borderless calculator field (no inline error): evaluate
+    // any `+ - × ÷` expression to a value and validate here.
+    final amount = evalAmountExpression(_amountController.text);
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Enter an amount greater than 0')));
+      return;
+    }
 
     setState(() => _isSubmitting = true);
 
     try {
-      final amount = double.parse(_amountController.text.replaceAll(',', ''));
       final description = _descriptionController.text.trim();
       final note = _noteController.text.trim();
       final month = toMonthKey(_date);
@@ -341,34 +369,23 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             _type = t;
                             _selectedCategoryId = null;
                           })),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
+                  // The amount is the hero: a big centered number (reference
+                  // "Log transaction" sheet), with description + date below it.
+                  _BigAmountField(
+                      controller: _amountController, focusNode: _amountFocus),
+                  const SizedBox(height: 18),
                   _DescriptionField(controller: _descriptionController),
                   const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: _AmountField(controller: _amountController),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: _DatePickerRow(
-                            date: _date, onTap: _pickDate, compact: true),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  _AccountDropdown(
-                    accounts: _accounts,
-                    label: _type == TransactionType.transfer
-                        ? 'From Account'
-                        : 'Account',
-                    value: _selectedAccountId,
-                    onChanged: (v) => setState(() => _selectedAccountId = v),
-                  ),
                   if (_type == TransactionType.transfer) ...[
+                    _DatePickerRow(date: _date, onTap: _pickDate),
+                    const SizedBox(height: 12),
+                    _AccountDropdown(
+                      accounts: _accounts,
+                      label: 'From Account',
+                      value: _selectedAccountId,
+                      onChanged: (v) => setState(() => _selectedAccountId = v),
+                    ),
                     const SizedBox(height: 12),
                     _AccountDropdown(
                       accounts: _accounts,
@@ -380,18 +397,37 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     const SizedBox(height: 12),
                     _PaidForSomeoneHint(
                         onUsePreset: _applyPaidForSomeonePreset),
-                  ],
-                  if (_type != TransactionType.transfer) ...[
-                    const SizedBox(height: 16),
-                    if (_filteredCategories.isEmpty)
-                      _NoCategoriesHint(type: _type)
-                    else
-                      _CategoryChips(
-                        categories: _filteredCategories,
-                        selected: _selectedCategoryId,
-                        onSelected: (id) =>
-                            setState(() => _selectedCategoryId = id),
-                      ),
+                  ] else ...[
+                    // Category + Account side by side (both are picker boxes;
+                    // Category opens a sheet of colored pills). Reference layout.
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: SheetLabeledField(
+                            label: 'Category',
+                            child: CategoryPickerField(
+                              categories: _filteredCategories,
+                              selectedId: _selectedCategoryId,
+                              onChanged: (id) =>
+                                  setState(() => _selectedCategoryId = id),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _AccountDropdown(
+                            accounts: _accounts,
+                            label: 'Account',
+                            value: _selectedAccountId,
+                            onChanged: (v) =>
+                                setState(() => _selectedAccountId = v),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _DatePickerRow(date: _date, onTap: _pickDate),
                   ],
                   if (_type == TransactionType.outflow) ...[
                     const SizedBox(height: 12),
@@ -454,6 +490,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             ),
           ),
         ),
+        // Calculator operator strip: a keyboard accessory shown only while the
+        // amount field is focused (the OS numeric keypad has no +−×÷ keys), so
+        // "calculator via keyboard" works without changing the form layout.
+        if (_amountFocus.hasFocus)
+          _OperatorBar(controller: _amountController, focusNode: _amountFocus),
       ],
     );
   }
@@ -491,27 +532,217 @@ class _TypeToggle extends StatelessWidget {
 
 // ── Amount Field ──────────────────────────────────────────────────────────────
 
-class _AmountField extends StatelessWidget {
+/// The hero amount input (reference "Log transaction"): an uppercase AMOUNT
+/// label over a big, centered `₱ 285` number. Doubles as a calculator — you can
+/// type an expression like `285+15` (operators come from the [_OperatorBar]
+/// keyboard strip) and it evaluates on blur/save, collapsing to the result so
+/// no formula lingers. Borderless, so validation happens in `_submit`.
+class _BigAmountField extends StatelessWidget {
   final TextEditingController controller;
+  final FocusNode focusNode;
 
-  const _AmountField({required this.controller});
+  const _BigAmountField({required this.controller, required this.focusNode});
 
   @override
   Widget build(BuildContext context) {
-    return SheetLabeledField(
-      label: 'Amount',
-      child: TextFormField(
-        controller: controller,
-        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-        inputFormatters: amountInputFormatters,
-        decoration:
-            sheetFieldDecoration(context, prefixText: '₱ ', emphasize: true),
-        validator: (v) {
-          if (v == null || v.isEmpty) return 'Enter an amount';
-          final parsed = double.tryParse(v);
-          if (parsed == null || parsed <= 0) return 'Amount must be > 0';
-          return null;
-        },
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'AMOUNT',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: cs.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text(
+              '₱',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(width: 5),
+            IntrinsicWidth(
+              child: TextField(
+                controller: controller,
+                focusNode: focusNode,
+                textAlign: TextAlign.center,
+                keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true, signed: true),
+                inputFormatters: calcAmountInputFormatters,
+                style: TextStyle(
+                  fontSize: 38,
+                  fontWeight: FontWeight.w800,
+                  color: cs.onSurface,
+                  letterSpacing: -0.5,
+                ),
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  hintText: '0',
+                  hintStyle: TextStyle(
+                    fontSize: 38,
+                    fontWeight: FontWeight.w800,
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// A slim keyboard accessory strip of calculator operators for the amount field.
+/// The OS numeric keypad has no `+ − × ÷`, so these keys insert the operators
+/// at the cursor; `=` folds the expression to its result. Keys are plain
+/// [GestureDetector]s (not focusable) so tapping them never steals focus from
+/// the field — the keyboard stays up and the strip stays visible.
+class _OperatorBar extends StatelessWidget {
+  final TextEditingController controller;
+  final FocusNode focusNode;
+
+  const _OperatorBar({required this.controller, required this.focusNode});
+
+  void _insert(String s) {
+    final v = controller.value;
+    final text = v.text;
+    var start = v.selection.start;
+    var end = v.selection.end;
+    if (start < 0 || end < 0) {
+      start = text.length;
+      end = text.length;
+    }
+    final newText = text.replaceRange(start, end, s);
+    controller.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: start + s.length),
+    );
+    focusNode.requestFocus();
+  }
+
+  void _backspace() {
+    final v = controller.value;
+    final text = v.text;
+    if (text.isEmpty) return;
+    var start = v.selection.start;
+    var end = v.selection.end;
+    if (start < 0 || end < 0) {
+      start = text.length;
+      end = text.length;
+    }
+    if (start == end) {
+      if (start == 0) return;
+      controller.value = TextEditingValue(
+        text: text.replaceRange(start - 1, start, ''),
+        selection: TextSelection.collapsed(offset: start - 1),
+      );
+    } else {
+      controller.value = TextEditingValue(
+        text: text.replaceRange(start, end, ''),
+        selection: TextSelection.collapsed(offset: start),
+      );
+    }
+    focusNode.requestFocus();
+  }
+
+  void _evaluate() {
+    final value = evalAmountExpression(controller.text);
+    if (value == null) return;
+    final f = formatEvaluatedAmount(value);
+    controller.value = TextEditingValue(
+      text: f,
+      selection: TextSelection.collapsed(offset: f.length),
+    );
+    focusNode.requestFocus();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        border: Border(top: BorderSide(color: cs.outlineVariant)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            _OpKey(label: '÷', onTap: () => _insert('÷')),
+            _OpKey(label: '×', onTap: () => _insert('×')),
+            _OpKey(label: '−', onTap: () => _insert('-')),
+            _OpKey(label: '+', onTap: () => _insert('+')),
+            _OpKey(icon: Icons.backspace_outlined, onTap: _backspace),
+            _OpKey(label: '=', onTap: _evaluate, accent: true),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OpKey extends StatelessWidget {
+  final String? label;
+  final IconData? icon;
+  final VoidCallback onTap;
+  final bool accent;
+
+  const _OpKey({
+    this.label,
+    this.icon,
+    required this.onTap,
+    this.accent = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fg = accent ? Colors.white : cs.onSurface;
+    return Expanded(
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          height: 44,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: accent ? cs.primary : cs.surface,
+            borderRadius: AppRadii.smBorder,
+            border: accent
+                ? null
+                : Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+          ),
+          child: icon != null
+              ? Icon(icon, size: 18, color: fg)
+              : Text(
+                  label!,
+                  style: TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: fg,
+                  ),
+                ),
+        ),
       ),
     );
   }
@@ -564,43 +795,6 @@ class _AccountDropdown extends StatelessWidget {
 
 // ── Category Chips ────────────────────────────────────────────────────────────
 
-class _CategoryChips extends StatelessWidget {
-  final List<FinanceCategory> categories;
-  final String? selected;
-  final ValueChanged<String> onSelected;
-
-  const _CategoryChips({
-    required this.categories,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Category',
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: categories.map((cat) {
-            final isSelected = selected == cat.id;
-            return ChoiceChip(
-              label: Text(cat.name),
-              selected: isSelected,
-              onSelected: (_) => onSelected(cat.id),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-}
-
 // ── Description Field ─────────────────────────────────────────────────────────
 
 class _DescriptionField extends StatelessWidget {
@@ -615,7 +809,8 @@ class _DescriptionField extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         maxLength: 60,
-        decoration: sheetFieldDecoration(context),
+        // Cap the length but hide the "0/60" counter (counterText: '').
+        decoration: sheetFieldDecoration(context, counterText: ''),
         validator: (v) =>
             (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
       ),
@@ -628,40 +823,22 @@ class _DescriptionField extends StatelessWidget {
 class _DatePickerRow extends StatelessWidget {
   final DateTime date;
   final VoidCallback onTap;
-  final bool compact;
 
-  const _DatePickerRow(
-      {required this.date, required this.onTap, this.compact = false});
+  const _DatePickerRow({required this.date, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cs.outline.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                color: cs.onSurfaceVariant, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                compact
-                    ? DateFormat('MMM d, yyyy').format(date)
-                    : DateFormat('MMMM d, yyyy').format(date),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: cs.onSurface, fontSize: 14),
-              ),
-            ),
-          ],
+    return SheetLabeledField(
+      label: 'Date',
+      child: SheetPickerBox(
+        onTap: onTap,
+        trailingIcon: Icons.calendar_today_outlined,
+        child: Text(
+          DateFormat('MMMM d, yyyy').format(date),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(color: cs.onSurface, fontSize: 14),
         ),
       ),
     );
@@ -683,36 +860,6 @@ class _NoteField extends StatelessWidget {
         controller: controller,
         maxLines: 2,
         decoration: sheetFieldDecoration(context),
-      ),
-    );
-  }
-}
-
-// ── No Categories Hint ────────────────────────────────────────────────────────
-
-class _NoCategoriesHint extends StatelessWidget {
-  final TransactionType type;
-
-  const _NoCategoriesHint({required this.type});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final label = type == TransactionType.inflow ? 'income' : 'expense';
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      child: Row(
-        children: [
-          Icon(Icons.info_outline, color: cs.onSurfaceVariant, size: 16),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'No $label categories yet — add some in the Ledger first.',
-              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
-            ),
-          ),
-        ],
       ),
     );
   }
