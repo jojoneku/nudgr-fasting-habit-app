@@ -14,6 +14,10 @@ the header. The control MUST meet the ≥44×44px touch target.
 - **WHEN** the user taps the month control and selects a different month
 - **THEN** the selected month updates and the hero + budget sections recompute for that month
 
+#### Scenario: Every month with budgets is reachable
+- **WHEN** the user opens the month picker
+- **THEN** it lists a window around the current month plus every month that has budget data (and the current selection), so no month with budgets is unreachable
+
 #### Scenario: Manage groups still reachable
 - **WHEN** the user opens the manage-groups control from the header
 - **THEN** the manage-groups sheet appears (unchanged behavior)
@@ -44,10 +48,13 @@ the empty state carries the screen. The tab MUST NOT show a "safe to spend" call
 ### Requirement: One card per budget with category identity
 Each budget SHALL render as its own card (not rows in a shared group card). An expense budget card
 MUST show the category's icon in a color chip (the same icon and color used for that category
-elsewhere in Treasury), the category name, the spent and allocated amounts, and a progress bar with a
-percentage. When spending exceeds the allocation the card MUST indicate the overage (e.g. "Over by
-₱x") and render the amount/bar in the danger accent. A savings/goal budget card MUST show the target
-name, contributed vs goal, and progress, treating meeting-or-exceeding the goal as success (not over).
+elsewhere in Treasury), the category name, the budget's cadence badge (MONTHLY / FIXED / GOAL / VAR),
+the spent and allocated amounts, and a progress bar with a percentage. When spending exceeds the
+allocation the card MUST indicate the overage (e.g. "Over by ₱x") and render the amount/bar in the
+danger accent. A savings/goal budget card MUST show the target name, contributed vs goal, and
+progress, treating meeting-or-exceeding the goal as success (not over). A card MUST support both a
+tap (edit the budget) and a long-press (toggle its transactions), preserving the prior tile's
+interactions.
 
 #### Scenario: Expense budget card shows icon, spend, and progress
 - **WHEN** a category has a budget for the selected month

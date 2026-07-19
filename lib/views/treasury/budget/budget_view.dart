@@ -48,16 +48,24 @@ class _BudgetViewState extends State<BudgetView> {
   Future<void> _pickMonth() async {
     final selected = widget.presenter.selectedMonth;
     final now = DateTime.now();
-    // A window of months centered on today (12 back → 2 ahead), newest first.
-    final options = <AppActionSheetItem<String>>[];
-    for (var i = 2; i >= -12; i--) {
-      final key = toMonthKey(DateTime(now.year, now.month + i));
-      options.add(AppActionSheetItem<String>(
-        label: monthLabel(key),
-        value: key,
-        isPrimary: key == selected,
-      ));
+    // A window around today (12 back → 3 ahead) unioned with every month that
+    // has budget data and the current selection, so no month is unreachable
+    // (the old prev/next stepping had no bound). Newest first.
+    final months = <String>{};
+    for (var i = 3; i >= -12; i--) {
+      months.add(toMonthKey(DateTime(now.year, now.month + i)));
     }
+    months.addAll(widget.presenter.monthsWithBudgets);
+    months.add(selected);
+    final sorted = months.toList()..sort((a, b) => b.compareTo(a));
+    final options = [
+      for (final key in sorted)
+        AppActionSheetItem<String>(
+          label: monthLabel(key),
+          value: key,
+          isPrimary: key == selected,
+        ),
+    ];
     final picked = await AppActionSheet.show<String>(
       context: context,
       title: 'Jump to month',

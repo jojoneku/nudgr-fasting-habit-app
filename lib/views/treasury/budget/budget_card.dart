@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -32,6 +33,13 @@ class _BudgetCardState extends State<BudgetCard> {
     }
     return categoryIcon(row.name, row.categoryType);
   }
+
+  String _budgetTypeLabel(BudgetType type) => switch (type) {
+        BudgetType.monthly => 'MONTHLY',
+        BudgetType.fixed => 'FIXED',
+        BudgetType.goal => 'GOAL',
+        BudgetType.variable => 'VAR',
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -70,6 +78,7 @@ class _BudgetCardState extends State<BudgetCard> {
       variant: AppCardVariant.filled,
       padding: EdgeInsets.zero,
       onTap: widget.onEdit,
+      onLongPress: () => setState(() => _expanded = !_expanded),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -80,15 +89,32 @@ class _BudgetCardState extends State<BudgetCard> {
               children: [
                 // Header: icon chip · name · spent / allocated
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _IconChip(icon: _icon, color: identity),
                     const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        row.name,
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                        overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            row.name,
+                            style: theme.textTheme.bodyLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          // Budget cadence badge — expense rows only, matching
+                          // the label the old category tile showed.
+                          if (!row.isSavings) ...[
+                            const SizedBox(height: 4),
+                            AppBadge(
+                              text: _budgetTypeLabel(row.budgetType),
+                              variant: AppBadgeVariant.tonal,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                     const SizedBox(width: 8),

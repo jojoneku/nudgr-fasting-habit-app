@@ -210,6 +210,7 @@ class BudgetPresenter extends ChangeNotifier {
             isSavings: true,
             isGoal: account.category == AccountCategory.goal,
             isIncome: false,
+            budgetType: entry.budget.budgetType,
             allocated: allocated,
             actual: contributed,
             progress:
@@ -238,6 +239,7 @@ class BudgetPresenter extends ChangeNotifier {
             isSavings: false,
             isGoal: false,
             isIncome: isIncome,
+            budgetType: budget?.budgetType ?? BudgetType.monthly,
             allocated: allocated,
             actual: actual,
             progress:
@@ -261,6 +263,12 @@ class BudgetPresenter extends ChangeNotifier {
     }
     return sections;
   }
+
+  /// Distinct months (YYYY-MM) that hold at least one budget, ascending. The
+  /// month picker unions these in so every month with data stays reachable —
+  /// preserving the old prev/next stepping's unbounded reach.
+  List<String> get monthsWithBudgets =>
+      _allBudgets.map((b) => b.month).toSet().toList()..sort();
 
   /// Non-transfer ledger entries touching [accountId] this month, newest first —
   /// the contributions/withdrawals shown when a savings card is expanded.
@@ -714,6 +722,10 @@ class BudgetSectionRow {
   final bool isSavings;
   final bool isGoal;
   final bool isIncome;
+
+  /// The budget's cadence type — surfaced as a small badge (expense rows only),
+  /// preserving the label the old category tile showed.
+  final BudgetType budgetType;
   final double allocated;
 
   /// Spent (expense), received (income), or net contributed (savings).
@@ -739,6 +751,7 @@ class BudgetSectionRow {
     required this.isSavings,
     required this.isGoal,
     required this.isIncome,
+    required this.budgetType,
     required this.allocated,
     required this.actual,
     required this.progress,
