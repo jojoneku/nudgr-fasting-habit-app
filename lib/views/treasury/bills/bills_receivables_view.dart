@@ -1113,84 +1113,121 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
     }
   }
 
+  Future<void> _pickFundFrom() async {
+    final accounts = widget.presenter.accounts;
+    if (accounts.isEmpty) return;
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: 'Fund from',
+      actions: [
+        for (final a in accounts)
+          AppActionSheetItem(
+            label: a.name,
+            value: a.id,
+            isPrimary: a.id == _selectedAccountId,
+          ),
+      ],
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedAccountId = picked;
+        if (_selectedToAccountId == picked) {
+          _selectedToAccountId = null; // can't transfer to itself
+        }
+      });
+    }
+  }
+
+  Future<void> _pickSetAside() async {
+    const spendIt = '__spend__';
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: 'Set aside into',
+      actions: [
+        AppActionSheetItem(
+          label: 'Spend it (no transfer)',
+          value: spendIt,
+          isPrimary: _selectedToAccountId == null,
+        ),
+        for (final a in _destinations)
+          if (a.id != _selectedAccountId)
+            AppActionSheetItem(
+              label: a.name,
+              value: a.id,
+              isPrimary: a.id == _selectedToAccountId,
+            ),
+      ],
+    );
+    if (picked != null) {
+      setState(() =>
+          _selectedToAccountId = picked == spendIt ? null : picked);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final accounts = widget.presenter.accounts;
+    final fundName = accounts
+            .where((a) => a.id == _selectedAccountId)
+            .map((a) => a.name)
+            .firstOrNull ??
+        '';
+    final setAsideName = _selectedToAccountId == null
+        ? 'Spend it (no transfer)'
+        : (_destinations
+                .where((a) => a.id == _selectedToAccountId)
+                .map((a) => a.name)
+                .firstOrNull ??
+            '');
 
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mark Paid — ${widget.expense.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Paid',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
+            AppEntityHeader(
+              icon: categoryIcon(widget.expense.name, CategoryType.expense),
+              name: widget.expense.name,
+              subtitle: 'Budgeted set-aside',
+              amount: formatPeso(widget.expense.allocatedAmount),
             ),
-            if (widget.presenter.accounts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Fund from'),
-                items: widget.presenter.accounts
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  _selectedAccountId = v;
-                  if (_selectedToAccountId == v) {
-                    _selectedToAccountId = null; // can't transfer to itself
-                  }
-                }),
+            const SizedBox(height: 18),
+            AppFormField(
+              label: 'Actual amount paid',
+              child: AppAmountField(controller: _amountController),
+            ),
+            if (accounts.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              AppFormField(
+                label: 'Fund from',
+                child: AppSelectField(
+                  value: fundName,
+                  placeholder: 'Select account',
+                  leadingIcon: Icons.account_balance_wallet_outlined,
+                  onTap: _pickFundFrom,
+                ),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedToAccountId,
-                decoration: const InputDecoration(labelText: 'Set aside into'),
-                items: [
-                  const DropdownMenuItem<String>(
-                      value: null, child: Text('Spend it (no transfer)')),
-                  for (final a in _destinations)
-                    if (a.id != _selectedAccountId)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ],
-                onChanged: (v) => setState(() => _selectedToAccountId = v),
+              const SizedBox(height: 16),
+              AppFormField(
+                label: 'Set aside into',
+                child: AppSelectField(
+                  value: setAsideName,
+                  leadingIcon: Icons.savings_outlined,
+                  onTap: _pickSetAside,
+                ),
               ),
             ],
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
-                ),
+            const SizedBox(height: 16),
+            AppFormField(
+              label: 'Date paid',
+              child: AppSelectField(
+                value: DateFormat('MMMM d, yyyy').format(_paidDate),
+                leadingIcon: Icons.calendar_today_outlined,
+                onTap: _pickDate,
               ),
             ),
             const SizedBox(height: 20),
@@ -1453,6 +1490,16 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
     if (mounted) Navigator.pop(context);
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _date,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _date = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -1479,53 +1526,25 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
                   ),
                 ),
               ),
-              Text(
-                'Mark Payment $count/${widget.installment.totalMonths}',
-                style: TextStyle(
-                  color: colorScheme.onSurface,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                ),
+              AppEntityHeader(
+                icon: Icons.credit_card_outlined,
+                name: widget.installment.name,
+                subtitle: 'Payment $count/${widget.installment.totalMonths}',
+                amount: formatPeso(widget.installment.monthlyAmount),
               ),
-              Text(
-                widget.installment.name,
-                style: TextStyle(
-                    color: colorScheme.onSurfaceVariant, fontSize: 13),
-              ),
-              const SizedBox(height: 20),
-              Text('Amount',
-                  style: TextStyle(
-                      color: colorScheme.onSurfaceVariant, fontSize: 12)),
-              const SizedBox(height: 6),
-              AppTextField(
-                controller: _amountCtrl,
-                prefix: const Text('₱ '),
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
+              const SizedBox(height: 18),
+              AppFormField(
+                label: 'Amount paid',
+                child: AppAmountField(controller: _amountCtrl),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('Date',
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant, fontSize: 12)),
-                subtitle: Text(
-                  '${_date.day}/${_date.month}/${_date.year}',
-                  style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w500),
+              AppFormField(
+                label: 'Date',
+                child: AppSelectField(
+                  value: DateFormat('MMMM d, yyyy').format(_date),
+                  leadingIcon: Icons.calendar_today_outlined,
+                  onTap: _pickDate,
                 ),
-                trailing: Icon(Icons.calendar_today_outlined,
-                    color: colorScheme.primary, size: 18),
-                onTap: () async {
-                  final picked = await showDatePicker(
-                    context: context,
-                    initialDate: _date,
-                    firstDate: DateTime(2020),
-                    lastDate: DateTime.now(),
-                  );
-                  if (picked != null) setState(() => _date = picked);
-                },
               ),
               const SizedBox(height: 20),
               AppPrimaryButton(

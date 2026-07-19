@@ -44,7 +44,8 @@
 
 - [x] 6.1 Bill + Received sheets rebuilt on `AppEntityHeader` + ₱ actual-paid + paid-from/deposit-to
       select + "Log to ledger" toggle (inverse of the old "already in ledger" flag). Logic unchanged.
-- [ ] 6.2 Expense (Fund from + Set aside into) and Installment mark-as-paid sheets — same treatment.
+- [x] 6.2 Expense (Fund from + Set aside into selects) and Installment (payment counter + date select)
+      mark-as-paid sheets rebuilt on the kit. Logic unchanged. All 4 mark-as-paid sheets now consistent.
 
 ## 7. Verification
 
