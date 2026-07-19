@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -13,7 +12,17 @@ class AddBillSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final Bill? existing;
 
-  const AddBillSheet({super.key, required this.presenter, this.existing});
+  /// When true the sheet renders only its form + Save (no drag handle, title, or
+  /// scroll) so it can be embedded inside the unified `NewEntrySheet`, which
+  /// provides those. Standalone use keeps the full sheet chrome.
+  final bool embedded;
+
+  const AddBillSheet({
+    super.key,
+    required this.presenter,
+    this.existing,
+    this.embedded = false,
+  });
 
   @override
   State<AddBillSheet> createState() => _AddBillSheetState();
@@ -23,14 +32,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _amountController = TextEditingController();
-  final _dueDayController = TextEditingController();
   final _paymentNoteController = TextEditingController();
 
+  int _dueDay = 1;
   BillType _billType = BillType.other;
   String? _selectedAccountId;
   String? _selectedCategoryId;
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
+  bool _reminderOn = false;
+  int _reminderDays = 2;
   bool _isSubmitting = false;
 
   @override
@@ -40,7 +51,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
     if (b != null) {
       _nameController.text = b.name;
       _amountController.text = b.amount.toStringAsFixed(2);
-      _dueDayController.text = b.dueDay.toString();
+      _dueDay = b.dueDay.clamp(1, 31);
       // Hide the internal auto-statement marker from the editable note field —
       // it is not a user-facing note. _resolvePaymentNote re-applies it on save.
       _paymentNoteController.text =
@@ -50,6 +61,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
       _selectedCategoryId = b.categoryId.isEmpty ? null : b.categoryId;
       _isRecurring = b.isRecurring;
       _recurrenceType = b.recurrenceType ?? RecurrenceType.monthly;
+      _reminderOn = b.reminderDaysBefore != null;
+      _reminderDays = b.reminderDaysBefore ?? 2;
     } else {
       // Default the payment account to the first one so a new bill is one tap
       // closer to done; the user can still change or clear it.
@@ -63,7 +76,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
   void dispose() {
     _nameController.dispose();
     _amountController.dispose();
-    _dueDayController.dispose();
     _paymentNoteController.dispose();
     super.dispose();
   }
@@ -87,7 +99,6 @@ class _AddBillSheetState extends State<AddBillSheet> {
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
-      final dueDay = int.parse(_dueDayController.text);
       final id = widget.existing?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
       final bill = Bill(
@@ -95,13 +106,19 @@ class _AddBillSheetState extends State<AddBillSheet> {
         name: _nameController.text.trim(),
         billType: _billType,
         amount: amount,
-        dueDay: dueDay,
-        month: widget.presenter.selectedMonth,
+        dueDay: _dueDay,
+        month: widget.existing?.month ?? widget.presenter.selectedMonth,
         categoryId: _selectedCategoryId ?? '',
         accountId: _selectedAccountId,
         paymentNote: _resolvePaymentNote(),
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
+        reminderDaysBefore: _reminderOn ? _reminderDays : null,
+        // Preserve paid state / links when editing.
+        isPaid: widget.existing?.isPaid ?? false,
+        paidDate: widget.existing?.paidDate,
+        paidAmount: widget.existing?.paidAmount,
+        transactionId: widget.existing?.transactionId,
       );
       if (widget.existing != null) {
         await widget.presenter.updateBill(bill);
@@ -120,6 +137,16 @@ class _AddBillSheetState extends State<AddBillSheet> {
         RecurrenceType.yearly => 'Yearly',
         RecurrenceType.custom => 'Custom',
       };
+
+  static String _ordinal(int day) {
+    if (day >= 11 && day <= 13) return '${day}th';
+    return switch (day % 10) {
+      1 => '${day}st',
+      2 => '${day}nd',
+      3 => '${day}rd',
+      _ => '${day}th',
+    };
+  }
 
   Widget _buildForm(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -149,6 +176,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
 
           // Amount + Due Day
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: TextFormField(
@@ -168,21 +196,15 @@ class _AddBillSheetState extends State<AddBillSheet> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: TextFormField(
-                  controller: _dueDayController,
-                  decoration:
-                      sheetFieldDecoration(context, label: 'Due Day (1–31)'),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(2),
+                child: DropdownButtonFormField<int>(
+                  initialValue: _dueDay,
+                  isExpanded: true,
+                  decoration: sheetFieldDecoration(context, label: 'Due Day'),
+                  items: [
+                    for (int d = 1; d <= 31; d++)
+                      DropdownMenuItem(value: d, child: Text(_ordinal(d))),
                   ],
-                  textInputAction: TextInputAction.next,
-                  validator: (v) {
-                    final d = int.tryParse(v ?? '');
-                    if (d == null || d < 1 || d > 31) return '1–31';
-                    return null;
-                  },
+                  onChanged: (v) => setState(() => _dueDay = v ?? _dueDay),
                 ),
               ),
             ],
@@ -196,8 +218,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
               hint: Text('Account (optional)',
                   style: TextStyle(
                       color: colorScheme.onSurfaceVariant, fontSize: 14)),
-              decoration:
-                  sheetFieldDecoration(context, label: 'Payment Account'),
+              decoration: sheetFieldDecoration(context, label: 'Pay from'),
               items: widget.presenter.accounts
                   .map(
                       (a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -238,7 +259,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
           ),
 
           // Recurring toggle
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           SwitchListTile(
             value: _isRecurring,
             onChanged: (v) => setState(() => _isRecurring = v),
@@ -261,13 +282,56 @@ class _AddBillSheetState extends State<AddBillSheet> {
                   setState(() => _recurrenceType = v ?? _recurrenceType),
             ),
           ],
+
+          // Reminder toggle (per-bill lead-time)
+          SwitchListTile(
+            value: _reminderOn,
+            onChanged: (v) => setState(() => _reminderOn = v),
+            title: const Text('Remind me before due',
+                style: TextStyle(fontSize: 14)),
+            secondary: Icon(Icons.notifications_none_rounded,
+                color: colorScheme.primary),
+            contentPadding: EdgeInsets.zero,
+          ),
+          if (_reminderOn) ...[
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 8,
+              children: [1, 2, 3, 5, 7].map((d) {
+                return ChoiceChip(
+                  label: Text(d == 1 ? '1 day' : '$d days'),
+                  selected: _reminderDays == d,
+                  onSelected: (_) => setState(() => _reminderDays = d),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
   }
 
+  Widget _saveButton() => AppPrimaryButton(
+        label: widget.existing != null ? 'Save' : 'Save bill',
+        onPressed: _isSubmitting ? null : _submit,
+        isLoading: _isSubmitting,
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildForm(context),
+          const SizedBox(height: 20),
+          _saveButton(),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
     final title = widget.existing != null ? 'Edit Bill' : 'Add Bill';
 
@@ -288,11 +352,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
             const SizedBox(height: 16),
             _buildForm(context),
             const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: widget.existing != null ? 'Save' : 'Add Bill',
-              onPressed: _isSubmitting ? null : _submit,
-              isLoading: _isSubmitting,
-            ),
+            _saveButton(),
             const SizedBox(height: 8),
           ],
         ),

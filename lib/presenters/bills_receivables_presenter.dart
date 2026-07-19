@@ -131,6 +131,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final Set<String> _awardedXpKeys = {};
   bool _awardedXpLoaded = false;
 
+  /// Cached global bills-reminder preference (see load) — gates whether a bill's
+  /// per-bill reminder is actually scheduled.
+  bool _billsReminderEnabled = true;
+
   // ─── Public state ────────────────────────────────────────────────────────────
 
   String get selectedMonth => _selectedMonth;
@@ -475,6 +479,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
     // Schedule or cancel monthly bills reminder based on user preferences.
     final prefs = await _storage.loadNotificationPreferences();
+    _billsReminderEnabled = prefs.billsReminderEnabled;
     if (prefs.billsReminderEnabled && _allBills.isNotEmpty) {
       await _notifications.scheduleBillsReminder(prefs.billsReminderDayOfMonth);
     } else {
@@ -600,6 +605,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = [..._allBills, bill];
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _syncBillReminder(bill);
     await _notifyDependents();
   }
 
@@ -607,6 +613,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _syncBillReminder(bill);
     await _notifyDependents();
   }
 
@@ -614,7 +621,26 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = _allBills.where((b) => b.id != id).toList();
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _notifications.cancelBillReminder(id);
     await _notifyDependents();
+  }
+
+  /// Schedules or cancels a bill's per-bill "remind me N days before" reminder.
+  /// Scheduled only for an unpaid bill that has a lead time and while the global
+  /// bills-reminder preference is on; otherwise the reminder is cancelled.
+  Future<void> _syncBillReminder(Bill bill) async {
+    if (bill.reminderDaysBefore != null &&
+        !bill.isPaid &&
+        _billsReminderEnabled) {
+      await _notifications.scheduleBillReminder(
+        billId: bill.id,
+        billName: bill.name,
+        dueDate: billDueDate(bill),
+        daysBefore: bill.reminderDaysBefore!,
+      );
+    } else {
+      await _notifications.cancelBillReminder(bill.id);
+    }
   }
 
   /// Marks [billId] paid. When [recordInLedger] is true (default) this also
@@ -688,6 +714,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     ));
     safeNotify();
     await _storage.saveBills(_allBills);
+    // A paid bill needs no reminder.
+    await _notifications.cancelBillReminder(bill.id);
     await _checkAllBillsPaidXp();
     await _notifyDependents();
   }
@@ -1311,6 +1339,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           paymentNote: b.paymentNote,
           isRecurring: b.isRecurring,
           recurrenceType: b.recurrenceType,
+          reminderDaysBefore: b.reminderDaysBefore,
         ));
     _allBills = [..._allBills, ...copies];
     await _storage.saveBills(_allBills);

@@ -251,4 +251,26 @@ void main() {
       expect(presenter.comingUpItems(installments), isEmpty);
     });
   });
+
+  group('per-bill reminder', () {
+    test('addBill persists the reminder lead time', () async {
+      await presenter.load();
+      await presenter.setMonth('2026-03');
+      await presenter.addBill(Bill(
+        id: 'r1',
+        name: 'Internet',
+        billType: BillType.utility,
+        amount: 100,
+        dueDay: 10,
+        month: '2026-03',
+        categoryId: '',
+        reminderDaysBefore: 2,
+      ));
+
+      final saved =
+          verify(mockStorage.saveBills(captureAny)).captured.last as List<Bill>;
+      expect(
+          saved.firstWhere((b) => b.id == 'r1').reminderDaysBefore, 2);
+    });
+  });
 }

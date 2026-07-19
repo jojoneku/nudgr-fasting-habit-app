@@ -13,8 +13,15 @@ class AddInstallmentSheet extends StatefulWidget {
   final InstallmentPresenter presenter;
   final Installment? existing;
 
+  /// Embedded inside `NewEntrySheet` — render only the form + Save (see
+  /// [AddBillSheet.embedded]).
+  final bool embedded;
+
   const AddInstallmentSheet(
-      {super.key, required this.presenter, this.existing});
+      {super.key,
+      required this.presenter,
+      this.existing,
+      this.embedded = false});
 
   @override
   State<AddInstallmentSheet> createState() => _AddInstallmentSheetState();
@@ -213,6 +220,23 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isEdit = widget.existing != null;
+
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildForm(context),
+          const SizedBox(height: 28),
+          AppPrimaryButton(
+            label: isEdit ? 'Save Changes' : 'Add Installment',
+            onPressed: _saving ? null : _save,
+            isLoading: _saving,
+          ),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
 
     return Padding(
       padding:

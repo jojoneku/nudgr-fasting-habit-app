@@ -14,7 +14,16 @@ class AddReceivableSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final Receivable? existing;
 
-  const AddReceivableSheet({super.key, required this.presenter, this.existing});
+  /// Embedded inside `NewEntrySheet` — render only the form + Save (see
+  /// [AddBillSheet.embedded]).
+  final bool embedded;
+
+  const AddReceivableSheet({
+    super.key,
+    required this.presenter,
+    this.existing,
+    this.embedded = false,
+  });
 
   @override
   State<AddReceivableSheet> createState() => _AddReceivableSheetState();
@@ -75,7 +84,8 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
-      final id = widget.existing?.id ??
+      final e = widget.existing;
+      final id = e?.id ??
           '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
       final receivable = Receivable(
         id: id,
@@ -83,13 +93,19 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
         receivableType: _receivableType,
         amount: amount,
         expectedDate: _expectedDate,
-        month: widget.presenter.selectedMonth,
+        month: e?.month ?? widget.presenter.selectedMonth,
         categoryId: _selectedCategoryId ?? '',
         accountId: _selectedAccountId,
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
+        // Preserve settled state + links when editing.
+        isReceived: e?.isReceived ?? false,
+        receivedDate: e?.receivedDate,
+        receivedAmount: e?.receivedAmount,
+        transactionId: e?.transactionId,
+        reimbursementForTxnId: e?.reimbursementForTxnId,
       );
-      if (widget.existing != null) {
+      if (e != null) {
         await widget.presenter.updateReceivable(receivable);
       } else {
         await widget.presenter.addReceivable(receivable);
@@ -264,8 +280,27 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
     );
   }
 
+  Widget _saveButton() => AppPrimaryButton(
+        label: widget.existing != null ? 'Save' : 'Save receivable',
+        onPressed: _isSubmitting ? null : _submit,
+        isLoading: _isSubmitting,
+      );
+
   @override
   Widget build(BuildContext context) {
+    if (widget.embedded) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildForm(context),
+          const SizedBox(height: 20),
+          _saveButton(),
+          const SizedBox(height: 8),
+        ],
+      );
+    }
+
     final colorScheme = Theme.of(context).colorScheme;
     final title =
         widget.existing != null ? 'Edit Receivable' : 'Add Receivable';
@@ -287,11 +322,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
             const SizedBox(height: 16),
             _buildForm(context),
             const SizedBox(height: 20),
-            AppPrimaryButton(
-              label: widget.existing != null ? 'Save' : 'Add Receivable',
-              onPressed: _isSubmitting ? null : _submit,
-              isLoading: _isSubmitting,
-            ),
+            _saveButton(),
             const SizedBox(height: 8),
           ],
         ),
