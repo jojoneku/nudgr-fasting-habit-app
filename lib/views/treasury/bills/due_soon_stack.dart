@@ -28,7 +28,10 @@ class DueSoonStack extends StatefulWidget {
 }
 
 class _DueSoonStackState extends State<DueSoonStack> {
-  final _controller = PageController(viewportFraction: 0.92);
+  // Full-width pages so the hero card fills the available content width (the
+  // list already insets 16px each side). The stacked-deck plates + page dots
+  // signal there's more to swipe, so we don't need a peek of the next card.
+  final _controller = PageController();
   int _page = 0;
 
   @override
@@ -70,7 +73,9 @@ class _DueSoonStackState extends State<DueSoonStack> {
                 final bill = bills[i];
                 final due = widget.presenter.billDueInfo(bill);
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  // A hairline gap so adjacent cards don't touch mid-swipe,
+                  // without meaningfully narrowing the card.
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
                   child: DueSoonHero(
                     billName: bill.name,
                     amount: bill.amount,
