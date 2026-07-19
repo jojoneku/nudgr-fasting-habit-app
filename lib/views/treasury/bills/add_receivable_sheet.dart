@@ -173,6 +173,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
 
           // Amount + Date
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: SheetLabeledField(
@@ -195,30 +196,33 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: InkWell(
-                  onTap: _pickDate,
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    height: 56,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: colorScheme.outlineVariant),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_today_outlined,
-                            color: colorScheme.onSurfaceVariant, size: 16),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            DateFormat('MMM d').format(_expectedDate),
-                            style: TextStyle(
-                                color: colorScheme.onSurface, fontSize: 13),
+                child: SheetLabeledField(
+                  label: 'Date',
+                  child: InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      height: 56,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: colorScheme.outlineVariant),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.calendar_today_outlined,
+                              color: colorScheme.onSurfaceVariant, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              DateFormat('MMM d').format(_expectedDate),
+                              style: TextStyle(
+                                  color: colorScheme.onSurface, fontSize: 13),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
