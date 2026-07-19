@@ -101,7 +101,7 @@ class _MonthYearPickerSheetState extends State<_MonthYearPickerSheet> {
     final cs = Theme.of(context).colorScheme;
 
     return SafeArea(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
