@@ -6,22 +6,7 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
-import 'package:intermittent_fasting/views/treasury/shared/forms/forms.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
-
-String _accountCategoryLabel(AccountCategory cat) => switch (cat) {
-      AccountCategory.bank => 'Bank',
-      AccountCategory.ewallet => 'eWallet',
-      AccountCategory.cash => 'Cash',
-      AccountCategory.savings => 'Savings',
-      AccountCategory.goal => 'Goal',
-      AccountCategory.timeDeposit => 'Time Deposit',
-      AccountCategory.creditCard => 'Credit Card',
-      AccountCategory.creditLine => 'Credit Line',
-      AccountCategory.bnpl => 'BNPL',
-      AccountCategory.investment => 'Investment',
-      AccountCategory.custodian => 'External',
-    };
 
 const _colorOptions = [
   '#7C3AED',
@@ -463,60 +448,79 @@ class _AccountSetupForm extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Type — chip row (reference: Bank / eWallet / Cash / Savings / …)
-            AppFormField(
-              label: 'Type',
-              child: AppChipSelect<AccountCategory>(
-                options: [
-                  for (final c in availableCategories)
-                    AppChipOption(c, _accountCategoryLabel(c)),
+            // Account details card
+            AppCard(
+              variant: AppCardVariant.outlined,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: nameController,
+                    decoration:
+                        const InputDecoration(labelText: 'Account Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty)
+                        ? 'Enter account name'
+                        : null,
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: _CategoryDropdown(
+                          categories: availableCategories,
+                          value: category,
+                          onChanged: onCategoryChanged,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextFormField(
+                          controller: balanceController,
+                          keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true),
+                          inputFormatters: amountInputFormatters,
+                          decoration: InputDecoration(
+                            labelText: balanceLabel,
+                            prefixText: '₱ ',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
-                selected: category,
-                onChanged: onCategoryChanged,
               ),
             ),
-            const SizedBox(height: 16),
-            AppFormField(
-              label: 'Name',
-              child: TextFormField(
-                controller: nameController,
-                decoration:
-                    const InputDecoration(hintText: 'e.g. BPI Personal'),
-                textCapitalization: TextCapitalization.words,
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter account name'
-                    : null,
+            const SizedBox(height: 12),
+
+            // Color picker card
+            AppCard(
+              variant: AppCardVariant.outlined,
+              header: Text(
+                'Color',
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-            ),
-            const SizedBox(height: 16),
-            AppFormField(
-              label: balanceLabel,
-              child: AppAmountField(
-                controller: balanceController,
-                hint: '0.00',
-              ),
-            ),
-            const SizedBox(height: 16),
-            AppFormField(
-              label: 'Color',
               child: _ColorPicker(
                 options: _colorOptions,
                 selected: selectedColor,
                 onSelected: onColorSelected,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
             // Conditional fields
             if (isGoal) ...[
-              AppFormField(
-                label: 'Goal Target',
-                child: AppAmountField(
-                  controller: goalTargetController,
-                  hint: '0.00',
+              TextFormField(
+                controller: goalTargetController,
+                keyboardType:
+                    const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: amountInputFormatters,
+                decoration: const InputDecoration(
+                  labelText: 'Goal Target',
+                  prefixText: '₱ ',
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
             ],
             if (isTimeDeposit) ...[
               _MaturityDateRow(date: maturityDate, onTap: onPickMaturityDate),
@@ -582,6 +586,44 @@ class _AccountSetupForm extends StatelessWidget {
 }
 
 // ─── Sub-widgets ──────────────────────────────────────────────────────────────
+
+class _CategoryDropdown extends StatelessWidget {
+  final List<AccountCategory> categories;
+  final AccountCategory value;
+  final ValueChanged<AccountCategory?> onChanged;
+
+  const _CategoryDropdown({
+    required this.categories,
+    required this.value,
+    required this.onChanged,
+  });
+
+  String _label(AccountCategory cat) => switch (cat) {
+        AccountCategory.bank => 'Bank',
+        AccountCategory.ewallet => 'eWallet',
+        AccountCategory.cash => 'Cash',
+        AccountCategory.savings => 'Savings',
+        AccountCategory.goal => 'Goal',
+        AccountCategory.timeDeposit => 'Time Deposit',
+        AccountCategory.creditCard => 'Credit Card',
+        AccountCategory.creditLine => 'Credit Line',
+        AccountCategory.bnpl => 'BNPL',
+        AccountCategory.investment => 'Investment',
+        AccountCategory.custodian => 'External',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    return DropdownButtonFormField<AccountCategory>(
+      initialValue: value,
+      decoration: const InputDecoration(labelText: 'Category'),
+      items: categories
+          .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+}
 
 class _ColorPicker extends StatelessWidget {
   final List<String> options;

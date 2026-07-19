@@ -3,26 +3,17 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
-import 'package:intermittent_fasting/views/treasury/shared/forms/forms.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddReceivableSheet extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final Receivable? existing;
 
-  /// When true, hosted inside the combined [AddEntrySheet] which provides the
-  /// title/chrome, so the internal title is suppressed.
-  final bool embedded;
-
-  const AddReceivableSheet({
-    super.key,
-    required this.presenter,
-    this.existing,
-    this.embedded = false,
-  });
+  const AddReceivableSheet({super.key, required this.presenter, this.existing});
 
   @override
   State<AddReceivableSheet> createState() => _AddReceivableSheetState();
@@ -115,175 +106,153 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
         RecurrenceType.custom => 'Custom',
       };
 
-  String _typeLabel(ReceivableType t) => switch (t) {
-        ReceivableType.salary => 'Salary',
-        ReceivableType.reimbursement => 'Reimbursement',
-        ReceivableType.business => 'Business',
-        ReceivableType.other => 'Other',
-      };
-
-  Future<void> _pickAccount() async {
-    const askLater = '__ask__';
-    final picked = await AppActionSheet.show<String>(
-      context: context,
-      title: 'Destination account',
-      actions: [
-        AppActionSheetItem(
-          label: 'Ask me when received',
-          value: askLater,
-          isPrimary: _selectedAccountId == null,
-        ),
-        for (final a in widget.presenter.accounts)
-          AppActionSheetItem(
-            label: a.name,
-            value: a.id,
-            isPrimary: a.id == _selectedAccountId,
-          ),
-      ],
-    );
-    if (picked != null) {
-      setState(() =>
-          _selectedAccountId = picked == askLater ? null : picked);
-    }
-  }
-
-  Future<void> _pickRecurrence() async {
-    final picked = await AppActionSheet.show<RecurrenceType>(
-      context: context,
-      title: 'Recurrence',
-      actions: [
-        for (final r in RecurrenceType.values)
-          AppActionSheetItem(
-            label: _recurrenceLabel(r),
-            value: r,
-            isPrimary: r == _recurrenceType,
-          ),
-      ],
-    );
-    if (picked != null) setState(() => _recurrenceType = picked);
-  }
-
   Widget _buildForm(BuildContext context) {
-    final accountName = _selectedAccountId == null
-        ? ''
-        : (widget.presenter.accounts
-                .where((a) => a.id == _selectedAccountId)
-                .map((a) => a.name)
-                .firstOrNull ??
-            '');
+    final colorScheme = Theme.of(context).colorScheme;
+
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          AppFormField(
-            label: 'Source / Name',
-            child: TextFormField(
-              controller: _nameController,
-              decoration: const InputDecoration(hintText: 'e.g. Client, Payroll'),
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-            ),
+          // Name
+          TextFormField(
+            controller: _nameController,
+            decoration: const InputDecoration(labelText: 'Source / Name'),
+            textInputAction: TextInputAction.next,
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+
+          // Receivable type selector
+          _ReceivableTypeSelector(
+            value: _receivableType,
+            onChanged: (v) => setState(() => _receivableType = v),
+          ),
+          const SizedBox(height: 12),
+
+          // Amount + Date
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                flex: 3,
-                child: AppFormField(
-                  label: 'Expected amount',
-                  child: AppAmountField(
-                    controller: _amountController,
-                    hint: '0.00',
-                    validator: (v) {
-                      final p = double.tryParse(v ?? '');
-                      if (p == null || p <= 0) return 'Must be > 0';
-                      return null;
-                    },
-                  ),
+                child: TextFormField(
+                  controller: _amountController,
+                  decoration: const InputDecoration(
+                      labelText: 'Expected Amount', prefixText: '₱ '),
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: amountInputFormatters,
+                  textInputAction: TextInputAction.done,
+                  validator: (v) {
+                    final p = double.tryParse(v ?? '');
+                    if (p == null || p <= 0) return 'Must be > 0';
+                    return null;
+                  },
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                flex: 2,
-                child: AppFormField(
-                  label: 'Expected',
-                  child: AppSelectField(
-                    value: DateFormat('MMM d').format(_expectedDate),
-                    leadingIcon: Icons.calendar_today_outlined,
-                    onTap: _pickDate,
+                child: InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colorScheme.outlineVariant),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined,
+                            color: colorScheme.onSurfaceVariant, size: 16),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            DateFormat('MMM d').format(_expectedDate),
+                            style: TextStyle(
+                                color: colorScheme.onSurface, fontSize: 13),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          _MoreOptionsLabel(),
-          const SizedBox(height: 12),
-          AppFormField(
-            label: 'Type',
-            child: AppChipSelect<ReceivableType>(
-              options: [
-                for (final t in ReceivableType.values)
-                  AppChipOption(t, _typeLabel(t)),
-              ],
-              selected: _receivableType,
-              onChanged: (t) => setState(() => _receivableType = t),
-            ),
-          ),
+
+          // Category chips
           if (_incomeCategories.isNotEmpty) ...[
             const SizedBox(height: 16),
-            AppFormField(
-              label: 'Category',
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _incomeCategories.map((cat) {
-                  final isSelected = _selectedCategoryId == cat.id;
-                  return ChoiceChip(
-                    label: Text(cat.name),
-                    selected: isSelected,
-                    onSelected: (_) => setState(
-                        () => _selectedCategoryId = isSelected ? null : cat.id),
-                  );
-                }).toList(),
-              ),
+            Text('Category',
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _incomeCategories.map((cat) {
+                final isSelected = _selectedCategoryId == cat.id;
+                return ChoiceChip(
+                  label: Text(cat.name),
+                  selected: isSelected,
+                  // Tap again to clear the category.
+                  onSelected: (_) => setState(
+                      () => _selectedCategoryId = isSelected ? null : cat.id),
+                );
+              }).toList(),
             ),
           ],
+
+          // Destination account (optional) — pre-fills _MarkReceivedSheet
+          // dropdown. Leave blank to be asked at received-time.
           if (widget.presenter.accounts.isNotEmpty) ...[
             const SizedBox(height: 16),
-            AppFormField(
-              label: 'Destination account (optional)',
-              hint: 'Pre-fills when you mark this received',
-              child: AppSelectField(
-                value: accountName,
-                placeholder: 'Ask me when received',
-                leadingIcon: Icons.account_balance_wallet_outlined,
-                onTap: _pickAccount,
+            DropdownButtonFormField<String?>(
+              initialValue: _selectedAccountId,
+              decoration: const InputDecoration(
+                labelText: 'Destination account (optional)',
+                helperText: 'Pre-fills when you mark this received',
               ),
+              items: [
+                const DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('Ask me when received',
+                      style: TextStyle(fontStyle: FontStyle.italic)),
+                ),
+                ...widget.presenter.accounts.map(
+                  (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ),
+              ],
+              onChanged: (v) => setState(() => _selectedAccountId = v),
             ),
           ],
+
+          // Recurring toggle
           const SizedBox(height: 16),
-          AppFormToggle(
-            icon: Icons.repeat_rounded,
-            title: 'Recurring',
-            subtitle: 'Auto-generate next month',
+          SwitchListTile(
             value: _isRecurring,
             onChanged: (v) => setState(() => _isRecurring = v),
+            title: const Text('Recurring', style: TextStyle(fontSize: 14)),
+            subtitle: Text('Auto-generate next month',
+                style: TextStyle(
+                    color: colorScheme.onSurfaceVariant, fontSize: 12)),
+            contentPadding: EdgeInsets.zero,
           ),
           if (_isRecurring) ...[
-            const SizedBox(height: 12),
-            AppFormField(
-              label: 'Recurrence',
-              child: AppSelectField(
-                value: _recurrenceLabel(_recurrenceType),
-                leadingIcon: Icons.event_repeat_outlined,
-                onTap: _pickRecurrence,
-              ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<RecurrenceType>(
+              initialValue: _recurrenceType,
+              decoration: const InputDecoration(labelText: 'Recurrence'),
+              items: RecurrenceType.values
+                  .map((r) => DropdownMenuItem(
+                      value: r, child: Text(_recurrenceLabel(r))))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _recurrenceType = v ?? _recurrenceType),
             ),
           ],
         ],
@@ -301,23 +270,21 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: SingleChildScrollView(
-        padding: EdgeInsets.fromLTRB(16, widget.embedded ? 4 : 20, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (!widget.embedded) ...[
-              Text(title,
-                  style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 16),
-            ],
+            Text(title,
+                style: TextStyle(
+                    color: colorScheme.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
             _buildForm(context),
             const SizedBox(height: 20),
             AppPrimaryButton(
-              label: widget.existing != null ? 'Save' : 'Save entry',
+              label: widget.existing != null ? 'Save' : 'Add Receivable',
               onPressed: _isSubmitting ? null : _submit,
               isLoading: _isSubmitting,
             ),
@@ -329,23 +296,41 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
   }
 }
 
-class _MoreOptionsLabel extends StatelessWidget {
+class _ReceivableTypeSelector extends StatelessWidget {
+  final ReceivableType value;
+  final ValueChanged<ReceivableType> onChanged;
+
+  const _ReceivableTypeSelector({required this.value, required this.onChanged});
+
+  static const _labels = {
+    ReceivableType.salary: 'Salary',
+    ReceivableType.reimbursement: 'Reimbursement',
+    ReceivableType.business: 'Business',
+    ReceivableType.other: 'Other',
+  };
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Row(
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'MORE OPTIONS',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.8,
-          ),
+        Text('Type',
+            style:
+                TextStyle(color: colorScheme.onSurfaceVariant, fontSize: 12)),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: ReceivableType.values.map((t) {
+            final isSelected = value == t;
+            return ChoiceChip(
+              label: Text(_labels[t]!),
+              selected: isSelected,
+              onSelected: (_) => onChanged(t),
+            );
+          }).toList(),
         ),
-        const SizedBox(width: 10),
-        Expanded(child: Divider(color: cs.outlineVariant)),
       ],
     );
   }

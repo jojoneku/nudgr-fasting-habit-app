@@ -4,8 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
+import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
-import 'package:intermittent_fasting/views/treasury/shared/forms/forms.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddInstallmentSheet extends StatefulWidget {
@@ -112,111 +112,94 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
     setState(() => _startMonth = toMonthKey(next));
   }
 
-  Future<void> _pickAccount() async {
-    final accounts = widget.presenter.accounts;
-    if (accounts.isEmpty) return;
-    final picked = await AppActionSheet.show<String>(
-      context: context,
-      title: 'Account (Credit / BNPL)',
-      actions: [
-        for (final a in accounts)
-          AppActionSheetItem(
-            label: a.name,
-            value: a.id,
-            isPrimary: a.id == _accountId,
-          ),
-      ],
-    );
-    if (picked != null) setState(() => _accountId = picked);
-  }
-
   Widget _buildForm(BuildContext context) {
-    final accountName = widget.presenter.accounts
-            .where((a) => a.id == _accountId)
-            .map((a) => a.name)
-            .firstOrNull ??
-        '';
     return Form(
       key: _formKey,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AppFormField(
-            label: 'Name',
-            child: TextFormField(
-              controller: _nameCtrl,
-              decoration:
-                  const InputDecoration(hintText: 'e.g. MacBook Pro, Braces'),
-              textInputAction: TextInputAction.next,
-              textCapitalization: TextCapitalization.words,
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Required' : null,
-            ),
+          // Name
+          _FieldLabel('Name'),
+          TextFormField(
+            controller: _nameCtrl,
+            decoration:
+                const InputDecoration(hintText: 'e.g. MacBook Pro, Braces'),
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
+            validator: (v) =>
+                (v == null || v.trim().isEmpty) ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Account (Credit / BNPL)',
-            child: AppSelectField(
-              value: accountName,
-              placeholder: 'Select account',
-              leadingIcon: Icons.credit_card_outlined,
-              onTap: _pickAccount,
-            ),
+
+          // Account
+          _FieldLabel('Account (Credit / BNPL)'),
+          DropdownButtonFormField<String>(
+            initialValue: _accountId,
+            decoration: const InputDecoration(hintText: 'Select account'),
+            items: widget.presenter.accounts.map((a) {
+              return DropdownMenuItem(value: a.id, child: Text(a.name));
+            }).toList(),
+            onChanged: (v) => setState(() => _accountId = v),
+            validator: (v) => v == null ? 'Required' : null,
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Total Amount',
-            child: AppAmountField(
-              controller: _totalCtrl,
-              hint: '0.00',
-              textInputAction: TextInputAction.next,
-              validator: (v) {
-                final p = double.tryParse(v ?? '');
-                if (p == null || p <= 0) return 'Must be > 0';
-                return null;
-              },
-            ),
+
+          // Total Amount
+          _FieldLabel('Total Amount'),
+          TextFormField(
+            controller: _totalCtrl,
+            decoration: const InputDecoration(hintText: '0.00'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: amountInputFormatters,
+            textInputAction: TextInputAction.next,
+            validator: (v) {
+              final p = double.tryParse(v ?? '');
+              if (p == null || p <= 0) return 'Must be > 0';
+              return null;
+            },
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Number of Months',
-            child: _MonthsSelector(
-              selected: _totalMonths,
-              onChanged: _onMonthsChanged,
-            ),
+
+          // Number of months
+          _FieldLabel('Number of Months'),
+          _MonthsSelector(
+            selected: _totalMonths,
+            onChanged: _onMonthsChanged,
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Monthly Payment (auto · editable)',
-            child: AppAmountField(
-              controller: _monthlyCtrl,
-              hint: '0.00',
-              textInputAction: TextInputAction.next,
-              onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
-              validator: (v) {
-                final p = double.tryParse(v ?? '');
-                if (p == null || p <= 0) return 'Must be > 0';
-                return null;
-              },
-            ),
+
+          // Monthly Amount
+          _FieldLabel('Monthly Payment (auto-computed, editable)'),
+          TextFormField(
+            controller: _monthlyCtrl,
+            decoration: const InputDecoration(hintText: '0.00'),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: amountInputFormatters,
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => setState(() => _monthlyManuallyEdited = true),
+            validator: (v) {
+              final p = double.tryParse(v ?? '');
+              if (p == null || p <= 0) return 'Must be > 0';
+              return null;
+            },
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Start Month',
-            child: _StartMonthSelector(
-              selectedMonth: _startMonth,
-              onAdjust: _adjustStartMonth,
-            ),
+
+          // Start Month
+          _FieldLabel('Start Month'),
+          _StartMonthSelector(
+            selectedMonth: _startMonth,
+            onAdjust: _adjustStartMonth,
           ),
           const SizedBox(height: 16),
-          AppFormField(
-            label: 'Note (optional)',
-            child: AppTextField(
-              controller: _noteCtrl,
-              hint: 'e.g. 0% interest, 12 months',
-              maxLines: 2,
-              textInputAction: TextInputAction.done,
-            ),
+
+          // Note
+          _FieldLabel('Note (optional)'),
+          AppTextField(
+            controller: _noteCtrl,
+            hint: 'e.g. 0% interest, 12 months',
+            maxLines: 2,
+            textInputAction: TextInputAction.done,
           ),
         ],
       ),
@@ -267,6 +250,26 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FieldLabel extends StatelessWidget {
+  final String text;
+  const _FieldLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );
