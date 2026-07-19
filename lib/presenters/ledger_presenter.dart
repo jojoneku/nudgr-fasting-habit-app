@@ -921,7 +921,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   // --- Category CRUD ---
 
   Future<void> addCategory(FinanceCategory category) async {
-    _categories = [..._categories, category];
+    // Stamp a real creation time so the row syncs up (categories default to
+    // epoch-0 updatedAt otherwise, which loses to any remote copy under
+    // last-write-wins).
+    _categories = [..._categories, category.copyWith(updatedAt: DateTime.now())];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);
   }
@@ -930,9 +933,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Setup categories table for inline rename / recolor / type change. A no-op
   /// if the id isn't present.
   Future<void> updateCategory(FinanceCategory category) async {
+    // Bump updatedAt on every edit (rename, recolor, type, icon, exclude-toggle)
+    // so the change wins under last-write-wins sync — the call sites use
+    // copyWith without touching the timestamp.
+    final stamped = category.copyWith(updatedAt: DateTime.now());
     _categories = [
       for (final c in _categories)
-        if (c.id == category.id) category else c
+        if (c.id == stamped.id) stamped else c
     ];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);

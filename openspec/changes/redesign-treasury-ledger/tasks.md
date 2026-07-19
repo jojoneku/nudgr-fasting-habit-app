@@ -45,4 +45,5 @@
 - [x] 9.3 Manage Categories: tint the category badge with the category's own color (matches the ledger row) instead of the flat type accent — on existing-category tiles AND the add-form icon preview (previews the color the new category will get); 44×44 hit area around the tappable icon.
 - [x] 9.4 Add screen-reader semantics (Income/Expenses/Net + value) to the abbreviated IN/OUT/NET strip via `excludeSemantics` so the value isn't announced twice.
 - [x] 9.6 `categoryMonogram` skips words with no Latin letter/digit (e.g. a leading emoji), so "🎮 Games" → "G" instead of a generic glyph. Unit-tested.
+- [x] 9.7 Stamp `updatedAt` centrally in `LedgerPresenter.addCategory`/`updateCategory` (was left at epoch-0 / unchanged by the copyWith call sites) so category creates and edits — including the new icon picker — win under last-write-wins sync. The one-time colour migration still saves directly (no timestamp churn).
 - [x] 9.5 Unify the minus glyph (U+2212) across the strip, row amounts, and daily-net badge; the daily-net badge now signs negatives explicitly (was color-only).
