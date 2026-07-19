@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// The redesigned Accounts section (`Nutrition Focus Treasury.dc.html`, Frame 1):
@@ -89,20 +90,10 @@ class _AccountRow extends StatelessWidget {
     required this.onTap,
   });
 
-  Color _accent(BuildContext context) {
-    try {
-      final hex = account.colorHex.replaceFirst('#', '');
-      return Color(int.parse('FF$hex', radix: 16));
-    } catch (_) {
-      return Theme.of(context).colorScheme.tertiary;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final accent = _accent(context);
     final hasHeld = heldAmount > 0 && !account.isLiability;
     final shown = hasHeld ? account.balance - heldAmount : account.balance;
 
@@ -112,19 +103,7 @@ class _AccountRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
       child: Row(
         children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.16),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(
-              _accountIcon(account.category),
-              size: 18,
-              color: accent,
-            ),
-          ),
+          AccountBadge.of(account),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -208,20 +187,6 @@ class _ExpanderRow extends StatelessWidget {
     );
   }
 }
-
-IconData _accountIcon(AccountCategory category) => switch (category) {
-      AccountCategory.bank => Icons.account_balance_outlined,
-      AccountCategory.ewallet => Icons.phone_android_outlined,
-      AccountCategory.cash => Icons.payments_outlined,
-      AccountCategory.savings => Icons.savings_outlined,
-      AccountCategory.goal => Icons.flag_outlined,
-      AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-      AccountCategory.creditCard => Icons.credit_card_outlined,
-      AccountCategory.creditLine => Icons.credit_score_outlined,
-      AccountCategory.bnpl => Icons.shopping_bag_outlined,
-      AccountCategory.investment => Icons.trending_up_rounded,
-      AccountCategory.custodian => Icons.swap_horiz_rounded,
-    };
 
 String _accountCategoryLabel(AccountCategory category) => switch (category) {
       AccountCategory.bank => 'Bank',

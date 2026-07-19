@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AccountCardWidget extends StatelessWidget {
@@ -51,20 +52,6 @@ class AccountCardWidget extends StatelessWidget {
     }
   }
 
-  IconData _categoryIcon() => switch (account.category) {
-        AccountCategory.bank => Icons.account_balance_outlined,
-        AccountCategory.ewallet => Icons.phone_android_outlined,
-        AccountCategory.cash => Icons.payments_outlined,
-        AccountCategory.savings => Icons.savings_outlined,
-        AccountCategory.goal => Icons.flag_outlined,
-        AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-        AccountCategory.creditCard => Icons.credit_card_outlined,
-        AccountCategory.creditLine => Icons.credit_score_outlined,
-        AccountCategory.bnpl => Icons.shopping_bag_outlined,
-        AccountCategory.investment => Icons.trending_up_rounded,
-        AccountCategory.custodian => Icons.swap_horiz_rounded,
-      };
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -107,7 +94,6 @@ class AccountCardWidget extends StatelessWidget {
                           account: account,
                           accentColor: accentColor,
                           categoryLabel: _categoryLabel(),
-                          categoryIcon: _categoryIcon(),
                         ),
                         _CardBalance(
                           account: account,
@@ -131,13 +117,11 @@ class _CardHeader extends StatelessWidget {
   final FinancialAccount account;
   final Color accentColor;
   final String categoryLabel;
-  final IconData categoryIcon;
 
   const _CardHeader({
     required this.account,
     required this.accentColor,
     required this.categoryLabel,
-    required this.categoryIcon,
   });
 
   @override
@@ -145,7 +129,7 @@ class _CardHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Icon(categoryIcon, color: accentColor, size: 18),
+        AccountBadge.of(account, size: 30),
         AppBadge(
           text: categoryLabel,
           color: accentColor,

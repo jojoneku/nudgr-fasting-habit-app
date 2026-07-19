@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
@@ -992,20 +993,6 @@ class _AccountTableRow extends StatelessWidget {
     }
   }
 
-  IconData get _icon => switch (account.category) {
-        AccountCategory.bank => Icons.account_balance_outlined,
-        AccountCategory.ewallet => Icons.account_balance_wallet_outlined,
-        AccountCategory.cash => Icons.payments_outlined,
-        AccountCategory.savings => Icons.savings_outlined,
-        AccountCategory.goal => Icons.flag_outlined,
-        AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-        AccountCategory.creditCard => Icons.credit_card_outlined,
-        AccountCategory.creditLine => Icons.account_balance_outlined,
-        AccountCategory.bnpl => Icons.schedule_outlined,
-        AccountCategory.investment => Icons.trending_up_outlined,
-        AccountCategory.custodian => Icons.group_outlined,
-      };
-
   String get _typeLabel => account.category.label;
 
   Future<void> _confirmDelete(BuildContext context) async {
@@ -1072,15 +1059,7 @@ class _AccountTableRow extends StatelessWidget {
       padding: EdgeInsets.only(left: indented ? WebInsets.lg : 0),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-            ),
-            child: Icon(_icon, size: 17, color: color),
-          ),
+          AccountBadge.of(account, size: 32),
           const SizedBox(width: WebInsets.md),
           Flexible(
             child: Column(

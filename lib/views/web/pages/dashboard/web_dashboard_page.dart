@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -789,19 +790,10 @@ class _BudgetHealthCard extends StatelessWidget {
 // Account balances — glanceable cards below the Month-End Outlook
 // ===========================================================================
 
-IconData _accountIcon(FinancialAccount a) => switch (a.category) {
-      AccountCategory.bank => Icons.account_balance_outlined,
-      AccountCategory.ewallet => Icons.phone_android_outlined,
-      AccountCategory.cash => Icons.payments_outlined,
-      AccountCategory.savings => Icons.savings_outlined,
-      AccountCategory.goal => Icons.flag_outlined,
-      AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-      AccountCategory.investment => Icons.trending_up_rounded,
-      AccountCategory.custodian => Icons.people_outline_rounded,
-      AccountCategory.creditCard => Icons.credit_card_outlined,
-      AccountCategory.creditLine => Icons.credit_score_outlined,
-      AccountCategory.bnpl => Icons.shopping_bag_outlined,
-    };
+// This tile is icon-only, so a chosen custom icon shows through; monogram
+// defaults fall back to the category icon here.
+IconData _accountIcon(FinancialAccount a) =>
+    kAccountIconCatalog[a.icon] ?? accountCategoryIcon(a.category);
 
 String _accountCategoryLabel(FinancialAccount a) => switch (a.category) {
       AccountCategory.bank => 'Bank',
