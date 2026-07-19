@@ -26,13 +26,24 @@ pairs, chip selectors, month stepper, reminder switch, and a `#2E90FA` Save butt
 
 ## Decisions
 
-- **`NewEntrySheet` merges bill + receivable.** A single `StatefulWidget` holds a `mode`
-  (`bill` | `receivable`) toggled by a segmented control (*Bill to pay / Money owed me*, bill=red
-  active, receivable=green). It composes the existing per-mode field sets and calls the existing
-  presenter methods (`addBill`/`updateBill` or `addReceivable`/`updateReceivable`). Editing an existing
-  record opens directly in the right mode with the toggle locked (you don't convert a bill into a
-  receivable). The FAB's *Add Bill* / *Add Receivable* both open this sheet, pre-set to the tapped mode.
-  *Alternative:* keep two sheets — rejected; the reference explicitly unifies them and the user likes it.
+- **One `NewEntrySheet` for all four types; single FAB.** The FAB opens `NewEntrySheet` directly (no
+  more 4-item menu). A `type` (`bill` | `receivable` | `setAside` | `installment`) is chosen by a
+  **type selector at the top** — an **icon + label chip row** (extending the reference's Bill/Receivable
+  segmented toggle to four), not a cramped 2-segment pill. The sheet is scrollable and renders the
+  chosen type's full field set below by composing the existing per-type field bodies, calling the
+  existing presenter methods (`addBill`/`updateBill`, `addReceivable`/`updateReceivable`,
+  `addBudgetedExpense`/`updateBudgetedExpense`, installment add/update). Editing an existing record opens
+  the sheet **locked to that type** (the selector is hidden/disabled — you don't convert a bill into an
+  installment). *Alternative:* FAB opens a type chooser that launches four separate sheets — rejected;
+  the user wants the pick inside one sheet. *Alternative:* only bill+receivable unified (reference
+  literal) — rejected; the user wants all four.
+- **Per-bill reminder.** Add an additive, null-tolerant `Bill.reminderDaysBefore` (`int?`; null = off).
+  The bill fields show a *"Remind me N days before"* switch (default N = 2 when turned on, per Frame 7).
+  `NotificationService` gains schedule/cancel for a per-bill due reminder (fired N days before the bill's
+  due date); `BillsReceivablesPresenter` (re)schedules on add/update and cancels on delete / mark-paid,
+  gated by the global bills-reminder preference. Reminder is **bill-only** for now (receivables/other
+  types don't show it). *Alternative:* reuse the global monthly bills reminder — rejected; the reference
+  is a per-bill lead-time reminder.
 - **Due-day picker, not free text.** Replace the `1–31` text field with a picker showing the ordinal
   ("15th") + caret, backed by the same `dueDay` int. Rationale: matches Frame 7, avoids invalid input.
 - **Shared scaffolding widgets** (new, in `shared/`): `SheetHeader` (grab handle + title + optional
@@ -60,13 +71,15 @@ pairs, chip selectors, month stepper, reminder switch, and a `#2E90FA` Save butt
 
 ## Migration Plan
 
-None — pure UI recomposition over unchanged presenters/models. Rollback = revert the sheet files; the
-new shared widgets are inert if unused.
+Additive only: `Bill.reminderDaysBefore` defaults to null (no reminder) and old records load unchanged.
+UI is recomposition over the existing presenters. Rollback = revert the sheet files + the field (inert
+if unused).
 
 ## Open Questions
 
-- **Per-bill reminder toggle** (Frame 7 "Remind me 2 days before"): include now — which requires an
-  additive `Bill.reminderDaysBefore` field + per-bill notification scheduling — or defer? Defaulting to
-  **defer** (kept out of the initial tasks) unless the user opts in.
-- Should the *Add Receivable* FAB entry remain, or collapse into a single *Add bill / receivable* entry
-  that opens on the bill mode? Defaulting to **keep both entries** (each pre-selects its mode).
+- **Resolved (user):** include the per-bill reminder now; collapse the FAB into one unified sheet with a
+  four-type selector.
+- Should **receivables** also get a lead-time reminder later? Out of scope now (bill-only), easy to
+  extend once the bill path is proven.
+- The type selector's exact form (icon-chip row vs 2×2 grid) is a visual detail to settle during build;
+  the requirement only fixes that all four types are pickable in one sheet.

@@ -17,38 +17,59 @@ tokens (works in dark and light).
 - **WHEN** a sheet is opened to edit an existing record
 - **THEN** it shows a tonal-red destructive action (Delete / Remove) beneath the primary button
 
-### Requirement: New-entry sheet (Bill / Receivable)
+### Requirement: Unified New-entry sheet
 
-Adding a bill or a receivable SHALL use a single "New entry" sheet with a segmented **Bill to pay /
-Money owed me** toggle that swaps between the two field sets, preserving every field each type has today.
+A single FAB SHALL open one "New entry" sheet that creates any of the four types — **Bill · Receivable ·
+Set-aside · Installment** — chosen by a type selector at the top; the sheet renders the chosen type's
+full field set and Save routes to that type's create flow. Every field each type has today is preserved.
 
-#### Scenario: Toggle between bill and receivable
-- **WHEN** the user opens the new-entry sheet and switches the toggle
-- **THEN** the fields swap between the bill set (name, amount, due day, pay-from account, category,
-  payment note, recurring) and the receivable set (name, expected amount, expected date, account,
-  category, receivable type, recurring), and Save creates the matching record
+#### Scenario: One FAB, pick the type
+- **WHEN** the user taps the FAB
+- **THEN** the "New entry" sheet opens with a type selector (Bill / Receivable / Set-aside /
+  Installment); selecting a type shows that type's fields below
 
-#### Scenario: Add a bill
-- **WHEN** the user fills the bill fields and taps Save
-- **THEN** a bill is created via the existing add-bill flow with the same fields as before
-
-#### Scenario: Add a receivable
-- **WHEN** the toggle is on "Money owed me", the user fills the fields and taps Save
-- **THEN** a receivable is created via the existing add-receivable flow
+#### Scenario: Create each type
+- **WHEN** the user completes a type's fields and taps Save
+- **THEN** the matching record is created via the existing flow for that type (bill, receivable,
+  budgeted set-aside, or installment) with the same fields as before
 
 #### Scenario: Editing is locked to its type
-- **WHEN** the sheet is opened to edit an existing bill or receivable
-- **THEN** it opens on that record's type with the toggle disabled, and Save updates that record
+- **WHEN** the sheet is opened to edit an existing record (e.g. from a card's Edit)
+- **THEN** it opens on that record's type with the type selector hidden/disabled, and Save updates that
+  record (no converting one type into another)
 
 #### Scenario: Due day is picked, not typed
 - **WHEN** the user sets a bill's due day
 - **THEN** it is chosen from a day picker shown as an ordinal (e.g. "15th"), stored as the same 1–31 value
 
-### Requirement: Add / edit installment sheet
+### Requirement: Per-bill reminder
 
-The installment sheet SHALL match the reference: name, credit/BNPL account, total amount, a number-of-
-months chip selector (3 / 6 / 12 / 24 / Custom), an auto-computed monthly payment, and a start-month
-stepper — with no change to the existing behavior.
+A bill SHALL support an optional "remind me N days before due" reminder, set from a toggle in the bill
+fields and stored on the bill; enabling it schedules a per-bill notification and disabling / paying /
+deleting the bill cancels it.
+
+#### Scenario: Turn on a reminder
+- **WHEN** the user enables "Remind me N days before" on a bill and saves
+- **THEN** the bill stores the lead time and a per-bill reminder is scheduled for N days before its due
+  date (subject to the global bills-reminder preference)
+
+#### Scenario: Reminder cleared
+- **WHEN** the user turns the reminder off, marks the bill paid, or deletes it
+- **THEN** the bill's scheduled reminder is cancelled
+
+#### Scenario: Old bills load without a reminder
+- **WHEN** a bill saved before this change is loaded
+- **THEN** it loads with no reminder set (the field is null-tolerant), unchanged
+
+#### Scenario: Reminder is bill-only
+- **WHEN** the type selector is on Receivable, Set-aside, or Installment
+- **THEN** no reminder toggle is shown
+
+### Requirement: Installment fields
+
+The installment type (within the New-entry sheet) SHALL match the reference: name, credit/BNPL account,
+total amount, a number-of-months chip selector (3 / 6 / 12 / 24 / Custom), an auto-computed monthly
+payment, and a start-month stepper — with no change to the existing behavior.
 
 #### Scenario: Create an installment
 - **WHEN** the user enters a name, picks a credit/BNPL account, a total, a month count, and a start month
@@ -58,10 +79,10 @@ stepper — with no change to the existing behavior.
 - **WHEN** the user picks "Custom" and enters a month count
 - **THEN** the monthly payment recomputes and the installment saves with that term
 
-### Requirement: Add / edit budgeted set-aside sheet
+### Requirement: Set-aside fields
 
-The budgeted set-aside sheet SHALL adopt the shared chrome while keeping all its fields: name,
-allocated amount, set-aside type, note, fund-from account, and category.
+The set-aside type (within the New-entry sheet) SHALL adopt the shared chrome while keeping all its
+fields: name, allocated amount, set-aside type, note, fund-from account, and category.
 
 #### Scenario: Create a set-aside
 - **WHEN** the user fills the fields and taps Save

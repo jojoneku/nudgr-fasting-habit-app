@@ -9,19 +9,26 @@ selectors**, a **month stepper**, an optional reminder switch, and a full-width 
 soft glow (destructive actions as a tonal red secondary). The user specifically likes this and wants
 the Bills forms to follow it.
 
-Two structural cues from the reference: **Add Bill and Add Receivable are one sheet** ("New entry")
-with a *Bill to pay / Money owed me* toggle (Frame 7), and the **installment form already matches** the
-reference (Frame 10 — name, credit/BNPL account, total, month chips, auto monthly, start-month stepper).
+Structural cues from the reference: the creation sheets share one language, **Add Bill and Add
+Receivable are one sheet** ("New entry") with a type toggle (Frame 7), and the **installment form
+already matches** the reference (Frame 10). We take this one step further per the user: a **single FAB**
+opens **one unified "New entry" sheet** where you pick the type — **Bill · Receivable · Set-aside ·
+Installment** — and the matching fields render below.
 
 This is a **restyle + consolidate**, not a feature change: every existing field and flow is preserved,
-re-dressed in the reference's language.
+re-dressed in the reference's language. One additive feature is included: a **per-bill reminder**.
 
 ## What Changes
 
-- **Consolidated "New entry" sheet (Bill / Receivable).** One sheet with a segmented *Bill to pay /
-  Money owed me* toggle that swaps between the bill and receivable field sets. All current fields are
-  kept (bill: type, category, payment note, recurring; receivable: type, category, expected date,
-  recurring) — the reference's minimal frame is the *look*, not a field cull.
+- **Single FAB → one unified "New entry" sheet.** The FAB stops opening a 4-item menu; it opens the
+  "New entry" sheet directly. A **type selector** at the top (an icon + label chip row: *Bill ·
+  Receivable · Set-aside · Installment*, extending the reference's Bill/Receivable toggle) chooses the
+  type; the sheet renders that type's full field set below and Save routes to the right create flow.
+  The sheet is scrollable (installment/set-aside carry more fields). Every current field of every type
+  is kept — the reference's minimal frames are the *look*, not a field cull.
+- **Per-bill reminder (new, additive).** The bill fields include a **"Remind me N days before"** toggle
+  (Frame 7). Backed by a new additive `Bill.reminderDaysBefore` field and per-bill scheduling via
+  `NotificationService`; toggling it (or paying/deleting the bill) schedules/cancels the reminder.
 - **Reference field chrome everywhere.** Uppercase `SheetFieldLabel` + `sheetFieldDecoration` field
   boxes, side-by-side **Amount | Due day** (bill) and **Amount | Expected date** (receivable), a
   **due-day picker** (ordinal "15th", replacing the free-text 1–31 box), segmented type toggles, category
@@ -37,12 +44,12 @@ re-dressed in the reference's language.
 
 ## Non-goals
 
-- **No data model changes** and **no new business logic** — mark-paid/received, recurring auto-copy,
-  installment math, credit-statement generation are untouched; only the sheets' composition/chrome change.
-- **No new dependencies, no migration.**
-- **Per-bill reminder toggle** ("Remind me 2 days before", Frame 7) is **deferred** — it needs a new
-  `Bill` field + per-bill notification scheduling. Captured as an open decision, not built here (see
-  design.md Open Questions).
+- **No changes to existing business logic** — mark-paid/received, recurring auto-copy, installment
+  math, and credit-statement generation are untouched; only the sheets' composition/chrome change (plus
+  the additive reminder scheduling).
+- **No migration.** The new `Bill.reminderDaysBefore` field is additive and null-tolerant (old records
+  load with no reminder).
+- **No new dependencies.**
 - **Add-account / Add-transaction / Manage-categories** sheets (Frames 5, 6, 8) are Ledger/Dashboard
   forms, out of scope for this Bills-forms change (the shared chrome is reusable by them later).
 
@@ -57,10 +64,14 @@ re-dressed in the reference's language.
 
 - **New:** shared sheet scaffolding widgets under `lib/views/treasury/shared/` (header, segmented
   toggle, chip row, month stepper, CTA) — some may extend the existing `sheet_fields.dart`.
-- **Modified:** `add_bill_sheet.dart` + `add_receivable_sheet.dart` (merged behind a `NewEntrySheet`),
-  `add_installment_sheet.dart`, and the mark/fund sheets in `bills_receivables_view.dart` (+ the
-  budgeted add sheet). The FAB menu's Add Bill / Add Receivable entries route to the one sheet.
-- **Reuses (unchanged):** `BillsReceivablesPresenter` / `InstallmentPresenter` methods, `sheet_fields.dart`
-  tokens, theme colors.
-- **Deps:** none. **Risk:** medium — form composition changes across several sheets; mitigated by
-  keeping every field + presenter call identical and covering each sheet with a widget test.
+- **Modified:** `add_bill_sheet.dart` + `add_receivable_sheet.dart` + `add_installment_sheet.dart` +
+  `_AddBudgetedExpenseSheet` (composed behind one `NewEntrySheet` with a type selector), and the
+  mark/fund sheets in `bills_receivables_view.dart`. The FAB opens `NewEntrySheet` directly.
+- **Model/service (additive):** `Bill.reminderDaysBefore` (+ fromJson/toJson/copyWith);
+  `NotificationService` per-bill reminder schedule/cancel; `BillsReceivablesPresenter` wires it on
+  add/update/delete/mark-paid.
+- **Reuses (unchanged):** `BillsReceivablesPresenter` / `InstallmentPresenter` create/edit methods,
+  `sheet_fields.dart` tokens, theme colors.
+- **Deps:** none. **Risk:** medium — form composition across several sheets + additive reminder wiring;
+  mitigated by keeping every existing field + presenter call identical and covering the sheet and the
+  reminder scheduling with tests.
