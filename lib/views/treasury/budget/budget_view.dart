@@ -225,6 +225,10 @@ class _BudgetRingHero extends StatelessWidget {
     final pct = presenter.percentUsed;
     final over = spent > allocated && allocated > 0;
     final ringColor = over ? cs.error : appColors.fast;
+    // The remaining figure keys off the raw sign (not `over`, which needs an
+    // allocation) so spend against a zero allocation still reads "over".
+    final remaining = presenter.totalRemaining;
+    final overspent = remaining < 0;
 
     return AppCard(
       variant: AppCardVariant.elevated,
@@ -279,11 +283,11 @@ class _BudgetRingHero extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  over
-                      ? '${formatPeso(presenter.totalRemaining.abs())} over'
-                      : '${formatPeso(presenter.totalRemaining)} left',
+                  overspent
+                      ? '${formatPeso(remaining.abs())} over'
+                      : '${formatPeso(remaining)} left',
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: over ? cs.error : appColors.success,
+                    color: overspent ? cs.error : appColors.success,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
