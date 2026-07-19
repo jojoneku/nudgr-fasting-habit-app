@@ -9,6 +9,10 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class TransactionListTile extends StatelessWidget {
   final TransactionRecord txn;
   final FinancialAccount? account;
+
+  /// Palette-indexed, brightness-aware swatch color for the account, rendered
+  /// as a small dot before the account name in the subtitle. Null hides it.
+  final Color? accountColor;
   final FinanceCategory? category;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
@@ -17,6 +21,7 @@ class TransactionListTile extends StatelessWidget {
     super.key,
     required this.txn,
     this.account,
+    this.accountColor,
     this.category,
     this.onTap,
     this.onDelete,
@@ -59,8 +64,11 @@ class TransactionListTile extends StatelessWidget {
     final accountLabel = account?.name ?? '';
     // The colored category icon now carries the category identity, so the row
     // subtitle is the account name only (spec §4). When a txn has no account we
-    // fall back to the category label so the subtitle is never blank.
+    // fall back to the category label so the subtitle is never blank. The
+    // account color dot (kept from the pre-redesign row) precedes the account
+    // name so accounts stay distinguishable at a glance.
     final subtitleText = accountLabel.isNotEmpty ? accountLabel : categoryLabel;
+    final showAccountDot = accountLabel.isNotEmpty && accountColor != null;
 
     return Semantics(
       label: '${txn.description}, $_amountText, $accountLabel',
@@ -87,11 +95,29 @@ class TransactionListTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
         ),
-        subtitle: Text(
-          subtitleText,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+        subtitle: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showAccountDot) ...[
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: accountColor,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+              ),
+              const SizedBox(width: 6),
+            ],
+            Flexible(
+              child: Text(
+                subtitleText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ],
         ),
         trailing: AppNumberDisplay(
           value: _amountText,

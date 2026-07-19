@@ -34,7 +34,19 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild so the add-form icon/monogram preview tracks the typed name live.
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }

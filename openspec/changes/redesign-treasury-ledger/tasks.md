@@ -19,7 +19,7 @@
 ## 5. "No background" rows
 
 - [x] 5.1 Drop the per-row `AppCard` fill in `_buildTxnTile`; rows render on the screen background (swipe-delete + undo preserved).
-- [x] 5.2 Subtitle = account name only, falling back to the category when a txn has no account; remove the account color dot. Title 14.5/600, subtitle 11.5 muted, badge 40/18.
+- [x] 5.2 Subtitle = account name only (category name dropped — the icon carries it), falling back to the category when a txn has no account. Keep the account color dot before the account name (retained from the pre-redesign row so accounts stay distinguishable). Title 14.5/600, subtitle 11.5 muted, badge 40/18.
 - [x] 5.3 Amount colors stay semantic — expense red, income green, transfer neutral grey.
 
 ## 6. User-settable category icons

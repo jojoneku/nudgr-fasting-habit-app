@@ -92,8 +92,8 @@ colored icon and the subtitle showing the account.
 #### Scenario: Row composition
 - **WHEN** a transaction row is shown
 - **THEN** it has no card background, a color-tinted category icon badge, the description as title, the
-  account name as subtitle, and a semantically-colored amount (expense red, income green, transfer
-  neutral grey)
+  account name (preceded by its color dot) as subtitle, and a semantically-colored amount (expense
+  red, income green, transfer neutral grey); the category name is not shown (the icon carries it)
 
 #### Scenario: Account-less transaction
 - **WHEN** a transaction has no account

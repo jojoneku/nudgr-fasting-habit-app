@@ -1332,6 +1332,11 @@ Widget _buildTxnTile(
       presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
   final category =
       presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
+  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
+  final accountColor = idx < 0
+      ? null
+      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
+          brightness: Theme.of(context).brightness);
   // Reference "no background" rows: no per-row card fill — rows sit directly on
   // the screen background, separated only by the list tile's own padding. Swipe
   // -to-delete + undo is preserved by TransactionListTile's onDelete.
@@ -1339,6 +1344,7 @@ Widget _buildTxnTile(
     key: ValueKey(txn.id),
     txn: txn,
     account: account,
+    accountColor: accountColor,
     category: category,
     onTap: () => onEdit(txn),
     onDelete: () {
