@@ -169,13 +169,14 @@ semantics label).
   shows plain account text; drop the dot for a cleaner row. Account color still
   lives on the icon-less contexts elsewhere.) If a txn has no account, show the
   category name as the subtitle fallback so the row is never blank.
-- **Trailing amount**: `14.5px`, `w700`, **JetBrains Mono**. Sign + color:
-  - Outflow → `−₱x`, color `onSurface` (reference shows expenses in primary
-    text, the `−` carries the meaning — *not* red on the row).
+- **Trailing amount**: `14.5px`, `w700`, **JetBrains Mono**. Sign + color
+  (semantic — retain the app's current meaning, not the reference's neutral row):
+  - Outflow → `−₱x`, color `danger`/`cs.error` (red).
   - Inflow → `+₱x`, color `move`/`cs.tertiary` (green).
-  - Transfer → `₱x`, color `textMuted` (neutral).
-  - *(Rationale: matches the reference no-bg screen exactly. The red/green
-    semantic emphasis lives in the IN/OUT/NET strip and daily-net badge.)*
+  - Transfer → `₱x`, color `textMuted`/`cs.onSurfaceVariant` (neutral grey).
+  - *(This keeps the at-a-glance red/green scan on every row; it deviates from
+    the reference no-bg frame, which shows expenses in neutral text, by product
+    decision.)*
 - Semantics label unchanged: `"<description>, <amount>, <account>"`.
 
 ### 5. Day group header + daily-net badge
@@ -314,8 +315,8 @@ presentation-only redesign.
 2. IN/OUT/NET strip shows correct live values with green/red/blue coloring and
    `+/−` on NET (red when negative), in JetBrains Mono.
 3. Transaction rows have **no card background**, a color-tinted category **icon**
-   badge, description title, **account-only** subtitle, and a mono amount whose
-   sign follows the reference coloring.
+   badge, description title, **account-only** subtitle, and a mono amount colored
+   semantically: expense red, income green, transfer neutral grey.
 4. Category identity is conveyed by the icon+color; the category **name no longer
    appears** in the row (except as an account-less fallback).
 5. Users can pick a category icon in Manage Categories; the choice persists and
