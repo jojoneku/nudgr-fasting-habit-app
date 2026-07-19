@@ -47,4 +47,52 @@ void main() {
       }
     });
   });
+
+  group('categoryMonogram', () {
+    test('single word → one uppercase letter', () {
+      expect(categoryMonogram('Allowance'), 'A');
+      expect(categoryMonogram('rent'), 'R');
+    });
+
+    test('two+ words → initials of the first two', () {
+      expect(categoryMonogram('Side gig'), 'SG');
+      expect(categoryMonogram('  emergency   fund  '), 'EF');
+    });
+
+    test('skips leading symbols; empty/blank → empty string', () {
+      expect(categoryMonogram('  #tag'), 'T');
+      expect(categoryMonogram(''), '');
+      expect(categoryMonogram('   '), '');
+      expect(categoryMonogram(null), '');
+    });
+  });
+
+  group('resolveCategoryBadge', () {
+    test('explicit catalog key → that icon, no monogram', () {
+      final spec =
+          resolveCategoryBadge('food', 'whatever', CategoryType.expense);
+      expect(spec.icon, kCategoryIconCatalog['food']);
+      expect(spec.monogram, isNull);
+    });
+
+    test('keyword match (no explicit icon) → heuristic glyph, no monogram', () {
+      final spec = resolveCategoryBadge(
+          kAutoCategoryIconKey, 'Groceries', CategoryType.expense);
+      expect(spec.icon, isNotNull);
+      expect(spec.monogram, isNull);
+    });
+
+    test('no keyword match → name monogram, no icon', () {
+      final spec = resolveCategoryBadge(
+          kAutoCategoryIconKey, 'Allowance', CategoryType.expense);
+      expect(spec.monogram, 'A');
+      expect(spec.icon, isNull);
+    });
+
+    test('no name and no icon → per-type generic icon (no monogram)', () {
+      final spec = resolveCategoryBadge('', '', CategoryType.expense);
+      expect(spec.icon, isNotNull);
+      expect(spec.monogram, isNull);
+    });
+  });
 }

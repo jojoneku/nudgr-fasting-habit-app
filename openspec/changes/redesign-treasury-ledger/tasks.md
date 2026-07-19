@@ -27,6 +27,7 @@
 - [x] 6.1 Add `lib/utils/category_icon_catalog.dart` — `kCategoryIconCatalog` (const), `kCategoryIconGroups`, `kAutoCategoryIconKey` sentinel, and `resolveCategoryIcon(iconKey, name, type)` that prefers the stored catalog key and falls back to `categoryIcon(name, type)` for legacy/auto. Unit-tested (`test/utils/category_icon_catalog_test.dart`): catalog hit, auto→heuristic, legacy/unknown→heuristic, and every grouped key exists in the catalog.
 - [x] 6.2 Render the resolved icon in `transaction_list_tile.dart` via `resolveCategoryIcon(category.icon, …)`.
 - [x] 6.3 Add an icon picker to `manage_categories_sheet.dart` (`showCategoryIconPicker`): grouped catalog grid + an "Auto" option; tappable preview on the add form and on each category tile; persists via `updateCategory`. No model/storage migration (`FinanceCategory.icon` already persists).
+- [x] 6.4 Name-monogram fallback so unmatched categories stay visually distinct: `resolveCategoryBadge` resolves in order catalog icon → keyword glyph → name monogram → per-type generic icon; `categoryMonogram` derives 1 letter (single word) / first-two initials (multi-word); new shared `CategoryBadge` widget renders icon-or-monogram, wired into the ledger row and Manage Categories (tile + add-form preview). Unit-tested (monogram derivation + badge resolution order).
 
 ## 7. Taller chat input (TTS deferred)
 

@@ -81,6 +81,17 @@ const List<(List<String>, IconData)> _rules = [
   (['saving', 'fund'], Icons.savings_outlined),
 ];
 
+/// The keyword-matched glyph for a category name, or null when no keyword in
+/// [_rules] matches. Lets callers distinguish "the heuristic found something"
+/// from "fall back" (e.g. to a name monogram). Pure; safe to call from `build`.
+IconData? categoryKeywordIcon(String? name) {
+  final n = (name ?? '').toLowerCase();
+  for (final (keywords, icon) in _rules) {
+    if (keywords.any(n.contains)) return icon;
+  }
+  return null;
+}
+
 /// Maps a finance category to a representative Material icon for the Nudgr
 /// ledger/dashboard rows (`Nutrition Focus Treasury.dc.html` — fork-knife for
 /// food, car for transport, briefcase for salary, …).
@@ -89,13 +100,10 @@ const List<(List<String>, IconData)> _rules = [
 /// from the category name with a keyword heuristic, falling back to a sensible
 /// per-type default. Pure and side-effect free — safe to call from `build`.
 IconData categoryIcon(String? name, CategoryType type) {
-  final n = (name ?? '').toLowerCase();
-  for (final (keywords, icon) in _rules) {
-    if (keywords.any(n.contains)) return icon;
-  }
-  return switch (type) {
-    CategoryType.income => Icons.arrow_downward_rounded,
-    CategoryType.expense => Icons.receipt_long_outlined,
-    CategoryType.transfer => Icons.swap_horiz_rounded,
-  };
+  return categoryKeywordIcon(name) ??
+      switch (type) {
+        CategoryType.income => Icons.arrow_downward_rounded,
+        CategoryType.expense => Icons.receipt_long_outlined,
+        CategoryType.transfer => Icons.swap_horiz_rounded,
+      };
 }

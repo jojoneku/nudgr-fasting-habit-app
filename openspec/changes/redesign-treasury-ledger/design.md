@@ -44,6 +44,12 @@ name from its text and leans on the icon to carry it.
   deterministic, user-controllable glyph.
 - **`'tag'` is the "Auto" sentinel, deliberately NOT a catalog key**, so the historical default and any
   legacy free-text still render the name-derived glyph.
+- **Name-monogram fallback (mirrors the account badge).** Because the row drops the category name,
+  two categories the keyword heuristic can't match would otherwise both show the generic receipt/arrow
+  and read identically. `resolveCategoryBadge` instead returns a name monogram (initials in the
+  category color) for unmatched names — the same identity trick accounts already use — and only uses
+  the per-type generic icon when the name has no usable letters. The shared `CategoryBadge` widget
+  renders either an icon or the monogram so every surface stays consistent.
 - **Const icon catalog.** `kCategoryIconCatalog` is a fixed `Map<String, IconData>` (no dynamic
   codepoints) so icon-font tree-shaking keeps working in release — the same constraint the account
   icon catalog follows.

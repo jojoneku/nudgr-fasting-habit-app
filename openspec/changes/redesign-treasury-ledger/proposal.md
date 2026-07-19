@@ -21,10 +21,12 @@ choice, since the reference treats the icon as a category's identity.
   background. The category identity is carried by the **color-tinted category icon**; the subtitle is
   the **account name only** (falls back to the category when a txn has no account). Amounts stay
   semantic — expense red, income green, transfer neutral grey.
-- **User-settable category icons.** Add a catalog picker (`utils/category_icon_catalog.dart` +
-  `resolveCategoryIcon`) to the Manage Categories sheet; the choice persists in the existing
-  `FinanceCategory.icon` field. Legacy categories with no explicit pick fall back to the name
-  heuristic (`category_icon.dart`), so **no data migration** is required.
+- **User-settable category icons, with a name-monogram fallback.** Add a catalog picker
+  (`utils/category_icon_catalog.dart`) to the Manage Categories sheet; the choice persists in the
+  existing `FinanceCategory.icon` field. The badge resolves as: chosen catalog icon → keyword-heuristic
+  glyph → **name monogram** (initials in the category color) → per-type generic icon. The monogram
+  step keeps categories the heuristic can't match (e.g. "Allowance") visually distinct instead of all
+  collapsing to a generic receipt. Legacy categories need **no data migration**.
 - **Taller chat input.** Keep chat logging; restyle the input pill and send button taller per the
   reference. Voice/TTS is deferred.
 

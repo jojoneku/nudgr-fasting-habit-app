@@ -112,3 +112,53 @@ IconData resolveCategoryIcon(String? iconKey, String? name, CategoryType type) {
   if (fromCatalog != null) return fromCatalog;
   return categoryIcon(name, type);
 }
+
+/// A resolved category badge: either an [icon] or a short name [monogram]
+/// (never both). Mirrors the account-badge pattern so a category with no
+/// explicit icon and no keyword match still gets a distinct, name-derived badge
+/// instead of a generic look-alike glyph.
+class CategoryBadgeSpec {
+  final IconData? icon;
+  final String? monogram;
+  const CategoryBadgeSpec.icon(IconData this.icon) : monogram = null;
+  const CategoryBadgeSpec.monogram(String this.monogram) : icon = null;
+}
+
+/// A short, name-derived monogram for a category (1 letter for a single word,
+/// initials of the first two words otherwise; up to 2 chars, uppercased).
+/// Returns '' when the name has no usable letters/digits.
+String categoryMonogram(String? name) {
+  final words = (name ?? '')
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((w) => w.isNotEmpty)
+      .toList();
+  String initial(String w) {
+    final m = RegExp(r'[A-Za-z0-9]').firstMatch(w);
+    return m?.group(0) ?? '';
+  }
+
+  if (words.isEmpty) return '';
+  if (words.length >= 2) {
+    final a = initial(words[0]);
+    final b = initial(words[1]);
+    if (a.isNotEmpty && b.isNotEmpty) return (a + b).toUpperCase();
+  }
+  return initial(words.first).toUpperCase();
+}
+
+/// Resolves the badge for a category (icon-or-monogram), Option-1 order:
+///   1. explicit catalog icon (user pick)
+///   2. keyword-heuristic glyph (shopping → cart, salary → briefcase, …)
+///   3. name monogram (so unmatched categories stay visually distinct)
+///   4. per-type generic icon (only when the name has no usable letters)
+CategoryBadgeSpec resolveCategoryBadge(
+    String? iconKey, String? name, CategoryType type) {
+  final fromCatalog = iconKey == null ? null : kCategoryIconCatalog[iconKey];
+  if (fromCatalog != null) return CategoryBadgeSpec.icon(fromCatalog);
+  final keyword = categoryKeywordIcon(name);
+  if (keyword != null) return CategoryBadgeSpec.icon(keyword);
+  final mono = categoryMonogram(name);
+  if (mono.isNotEmpty) return CategoryBadgeSpec.monogram(mono);
+  return CategoryBadgeSpec.icon(categoryIcon(name, type));
+}

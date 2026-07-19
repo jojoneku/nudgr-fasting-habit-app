@@ -16,10 +16,11 @@ Nudgr reference's per-category iconography.
 - **THEN** the badge shows the corresponding heuristic Material glyph (cart, fork-knife, car,
   briefcase) in the category's color
 
-#### Scenario: Unknown category name
+#### Scenario: Unknown category name (monogram fallback)
 - **WHEN** a category has no explicit icon and its name matches no keyword
-- **THEN** the badge shows a sensible per-type fallback glyph (income vs expense) rather than an
-  error or a blank icon
+- **THEN** the badge shows a name-derived monogram (one letter for a single word, first-two initials
+  otherwise) in the category color, keeping unmatched categories visually distinct — falling back to a
+  per-type generic glyph only when the name has no usable letters
 
 #### Scenario: Transfer entry
 - **WHEN** the transaction is an internal transfer

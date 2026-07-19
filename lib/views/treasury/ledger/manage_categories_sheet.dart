@@ -5,6 +5,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -376,17 +377,13 @@ class _AddCategoryForm extends StatelessWidget {
               child: InkWell(
                 onTap: onPickIcon,
                 borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withValues(alpha: 0.4)),
-                  ),
-                  child: Icon(
-                    resolveCategoryIcon(iconKey, controller.text, type),
-                    color: color,
-                    size: 22,
-                  ),
+                child: CategoryBadge(
+                  iconKey: iconKey,
+                  name: controller.text,
+                  type: type,
+                  color: color,
+                  size: 52,
+                  iconSize: 24,
                 ),
               ),
             ),
@@ -465,9 +462,10 @@ class _CategoryTile extends StatelessWidget {
           child: InkWell(
             onTap: onChangeIcon,
             borderRadius: BorderRadius.circular(12),
-            child: AppIconBadge(
-              icon: resolveCategoryIcon(
-                  category.icon, category.name, category.type),
+            child: CategoryBadge(
+              iconKey: category.icon,
+              name: category.name,
+              type: category.type,
               color: accentColor,
               size: 40,
               iconSize: 18,

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
-import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class TransactionListTile extends StatelessWidget {
@@ -47,17 +47,6 @@ class TransactionListTile extends StatelessWidget {
     }
   }
 
-  IconData _categoryIcon() {
-    if (txn.type == TransactionType.transfer) return Icons.swap_horiz_rounded;
-    // Prefer the category's chosen icon; falls back to the name heuristic for
-    // legacy categories with no explicit pick (resolveCategoryIcon).
-    return resolveCategoryIcon(
-      category?.icon,
-      category?.name,
-      category?.type ?? CategoryType.expense,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -77,12 +66,21 @@ class TransactionListTile extends StatelessWidget {
       label: '${txn.description}, $_amountText, $accountLabel',
       child: AppListTile(
         key: key,
-        leading: AppIconBadge(
-          icon: _categoryIcon(),
-          color: catColor,
-          size: 40,
-          iconSize: 18,
-        ),
+        leading: isTransfer
+            ? AppIconBadge(
+                icon: Icons.swap_horiz_rounded,
+                color: catColor,
+                size: 40,
+                iconSize: 18,
+              )
+            : CategoryBadge(
+                iconKey: category?.icon,
+                name: category?.name,
+                type: category?.type ?? CategoryType.expense,
+                color: catColor,
+                size: 40,
+                iconSize: 18,
+              ),
         title: Text(
           txn.description,
           maxLines: 1,
