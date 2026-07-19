@@ -183,7 +183,7 @@ class BudgetPresenter extends ChangeNotifier {
   // ─── Mobile Budget sections (Nudgr budget-cards redesign) ───────────────────────
 
   /// Ordered, display-ready sections for the mobile Budget card list. Groups
-  /// follow `sortOrder` (Living Expense → Savings → Variable → Non-Negotiables by
+  /// follow `sortOrder` (Living → Savings → Variable → Essentials by
   /// default; a user's manage-groups order wins). Each section carries its
   /// resolved rows and spent/allocated totals; empty groups are omitted. Visual
   /// tokens (icon glyph, color) are left to the view — the presenter stays free

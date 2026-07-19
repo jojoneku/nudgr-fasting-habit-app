@@ -251,6 +251,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     final savingsTargets = widget.presenter.savingsTargets;
     final isPreselected = widget.preselectedCategoryId != null;
     final targetName = _selectedTargetName;
+    final accent = Theme.of(context).colorScheme.primary;
 
     return Form(
       key: _formKey,
@@ -328,16 +329,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
 
             // Budget group
             SheetFieldLabel('Budget group'),
-            AppSegmentedControl<String>(
-              segments: [
-                for (final g in widget.presenter.groups)
-                  (
-                    value: g.id,
-                    label: g.name.length > 8 ? g.name.substring(0, 8) : g.name,
-                    icon: null,
-                  ),
-              ],
-              selected: _groupId,
+            SheetSegmentedToggle<String>(
+              value: _groupId,
               onChanged: (gId) {
                 // Switching between expense ↔ savings invalidates the picked
                 // id since categories and accounts share the same `categoryId`
@@ -349,20 +342,32 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   if (crossing) _selectedCategoryId = null;
                 });
               },
+              segments: [
+                for (final g in widget.presenter.groups)
+                  SheetSegment(label: g.name, value: g.id, accent: accent),
+              ],
             ),
             const SizedBox(height: 16),
 
             // Budget type
             SheetFieldLabel('Budget type'),
-            AppSegmentedControl<BudgetType>(
-              segments: const [
-                (value: BudgetType.monthly, label: 'Monthly', icon: null),
-                (value: BudgetType.fixed, label: 'Fixed', icon: null),
-                (value: BudgetType.goal, label: 'Goal', icon: null),
-                (value: BudgetType.variable, label: 'Variable', icon: null),
-              ],
-              selected: _budgetType,
+            SheetSegmentedToggle<BudgetType>(
+              value: _budgetType,
               onChanged: (t) => setState(() => _budgetType = t),
+              segments: [
+                SheetSegment(
+                    label: 'Monthly',
+                    value: BudgetType.monthly,
+                    accent: accent),
+                SheetSegment(
+                    label: 'Fixed', value: BudgetType.fixed, accent: accent),
+                SheetSegment(
+                    label: 'Goal', value: BudgetType.goal, accent: accent),
+                SheetSegment(
+                    label: 'Variable',
+                    value: BudgetType.variable,
+                    accent: accent),
+              ],
             ),
             const SizedBox(height: 20),
 
