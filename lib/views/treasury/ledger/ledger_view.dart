@@ -867,27 +867,35 @@ class _SelectChip extends StatelessWidget {
 
 // ── Month / Year Switcher ────────────────────────────────────────────────────
 
-/// Month + year switcher: chevrons step one month; tapping the pill opens a
-/// month/year picker to jump anywhere. Day-level filtering lives in the
-/// Filter & sort sheet, not here.
-class _MonthSelectorRow extends StatelessWidget {
+/// A tappable month pill (no chevrons) that opens a month-grid popover with
+/// year navigation — pick any month the way you'd pick a day on the calendar.
+class _MonthSelectorRow extends StatefulWidget {
   final LedgerPresenter presenter;
 
   const _MonthSelectorRow({required this.presenter});
 
-  Future<void> _pickMonth(BuildContext context) async {
+  @override
+  State<_MonthSelectorRow> createState() => _MonthSelectorRowState();
+}
+
+class _MonthSelectorRowState extends State<_MonthSelectorRow> {
+  final _pillKey = GlobalKey();
+
+  Future<void> _openPicker() async {
     HapticFeedback.selectionClick();
-    final current =
-        DateTime.tryParse('${presenter.selectedMonth}-01') ?? DateTime.now();
-    final picked = await showDatePicker(
+    final box = _pillKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final topOffset = offset.dy + box.size.height + 8;
+    await showDialog<void>(
       context: context,
-      initialDate: current,
-      firstDate: DateTime(2015),
-      lastDate: DateTime(2100),
-      initialDatePickerMode: DatePickerMode.year,
-      helpText: 'Select month',
+      barrierColor: Colors.black.withValues(alpha: 0.25),
+      builder: (ctx) => _MonthPickerPopover(
+        presenter: widget.presenter,
+        topOffset: topOffset,
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
     );
-    if (picked != null) presenter.setMonth(toMonthKey(picked));
   }
 
   @override
@@ -896,68 +904,208 @@ class _MonthSelectorRow extends StatelessWidget {
     final cs = theme.colorScheme;
     return Container(
       color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
-              tooltip: 'Previous month',
-              onPressed: () =>
-                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      child: Center(
+        child: GestureDetector(
+          key: _pillKey,
+          onTap: _openPicker,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.6),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_today_rounded,
+                    size: 14, color: cs.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  monthLabel(widget.presenter.selectedMonth),
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(Icons.keyboard_arrow_down_rounded,
+                    color: cs.onSurfaceVariant, size: 18),
+              ],
             ),
           ),
-          Expanded(
-            child: Center(
-              child: GestureDetector(
-                onTap: () => _pickMonth(context),
-                // Bordered month pill with a caret.
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.6),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+        ),
+      ),
+    );
+  }
+}
+
+/// Anchored popover: a year header (‹ 2026 ›) + a 3-column grid of the twelve
+/// months. Selecting a month sets it and closes.
+class _MonthPickerPopover extends StatefulWidget {
+  final LedgerPresenter presenter;
+  final double topOffset;
+  final VoidCallback onDismiss;
+
+  const _MonthPickerPopover({
+    required this.presenter,
+    required this.topOffset,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_MonthPickerPopover> createState() => _MonthPickerPopoverState();
+}
+
+class _MonthPickerPopoverState extends State<_MonthPickerPopover> {
+  late int _year;
+  late final int _selYear;
+  late final int _selMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.presenter.selectedMonth.split('-');
+    _selYear = int.parse(parts[0]);
+    _selMonth = int.parse(parts[1]);
+    _year = _selYear;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final now = DateTime.now();
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: widget.onDismiss,
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: GestureDetector(
+          onTap: () {},
+          child: Container(
+            width: 300,
+            margin: EdgeInsets.only(top: widget.topOffset, left: 12, right: 12),
+            child: AppCard(
+              variant: AppCardVariant.elevated,
+              padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        monthLabel(presenter.selectedMonth),
-                        style: TextStyle(
-                          color: cs.onSurface,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: IconButton(
+                          icon: Icon(Icons.chevron_left,
+                              color: cs.onSurfaceVariant),
+                          tooltip: 'Previous year',
+                          onPressed: () => setState(() => _year--),
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: cs.onSurfaceVariant,
-                        size: 18,
+                      Expanded(
+                        child: Center(
+                          child: Text(
+                            '$_year',
+                            style: theme.textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: IconButton(
+                          icon: Icon(Icons.chevron_right,
+                              color: cs.onSurfaceVariant),
+                          tooltip: 'Next year',
+                          onPressed: () => setState(() => _year++),
+                        ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 3,
+                    childAspectRatio: 2.2,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    children: [
+                      for (var m = 1; m <= 12; m++)
+                        _MonthCell(
+                          label: DateFormat('MMM').format(DateTime(_year, m)),
+                          selected: _year == _selYear && m == _selMonth,
+                          isCurrent: _year == now.year && m == now.month,
+                          onTap: () {
+                            widget.presenter.setMonth(
+                              '$_year-${m.toString().padLeft(2, '0')}',
+                            );
+                            widget.onDismiss();
+                          },
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-              tooltip: 'Next month',
-              onPressed: () =>
-                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
-            ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MonthCell extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool isCurrent;
+  final VoidCallback onTap;
+
+  const _MonthCell({
+    required this.label,
+    required this.selected,
+    required this.isCurrent,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? cs.primary
+                : (isCurrent
+                    ? cs.primary.withValues(alpha: 0.5)
+                    : cs.outlineVariant.withValues(alpha: 0.5)),
           ),
-        ],
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? cs.primary : cs.onSurface,
+          ),
+        ),
       ),
     );
   }
