@@ -390,7 +390,9 @@ class _AddCategoryForm extends StatelessWidget {
     return Form(
       key: formKey,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // Bottom-align so the icon preview + add button line up with the input
+        // box, not the field's label that now sits above it.
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           // Tappable icon preview — opens the catalog picker.
           Semantics(

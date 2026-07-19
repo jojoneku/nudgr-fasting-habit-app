@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
+import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/full_category_breakdown_sheet.dart';
@@ -191,12 +192,8 @@ class _PieChartPainter extends CustomPainter {
       final tp = TextPainter(
         text: TextSpan(
           text: label,
-          style: TextStyle(
-            color: textPrimaryColor,
-            fontSize: 13,
-            fontWeight: FontWeight.w700,
-            fontFamily: 'DM Mono',
-          ),
+          style: AppTextStyles.numeric(fontSize: 13, weight: FontWeight.w700)
+              .copyWith(color: textPrimaryColor),
         ),
         textDirection: ui.TextDirection.ltr,
         textAlign: TextAlign.center,

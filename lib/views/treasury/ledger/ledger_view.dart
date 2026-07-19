@@ -1318,13 +1318,9 @@ class _SummarySegment extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               value,
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                ),
-              ),
+              style:
+                  AppTextStyles.numeric(fontSize: 13, weight: FontWeight.w800)
+                      .copyWith(color: color),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -1516,13 +1512,8 @@ class _DailyNetBadge extends StatelessWidget {
 
     return Text(
       '$prefix${formatPeso(dailyNet.abs())}',
-      style: AppTextStyles.mono(
-        textStyle: TextStyle(
-          color: netColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      style: AppTextStyles.numeric(fontSize: 11, weight: FontWeight.w600)
+          .copyWith(color: netColor),
     );
   }
 }
