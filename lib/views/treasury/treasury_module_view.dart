@@ -44,11 +44,14 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  // Index of the Ledger tab — keep in sync with the TabBar order below.
+  // Indices of tabs that own their in-page header — keep in sync with the
+  // TabBar order below.
   static const int _ledgerTabIndex = 1;
+  static const int _billsTabIndex = 2;
 
-  // The redesigned Ledger renders its own "Ledger" title, so the shared
-  // "TREASURY" app bar is hidden while that tab is active (per the reference
+  // The redesigned Ledger and Bills tabs render their own in-page headers
+  // (Ledger's "Ledger" title; Bills' header + month·year picker), so the shared
+  // "TREASURY" app bar is hidden while either is active (per the reference
   // frame). Other tabs keep the app bar until they get the same treatment.
   bool _appBarHidden = false;
 
@@ -68,9 +71,11 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   }
 
   void _onTabChanged() {
-    // Toggle the app bar as soon as we cross into/out of the Ledger tab (even
-    // mid-animation) so there's no flash of the "TREASURY" bar over the Ledger.
-    final hide = _tabController.index == _ledgerTabIndex;
+    // Toggle the app bar as soon as we cross into/out of a header-owning tab
+    // (Ledger, Bills) — even mid-animation — so there's no flash of the shared
+    // "TREASURY" bar over that tab's own in-page header.
+    final index = _tabController.index;
+    final hide = index == _ledgerTabIndex || index == _billsTabIndex;
     if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
 
     if (_tabController.indexIsChanging) return;
@@ -106,7 +111,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      // Hidden on the Ledger tab, which supplies its own "Ledger" title.
+      // Hidden on the Ledger and Bills tabs, which supply their own in-page
+      // headers ("Ledger" title / "Bills" header + month·year picker).
       appBar: _appBarHidden
           ? null
           : AppBar(
@@ -150,7 +156,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         controller: _tabController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          TreasuryDashboardView(presenter: widget.dashPresenter),
+          TreasuryDashboardView(
+            presenter: widget.dashPresenter,
+            billsPresenter: widget.billsPresenter,
+          ),
           LedgerView(presenter: widget.ledgerPresenter),
           BillsReceivablesView(
             presenter: widget.billsPresenter,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/app_colors.dart';
@@ -15,12 +16,28 @@ import 'package:intermittent_fasting/views/treasury/dashboard/net_worth_hero.dar
 import 'package:intermittent_fasting/views/treasury/dashboard/spending_analytics_card.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/upcoming_bills_card.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
+import 'package:intermittent_fasting/views/treasury/shared/quick_pay_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class TreasuryDashboardView extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
-  const TreasuryDashboardView({super.key, required this.presenter});
+  /// Optional — supplied by the Treasury module so the Credit section (now the
+  /// single home for credit cards) can offer a quick Pay action. Null-safe: the
+  /// dashboard still builds standalone (e.g. in tests) without a Pay button.
+  final BillsReceivablesPresenter? billsPresenter;
+
+  const TreasuryDashboardView({
+    super.key,
+    required this.presenter,
+    this.billsPresenter,
+  });
+
+  void _showQuickPay(BuildContext context, FinancialAccount card) {
+    final bills = billsPresenter;
+    if (bills == null) return;
+    showQuickPaySheet(context, card: card, presenter: bills);
+  }
 
   void _showAccountSheet(BuildContext context, [FinancialAccount? existing]) {
     AppBottomSheet.show(
@@ -59,6 +76,9 @@ class TreasuryDashboardView extends StatelessWidget {
             onAddAccount: () => _showAccountSheet(context),
             onEditAccount: (account) => _showAccountSheet(context, account),
             onAddGoalSavings: () => _showGoalSavingsSheet(context),
+            onPayCredit: billsPresenter == null
+                ? null
+                : (card) => _showQuickPay(context, card),
           ),
           floatingActionButton: _AddAccountFab(
             onTap: () => _showAccountSheet(context),
@@ -96,11 +116,15 @@ class _DashboardScrollBody extends StatelessWidget {
   final ValueChanged<FinancialAccount> onEditAccount;
   final VoidCallback onAddGoalSavings;
 
+  /// Null when no bills presenter is wired (no quick-pay available).
+  final ValueChanged<FinancialAccount>? onPayCredit;
+
   const _DashboardScrollBody({
     required this.presenter,
     required this.onAddAccount,
     required this.onEditAccount,
     required this.onAddGoalSavings,
+    this.onPayCredit,
   });
 
   @override
@@ -125,6 +149,16 @@ class _DashboardScrollBody extends StatelessWidget {
               totalLiquidCash: presenter.totalLiquidCash,
               onEdit: onEditAccount,
             ),
+          // Credit cards live here, directly under Accounts — a card balance is
+          // an account, not a monthly bill (moved off the Bills tab).
+          if (presenter.creditAccounts.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            _CreditSection(
+              presenter: presenter,
+              onEdit: onEditAccount,
+              onPay: onPayCredit,
+            ),
+          ],
           const SizedBox(height: 16),
           // Retained from the pre-redesign dashboard: exact month figures plus
           // Ending Cash / Forecast, which the hero + strip summarize but don't
@@ -151,8 +185,6 @@ class _DashboardScrollBody extends StatelessWidget {
             onAdd: onAddGoalSavings,
           ),
           const SizedBox(height: 16),
-          if (presenter.creditAccounts.isNotEmpty)
-            _CreditSection(presenter: presenter, onEdit: onEditAccount),
           if (presenter.custodianAccounts.isNotEmpty) ...[
             const SizedBox(height: 16),
             _HeldFundsCard(presenter: presenter, onEdit: onEditAccount),
@@ -348,7 +380,14 @@ class _CreditSection extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
   final ValueChanged<FinancialAccount> onEdit;
 
-  const _CreditSection({required this.presenter, required this.onEdit});
+  /// Quick-pay a card; null when no bills presenter is wired.
+  final ValueChanged<FinancialAccount>? onPay;
+
+  const _CreditSection({
+    required this.presenter,
+    required this.onEdit,
+    this.onPay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -373,6 +412,7 @@ class _CreditSection extends StatelessWidget {
                 HapticFeedback.selectionClick();
                 onEdit(accounts[i]);
               },
+              onPay: onPay,
             ),
             if (i < accounts.length - 1) const SizedBox(height: 8),
           ],
@@ -387,12 +427,14 @@ class _CreditAccountCard extends StatelessWidget {
   final ({String label, bool imminent})? dueInfo;
   final double? minimumDue;
   final VoidCallback onTap;
+  final ValueChanged<FinancialAccount>? onPay;
 
   const _CreditAccountCard({
     required this.account,
     required this.dueInfo,
     required this.minimumDue,
     required this.onTap,
+    this.onPay,
   });
 
   @override
@@ -477,6 +519,23 @@ class _CreditAccountCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (onPay != null && account.currentPayable > 0) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.tonalIcon(
+                onPressed: () => onPay!(account),
+                style: FilledButton.styleFrom(
+                  backgroundColor: cs.primary.withValues(alpha: 0.14),
+                  foregroundColor: cs.primary,
+                  minimumSize: const Size.fromHeight(44),
+                ),
+                icon: const Icon(Icons.payments_outlined, size: 18),
+                label: const Text('Pay',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
             ),
           ],
         ],

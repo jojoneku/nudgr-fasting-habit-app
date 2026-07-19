@@ -54,6 +54,10 @@ class Bill {
   final DateTime? paidDate;
   final double? paidAmount; // may differ from billed amount (partial pay)
   final String? transactionId; // linked TransactionRecord
+  /// Lead time for a per-bill "remind me N days before due" reminder. Null means
+  /// no reminder. Additive/null-tolerant — bills saved before this field load
+  /// with no reminder.
+  final int? reminderDaysBefore;
   final DateTime updatedAt;
 
   Bill({
@@ -73,6 +77,7 @@ class Bill {
     this.paidDate,
     this.paidAmount,
     this.transactionId,
+    this.reminderDaysBefore,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -111,6 +116,7 @@ class Bill {
           : null,
       paidAmount: (json['paidAmount'] as num?)?.toDouble(),
       transactionId: json['transactionId'] as String?,
+      reminderDaysBefore: (json['reminderDaysBefore'] as num?)?.toInt(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -133,6 +139,7 @@ class Bill {
         'paidDate': paidDate?.toIso8601String(),
         'paidAmount': paidAmount,
         'transactionId': transactionId,
+        'reminderDaysBefore': reminderDaysBefore,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -152,6 +159,7 @@ class Bill {
     DateTime? paidDate,
     double? paidAmount,
     String? transactionId,
+    Object? reminderDaysBefore = _kUnset,
     DateTime? updatedAt,
   }) {
     return Bill(
@@ -172,6 +180,9 @@ class Bill {
       paidDate: paidDate ?? this.paidDate,
       paidAmount: paidAmount ?? this.paidAmount,
       transactionId: transactionId ?? this.transactionId,
+      reminderDaysBefore: identical(reminderDaysBefore, _kUnset)
+          ? this.reminderDaysBefore
+          : reminderDaysBefore as int?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
