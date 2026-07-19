@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
@@ -68,6 +69,24 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
   List<FinanceCategory> get _incomeCategories => widget.presenter.categories
       .where((c) => c.type == CategoryType.income)
       .toList();
+
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.accounts,
+      selectedId: _selectedAccountId,
+      allowNone: true,
+      noneLabel: 'Ask me when received',
+    );
+    if (choice != null) setState(() => _selectedAccountId = choice.id);
+  }
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -226,28 +245,25 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
             ),
           ],
 
-          // Destination account (optional) — pre-fills _MarkReceivedSheet
-          // dropdown. Leave blank to be asked at received-time.
+          // Destination account (optional) — pre-fills _MarkReceivedSheet.
+          // Leave as "Ask me when received" to be asked at received-time.
           if (widget.presenter.accounts.isNotEmpty) ...[
             const SizedBox(height: 16),
-            DropdownButtonFormField<String?>(
-              initialValue: _selectedAccountId,
-              decoration: sheetFieldDecoration(
-                context,
-                label: 'Destination account (optional)',
-                helperText: 'Pre-fills when you mark this received',
+            const SheetFieldLabel('Destination account (optional)'),
+            SheetAccountField(
+              account: _selectedAccount,
+              placeholder: 'Ask me when received',
+              onTap: _pickAccount,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 2),
+              child: Text(
+                'Pre-fills when you mark this received',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
-              items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text('Ask me when received',
-                      style: TextStyle(fontStyle: FontStyle.italic)),
-                ),
-                ...widget.presenter.accounts.map(
-                  (a) => DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ),
-              ],
-              onChanged: (v) => setState(() => _selectedAccountId = v),
             ),
           ],
 

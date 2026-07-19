@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
@@ -83,6 +84,24 @@ class _AddBillSheetState extends State<AddBillSheet> {
   List<FinanceCategory> get _expenseCategories => widget.presenter.categories
       .where((c) => c.type == CategoryType.expense)
       .toList();
+
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.accounts,
+      selectedId: _selectedAccountId,
+      allowNone: true,
+      noneLabel: 'None',
+    );
+    if (choice != null) setState(() => _selectedAccountId = choice.id);
+  }
 
   /// Resolves the note to persist. A user-typed note wins; otherwise we
   /// re-apply the auto-statement marker we hid from the field, so editing an
@@ -210,20 +229,14 @@ class _AddBillSheetState extends State<AddBillSheet> {
             ],
           ),
 
-          // Account dropdown
+          // Account — reference badge + name + caret picker (optional).
           if (widget.presenter.accounts.isNotEmpty) ...[
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _selectedAccountId,
-              hint: Text('Account (optional)',
-                  style: TextStyle(
-                      color: colorScheme.onSurfaceVariant, fontSize: 14)),
-              decoration: sheetFieldDecoration(context, label: 'Pay from'),
-              items: widget.presenter.accounts
-                  .map(
-                      (a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
-                  .toList(),
-              onChanged: (v) => setState(() => _selectedAccountId = v),
+            const SheetFieldLabel('Pay from'),
+            SheetAccountField(
+              account: _selectedAccount,
+              placeholder: 'None',
+              onTap: _pickAccount,
             ),
           ],
 

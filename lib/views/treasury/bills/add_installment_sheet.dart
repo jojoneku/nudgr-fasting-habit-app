@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
@@ -39,6 +40,28 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
   String _startMonth = toMonthKey(DateTime.now());
   bool _monthlyManuallyEdited = false;
   bool _saving = false;
+  bool _accountError = false;
+
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _accountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.accounts,
+      selectedId: _accountId,
+    );
+    if (choice != null) {
+      setState(() {
+        _accountId = choice.id;
+        _accountError = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -86,7 +109,10 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_accountId == null) return;
+    if (_accountId == null) {
+      setState(() => _accountError = true);
+      return;
+    }
     setState(() => _saving = true);
 
     final total = double.parse(_totalCtrl.text);
@@ -139,17 +165,21 @@ class _AddInstallmentSheetState extends State<AddInstallmentSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Account
+          // Account (required)
           const _FieldLabel('Account (Credit / BNPL)'),
-          DropdownButtonFormField<String>(
-            initialValue: _accountId,
-            decoration: sheetFieldDecoration(context, hint: 'Select account'),
-            items: widget.presenter.accounts.map((a) {
-              return DropdownMenuItem(value: a.id, child: Text(a.name));
-            }).toList(),
-            onChanged: (v) => setState(() => _accountId = v),
-            validator: (v) => v == null ? 'Required' : null,
+          SheetAccountField(
+            account: _selectedAccount,
+            placeholder: 'Select account',
+            onTap: _pickAccount,
           ),
+          if (_accountError)
+            Padding(
+              padding: const EdgeInsets.only(top: 6, left: 2),
+              child: Text('Required',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12)),
+            ),
           const SizedBox(height: 16),
 
           // Total Amount

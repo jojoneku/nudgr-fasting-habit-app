@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 
 /// Shared building blocks for the reference sheet frames
 /// (`Nutrition Focus Treasury.dc.html`, Frames 9–20): an uppercase field label
@@ -116,6 +118,177 @@ class SheetPickerBox extends StatelessWidget {
           children: [
             Expanded(child: child),
             Icon(trailingIcon, size: 18, color: cs.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Account field + picker ───────────────────────────────────────────────────
+// Reference "PAY FROM" / "ACCOUNT" row: a mini account badge + name + caret,
+// tapping opens a bottom-sheet account list. Shared by the Bills entry forms.
+
+/// A field box showing an account as a mini [AccountBadge] + name + caret.
+/// Pair with a [SheetFieldLabel] above; tap opens [showAccountPicker].
+class SheetAccountField extends StatelessWidget {
+  final FinancialAccount? account;
+  final String placeholder;
+  final VoidCallback onTap;
+
+  const SheetAccountField({
+    super.key,
+    required this.account,
+    required this.onTap,
+    this.placeholder = 'Select account',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final a = account;
+    return SheetPickerBox(
+      onTap: onTap,
+      child: a == null
+          ? Text(placeholder,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 14))
+          : Row(
+              children: [
+                AccountBadge.of(a, size: 24),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    a.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// Result of [showAccountPicker]. A null future means "dismissed / no change";
+/// an [AccountChoice] with a null [id] means the "none" option was chosen.
+class AccountChoice {
+  final String? id;
+  const AccountChoice(this.id);
+}
+
+/// A bottom-sheet account list. When [allowNone] is set, a leading [noneLabel]
+/// row returns `AccountChoice(null)`.
+Future<AccountChoice?> showAccountPicker(
+  BuildContext context, {
+  required List<FinancialAccount> accounts,
+  String? selectedId,
+  bool allowNone = false,
+  String noneLabel = 'None',
+}) {
+  final cs = Theme.of(context).colorScheme;
+  return showModalBottomSheet<AccountChoice>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: cs.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      return SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text('Account',
+                    style: TextStyle(
+                        color: theme.colorScheme.onSurface,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800)),
+              ),
+              if (allowNone)
+                _AccountPickerRow(
+                  leading: Icon(Icons.block_rounded,
+                      size: 20, color: theme.colorScheme.onSurfaceVariant),
+                  label: noneLabel,
+                  selected: selectedId == null,
+                  onTap: () => Navigator.of(ctx).pop(const AccountChoice(null)),
+                ),
+              for (final a in accounts)
+                _AccountPickerRow(
+                  leading: AccountBadge.of(a, size: 28),
+                  label: a.name,
+                  selected: a.id == selectedId,
+                  onTap: () => Navigator.of(ctx).pop(AccountChoice(a.id)),
+                ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _AccountPickerRow extends StatelessWidget {
+  final Widget leading;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AccountPickerRow({
+    required this.leading,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, size: 20, color: cs.primary),
           ],
         ),
       ),

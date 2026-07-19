@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budgeted_expense.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
+import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -97,15 +98,35 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
     }
   }
 
+  // Only liquid accounts can fund a set-aside — funding it later debits one.
+  List<FinancialAccount> get _liquidAccounts => widget.presenter.accounts
+      .where((a) => a.isActive && a.isLiquid)
+      .toList();
+
+  FinancialAccount? get _selectedAccount {
+    for (final a in _liquidAccounts) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: _liquidAccounts,
+      selectedId: _selectedAccountId,
+      allowNone: true,
+      noneLabel: 'None',
+    );
+    if (choice != null) setState(() => _selectedAccountId = choice.id);
+  }
+
   Widget _buildForm(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final expenseCategories = widget.presenter.categories
         .where((c) => c.type == CategoryType.expense)
         .toList();
-    // Only liquid accounts can fund a set-aside — funding it later debits one.
-    final liquidAccounts = widget.presenter.accounts
-        .where((a) => a.isActive && a.isLiquid)
-        .toList();
+    final liquidAccounts = _liquidAccounts;
 
     return Form(
       key: _formKey,
@@ -150,20 +171,11 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
           ),
           if (liquidAccounts.isNotEmpty) ...[
             const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue:
-                  liquidAccounts.any((a) => a.id == _selectedAccountId)
-                      ? _selectedAccountId
-                      : null,
-              decoration: const InputDecoration(
-                  labelText: 'Fund from account (optional)'),
-              items: [
-                const DropdownMenuItem<String>(
-                    value: null, child: Text('None')),
-                for (final a in liquidAccounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
-              ],
-              onChanged: (v) => setState(() => _selectedAccountId = v),
+            const SheetFieldLabel('Fund from account (optional)'),
+            SheetAccountField(
+              account: _selectedAccount,
+              placeholder: 'None',
+              onTap: _pickAccount,
             ),
           ],
           if (expenseCategories.isNotEmpty) ...[
