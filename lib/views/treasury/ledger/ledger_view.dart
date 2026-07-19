@@ -32,10 +32,6 @@ class _LedgerViewState extends State<LedgerView> {
   LedgerPresenter get presenter => widget.presenter;
   String? _lastSnackbarSummary;
 
-  /// List (default) vs full-month spending-heat Calendar view of the ledger
-  /// (reference "Spending calendar · ledger alt view").
-  bool _calendarView = false;
-
   @override
   void initState() {
     super.initState();
@@ -129,24 +125,12 @@ class _LedgerViewState extends State<LedgerView> {
                 _FilterSortBar(
                   presenter: presenter,
                   onOpenFilters: _showFilterSortSheet,
-                  calendarView: _calendarView,
-                  onViewChanged: (v) => setState(() => _calendarView = v),
                 ),
                 Expanded(
-                  child: _calendarView
-                      ? _CalendarBody(
-                          presenter: presenter,
-                          onDaySelected: (day) {
-                            presenter.setSelectedDate(day);
-                            // Drop back to the list so the tapped day's entries
-                            // are visible (the date-filter chip shows the day).
-                            setState(() => _calendarView = false);
-                          },
-                        )
-                      : _TransactionList(
-                          presenter: presenter,
-                          onEditTransaction: _showEditTransactionSheet,
-                        ),
+                  child: _TransactionList(
+                    presenter: presenter,
+                    onEditTransaction: _showEditTransactionSheet,
+                  ),
                 ),
                 _ChatHardErrorChip(presenter: presenter),
                 _LedgerChatDrawer(presenter: presenter),
@@ -509,19 +493,14 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 // ── Filter & Sort ─────────────────────────────────────────────────────────
 
 /// Single-button filter/sort bar (reference "Filter & sort"): a pill button
-/// with an active-count badge that opens [_FilterSortSheet], plus the
-/// List/Calendar view toggle on the right.
+/// with an active-count badge that opens [_FilterSortSheet].
 class _FilterSortBar extends StatelessWidget {
   final LedgerPresenter presenter;
   final VoidCallback onOpenFilters;
-  final bool calendarView;
-  final ValueChanged<bool> onViewChanged;
 
   const _FilterSortBar({
     required this.presenter,
     required this.onOpenFilters,
-    required this.calendarView,
-    required this.onViewChanged,
   });
 
   @override
@@ -582,9 +561,6 @@ class _FilterSortBar extends StatelessWidget {
               ),
             ),
           ),
-          const Spacer(),
-          _LedgerViewToggle(
-              calendarView: calendarView, onChanged: onViewChanged),
         ],
       ),
     );
@@ -1133,117 +1109,6 @@ class _SummaryChip extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-// ── List / Calendar view toggle ──────────────────────────────────────────────
-
-/// Right-aligned List / Calendar segmented toggle (reference Frame 11). Switches
-/// the ledger body between the grouped transaction list and the full-month
-/// spending-heat calendar.
-class _LedgerViewToggle extends StatelessWidget {
-  final bool calendarView;
-  final ValueChanged<bool> onChanged;
-
-  const _LedgerViewToggle(
-      {required this.calendarView, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    // Compact, embeddable (the parent [_FilterSortBar] supplies row layout +
-    // padding); List | Calendar segmented chips.
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _ToggleChip(
-          label: 'List',
-          icon: Icons.view_list_rounded,
-          selected: !calendarView,
-          onTap: () => onChanged(false),
-        ),
-        const SizedBox(width: 6),
-        _ToggleChip(
-          label: 'Calendar',
-          icon: Icons.calendar_month_rounded,
-          selected: calendarView,
-          onTap: () => onChanged(true),
-        ),
-      ],
-    );
-  }
-}
-
-class _ToggleChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ToggleChip({
-    required this.label,
-    required this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.15)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(
-            color: selected ? cs.primary : cs.outlineVariant,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon,
-                size: 13, color: selected ? cs.primary : cs.onSurfaceVariant),
-            const SizedBox(width: 5),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                color: selected ? cs.primary : cs.onSurfaceVariant,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Scrollable full-month spending-heat calendar body for the Calendar view.
-class _CalendarBody extends StatelessWidget {
-  final LedgerPresenter presenter;
-  final ValueChanged<DateTime> onDaySelected;
-
-  const _CalendarBody({required this.presenter, required this.onDaySelected});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
-      children: [
-        SpendingCalendar(
-          presenter: presenter,
-          onDaySelected: onDaySelected,
-        ),
-      ],
     );
   }
 }
