@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
+import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -20,7 +21,7 @@ class MonthlySummaryDetailView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AppPageScaffold.large(
-      title: monthLabel(summary.month).toUpperCase(),
+      title: monthLabel(summary.month),
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
         onPressed: () => Navigator.pop(context),
@@ -56,70 +57,101 @@ class _CashFlowSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final total = summary.totalInflow + summary.totalOutflow;
-    final inflowPct =
-        total > 0 ? (summary.totalInflow / total).clamp(0.0, 1.0) : 0.5;
+    final netPositive = summary.netSavings >= 0;
+    final rate = summary.savingsRate;
 
-    return AppSection(
-      title: 'CASH FLOW',
-      child: AppCard(
-        variant: AppCardVariant.elevated,
-        child: Column(
-          children: [
-            // 3-column metrics
-            Row(
+    return AppCard(
+      variant: AppCardVariant.filled,
+      child: Column(
+        children: [
+          // IN · OUT · NET, three centered columns split by hairline dividers.
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: AppNumberDisplay(
-                    value: formatPeso(summary.totalInflow),
-                    label: 'Total Inflow',
-                    size: AppNumberSize.body,
-                    color: cs.tertiary,
-                    textAlign: TextAlign.start,
-                  ),
+                _TotalCol(
+                  label: 'IN',
+                  value: formatPesoCompact(summary.totalInflow),
+                  color: cs.tertiary,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: AppNumberDisplay(
-                    value: formatPeso(summary.totalOutflow),
-                    label: 'Total Outflow',
-                    size: AppNumberSize.body,
-                    color: cs.error,
-                    textAlign: TextAlign.start,
-                  ),
+                _divider(cs),
+                _TotalCol(
+                  label: 'OUT',
+                  value: formatPesoCompact(summary.totalOutflow),
+                  color: cs.error,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: AppNumberDisplay(
-                    value: formatPeso(summary.netSavings.abs()),
-                    prefix: summary.netSavings >= 0 ? '+' : '−',
-                    label: 'Net Savings',
-                    size: AppNumberSize.body,
-                    color: summary.netSavings >= 0 ? cs.tertiary : cs.error,
-                    textAlign: TextAlign.start,
-                  ),
+                _divider(cs),
+                _TotalCol(
+                  label: 'NET',
+                  value:
+                      '${netPositive ? '+' : '−'}${formatPesoCompact(summary.netSavings.abs())}',
+                  color: netPositive ? cs.primary : cs.error,
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Visual inflow/outflow split bar
-            ClipRRect(
-              borderRadius: BorderRadius.circular(4),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: (inflowPct * 100).round().clamp(1, 99),
-                    child: Container(height: 8, color: cs.tertiary),
-                  ),
-                  Expanded(
-                    flex: ((1 - inflowPct) * 100).round().clamp(1, 99),
-                    child: Container(height: 8, color: cs.error),
-                  ),
-                ],
+          ),
+          if (rate != null) ...[
+            const SizedBox(height: 13),
+            AppLinearProgress(
+              value: rate.clamp(0.0, 1.0),
+              color: cs.primary,
+              height: 7,
+            ),
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Saved ${(rate * 100).round()}% of income',
+                style: theme.textTheme.labelSmall
+                    ?.copyWith(color: cs.onSurfaceVariant),
               ),
             ),
           ],
-        ),
+        ],
+      ),
+    );
+  }
+
+  Widget _divider(ColorScheme cs) => Container(
+        width: 1,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        color: cs.outlineVariant,
+      );
+}
+
+class _TotalCol extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+
+  const _TotalCol(
+      {required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: cs.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.titleSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w800),
+          ),
+        ],
       ),
     );
   }
@@ -144,7 +176,7 @@ class _BillsReceivablesSection extends StatelessWidget {
     return AppSection(
       title: 'BILLS & RECEIVABLES',
       child: AppCard(
-        variant: AppCardVariant.elevated,
+        variant: AppCardVariant.filled,
         child: Column(
           children: [
             AppListTile(
@@ -199,36 +231,66 @@ class _CategorySpendSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (summary.categorySpend.isEmpty) return const SizedBox.shrink();
 
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     final sorted = summary.categorySpend.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    final maxSpend = sorted.first.value;
 
     return AppSection(
       title: 'SPENDING BY CATEGORY',
-      child: AppCard(
-        variant: AppCardVariant.elevated,
-        child: Column(
-          children: sorted.map((entry) {
-            final cat = categories.cast<FinanceCategory?>().firstWhere(
-                  (c) => c?.id == entry.key,
-                  orElse: () => null,
-                );
-            final pct =
-                maxSpend > 0 ? (entry.value / maxSpend).clamp(0.0, 1.0) : 0.0;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: AppLinearProgress(
-                value: pct,
-                label: cat?.name ?? entry.key,
-                valueText: formatPeso(entry.value),
-                color: cs.primary,
-                height: 5,
-              ),
-            );
-          }).toList(),
-        ),
+      child: Column(
+        children: [
+          for (var i = 0; i < sorted.length; i++) ...[
+            if (i > 0) const SizedBox(height: 8),
+            Builder(builder: (context) {
+              final entry = sorted[i];
+              final cat = categories.cast<FinanceCategory?>().firstWhere(
+                    (c) => c?.id == entry.key,
+                    orElse: () => null,
+                  );
+              final dot = cat != null
+                  ? resolveSliceColor(cat.colorHex, i,
+                      brightness: theme.brightness)
+                  : cs.onSurfaceVariant;
+              return AppCard(
+                variant: AppCardVariant.filled,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 9,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: dot,
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    ),
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        cat?.name ?? entry.key,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      formatPeso(entry.value),
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        color: cs.onSurfaceVariant,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        ],
       ),
     );
   }
@@ -256,7 +318,7 @@ class _AccountSnapshotsSection extends StatelessWidget {
     return AppSection(
       title: 'ACCOUNT BALANCES AT CLOSE',
       child: AppCard(
-        variant: AppCardVariant.elevated,
+        variant: AppCardVariant.filled,
         child: Column(
           children: summary.accountSnapshots.entries
               .map(
