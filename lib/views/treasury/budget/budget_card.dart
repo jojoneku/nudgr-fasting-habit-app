@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
@@ -10,9 +8,8 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 /// One budget rendered as its own card (Nudgr budget-cards redesign,
 /// `Nutrition Focus Treasury.dc.html` Frame 4). Shows the category's icon + color
 /// (the same identity it carries in the ledger and dashboard), the name with its
-/// cadence badge inline, the progress bar below the name, and spent / allocated.
-/// Tapping the card opens the budget's transactions in a ledger-style popup
-/// scoped to this category; long-press edits the budget.
+/// spent / allocated inline, and the progress bar directly below the name — all
+/// in the column beside the (vertically centered) icon. Long-press edits.
 class BudgetCard extends StatelessWidget {
   final BudgetSectionRow row;
   final VoidCallback? onEdit;
@@ -24,16 +21,6 @@ class BudgetCard extends StatelessWidget {
       return row.isGoal ? Icons.flag_outlined : Icons.savings_outlined;
     }
     return categoryIcon(row.name, row.categoryType);
-  }
-
-  void _showTransactions(BuildContext context) {
-    AppBottomSheet.show(
-      context: context,
-      title: row.name,
-      useDraggableScrollableSheet: true,
-      initialChildSize: 0.6,
-      body: _BudgetTransactions(row: row),
-    );
   }
 
   @override
@@ -70,172 +57,92 @@ class BudgetCard extends StatelessWidget {
     return AppCard(
       variant: AppCardVariant.filled,
       padding: EdgeInsets.zero,
-      onTap: () => _showTransactions(context),
       onLongPress: onEdit,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        // Icon centered against the name + progress block beside it, so nothing
+        // hangs indented or full-width below the card.
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Header: icon · name + cadence badge inline · spent / allocated
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _IconChip(icon: _icon, color: identity),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    row.name,
-                    style: theme.textTheme.bodyLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                    overflow: TextOverflow.ellipsis,
+            _IconChip(icon: _icon, color: identity),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Name + spent / allocated inline.
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          row.name,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      AppNumberDisplay(
+                        value: formatPesoCompact(row.actual),
+                        size: AppNumberSize.body,
+                        color: overOrMet ? accent : cs.onSurface,
+                      ),
+                      Text(
+                        ' / ${formatPesoCompact(row.allocated)}',
+                        style: theme.textTheme.bodySmall
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    AppNumberDisplay(
-                      value: formatPesoCompact(row.actual),
-                      size: AppNumberSize.body,
-                      color: overOrMet ? accent : cs.onSurface,
+                  const SizedBox(height: 8),
+                  // Progress bar + % — directly below the name, aligned with it.
+                  Row(
+                    children: [
+                      Expanded(
+                        child: AppLinearProgress(
+                          value: row.progress,
+                          color: accent,
+                          height: 6,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        pct,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: overOrMet ? accent : cs.onSurfaceVariant,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Over-budget / goal note stays inside the column so it aligns
+                  // with the name, not hanging under the icon.
+                  if (row.isOver) ...[
+                    const SizedBox(height: 6),
+                    _HintLine(
+                      icon: Icons.warning_amber_rounded,
+                      color: cs.error,
+                      text:
+                          'Over by ${formatPeso(row.overBy)} — trim next week',
                     ),
-                    Text(
-                      ' / ${formatPesoCompact(row.allocated)}',
-                      style: theme.textTheme.bodySmall
-                          ?.copyWith(color: cs.onSurfaceVariant),
+                  ] else if (row.isSavings && row.met) ...[
+                    const SizedBox(height: 6),
+                    _HintLine(
+                      icon: Icons.check_circle_outline_rounded,
+                      color: cs.tertiary,
+                      text: 'Goal reached',
                     ),
                   ],
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 12),
-            // Full-width progress bar + %
-            Row(
-              children: [
-                Expanded(
-                  child: AppLinearProgress(
-                    value: row.progress,
-                    color: accent,
-                    height: 6,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Text(
-                  pct,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: overOrMet ? accent : cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            // Over-budget / goal note — otherwise a subtle "tap to view" hint so
-            // the card reads as tappable (transactions open on tap).
-            if (row.isOver) ...[
-              const SizedBox(height: 8),
-              _HintLine(
-                icon: Icons.warning_amber_rounded,
-                color: cs.error,
-                text: 'Over by ${formatPeso(row.overBy)} — trim next week',
-              ),
-            ] else if (row.isSavings && row.met) ...[
-              const SizedBox(height: 8),
-              _HintLine(
-                icon: Icons.check_circle_outline_rounded,
-                color: cs.tertiary,
-                text: 'Goal reached',
-              ),
-            ] else ...[
-              const SizedBox(height: 6),
-              Text(
-                'Tap to see transactions',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.75),
-                ),
-              ),
-            ],
           ],
         ),
       ),
-    );
-  }
-}
-
-/// The budget's transactions in a ledger-style popup, scoped to this category.
-class _BudgetTransactions extends StatelessWidget {
-  final BudgetSectionRow row;
-
-  const _BudgetTransactions({required this.row});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final identity = resolveSliceColor(
-      row.colorHex,
-      row.colorIndex,
-      brightness: theme.brightness,
-    );
-    final accent = row.isOver
-        ? cs.error
-        : ((row.isSavings && row.met) || row.isIncome ? cs.tertiary : identity);
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Spent-of-allocated summary + progress
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  AppNumberDisplay(
-                    value: formatPeso(row.actual),
-                    size: AppNumberSize.title,
-                    color: accent,
-                  ),
-                  Text(
-                    ' of ${formatPeso(row.allocated)}',
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: cs.onSurfaceVariant),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              AppLinearProgress(value: row.progress, color: accent, height: 6),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        if (row.transactions.isEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 28, 16, 28),
-            child: Text(
-              'No transactions this month',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall
-                  ?.copyWith(color: cs.onSurfaceVariant),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            child: Column(
-              children: [
-                for (final t in row.transactions)
-                  _TransactionRow(transaction: t),
-              ],
-            ),
-          ),
-      ],
     );
   }
 }
@@ -283,56 +190,6 @@ class _HintLine extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TransactionRow extends StatelessWidget {
-  final TransactionRecord transaction;
-
-  const _TransactionRow({required this.transaction});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isInflow = transaction.type == TransactionType.inflow;
-
-    return AppListTile(
-      dense: true,
-      leading: Container(
-        width: 3,
-        height: 28,
-        decoration: BoxDecoration(
-          color: isInflow
-              ? cs.tertiary.withValues(alpha: 0.5)
-              : cs.error.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(2),
-        ),
-      ),
-      title: Text(
-        transaction.description,
-        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            DateFormat('MMM d').format(transaction.date),
-            style: theme.textTheme.labelSmall
-                ?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            '${isInflow ? '+' : '−'}${formatPesoCompact(transaction.amount)}',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: isInflow ? cs.tertiary : cs.error,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
