@@ -132,15 +132,18 @@ class _QuickPaySheetState extends State<QuickPaySheet> {
             ),
             if (payers.isNotEmpty) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                key: ValueKey(_selectedAccountId),
-                initialValue: _selectedAccountId,
-                decoration: sheetFieldDecoration(context, label: 'Pay from'),
-                items: payers
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
+              SheetLabeledField(
+                label: 'Pay from',
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(_selectedAccountId),
+                  initialValue: _selectedAccountId,
+                  decoration: sheetFieldDecoration(context),
+                  items: payers
+                      .map((a) =>
+                          DropdownMenuItem(value: a.id, child: Text(a.name)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                ),
               ),
             ],
             const SizedBox(height: 12),

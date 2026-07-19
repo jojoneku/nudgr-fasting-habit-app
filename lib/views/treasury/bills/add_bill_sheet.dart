@@ -177,12 +177,15 @@ class _AddBillSheetState extends State<AddBillSheet> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // Name
-          TextFormField(
-            controller: _nameController,
-            decoration: sheetFieldDecoration(context, label: 'Name'),
-            textInputAction: TextInputAction.next,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+          SheetLabeledField(
+            label: 'Name',
+            child: TextFormField(
+              controller: _nameController,
+              decoration: sheetFieldDecoration(context),
+              textInputAction: TextInputAction.next,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -198,32 +201,38 @@ class _AddBillSheetState extends State<AddBillSheet> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: TextFormField(
-                  controller: _amountController,
-                  decoration: sheetFieldDecoration(context,
-                      label: 'Amount', prefixText: '₱ ', emphasize: true),
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
-                  inputFormatters: amountInputFormatters,
-                  textInputAction: TextInputAction.next,
-                  validator: (v) {
-                    final p = double.tryParse(v ?? '');
-                    if (p == null || p <= 0) return 'Must be > 0';
-                    return null;
-                  },
+                child: SheetLabeledField(
+                  label: 'Amount',
+                  child: TextFormField(
+                    controller: _amountController,
+                    decoration: sheetFieldDecoration(context,
+                        prefixText: '₱ ', emphasize: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: amountInputFormatters,
+                    textInputAction: TextInputAction.next,
+                    validator: (v) {
+                      final p = double.tryParse(v ?? '');
+                      if (p == null || p <= 0) return 'Must be > 0';
+                      return null;
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _dueDay,
-                  isExpanded: true,
-                  decoration: sheetFieldDecoration(context, label: 'Due Day'),
-                  items: [
-                    for (int d = 1; d <= 31; d++)
-                      DropdownMenuItem(value: d, child: Text(_ordinal(d))),
-                  ],
-                  onChanged: (v) => setState(() => _dueDay = v ?? _dueDay),
+                child: SheetLabeledField(
+                  label: 'Due Day',
+                  child: DropdownButtonFormField<int>(
+                    initialValue: _dueDay,
+                    isExpanded: true,
+                    decoration: sheetFieldDecoration(context),
+                    items: [
+                      for (int d = 1; d <= 31; d++)
+                        DropdownMenuItem(value: d, child: Text(_ordinal(d))),
+                    ],
+                    onChanged: (v) => setState(() => _dueDay = v ?? _dueDay),
+                  ),
                 ),
               ),
             ],
@@ -284,15 +293,18 @@ class _AddBillSheetState extends State<AddBillSheet> {
           ),
           if (_isRecurring) ...[
             const SizedBox(height: 8),
-            DropdownButtonFormField<RecurrenceType>(
-              initialValue: _recurrenceType,
-              decoration: sheetFieldDecoration(context, label: 'Recurrence'),
-              items: RecurrenceType.values
-                  .map((r) => DropdownMenuItem(
-                      value: r, child: Text(_recurrenceLabel(r))))
-                  .toList(),
-              onChanged: (v) =>
-                  setState(() => _recurrenceType = v ?? _recurrenceType),
+            SheetLabeledField(
+              label: 'Recurrence',
+              child: DropdownButtonFormField<RecurrenceType>(
+                initialValue: _recurrenceType,
+                decoration: sheetFieldDecoration(context),
+                items: RecurrenceType.values
+                    .map((r) => DropdownMenuItem(
+                        value: r, child: Text(_recurrenceLabel(r))))
+                    .toList(),
+                onChanged: (v) =>
+                    setState(() => _recurrenceType = v ?? _recurrenceType),
+              ),
             ),
           ],
 

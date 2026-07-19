@@ -498,18 +498,21 @@ class _AmountField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: amountInputFormatters,
-      decoration: sheetFieldDecoration(context,
-          label: 'Amount', prefixText: '₱ ', emphasize: true),
-      validator: (v) {
-        if (v == null || v.isEmpty) return 'Enter an amount';
-        final parsed = double.tryParse(v);
-        if (parsed == null || parsed <= 0) return 'Amount must be > 0';
-        return null;
-      },
+    return SheetLabeledField(
+      label: 'Amount',
+      child: TextFormField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: amountInputFormatters,
+        decoration:
+            sheetFieldDecoration(context, prefixText: '₱ ', emphasize: true),
+        validator: (v) {
+          if (v == null || v.isEmpty) return 'Enter an amount';
+          final parsed = double.tryParse(v);
+          if (parsed == null || parsed <= 0) return 'Amount must be > 0';
+          return null;
+        },
+      ),
     );
   }
 }
@@ -607,12 +610,15 @@ class _DescriptionField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      maxLength: 60,
-      decoration: sheetFieldDecoration(context, label: 'Description'),
-      validator: (v) =>
-          (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
+    return SheetLabeledField(
+      label: 'Description',
+      child: TextFormField(
+        controller: controller,
+        maxLength: 60,
+        decoration: sheetFieldDecoration(context),
+        validator: (v) =>
+            (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
+      ),
     );
   }
 }
@@ -671,10 +677,13 @@ class _NoteField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      maxLines: 2,
-      decoration: sheetFieldDecoration(context, label: 'Note (optional)'),
+    return SheetLabeledField(
+      label: 'Note (optional)',
+      child: TextFormField(
+        controller: controller,
+        maxLines: 2,
+        decoration: sheetFieldDecoration(context),
+      ),
     );
   }
 }
@@ -822,11 +831,13 @@ class _ReimbursableField extends StatelessWidget {
             ),
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: TextFormField(
-                controller: owedByController,
-                maxLength: 40,
-                decoration: sheetFieldDecoration(context,
-                    label: 'Who owes you? (optional)', counterText: ''),
+              child: SheetLabeledField(
+                label: 'Who owes you? (optional)',
+                child: TextFormField(
+                  controller: owedByController,
+                  maxLength: 40,
+                  decoration: sheetFieldDecoration(context, counterText: ''),
+                ),
               ),
             ),
           ],

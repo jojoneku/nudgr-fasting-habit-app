@@ -773,26 +773,29 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
             onChanged: (v) => setState(() => _logToLedger = v),
           ),
           if (_logToLedger) ...[
-            DropdownButtonFormField<String>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Account'),
-              items: [
-                for (final a in accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
-              ],
-              onChanged: (v) => setState(() => _accountId = v),
+            LabeledField(
+              label: 'Account',
+              child: DropdownButtonFormField<String>(
+                initialValue: _accountId,
+                items: [
+                  for (final a in accounts)
+                    DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setState(() => _accountId = v),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration:
-                  const InputDecoration(labelText: 'Category (optional)'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('None')),
-                for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.name)),
-              ],
-              onChanged: (v) => setState(() => _categoryId = v),
+            LabeledField(
+              label: 'Category (optional)',
+              child: DropdownButtonFormField<String>(
+                initialValue: _categoryId,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('None')),
+                  for (final c in categories)
+                    DropdownMenuItem(value: c.id, child: Text(c.name)),
+                ],
+                onChanged: (v) => setState(() => _categoryId = v),
+              ),
             ),
           ],
         ],

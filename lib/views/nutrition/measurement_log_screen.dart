@@ -1183,15 +1183,18 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
           const SizedBox(height: 16),
 
           // Primary: Waist
-          TextField(
-            controller: _waistCtrl,
-            autofocus: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            onChanged: (_) => setState(() {}),
-            decoration: InputDecoration(
-              labelText: 'Waist ($_unitLabel)',
-              border: const OutlineInputBorder(),
+          LabeledField(
+            label: 'Waist ($_unitLabel)',
+            child: TextField(
+              controller: _waistCtrl,
+              autofocus: true,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+              ),
             ),
           ),
           const SizedBox(height: 16),
@@ -1239,12 +1242,14 @@ class _AddMeasurementSheetState extends State<_AddMeasurementSheet> {
                 onChanged: () => setState(() {}),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: _notesCtrl,
-                textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (optional)',
-                  border: OutlineInputBorder(),
+              LabeledField(
+                label: 'Notes (optional)',
+                child: TextField(
+                  controller: _notesCtrl,
+                  textInputAction: TextInputAction.done,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -1327,14 +1332,16 @@ class _MeasurementField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          controller: ctrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textInputAction: TextInputAction.next,
-          onChanged: (_) => onChanged(),
-          decoration: InputDecoration(
-            labelText: label,
-            border: const OutlineInputBorder(),
+        LabeledField(
+          label: label,
+          child: TextField(
+            controller: ctrl,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.next,
+            onChanged: (_) => onChanged(),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         if (note != null) ...[

@@ -415,13 +415,16 @@ class _AddCategoryForm extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: TextFormField(
-              controller: controller,
-              textCapitalization: TextCapitalization.words,
-              decoration: sheetFieldDecoration(context, label: 'Category name'),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-              onFieldSubmitted: (_) => onSubmit(),
+            child: SheetLabeledField(
+              label: 'Category name',
+              child: TextFormField(
+                controller: controller,
+                textCapitalization: TextCapitalization.words,
+                decoration: sheetFieldDecoration(context),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                onFieldSubmitted: (_) => onSubmit(),
+              ),
             ),
           ),
           const SizedBox(width: 10),

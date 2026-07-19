@@ -477,13 +477,15 @@ class _AccountSetupForm extends StatelessWidget {
               variant: AppCardVariant.outlined,
               child: Column(
                 children: [
-                  TextFormField(
-                    controller: nameController,
-                    decoration:
-                        sheetFieldDecoration(context, label: 'Account Name'),
-                    validator: (v) => (v == null || v.trim().isEmpty)
-                        ? 'Enter account name'
-                        : null,
+                  SheetLabeledField(
+                    label: 'Account Name',
+                    child: TextFormField(
+                      controller: nameController,
+                      decoration: sheetFieldDecoration(context),
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter account name'
+                          : null,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -498,15 +500,17 @@ class _AccountSetupForm extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: TextFormField(
-                          controller: balanceController,
-                          keyboardType: const TextInputType.numberWithOptions(
-                              decimal: true),
-                          inputFormatters: amountInputFormatters,
-                          decoration: sheetFieldDecoration(
-                            context,
-                            label: balanceLabel,
-                            prefixText: '₱ ',
+                        child: SheetLabeledField(
+                          label: balanceLabel,
+                          child: TextFormField(
+                            controller: balanceController,
+                            keyboardType: const TextInputType.numberWithOptions(
+                                decimal: true),
+                            inputFormatters: amountInputFormatters,
+                            decoration: sheetFieldDecoration(
+                              context,
+                              prefixText: '₱ ',
+                            ),
                           ),
                         ),
                       ),
@@ -574,15 +578,17 @@ class _AccountSetupForm extends StatelessWidget {
 
             // Conditional fields
             if (isGoal) ...[
-              TextFormField(
-                controller: goalTargetController,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: amountInputFormatters,
-                decoration: sheetFieldDecoration(
-                  context,
-                  label: 'Goal Target',
-                  prefixText: '₱ ',
+              SheetLabeledField(
+                label: 'Goal Target',
+                child: TextFormField(
+                  controller: goalTargetController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: amountInputFormatters,
+                  decoration: sheetFieldDecoration(
+                    context,
+                    prefixText: '₱ ',
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -679,13 +685,16 @@ class _CategoryDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<AccountCategory>(
-      initialValue: value,
-      decoration: sheetFieldDecoration(context, label: 'Category'),
-      items: categories
-          .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
-          .toList(),
-      onChanged: onChanged,
+    return SheetLabeledField(
+      label: 'Category',
+      child: DropdownButtonFormField<AccountCategory>(
+        initialValue: value,
+        decoration: sheetFieldDecoration(context),
+        items: categories
+            .map((c) => DropdownMenuItem(value: c, child: Text(_label(c))))
+            .toList(),
+        onChanged: onChanged,
+      ),
     );
   }
 }
@@ -921,35 +930,40 @@ class _CreditDetailsCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Brand preset — seeds the finance rate when picked.
-          DropdownButtonFormField<String?>(
-            initialValue: creditBrand,
-            decoration: sheetFieldDecoration(
-              context,
-              label: 'Card type (optional)',
-              helperText: 'Pick a card to prefill its finance rate',
+          SheetLabeledField(
+            label: 'Card type (optional)',
+            child: DropdownButtonFormField<String?>(
+              initialValue: creditBrand,
+              decoration: sheetFieldDecoration(
+                context,
+                helperText: 'Pick a card to prefill its finance rate',
+              ),
+              items: [
+                DropdownMenuItem<String?>(
+                  value: null,
+                  child: Text('— Manual —',
+                      style: TextStyle(color: cs.onSurfaceVariant)),
+                ),
+                ...kCreditBrandPresets.map(
+                  (p) => DropdownMenuItem<String?>(
+                      value: p.key, child: Text(p.label)),
+                ),
+              ],
+              onChanged: onBrandChanged,
             ),
-            items: [
-              DropdownMenuItem<String?>(
-                value: null,
-                child: Text('— Manual —',
-                    style: TextStyle(color: cs.onSurfaceVariant)),
-              ),
-              ...kCreditBrandPresets.map(
-                (p) => DropdownMenuItem<String?>(
-                    value: p.key, child: Text(p.label)),
-              ),
-            ],
-            onChanged: onBrandChanged,
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: creditLimitController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: amountInputFormatters,
-            decoration: sheetFieldDecoration(
-              context,
-              label: 'Credit Limit',
-              prefixText: '₱ ',
+          SheetLabeledField(
+            label: 'Credit Limit',
+            child: TextFormField(
+              controller: creditLimitController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: amountInputFormatters,
+              decoration: sheetFieldDecoration(
+                context,
+                prefixText: '₱ ',
+              ),
             ),
           ),
           const SizedBox(height: 12),
@@ -973,15 +987,18 @@ class _CreditDetailsCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: financeRateController,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: amountInputFormatters,
-            decoration: sheetFieldDecoration(
-              context,
-              label: 'Monthly finance rate',
-              suffixText: '% / mo',
-              helperText: 'Interest on unpaid balance (BSP cap 3%)',
+          SheetLabeledField(
+            label: 'Monthly finance rate',
+            child: TextFormField(
+              controller: financeRateController,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: amountInputFormatters,
+              decoration: sheetFieldDecoration(
+                context,
+                suffixText: '% / mo',
+                helperText: 'Interest on unpaid balance (BSP cap 3%)',
+              ),
             ),
           ),
         ],
@@ -1004,21 +1021,24 @@ class _DayOfMonthDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<int?>(
-      initialValue: value,
-      isExpanded: true,
-      decoration: sheetFieldDecoration(context, label: label),
-      items: [
-        DropdownMenuItem<int?>(
-          value: null,
-          child: Text('—',
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
-        ),
-        for (int d = 1; d <= 28; d++)
-          DropdownMenuItem<int?>(value: d, child: Text('$d')),
-      ],
-      onChanged: onChanged,
+    return SheetLabeledField(
+      label: label,
+      child: DropdownButtonFormField<int?>(
+        initialValue: value,
+        isExpanded: true,
+        decoration: sheetFieldDecoration(context),
+        items: [
+          DropdownMenuItem<int?>(
+            value: null,
+            child: Text('—',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+          ),
+          for (int d = 1; d <= 28; d++)
+            DropdownMenuItem<int?>(value: d, child: Text('$d')),
+        ],
+        onChanged: onChanged,
+      ),
     );
   }
 }
@@ -1042,26 +1062,28 @@ class _StoredInDropdown extends StatelessWidget {
     // crashes the edit sheet. Fall back to "not linked". Mirrors the web form.
     final safeSelected =
         accounts.any((a) => a.id == selectedId) ? selectedId : null;
-    return DropdownButtonFormField<String>(
-      initialValue: safeSelected,
-      decoration: sheetFieldDecoration(
-        context,
-        label: 'Stored in account (optional)',
-        helperText: 'These funds physically live in this account',
-      ),
-      items: [
-        DropdownMenuItem<String>(
-          value: null,
-          child: Text(
-            '— Not linked —',
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant),
-          ),
+    return SheetLabeledField(
+      label: 'Stored in account (optional)',
+      child: DropdownButtonFormField<String>(
+        initialValue: safeSelected,
+        decoration: sheetFieldDecoration(
+          context,
+          helperText: 'These funds physically live in this account',
         ),
-        ...accounts.map(
-            (a) => DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
-      ],
-      onChanged: onChanged,
+        items: [
+          DropdownMenuItem<String>(
+            value: null,
+            child: Text(
+              '— Not linked —',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
+          ),
+          ...accounts.map((a) =>
+              DropdownMenuItem<String>(value: a.id, child: Text(a.name))),
+        ],
+        onChanged: onChanged,
+      ),
     );
   }
 }

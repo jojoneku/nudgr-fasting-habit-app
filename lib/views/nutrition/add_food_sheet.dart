@@ -3,6 +3,7 @@ import '../../app_colors.dart'; // context.appColors
 import '../../models/food_entry.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
+import '../widgets/system/system.dart';
 
 class AddFoodSheet extends StatefulWidget {
   final NutritionPresenter presenter;
@@ -93,21 +94,28 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
   }
 
   Widget _buildNameField(ColorScheme cs) {
-    return TextField(
-      controller: _nameCtrl,
-      autofocus: true,
-      textCapitalization: TextCapitalization.sentences,
-      style: TextStyle(color: cs.onSurface),
-      decoration: _inputDecoration('Food name', 'e.g. Chicken breast 150g', cs),
+    return LabeledField(
+      label: 'Food name',
+      child: TextField(
+        controller: _nameCtrl,
+        autofocus: true,
+        textCapitalization: TextCapitalization.sentences,
+        style: TextStyle(color: cs.onSurface),
+        decoration:
+            _inputDecoration('Food name', 'e.g. Chicken breast 150g', cs),
+      ),
     );
   }
 
   Widget _buildCaloriesField(ColorScheme cs) {
-    return TextField(
-      controller: _calCtrl,
-      keyboardType: TextInputType.number,
-      style: TextStyle(color: cs.onSurface),
-      decoration: _inputDecoration('Calories', 'kcal', cs),
+    return LabeledField(
+      label: 'Calories',
+      child: TextField(
+        controller: _calCtrl,
+        keyboardType: TextInputType.number,
+        style: TextStyle(color: cs.onSurface),
+        decoration: _inputDecoration('Calories', 'kcal', cs),
+      ),
     );
   }
 
@@ -138,29 +146,38 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
     return Row(
       children: [
         Expanded(
-          child: TextField(
-            controller: _proteinCtrl,
-            keyboardType: TextInputType.number,
-            style: TextStyle(color: cs.onSurface, fontSize: 13),
-            decoration: _inputDecoration('Protein', 'g', cs),
+          child: LabeledField(
+            label: 'Protein',
+            child: TextField(
+              controller: _proteinCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
+              decoration: _inputDecoration('Protein', 'g', cs),
+            ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: TextField(
-            controller: _carbsCtrl,
-            keyboardType: TextInputType.number,
-            style: TextStyle(color: cs.onSurface, fontSize: 13),
-            decoration: _inputDecoration('Carbs', 'g', cs),
+          child: LabeledField(
+            label: 'Carbs',
+            child: TextField(
+              controller: _carbsCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
+              decoration: _inputDecoration('Carbs', 'g', cs),
+            ),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: TextField(
-            controller: _fatCtrl,
-            keyboardType: TextInputType.number,
-            style: TextStyle(color: cs.onSurface, fontSize: 13),
-            decoration: _inputDecoration('Fat', 'g', cs),
+          child: LabeledField(
+            label: 'Fat',
+            child: TextField(
+              controller: _fatCtrl,
+              keyboardType: TextInputType.number,
+              style: TextStyle(color: cs.onSurface, fontSize: 13),
+              decoration: _inputDecoration('Fat', 'g', cs),
+            ),
           ),
         ),
       ],
@@ -214,7 +231,6 @@ class _AddFoodSheetState extends State<AddFoodSheet> {
 
   InputDecoration _inputDecoration(String label, String hint, ColorScheme cs) {
     return InputDecoration(
-      labelText: label,
       hintText: hint,
       labelStyle: TextStyle(color: cs.onSurfaceVariant),
       hintStyle: TextStyle(color: cs.onSurfaceVariant.withValues(alpha: 0.5)),

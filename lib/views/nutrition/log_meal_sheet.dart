@@ -9,6 +9,7 @@ import '../../models/food_parse_result.dart';
 import '../../models/food_template.dart';
 import '../../models/meal_slot.dart';
 import '../../presenters/nutrition_presenter.dart';
+import '../widgets/system/system.dart';
 
 // ─── Main Sheet ───────────────────────────────────────────────────────────────
 
@@ -1651,17 +1652,23 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             ),
           ]),
           const SizedBox(height: 14),
-          TextField(
-              controller: _nameCtrl,
-              autofocus: true,
-              style: TextStyle(color: cs.onSurface),
-              decoration: _dec('Food name', 'e.g. Chicken breast 150g', cs)),
+          LabeledField(
+            label: 'Food name',
+            child: TextField(
+                controller: _nameCtrl,
+                autofocus: true,
+                style: TextStyle(color: cs.onSurface),
+                decoration: _dec('Food name', 'e.g. Chicken breast 150g', cs)),
+          ),
           const SizedBox(height: 10),
-          TextField(
-              controller: _calCtrl,
-              keyboardType: TextInputType.number,
-              style: TextStyle(color: cs.onSurface),
-              decoration: _dec('Calories (kcal)', 'e.g. 320', cs)),
+          LabeledField(
+            label: 'Calories (kcal)',
+            child: TextField(
+                controller: _calCtrl,
+                keyboardType: TextInputType.number,
+                style: TextStyle(color: cs.onSurface),
+                decoration: _dec('Calories (kcal)', 'e.g. 320', cs)),
+          ),
           const SizedBox(height: 10),
           GestureDetector(
             onTap: () => setState(() => _showMacros = !_showMacros),
@@ -1681,25 +1688,31 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             const SizedBox(height: 10),
             Row(children: [
               Expanded(
-                  child: TextField(
-                      controller: _pCtrl,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(color: cs.onSurface, fontSize: 12),
-                      decoration: _dec('Protein', 'g', cs))),
+                  child: LabeledField(
+                      label: 'Protein',
+                      child: TextField(
+                          controller: _pCtrl,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(color: cs.onSurface, fontSize: 12),
+                          decoration: _dec('Protein', 'g', cs)))),
               const SizedBox(width: 8),
               Expanded(
-                  child: TextField(
-                      controller: _cCtrl,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(color: cs.onSurface, fontSize: 12),
-                      decoration: _dec('Carbs', 'g', cs))),
+                  child: LabeledField(
+                      label: 'Carbs',
+                      child: TextField(
+                          controller: _cCtrl,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(color: cs.onSurface, fontSize: 12),
+                          decoration: _dec('Carbs', 'g', cs)))),
               const SizedBox(width: 8),
               Expanded(
-                  child: TextField(
-                      controller: _fCtrl,
-                      keyboardType: TextInputType.number,
-                      style: TextStyle(color: cs.onSurface, fontSize: 12),
-                      decoration: _dec('Fat', 'g', cs))),
+                  child: LabeledField(
+                      label: 'Fat',
+                      child: TextField(
+                          controller: _fCtrl,
+                          keyboardType: TextInputType.number,
+                          style: TextStyle(color: cs.onSurface, fontSize: 12),
+                          decoration: _dec('Fat', 'g', cs)))),
             ]),
           ],
           const SizedBox(height: 16),
@@ -1725,7 +1738,6 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
 
   InputDecoration _dec(String label, String hint, ColorScheme cs) =>
       InputDecoration(
-        labelText: label,
         hintText: hint,
         labelStyle: TextStyle(color: cs.onSurfaceVariant),
         hintStyle: TextStyle(

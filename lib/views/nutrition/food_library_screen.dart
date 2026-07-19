@@ -884,13 +884,15 @@ class _MacroField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        border: const OutlineInputBorder(),
+    return LabeledField(
+      label: label,
+      child: TextField(
+        controller: controller,
+        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+        decoration: const InputDecoration(
+          isDense: true,
+          border: OutlineInputBorder(),
+        ),
       ),
     );
   }

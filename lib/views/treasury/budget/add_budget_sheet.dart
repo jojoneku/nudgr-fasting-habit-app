@@ -95,11 +95,13 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('New Expense Category'),
-        content: TextField(
-          controller: nameCtrl,
-          autofocus: true,
-          decoration: const InputDecoration(labelText: 'Category name'),
-          textCapitalization: TextCapitalization.words,
+        content: LabeledField(
+          label: 'Category name',
+          child: TextField(
+            controller: nameCtrl,
+            autofocus: true,
+            textCapitalization: TextCapitalization.words,
+          ),
         ),
         actions: [
           TextButton(

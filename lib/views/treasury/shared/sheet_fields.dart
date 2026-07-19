@@ -37,13 +37,40 @@ class SheetFieldLabel extends StatelessWidget {
   }
 }
 
+/// A form field with its label rendered on its own line **above** the field box
+/// (per the Nudgr reference), instead of Flutter's floating inline `labelText`.
+/// Wrap any field (`TextFormField`, `DropdownButtonFormField`, picker box) whose
+/// decoration would otherwise carry a `label:`. Works inside a `Column` or an
+/// `Expanded`/`Row` cell alike.
+class SheetLabeledField extends StatelessWidget {
+  final String label;
+  final Widget child;
+
+  const SheetLabeledField({
+    super.key,
+    required this.label,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SheetFieldLabel(label),
+        child,
+      ],
+    );
+  }
+}
+
 /// [InputDecoration] matching the reference field box: filled, bordered,
 /// rounded, no floating label (pair with [SheetFieldLabel]). Set [emphasize]
 /// for the blue-bordered primary amount field.
 InputDecoration sheetFieldDecoration(
   BuildContext context, {
   String? hint,
-  String? label,
   String? helperText,
   String? counterText,
   Widget? prefix,
@@ -61,9 +88,6 @@ InputDecoration sheetFieldDecoration(
   final idle = emphasize ? blue : cs.outlineVariant.withValues(alpha: 0.6);
   return InputDecoration(
     hintText: hint,
-    // Persistent floating label for controls (dropdowns nested in builders)
-    // where a separate [SheetFieldLabel] above isn't structurally convenient.
-    labelText: label,
     helperText: helperText,
     counterText: counterText,
     prefix: prefix,

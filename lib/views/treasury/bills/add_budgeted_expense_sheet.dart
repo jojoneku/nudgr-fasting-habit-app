@@ -133,35 +133,45 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextFormField(
-            controller: _nameController,
-            decoration: sheetFieldDecoration(context, label: 'Name'),
-            textInputAction: TextInputAction.next,
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+          SheetLabeledField(
+            label: 'Name',
+            child: TextFormField(
+              controller: _nameController,
+              decoration: sheetFieldDecoration(context),
+              textInputAction: TextInputAction.next,
+              validator: (v) =>
+                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+            ),
           ),
           const SizedBox(height: 12),
-          TextFormField(
-            controller: _amountController,
-            decoration: sheetFieldDecoration(context,
-                label: 'Allocated Amount', prefixText: '₱ ', emphasize: true),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            textInputAction: TextInputAction.next,
-            validator: (v) {
-              final p = double.tryParse(v ?? '');
-              if (p == null || p <= 0) return 'Must be > 0';
-              return null;
-            },
+          SheetLabeledField(
+            label: 'Allocated Amount',
+            child: TextFormField(
+              controller: _amountController,
+              decoration: sheetFieldDecoration(context,
+                  prefixText: '₱ ', emphasize: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              textInputAction: TextInputAction.next,
+              validator: (v) {
+                final p = double.tryParse(v ?? '');
+                if (p == null || p <= 0) return 'Must be > 0';
+                return null;
+              },
+            ),
           ),
           const SizedBox(height: 12),
-          DropdownButtonFormField<SetAsideType>(
-            initialValue: _budgetedType,
-            decoration: sheetFieldDecoration(context, label: 'Type'),
-            items: SetAsideType.values
-                .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
-                .toList(),
-            onChanged: (v) =>
-                setState(() => _budgetedType = v ?? _budgetedType),
+          SheetLabeledField(
+            label: 'Type',
+            child: DropdownButtonFormField<SetAsideType>(
+              initialValue: _budgetedType,
+              decoration: sheetFieldDecoration(context),
+              items: SetAsideType.values
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
+                  .toList(),
+              onChanged: (v) =>
+                  setState(() => _budgetedType = v ?? _budgetedType),
+            ),
           ),
           const SizedBox(height: 12),
           AppTextField(

@@ -64,7 +64,7 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    final field = TextField(
       controller: controller,
       focusNode: focusNode,
       autofocus: autofocus,
@@ -80,7 +80,8 @@ class AppTextField extends StatelessWidget {
       onChanged: onChanged,
       onSubmitted: onSubmitted,
       decoration: InputDecoration(
-        labelText: label,
+        // Label renders on its own line above the field (see below), per the
+        // Nudgr reference — not as a floating inline `labelText`.
         hintText: hint,
         helperText: helperText,
         errorText: errorText,
@@ -95,6 +96,29 @@ class AppTextField extends StatelessWidget {
             : null,
         contentPadding: contentPadding,
       ),
+    );
+
+    if (label == null) return field;
+
+    // Label above the field box (reference style), matching SheetFieldLabel.
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Text(
+            label!.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        field,
+      ],
     );
   }
 }
