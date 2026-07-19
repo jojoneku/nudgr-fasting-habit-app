@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../utils/app_scroll_behavior.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../presenters/auth_presenter.dart';
@@ -49,6 +50,7 @@ class TreasuryWebApp extends StatelessWidget {
       builder: (context, mode, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Treasury',
+        scrollBehavior: const AppScrollBehavior(),
         theme: buildWebLightTheme(),
         darkTheme: buildWebDarkTheme(),
         themeMode: mode,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/app_scroll_behavior.dart';
 import '../presenters/settings_presenter.dart';
 import '../presenters/update_presenter.dart';
 import '../services/local_storage_service.dart';
@@ -71,6 +72,9 @@ class _FastingAppState extends State<FastingApp> {
       builder: (context, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'Nudgr',
+        // Enable mouse/trackpad drag on scrollables (PageViews, etc.) so swipe
+        // gestures work on web and desktop, not just touch.
+        scrollBehavior: const AppScrollBehavior(),
         theme: _cachedLightTheme,
         darkTheme: _cachedDarkTheme,
         themeMode: _settingsPresenter.themeMode,
