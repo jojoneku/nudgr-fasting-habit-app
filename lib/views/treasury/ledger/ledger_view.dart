@@ -4,7 +4,6 @@ import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
-import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -101,6 +100,15 @@ class _LedgerViewState extends State<LedgerView> {
     );
   }
 
+  void _showFilterSortSheet() {
+    HapticFeedback.selectionClick();
+    AppBottomSheet.show(
+      context: context,
+      title: 'Filter & sort',
+      body: _FilterSortSheet(presenter: presenter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -118,10 +126,11 @@ class _LedgerViewState extends State<LedgerView> {
                     onClear: () => presenter.setSelectedDate(null),
                   ),
                 _SummaryCard(presenter: presenter),
-                _AccountFilterRow(presenter: presenter),
-                _LedgerViewToggle(
+                _FilterSortBar(
+                  presenter: presenter,
+                  onOpenFilters: _showFilterSortSheet,
                   calendarView: _calendarView,
-                  onChanged: (v) => setState(() => _calendarView = v),
+                  onViewChanged: (v) => setState(() => _calendarView = v),
                 ),
                 Expanded(
                   child: _calendarView
@@ -497,286 +506,247 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
   }
 }
 
-// ── Account Filter ──────────────────────────────────────────────────────────
+// ── Filter & Sort ─────────────────────────────────────────────────────────
 
-class _AccountFilterRow extends StatelessWidget {
+/// Single-button filter/sort bar (reference "Filter & sort"): a pill button
+/// with an active-count badge that opens [_FilterSortSheet], plus the
+/// List/Calendar view toggle on the right.
+class _FilterSortBar extends StatelessWidget {
   final LedgerPresenter presenter;
+  final VoidCallback onOpenFilters;
+  final bool calendarView;
+  final ValueChanged<bool> onViewChanged;
 
-  const _AccountFilterRow({required this.presenter});
-
-  Future<void> _openCategoryFilter(BuildContext context) async {
-    HapticFeedback.selectionClick();
-    await AppBottomSheet.show(
-      context: context,
-      title: 'Filter by Category',
-      body: _CategoryFilterSheet(presenter: presenter),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedCategory = presenter.categories
-        .where((c) => c.id == presenter.selectedCategoryId)
-        .firstOrNull;
-
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        children: [
-          // Category filter: a clearable active chip when one is selected,
-          // otherwise a plain "Category" affordance that opens the picker.
-          if (selectedCategory != null)
-            _CategoryActiveChip(
-              category: selectedCategory,
-              onClear: () => presenter.setCategoryFilter(null),
-              onTap: () => _openCategoryFilter(context),
-            )
-          else
-            _AccountPill(
-              label: 'Category',
-              icon: Icons.filter_list_rounded,
-              selected: false,
-              onTap: () => _openCategoryFilter(context),
-            ),
-          // The owed filter now lives inside the category picker; when it's
-          // active we still surface a clearable chip here so the engaged filter
-          // stays visible — mirroring the active-category chip above.
-          if (presenter.owedOnly)
-            _OwedActiveChip(
-              total: presenter.outstandingOwedTotal,
-              onClear: () => presenter.setOwedFilter(false),
-            ),
-          _FilterDivider(),
-          _AccountPill(
-            label: 'All',
-            icon: Icons.account_balance_wallet_outlined,
-            selected: presenter.selectedAccountId == null,
-            onTap: () => presenter.setAccount(null),
-          ),
-          ...presenter.accounts.map((a) => _AccountPill(
-                label: a.name,
-                selected: presenter.selectedAccountId == a.id,
-                onTap: () => presenter.setAccount(a.id),
-              )),
-        ],
-      ),
-    );
-  }
-}
-
-/// Thin vertical separator between the category affordance and the account
-/// pills so the two filter dimensions read as distinct groups.
-class _FilterDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Center(
-        child: Container(
-          width: 1,
-          height: 22,
-          color: cs.outlineVariant,
-        ),
-      ),
-    );
-  }
-}
-
-/// Active category filter shown as a colored chip with an ✕ to clear it.
-/// Tapping the body reopens the picker; tapping the ✕ clears the filter.
-class _CategoryActiveChip extends StatelessWidget {
-  final FinanceCategory category;
-  final VoidCallback onClear;
-  final VoidCallback onTap;
-
-  const _CategoryActiveChip({
-    required this.category,
-    required this.onClear,
-    required this.onTap,
+  const _FilterSortBar({
+    required this.presenter,
+    required this.onOpenFilters,
+    required this.calendarView,
+    required this.onViewChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final dotColor = resolveSliceColor(
-      category.colorHex,
-      0,
-      brightness: Theme.of(context).brightness,
-    );
+    final blue = context.appColors.fast;
+    final count = presenter.activeFilterCount;
+    final active = count > 0 || presenter.isCustomSort;
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.only(left: 12, right: 6),
-          decoration: BoxDecoration(
-            color: cs.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: cs.primary),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                category.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                ),
-              ),
-              SizedBox(
-                width: 32,
-                height: 44,
-                child: Semantics(
-                  label: 'Clear category filter',
-                  button: true,
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onClear();
-                    },
-                    borderRadius: BorderRadius.circular(22),
-                    child:
-                        Icon(Icons.close_rounded, size: 16, color: cs.primary),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Modal picker listing every selectable category (income + expense), each
-/// with a color dot, plus an "All categories" reset option at the top.
-class _CategoryFilterSheet extends StatelessWidget {
-  final LedgerPresenter presenter;
-
-  const _CategoryFilterSheet({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final brightness = Theme.of(context).brightness;
-    // Exclude the reserved transfer category — it is never a user filter target.
-    final expense = presenter.categories
-        .where((c) => c.type == CategoryType.expense)
-        .toList();
-    final income = presenter.categories
-        .where((c) => c.type == CategoryType.income)
-        .toList();
-
-    void select(String? id) {
-      HapticFeedback.selectionClick();
-      presenter.setCategoryFilter(id);
-      Navigator.of(context).pop();
-    }
-
-    void toggleOwed() {
-      HapticFeedback.selectionClick();
-      presenter.setOwedFilter(!presenter.owedOnly);
-      Navigator.of(context).pop();
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Row(
         children: [
-          // Money-owed filter — shown whenever there's an outstanding
-          // reimbursable (or the filter is already on). Independent of the
-          // category selection below.
-          if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
-            _OwedFilterTile(
-              total: presenter.outstandingOwedTotal,
-              active: presenter.owedOnly,
-              onTap: toggleOwed,
+          GestureDetector(
+            onTap: onOpenFilters,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+              decoration: BoxDecoration(
+                color: active
+                    ? blue.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: active ? blue : cs.outlineVariant),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded,
+                      size: 15, color: active ? blue : cs.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Filter & sort',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: active ? blue : cs.onSurfaceVariant,
+                    ),
+                  ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: blue,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-            const Divider(height: 8),
-          ],
-          _CategoryFilterTile(
-            label: 'All categories',
-            selected: presenter.selectedCategoryId == null,
-            onTap: () => select(null),
           ),
-          if (expense.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            AppSection(
-              title: 'Expense',
-              child: Column(
-                children: [
-                  for (final c in expense)
-                    _CategoryFilterTile(
-                      key: ValueKey(c.id),
-                      label: c.name,
-                      dotColor: resolveSliceColor(c.colorHex, 0,
-                          brightness: brightness),
-                      selected: presenter.selectedCategoryId == c.id,
-                      onTap: () => select(c.id),
-                    ),
-                ],
-              ),
-            ),
-          ],
-          if (income.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            AppSection(
-              title: 'Income',
-              child: Column(
-                children: [
-                  for (final c in income)
-                    _CategoryFilterTile(
-                      key: ValueKey(c.id),
-                      label: c.name,
-                      dotColor: resolveSliceColor(c.colorHex, 0,
-                          brightness: brightness),
-                      selected: presenter.selectedCategoryId == c.id,
-                      onTap: () => select(c.id),
-                    ),
-                ],
-              ),
-            ),
-          ],
-          if (expense.isEmpty && income.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: AppEmptyState(
-                icon: Icons.label_off_outlined,
-                title: 'No categories yet',
-                body: 'Add categories to filter your transactions by them.',
-              ),
-            ),
+          const Spacer(),
+          _LedgerViewToggle(
+              calendarView: calendarView, onChanged: onViewChanged),
         ],
       ),
     );
   }
 }
 
-class _CategoryFilterTile extends StatelessWidget {
+/// The Filter & sort bottom sheet: multi-select categories + accounts, the owed
+/// toggle, and Date/Amount sort with direction. Applies live via the presenter.
+class _FilterSortSheet extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _FilterSortSheet({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final brightness = Theme.of(context).brightness;
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        final expense = presenter.categories
+            .where((c) => c.type == CategoryType.expense)
+            .toList();
+        final income = presenter.categories
+            .where((c) => c.type == CategoryType.income)
+            .toList();
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _FilterHeading('Sort by'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _SelectChip(
+                    label: 'Newest',
+                    selected: presenter.sortField == LedgerSortField.date &&
+                        presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.date,
+                        descending: true),
+                  ),
+                  _SelectChip(
+                    label: 'Oldest',
+                    selected: presenter.sortField == LedgerSortField.date &&
+                        !presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.date,
+                        descending: false),
+                  ),
+                  _SelectChip(
+                    label: 'Largest',
+                    selected: presenter.sortField == LedgerSortField.amount &&
+                        presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.amount,
+                        descending: true),
+                  ),
+                  _SelectChip(
+                    label: 'Smallest',
+                    selected: presenter.sortField == LedgerSortField.amount &&
+                        !presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.amount,
+                        descending: false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
+                const _FilterHeading('Money owed to you'),
+                _SelectChip(
+                  label: 'Owed: ${formatPeso(presenter.outstandingOwedTotal)}',
+                  selected: presenter.owedOnly,
+                  onTap: () => presenter.setOwedFilter(!presenter.owedOnly),
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (presenter.accounts.isNotEmpty) ...[
+                const _FilterHeading('Accounts'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final a in presenter.accounts)
+                      _SelectChip(
+                        label: a.name,
+                        selected: presenter.selectedAccountIds.contains(a.id),
+                        onTap: () => presenter.toggleAccountFilter(a.id),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+              ],
+              if (expense.isNotEmpty || income.isNotEmpty) ...[
+                const _FilterHeading('Categories'),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final c in [...expense, ...income])
+                      _SelectChip(
+                        label: c.name,
+                        dotColor: resolveSliceColor(c.colorHex, 0,
+                            brightness: brightness),
+                        selected: presenter.selectedCategoryIds.contains(c.id),
+                        onTap: () => presenter.toggleCategoryFilter(c.id),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+              Row(
+                children: [
+                  Expanded(
+                    child: AppSecondaryButton(
+                      label: 'Clear all',
+                      onPressed: presenter.activeFilterCount == 0
+                          ? null
+                          : presenter.clearAllFilters,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppPrimaryButton(
+                      label: 'Done',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _FilterHeading extends StatelessWidget {
+  final String text;
+  const _FilterHeading(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.appColors.textMuted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+      ),
+    );
+  }
+}
+
+class _SelectChip extends StatelessWidget {
   final String label;
   final Color? dotColor;
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryFilterTile({
-    super.key,
+  const _SelectChip({
     required this.label,
     this.dotColor,
     required this.selected,
@@ -786,106 +756,45 @@ class _CategoryFilterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: dotColor ?? cs.onSurfaceVariant,
-                  shape:
-                      dotColor != null ? BoxShape.circle : BoxShape.rectangle,
-                  borderRadius:
-                      dotColor == null ? BorderRadius.circular(3) : null,
-                ),
-                child: dotColor == null
-                    ? Icon(Icons.clear_all_rounded, size: 12, color: cs.surface)
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? cs.primary : cs.onSurface,
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_rounded, size: 18, color: cs.primary),
-            ],
-          ),
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
         ),
-      ),
-    );
-  }
-}
-
-class _AccountPill extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _AccountPill({
-    required this.label,
-    this.icon,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-          decoration: BoxDecoration(
-            color: selected
-                ? cs.primary.withValues(alpha: 0.15)
-                : cs.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? cs.primary : cs.outlineVariant,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon,
-                    size: 13,
-                    color: selected ? cs.primary : cs.onSurfaceVariant),
-                const SizedBox(width: 5),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? cs.primary : cs.onSurfaceVariant,
-                ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dotColor != null) ...[
+              Container(
+                width: 9,
+                height: 9,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
               ),
+              const SizedBox(width: 7),
             ],
-          ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? cs.primary : cs.onSurface,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.check_rounded, size: 14, color: cs.primary),
+            ],
+          ],
         ),
       ),
     );
@@ -1109,119 +1018,6 @@ class _DateFilterChip extends StatelessWidget {
   }
 }
 
-// ── Owed Filter Chip ───────────────────────────────────────────────────────
-
-/// Tappable chip surfacing money you're still owed this month (reimbursable
-/// expenses not yet paid back). Tapping toggles a filter to just those rows.
-/// Owed-filter row inside the category picker. Toggles [LedgerPresenter.owedOnly]
-/// and reads as a sibling option to the category list. Styled like
-/// [_CategoryFilterTile] but tinted tertiary to match the "money owed" accent.
-class _OwedFilterTile extends StatelessWidget {
-  final double total;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _OwedFilterTile({
-    required this.total,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final fg = active ? cs.tertiary : cs.onSurface;
-    return Semantics(
-      selected: active,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 16,
-                color: active ? cs.tertiary : cs.onSurfaceVariant,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Owed to you: ${formatPeso(total)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                    color: fg,
-                  ),
-                ),
-              ),
-              if (active)
-                Icon(Icons.check_rounded, size: 18, color: cs.tertiary),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact active-state chip for the filter row, shown only while the owed
-/// filter is on. Tapping anywhere clears it. Mirrors [_CategoryActiveChip].
-class _OwedActiveChip extends StatelessWidget {
-  final double total;
-  final VoidCallback onClear;
-
-  const _OwedActiveChip({required this.total, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Semantics(
-        label: 'Clear owed filter',
-        button: true,
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onClear();
-          },
-          child: Container(
-            padding: const EdgeInsets.only(left: 12, right: 8),
-            decoration: BoxDecoration(
-              color: cs.tertiaryContainer,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.tertiary.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.account_balance_wallet_outlined,
-                    size: 12, color: cs.onTertiaryContainer),
-                const SizedBox(width: 6),
-                Text(
-                  'Owed: ${formatPeso(total)}',
-                  style: TextStyle(
-                    color: cs.onTertiaryContainer,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(Icons.close_rounded,
-                    size: 14, color: cs.onTertiaryContainer),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── Summary Card ─────────────────────────────────────────────────────────────
 
 class _SummaryCard extends StatelessWidget {
@@ -1332,26 +1128,25 @@ class _LedgerViewToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _ToggleChip(
-            label: 'List',
-            icon: Icons.view_list_rounded,
-            selected: !calendarView,
-            onTap: () => onChanged(false),
-          ),
-          const SizedBox(width: 6),
-          _ToggleChip(
-            label: 'Calendar',
-            icon: Icons.calendar_month_rounded,
-            selected: calendarView,
-            onTap: () => onChanged(true),
-          ),
-        ],
-      ),
+    // Compact, embeddable (the parent [_FilterSortBar] supplies row layout +
+    // padding); List | Calendar segmented chips.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _ToggleChip(
+          label: 'List',
+          icon: Icons.view_list_rounded,
+          selected: !calendarView,
+          onTap: () => onChanged(false),
+        ),
+        const SizedBox(width: 6),
+        _ToggleChip(
+          label: 'Calendar',
+          icon: Icons.calendar_month_rounded,
+          selected: calendarView,
+          onTap: () => onChanged(true),
+        ),
+      ],
     );
   }
 }
@@ -1432,6 +1227,51 @@ class _CalendarBody extends StatelessWidget {
 
 // ── Transaction List ─────────────────────────────────────────────────────────
 
+/// Builds one transaction row — account/category resolved, swipe-to-delete with
+/// undo. Shared by the day-grouped list and the flat (amount-sorted) list.
+Widget _buildTxnTile(
+  BuildContext context,
+  LedgerPresenter presenter,
+  TransactionRecord txn,
+  void Function(TransactionRecord txn) onEdit,
+) {
+  final account =
+      presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
+  final category =
+      presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
+  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
+  final accountColor = idx < 0
+      ? null
+      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
+          brightness: Theme.of(context).brightness);
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 4),
+    child: AppCard(
+      variant: AppCardVariant.filled,
+      padding: EdgeInsets.zero,
+      child: TransactionListTile(
+        key: ValueKey(txn.id),
+        txn: txn,
+        account: account,
+        accountColor: accountColor,
+        category: category,
+        onTap: () => onEdit(txn),
+        onDelete: () {
+          HapticFeedback.mediumImpact();
+          final deleted = txn;
+          presenter.deleteTransaction(deleted.id);
+          AppToast.action(
+            context,
+            message: 'Deleted "${deleted.description}"',
+            actionLabel: 'Undo',
+            onAction: () => presenter.restoreTransaction(deleted),
+          );
+        },
+      ),
+    ),
+  );
+}
+
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
   final void Function(TransactionRecord txn) onEditTransaction;
@@ -1441,29 +1281,39 @@ class _TransactionList extends StatelessWidget {
     required this.onEditTransaction,
   });
 
+  static const _empty = AppEmptyState(
+    icon: Icons.receipt_long_outlined,
+    title: 'No transactions this month',
+    body: 'Tap + to log your first one',
+  );
+
   @override
   Widget build(BuildContext context) {
-    final grouped = presenter.groupedTransactions;
-
-    if (grouped.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'No transactions this month',
-        body: 'Tap + to log your first one',
+    // Amount sort → a flat list ordered by amount (day grouping doesn't apply).
+    if (presenter.sortField == LedgerSortField.amount) {
+      final txns = presenter.sortedTransactions;
+      if (txns.isEmpty) return _empty;
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
+        itemCount: txns.length,
+        itemBuilder: (context, i) =>
+            _buildTxnTile(context, presenter, txns[i], onEditTransaction),
       );
     }
 
-    final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    // Date sort → day-grouped; the presenter already ordered the day keys.
+    final grouped = presenter.groupedTransactions;
+    if (grouped.isEmpty) return _empty;
+    final dates = grouped.keys.toList();
 
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 100),
-      itemCount: sortedDates.length,
+      itemCount: dates.length,
       itemBuilder: (context, index) {
-        final date = sortedDates[index];
-        final txns = grouped[date]!;
+        final date = dates[index];
         return _DateGroup(
           date: date,
-          transactions: txns,
+          transactions: grouped[date]!,
           presenter: presenter,
           onEditTransaction: onEditTransaction,
         );
@@ -1495,34 +1345,6 @@ class _DateGroup extends StatelessWidget {
             TransactionType.transfer => sum,
           });
 
-  FinancialAccount? _findAccount(String id) {
-    try {
-      return presenter.accounts.firstWhere((a) => a.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  FinanceCategory? _findCategory(String id) {
-    try {
-      return presenter.categories.firstWhere((c) => c.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Resolves an account's swatch color (palette-indexed, brightness-aware)
-  /// for the subtitle dot. Null when the account is unknown.
-  Color? _accountColor(BuildContext context, String id) {
-    final idx = presenter.accounts.indexWhere((a) => a.id == id);
-    if (idx < 0) return null;
-    return resolveSliceColor(
-      presenter.accounts[idx].colorHex,
-      idx,
-      brightness: Theme.of(context).brightness,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1533,34 +1355,8 @@ class _DateGroup extends StatelessWidget {
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
           children: [
-            ...transactions.map(
-              (txn) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: AppCard(
-                  variant: AppCardVariant.filled,
-                  padding: EdgeInsets.zero,
-                  child: TransactionListTile(
-                    key: ValueKey(txn.id),
-                    txn: txn,
-                    account: _findAccount(txn.accountId),
-                    accountColor: _accountColor(context, txn.accountId),
-                    category: _findCategory(txn.categoryId),
-                    onTap: () => onEditTransaction(txn),
-                    onDelete: () {
-                      HapticFeedback.mediumImpact();
-                      final deleted = txn;
-                      presenter.deleteTransaction(deleted.id);
-                      AppToast.action(
-                        context,
-                        message: 'Deleted "${deleted.description}"',
-                        actionLabel: 'Undo',
-                        onAction: () => presenter.restoreTransaction(deleted),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+            ...transactions.map((txn) =>
+                _buildTxnTile(context, presenter, txn, onEditTransaction)),
             const SizedBox(height: 4),
           ],
         ),
