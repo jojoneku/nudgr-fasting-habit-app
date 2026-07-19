@@ -126,21 +126,64 @@ class SheetPickerBox extends StatelessWidget {
   }
 }
 
-// ── Segmented toggle ─────────────────────────────────────────────────────────
+// ── Reference sheet kit ──────────────────────────────────────────────────────
+// Shared chrome + controls for the redesigned Treasury creation/edit sheets
+// (`Nutrition Focus Treasury.dc.html`). Purely presentational; no form logic.
+
+/// The centered grab handle at the top of a bottom sheet.
+class SheetHandle extends StatelessWidget {
+  const SheetHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: cs.outlineVariant,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bold sheet title (reference "New entry" / "New Installment").
+class SheetTitle extends StatelessWidget {
+  final String text;
+  const SheetTitle(this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        color: cs.onSurface,
+        fontSize: 17,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
 
 /// One segment of a [SheetSegmentedToggle].
 class SheetSegment<T> {
   final String label;
   final T value;
 
-  /// Fill color when this segment is selected.
+  /// Fill color when this segment is selected (e.g. bills-orange vs move-green).
   final Color accent;
   const SheetSegment(
       {required this.label, required this.value, required this.accent});
 }
 
 /// A reference-style segmented toggle: a pill container whose selected segment
-/// is filled with its [SheetSegment.accent]. Pass a null [onChanged] to disable.
+/// is filled with its [SheetSegment.accent]. Pass a null [onChanged] to render
+/// it disabled (e.g. edit mode locked to a kind).
 class SheetSegmentedToggle<T> extends StatelessWidget {
   final List<SheetSegment<T>> segments;
   final T value;
@@ -181,11 +224,10 @@ class SheetSegmentedToggle<T> extends StatelessWidget {
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     curve: Curves.easeOut,
-                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color:
-                          seg.value == value ? seg.accent : Colors.transparent,
+                      color: seg.value == value ? seg.accent : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Text(
@@ -211,11 +253,8 @@ class SheetSegmentedToggle<T> extends StatelessWidget {
   }
 }
 
-// ── Account field + picker ───────────────────────────────────────────────────
-
 /// A field box showing an account as a mini [AccountBadge] + name + caret
-/// (reference "ACCOUNT" row). Pair with a [SheetFieldLabel]; tap opens
-/// [showAccountPicker].
+/// (reference "PAY FROM" / "ACCOUNT" row). Tapping opens [showAccountPicker].
 class SheetAccountField extends StatelessWidget {
   final FinancialAccount? account;
   final String placeholder;
@@ -267,8 +306,8 @@ class AccountChoice {
   const AccountChoice(this.id);
 }
 
-/// A bottom-sheet account list. When [allowNone] is set, a leading [noneLabel]
-/// row returns `AccountChoice(null)`.
+/// A bottom-sheet account list reused by every account field. When [allowNone]
+/// is set, a leading [noneLabel] row returns `AccountChoice(null)`.
 Future<AccountChoice?> showAccountPicker(
   BuildContext context, {
   required List<FinancialAccount> accounts,
@@ -293,24 +332,10 @@ Future<AccountChoice?> showAccountPicker(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text('Account',
-                    style: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800)),
+              const SheetHandle(),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: SheetTitle('Account'),
               ),
               if (allowNone)
                 _AccountPickerRow(
