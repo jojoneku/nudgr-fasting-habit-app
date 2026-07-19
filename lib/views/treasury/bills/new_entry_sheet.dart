@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
@@ -130,31 +131,43 @@ class _TypeSelector extends StatelessWidget {
         ac.purple
       ),
     ];
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final (type, icon, label, color) in options)
-          _TypeChip(
-            icon: icon,
-            label: label,
-            color: color,
-            selected: value == type,
-            onTap: () => onChanged(type),
-          ),
-      ],
+    final cs = Theme.of(context).colorScheme;
+    // A single segmented control: four equal compartments in one rounded track,
+    // the active one filled with its type accent (per the reference).
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          for (final (type, icon, label, color) in options)
+            Expanded(
+              child: _TypeSegment(
+                icon: icon,
+                label: label,
+                color: color,
+                selected: value == type,
+                onTap: () => onChanged(type),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
 
-class _TypeChip extends StatelessWidget {
+/// One compartment of the type segmented control: icon over label, stacked so
+/// the four (incl. the long "Receivable"/"Installment") fit in a single row.
+class _TypeSegment extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
   final bool selected;
   final VoidCallback onTap;
 
-  const _TypeChip({
+  const _TypeSegment({
     required this.icon,
     required this.label,
     required this.color,
@@ -165,34 +178,41 @@ class _TypeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Material(
-      color: selected ? color.withValues(alpha: 0.15) : cs.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    final fg = selected ? Colors.white : cs.onSurfaceVariant;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: selected
+            ? null
+            : () {
+                HapticFeedback.selectionClick();
+                onTap();
+              },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color:
-                  selected ? color : cs.outlineVariant.withValues(alpha: 0.6),
-            ),
+            color: selected ? color : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Row(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon,
-                  size: 16, color: selected ? color : cs.onSurfaceVariant),
-              const SizedBox(width: 7),
+              Icon(icon, size: 18, color: fg),
+              const SizedBox(height: 4),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: selected ? color : cs.onSurface,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  color: fg,
+                  fontSize: 11,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 ),
               ),
             ],
