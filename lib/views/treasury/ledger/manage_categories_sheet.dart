@@ -462,25 +462,44 @@ class _CategoryTile extends StatelessWidget {
     required this.onChangeIcon,
   });
 
+  /// The category's own color — matches how the ledger row tints the badge, so
+  /// the icon looks identical here and in the feed. Falls back to the type
+  /// accent if the stored hex can't be parsed.
+  Color get _badgeColor {
+    try {
+      return Color(
+          int.parse('FF${category.colorHex.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      return accentColor;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: AppListTile(
+        // 44×44 hit area (touch-target rule) around the 40px badge.
         leading: Semantics(
           button: true,
           label: 'Change icon for ${category.name}',
-          child: InkWell(
-            onTap: onChangeIcon,
-            borderRadius: BorderRadius.circular(12),
-            child: CategoryBadge(
-              iconKey: category.icon,
-              name: category.name,
-              type: category.type,
-              color: accentColor,
-              size: 40,
-              iconSize: 18,
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: InkWell(
+              onTap: onChangeIcon,
+              borderRadius: BorderRadius.circular(12),
+              child: Center(
+                child: CategoryBadge(
+                  iconKey: category.icon,
+                  name: category.name,
+                  type: category.type,
+                  color: _badgeColor,
+                  size: 40,
+                  iconSize: 18,
+                ),
+              ),
             ),
           ),
         ),

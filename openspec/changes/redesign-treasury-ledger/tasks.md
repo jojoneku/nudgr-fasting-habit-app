@@ -37,3 +37,11 @@
 
 - [ ] 8.1 `dart format` + `flutter analyze` clean; unit + widget tests green. → Runs on CI (no local Flutter toolchain in the authoring environment); brace/import/reference review done by hand, no presenter API changed so presenter tests are unaffected.
 - [ ] 8.2 Live smoke: header pills in line; IN/OUT/NET correct; rows no-bg with chosen category icon; pick an icon in Manage Categories and see it in the row; legacy category still shows a heuristic glyph; chat logging still works. → Deferred to device/emulator run.
+
+## 9. Review-driven consistency polish
+
+- [x] 9.1 Restore the account color dot in the ledger row subtitle (dropped in the reskin) — superset guardrail; category name stays removed (icon carries it).
+- [x] 9.2 Manage Categories: live-rebuild the add-form icon/monogram preview as the name is typed.
+- [x] 9.3 Manage Categories: tint the category badge with the category's own color (matches the ledger row) instead of the flat type accent; 44×44 hit area around the tappable icon.
+- [x] 9.4 Add screen-reader semantics (Income/Expenses/Net) to the abbreviated IN/OUT/NET strip.
+- [x] 9.5 Unify the minus glyph (U+2212) across the strip, row amounts, and daily-net badge; the daily-net badge now signs negatives explicitly (was color-only).

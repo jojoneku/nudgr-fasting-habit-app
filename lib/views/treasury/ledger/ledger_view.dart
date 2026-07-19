@@ -1241,18 +1241,21 @@ class _SummaryStrip extends StatelessWidget {
             children: [
               _SummarySegment(
                 label: 'IN',
+                semanticsLabel: 'Income',
                 value: formatPeso(presenter.filteredMonthInflow),
                 color: cs.tertiary,
               ),
               _SummaryDivider(color: cs.outlineVariant),
               _SummarySegment(
                 label: 'OUT',
+                semanticsLabel: 'Expenses',
                 value: formatPeso(presenter.filteredMonthOutflow),
                 color: cs.error,
               ),
               _SummaryDivider(color: cs.outlineVariant),
               _SummarySegment(
                 label: 'NET',
+                semanticsLabel: 'Net',
                 value: '$netPrefix${formatPeso(net.abs())}',
                 color: netColor,
               ),
@@ -1275,11 +1278,16 @@ class _SummaryDivider extends StatelessWidget {
 
 class _SummarySegment extends StatelessWidget {
   final String label;
+
+  /// Spoken label for screen readers (the on-screen [label] is an abbreviation
+  /// like "IN"/"OUT"/"NET").
+  final String semanticsLabel;
   final String value;
   final Color color;
 
   const _SummarySegment({
     required this.label,
+    required this.semanticsLabel,
     required this.value,
     required this.color,
   });
@@ -1287,32 +1295,38 @@ class _SummarySegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: context.appColors.textTertiary,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.3,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: AppTextStyles.mono(
-              textStyle: TextStyle(
-                color: color,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
+      child: Semantics(
+        label: semanticsLabel,
+        value: value,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ExcludeSemantics(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: context.appColors.textTertiary,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
+                ),
               ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: AppTextStyles.mono(
+                textStyle: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                ),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1493,7 +1507,9 @@ class _DailyNetBadge extends StatelessWidget {
         : dailyNet < 0
             ? cs.error
             : cs.onSurfaceVariant;
-    final prefix = dailyNet > 0 ? '+' : '';
+    // Sign the value explicitly (U+2212 minus) — a negative day used to read as
+    // a plain figure distinguished only by color.
+    final prefix = dailyNet > 0 ? '+' : (dailyNet < 0 ? '−' : '');
 
     return Text(
       '$prefix${formatPeso(dailyNet.abs())}',

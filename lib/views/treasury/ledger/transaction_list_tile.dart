@@ -39,7 +39,8 @@ class TransactionListTile extends StatelessWidget {
     final f = formatPeso(txn.amount);
     return switch (txn.type) {
       TransactionType.inflow => '+$f',
-      TransactionType.outflow => '-$f',
+      // U+2212 minus (matches the IN/OUT/NET strip and daily-net badge).
+      TransactionType.outflow => '−$f',
       TransactionType.transfer => f,
     };
   }
