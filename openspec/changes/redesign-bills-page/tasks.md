@@ -29,7 +29,7 @@
 ## 6. Verification
 
 - [ ] 6.1 `dart format` + `flutter analyze` clean. → **Not run — no Flutter/Dart SDK in this environment.** Reviewed manually; must be run in a Flutter env before merge.
-- [ ] 6.2 Presenter unit tests: `imminentUnpaidBills`; `comingUpItems`. → Deferred (need mock setup + a runner not available here).
+- [x] 6.2 Presenter unit tests written (`test/presenters/bills_coming_up_test.dart`): `imminentUnpaidBills` (due-soon incl. overdue, paid excluded, soonest-first; far-future excluded); `comingUpItems` (merge across 4 types, dated-ascending then undated, inflow flag, cap-at-5 dropping undated, ASAP receivable last, empty case). **Not executed here** (no SDK).
 - [x] 6.3 Widget tests written: `ObligationCard` (Pay/Receive fires, done dims + check), `ComingUpTimeline` (rows + inflow `+`, tap, empty), `MonthYearPill` (label, opens sheet, month select fires / same-month no-op). `DueSoonStack` deferred (needs a presenter mock). **Not executed here.**
 - [ ] 6.4 Existing `due_soon_hero_test.dart` + presenter tests still pass. → `DueSoonHero` reused unchanged; needs a run to confirm.
 - [ ] 6.5 Live smoke (device/web, both themes): swipe the stack, mark a bill paid from a card, pay a credit card from the Dashboard, change month+year from the in-page pill. → deferred with other Treasury live smoke.
