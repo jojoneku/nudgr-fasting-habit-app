@@ -1,12 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
-import 'package:intermittent_fasting/models/finance/budget.dart';
-import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
-import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/budget/add_budget_sheet.dart';
-import 'package:intermittent_fasting/views/treasury/budget/category_budget_tile.dart';
+import 'package:intermittent_fasting/views/treasury/budget/budget_card.dart';
 import 'package:intermittent_fasting/views/treasury/budget/manage_groups_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -48,63 +45,65 @@ class _BudgetViewState extends State<BudgetView> {
     );
   }
 
+  Future<void> _pickMonth() async {
+    final selected = widget.presenter.selectedMonth;
+    final now = DateTime.now();
+    // A window around today (12 back → 3 ahead) unioned with every month that
+    // has budget data and the current selection, so no month is unreachable
+    // (the old prev/next stepping had no bound). Newest first.
+    final months = <String>{};
+    for (var i = 3; i >= -12; i--) {
+      months.add(toMonthKey(DateTime(now.year, now.month + i)));
+    }
+    months.addAll(widget.presenter.monthsWithBudgets);
+    months.add(selected);
+    final sorted = months.toList()..sort((a, b) => b.compareTo(a));
+    final options = [
+      for (final key in sorted)
+        AppActionSheetItem<String>(
+          label: monthLabel(key),
+          value: key,
+          isPrimary: key == selected,
+        ),
+    ];
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: 'Jump to month',
+      actions: options,
+    );
+    if (picked != null) widget.presenter.setMonth(picked);
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: widget.presenter,
       builder: (context, _) {
-        final byGroup = widget.presenter.categoriesByGroup;
-        final savings = widget.presenter.savingsBudgets;
-        final hasAny =
-            byGroup.values.any((list) => list.isNotEmpty) || savings.isNotEmpty;
+        final sections = widget.presenter.budgetSections;
+        final hasAny = sections.isNotEmpty;
 
         return Scaffold(
           body: Column(
             children: [
-              _MonthSelector(
+              _BudgetHeader(
                 presenter: widget.presenter,
                 onManageGroups: _showManageGroups,
+                onPickMonth: _pickMonth,
               ),
-              if (hasAny)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                  child: Column(
-                    children: [
-                      _BudgetPaceHero(presenter: widget.presenter),
-                      if (widget.presenter.isCurrentMonth) ...[
-                        const SizedBox(height: 10),
-                        _SafeToSpendCallout(presenter: widget.presenter),
-                      ],
-                    ],
-                  ),
-                ),
               Expanded(
                 child: hasAny
                     ? ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
                         children: [
-                          for (final group
-                              in widget.presenter.expenseGroups) ...[
-                            if ((byGroup[group.id] ?? const []).isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 16),
-                                child: _GroupSection(
-                                  group: group,
-                                  presenter: widget.presenter,
-                                  categories: byGroup[group.id]!,
-                                  onTapCategory: _showAddBudgetSheet,
-                                ),
-                              ),
-                          ],
-                          if (savings.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 16),
-                              child: _SavingsSection(
-                                presenter: widget.presenter,
-                                rows: savings,
-                                onTap: _showAddBudgetSheet,
-                              ),
+                          _BudgetRingHero(presenter: widget.presenter),
+                          const SizedBox(height: 20),
+                          for (final section in sections) ...[
+                            _SectionBlock(
+                              section: section,
+                              onEditRow: _showAddBudgetSheet,
                             ),
+                            const SizedBox(height: 18),
+                          ],
                         ],
                       )
                     : AppEmptyState(
@@ -127,13 +126,18 @@ class _BudgetViewState extends State<BudgetView> {
   }
 }
 
-// ─── Month Selector ───────────────────────────────────────────────────────────
+// ─── Header: big "Budget" title + month dropdown ────────────────────────────────
 
-class _MonthSelector extends StatelessWidget {
+class _BudgetHeader extends StatelessWidget {
   final BudgetPresenter presenter;
-  final VoidCallback? onManageGroups;
+  final VoidCallback onManageGroups;
+  final VoidCallback onPickMonth;
 
-  const _MonthSelector({required this.presenter, this.onManageGroups});
+  const _BudgetHeader({
+    required this.presenter,
+    required this.onManageGroups,
+    required this.onPickMonth,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -141,47 +145,30 @@ class _MonthSelector extends StatelessWidget {
     return Material(
       color: theme.scaffoldBackgroundColor,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Expanded(
+              child: Text(
+                'Budget',
+                style: theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800, letterSpacing: -0.5),
+              ),
+            ),
             SizedBox(
               width: 44,
               height: 44,
               child: IconButton(
-                icon: const Icon(Icons.chevron_left),
-                onPressed: () =>
-                    presenter.setMonth(previousMonth(presenter.selectedMonth)),
+                icon: const Icon(Icons.tune_rounded),
+                tooltip: 'Manage groups',
+                onPressed: onManageGroups,
               ),
             ),
-            Text(
-              monthLabel(presenter.selectedMonth),
-              style: theme.textTheme.titleSmall
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (onManageGroups != null)
-                  SizedBox(
-                    width: 44,
-                    height: 44,
-                    child: IconButton(
-                      icon: const Icon(Icons.category_outlined),
-                      tooltip: 'Manage groups',
-                      onPressed: onManageGroups,
-                    ),
-                  ),
-                SizedBox(
-                  width: 44,
-                  height: 44,
-                  child: IconButton(
-                    icon: const Icon(Icons.chevron_right),
-                    onPressed: () =>
-                        presenter.setMonth(nextMonth(presenter.selectedMonth)),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 2),
+            _MonthSwitcher(
+              month: presenter.selectedMonth,
+              onTap: onPickMonth,
             ),
           ],
         ),
@@ -190,16 +177,43 @@ class _MonthSelector extends StatelessWidget {
   }
 }
 
-// ─── Pace Ring Hero ───────────────────────────────────────────────────────────
+class _MonthSwitcher extends StatelessWidget {
+  final String month;
+  final VoidCallback onTap;
 
-/// The pace-aware budget hero (`Nutrition Focus Treasury.dc.html`, Frame 4): a
-/// spent-percentage ring beside the SPENT / of-allocated figures and an
-/// "Ahead of pace" / "Over pace" pill. Conveys the old summary banner's
-/// allocated + spent + remaining relationship in one glance.
-class _BudgetPaceHero extends StatelessWidget {
+  const _MonthSwitcher({required this.month, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Material(
+      color: cs.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Text(
+            monthChipLabel(month),
+            style: theme.textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.w700),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Ring hero: spent vs budgeted ───────────────────────────────────────────────
+
+class _BudgetRingHero extends StatelessWidget {
   final BudgetPresenter presenter;
 
-  const _BudgetPaceHero({required this.presenter});
+  const _BudgetRingHero({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
@@ -211,6 +225,10 @@ class _BudgetPaceHero extends StatelessWidget {
     final pct = presenter.percentUsed;
     final over = spent > allocated && allocated > 0;
     final ringColor = over ? cs.error : appColors.fast;
+    // The remaining figure keys off the raw sign (not `over`, which needs an
+    // allocation) so spend against a zero allocation still reads "over".
+    final remaining = presenter.totalRemaining;
+    final overspent = remaining < 0;
 
     return AppCard(
       variant: AppCardVariant.elevated,
@@ -262,6 +280,16 @@ class _BudgetPaceHero extends StatelessWidget {
                   'of ${formatPeso(allocated)}',
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: appColors.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  overspent
+                      ? '${formatPeso(remaining.abs())} over'
+                      : '${formatPeso(remaining)} left',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: overspent ? cs.error : appColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (presenter.isCurrentMonth) ...[
                   const SizedBox(height: 10),
@@ -320,231 +348,30 @@ class _PacePill extends StatelessWidget {
   }
 }
 
-/// Blue-tinted "safe to spend / day" callout — remaining budget spread over the
-/// days left this month. Shown only for the current month.
-class _SafeToSpendCallout extends StatelessWidget {
-  final BudgetPresenter presenter;
+// ─── Section: group header + per-budget cards ──────────────────────────────────
 
-  const _SafeToSpendCallout({required this.presenter});
+class _SectionBlock extends StatelessWidget {
+  final BudgetSection section;
+  final ValueChanged<String> onEditRow;
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final blue = context.appColors.fast;
-    final days = presenter.daysLeftInSelectedMonth;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: blue.withValues(alpha: 0.07),
-        border: Border.all(color: blue.withValues(alpha: 0.22)),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-      child: Row(
-        children: [
-          Icon(Icons.savings_outlined, size: 20, color: blue),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Safe to spend · ${days == 0 ? 'last day' : '$days days left'}',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: context.appColors.textMuted),
-                ),
-                const SizedBox(height: 1),
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: formatPeso(presenter.safeToSpendPerDay),
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w800),
-                      ),
-                      TextSpan(
-                        text: ' / day',
-                        style: theme.textTheme.labelSmall
-                            ?.copyWith(color: context.appColors.textMuted),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ─── Group Section ────────────────────────────────────────────────────────────
-
-class _GroupSection extends StatelessWidget {
-  final BudgetGroupDef group;
-  final BudgetPresenter presenter;
-  final List categories;
-  final ValueChanged<String> onTapCategory;
-
-  const _GroupSection({
-    required this.group,
-    required this.presenter,
-    required this.categories,
-    required this.onTapCategory,
-  });
+  const _SectionBlock({required this.section, required this.onEditRow});
 
   @override
   Widget build(BuildContext context) {
-    final sectionAllocated = presenter.sectionAllocated(group.id);
-    final sectionSpent = presenter.sectionSpent(group.id);
-
     return AppSection(
-      title: group.name.toUpperCase(),
+      title: section.name.toUpperCase(),
       hint:
-          '${formatPesoCompact(sectionSpent)} / ${formatPesoCompact(sectionAllocated)}',
-      child: AppCard(
-        variant: AppCardVariant.outlined,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            for (int i = 0; i < categories.length; i++) ...[
-              CategoryBudgetTile(
-                category: categories[i],
-                budget: presenter.budgetFor(categories[i].id),
-                spent: presenter.spentFor(categories[i].id),
-                received: presenter.receivedFor(categories[i].id),
-                isIncome: presenter.isCategoryIncome(categories[i].id),
-                transactions:
-                    presenter.transactionsForCategory(categories[i].id),
-                onTap: () => onTapCategory(categories[i].id),
-              ),
-              if (i < categories.length - 1)
-                Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Savings Section ──────────────────────────────────────────────────────────
-
-class _SavingsSection extends StatelessWidget {
-  final BudgetPresenter presenter;
-  final List<({Budget budget, FinancialAccount account})> rows;
-  final ValueChanged<String> onTap;
-
-  const _SavingsSection({
-    required this.presenter,
-    required this.rows,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final allocated = presenter.sectionAllocated(BudgetGroupDef.idSavings);
-    final saved = presenter.sectionSpent(BudgetGroupDef.idSavings);
-
-    return AppSection(
-      title: 'SAVINGS / GOALS',
-      hint: '${formatPesoCompact(saved)} / ${formatPesoCompact(allocated)}',
-      child: AppCard(
-        variant: AppCardVariant.outlined,
-        padding: EdgeInsets.zero,
-        child: Column(
-          children: [
-            for (var i = 0; i < rows.length; i++) ...[
-              _SavingsTile(
-                budget: rows[i].budget,
-                account: rows[i].account,
-                contributed: presenter.contributedTo(rows[i].account.id),
-                onTap: () => onTap(rows[i].account.id),
-              ),
-              if (i < rows.length - 1)
-                Divider(
-                  height: 1,
-                  indent: 16,
-                  endIndent: 16,
-                  color: cs.outlineVariant,
-                ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _SavingsTile extends StatelessWidget {
-  final Budget budget;
-  final FinancialAccount account;
-  final double contributed;
-  final VoidCallback onTap;
-
-  const _SavingsTile({
-    required this.budget,
-    required this.account,
-    required this.contributed,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final allocated = budget.allocatedAmount;
-    final progress =
-        allocated > 0 ? (contributed / allocated).clamp(0.0, 1.5) : 0.0;
-    final met = contributed >= allocated && allocated > 0;
-    final color = met ? cs.tertiary : cs.primary;
-
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  account.category == AccountCategory.goal
-                      ? Icons.flag_outlined
-                      : Icons.savings_outlined,
-                  size: 16,
-                  color: cs.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    account.name,
-                    style: theme.textTheme.bodyMedium
-                        ?.copyWith(fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Text(
-                  '${formatPesoCompact(contributed)} / ${formatPesoCompact(allocated)}',
-                  style: theme.textTheme.labelMedium?.copyWith(color: color),
-                ),
-              ],
+          '${formatPesoCompact(section.spent)} / ${formatPesoCompact(section.allocated)}',
+      child: Column(
+        children: [
+          for (var i = 0; i < section.rows.length; i++) ...[
+            BudgetCard(
+              row: section.rows[i],
+              onEdit: () => onEditRow(section.rows[i].targetId),
             ),
-            const SizedBox(height: 6),
-            AppLinearProgress(
-              value: progress.clamp(0.0, 1.0),
-              height: 4,
-              color: color,
-            ),
+            if (i < section.rows.length - 1) const SizedBox(height: 10),
           ],
-        ),
+        ],
       ),
     );
   }

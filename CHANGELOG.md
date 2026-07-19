@@ -13,6 +13,244 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.48] - 2026-07-19
+
+- Maintenance and internal improvements.
+
+## [1.1.47] - 2026-07-16
+
+### Fixed
+- restore weight-log screen access from the weight tile
+
+## [1.1.46] - 2026-07-16
+
+### Fixed
+- stop hero ring glow from being sheared by the pinned app bar
+
+## [1.1.45] - 2026-07-16
+
+### Added
+- download and install updates in-app instead of via browser
+
+### Fixed
+- replace open_file_plus with open_filex to fix release build
+- resolve undefined UpdateManifest type in update prompt
+
+## [1.1.44] - 2026-07-15
+
+### Fixed
+- file credit statements under their real due month
+- persist hub module order across app restarts
+- report cloud coach failures accurately, never as insights
+
+## [1.1.43] - 2026-07-13
+
+### Added
+- hub coach line rework, daily brief sheet, app wiring (plan 057 phase 4)
+- add InsightsPresenter engine (plan 057 phase 3)
+- add insight persistence to StorageService (plan 057 phase 2)
+- add snapshot/insight models and pure utils (plan 057 phase 1)
+
+### Fixed
+- guard brief generation and refresh against re-entrancy
+
+## [1.1.42] - 2026-07-12
+
+### Fixed
+- show paid/received items as deactivated, not just struck out
+- make quest "Mark as Done" action actually complete
+- per-quest check on Quests card instead of one ambiguous button
+
+## [1.1.41] - 2026-07-12
+
+- Maintenance and internal improvements.
+
+## [1.1.40] - 2026-07-12
+
+### Added
+- ring hero, coaching line, rich Finance card + micro-actions
+
+## [1.1.39] - 2026-07-11
+
+### Fixed
+- stop promotion PRs merging before required checks register
+
+## [1.1.38] - 2026-07-11
+
+### Added
+- per-step skip, review step, plain copy + lighter accents
+- first-run Awakening wizard (Nudgr)
+
+## [1.1.37] - 2026-07-11
+
+### Added
+- unify Treasury web companion onto Nudgr tokens
+- adopt Nudgr dark-first token system + on-brand charts
+
+## [1.1.36] - 2026-07-06
+
+### Added
+- set-aside funding accounts, by-account breakdown & transfers
+
+## [1.1.35] - 2026-07-06
+
+### Fixed
+- allow changing a reimbursable expense's expected payback date
+
+## [1.1.34] - 2026-07-04
+
+### Added
+- balance dashboard content cards with a masonry layout
+
+## [1.1.33] - 2026-07-04
+
+### Added
+- show account balances as cards below the Month-End Outlook
+
+### Fixed
+- clarify Proj. Month-End Cash subtitle includes budget
+
+## [1.1.32] - 2026-07-04
+
+### Added
+- replace duplicate Current Obligations tile with Budget Allocated
+
+### Fixed
+- stop farmable XP via a persisted one-time-award guard
+- only net linked custodian balances out of dashboard KPIs
+- clear category on inline type flip; require category on draft add
+- guard day rollover and reset streak on a missed day
+- make credit-card statement bills payable on web
+- stop mobile account edit from orphaning sub-account pockets
+- stop logging JWT + PII; fail rate limiter closed
+- diff-based dirty marking to stop cross-device data loss
+
+## [1.1.31] - 2026-07-04
+
+### Added
+- recurring set-asides, unpaid-first ordering, side-by-side bills
+
+## [1.1.30] - 2026-07-04
+
+- Maintenance and internal improvements.
+
+## [1.1.29] - 2026-07-04
+
+### Added
+- add notification action buttons (Done / Snooze / Skip)
+
+### Fixed
+- stop credit-card statements proliferating into future months
+
+## [1.1.28] - 2026-06-30
+
+### Added
+- per-category exclude-from-totals toggle
+
+## [1.1.27] - 2026-06-30
+
+### Added
+- full-peso account balances and sorted bill lists
+
+### Fixed
+- hide raw __auto_statement__ marker from the UI
+
+## [1.1.26] - 2026-06-30
+
+### Fixed
+- make home-screen widgets fill their card and never render blank
+
+## [1.1.25] - 2026-06-29
+
+### Fixed
+- stack bills & receivables on mobile, keep side-by-side web-only
+
+## [1.1.24] - 2026-06-28
+
+### Added
+- show both accounts on a transfer row in the web ledger
+
+## [1.1.23] - 2026-06-28
+
+### Added
+- surface credit-card intelligence on the web dashboard
+- installments section on the web bills page
+- create nested sub-accounts (pockets/goals/time deposits)
+- create savings/goal budgets on the web budget page
+
+### Fixed
+- snap to current month on chat-commit; don't wipe cart budget on bad input
+- budget total reconciles with rows + cap setBudget XP
+- account integrity — ledger sync, dropdown crash, icon, errors
+- keep reimbursement receivables in sync on edit & undo
+
+## [1.1.22] - 2026-06-27
+
+### Added
+- credit card live balance section + quick pay
+- show bills and receivables cards side by side
+- custom group CRUD + fix budget health spending zeros
+
+### Fixed
+- declare missing _selectedCategoryId field in _AddRowState
+- re-run credit statement detection on month change
+
+## [1.1.21] - 2026-06-27
+
+### Added
+- recurring receivables in the web bills page
+
+### Fixed
+- pick an existing category for budgets instead of free-text
+
+## [1.1.20] - 2026-06-27
+
+### Added
+- exclude reimbursables/loans from income & expense everywhere
+- add reimbursable / "I'll get this back" to the web ledger
+- optional payback date controls which month it shows
+- treat money you'll get back as not-spending
+
+### Fixed
+- scope summary repair to transfer/reimbursable months
+- lift the chat bar above the keyboard
+- file reimbursement/loan receivable in the month it arose
+- make the finance card fully tappable
+
+## [1.1.19] - 2026-06-27
+
+### Added
+- unified quick-log bar routes finance + nutrition
+
+## [1.1.18] - 2026-06-27
+
+### Added
+- replace bottom FAB with a docked AI Coach chat bar
+- track monthly savings contributions into pockets
+
+### Fixed
+- allow editing transfers in the web ledger
+
+## [1.1.17] - 2026-06-26
+
+### Added
+- add data-security plan and disable Android cloud auto-backup
+
+## [1.1.16] - 2026-06-26
+
+### Added
+- auto-generate CHANGELOG + release notes from Conventional Commits
+- resolve on-device steps SPN via canonical platform API
+
+### Fixed
+- make Firebase web deploy actually deploy (Node 20 + unmask)
+- guard nutrition push against clobbering cloud feed
+- stop empty cloud snapshot from wiping the local food feed
+- surface logged food that has no chat row
+- add missing if-guard to changelog step; restore fetch-depth for changelog diff
+- narrow on-device step SPN match to documented phone prefix
+- merge on-device step labels so Health Connect relabels don't drop data
+
 ## [1.1.15] - 2026-06-25
 
 ### Added
@@ -191,7 +429,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.15...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.48...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -208,3 +446,36 @@ distributed via `manifest.json`.
 [1.1.13]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.13
 [1.1.14]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.14
 [1.1.15]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.15
+[1.1.16]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.16
+[1.1.17]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.17
+[1.1.18]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.18
+[1.1.19]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.19
+[1.1.20]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.20
+[1.1.21]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.21
+[1.1.22]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.22
+[1.1.23]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.23
+[1.1.24]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.24
+[1.1.25]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.25
+[1.1.26]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.26
+[1.1.27]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.27
+[1.1.28]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.28
+[1.1.29]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.29
+[1.1.30]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.30
+[1.1.31]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.31
+[1.1.32]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.32
+[1.1.33]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.33
+[1.1.34]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.34
+[1.1.35]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.35
+[1.1.36]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.36
+[1.1.37]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.37
+[1.1.38]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.38
+[1.1.39]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.39
+[1.1.40]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.40
+[1.1.41]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.41
+[1.1.42]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.42
+[1.1.43]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.43
+[1.1.44]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.44
+[1.1.45]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.45
+[1.1.46]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.46
+[1.1.47]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.47
+[1.1.48]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.48

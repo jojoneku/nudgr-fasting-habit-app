@@ -133,8 +133,10 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   title: Text(g.name, style: theme.textTheme.bodyMedium),
+                  // Role descriptor derived from the group's flags — not a
+                  // hardcoded name, so a renamed savings group still reads right.
                   subtitle: g.isSavings
-                      ? Text('Savings / Goals',
+                      ? Text('Savings group',
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: cs.onSurfaceVariant))
                       : g.isBuiltIn

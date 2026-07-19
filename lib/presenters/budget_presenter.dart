@@ -157,24 +157,16 @@ class BudgetPresenter extends ChangeNotifier {
   double get percentUsed =>
       totalAllocated > 0 ? totalSpent / totalAllocated : 0.0;
 
-  // ─── Pace + safe-to-spend (Nudgr redesign) ─────────────────────────────────────
-  // Pure derivations for the pace-ring hero. Pace and safe-to-spend only make
-  // sense for the in-progress month; for a past/future month the UI omits them.
+  // ─── Pace (Nudgr budget-cards redesign) ────────────────────────────────────────
+  // Pure derivations for the ring hero's on-pace pill. Pace only makes sense for
+  // the in-progress month; the view hides the pill for a past/future month.
 
   /// True when the selected month is the current calendar month.
   bool get isCurrentMonth => _selectedMonth == toMonthKey(DateTime.now());
 
-  /// Whole days remaining in the selected month (0 when it isn't the current
-  /// month — pace/safe-to-spend don't apply to a closed or future month).
-  int get daysLeftInSelectedMonth {
-    if (!isCurrentMonth) return 0;
-    final now = DateTime.now();
-    final lastDay = DateTime(now.year, now.month + 1, 0).day;
-    return (lastDay - now.day).clamp(0, lastDay);
-  }
-
   /// Fraction of the selected month elapsed (0–1): 1.0 for a past month, 0.0 for
-  /// a future month, today/last-day for the current month.
+  /// a future month, today/last-day for the current month. Keeps the date math
+  /// out of `build()` (Rule 1) and makes pace unit-testable without the tree.
   double get monthElapsedFraction {
     final nowKey = toMonthKey(DateTime.now());
     if (_selectedMonth.compareTo(nowKey) < 0) return 1.0;
@@ -184,19 +176,110 @@ class BudgetPresenter extends ChangeNotifier {
     return (now.day / lastDay).clamp(0.0, 1.0);
   }
 
-  /// True when spending is at or under the month's elapsed pace (small tolerance
-  /// so being exactly on pace still reads as "ahead"). Meaningful for the
-  /// current month; a future month (0 elapsed, 0 spent) also reads as ahead.
+  /// True when spending is at or under the month's elapsed pace (a small
+  /// tolerance so being exactly on pace still reads as "ahead").
   bool get isAheadOfPace => percentUsed <= monthElapsedFraction + 0.02;
 
-  /// Remaining budget spread across the days left this month — the reference's
-  /// "safe to spend / day". Never negative; falls back to the raw remaining when
-  /// no days remain (or the month isn't current).
-  double get safeToSpendPerDay {
-    final remaining = totalRemaining < 0 ? 0.0 : totalRemaining;
-    final days = daysLeftInSelectedMonth;
-    return days > 0 ? remaining / days : remaining;
+  // ─── Mobile Budget sections (Nudgr budget-cards redesign) ───────────────────────
+
+  /// Ordered, display-ready sections for the mobile Budget card list. Groups
+  /// follow `sortOrder` (Living → Savings → Variable → Essentials by
+  /// default; a user's manage-groups order wins). Each section carries its
+  /// resolved rows and spent/allocated totals; empty groups are omitted. Visual
+  /// tokens (icon glyph, color) are left to the view — the presenter stays free
+  /// of Flutter material types.
+  List<BudgetSection> get budgetSections {
+    final ordered = [..._groups]
+      ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+    final sections = <BudgetSection>[];
+    var colorIndex = 0;
+    for (final group in ordered) {
+      final rows = <BudgetSectionRow>[];
+      if (group.isSavings) {
+        for (final entry
+            in savingsBudgets.where((e) => e.budget.group == group.id)) {
+          final account = entry.account;
+          final allocated = entry.budget.allocatedAmount;
+          final contributed = contributedTo(account.id);
+          rows.add(BudgetSectionRow(
+            targetId: account.id,
+            name: account.name,
+            colorHex: account.colorHex,
+            colorIndex: colorIndex++,
+            categoryType: CategoryType.income,
+            isSavings: true,
+            isGoal: account.category == AccountCategory.goal,
+            isIncome: false,
+            budgetType: entry.budget.budgetType,
+            allocated: allocated,
+            actual: contributed,
+            progress:
+                allocated > 0 ? (contributed / allocated).clamp(0.0, 1.0) : 0.0,
+            // Savings rows can never be "over" — exceeding the goal is good.
+            isOver: false,
+            overBy: 0.0,
+            met: allocated > 0 && contributed >= allocated,
+            transactions: _transactionsForAccount(account.id),
+          ));
+        }
+      } else {
+        for (final cat
+            in categoriesByGroup[group.id] ?? const <FinanceCategory>[]) {
+          final budget = budgetFor(cat.id);
+          final allocated = budget?.allocatedAmount ?? 0.0;
+          final isIncome = isCategoryIncome(cat.id);
+          final actual = isIncome ? receivedFor(cat.id) : spentFor(cat.id);
+          final isOver = allocated > 0 && actual > allocated && !isIncome;
+          rows.add(BudgetSectionRow(
+            targetId: cat.id,
+            name: cat.name,
+            colorHex: cat.colorHex,
+            colorIndex: colorIndex++,
+            categoryType: cat.type,
+            isSavings: false,
+            isGoal: false,
+            isIncome: isIncome,
+            budgetType: budget?.budgetType ?? BudgetType.monthly,
+            allocated: allocated,
+            actual: actual,
+            progress:
+                allocated > 0 ? (actual / allocated).clamp(0.0, 1.0) : 0.0,
+            isOver: isOver,
+            overBy: isOver ? actual - allocated : 0.0,
+            met: false,
+            transactions: transactionsForCategory(cat.id),
+          ));
+        }
+      }
+      if (rows.isEmpty) continue;
+      sections.add(BudgetSection(
+        groupId: group.id,
+        name: group.name,
+        isSavings: group.isSavings,
+        allocated: sectionAllocated(group.id),
+        spent: sectionSpent(group.id),
+        rows: rows,
+      ));
+    }
+    return sections;
   }
+
+  /// Distinct months (YYYY-MM) that hold at least one budget, ascending. The
+  /// month picker unions these in so every month with data stays reachable —
+  /// preserving the old prev/next stepping's unbounded reach.
+  List<String> get monthsWithBudgets =>
+      _allBudgets.map((b) => b.month).toSet().toList()..sort();
+
+  /// Non-transfer ledger entries touching [accountId] this month, newest first —
+  /// the contributions/withdrawals shown when a savings card is expanded.
+  List<TransactionRecord> _transactionsForAccount(String accountId) =>
+      _allTransactions
+          .where((t) =>
+              t.month == _selectedMonth &&
+              t.accountId == accountId &&
+              t.transferGroupId == null)
+          .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
 
   // ─── Web aggregates (Plan 050-D) ───────────────────────────────────────────────
 
@@ -617,5 +700,84 @@ class WebBudgetRow {
     required this.remaining,
     required this.progress,
     required this.isOver,
+  });
+}
+
+/// One display-ready budget row for the mobile Budget card list
+/// ([BudgetPresenter.budgetSections]). All math is resolved in the presenter;
+/// the card widget resolves only the visual tokens — the icon glyph from
+/// [name]/[categoryType] (or the savings/goal glyph via [isSavings]/[isGoal])
+/// and the color from [colorHex]/[colorIndex]. [targetId] is the category id for
+/// expense rows and the account id for savings rows (matching the edit sheet's
+/// `preselectedCategoryId`).
+class BudgetSectionRow {
+  final String targetId;
+  final String name;
+  final String colorHex;
+
+  /// Stable index into the color palette for the near-white fallback in
+  /// `resolveSliceColor` — unique per row within a `budgetSections` build.
+  final int colorIndex;
+  final CategoryType categoryType;
+  final bool isSavings;
+  final bool isGoal;
+  final bool isIncome;
+
+  /// The budget's cadence type — surfaced as a small badge (expense rows only),
+  /// preserving the label the old category tile showed.
+  final BudgetType budgetType;
+  final double allocated;
+
+  /// Spent (expense), received (income), or net contributed (savings).
+  final double actual;
+
+  /// Clamped 0.0–1.0 fill for the progress bar.
+  final double progress;
+  final bool isOver;
+
+  /// `actual - allocated` when over (expense only); 0 otherwise.
+  final double overBy;
+
+  /// Savings only: contributions reached or exceeded the goal.
+  final bool met;
+  final List<TransactionRecord> transactions;
+
+  const BudgetSectionRow({
+    required this.targetId,
+    required this.name,
+    required this.colorHex,
+    required this.colorIndex,
+    required this.categoryType,
+    required this.isSavings,
+    required this.isGoal,
+    required this.isIncome,
+    required this.budgetType,
+    required this.allocated,
+    required this.actual,
+    required this.progress,
+    required this.isOver,
+    required this.overBy,
+    required this.met,
+    required this.transactions,
+  });
+}
+
+/// A budget group with its resolved rows and section totals, ordered for the
+/// mobile Budget list ([BudgetPresenter.budgetSections]).
+class BudgetSection {
+  final String groupId;
+  final String name;
+  final bool isSavings;
+  final double allocated;
+  final double spent;
+  final List<BudgetSectionRow> rows;
+
+  const BudgetSection({
+    required this.groupId,
+    required this.name,
+    required this.isSavings,
+    required this.allocated,
+    required this.spent,
+    required this.rows,
   });
 }
