@@ -48,11 +48,13 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   // TabBar order below.
   static const int _ledgerTabIndex = 1;
   static const int _billsTabIndex = 2;
+  static const int _budgetTabIndex = 3;
 
-  // The redesigned Ledger and Bills tabs render their own in-page headers
-  // (Ledger's "Ledger" title; Bills' header + month·year picker), so the shared
-  // "TREASURY" app bar is hidden while either is active (per the reference
-  // frame). Other tabs keep the app bar until they get the same treatment.
+  // The redesigned Ledger, Bills and Budget tabs render their own in-page
+  // headers (Ledger's "Ledger" title; Bills' header + month·year picker;
+  // Budget's "Budget" title + month dropdown), so the shared "TREASURY" app bar
+  // is hidden while any is active (per the reference frame). Other tabs keep the
+  // app bar until they get the same treatment.
   bool _appBarHidden = false;
 
   @override
@@ -75,7 +77,9 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     // (Ledger, Bills) — even mid-animation — so there's no flash of the shared
     // "TREASURY" bar over that tab's own in-page header.
     final index = _tabController.index;
-    final hide = index == _ledgerTabIndex || index == _billsTabIndex;
+    final hide = index == _ledgerTabIndex ||
+        index == _billsTabIndex ||
+        index == _budgetTabIndex;
     if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
 
     if (_tabController.indexIsChanging) return;

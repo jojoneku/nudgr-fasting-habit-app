@@ -83,38 +83,42 @@ class _BudgetViewState extends State<BudgetView> {
         final hasAny = sections.isNotEmpty;
 
         return Scaffold(
-          body: Column(
-            children: [
-              _BudgetHeader(
-                presenter: widget.presenter,
-                onManageGroups: _showManageGroups,
-                onPickMonth: _pickMonth,
-              ),
-              Expanded(
-                child: hasAny
-                    ? ListView(
-                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-                        children: [
-                          _BudgetRingHero(presenter: widget.presenter),
-                          const SizedBox(height: 20),
-                          for (final section in sections) ...[
-                            _SectionBlock(
-                              section: section,
-                              onEditRow: _showAddBudgetSheet,
-                            ),
-                            const SizedBox(height: 18),
+          // The module hides its "TREASURY" app bar on this tab, so keep the top
+          // safe-area inset here to clear the status bar under the "Budget" title.
+          body: SafeArea(
+            child: Column(
+              children: [
+                _BudgetHeader(
+                  presenter: widget.presenter,
+                  onManageGroups: _showManageGroups,
+                  onPickMonth: _pickMonth,
+                ),
+                Expanded(
+                  child: hasAny
+                      ? ListView(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
+                          children: [
+                            _BudgetRingHero(presenter: widget.presenter),
+                            const SizedBox(height: 20),
+                            for (final section in sections) ...[
+                              _SectionBlock(
+                                section: section,
+                                onEditRow: _showAddBudgetSheet,
+                              ),
+                              const SizedBox(height: 18),
+                            ],
                           ],
-                        ],
-                      )
-                    : AppEmptyState(
-                        icon: Icons.account_balance_wallet_outlined,
-                        title: 'No budgets yet',
-                        body: 'Tap + to set spending limits',
-                        actionLabel: 'Set Budget',
-                        onAction: () => _showAddBudgetSheet(),
-                      ),
-              ),
-            ],
+                        )
+                      : AppEmptyState(
+                          icon: Icons.account_balance_wallet_outlined,
+                          title: 'No budgets yet',
+                          body: 'Tap + to set spending limits',
+                          actionLabel: 'Set Budget',
+                          onAction: () => _showAddBudgetSheet(),
+                        ),
+                ),
+              ],
+            ),
           ),
           floatingActionButton: FloatingActionButton(
             onPressed: () => _showAddBudgetSheet(),
