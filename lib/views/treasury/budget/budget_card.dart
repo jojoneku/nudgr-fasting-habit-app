@@ -74,7 +74,6 @@ class BudgetCard extends StatelessWidget {
     final pct =
         hasBudget ? '${(row.actual / row.allocated * 100).round()}%' : '—';
     final overOrMet = row.isOver || (row.isSavings && row.met);
-    final txnCount = row.transactions.length;
 
     return AppCard(
       variant: AppCardVariant.filled,
@@ -86,63 +85,35 @@ class BudgetCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header: icon · name + cadence badge inline · spent / allocated
             Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 _IconChip(icon: _icon, color: identity),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+                  child: Row(
                     children: [
-                      // Name + cadence badge (badge inline, after the name)
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              row.name,
-                              style: theme.textTheme.bodyLarge
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (!row.isSavings) ...[
-                            const SizedBox(width: 8),
-                            AppBadge(
-                              text: _budgetTypeLabel(row.budgetType),
-                              variant: AppBadgeVariant.tonal,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ],
-                        ],
+                      Flexible(
+                        child: Text(
+                          row.name,
+                          style: theme.textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      // Progress bar + % (directly below the name)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: AppLinearProgress(
-                              value: row.progress,
-                              color: accent,
-                              height: 6,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            pct,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: overOrMet ? accent : cs.onSurfaceVariant,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
+                      if (!row.isSavings) ...[
+                        const SizedBox(width: 8),
+                        AppBadge(
+                          text: _budgetTypeLabel(row.budgetType),
+                          variant: AppBadgeVariant.tonal,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ],
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Spent / allocated (top-right)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.baseline,
@@ -162,35 +133,52 @@ class BudgetCard extends StatelessWidget {
                 ),
               ],
             ),
-            // Over-budget hint (expense) / goal-reached note (savings)
+            const SizedBox(height: 12),
+            // Full-width progress bar + %
+            Row(
+              children: [
+                Expanded(
+                  child: AppLinearProgress(
+                    value: row.progress,
+                    color: accent,
+                    height: 6,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  pct,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: overOrMet ? accent : cs.onSurfaceVariant,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            // Over-budget / goal note — otherwise a subtle "tap to view" hint so
+            // the card reads as tappable (transactions open on tap).
             if (row.isOver) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _HintLine(
                 icon: Icons.warning_amber_rounded,
                 color: cs.error,
                 text: 'Over by ${formatPeso(row.overBy)} — trim next week',
               ),
             ] else if (row.isSavings && row.met) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               _HintLine(
                 icon: Icons.check_circle_outline_rounded,
                 color: cs.tertiary,
                 text: 'Goal reached',
               ),
-            ],
-            // Tap-to-view-transactions affordance
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                Text(
-                  '$txnCount transaction${txnCount == 1 ? '' : 's'}',
-                  style: theme.textTheme.labelSmall
-                      ?.copyWith(color: cs.onSurfaceVariant),
+            ] else ...[
+              const SizedBox(height: 6),
+              Text(
+                'Tap to see transactions',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.75),
                 ),
-                Icon(Icons.chevron_right, size: 16, color: cs.onSurfaceVariant),
-              ],
-            ),
+              ),
+            ],
           ],
         ),
       ),
