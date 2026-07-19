@@ -561,6 +561,32 @@ class _FilterSortBar extends StatelessWidget {
               ),
             ),
           ),
+          // Quick clear — wipes the active filters (keeps sort) without opening
+          // the sheet. Only shown when something is filtered.
+          if (count > 0) ...[
+            const SizedBox(width: 8),
+            Semantics(
+              button: true,
+              label: 'Clear filters',
+              child: GestureDetector(
+                onTap: () {
+                  HapticFeedback.selectionClick();
+                  presenter.clearAllFilters();
+                },
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLow,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Icon(Icons.close_rounded,
+                      size: 16, color: cs.onSurfaceVariant),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
