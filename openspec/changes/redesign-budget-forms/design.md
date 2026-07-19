@@ -15,12 +15,13 @@ and behavior; reuse the same primitives so the branches merge cleanly.
 
 ## Decisions
 
-- **Trim the shared kit for this branch.** `sheet_fields.dart` here contains only `SheetFieldLabel`,
-  `sheetFieldDecoration`, and `SheetPickerBox` — byte-identical to the Bills-page versions. The
-  AccountBadge-coupled `SheetAccountField`/`showAccountPicker` are omitted because they pull in
-  `account_badge_widget.dart` and a `+253`-line `utils/account_badge.dart` that live on the Bills
-  branch; the budget form doesn't need account badges. Keeping the three shared primitives identical
-  means a later merge with Bills is a trivial superset resolution, not a content conflict.
+- **Adopt the consolidated kit, not a trimmed copy.** `sheet_fields.dart` here is the full 407-line
+  file, byte-identical to `redesign-bills-page` / `redesign-ledger-page` / `redesign-bills-forms`, and
+  its dependencies (`account_badge_widget.dart`, `utils/account_badge.dart`) are brought in identical
+  too. `AccountBadge.of` maps onto this branch's existing `FinancialAccount` fields (`category`, `name`,
+  `icon`, `colorHex`), so nothing else changes. Sharing the exact files means every treasury branch
+  merges cleanly with no kit divergence. (An earlier iteration shipped a trimmed 3-component subset;
+  that was replaced with the full kit for consolidation.)
 - **Category/account selection = `SheetPickerBox` + bottom-sheet list.** Replaces the two
   `DropdownButtonFormField`s. A leading "New category…" row in the expense picker preserves the
   create-category flow (same `_showCreateCategoryDialog`). Savings mode lists `savingsTargets`.

@@ -13,10 +13,12 @@ read as one system.
 
 ## What Changes
 
-- Add `lib/views/treasury/shared/sheet_fields.dart` — the shared `SheetFieldLabel` (uppercase label),
-  `sheetFieldDecoration` (filled/bordered field box, `emphasize` for the blue amount border), and
-  `SheetPickerBox` (tappable read-only field box). Byte-identical to the corresponding parts of the
-  Bills-forms kit so the two merge cleanly.
+- Adopt the **consolidated `sheet_fields.dart` kit** verbatim from the other treasury redesign branches
+  (`redesign-bills-page`, `redesign-ledger-page`, `redesign-bills-forms` all carry the identical
+  407-line file) — `SheetFieldLabel`, `sheetFieldDecoration`, `SheetPickerBox`, plus `SheetHandle`,
+  `SheetTitle`, `SheetSegmentedToggle`, `SheetAccountField`, and `showAccountPicker`. Its dependencies
+  `account_badge_widget.dart` and `utils/account_badge.dart` are brought in byte-identical too, so every
+  treasury branch shares the same field kit and the files merge cleanly.
 - Restyle `add_budget_sheet.dart` onto the kit: a category / savings-account **picker box** opening a
   bottom-sheet list (with a "New category…" row preserving the create-category flow), an emphasized ₱
   **Budget amount** field, and BUDGET GROUP / BUDGET TYPE selectors under uppercase labels. Preselected
@@ -44,8 +46,9 @@ read as one system.
 
 ## Impact
 
-- **New:** `lib/views/treasury/shared/sheet_fields.dart` (shared field kit, trimmed to the
-  AccountBadge-free primitives this branch needs).
+- **New (consolidated kit, identical to the other treasury branches):**
+  `lib/views/treasury/shared/sheet_fields.dart`, `lib/views/treasury/shared/account_badge_widget.dart`,
+  `lib/utils/account_badge.dart`.
 - **Modified:** `lib/views/treasury/budget/add_budget_sheet.dart` (restyle only).
 - **Reuses:** `AppSegmentedControl`, `AppPrimaryButton`, `AppDestructiveButton`, `amount_input_formatter`,
   `category_colors`, `finance_format`, theme tokens.

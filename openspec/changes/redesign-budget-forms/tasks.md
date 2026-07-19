@@ -1,7 +1,8 @@
 ## 1. Shared field kit
 
-- [x] 1.1 Add `lib/views/treasury/shared/sheet_fields.dart` with `SheetFieldLabel`,
-      `sheetFieldDecoration`, `SheetPickerBox` (byte-identical to the Bills-page kit's shared parts).
+- [x] 1.1 Adopt the consolidated `sheet_fields.dart` (full 407-line kit) + `account_badge_widget.dart`
+      + `utils/account_badge.dart`, byte-identical to the other treasury redesign branches, so the kit
+      is shared and merges cleanly.
 
 ## 2. Restyle the Set / Edit Budget sheet
 
