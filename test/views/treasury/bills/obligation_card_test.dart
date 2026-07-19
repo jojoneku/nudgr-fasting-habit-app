@@ -40,6 +40,29 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
+  testWidgets('renders the type badge, note, and progress bar', (tester) async {
+    await tester.pumpWidget(host(ObligationCard(
+      icon: Icons.credit_score_outlined,
+      iconColor: Colors.purple,
+      name: 'MacBook',
+      amount: 5000,
+      dateLabel: 'payment 3/12',
+      badgeLabel: 'INSTALL',
+      note: 'BPI Credit Card',
+      progress: 0.25,
+      actionLabel: 'Pay',
+      onAction: () {},
+    )));
+
+    expect(find.text('MacBook'), findsOneWidget);
+    expect(find.text('INSTALL'), findsOneWidget);
+    expect(find.text('BPI Credit Card'), findsOneWidget);
+    final bar = tester.widget<LinearProgressIndicator>(
+      find.byType(LinearProgressIndicator),
+    );
+    expect(bar.value, 0.25);
+  });
+
   testWidgets('receivable shows a Receive action', (tester) async {
     var received = 0;
     await tester.pumpWidget(host(ObligationCard(

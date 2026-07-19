@@ -4,14 +4,16 @@ import 'package:intermittent_fasting/utils/app_motion.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
-/// A single obligation row card — category icon, name, "amount · date", and a
-/// right-aligned Pay / Receive action. Used by every Bills-tab section (bills,
-/// receivables, budgeted, installments). Modeled on the reference's compact
-/// Meralco card, minus the "due in N days" urgency line.
+/// A single obligation row card — category icon, name (+ optional type badge),
+/// "amount · date", an optional note line, and an optional compact progress
+/// bar, with a right-aligned Pay / Receive action. Used by every Bills-tab
+/// section (bills, receivables, budgeted, installments). Modeled on the
+/// reference's compact card.
 ///
-/// Dumb widget: the caller resolves the category [icon]/[iconColor] and passes
-/// primitives + callbacks. Paid/received items render dimmed with a check in
-/// place of the action button.
+/// Dumb widget: the caller resolves everything and passes primitives +
+/// callbacks. Paid/received items render dimmed (a disabled look) with a check
+/// in place of the action button; the caller passes the settled detail via
+/// [note].
 class ObligationCard extends StatelessWidget {
   final IconData icon;
 
@@ -20,6 +22,18 @@ class ObligationCard extends StatelessWidget {
   final String name;
   final double amount;
   final String dateLabel;
+
+  /// Small badge shown just after the name (e.g. the bill type "UTIL"/"CC").
+  final String? badgeLabel;
+  final Color? badgeColor;
+
+  /// Secondary muted line under the amount — a payment note, "Auto-generated
+  /// statement", a set-aside's funding note, or the settled detail
+  /// ("Paid ₱… · Jun 28") when [done].
+  final String? note;
+
+  /// 0–1 progress shown as a thin bar at the bottom (installments, set-asides).
+  final double? progress;
 
   /// True for money coming in (receivables): amount shows a `+` in the success
   /// color and the action defaults to "Receive".
@@ -48,6 +62,10 @@ class ObligationCard extends StatelessWidget {
     required this.amount,
     required this.dateLabel,
     required this.actionLabel,
+    this.badgeLabel,
+    this.badgeColor,
+    this.note,
+    this.progress,
     this.isInflow = false,
     this.done = false,
     this.onAction,
@@ -84,15 +102,28 @@ class ObligationCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: cs.onSurface,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      if (badgeLabel != null) ...[
+                        const SizedBox(width: 6),
+                        AppBadge(
+                          text: badgeLabel!,
+                          color: badgeColor ?? iconColor,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 3),
                   Row(
@@ -119,6 +150,31 @@ class ObligationCard extends StatelessWidget {
                       ),
                     ],
                   ),
+                  if (note != null && note!.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      note!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.85),
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                  if (progress != null) ...[
+                    const SizedBox(height: 7),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(2),
+                      child: LinearProgressIndicator(
+                        value: progress!.clamp(0.0, 1.0),
+                        minHeight: 5,
+                        backgroundColor:
+                            cs.outlineVariant.withValues(alpha: 0.3),
+                        color: iconColor,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -194,8 +250,7 @@ class _ActionButton extends StatelessWidget {
         foregroundColor: Theme.of(context).colorScheme.surface,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         minimumSize: const Size(0, 44),
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
       ),
       child: Text(label),

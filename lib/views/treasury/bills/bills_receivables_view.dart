@@ -270,6 +270,48 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     if (ok) onConfirm();
   }
 
+  // A bill's type is a subset of its category — shown as a small badge after
+  // the name. Label is context-free; color needs the theme.
+  String _billTypeLabel(BillType t) => switch (t) {
+        BillType.creditCard => 'CC',
+        BillType.installment => 'INSTALL',
+        BillType.subscription => 'SUB',
+        BillType.insurance => 'INS',
+        BillType.govtContribution => 'GOV',
+        BillType.utility => 'UTIL',
+        BillType.other => 'OTHER',
+      };
+
+  Color _billTypeColor(BillType t) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (t) {
+      BillType.creditCard => cs.error,
+      BillType.installment => context.appColors.gold,
+      BillType.subscription => cs.primary,
+      BillType.insurance => context.appColors.success,
+      BillType.govtContribution => context.appColors.purple,
+      BillType.utility => context.appColors.orange,
+      BillType.other => cs.onSurfaceVariant,
+    };
+  }
+
+  String _receivableTypeLabel(ReceivableType t) => switch (t) {
+        ReceivableType.salary => 'SALARY',
+        ReceivableType.reimbursement => 'REIMB',
+        ReceivableType.business => 'BIZ',
+        ReceivableType.other => 'OTHER',
+      };
+
+  Color _receivableTypeColor(ReceivableType t) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (t) {
+      ReceivableType.salary => context.appColors.success,
+      ReceivableType.reimbursement => cs.primary,
+      ReceivableType.business => context.appColors.gold,
+      ReceivableType.other => cs.onSurfaceVariant,
+    };
+  }
+
   // ─── Sections ────────────────────────────────────────────────────────────
 
   Widget _billsSection() {
@@ -286,11 +328,22 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
 
   Widget _billCard(Bill b, int i) {
     final v = _catVisual(b.categoryId, i, fallback: context.appColors.bills);
+    final String? note = b.isPaid
+        ? 'Paid ${formatPeso(b.paidAmount ?? b.amount)}'
+            '${b.paidDate != null ? ' · ${DateFormat('MMM d').format(b.paidDate!)}' : ''}'
+        : b.isAutoStatement
+            ? 'Auto-generated statement'
+            : (b.paymentNote != null && b.paymentNote!.isNotEmpty
+                ? b.paymentNote
+                : null);
     return ObligationCard(
       key: ValueKey('bill_${b.id}'),
       icon: v.icon,
       iconColor: v.color,
       name: b.name,
+      badgeLabel: _billTypeLabel(b.billType),
+      badgeColor: _billTypeColor(b.billType),
+      note: note,
       amount: b.amount,
       dateLabel:
           'due ${DateFormat('MMM d').format(widget.presenter.billDueDate(b))}',
@@ -324,11 +377,18 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final date = r.expectedDate;
     final dateLabel =
         date == null ? 'ASAP' : 'exp ${DateFormat('MMM d').format(date)}';
+    final String? note = r.isReceived
+        ? 'Received ${formatPeso(r.receivedAmount ?? r.amount)}'
+            '${r.receivedDate != null ? ' · ${DateFormat('MMM d').format(r.receivedDate!)}' : ''}'
+        : null;
     return ObligationCard(
       key: ValueKey('rec_${r.id}'),
       icon: v.icon,
       iconColor: v.color,
       name: r.name,
+      badgeLabel: _receivableTypeLabel(r.receivableType),
+      badgeColor: _receivableTypeColor(r.receivableType),
+      note: note,
       amount: r.amount,
       dateLabel: dateLabel,
       isInflow: true,
@@ -359,11 +419,22 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
 
   Widget _budgetedCard(BudgetedExpense e, int i) {
     final v = _catVisual(e.categoryId, i, fallback: context.appColors.gold);
+    final accountName = widget.presenter.accountName(e.accountId);
+    final String? note = e.isPaid
+        ? 'Funded ${formatPeso(e.spentAmount)}'
+        : (e.note != null && e.note!.isNotEmpty
+            ? e.note
+            : (accountName != null ? 'Fund from $accountName' : null));
+    final progress = e.allocatedAmount > 0
+        ? (e.spentAmount / e.allocatedAmount).clamp(0.0, 1.0)
+        : null;
     return ObligationCard(
       key: ValueKey('bud_${e.id}'),
       icon: v.icon,
       iconColor: v.color,
       name: e.name,
+      note: note,
+      progress: progress,
       amount: e.allocatedAmount,
       dateLabel: e.budgetedType.label,
       actionLabel: 'Fund',
@@ -397,11 +468,16 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     final dateLabel = paidThisMonth
         ? 'paid · $count/${inst.totalMonths}'
         : 'payment ${count + 1}/${inst.totalMonths}';
+    final account = widget.installmentPresenter.accounts
+        .where((a) => a.id == inst.accountId)
+        .firstOrNull;
     return ObligationCard(
       key: ValueKey('inst_${inst.id}'),
       icon: Icons.credit_score_outlined,
       iconColor: context.appColors.purple,
       name: inst.name,
+      note: account?.name,
+      progress: widget.installmentPresenter.paymentProgress(inst.id),
       amount: inst.monthlyAmount,
       dateLabel: dateLabel,
       actionLabel: 'Pay',

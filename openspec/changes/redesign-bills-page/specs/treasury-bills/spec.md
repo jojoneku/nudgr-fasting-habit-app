@@ -69,7 +69,16 @@ right-aligned **Pay** (or **Receive** for receivables) action.
 
 #### Scenario: A settled item
 - **WHEN** an item is paid or received
-- **THEN** its card is dimmed and shows a check instead of the action button
+- **THEN** its card is dimmed (a disabled look) and shows a check instead of the
+  action button, with the settled detail (e.g. "Paid ₱3,200 · Jun 28") as its note
+
+#### Scenario: Card detail preserved from the old tiles
+- **WHEN** a card is shown
+- **THEN** it retains the pre-redesign detail in the compact layout: a small
+  type badge after the name (bill type / receivable type), a note line (payment
+  note, or "Auto-generated statement" for credit statements, or the set-aside's
+  funding note/account), and a single-row progress bar for installments and
+  budgeted set-asides
 
 #### Scenario: An empty section
 - **WHEN** a type has no items for the selected month
