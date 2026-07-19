@@ -9,7 +9,8 @@
 ## 3. Reference header layout
 
 - [x] 3.1 Add a `Ledger` title row (`_LedgerHeader`), left-aligned, 23/800.
-- [x] 3.2 Combine the Filter & sort pill and the month/year pill into one in-line controls row (`_LedgerControlsRow` + `_FilterSortButton` + `_MonthPill`); remove the standalone centered month row. Day filter stays inside the Filter & sort sheet.
+- [x] 3.2 Combine the Filter & sort pill and the month/year pill into one in-line controls row (`_LedgerControlsRow` + `_FilterSortButton` + `_MonthPill`); remove the standalone centered month row. Day filter stays inside the Filter & sort sheet. Guard against overflow on narrow screens (Expanded + loose Flexible, ellipsizing label).
+- [x] 3.3 Hide the module's shared "TREASURY" app bar while the Ledger tab is active (`treasury_module_view.dart`) so the Ledger's own title owns the top; flip the Ledger's top `SafeArea` on to clear the status bar. Other tabs keep the app bar.
 
 ## 4. Segmented IN / OUT / NET strip
 

@@ -110,8 +110,10 @@ class _LedgerViewState extends State<LedgerView> {
       listenable: presenter,
       builder: (context, _) {
         return Scaffold(
+          // The module hides its "TREASURY" app bar on this tab, so the Ledger
+          // owns the top: keep the top safe-area inset here to clear the status
+          // bar under the "Ledger" title.
           body: SafeArea(
-            top: false,
             child: Column(
               children: [
                 const _LedgerHeader(),

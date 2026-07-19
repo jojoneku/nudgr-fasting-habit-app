@@ -44,6 +44,14 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
+  // Index of the Ledger tab — keep in sync with the TabBar order below.
+  static const int _ledgerTabIndex = 1;
+
+  // The redesigned Ledger renders its own "Ledger" title, so the shared
+  // "TREASURY" app bar is hidden while that tab is active (per the reference
+  // frame). Other tabs keep the app bar until they get the same treatment.
+  bool _appBarHidden = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +68,11 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   }
 
   void _onTabChanged() {
+    // Toggle the app bar as soon as we cross into/out of the Ledger tab (even
+    // mid-animation) so there's no flash of the "TREASURY" bar over the Ledger.
+    final hide = _tabController.index == _ledgerTabIndex;
+    if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
+
     if (_tabController.indexIsChanging) return;
     // Each tab keeps its own presenter cache. Reload on focus so cross-tab
     // mutations (e.g. mark-paid in Bills, transfer in Ledger) show up without
@@ -93,16 +106,19 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        title: Text(
-          'TREASURY',
-          style: theme.textTheme.titleSmall?.copyWith(
-            letterSpacing: 2.0,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      // Hidden on the Ledger tab, which supplies its own "Ledger" title.
+      appBar: _appBarHidden
+          ? null
+          : AppBar(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              title: Text(
+                'TREASURY',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  letterSpacing: 2.0,
+                ),
+              ),
+              centerTitle: true,
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainer,

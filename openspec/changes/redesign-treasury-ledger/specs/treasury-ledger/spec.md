@@ -65,6 +65,15 @@ and the month/year pill in line, then the cash-flow strip — matching the refer
 - **THEN** the existing Filter & sort sheet / month-grid popover open, and the day filter remains
   inside the Filter & sort sheet
 
+#### Scenario: Ledger owns the top (no duplicate title)
+- **WHEN** the Ledger tab is active in the Treasury module
+- **THEN** the module's shared "TREASURY" app bar is hidden so the Ledger's own "Ledger" title is the
+  only top title, and the Ledger content still clears the status bar
+
+#### Scenario: Controls never overflow
+- **WHEN** the screen is narrow and a filter is active with a long month label
+- **THEN** the Filter & sort pill label ellipsizes rather than overflowing the row
+
 ### Requirement: Segmented cash-flow strip
 
 The Ledger SHALL show a single segmented IN / OUT / NET card fed by the month's filtered totals.
