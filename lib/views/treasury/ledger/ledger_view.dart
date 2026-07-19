@@ -17,7 +17,6 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
-final _dateFilterFmt = DateFormat('MMM d, yyyy');
 
 class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -116,11 +115,6 @@ class _LedgerViewState extends State<LedgerView> {
             child: Column(
               children: [
                 _MonthSelectorRow(presenter: presenter),
-                if (presenter.selectedDate != null)
-                  _DateFilterChip(
-                    date: presenter.selectedDate!,
-                    onClear: () => presenter.setSelectedDate(null),
-                  ),
                 _SummaryCard(presenter: presenter),
                 _FilterSortBar(
                   presenter: presenter,
@@ -595,6 +589,31 @@ class _FilterSortBar extends StatelessWidget {
 
 /// The Filter & sort bottom sheet: multi-select categories + accounts, the owed
 /// toggle, and Date/Amount sort with direction. Applies live via the presenter.
+/// Opens the spending-heat calendar to pick a single day within the selected
+/// month (tapping the active day again clears it). Used by the Day filter.
+Future<void> _pickLedgerDay(
+    BuildContext context, LedgerPresenter presenter) async {
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SpendingCalendar(
+        presenter: presenter,
+        onDaySelected: (day) {
+          final cur = presenter.selectedDate;
+          final same = cur != null &&
+              cur.year == day.year &&
+              cur.month == day.month &&
+              cur.day == day.day;
+          presenter.setSelectedDate(same ? null : day);
+          Navigator.of(ctx).pop();
+        },
+      ),
+    ),
+  );
+}
+
 class _FilterSortSheet extends StatelessWidget {
   final LedgerPresenter presenter;
   const _FilterSortSheet({required this.presenter});
@@ -648,6 +667,26 @@ class _FilterSortSheet extends StatelessWidget {
                         !presenter.sortDescending,
                     onTap: () => presenter.setSort(LedgerSortField.amount,
                         descending: false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _FilterHeading('Day'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _SelectChip(
+                    label: 'Any day',
+                    selected: presenter.selectedDate == null,
+                    onTap: () => presenter.setSelectedDate(null),
+                  ),
+                  _SelectChip(
+                    label: presenter.selectedDate != null
+                        ? _filterChipFmt.format(presenter.selectedDate!)
+                        : 'Pick a day…',
+                    selected: presenter.selectedDate != null,
+                    onTap: () => _pickLedgerDay(context, presenter),
                   ),
                 ],
               ),
@@ -826,37 +865,29 @@ class _SelectChip extends StatelessWidget {
   }
 }
 
-// ── Month Selector ──────────────────────────────────────────────────────────
+// ── Month / Year Switcher ────────────────────────────────────────────────────
 
-class _MonthSelectorRow extends StatefulWidget {
+/// Month + year switcher: chevrons step one month; tapping the pill opens a
+/// month/year picker to jump anywhere. Day-level filtering lives in the
+/// Filter & sort sheet, not here.
+class _MonthSelectorRow extends StatelessWidget {
   final LedgerPresenter presenter;
 
   const _MonthSelectorRow({required this.presenter});
 
-  @override
-  State<_MonthSelectorRow> createState() => _MonthSelectorRowState();
-}
-
-class _MonthSelectorRowState extends State<_MonthSelectorRow> {
-  final _labelKey = GlobalKey();
-
-  Future<void> _showCalendarPopover() async {
+  Future<void> _pickMonth(BuildContext context) async {
     HapticFeedback.selectionClick();
-    final box = _labelKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    final topOffset = offset.dy + size.height + 6;
-
-    await showDialog<void>(
+    final current =
+        DateTime.tryParse('${presenter.selectedMonth}-01') ?? DateTime.now();
+    final picked = await showDatePicker(
       context: context,
-      barrierColor: Colors.transparent,
-      builder: (dialogContext) => _CalendarPopover(
-        presenter: widget.presenter,
-        topOffset: topOffset,
-        onDismiss: () => Navigator.of(dialogContext).pop(),
-      ),
+      initialDate: current,
+      firstDate: DateTime(2015),
+      lastDate: DateTime(2100),
+      initialDatePickerMode: DatePickerMode.year,
+      helpText: 'Select month',
     );
+    if (picked != null) presenter.setMonth(toMonthKey(picked));
   }
 
   @override
@@ -873,15 +904,16 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter.stepDay(-1),
+              tooltip: 'Previous month',
+              onPressed: () =>
+                  presenter.setMonth(previousMonth(presenter.selectedMonth)),
             ),
           ),
           Expanded(
             child: Center(
               child: GestureDetector(
-                key: _labelKey,
-                onTap: _showCalendarPopover,
-                // Reference-style bordered month pill with a caret.
+                onTap: () => _pickMonth(context),
+                // Bordered month pill with a caret.
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
@@ -896,10 +928,7 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        widget.presenter.selectedDate != null
-                            ? _dateFilterFmt
-                                .format(widget.presenter.selectedDate!)
-                            : monthLabel(widget.presenter.selectedMonth),
+                        monthLabel(presenter.selectedMonth),
                         style: TextStyle(
                           color: cs.onSurface,
                           fontWeight: FontWeight.w700,
@@ -923,118 +952,9 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
             height: 44,
             child: IconButton(
               icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter.stepDay(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Calendar Popover ─────────────────────────────────────────────────────────
-
-class _CalendarPopover extends StatelessWidget {
-  final LedgerPresenter presenter;
-  final double topOffset;
-  final VoidCallback onDismiss;
-
-  const _CalendarPopover({
-    required this.presenter,
-    required this.topOffset,
-    required this.onDismiss,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: onDismiss,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: GestureDetector(
-          // Swallow taps inside so they don't propagate to the dismiss handler
-          onTap: () {},
-          child: Container(
-            margin: EdgeInsets.only(top: topOffset, left: 12, right: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .shadow
-                      .withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: SpendingCalendar(
-              presenter: presenter,
-              onDaySelected: (day) {
-                HapticFeedback.selectionClick();
-                final current = presenter.selectedDate;
-                if (current != null &&
-                    current.year == day.year &&
-                    current.month == day.month &&
-                    current.day == day.day) {
-                  presenter.setSelectedDate(null);
-                } else {
-                  presenter.setSelectedDate(day);
-                }
-                onDismiss();
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── Date Filter Chip ─────────────────────────────────────────────────────────
-
-class _DateFilterChip extends StatelessWidget {
-  final DateTime date;
-  final VoidCallback onClear;
-
-  const _DateFilterChip({required this.date, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: 12, color: cs.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'Filtered: ${_filterChipFmt.format(date)}',
-                  style: TextStyle(
-                    color: cs.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: onClear,
-                  child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
-                ),
-              ],
+              tooltip: 'Next month',
+              onPressed: () =>
+                  presenter.setMonth(nextMonth(presenter.selectedMonth)),
             ),
           ),
         ],

@@ -140,12 +140,14 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerSortField get sortField => _sortField;
   bool get sortDescending => _sortDescending;
 
-  /// Number of active filters (each selected category/account + the owed flag)
-  /// — drives the count badge on the Filter & sort button.
+  /// Number of active filters (each selected category/account, the owed flag,
+  /// and a single-day filter) — drives the count badge on the Filter & sort
+  /// button.
   int get activeFilterCount =>
       _selectedCategoryIds.length +
       _selectedAccountIds.length +
-      (_owedOnly ? 1 : 0);
+      (_owedOnly ? 1 : 0) +
+      (_selectedDate != null ? 1 : 0);
 
   /// True when the sort is anything other than the default newest-first date.
   bool get isCustomSort =>
@@ -482,11 +484,12 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  /// Clears all filters (categories, accounts, owed); leaves the sort untouched.
+  /// Clears all filters (categories, accounts, owed, day); leaves sort untouched.
   void clearAllFilters() {
     _selectedCategoryIds.clear();
     _selectedAccountIds.clear();
     _owedOnly = false;
+    _selectedDate = null;
     safeNotify();
   }
 
