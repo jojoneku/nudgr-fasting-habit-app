@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
@@ -125,12 +126,135 @@ class SheetPickerBox extends StatelessWidget {
   }
 }
 
-// ── Account field + picker ───────────────────────────────────────────────────
-// Reference "PAY FROM" / "ACCOUNT" row: a mini account badge + name + caret,
-// tapping opens a bottom-sheet account list. Shared by the Bills entry forms.
+// ── Reference sheet kit ──────────────────────────────────────────────────────
+// Shared chrome + controls for the redesigned Treasury creation/edit sheets
+// (`Nutrition Focus Treasury.dc.html`). Purely presentational; no form logic.
 
-/// A field box showing an account as a mini [AccountBadge] + name + caret.
-/// Pair with a [SheetFieldLabel] above; tap opens [showAccountPicker].
+/// The centered grab handle at the top of a bottom sheet.
+class SheetHandle extends StatelessWidget {
+  const SheetHandle({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Container(
+        width: 36,
+        height: 4,
+        margin: const EdgeInsets.only(bottom: 14),
+        decoration: BoxDecoration(
+          color: cs.outlineVariant,
+          borderRadius: BorderRadius.circular(999),
+        ),
+      ),
+    );
+  }
+}
+
+/// The bold sheet title (reference "New entry" / "New Installment").
+class SheetTitle extends StatelessWidget {
+  final String text;
+  const SheetTitle(this.text, {super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Text(
+      text,
+      style: TextStyle(
+        color: cs.onSurface,
+        fontSize: 17,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+}
+
+/// One segment of a [SheetSegmentedToggle].
+class SheetSegment<T> {
+  final String label;
+  final T value;
+
+  /// Fill color when this segment is selected (e.g. bills-orange vs move-green).
+  final Color accent;
+  const SheetSegment(
+      {required this.label, required this.value, required this.accent});
+}
+
+/// A reference-style segmented toggle: a pill container whose selected segment
+/// is filled with its [SheetSegment.accent]. Pass a null [onChanged] to render
+/// it disabled (e.g. edit mode locked to a kind).
+class SheetSegmentedToggle<T> extends StatelessWidget {
+  final List<SheetSegment<T>> segments;
+  final T value;
+  final ValueChanged<T>? onChanged;
+
+  const SheetSegmentedToggle({
+    super.key,
+    required this.segments,
+    required this.value,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final disabled = onChanged == null;
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          for (final seg in segments)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: seg.value == value,
+                label: seg.label,
+                child: GestureDetector(
+                  onTap: disabled || seg.value == value
+                      ? null
+                      : () {
+                          HapticFeedback.selectionClick();
+                          onChanged!(seg.value);
+                        },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOut,
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: seg.value == value ? seg.accent : Colors.transparent,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(
+                      seg.label,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: seg.value == value
+                            ? FontWeight.w700
+                            : FontWeight.w600,
+                        color: seg.value == value
+                            ? Colors.white
+                            : cs.onSurfaceVariant
+                                .withValues(alpha: disabled ? 0.5 : 1),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A field box showing an account as a mini [AccountBadge] + name + caret
+/// (reference "PAY FROM" / "ACCOUNT" row). Tapping opens [showAccountPicker].
 class SheetAccountField extends StatelessWidget {
   final FinancialAccount? account;
   final String placeholder;
@@ -182,8 +306,8 @@ class AccountChoice {
   const AccountChoice(this.id);
 }
 
-/// A bottom-sheet account list. When [allowNone] is set, a leading [noneLabel]
-/// row returns `AccountChoice(null)`.
+/// A bottom-sheet account list reused by every account field. When [allowNone]
+/// is set, a leading [noneLabel] row returns `AccountChoice(null)`.
 Future<AccountChoice?> showAccountPicker(
   BuildContext context, {
   required List<FinancialAccount> accounts,
@@ -208,24 +332,10 @@ Future<AccountChoice?> showAccountPicker(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 14),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.outlineVariant,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text('Account',
-                    style: TextStyle(
-                        color: theme.colorScheme.onSurface,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800)),
+              const SheetHandle(),
+              const Padding(
+                padding: EdgeInsets.only(bottom: 8),
+                child: SheetTitle('Account'),
               ),
               if (allowNone)
                 _AccountPickerRow(
