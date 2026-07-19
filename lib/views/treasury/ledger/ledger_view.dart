@@ -659,8 +659,13 @@ class _FilterSortSheet extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
               ],
-              if (presenter.accounts.isNotEmpty) ...[
-                const _FilterHeading('Accounts'),
+              // Accounts + Categories always show (with an empty hint) so the
+              // filter dimensions are never a mystery — even before any account
+              // or category exists on this device.
+              const _FilterHeading('Accounts'),
+              if (presenter.accounts.isEmpty)
+                const _FilterEmptyHint('No accounts yet')
+              else
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -673,10 +678,11 @@ class _FilterSortSheet extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 16),
-              ],
-              if (expense.isNotEmpty || income.isNotEmpty) ...[
-                const _FilterHeading('Categories'),
+              const SizedBox(height: 16),
+              const _FilterHeading('Categories'),
+              if (expense.isEmpty && income.isEmpty)
+                const _FilterEmptyHint('No categories yet')
+              else
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -691,8 +697,7 @@ class _FilterSortSheet extends StatelessWidget {
                       ),
                   ],
                 ),
-                const SizedBox(height: 20),
-              ],
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -734,6 +739,24 @@ class _FilterHeading extends StatelessWidget {
               color: context.appColors.textMuted,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.6,
+            ),
+      ),
+    );
+  }
+}
+
+class _FilterEmptyHint extends StatelessWidget {
+  final String text;
+  const _FilterEmptyHint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.appColors.textMuted,
             ),
       ),
     );
