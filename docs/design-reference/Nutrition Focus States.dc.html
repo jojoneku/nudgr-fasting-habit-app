@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;-webkit-font-smoothing:antialiased;}
+</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Action states</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:900px; line-height:1.5;">Every action the food logger supports, captured as a frame. Top row is the logging flow end-to-end; bottom row is managing an existing entry.</div>
+</div>
+
+<!-- ROW A LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:120px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Logging a meal</div><div style="font-size:14px; color:#5C6068;">open → type → analyze → estimate → logged</div></div>
+</div>
+
+<!-- ============ A1 · COMPOSE ============ -->
+<div style="position:absolute; left:40px; top:162px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">1 · Compose</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;"><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">581</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div><div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:28%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5);"></div></div></div>
+    <!-- dim -->
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <!-- sheet -->
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:13px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Log a meal</span><span style="font-size:13px; font-weight:700; color:#797D85;">Cancel</span></div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:13px;">
+        <div style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;"><i class="ph-fill ph-egg" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">2 eggs &amp; toast</span></div>
+        <div style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;"><i class="ph-fill ph-coffee" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">Flat white</span></div>
+        <div style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px;"><i class="ph-fill ph-bowl-food" style="font-size:13px; color:#FFC107;"></i><span style="font-size:12px; font-weight:700; color:#C9CDD3;">Rice &amp; chicken</span></div>
+      </div>
+      <div style="height:52px; background:#202021; border:1.5px solid #2196F3; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;"><i class="ph ph-camera" style="font-size:20px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">What did you eat?</span><div style="width:38px; height:38px; border-radius:12px; background:#3A3B3D; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:17px; color:#fff;"></i></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ A2 · ANALYZING ============ -->
+<div style="position:absolute; left:420px; top:162px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">2 · Analyzing</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;"><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">581</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div><div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:28%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5);"></div></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:13px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Log a meal</span><span style="font-size:13px; font-weight:700; color:#797D85;">Cancel</span></div>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:11px;"><div style="max-width:82%; background:#202021; border:1px solid #313132; border-radius:16px 16px 6px 16px; padding:11px 14px;"><span style="font-size:14px; color:#E7E7E9; line-height:1.35;">2 eggs, 2 toast and a flat white</span></div></div>
+      <div style="display:flex; align-items:center; gap:9px; padding:8px 4px 16px;"><div style="width:16px; height:16px; border-radius:50%; border:2px solid #2E2F31; border-top-color:#5BAAF5;"></div><span style="font-size:13px; color:#9BA0A8; font-weight:600;">Analyzing your meal…</span></div>
+      <div style="height:52px; background:#202021; border:1px solid #313132; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;"><i class="ph ph-camera" style="font-size:20px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">What did you eat?</span><div style="width:38px; height:38px; border-radius:12px; background:#3A3B3D; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:17px; color:#fff;"></i></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ A3 · ESTIMATE ============ -->
+<div style="position:absolute; left:800px; top:162px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">3 · Estimate</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Log a meal</span><span style="font-size:13px; font-weight:700; color:#797D85;">Cancel</span></div>
+      <div style="display:flex; justify-content:flex-end; margin-bottom:11px;"><div style="max-width:82%; background:#202021; border:1px solid #313132; border-radius:16px 16px 6px 16px; padding:10px 13px;"><span style="font-size:13px; color:#E7E7E9;">2 eggs, 2 toast and a flat white</span></div></div>
+      <div style="background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:15px 16px 14px;">
+        <div style="display:flex; align-items:center; gap:7px; margin-bottom:12px;"><i class="ph-fill ph-sparkle" style="font-size:13px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#5BAAF5;">Estimate</span></div>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Fried eggs ×2</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P13 · C1 · F15</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">180</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Toast ×2</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P8 · C30 · F4</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">180</span></div>
+          <div style="display:flex; justify-content:space-between; align-items:baseline;"><div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Flat white · oat</div><div style="font-size:10px; color:#797D85; margin-top:2px;">P6 · C12 · F7</div></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">120</span></div>
+        </div>
+        <div style="margin-top:13px; padding-top:12px; border-top:1px solid #2E2F31; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 27P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 43C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 26F</span></div><span style="font-size:16px; font-weight:800; color:#F2F2F3;">480 <span style="font-size:11px; color:#797D85; font-weight:600;">kcal</span></span></div>
+        <div style="margin-top:13px; display:flex; gap:9px;"><div style="flex:1; height:44px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 6px 16px -6px rgba(33,150,243,.6);"><i class="ph-bold ph-check" style="font-size:15px; color:#fff;"></i><span style="font-size:14px; font-weight:700; color:#fff;">Log it</span></div><div style="width:104px; height:44px; border-radius:13px; background:#252628; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph ph-pencil-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Edit</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ A4 · LOGGED ============ -->
+<div style="position:absolute; left:1180px; top:162px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">4 · Logged</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;"><div style="display:flex; justify-content:space-between; align-items:flex-start;"><div><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">1,061</span></div></div><div style="text-align:right; padding-top:4px;"><div style="font-size:20px; font-weight:800; color:#5BAAF5;">1,037</div><div style="font-size:11px; font-weight:600; color:#7E828A;">left of 2,098</div></div></div><div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:51%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5);"></div></div></div>
+    <div style="margin:12px 18px 0; background:rgba(76,175,80,.1); border:1px solid rgba(76,175,80,.3); border-radius:14px; padding:11px 14px; display:flex; align-items:center; gap:10px;"><div style="width:24px; height:24px; border-radius:50%; background:#4CAF50; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-check" style="font-size:13px; color:#fff;"></i></div><div style="flex:1; font-size:13px; font-weight:700; color:#A5D6A7;">Logged · 480 kcal</div><span style="font-size:12px; font-weight:700; color:#7E828A;">Undo</span></div>
+    <div style="padding:16px 22px 0;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's log</span><span style="font-size:12px; font-weight:700; color:#7E828A;">1,061 kcal</span></div></div>
+    <div style="padding:11px 18px 0;">
+      <div style="background:#1D1D1E; border:1px solid rgba(33,150,243,.4); border-radius:17px; padding:13px 15px; box-shadow:0 0 0 3px rgba(33,150,243,.08);">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;"><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Eggs, toast &amp; flat white</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="font-size:11px; color:#797D85;">3 items · 9:50 AM</span><span style="display:inline-flex; align-items:center; gap:3px; background:rgba(33,150,243,.14); border-radius:6px; padding:2px 6px;"><i class="ph-fill ph-cloud" style="font-size:10px; color:#5BAAF5;"></i><span style="font-size:9.5px; font-weight:700; color:#5BAAF5;">Cloud</span></span></div></div><div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3;">480</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div></div>
+        <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 27P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 43C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 26F</span><div style="flex:1;"></div><i class="ph ph-dots-three" style="font-size:18px; color:#6E727A;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW B LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1000px; width:1480px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Managing an entry</div><div style="font-size:14px; color:#5C6068;">tap ⋯ → edit · save · wrong · delete</div></div>
+</div>
+
+<!-- ============ B1 · ACTIONS OPEN ============ -->
+<div style="position:absolute; left:40px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">5 · Actions open</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="padding:18px 22px 0;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's log</span><span style="font-size:12px; font-weight:700; color:#7E828A;">581 kcal</span></div></div>
+    <div style="padding:11px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <!-- card with menu open -->
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:17px; padding:13px 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;"><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">White rice, fried fish &amp; uni</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="font-size:11px; color:#797D85;">237g · 9:16 AM</span><span style="display:inline-flex; align-items:center; gap:3px; background:rgba(33,150,243,.14); border-radius:6px; padding:2px 6px;"><i class="ph-fill ph-cloud" style="font-size:10px; color:#5BAAF5;"></i><span style="font-size:9.5px; font-weight:700; color:#5BAAF5;">Cloud</span></span></div></div><div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3;">431</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div></div>
+        <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 29P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 46C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 15F</span><div style="flex:1;"></div><i class="ph ph-dots-three" style="font-size:18px; color:#5BAAF5;"></i></div>
+        <div style="display:flex; gap:7px; margin-top:11px; padding-top:11px; border-top:1px solid #2A2A2B;">
+          <div style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;"><i class="ph ph-pencil-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Edit</span></div>
+          <div style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;"><i class="ph ph-bookmark-simple" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Save</span></div>
+          <div style="flex:1; height:36px; border-radius:10px; background:#252628; display:flex; align-items:center; justify-content:center; gap:5px;"><i class="ph ph-thumbs-down" style="font-size:14px; color:#C9CDD3;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">Wrong</span></div>
+          <div style="flex:1; height:36px; border-radius:10px; background:rgba(244,67,54,.12); display:flex; align-items:center; justify-content:center; gap:5px;"><i class="ph ph-trash" style="font-size:14px; color:#FF6B6B;"></i><span style="font-size:11.5px; font-weight:700; color:#FF6B6B;">Delete</span></div>
+        </div>
+      </div>
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:17px; padding:13px 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;"><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Bear Brand milk powder</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="font-size:11px; color:#797D85;">30g · 9:40 AM</span><span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,.06); border-radius:6px; padding:2px 6px;"><i class="ph-bold ph-device-mobile" style="font-size:10px; color:#9BA0A8;"></i><span style="font-size:9.5px; font-weight:700; color:#9BA0A8;">Local</span></span></div></div><div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3;">150</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div></div>
+        <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 4P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 22C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 5F</span><div style="flex:1;"></div><i class="ph ph-dots-three" style="font-size:18px; color:#6E727A;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B2 · EDIT ============ -->
+<div style="position:absolute; left:420px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">6 · Edit</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; left:0; right:0; bottom:0; background:#171718; border-top:1px solid #2E2F31; border-radius:26px 26px 0 0; padding:12px 16px 16px; box-shadow:0 -20px 50px -20px rgba(0,0,0,.7);">
+      <div style="width:38px; height:4px; border-radius:999px; background:#3A3B3D; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:13px;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Edit meal</span><span style="font-size:13px; font-weight:700; color:#797D85;">Cancel</span></div>
+      <div style="font-size:11px; color:#7E828A; margin-bottom:9px;">Tweak the description, then re-estimate.</div>
+      <div style="height:52px; background:#202021; border:1.5px solid #2196F3; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px; box-shadow:0 0 0 4px rgba(33,150,243,.1);"><i class="ph ph-camera" style="font-size:20px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#E7E7E9;">White rice, fried fish &amp; uni<span style="display:inline-block; width:1.5px; height:16px; background:#5BAAF5; margin-left:2px; vertical-align:-3px;"></span></span><div style="width:38px; height:38px; border-radius:12px; background:#2196F3; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:17px; color:#fff;"></i></div></div>
+      <div style="margin-top:13px; display:flex; gap:8px; flex-wrap:wrap;"><div style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:10px; padding:8px 11px;"><i class="ph ph-magnifying-glass" style="font-size:12px; color:#797D85;"></i><span style="font-size:12px; color:#C9CDD3;">White rice, cooked</span><span style="font-size:11px; color:#797D85;">1.3/g</span></div><div style="display:flex; align-items:center; gap:6px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:10px; padding:8px 11px;"><i class="ph ph-magnifying-glass" style="font-size:12px; color:#797D85;"></i><span style="font-size:12px; color:#C9CDD3;">Fish, fried</span></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B3 · REMOVED ============ -->
+<div style="position:absolute; left:800px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">7 · Removed · undo</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;"><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">150</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div><div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:7%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5);"></div></div></div>
+    <div style="margin:12px 18px 0; background:#202021; border:1px solid #313132; border-radius:14px; padding:11px 14px; display:flex; align-items:center; gap:10px;"><i class="ph ph-trash" style="font-size:16px; color:#9BA0A8;"></i><div style="flex:1; font-size:13px; font-weight:700; color:#C9CDD3;">Removed · White rice, fried fish &amp; uni</div><span style="font-size:12px; font-weight:800; color:#5BAAF5;">Undo</span></div>
+    <div style="padding:16px 22px 0;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's log</span><span style="font-size:12px; font-weight:700; color:#7E828A;">150 kcal</span></div></div>
+    <div style="padding:11px 18px 0;">
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:17px; padding:13px 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;"><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Bear Brand milk powder</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="font-size:11px; color:#797D85;">30g · 9:40 AM</span><span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,255,255,.06); border-radius:6px; padding:2px 6px;"><i class="ph-bold ph-device-mobile" style="font-size:10px; color:#9BA0A8;"></i><span style="font-size:9.5px; font-weight:700; color:#9BA0A8;">Local</span></span></div></div><div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3;">150</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div></div>
+        <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 4P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 22C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 5F</span><div style="flex:1;"></div><i class="ph ph-dots-three" style="font-size:18px; color:#6E727A;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ B4 · SAVED ============ -->
+<div style="position:absolute; left:1180px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">8 · Saved to library</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Nutrition</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px; color:#5BAAF5;"></i><span style="font-size:11px; font-weight:700; color:#5BAAF5;">Cloud</span></div></div>
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:14px 18px 13px;"><div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eaten today</div><div style="display:flex; align-items:baseline; gap:7px; margin-top:5px;"><span style="font-size:40px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">581</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div><div style="margin-top:12px; height:7px; background:#2E2F31; border-radius:999px; overflow:hidden;"><div style="width:28%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5);"></div></div></div>
+    <div style="margin:12px 18px 0; background:rgba(255,202,40,.1); border:1px solid rgba(255,202,40,.3); border-radius:14px; padding:11px 14px; display:flex; align-items:center; gap:10px;"><div style="width:24px; height:24px; border-radius:50%; background:#FFCA28; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-fill ph-bookmark-simple" style="font-size:13px; color:#1A1A1A;"></i></div><div style="flex:1; font-size:13px; font-weight:700; color:#FFD98A;">Saved “White rice, fried fish &amp; uni” to library</div></div>
+    <div style="padding:16px 22px 0;"><div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's log</span><span style="font-size:12px; font-weight:700; color:#7E828A;">581 kcal</span></div></div>
+    <div style="padding:11px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:17px; padding:13px 15px;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;"><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">White rice, fried fish &amp; uni</div><div style="display:flex; align-items:center; gap:8px; margin-top:5px;"><span style="font-size:11px; color:#797D85;">237g · 9:16 AM</span><span style="display:inline-flex; align-items:center; gap:3px; background:rgba(255,202,40,.12); border-radius:6px; padding:2px 6px;"><i class="ph-fill ph-bookmark-simple" style="font-size:10px; color:#FFCA28;"></i><span style="font-size:9.5px; font-weight:700; color:#FFCA28;">Library</span></span></div></div><div style="text-align:right;"><div style="font-size:17px; font-weight:800; color:#F2F2F3;">431</div><div style="font-size:10px; font-weight:600; color:#797D85;">kcal</div></div></div>
+        <div style="display:flex; align-items:center; gap:13px; margin-top:11px;"><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 29P</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 46C</span><span style="font-size:11px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 15F</span><div style="flex:1;"></div><i class="ph ph-dots-three" style="font-size:18px; color:#6E727A;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

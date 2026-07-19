@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1560px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Treasury — redesigned</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:1040px; line-height:1.5;">Same six-tab module, rethought for clarity. A net-worth hero with a real trend line, a cashflow strip you can read in a glance, branded account tiles, day-grouped ledger with running totals, a "due soon" bills timeline, and a budget ring that judges <em>pace</em> — not just totals.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1560px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Dashboard · ledger · bills · budget</div><div style="font-size:14px; color:#5C6068;">UX-first pass</div></div>
+</div>
+
+<!-- ============ FRAME 1 · DASHBOARD ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Dashboard</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- header -->
+    <div style="padding:14px 20px 0; display:flex; align-items:center; justify-content:space-between;">
+      <div><div style="font-size:12px; color:#83878F;">Good evening, Migs</div><div style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em; margin-top:1px;">Treasury</div></div>
+      <div style="display:flex; align-items:center; gap:5px; background:rgba(70,189,107,.12); border-radius:999px; padding:5px 10px;"><span style="width:6px; height:6px; border-radius:50%; background:#46BD6B;"></span><span style="font-size:10.5px; font-weight:700; color:#6FCB8A;">Synced</span></div>
+    </div>
+
+    <!-- net worth hero with sparkline -->
+    <div style="margin:14px 16px 0; background:linear-gradient(155deg,#1B2A44 0%,#172033 55%,#15171C 100%); border:1px solid #29354B; border-radius:22px; padding:17px 18px 0; overflow:hidden;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:11px; font-weight:700; letter-spacing:.09em; color:#8FB4E8;">NET WORTH</span><div style="display:flex; align-items:center; gap:3px; background:rgba(70,189,107,.16); border-radius:999px; padding:3px 8px;"><i class="ph-bold ph-trend-up" style="font-size:11px; color:#6FCB8A;"></i><span style="font-size:10.5px; font-weight:700; color:#6FCB8A;">+2.7%</span></div></div>
+      <div style="display:flex; align-items:baseline; gap:3px; margin-top:7px;"><span style="font-size:17px; font-weight:700; color:#EBF1FB;">₱</span><span style="font-size:38px; font-weight:800; color:#FBFCFE; letter-spacing:-.03em; line-height:.9;">486,210</span></div>
+      <div style="font-size:12px; color:#9DB6DC; margin-top:7px;"><span style="font-weight:700; color:#6FCB8A;">+₱12,840</span> this month</div>
+      <svg viewBox="0 0 300 64" width="100%" height="58" preserveAspectRatio="none" style="display:block; margin-top:6px;">
+        <defs><linearGradient id="nwfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BAAF5" stop-opacity=".35"></stop><stop offset="1" stop-color="#5BAAF5" stop-opacity="0"></stop></linearGradient></defs>
+        <path d="M0,46 L40,42 L80,48 L120,33 L160,37 L200,24 L240,20 L300,10 L300,64 L0,64 Z" fill="url(#nwfill)"></path>
+        <path d="M0,46 L40,42 L80,48 L120,33 L160,37 L200,24 L240,20 L300,10" fill="none" stroke="#6FB6F7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+        <circle cx="300" cy="10" r="3.5" fill="#fff"></circle>
+      </svg>
+    </div>
+
+    <!-- cashflow strip -->
+    <div style="margin:12px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:18px; padding:14px 16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;"><span style="font-size:12.5px; font-weight:700; color:#E7E7E9;">June cashflow</span><span style="font-size:11px; color:#83878F;">5 days left</span></div>
+      <div style="display:flex; align-items:center; gap:9px; margin-bottom:9px;"><i class="ph-bold ph-arrow-down" style="font-size:13px; color:#46BD6B;"></i><div style="flex:1; height:8px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:100%; height:100%; background:#46BD6B; border-radius:999px;"></div></div><span style="font-size:12px; font-weight:800; color:#6FCB8A; min-width:54px; text-align:right;">₱68,000</span></div>
+      <div style="display:flex; align-items:center; gap:9px;"><i class="ph-bold ph-arrow-up" style="font-size:13px; color:#F6685E;"></i><div style="flex:1; height:8px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:61%; height:100%; background:#F6685E; border-radius:999px;"></div></div><span style="font-size:12px; font-weight:800; color:#FF8A80; min-width:54px; text-align:right;">₱41,305</span></div>
+      <div style="margin-top:12px; padding-top:11px; border-top:1px solid #26262A; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:11.5px; color:#9A9FA8;">Projected spare</span><span style="font-size:15px; font-weight:800; color:#5BAAF5;">₱19,855</span></div>
+    </div>
+
+    <!-- accounts -->
+    <div style="padding:16px 20px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Accounts</span><span style="font-size:12px; font-weight:700; color:#83878F;">₱94,320 liquid</span></div>
+    <div style="padding:10px 16px 0; display:flex; flex-direction:column; gap:7px;">
+      <div style="display:flex; align-items:center; gap:12px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:11px 13px;"><div style="width:36px; height:36px; border-radius:11px; background:#9B2C2C; display:flex; align-items:center; justify-content:center;"><span style="font-size:13px; font-weight:800; color:#fff;">BPI</span></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">BPI Personal</div><div style="font-size:10.5px; color:#83878F;">Bank · primary</div></div><span style="font-size:14px; font-weight:800; color:#E7E7E9;">₱42,100</span></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:11px 13px;"><div style="width:36px; height:36px; border-radius:11px; background:#1565C0; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px; color:#fff;"></i></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">GCash</div><div style="font-size:10.5px; color:#83878F;">eWallet</div></div><span style="font-size:14px; font-weight:800; color:#E7E7E9;">₱18,400</span></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:11px 13px;"><div style="width:36px; height:36px; border-radius:11px; background:#1B7A4B; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px; color:#fff;"></i></div><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Maya</div><div style="font-size:10.5px; color:#83878F;">eWallet</div></div><span style="font-size:14px; font-weight:800; color:#E7E7E9;">₱9,200</span></div>
+      <div style="display:flex; align-items:center; justify-content:center; gap:6px; padding:8px 0;"><span style="font-size:11.5px; font-weight:700; color:#6E727B;">+3 more accounts</span><i class="ph ph-caret-down" style="font-size:11px; color:#6E727B;"></i></div>
+    </div>
+
+    <!-- bottom tab bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; height:62px; background:#0E0E10; border-top:1px solid #232327; display:flex; align-items:center; justify-content:space-around; padding-bottom:5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph-fill ph-squares-four" style="font-size:19px; color:#5BAAF5;"></i><span style="font-size:8.5px; font-weight:700; color:#5BAAF5;">Dashboard</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-list-dashes" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Ledger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-receipt" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Bills</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-chart-pie-slice" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Budget</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-clock-counter-clockwise" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">History</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-shopping-cart-simple" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Cart</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · LEDGER ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Ledger · daily totals</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- header + month -->
+    <div style="padding:13px 20px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Ledger</span><div style="display:flex; align-items:center; gap:4px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 12px;"><span style="font-size:12px; font-weight:700; color:#E7E7E9;">June 2026</span><i class="ph-fill ph-caret-down" style="font-size:10px; color:#83878F;"></i></div></div>
+
+    <!-- filter chips -->
+    <div style="padding:11px 16px 4px; display:flex; gap:7px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:5px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 11px;"><i class="ph ph-funnel" style="font-size:11px; color:#9A9FA8;"></i><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Category</span></div>
+      <div style="display:flex; align-items:center; gap:5px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 11px;"><i class="ph ph-bank" style="font-size:11px; color:#9A9FA8;"></i><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Account</span></div>
+    </div>
+
+    <!-- day group: just the date -->
+    <div style="padding:13px 20px 4px;"><span style="font-size:12px; font-weight:700; color:#9A9FA8;">Today</span></div>
+    <div style="padding:0 14px;">
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 6px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(246,104,94,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-fork-knife" style="font-size:18px; color:#F6685E;"></i></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:600; color:#F2F2F3;">Jollibee lunch</div><div style="font-size:11.5px; color:#83878F; margin-top:2px;">GCash</div></div><span style="font-size:14.5px; font-weight:700; color:#F2F2F3;">−₱285</span></div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 6px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(46,144,250,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-arrows-left-right" style="font-size:18px; color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:600; color:#F2F2F3;">To Maribank savings</div><div style="font-size:11.5px; color:#83878F; margin-top:2px;">Transfer</div></div><span style="font-size:14.5px; font-weight:600; color:#83878F;">₱5,000</span></div>
+    </div>
+
+    <div style="padding:13px 20px 4px;"><span style="font-size:12px; font-weight:700; color:#9A9FA8;">Yesterday</span></div>
+    <div style="padding:0 14px;">
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 6px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(70,189,107,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-briefcase" style="font-size:18px; color:#46BD6B;"></i></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:600; color:#F2F2F3;">Salary</div><div style="font-size:11.5px; color:#83878F; margin-top:2px;">BPI</div></div><span style="font-size:14.5px; font-weight:700; color:#6FCB8A;">+₱34,000</span></div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 6px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(255,197,66,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-car" style="font-size:18px; color:#FFC542;"></i></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:600; color:#F2F2F3;">Grab to office</div><div style="font-size:11.5px; color:#83878F; margin-top:2px;">GCash</div></div><span style="font-size:14.5px; font-weight:700; color:#F2F2F3;">−₱180</span></div>
+      <div style="display:flex; align-items:center; gap:13px; padding:11px 6px;"><div style="width:40px; height:40px; border-radius:12px; background:rgba(179,107,212,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-shopping-bag" style="font-size:18px; color:#B36BD4;"></i></div><div style="flex:1;"><div style="font-size:14.5px; font-weight:600; color:#F2F2F3;">Groceries · SM</div><div style="font-size:11.5px; color:#83878F; margin-top:2px;">Cash</div></div><span style="font-size:14.5px; font-weight:700; color:#F2F2F3;">−₱2,340</span></div>
+    </div>
+
+    <!-- input bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; padding:9px 12px; background:#131315; border-top:1px solid #202024; display:flex; align-items:center; gap:9px;">
+      <div style="flex:1; height:42px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:21px; display:flex; align-items:center; gap:9px; padding:0 14px;"><i class="ph ph-sparkle" style="font-size:15px; color:#5BAAF5;"></i><span style="font-size:13px; color:#83878F;">Type a transaction…</span></div>
+      <div style="width:42px; height:42px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -7px rgba(46,144,250,.7);"><i class="ph-fill ph-microphone" style="font-size:17px; color:#fff;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · BILLS ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Bills · due-soon timeline</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <div style="padding:13px 20px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Bills</span><div style="display:flex; align-items:center; gap:4px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 12px;"><span style="font-size:12px; font-weight:700; color:#E7E7E9;">June</span><i class="ph-fill ph-caret-down" style="font-size:10px; color:#83878F;"></i></div></div>
+
+    <!-- due soon hero -->
+    <div style="margin:13px 16px 0; background:linear-gradient(155deg,#3A2417,#241813 70%,#15171C); border:1px solid #4A2F1C; border-radius:20px; padding:16px 17px;">
+      <div style="display:flex; align-items:center; gap:7px;"><i class="ph-fill ph-warning-circle" style="font-size:14px; color:#FF8A4C;"></i><span style="font-size:11px; font-weight:700; letter-spacing:.06em; color:#FFB37A;">DUE IN 3 DAYS</span></div>
+      <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:11px;">
+        <div><div style="font-size:17px; font-weight:800; color:#F7F7F8;">Meralco</div><div style="font-size:11.5px; color:#B89478; margin-top:2px;">Electricity · due Jun 28</div></div>
+        <div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">₱3,200</div>
+      </div>
+      <div style="margin-top:13px; display:flex; gap:8px;"><div style="flex:1; height:42px; border-radius:13px; background:#FF8A4C; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph-fill ph-check" style="font-size:14px; color:#241813;"></i><span style="font-size:13px; font-weight:800; color:#241813;">Mark paid</span></div><div style="width:46px; height:42px; border-radius:13px; background:rgba(255,255,255,.08); display:flex; align-items:center; justify-content:center;"><i class="ph ph-bell-simple" style="font-size:17px; color:#FFB37A;"></i></div></div>
+    </div>
+
+    <!-- stat chips -->
+    <div style="padding:12px 16px 0; display:flex; gap:8px;">
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:9px 11px;"><div style="font-size:14px; font-weight:800; color:#FF8A80;">₱8.4k</div><div style="font-size:9.5px; color:#83878F; margin-top:1px;">Pending</div></div>
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:9px 11px;"><div style="font-size:14px; font-weight:800; color:#6FCB8A;">₱12.3k</div><div style="font-size:9.5px; color:#83878F; margin-top:1px;">Paid</div></div>
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:9px 11px;"><div style="font-size:14px; font-weight:800; color:#5BAAF5;">₱4.5k</div><div style="font-size:9.5px; color:#83878F; margin-top:1px;">Installments</div></div>
+    </div>
+
+    <!-- timeline list -->
+    <div style="padding:16px 20px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Coming up</span></div>
+    <div style="padding:12px 18px 0; position:relative;">
+      <div style="position:absolute; left:28px; top:18px; bottom:14px; width:2px; background:#26262A;"></div>
+      <div style="display:flex; align-items:center; gap:13px; margin-bottom:14px; position:relative;"><div style="width:20px; height:20px; border-radius:50%; background:#131315; border:2px solid #FF8A4C; display:flex; align-items:center; justify-content:center; z-index:1;"><span style="width:7px; height:7px; border-radius:50%; background:#FF8A4C;"></span></div><div style="flex:1; display:flex; align-items:center; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Internet · PLDT</div><div style="font-size:10.5px; color:#83878F;">Jul 1 · 6 days</div></div><span style="font-size:13px; font-weight:700; color:#E7E7E9;">₱2,099</span></div></div>
+      <div style="display:flex; align-items:center; gap:13px; margin-bottom:14px; position:relative;"><div style="width:20px; height:20px; border-radius:50%; background:#131315; border:2px solid #46BD6B; display:flex; align-items:center; justify-content:center; z-index:1;"><i class="ph-bold ph-arrow-down" style="font-size:9px; color:#46BD6B;"></i></div><div style="flex:1; display:flex; align-items:center; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Refund · Lazada</div><div style="font-size:10.5px; color:#6FCB8A;">incoming · receivable</div></div><span style="font-size:13px; font-weight:700; color:#6FCB8A;">+₱1,240</span></div></div>
+      <div style="display:flex; align-items:center; gap:13px; position:relative;"><div style="width:20px; height:20px; border-radius:50%; background:#131315; border:2px solid #3A3A40; display:flex; align-items:center; justify-content:center; z-index:1;"><span style="width:6px; height:6px; border-radius:50%; background:#5A5E66;"></span></div><div style="flex:1; display:flex; align-items:center; justify-content:space-between;"><div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Spotify</div><div style="font-size:10.5px; color:#83878F;">Jul 5 · 10 days</div></div><span style="font-size:13px; font-weight:700; color:#E7E7E9;">₱149</span></div></div>
+    </div>
+
+    <!-- credit card mini -->
+    <div style="margin:16px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:12px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><i class="ph ph-credit-card" style="font-size:15px; color:#F6685E;"></i><span style="font-size:12.5px; font-weight:700; color:#F2F2F3;">BPI Credit Card</span></div><span style="font-size:13px; font-weight:800; color:#FF8A80;">₱14,200</span></div>
+      <div style="margin-top:9px; height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:28%; height:100%; background:#2E90FA; border-radius:999px;"></div></div>
+      <div style="font-size:10px; color:#83878F; margin-top:6px;">₱35,800 available · due Jul 5</div>
+    </div>
+
+    <!-- FAB + tab bar -->
+    <div style="position:absolute; bottom:74px; right:18px; width:52px; height:52px; border-radius:18px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -8px rgba(46,144,250,.7);"><i class="ph-bold ph-plus" style="font-size:22px; color:#fff;"></i></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; height:62px; background:#0E0E10; border-top:1px solid #232327; display:flex; align-items:center; justify-content:space-around; padding-bottom:5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-squares-four" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Dashboard</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-list-dashes" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Ledger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph-fill ph-receipt" style="font-size:19px; color:#5BAAF5;"></i><span style="font-size:8.5px; font-weight:700; color:#5BAAF5;">Bills</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-chart-pie-slice" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Budget</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-clock-counter-clockwise" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">History</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-shopping-cart-simple" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Cart</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · BUDGET ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Budget · pace-aware</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <div style="padding:13px 20px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Budget</span><div style="display:flex; align-items:center; gap:4px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 12px;"><span style="font-size:12px; font-weight:700; color:#E7E7E9;">June</span><i class="ph-fill ph-caret-down" style="font-size:10px; color:#83878F;"></i></div></div>
+
+    <!-- pace ring hero -->
+    <div style="margin:14px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:20px; padding:18px; display:flex; align-items:center; gap:18px;">
+      <div style="position:relative; width:108px; height:108px; flex-shrink:0;">
+        <svg viewBox="0 0 120 120" width="108" height="108" style="transform:rotate(-90deg);">
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#26262A" stroke-width="12"></circle>
+          <circle cx="60" cy="60" r="50" fill="none" stroke="#5BAAF5" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="91.1"></circle>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; line-height:.9;">71%</div><div style="font-size:9.5px; color:#83878F; margin-top:3px;">spent</div></div>
+      </div>
+      <div style="flex:1;">
+        <div style="font-size:11px; font-weight:700; letter-spacing:.06em; color:#83878F;">SPENT</div>
+        <div style="font-size:21px; font-weight:800; color:#F7F7F8; margin-top:2px; letter-spacing:-.02em;">₱28,540</div>
+        <div style="font-size:11px; color:#83878F; margin-top:1px;">of ₱40,000</div>
+        <div style="margin-top:11px; display:inline-flex; align-items:center; gap:5px; background:rgba(70,189,107,.14); border-radius:999px; padding:4px 9px;"><i class="ph-fill ph-check-circle" style="font-size:12px; color:#46BD6B;"></i><span style="font-size:10.5px; font-weight:700; color:#6FCB8A;">Ahead of pace</span></div>
+      </div>
+    </div>
+
+    <!-- safe to spend callout -->
+    <div style="margin:11px 16px 0; background:rgba(46,144,250,.07); border:1px solid rgba(46,144,250,.22); border-radius:14px; padding:12px 15px; display:flex; align-items:center; gap:12px;"><i class="ph-fill ph-hand-coins" style="font-size:20px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:10.5px; color:#9DB6DC;">Safe to spend · 5 days left</div><div style="font-size:15px; font-weight:800; color:#F7F7F8; margin-top:1px;">₱2,292 <span style="font-size:11px; font-weight:600; color:#83878F;">/ day</span></div></div></div>
+
+    <!-- category budgets -->
+    <div style="padding:16px 20px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">By category</span></div>
+    <div style="padding:11px 16px 0; display:flex; flex-direction:column; gap:10px;">
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:13px; padding:11px 13px;"><div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:#F6685E;"></span><span style="font-size:12.5px; font-weight:600; color:#E7E7E9;">Food &amp; dining</span></div><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">₱9,200 / 10,000</span></div><div style="margin-top:8px; height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:92%; height:100%; background:#F6685E; border-radius:999px;"></div></div></div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:13px; padding:11px 13px;"><div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:#FFC542;"></span><span style="font-size:12.5px; font-weight:600; color:#E7E7E9;">Transport</span></div><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">₱3,140 / 5,000</span></div><div style="margin-top:8px; height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:63%; height:100%; background:#FFC542; border-radius:999px;"></div></div></div>
+      <div style="background:#1C1C20; border:1px solid rgba(246,104,94,.4); border-radius:13px; padding:11px 13px;"><div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:#B36BD4;"></span><span style="font-size:12.5px; font-weight:600; color:#E7E7E9;">Groceries</span></div><span style="font-size:11.5px; font-weight:700; color:#FF8A80;">₱8,700 / 8,000</span></div><div style="margin-top:8px; height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:100%; height:100%; background:#F6685E; border-radius:999px;"></div></div><div style="font-size:10px; color:#FF8A80; margin-top:5px; font-weight:600;">Over by ₱700 — trim next week</div></div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:13px; padding:11px 13px;"><div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:#5BAAF5;"></span><span style="font-size:12.5px; font-weight:600; color:#E7E7E9;">Shopping</span></div><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">₱4,200 / 9,000</span></div><div style="margin-top:8px; height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:47%; height:100%; background:#5BAAF5; border-radius:999px;"></div></div></div>
+    </div>
+
+    <!-- tab bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; height:62px; background:#0E0E10; border-top:1px solid #232327; display:flex; align-items:center; justify-content:space-around; padding-bottom:5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-squares-four" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Dashboard</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-list-dashes" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Ledger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-receipt" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Bills</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph-fill ph-chart-pie-slice" style="font-size:19px; color:#5BAAF5;"></i><span style="font-size:8.5px; font-weight:700; color:#5BAAF5;">Budget</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-clock-counter-clockwise" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">History</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-shopping-cart-simple" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Cart</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 3 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1002px; width:1740px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">History · monthly detail · grocery cart · cart checkout</div><div style="font-size:14px; color:#5C6068;">view &amp; read surfaces</div></div>
+</div>
+
+<!-- ============ FRAME 5 · HISTORY ============ -->
+<div style="position:absolute; left:40px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">History</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:13px 20px 0;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">History</span></div>
+
+    <!-- current month LIVE -->
+    <div style="padding:14px 18px 0;"><div style="display:flex; align-items:center; gap:8px; margin-bottom:10px;"><span style="font-size:10.5px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">CURRENT MONTH</span><span style="font-size:9px; font-weight:800; color:#131315; background:#2E90FA; border-radius:999px; padding:2px 7px; letter-spacing:.06em;">LIVE</span></div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:14px; font-weight:700; color:#E7E7E9;">June 2026</span><span style="font-size:11px; color:#9A9FA8;">in progress</span></div>
+        <div style="display:flex; gap:8px; margin-top:12px;">
+          <div style="flex:1; text-align:center; background:#131315; border-radius:10px; padding:9px 6px;"><div style="font-size:10px; color:#9A9FA8;">IN</div><div style="font-size:13px; font-weight:800; color:#6FCB8A; margin-top:2px;">₱68,000</div></div>
+          <div style="flex:1; text-align:center; background:#131315; border-radius:10px; padding:9px 6px;"><div style="font-size:10px; color:#9A9FA8;">OUT</div><div style="font-size:13px; font-weight:800; color:#FF8A80; margin-top:2px;">₱41,305</div></div>
+          <div style="flex:1; text-align:center; background:#131315; border-radius:10px; padding:9px 6px;"><div style="font-size:10px; color:#9A9FA8;">SAVED</div><div style="font-size:13px; font-weight:800; color:#5BAAF5; margin-top:2px;">39%</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- closed months -->
+    <div style="padding:16px 18px 0;"><span style="font-size:10.5px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">CLOSED MONTHS</span></div>
+    <div style="padding:10px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-size:14px; font-weight:700; color:#E7E7E9;">May 2026</div><div style="display:flex; gap:10px; margin-top:5px;"><span style="font-size:11px; color:#6FCB8A;">+₱70,000</span><span style="font-size:11px; color:#FF8A80;">−₱38,420</span></div></div>
+        <div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#5BAAF5;">+₱31,580</div><div style="font-size:10px; color:#9A9FA8; margin-top:2px;">45% saved</div></div>
+      </div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-size:14px; font-weight:700; color:#E7E7E9;">Apr 2026</div><div style="display:flex; gap:10px; margin-top:5px;"><span style="font-size:11px; color:#6FCB8A;">+₱68,000</span><span style="font-size:11px; color:#FF8A80;">−₱44,100</span></div></div>
+        <div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#5BAAF5;">+₱23,900</div><div style="font-size:10px; color:#9A9FA8; margin-top:2px;">35% saved</div></div>
+      </div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-size:14px; font-weight:700; color:#E7E7E9;">Mar 2026</div><div style="display:flex; gap:10px; margin-top:5px;"><span style="font-size:11px; color:#6FCB8A;">+₱68,000</span><span style="font-size:11px; color:#FF8A80;">−₱50,800</span></div></div>
+        <div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#FF8A80;">+₱17,200</div><div style="font-size:10px; color:#9A9FA8; margin-top:2px;">25% saved</div></div>
+      </div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px; display:flex; align-items:center; justify-content:space-between;">
+        <div><div style="font-size:14px; font-weight:700; color:#E7E7E9;">Feb 2026</div><div style="display:flex; gap:10px; margin-top:5px;"><span style="font-size:11px; color:#6FCB8A;">+₱68,000</span><span style="font-size:11px; color:#FF8A80;">−₱39,900</span></div></div>
+        <div style="text-align:right;"><div style="font-size:14px; font-weight:800; color:#5BAAF5;">+₱28,100</div><div style="font-size:10px; color:#9A9FA8; margin-top:2px;">41% saved</div></div>
+      </div>
+    </div>
+
+    <!-- tab bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; height:62px; background:#0E0E10; border-top:1px solid #232327; display:flex; align-items:center; justify-content:space-around; padding-bottom:5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-squares-four" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Dashboard</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-list-dashes" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Ledger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-receipt" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Bills</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-chart-pie-slice" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Budget</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph-fill ph-clock-counter-clockwise" style="font-size:19px; color:#5BAAF5;"></i><span style="font-size:8.5px; font-weight:700; color:#5BAAF5;">History</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-shopping-cart-simple" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Cart</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 6 · MONTHLY DETAIL ============ -->
+<div style="position:absolute; left:420px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Monthly detail</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 20px 0; display:flex; align-items:center; gap:11px;"><i class="ph ph-caret-left" style="font-size:19px; color:#8C9097;"></i><span style="font-size:20px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">May 2026</span></div>
+
+    <!-- totals -->
+    <div style="margin:12px 16px 0; background:linear-gradient(155deg,#1B2A44,#172033 55%,#15171C); border:1px solid #29354B; border-radius:18px; padding:15px 16px;">
+      <div style="display:flex; gap:8px;">
+        <div style="flex:1; text-align:center;"><div style="font-size:9.5px; color:#9DB6DC; font-weight:700; letter-spacing:.06em;">IN</div><div style="font-size:17px; font-weight:800; color:#6FCB8A; margin-top:3px;">₱70,000</div></div>
+        <div style="width:1px; background:#29354B;"></div>
+        <div style="flex:1; text-align:center;"><div style="font-size:9.5px; color:#9DB6DC; font-weight:700; letter-spacing:.06em;">OUT</div><div style="font-size:17px; font-weight:800; color:#FF8A80; margin-top:3px;">₱38,420</div></div>
+        <div style="width:1px; background:#29354B;"></div>
+        <div style="flex:1; text-align:center;"><div style="font-size:9.5px; color:#9DB6DC; font-weight:700; letter-spacing:.06em;">NET</div><div style="font-size:17px; font-weight:800; color:#5BAAF5; margin-top:3px;">+₱31,580</div></div>
+      </div>
+      <div style="margin-top:13px; height:7px; background:#1A2535; border-radius:999px; overflow:hidden;"><div style="width:55%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5); border-radius:999px;"></div></div>
+      <div style="font-size:10px; color:#9DB6DC; margin-top:6px;">Saved 45% of income</div>
+    </div>
+
+    <!-- by category -->
+    <div style="padding:14px 18px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Spending by category</span></div>
+    <div style="padding:10px 16px 0; display:flex; flex-direction:column; gap:7px;">
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#F6685E; flex-shrink:0;"></span><span style="flex:1; font-size:12.5px; font-weight:600; color:#E7E7E9;">Food &amp; dining</span><span style="font-size:12px; font-weight:700; color:#C9CDD3;">₱9,200</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#B36BD4; flex-shrink:0;"></span><span style="flex:1; font-size:12.5px; font-weight:600; color:#E7E7E9;">Groceries</span><span style="font-size:12px; font-weight:700; color:#C9CDD3;">₱7,800</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#FFC542; flex-shrink:0;"></span><span style="flex:1; font-size:12.5px; font-weight:600; color:#E7E7E9;">Transport</span><span style="font-size:12px; font-weight:700; color:#C9CDD3;">₱3,140</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#5BAAF5; flex-shrink:0;"></span><span style="flex:1; font-size:12.5px; font-weight:600; color:#E7E7E9;">Shopping</span><span style="font-size:12px; font-weight:700; color:#C9CDD3;">₱4,200</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#46BD6B; flex-shrink:0;"></span><span style="flex:1; font-size:12.5px; font-weight:600; color:#E7E7E9;">Health</span><span style="font-size:12px; font-weight:700; color:#C9CDD3;">₱3,300</span></div>
+    </div>
+
+    <!-- account breakdown -->
+    <div style="padding:14px 18px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">By account</span></div>
+    <div style="padding:8px 16px 0; display:flex; gap:7px;">
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:11px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:5px;"><div style="width:8px; height:8px; border-radius:2px; background:#9B2C2C;"></div><span style="font-size:10.5px; font-weight:600; color:#E7E7E9;">BPI</span></div><div style="font-size:12.5px; font-weight:800; color:#FF8A80; margin-top:5px;">₱22,100</div></div>
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:11px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:5px;"><div style="width:8px; height:8px; border-radius:2px; background:#1565C0;"></div><span style="font-size:10.5px; font-weight:600; color:#E7E7E9;">GCash</span></div><div style="font-size:12.5px; font-weight:800; color:#FF8A80; margin-top:5px;">₱9,880</div></div>
+      <div style="flex:1; background:#1C1C20; border:1px solid #2A2A2E; border-radius:11px; padding:9px 10px;"><div style="display:flex; align-items:center; gap:5px;"><div style="width:8px; height:8px; border-radius:2px; background:#FFCA28;"></div><span style="font-size:10.5px; font-weight:600; color:#E7E7E9;">Cash</span></div><div style="font-size:12.5px; font-weight:800; color:#FF8A80; margin-top:5px;">₱6,440</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 7 · GROCERY CART ============ -->
+<div style="position:absolute; left:800px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Grocery cart</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- running total header -->
+    <div style="margin:10px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><span style="font-size:10px; font-weight:700; letter-spacing:.1em; color:#9A9FA8;">RUNNING TOTAL</span><i class="ph ph-clock-counter-clockwise" style="font-size:15px; color:#9A9FA8;"></i></div>
+      <div style="font-size:32px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em; margin-top:4px;">₱1,284</div>
+      <div style="display:flex; gap:9px; margin-top:6px; flex-wrap:wrap;">
+        <span style="font-size:11px; color:#C9CDD3; font-weight:600;">₱1,060 confirmed</span>
+        <span style="font-size:11px; color:#5BAAF5; font-weight:600;">~₱224 est</span>
+      </div>
+      <!-- budget bar -->
+      <div style="margin-top:11px;"><div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:5px;"><span style="font-size:11px; color:#9A9FA8;">₱716 left of ₱2,000 budget</span><i class="ph ph-pencil-simple" style="font-size:12px; color:#9A9FA8;"></i></div><div style="height:7px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:64%; height:100%; background:#2E90FA; border-radius:999px;"></div></div></div>
+    </div>
+
+    <!-- items list -->
+    <div style="padding:10px 16px 0; display:flex; flex-direction:column; gap:1px;">
+      <div style="display:flex; align-items:center; gap:0; padding:12px 4px; border-bottom:1px solid #1E1E22;">
+        <div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Eggs</div><div style="font-size:11px; color:#83878F; margin-top:2px;">₱9.50/pc · confirmed</div></div>
+        <div style="display:flex; align-items:center; gap:0;"><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-minus" style="font-size:13px; color:#9A9FA8;"></i></div><span style="font-size:13px; font-weight:700; color:#F2F2F3; min-width:32px; text-align:center;">12</span><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-plus" style="font-size:13px; color:#9A9FA8;"></i></div></div>
+        <span style="min-width:64px; text-align:right; font-size:13px; font-weight:700; color:#E7E7E9; padding-left:8px;">₱114</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0; padding:12px 4px; border-bottom:1px solid #1E1E22;">
+        <div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Chicken breast</div><div style="font-size:11px; color:#5BAAF5; margin-top:2px;">~₱280/kg · tap to confirm</div></div>
+        <div style="display:flex; align-items:center; gap:0;"><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-minus" style="font-size:13px; color:#9A9FA8;"></i></div><span style="font-size:13px; font-weight:700; color:#F2F2F3; min-width:32px; text-align:center;">0.8 kg</span><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-plus" style="font-size:13px; color:#9A9FA8;"></i></div></div>
+        <span style="min-width:64px; text-align:right; font-size:13px; font-weight:600; color:#5BAAF5; padding-left:8px;">~₱224</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0; padding:12px 4px; border-bottom:1px solid #1E1E22;">
+        <div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Rice</div><div style="font-size:11px; color:#83878F; margin-top:2px;">₱52/kg · confirmed</div></div>
+        <div style="display:flex; align-items:center; gap:0;"><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-minus" style="font-size:13px; color:#9A9FA8;"></i></div><span style="font-size:13px; font-weight:700; color:#F2F2F3; min-width:32px; text-align:center;">5 kg</span><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-plus" style="font-size:13px; color:#9A9FA8;"></i></div></div>
+        <span style="min-width:64px; text-align:right; font-size:13px; font-weight:700; color:#E7E7E9; padding-left:8px;">₱260</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:0; padding:12px 4px;">
+        <div style="flex:1;"><div style="font-size:14px; font-weight:600; color:#F2F2F3;">Cooking oil</div><div style="font-size:11px; color:#F6685E; margin-top:2px;">No price · tap to add</div></div>
+        <div style="display:flex; align-items:center; gap:0;"><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-minus" style="font-size:13px; color:#9A9FA8;"></i></div><span style="font-size:13px; font-weight:700; color:#F2F2F3; min-width:32px; text-align:center;">1</span><div style="width:32px; height:32px; border-radius:9px; background:#232327; display:flex; align-items:center; justify-content:center;"><i class="ph ph-plus" style="font-size:13px; color:#9A9FA8;"></i></div></div>
+        <span style="min-width:64px; text-align:right; font-size:13px; font-weight:600; color:#F6685E; padding-left:8px;">—</span>
+      </div>
+    </div>
+
+    <!-- bottom bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; padding:10px 14px 14px; background:#131315; border-top:1px solid #1E1E22; display:flex; flex-direction:column; gap:8px;">
+      <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 8px 20px -9px rgba(46,144,250,.7);"><i class="ph-fill ph-check-circle" style="font-size:17px; color:#fff;"></i><span style="font-size:14px; font-weight:800; color:#fff;">Finish trip</span></div>
+      <div style="display:flex; gap:8px;"><div style="flex:1; height:44px; border-radius:13px; background:#232327; border:1px solid #2A2A2E; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph-bold ph-plus" style="font-size:14px; color:#E7E7E9;"></i><span style="font-size:13px; font-weight:700; color:#E7E7E9;">Add item</span></div><div style="width:44px; height:44px; border-radius:13px; background:#232327; border:1px solid #2A2A2E; display:flex; align-items:center; justify-content:center;"><i class="ph ph-trash" style="font-size:16px; color:#9A9FA8;"></i></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 8 · CART CHECKOUT ============ -->
+<div style="position:absolute; left:1180px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Finish trip · checkout</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <!-- faint cart behind -->
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Cart</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <!-- sheet -->
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 24px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Finish trip</div>
+
+      <div style="margin-top:10px;"><span style="font-size:32px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">₱1,284</span></div>
+      <div style="display:flex; gap:9px; margin-top:5px; flex-wrap:wrap;"><span style="font-size:11.5px; color:#9A9FA8;">₱1,060 confirmed</span><span style="font-size:11.5px; color:#5BAAF5;">~₱224 est</span><span style="font-size:11.5px; color:#F6685E;">1 unpriced (not counted)</span></div>
+
+      <!-- log to ledger toggle -->
+      <div style="margin-top:16px; background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:12px;"><i class="ph-fill ph-book-open" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Log to ledger</div><div style="font-size:11px; color:#9A9FA8; margin-top:1px;">Add as expense to Ledger</div></div><div style="width:44px; height:25px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2.5px; width:20px; height:20px; border-radius:50%; background:#fff;"></div></div></div>
+
+      <!-- account picker -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">ACCOUNT</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 13px;"><div style="display:flex; align-items:center; gap:8px;"><div style="width:22px; height:22px; border-radius:7px; background:#1565C0; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:10px; color:#fff;"></i></div><span style="font-size:13px; font-weight:600; color:#F2F2F3;">GCash</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+
+      <!-- category picker -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">CATEGORY (OPTIONAL)</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 13px;"><div style="display:flex; align-items:center; gap:8px;"><span style="width:9px; height:9px; border-radius:3px; background:#B36BD4;"></span><span style="font-size:13px; font-weight:600; color:#F2F2F3;">Groceries</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+
+      <div style="margin-top:20px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><i class="ph-fill ph-check-circle" style="font-size:17px; color:#fff;"></i><span style="font-size:15px; font-weight:800; color:#fff;">Finish &amp; log</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 4 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1876px; width:1740px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Add budget · installment · spending calendar · goals</div><div style="font-size:14px; color:#5C6068;">creation sheets + alternate ledger view</div></div>
+</div>
+
+<!-- ============ FRAME 9 · ADD BUDGET ============ -->
+<div style="position:absolute; left:40px; top:1918px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add / edit budget</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Budget</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 22px; max-height:88%;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Set budget</div>
+
+      <!-- category row -->
+      <div style="margin-top:14px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><div style="display:flex; align-items:center; gap:9px;"><span style="width:11px; height:11px; border-radius:4px; background:#F6685E;"></span><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Food &amp; dining</span></div><i class="ph ph-caret-down" style="font-size:13px; color:#83878F;"></i></div>
+
+      <!-- amount -->
+      <div style="margin-top:13px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">BUDGET AMOUNT</div><div style="margin-top:7px; height:52px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:5px; padding:0 14px;"><span style="font-size:18px; color:#9A9FA8; font-weight:700;">₱</span><span style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.01em;">10,000</span></div></div>
+
+      <!-- budget group -->
+      <div style="margin-top:14px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:8px;">BUDGET GROUP</div>
+      <div style="display:flex; gap:6px;">
+        <div style="flex:1; text-align:center; background:#2E90FA; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:700; color:#fff;">Living</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Lifestyle</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Savings</span></div>
+      </div></div>
+
+      <!-- budget type -->
+      <div style="margin-top:14px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:8px;">BUDGET TYPE</div>
+      <div style="display:flex; gap:6px;">
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:8px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Monthly</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:8px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Fixed</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:8px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Goal</span></div>
+        <div style="flex:1; text-align:center; background:#2E90FA; border-radius:10px; padding:8px 0;"><span style="font-size:11px; font-weight:700; color:#fff;">Variable</span></div>
+      </div></div>
+
+      <div style="margin-top:20px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Set Budget</span></div>
+      <div style="margin-top:8px; height:46px; border-radius:14px; background:rgba(246,104,94,.1); border:1px solid rgba(246,104,94,.3); display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#F6685E;">Remove budget</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 10 · ADD INSTALLMENT ============ -->
+<div style="position:absolute; left:420px; top:1918px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add installment</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Bills</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:80px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; overflow-y:auto; padding:12px 18px 24px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">New Installment</div>
+
+      <!-- name -->
+      <div style="margin-top:14px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">NAME</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">MacBook Pro</span></div></div>
+
+      <!-- account -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">ACCOUNT (CREDIT / BNPL)</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><div style="display:flex; align-items:center; gap:8px;"><div style="width:22px; height:22px; border-radius:7px; background:#9B2C2C; display:flex; align-items:center; justify-content:center;"><span style="font-size:8px; font-weight:800; color:#fff;">BPI</span></div><span style="font-size:13px; font-weight:600; color:#F2F2F3;">BPI Credit Card</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+
+      <!-- total amount -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">TOTAL AMOUNT</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 14px;"><span style="font-size:15px; color:#9A9FA8; font-weight:700;">₱</span><span style="font-size:16px; font-weight:800; color:#F7F7F8;">89,999</span></div></div>
+
+      <!-- months selector chips -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:8px;">NUMBER OF MONTHS</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 13px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">3mo</span></div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 13px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">6mo</span></div>
+        <div style="background:#2E90FA; border-radius:9px; padding:7px 13px;"><span style="font-size:11.5px; font-weight:700; color:#fff;">12mo</span></div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 13px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">24mo</span></div>
+        <div style="width:64px; height:34px; background:#202024; border:1px solid #2E2E33; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Custom</span></div>
+      </div></div>
+
+      <!-- monthly auto -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">MONTHLY PAYMENT (AUTO)</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 14px;"><span style="font-size:15px; color:#9A9FA8; font-weight:700;">₱</span><span style="font-size:16px; font-weight:700; color:#C9CDD3;">7,500</span></div></div>
+
+      <!-- start month -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:7px;">START MONTH</div>
+      <div style="height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center;"><div style="width:44px; height:100%; display:flex; align-items:center; justify-content:center;"><i class="ph ph-caret-left" style="font-size:15px; color:#9A9FA8;"></i></div><div style="flex:1; text-align:center; font-size:14px; font-weight:700; color:#F2F2F3;">July 2026</div><div style="width:44px; height:100%; display:flex; align-items:center; justify-content:center;"><i class="ph ph-caret-right" style="font-size:15px; color:#9A9FA8;"></i></div></div></div>
+
+      <div style="margin-top:18px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Add Installment</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 11 · SPENDING CALENDAR ============ -->
+<div style="position:absolute; left:800px; top:1918px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Spending calendar · ledger alt view</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- month nav + view toggle -->
+    <div style="padding:10px 14px 4px; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:18px; color:#8C9097;"></i><span style="font-size:15px; font-weight:700; color:#F2F2F3;">June 2026</span><i class="ph ph-caret-right" style="font-size:18px; color:#8C9097;"></i></div>
+    <div style="padding:4px 16px 0; display:flex; gap:6px; justify-content:flex-end;"><div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:5px 10px;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">List</span></div><div style="background:#2E90FA; border-radius:9px; padding:5px 10px;"><span style="font-size:11px; font-weight:700; color:#fff;">Calendar</span></div></div>
+
+    <!-- calendar grid -->
+    <div style="padding:10px 14px 0;">
+      <!-- day labels -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; margin-bottom:4px;">
+        <span style="font-size:10px; font-weight:700; color:#9A9FA8;">S</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">M</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">T</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">W</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">T</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">F</span><span style="font-size:10px; font-weight:700; color:#9A9FA8;">S</span>
+      </div>
+      <!-- week 1: Jun starts on Monday -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; margin-bottom:3px;">
+        <div style="height:36px;"></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.20); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">2</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">3</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.55); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#fff;">4</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.35); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#F2F2F3;">5</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(70,189,107,.45); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#fff;">6</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">7</span></div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; margin-bottom:3px;">
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.20); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">8</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.70); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#fff;">9</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.30); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#F2F2F3;">10</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.15); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">11</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">12</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.40); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#F2F2F3;">13</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.20); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">14</span></div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; margin-bottom:3px;">
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.25); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">15</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.15); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">16</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.85); display:flex; align-items:center; justify-content:center; position:relative;"><span style="font-size:12px; font-weight:700; color:#fff;">17</span><span style="position:absolute; bottom:4px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:50%; background:rgba(70,189,107,.9);"></span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.30); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#F2F2F3;">18</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.20); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">19</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">20</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.20); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#E7E7E9;">21</span></div>
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; text-align:center; margin-bottom:3px;">
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.50); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#fff;">22</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.30); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:600; color:#F2F2F3;">23</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(70,189,107,.55); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#fff;">24</span></div>
+        <div style="height:36px; border-radius:9px; background:#2E90FA; border:2px solid #fff; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:800; color:#fff;">25</span></div>
+        <div style="height:36px; border-radius:9px; background:rgba(246,104,94,.15); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">26</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">27</span></div>
+        <div style="height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; color:#9A9FA8;">28</span></div>
+      </div>
+    </div>
+
+    <!-- selected day detail -->
+    <div style="margin:12px 14px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:13px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;"><span style="font-size:13px; font-weight:700; color:#E7E7E9;">Wed, Jun 25</span><span style="font-size:12px; font-weight:700; color:#FF8A80;">−₱285 out</span></div>
+      <div style="display:flex; align-items:center; gap:11px;"><div style="width:36px; height:36px; border-radius:11px; background:rgba(246,104,94,.14); display:flex; align-items:center; justify-content:center;"><i class="ph ph-fork-knife" style="font-size:16px; color:#F6685E;"></i></div><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Jollibee lunch</div><div style="font-size:11px; color:#83878F; margin-top:1px;">GCash</div></div><span style="font-size:13px; font-weight:700; color:#F2F2F3;">−₱285</span></div>
+    </div>
+
+    <!-- legend -->
+    <div style="padding:12px 18px 0; display:flex; gap:14px; align-items:center;">
+      <div style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:4px; background:rgba(246,104,94,.7);"></span><span style="font-size:10.5px; color:#9A9FA8;">High spend</span></div>
+      <div style="display:flex; align-items:center; gap:5px;"><span style="width:12px; height:12px; border-radius:4px; background:rgba(70,189,107,.5);"></span><span style="font-size:10.5px; color:#9A9FA8;">Income</span></div>
+      <div style="display:flex; align-items:center; gap:5px;"><span style="width:4px; height:4px; border-radius:50%; background:#5BAAF5;"></span><span style="font-size:10.5px; color:#9A9FA8;">Both</span></div>
+    </div>
+
+    <!-- input bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; padding:9px 12px; background:#131315; border-top:1px solid #202024; display:flex; align-items:center; gap:9px;">
+      <div style="flex:1; height:42px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:21px; display:flex; align-items:center; gap:9px; padding:0 14px;"><i class="ph ph-sparkle" style="font-size:15px; color:#5BAAF5;"></i><span style="font-size:13px; color:#83878F;">Type a transaction…</span></div>
+      <div style="width:42px; height:42px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-microphone" style="font-size:17px; color:#fff;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 12 · GOALS / SAVINGS ============ -->
+<div style="position:absolute; left:1180px; top:1918px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Goals &amp; savings</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 20px 0; display:flex; align-items:center; gap:11px;"><i class="ph ph-caret-left" style="font-size:19px; color:#8C9097;"></i><span style="font-size:20px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Goals &amp; Savings</span></div>
+
+    <!-- total saved -->
+    <div style="margin:12px 16px 0; background:linear-gradient(155deg,#172a1c,#131915 70%); border:1px solid rgba(70,189,107,.25); border-radius:18px; padding:15px 17px; display:flex; align-items:center; gap:14px;"><i class="ph-fill ph-piggy-bank" style="font-size:28px; color:#46BD6B;"></i><div><div style="font-size:11px; font-weight:700; letter-spacing:.06em; color:#6FCB8A;">TOTAL SAVED</div><div style="font-size:26px; font-weight:800; color:#F7F7F8; margin-top:2px; letter-spacing:-.02em;">₱391,890</div></div></div>
+
+    <!-- goal cards -->
+    <div style="padding:14px 18px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Active goals</span></div>
+    <div style="padding:10px 16px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:13px 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px;"><span style="width:9px; height:9px; border-radius:50%; background:#5BAAF5;"></span><span style="font-size:13.5px; font-weight:700; color:#E7E7E9;">Emergency Fund</span></div><span style="font-size:12px; font-weight:800; color:#5BAAF5;">54%</span></div>
+        <div style="margin-top:9px; height:7px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:54%; height:100%; background:#5BAAF5; border-radius:999px;"></div></div>
+        <div style="font-size:11px; color:#9A9FA8; margin-top:5px;">₱108,000 / ₱200,000</div>
+      </div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:13px 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px;"><span style="width:9px; height:9px; border-radius:50%; background:#FFCA28;"></span><span style="font-size:13.5px; font-weight:700; color:#E7E7E9;">New Laptop</span></div><span style="font-size:12px; font-weight:800; color:#FFCA28;">76%</span></div>
+        <div style="margin-top:9px; height:7px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:76%; height:100%; background:#FFCA28; border-radius:999px;"></div></div>
+        <div style="font-size:11px; color:#9A9FA8; margin-top:5px;">₱68,400 / ₱90,000</div>
+      </div>
+      <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:13px 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:7px;"><span style="width:9px; height:9px; border-radius:50%; background:#B36BD4;"></span><span style="font-size:13.5px; font-weight:700; color:#E7E7E9;">Vacation · Japan</span></div><span style="font-size:12px; font-weight:800; color:#B36BD4;">24%</span></div>
+        <div style="margin-top:9px; height:7px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:24%; height:100%; background:#B36BD4; border-radius:999px;"></div></div>
+        <div style="font-size:11px; color:#9A9FA8; margin-top:5px;">₱30,000 / ₱120,000</div>
+      </div>
+    </div>
+
+    <!-- plain savings -->
+    <div style="padding:14px 18px 0;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Savings accounts</span></div>
+    <div style="padding:10px 16px 0; display:flex; flex-direction:column; gap:7px;">
+      <div style="display:flex; align-items:center; gap:11px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 12px;"><span style="width:9px; height:9px; border-radius:50%; background:#00BCD4; flex-shrink:0;"></span><div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#E7E7E9;">Maribank savings</div></div><span style="font-size:13px; font-weight:700; color:#C9CDD3;">₱185,490</span></div>
+    </div>
+
+    <!-- add goal FAB -->
+    <div style="position:absolute; bottom:74px; right:18px; width:52px; height:52px; border-radius:18px; background:#46BD6B; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -8px rgba(70,189,107,.7);"><i class="ph-bold ph-plus" style="font-size:22px; color:#fff;"></i></div>
+
+    <!-- tab bar -->
+    <div style="position:absolute; bottom:0; left:0; right:0; height:62px; background:#0E0E10; border-top:1px solid #232327; display:flex; align-items:center; justify-content:space-around; padding-bottom:5px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph-fill ph-squares-four" style="font-size:19px; color:#5BAAF5;"></i><span style="font-size:8.5px; font-weight:700; color:#5BAAF5;">Dashboard</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-list-dashes" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Ledger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-receipt" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Bills</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-chart-pie-slice" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Budget</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-clock-counter-clockwise" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">History</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:3px;"><i class="ph ph-shopping-cart-simple" style="font-size:19px; color:#6A6E76;"></i><span style="font-size:8.5px; font-weight:600; color:#6A6E76;">Cart</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 5 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:2750px; width:1740px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Account setup · edit transaction · mark paid · budget groups</div><div style="font-size:14px; color:#5C6068;">the four missing flows</div></div>
+</div>
+
+<!-- ============ FRAME 13 · ACCOUNT SETUP / EDIT ============ -->
+<div style="position:absolute; left:40px; top:2792px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Account setup &amp; edit</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Dashboard</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <!-- sheet — tall, scrolls -->
+    <div style="position:absolute; bottom:0; left:0; right:0; top:72px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; overflow:hidden; display:flex; flex-direction:column;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;"><div style="font-size:17px; font-weight:800; color:#F7F7F8;">Edit account</div><div style="display:flex; align-items:center; gap:5px; background:rgba(46,144,250,.16); border-radius:10px; padding:6px 10px;"><i class="ph-bold ph-plus" style="font-size:12px; color:#5BAAF5;"></i><span style="font-size:11.5px; font-weight:700; color:#5BAAF5;">Add pocket</span></div></div>
+
+      <!-- name + category row -->
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <div style="flex:2;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">NAME</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">BPI Personal</span></div></div>
+        <div style="flex:1;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">TYPE</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 12px;"><span style="font-size:13px; font-weight:600; color:#F2F2F3;">Bank</span><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+      </div>
+
+      <!-- balance -->
+      <div style="margin-bottom:10px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">CURRENT BALANCE</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 14px;"><span style="font-size:15px; color:#9A9FA8; font-weight:700;">₱</span><span style="font-size:16px; font-weight:800; color:#F7F7F8; letter-spacing:-.01em;">42,100</span></div></div>
+
+      <!-- color swatches -->
+      <div style="margin-bottom:10px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:8px;">COLOR</div>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <div style="width:30px; height:30px; border-radius:50%; background:#9B2C2C; box-shadow:0 0 0 2px #1A1A1E, 0 0 0 4px #9B2C2C;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#2563EB;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#059669;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#D97706;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#DC2626;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#0891B2;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#202024; border:1px dashed #3A3A40; display:flex; align-items:center; justify-content:center;"><i class="ph ph-eyedropper" style="font-size:13px; color:#6A6E76;"></i></div>
+      </div></div>
+
+      <!-- credit card section (conditional) -->
+      <div style="background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:12px 14px; margin-bottom:12px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:10px;">CREDIT DETAILS</div>
+        <div style="display:flex; gap:8px; margin-bottom:9px;">
+          <div style="flex:1;"><div style="font-size:9.5px; color:#9A9FA8; margin-bottom:5px;">BRAND PRESET</div><div style="height:40px; background:#131315; border:1px solid #2E2E33; border-radius:10px; display:flex; align-items:center; justify-content:space-between; padding:0 11px;"><span style="font-size:12.5px; color:#C9CDD3;">BPI</span><i class="ph ph-caret-down" style="font-size:11px; color:#83878F;"></i></div></div>
+          <div style="flex:1;"><div style="font-size:9.5px; color:#9A9FA8; margin-bottom:5px;">CREDIT LIMIT</div><div style="height:40px; background:#131315; border:1px solid #2E2E33; border-radius:10px; display:flex; align-items:center; padding:0 11px;"><span style="font-size:12.5px; color:#C9CDD3;">₱50,000</span></div></div>
+        </div>
+        <div style="display:flex; gap:8px; margin-bottom:9px;">
+          <div style="flex:1;"><div style="font-size:9.5px; color:#9A9FA8; margin-bottom:5px;">STATEMENT DAY</div><div style="height:40px; background:#131315; border:1px solid #2E2E33; border-radius:10px; display:flex; align-items:center; justify-content:space-between; padding:0 11px;"><span style="font-size:12.5px; color:#C9CDD3;">25th</span><i class="ph ph-caret-down" style="font-size:11px; color:#83878F;"></i></div></div>
+          <div style="flex:1;"><div style="font-size:9.5px; color:#9A9FA8; margin-bottom:5px;">DUE DAY</div><div style="height:40px; background:#131315; border:1px solid #2E2E33; border-radius:10px; display:flex; align-items:center; justify-content:space-between; padding:0 11px;"><span style="font-size:12.5px; color:#C9CDD3;">5th</span><i class="ph ph-caret-down" style="font-size:11px; color:#83878F;"></i></div></div>
+        </div>
+        <div><div style="font-size:9.5px; color:#9A9FA8; margin-bottom:5px;">MONTHLY FINANCE RATE</div><div style="height:40px; background:#131315; border:1px solid #2E2E33; border-radius:10px; display:flex; align-items:center; justify-content:space-between; padding:0 11px;"><span style="font-size:12.5px; color:#C9CDD3;">3.00 % / mo</span></div><div style="font-size:9px; color:#6A6E76; margin-top:4px;">BSP cap 3% · pre-filled from brand</div></div>
+      </div>
+
+      <div style="flex:1;"></div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -8px rgba(46,144,250,.7);"><span style="font-size:14.5px; font-weight:800; color:#fff;">Save</span></div>
+        <div style="height:46px; border-radius:14px; background:rgba(246,104,94,.1); border:1px solid rgba(246,104,94,.3); display:flex; align-items:center; justify-content:center; gap:7px;"><i class="ph ph-trash" style="font-size:15px; color:#F6685E;"></i><span style="font-size:13.5px; font-weight:700; color:#F6685E;">Delete account</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 14 · EDIT TRANSACTION ============ -->
+<div style="position:absolute; left:420px; top:2792px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Edit transaction</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Ledger</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:72px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; overflow:hidden; display:flex; flex-direction:column;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 12px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8; margin-bottom:14px;">Edit transaction</div>
+
+      <!-- type toggle -->
+      <div style="display:flex; gap:6px; margin-bottom:12px;">
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:700; color:#6FCB8A;">Inflow</span></div>
+        <div style="flex:1; text-align:center; background:rgba(246,104,94,.16); border:1px solid #F6685E; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:700; color:#F6685E;">Outflow</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Transfer</span></div>
+      </div>
+
+      <!-- description -->
+      <div style="margin-bottom:9px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">DESCRIPTION</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Groceries · SM</span></div></div>
+
+      <!-- amount + date row -->
+      <div style="display:flex; gap:8px; margin-bottom:9px;">
+        <div style="flex:1;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">AMOUNT</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 12px;"><span style="font-size:13px; color:#9A9FA8;">₱</span><span style="font-size:15px; font-weight:800; color:#F7F7F8;">2,340</span></div></div>
+        <div style="flex:1;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">DATE</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:7px; padding:0 12px;"><i class="ph ph-calendar-blank" style="font-size:14px; color:#9A9FA8;"></i><span style="font-size:12.5px; font-weight:600; color:#F2F2F3;">Jun 24</span></div></div>
+      </div>
+
+      <!-- account -->
+      <div style="margin-bottom:9px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">ACCOUNT</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><div style="display:flex; align-items:center; gap:8px;"><div style="width:22px; height:22px; border-radius:7px; background:#FFCA28; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-money" style="font-size:10px; color:#131315;"></i></div><span style="font-size:13px; font-weight:600; color:#F2F2F3;">Cash</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+
+      <!-- category chips -->
+      <div style="margin-bottom:9px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:7px;">CATEGORY</div>
+      <div style="display:flex; gap:6px; flex-wrap:wrap;">
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:6px 11px;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Food</span></div>
+        <div style="background:#2E90FA; border-radius:9px; padding:6px 11px;"><span style="font-size:11px; font-weight:700; color:#fff;">Groceries</span></div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:6px 11px;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Transport</span></div>
+        <div style="background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:6px 11px;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Shopping</span></div>
+      </div></div>
+
+      <!-- reimbursable toggle -->
+      <div style="background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px; margin-bottom:9px; display:flex; align-items:center; gap:10px;"><div style="flex:1;"><div style="font-size:13px; font-weight:700; color:#F2F2F3;">I'll get this back</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:2px; line-height:1.4;">Tracks as money owed to you, not spending</div></div><div style="width:44px; height:25px; border-radius:999px; background:#232327; border:1px solid #2E2E33; position:relative;"><div style="position:absolute; left:3px; top:2.5px; width:18px; height:18px; border-radius:50%; background:#9A9FA8;"></div></div></div>
+
+      <!-- note -->
+      <div style="margin-bottom:12px;"><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">NOTE</div><div style="margin-top:6px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:13px; color:#9A9FA8;">Optional note…</span></div></div>
+
+      <div style="flex:1;"></div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:14.5px; font-weight:800; color:#fff;">Save</span></div>
+        <div style="height:44px; border-radius:14px; background:#202024; border:1px solid rgba(246,104,94,.3); display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph ph-trash" style="font-size:14px; color:#F6685E;"></i><span style="font-size:13px; font-weight:700; color:#F6685E;">Delete</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 15 · MARK BILL PAID ============ -->
+<div style="position:absolute; left:800px; top:2792px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Mark bill as paid</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Bills</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 24px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Mark as paid</div>
+
+      <!-- bill summary -->
+      <div style="margin-top:14px; background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:14px 15px; display:flex; align-items:center; gap:12px;">
+        <div style="width:40px; height:40px; border-radius:12px; background:rgba(246,104,94,.14); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-lightning" style="font-size:19px; color:#F6685E;"></i></div>
+        <div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Meralco</div><div style="font-size:11px; color:#9A9FA8; margin-top:2px;">Electricity · due Jun 28</div></div>
+        <div style="font-size:18px; font-weight:800; color:#F7F7F8;">₱3,200</div>
+      </div>
+
+      <!-- actual amount -->
+      <div style="margin-top:14px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">ACTUAL AMOUNT PAID</div><div style="margin-top:7px; height:52px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:5px; padding:0 14px;"><span style="font-size:17px; color:#9A9FA8; font-weight:700;">₱</span><span style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.01em;">3,200</span></div></div>
+
+      <!-- pay from -->
+      <div style="margin-top:12px;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#9A9FA8;">PAID FROM</div><div style="margin-top:7px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><div style="display:flex; align-items:center; gap:8px;"><div style="width:22px; height:22px; border-radius:7px; background:#9B2C2C; display:flex; align-items:center; justify-content:center;"><span style="font-size:7.5px; font-weight:800; color:#fff;">BPI</span></div><span style="font-size:13px; font-weight:600; color:#F2F2F3;">BPI Personal</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+
+      <!-- log to ledger toggle -->
+      <div style="margin-top:13px; background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px; display:flex; align-items:center; gap:12px;"><i class="ph-fill ph-book-open" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Log to ledger</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">Already added it? Leave this off.</div></div><div style="width:44px; height:25px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2.5px; width:20px; height:20px; border-radius:50%; background:#fff;"></div></div></div>
+
+      <!-- date -->
+      <div style="margin-top:12px; height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:9px; padding:0 14px;"><i class="ph ph-calendar-check" style="font-size:15px; color:#9A9FA8;"></i><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Jun 28, 2026</span><span style="font-size:11px; color:#9A9FA8; margin-left:2px;">· today</span></div>
+
+      <div style="margin-top:20px; height:52px; border-radius:14px; background:#46BD6B; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 10px 22px -9px rgba(70,189,107,.7);"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#fff;"></i><span style="font-size:15px; font-weight:800; color:#fff;">Mark as paid</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 16 · BUDGET GROUPS ============ -->
+<div style="position:absolute; left:1180px; top:2792px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Manage budget groups</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Budget</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:72px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; display:flex; flex-direction:column;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 12px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;"><div style="font-size:17px; font-weight:800; color:#F7F7F8;">Budget groups</div><div style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Drag to reorder</div></div>
+
+      <!-- groups list -->
+      <div style="display:flex; flex-direction:column; gap:7px; flex:1;">
+
+        <!-- built-in Living -->
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px;">
+          <i class="ph ph-dots-six-vertical" style="font-size:16px; color:#5A5E66;"></i>
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Living expenses</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">Built-in</div></div>
+          <i class="ph ph-pencil-simple" style="font-size:15px; color:#9A9FA8;"></i>
+        </div>
+
+        <!-- built-in Lifestyle -->
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px;">
+          <i class="ph ph-dots-six-vertical" style="font-size:16px; color:#5A5E66;"></i>
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Lifestyle</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">Built-in</div></div>
+          <i class="ph ph-pencil-simple" style="font-size:15px; color:#9A9FA8;"></i>
+        </div>
+
+        <!-- built-in Savings -->
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px;">
+          <i class="ph ph-dots-six-vertical" style="font-size:16px; color:#5A5E66;"></i>
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Savings / Goals</div><div style="font-size:10.5px; color:#6FCB8A; margin-top:1px;">Built-in · savings</div></div>
+          <i class="ph ph-pencil-simple" style="font-size:15px; color:#9A9FA8;"></i>
+        </div>
+
+        <!-- user custom -->
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:13px; padding:12px 14px;">
+          <i class="ph ph-dots-six-vertical" style="font-size:16px; color:#5A5E66;"></i>
+          <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Subscriptions</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">Custom</div></div>
+          <div style="display:flex; gap:8px; align-items:center;"><i class="ph ph-pencil-simple" style="font-size:15px; color:#9A9FA8;"></i><i class="ph ph-trash" style="font-size:15px; color:#F6685E;"></i></div>
+        </div>
+
+        <!-- inline new group -->
+        <div style="display:flex; align-items:center; gap:10px; background:#202024; border:1px dashed #2E90FA; border-radius:13px; padding:12px 14px;">
+          <div style="width:28px; height:28px; border-radius:9px; background:rgba(46,144,250,.16); display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-plus" style="font-size:13px; color:#5BAAF5;"></i></div>
+          <div style="flex:1; font-size:13.5px; color:#9A9FA8;">New group name…</div>
+        </div>
+
+      </div>
+
+      <!-- helper note -->
+      <div style="margin-top:12px; background:rgba(46,144,250,.07); border:1px solid rgba(46,144,250,.18); border-radius:12px; padding:10px 13px; display:flex; align-items:flex-start; gap:8px;"><i class="ph ph-info" style="font-size:14px; color:#5BAAF5; flex-shrink:0; margin-top:1px;"></i><span style="font-size:11.5px; color:#9DB6DC; line-height:1.45;">Deleting a group moves its budgets to the first available group — nothing is lost.</span></div>
+
+      <div style="margin-top:14px; height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:14.5px; font-weight:800; color:#fff;">Done</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1002px; width:1560px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Add anything</div><div style="font-size:14px; color:#5C6068;">the creation sheets — account · transaction · bill / receivable · category</div></div>
+</div>
+
+<!-- ============ FRAME 5 · ADD ACCOUNT ============ -->
+<div style="position:absolute; left:40px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add account</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <!-- faint dashboard behind -->
+    <div style="padding:14px 20px 0; opacity:.25;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Treasury</div><div style="margin-top:14px; height:120px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:22px;"></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <!-- sheet -->
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Add account</div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:16px;">TYPE</div>
+      <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+        <div style="background:#2E90FA; border-radius:10px; padding:7px 12px;"><span style="font-size:11.5px; font-weight:700; color:#fff;">Bank</span></div>
+        <div style="background:#232327; border:1px solid #2E2E33; border-radius:10px; padding:7px 12px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">eWallet</span></div>
+        <div style="background:#232327; border:1px solid #2E2E33; border-radius:10px; padding:7px 12px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Cash</span></div>
+        <div style="background:#232327; border:1px solid #2E2E33; border-radius:10px; padding:7px 12px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Savings</span></div>
+        <div style="background:#232327; border:1px solid #2E2E33; border-radius:10px; padding:7px 12px;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">Credit</span></div>
+      </div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:16px;">NAME</div>
+      <div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:14px; font-weight:600; color:#F2F2F3;">BPI Personal</span></div>
+
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">STARTING BALANCE</div><div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 14px;"><span style="font-size:14px; color:#83878F;">₱</span><span style="font-size:14px; font-weight:700; color:#F2F2F3;">42,100</span></div></div>
+      </div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:14px;">COLOR</div>
+      <div style="display:flex; gap:10px; margin-top:9px;">
+        <div style="width:30px; height:30px; border-radius:50%; background:#9B2C2C; box-shadow:0 0 0 2px #131315, 0 0 0 4px #9B2C2C;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#2E90FA;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#46BD6B;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#FFC542;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#B36BD4;"></div>
+        <div style="width:30px; height:30px; border-radius:50%; background:#00BCD4;"></div>
+      </div>
+
+      <div style="margin-top:20px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Save account</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 6 · ADD TRANSACTION ============ -->
+<div style="position:absolute; left:420px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add transaction</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.25;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Ledger</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Log transaction</div>
+
+      <!-- type segmented -->
+      <div style="display:flex; gap:6px; margin-top:14px; background:#232327; border-radius:12px; padding:4px;">
+        <div style="flex:1; text-align:center; background:#F6685E; border-radius:9px; padding:8px 0;"><span style="font-size:12px; font-weight:700; color:#fff;">Expense</span></div>
+        <div style="flex:1; text-align:center; padding:8px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">Income</span></div>
+        <div style="flex:1; text-align:center; padding:8px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">Transfer</span></div>
+      </div>
+
+      <!-- amount -->
+      <div style="margin-top:16px; text-align:center;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">AMOUNT</div><div style="display:flex; align-items:baseline; gap:5px; justify-content:center; margin-top:7px;"><span style="font-size:24px; font-weight:700; color:#83878F;">₱</span><span style="font-size:38px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">285</span><span style="display:inline-block; width:2px; height:32px; background:#2E90FA; margin-left:1px;"></span></div></div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:14px;">DESCRIPTION</div>
+      <div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:14px; font-weight:600; color:#F2F2F3;">Jollibee lunch</span></div>
+
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">CATEGORY</div><div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:7px; padding:0 12px;"><span style="width:9px; height:9px; border-radius:3px; background:#F6685E;"></span><span style="font-size:13px; font-weight:600; color:#F2F2F3;">Food</span></div></div>
+        <div style="flex:1;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">ACCOUNT</div><div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:7px; padding:0 12px;"><i class="ph-fill ph-wallet" style="font-size:13px; color:#5BAAF5;"></i><span style="font-size:13px; font-weight:600; color:#F2F2F3;">GCash</span></div></div>
+      </div>
+
+      <div style="margin-top:20px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Save</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 7 · ADD BILL / RECEIVABLE ============ -->
+<div style="position:absolute; left:800px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add bill / receivable</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.25;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Bills</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">New entry</div>
+
+      <!-- bill vs receivable -->
+      <div style="display:flex; gap:6px; margin-top:14px; background:#232327; border-radius:12px; padding:4px;">
+        <div style="flex:1; text-align:center; background:#F6685E; border-radius:9px; padding:8px 0;"><span style="font-size:12px; font-weight:700; color:#fff;">Bill to pay</span></div>
+        <div style="flex:1; text-align:center; padding:8px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">Money owed me</span></div>
+      </div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:16px;">NAME</div>
+      <div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:14px; font-weight:600; color:#F2F2F3;">Meralco</span></div>
+
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <div style="flex:1;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">AMOUNT</div><div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:4px; padding:0 14px;"><span style="font-size:14px; color:#83878F;">₱</span><span style="font-size:14px; font-weight:700; color:#F2F2F3;">3,200</span></div></div>
+        <div style="flex:1;"><div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F;">DUE DAY</div><div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><span style="font-size:14px; font-weight:700; color:#F2F2F3;">15th</span><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div></div>
+      </div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:14px;">PAY FROM</div>
+      <div style="margin-top:8px; height:46px; background:#232327; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><div style="display:flex; align-items:center; gap:8px;"><div style="width:22px; height:22px; border-radius:7px; background:#9B2C2C; display:flex; align-items:center; justify-content:center;"><span style="font-size:8px; font-weight:800; color:#fff;">BPI</span></div><span style="font-size:13px; font-weight:600; color:#F2F2F3;">BPI Personal</span></div><i class="ph ph-caret-down" style="font-size:12px; color:#83878F;"></i></div>
+
+      <div style="margin-top:14px; display:flex; align-items:center; justify-content:space-between; background:#232327; border:1px solid #2E2E33; border-radius:12px; padding:11px 14px;"><div style="display:flex; align-items:center; gap:9px;"><i class="ph-fill ph-bell-simple" style="font-size:16px; color:#5BAAF5;"></i><span style="font-size:13px; font-weight:600; color:#E7E7E9;">Remind me 2 days before</span></div><div style="width:38px; height:22px; border-radius:999px; background:#2E90FA; position:relative;"><div style="position:absolute; right:2px; top:2px; width:18px; height:18px; border-radius:50%; background:#fff;"></div></div></div>
+
+      <div style="margin-top:18px; height:52px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 10px 22px -9px rgba(46,144,250,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Save bill</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 8 · CATEGORIES ============ -->
+<div style="position:absolute; left:1180px; top:1044px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Manage categories</div>
+  <div style="width:340px; height:740px; background:#131315; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2E; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:96px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; overflow:hidden;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto 14px;"></div>
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="font-size:17px; font-weight:800; color:#F7F7F8;">Categories</div><div style="display:flex; align-items:center; gap:5px; background:#2E90FA; border-radius:10px; padding:7px 11px;"><i class="ph-bold ph-plus" style="font-size:12px; color:#fff;"></i><span style="font-size:12px; font-weight:700; color:#fff;">New</span></div></div>
+
+      <!-- new category inline -->
+      <div style="margin-top:14px; background:#202024; border:1px solid #2E2E33; border-radius:14px; padding:13px 14px;">
+        <div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#83878F;">NEW CATEGORY</div>
+        <div style="margin-top:9px; height:42px; background:#131315; border:1px solid #2E2E33; border-radius:11px; display:flex; align-items:center; padding:0 13px;"><span style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Coffee</span></div>
+        <div style="display:flex; gap:7px; margin-top:10px;">
+          <div style="width:26px; height:26px; border-radius:50%; background:#F6685E;"></div>
+          <div style="width:26px; height:26px; border-radius:50%; background:#FFC542; box-shadow:0 0 0 2px #202024, 0 0 0 4px #FFC542;"></div>
+          <div style="width:26px; height:26px; border-radius:50%; background:#46BD6B;"></div>
+          <div style="width:26px; height:26px; border-radius:50%; background:#5BAAF5;"></div>
+          <div style="width:26px; height:26px; border-radius:50%; background:#B36BD4;"></div>
+          <div style="width:26px; height:26px; border-radius:50%; background:#00BCD4;"></div>
+        </div>
+      </div>
+
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:18px;">EXPENSE</div>
+      <div style="margin-top:9px; display:flex; flex-direction:column; gap:7px;">
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:10px 13px;"><span style="width:11px; height:11px; border-radius:4px; background:#F6685E;"></span><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Food &amp; dining</span><i class="ph ph-dots-six-vertical" style="font-size:15px; color:#5A5E66;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:10px 13px;"><span style="width:11px; height:11px; border-radius:4px; background:#FFC542;"></span><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Transport</span><i class="ph ph-dots-six-vertical" style="font-size:15px; color:#5A5E66;"></i></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:10px 13px;"><span style="width:11px; height:11px; border-radius:4px; background:#B36BD4;"></span><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Groceries</span><i class="ph ph-dots-six-vertical" style="font-size:15px; color:#5A5E66;"></i></div>
+      </div>
+      <div style="font-size:10.5px; font-weight:700; letter-spacing:.05em; color:#83878F; margin-top:14px;">INCOME</div>
+      <div style="margin-top:9px; display:flex; flex-direction:column; gap:7px;">
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:10px 13px;"><span style="width:11px; height:11px; border-radius:4px; background:#46BD6B;"></span><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Salary</span><i class="ph ph-dots-six-vertical" style="font-size:15px; color:#5A5E66;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

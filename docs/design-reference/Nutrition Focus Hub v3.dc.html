@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute;left:40px;top:8px;width:1380px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px;font-weight:800;color:#15161A;margin-top:4px;letter-spacing:-.025em;">Hub v3 — refined</div>
+  <div style="font-size:15px;color:#5C6068;margin-top:7px;max-width:940px;line-height:1.6;">Ring labels show meaning not percentages. Finance card now shows safe-to-spend hero + cashflow bars (in vs out) + savings rate + upcoming bill countdown. 4th frame: finance-first end-of-month state with savings milestone.</div>
+</div>
+<div data-drags-parent="1" style="position:absolute;left:40px;top:128px;width:1380px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:22px;font-weight:800;color:#15161A;letter-spacing:-.02em;">Active · morning · urgent · finance month-end</div>
+</div>
+
+<!-- ============ FRAME 1 · ACTIVE ============ -->
+<div style="position:absolute;left:40px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Active mid-day</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- header -->
+    <div style="padding:11px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div>
+        <div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph-fill ph-flame" style="font-size:13px;color:#FF8A4C;"></i><span style="font-size:12px;font-weight:700;color:#C9CDD3;">12</span></div>
+        <i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i>
+      </div>
+    </div>
+
+    <!-- THREE RINGS HERO -->
+    <div style="padding:20px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+
+      <!-- FAST ring -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1A2535" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#2E90FA" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="66.2"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:14px;font-weight:800;color:#F7F7F8;letter-spacing:-.01em;line-height:1;">11:41</div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#5BAAF5;margin-top:2px;">FAST</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#5BAAF5;text-align:center;">73%</div>
+      </div>
+
+      <!-- FOOD ring -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1A2826" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#26C6DA" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="79.1"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:14px;font-weight:800;color:#F7F7F8;letter-spacing:-.01em;line-height:1;">678</div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#26C6DA;margin-top:2px;">LEFT</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#26C6DA;text-align:center;">68% eaten</div>
+      </div>
+
+      <!-- MOVE ring -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#152218" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#46BD6B" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="4.9"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:14px;font-weight:800;color:#4CAF50;letter-spacing:-.01em;line-height:1;">7,840</div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#46BD6B;margin-top:2px;">STEPS</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#46BD6B;text-align:center;">Goal done</div>
+      </div>
+
+    </div>
+
+    <!-- AI coaching line -->
+    <div style="margin:14px 18px 0;padding:10px 14px;background:#1B1F2A;border-radius:12px;border:1px solid #252D3D;display:flex;align-items:center;gap:9px;">
+      <i class="ph-fill ph-sparkle" style="font-size:13px;color:#5BAAF5;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#9DB6DC;line-height:1.45;flex:1;">Fat burning · 04:19 left. Steps done. 3 quests earn <span style="color:#FFCA28;font-weight:700;">+80 XP</span>. Meralco in 3 days.</span>
+    </div>
+
+    <!-- CARDS -->
+    <div style="padding:14px 14px 0;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- QUESTS -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;">
+          <i class="ph ph-lightning" style="font-size:14px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Quests</span>
+          <div style="background:rgba(255,202,40,.14);border-radius:999px;padding:3px 8px;"><span style="font-size:9.5px;font-weight:700;color:#FFCA28;">+80 XP left</span></div>
+          <i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i>
+        </div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:9px;"><div style="width:40%;height:100%;background:#46BD6B;border-radius:999px;"></div></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="width:2px;height:32px;background:rgba(46,144,250,.7);border-radius:2px;flex-shrink:0;"></div>
+          <div><div style="font-size:12.5px;font-weight:600;color:#F2F2F3;">Evening walk</div><div style="font-size:10px;color:#83878F;margin-top:1px;">7:00 PM · AGI · +30 XP</div></div>
+        </div>
+      </div>
+
+      <!-- FINANCE — rich -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><i class="ph-fill ph-vault" style="font-size:14px;color:#FFCA28;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Finance</span><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:2px;">SAFE TO SPEND TODAY</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:10px;"><div style="font-size:24px;font-weight:800;color:#5BAAF5;letter-spacing:-.02em;line-height:1.15;">₱19,855</div><div style="background:rgba(70,189,107,.14);border-radius:999px;padding:2px 8px;"><span style="font-size:9.5px;font-weight:700;color:#6FCB8A;">39% saved</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #26262A;">
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-down" style="font-size:11px;color:#6FCB8A;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#46BD6B;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#6FCB8A;min-width:30px;text-align:right;">₱68k</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-up" style="font-size:11px;color:#FF8A80;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:61%;height:100%;background:#F6685E;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#FF8A80;min-width:30px;text-align:right;">₱41k</span></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:6px;">COMING UP</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#FF8A4C;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#F2F2F3;">Meralco</span><span style="font-size:9.5px;color:#FF8A4C;font-weight:700;">3 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱3,200</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#83878F;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#C9CDD3;">Internet</span><span style="font-size:9.5px;color:#83878F;font-weight:700;">6 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱2,099</span></div>
+        </div>
+      </div>
+
+      <!-- WEIGHT + BODY compact row -->
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">WEIGHT</div>
+          <div style="font-size:16px;font-weight:800;color:#F7F7F8;">71.6 <span style="font-size:10px;color:#83878F;">kg</span></div>
+          <div style="font-size:9px;color:#FFCA28;margin-top:2px;">−3.6 kg ↓</div>
+        </div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;">
+          <div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">BODY</div>
+          <div style="font-size:16px;font-weight:800;color:#F7F7F8;">81 <span style="font-size:10px;color:#83878F;">cm</span></div>
+          <div style="font-size:9px;color:#5BAAF5;margin-top:2px;">~17% BF ↓</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- quick-log bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div>
+      <div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · MORNING ============ -->
+<div style="position:absolute;left:420px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Morning · nothing started</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>7:02</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:11px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Good morning, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph-fill ph-flame" style="font-size:13px;color:#FF8A4C;"></i><span style="font-size:12px;font-weight:700;color:#C9CDD3;">12</span></div><i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i></div>
+    </div>
+
+    <!-- THREE RINGS — empty state -->
+    <div style="padding:20px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+
+      <!-- FAST — idle -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1E1E22" stroke-width="9"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <i class="ph ph-timer" style="font-size:22px;color:#4A4E55;"></i>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#6A6E76;text-align:center;">FAST</div>
+      </div>
+
+      <!-- FOOD — empty -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1E1E22" stroke-width="9"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:13px;font-weight:800;color:#5A5E66;line-height:1;">2,098</div>
+            <div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#4A4E55;margin-top:2px;">KCAL</div>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#6A6E76;text-align:center;">FOOD</div>
+      </div>
+
+      <!-- MOVE — empty -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1E1E22" stroke-width="9"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <i class="ph ph-person-simple-run" style="font-size:22px;color:#4A4E55;"></i>
+          </div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#6A6E76;text-align:center;">MOVE</div>
+      </div>
+
+    </div>
+
+    <!-- AI coaching line — morning motivational -->
+    <div style="margin:14px 18px 0;padding:10px 14px;background:#1B1F2A;border-radius:12px;border:1px solid #252D3D;display:flex;align-items:center;gap:9px;">
+      <i class="ph-fill ph-sun-horizon" style="font-size:13px;color:#FFCA28;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#9DB6DC;line-height:1.45;flex:1;">12-day streak on the line. Start your fast — <span style="color:#FFCA28;font-weight:700;">+130 XP</span> available today.</span>
+    </div>
+
+    <!-- cards -->
+    <div style="padding:14px 14px 0;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- FASTING idle CTA -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px;"><i class="ph ph-timer" style="font-size:14px;color:#9A9FA8;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Fasting</span><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="font-size:12.5px;font-weight:600;color:#F2F2F3;margin-bottom:2px;">Ready to start</div>
+        <div style="font-size:10.5px;color:#83878F;margin-bottom:11px;">16:8 · last fast ended 8h ago</div>
+        <div style="height:38px;border-radius:11px;background:rgba(46,144,250,.14);border:1px solid rgba(46,144,250,.28);display:flex;align-items:center;justify-content:center;gap:7px;"><i class="ph-fill ph-play-circle" style="font-size:15px;color:#5BAAF5;"></i><span style="font-size:12.5px;font-weight:700;color:#5BAAF5;">Start 16:8 fast</span></div>
+      </div>
+
+      <!-- QUESTS -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><i class="ph ph-lightning" style="font-size:14px;color:#9A9FA8;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Quests</span><div style="background:rgba(255,202,40,.14);border-radius:999px;padding:3px 8px;"><span style="font-size:9.5px;font-weight:700;color:#FFCA28;">+130 XP available</span></div><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;margin-bottom:9px;"></div>
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:2px;height:32px;background:rgba(46,144,250,.7);border-radius:2px;flex-shrink:0;"></div><div><div style="font-size:12.5px;font-weight:600;color:#F2F2F3;">100 push-ups</div><div style="font-size:10px;color:#83878F;margin-top:1px;">8:00 AM · next up · +30 XP</div></div></div>
+      </div>
+
+      <!-- FINANCE -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="ph-fill ph-vault" style="font-size:14px;color:#FFCA28;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Finance</span><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:2px;">SAFE TO SPEND TODAY</div>
+        <div style="font-size:24px;font-weight:800;color:#5BAAF5;letter-spacing:-.02em;line-height:1.15;">₱19,855</div>
+        <div style="display:flex;align-items:center;gap:5px;margin-top:6px;"><i class="ph-fill ph-warning" style="font-size:11px;color:#F6685E;"></i><span style="font-size:10px;font-weight:600;color:#F6685E;">Meralco due today</span></div>
+      </div>
+
+    </div>
+
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;"><div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div><div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · BILL URGENT ============ -->
+<div style="position:absolute;left:800px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Urgent — bill + budget over</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:11px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph-fill ph-flame" style="font-size:13px;color:#FF8A4C;"></i><span style="font-size:12px;font-weight:700;color:#C9CDD3;">12</span></div><i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i></div>
+    </div>
+
+    <!-- THREE RINGS — active with over-budget food ring -->
+    <div style="padding:20px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+
+      <!-- FAST ring -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#1A2535" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#2E90FA" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="66.2"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:14px;font-weight:800;color:#F7F7F8;line-height:1;">11:41</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#5BAAF5;margin-top:2px;">FAST</div></div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#5BAAF5;">73%</div>
+      </div>
+
+      <!-- FOOD ring — over goal, red -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#2A1414" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#F6685E" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="0"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:14px;font-weight:800;color:#F6685E;line-height:1;">+312</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#F6685E;margin-top:2px;">OVER</div></div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#F6685E;">Over goal</div>
+      </div>
+
+      <!-- MOVE ring — goal met -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+        <div style="position:relative;width:90px;height:90px;">
+          <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#152218" stroke-width="9"/>
+            <circle cx="45" cy="45" r="39" fill="none" stroke="#46BD6B" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="4.9"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:14px;font-weight:800;color:#4CAF50;line-height:1;">7,840</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#46BD6B;margin-top:2px;">STEPS</div></div>
+        </div>
+        <div style="font-size:9.5px;font-weight:700;color:#46BD6B;">Goal ✓</div>
+      </div>
+
+    </div>
+
+    <!-- AI coaching — urgent red -->
+    <div style="margin:14px 18px 0;padding:10px 14px;background:#221619;border-radius:12px;border:1px solid rgba(246,104,94,.25);display:flex;align-items:center;gap:9px;">
+      <i class="ph-fill ph-warning-circle" style="font-size:13px;color:#F6685E;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#C9897A;line-height:1.45;flex:1;">Over calories by 312 kcal. <span style="color:#F6685E;font-weight:700;">Meralco due today</span> — ₱3,200.</span>
+    </div>
+
+    <div style="padding:14px 14px 0;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- FINANCE — urgent rich -->
+      <div style="background:#1C1C20;border:1px solid rgba(246,104,94,.3);border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><i class="ph-fill ph-vault" style="font-size:14px;color:#FFCA28;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Finance</span><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:2px;">SAFE TO SPEND TODAY</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:9px;"><div style="font-size:24px;font-weight:800;color:#5BAAF5;letter-spacing:-.02em;line-height:1.15;">₱19,855</div><div style="background:rgba(70,189,107,.14);border-radius:999px;padding:2px 8px;"><span style="font-size:9.5px;font-weight:700;color:#6FCB8A;">39% saved</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:9px;padding-bottom:9px;border-bottom:1px solid #26262A;">
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-down" style="font-size:11px;color:#6FCB8A;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#46BD6B;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#6FCB8A;min-width:30px;text-align:right;">₱68k</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-up" style="font-size:11px;color:#FF8A80;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:61%;height:100%;background:#F6685E;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#FF8A80;min-width:30px;text-align:right;">₱41k</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:7px;background:rgba(246,104,94,.1);border-radius:9px;padding:7px 10px;margin-bottom:6px;"><i class="ph-fill ph-warning" style="font-size:12px;color:#F6685E;"></i><span style="font-size:11px;font-weight:600;color:#F6685E;">Meralco due today · ₱3,200</span></div>
+        <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#83878F;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#C9CDD3;">Internet</span><span style="font-size:9.5px;color:#83878F;font-weight:700;">6 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱2,099</span></div>
+      </div>
+
+      <!-- QUESTS -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><i class="ph ph-lightning" style="font-size:14px;color:#9A9FA8;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Quests</span><div style="background:rgba(255,202,40,.14);border-radius:999px;padding:3px 8px;"><span style="font-size:9.5px;font-weight:700;color:#FFCA28;">+80 XP left</span></div><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:9px;"><div style="width:40%;height:100%;background:#46BD6B;border-radius:999px;"></div></div>
+        <div style="display:flex;align-items:center;gap:8px;"><div style="width:2px;height:32px;background:rgba(46,144,250,.7);border-radius:2px;flex-shrink:0;"></div><div><div style="font-size:12.5px;font-weight:600;color:#F2F2F3;">Evening walk</div><div style="font-size:10px;color:#83878F;margin-top:1px;">7:00 PM · AGI · +30 XP</div></div></div>
+      </div>
+
+      <!-- WEIGHT + BODY -->
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">WEIGHT</div><div style="font-size:16px;font-weight:800;color:#F7F7F8;">71.6 <span style="font-size:10px;color:#83878F;">kg</span></div><div style="font-size:9px;color:#FFCA28;margin-top:2px;">−3.6 kg ↓</div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">BODY</div><div style="font-size:16px;font-weight:800;color:#F7F7F8;">81 <span style="font-size:10px;color:#83878F;">cm</span></div><div style="font-size:9px;color:#5BAAF5;margin-top:2px;">~17% BF ↓</div></div>
+      </div>
+
+    </div>
+
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;"><div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div><div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · FINANCE MONTH-END ============ -->
+<div style="position:absolute;left:1180px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Finance-first · month closing</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:11px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph-fill ph-flame" style="font-size:13px;color:#FF8A4C;"></i><span style="font-size:12px;font-weight:700;color:#C9CDD3;">12</span></div><i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i></div>
+    </div>
+
+    <!-- THREE RINGS — end of day all done -->
+    <div style="padding:18px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:7px;">
+        <div style="position:relative;width:86px;height:86px;">
+          <svg width="86" height="86" viewBox="0 0 86 86" style="transform:rotate(-90deg);"><circle cx="43" cy="43" r="37" fill="none" stroke="#1A2535" stroke-width="8"/><circle cx="43" cy="43" r="37" fill="none" stroke="#2E90FA" stroke-width="8" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="0"/></svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:13px;font-weight:800;color:#F7F7F8;line-height:1;">16:02</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#5BAAF5;margin-top:2px;">FAST</div></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:#5BAAF5;">Complete ✓</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:7px;">
+        <div style="position:relative;width:86px;height:86px;">
+          <svg width="86" height="86" viewBox="0 0 86 86" style="transform:rotate(-90deg);"><circle cx="43" cy="43" r="37" fill="none" stroke="#1A2826" stroke-width="8"/><circle cx="43" cy="43" r="37" fill="none" stroke="#26C6DA" stroke-width="8" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="23.3"/></svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:13px;font-weight:800;color:#F7F7F8;line-height:1;">1,840</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#26C6DA;margin-top:2px;">KCAL</div></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:#26C6DA;">Under goal</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:center;gap:7px;">
+        <div style="position:relative;width:86px;height:86px;">
+          <svg width="86" height="86" viewBox="0 0 86 86" style="transform:rotate(-90deg);"><circle cx="43" cy="43" r="37" fill="none" stroke="#152218" stroke-width="8"/><circle cx="43" cy="43" r="37" fill="none" stroke="#46BD6B" stroke-width="8" stroke-linecap="round" stroke-dasharray="232.5" stroke-dashoffset="0"/></svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:13px;font-weight:800;color:#4CAF50;line-height:1;">10.2k</div><div style="font-size:8px;font-weight:700;letter-spacing:.06em;color:#46BD6B;margin-top:2px;">STEPS</div></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;color:#46BD6B;">Goal done</div>
+      </div>
+    </div>
+
+    <!-- AI coaching — positive month-end -->
+    <div style="margin:13px 18px 0;padding:10px 14px;background:#172A1C;border-radius:12px;border:1px solid rgba(70,189,107,.25);display:flex;align-items:center;gap:9px;">
+      <i class="ph-fill ph-sparkle" style="font-size:13px;color:#46BD6B;flex-shrink:0;"></i>
+      <span style="font-size:12px;color:#8DC9A2;line-height:1.45;flex:1;">Best savings month yet — <span style="color:#6FCB8A;font-weight:700;">45% saved</span>. Net worth up ₱12,840 in June.</span>
+    </div>
+
+    <div style="padding:12px 14px 0;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- FINANCE — month-end rich -->
+      <div style="background:linear-gradient(155deg,#1B2A1C,#15171C);border:1px solid rgba(70,189,107,.25);border-radius:14px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><i class="ph-fill ph-vault" style="font-size:14px;color:#FFCA28;"></i><span style="flex:1;font-size:12.5px;font-weight:700;color:#C9CDD3;">Finance · June wrap</span><i class="ph ph-caret-right" style="font-size:12px;color:#4A4E55;"></i></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:2px;">NET WORTH</div>
+        <div style="display:flex;align-items:baseline;gap:7px;margin-bottom:10px;"><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">₱486,210</div><div style="background:rgba(70,189,107,.18);border-radius:999px;padding:2px 8px;"><span style="font-size:9.5px;font-weight:700;color:#6FCB8A;">+₱12,840 ↑</span></div></div>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(70,189,107,.15);">
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-down" style="font-size:11px;color:#6FCB8A;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#46BD6B;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#6FCB8A;min-width:30px;text-align:right;">₱68k</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-bold ph-arrow-up" style="font-size:11px;color:#FF8A80;"></i><div style="flex:1;height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:55%;height:100%;background:#F6685E;border-radius:999px;"></div></div><span style="font-size:10px;font-weight:700;color:#FF8A80;min-width:30px;text-align:right;">₱37k</span></div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:9px 10px;text-align:center;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:2px;">SAVED</div><div style="font-size:16px;font-weight:800;color:#6FCB8A;">45%</div><div style="font-size:8px;color:#9A9FA8;margin-top:1px;">best month</div></div>
+          <div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:9px 10px;text-align:center;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:2px;">SPARE</div><div style="font-size:16px;font-weight:800;color:#5BAAF5;">₱31k</div><div style="font-size:8px;color:#9A9FA8;margin-top:1px;">5 days left</div></div>
+          <div style="flex:1;background:rgba(0,0,0,.25);border-radius:10px;padding:9px 10px;text-align:center;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:2px;">LIQUID</div><div style="font-size:16px;font-weight:800;color:#F7F7F8;">₱94k</div><div style="font-size:8px;color:#9A9FA8;margin-top:1px;">all accounts</div></div>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.07em;color:#9A9FA8;margin-bottom:6px;">NEXT UP</div>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#FF8A4C;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#F2F2F3;">Meralco</span><span style="font-size:9.5px;color:#FF8A4C;font-weight:700;">3 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱3,200</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#83878F;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#C9CDD3;">Internet</span><span style="font-size:9.5px;color:#83878F;font-weight:700;">6 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱2,099</span></div>
+          <div style="display:flex;align-items:center;gap:7px;"><div style="width:5px;height:5px;border-radius:50%;background:#83878F;flex-shrink:0;"></div><span style="flex:1;font-size:11px;font-weight:600;color:#C9CDD3;">BPI Credit</span><span style="font-size:9.5px;color:#83878F;font-weight:700;">8 days</span><span style="font-size:11px;font-weight:700;color:#C9CDD3;margin-left:6px;">₱14,200</span></div>
+        </div>
+      </div>
+
+      <!-- WEIGHT + BODY -->
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">WEIGHT</div><div style="font-size:16px;font-weight:800;color:#F7F7F8;">71.6 <span style="font-size:10px;color:#83878F;">kg</span></div><div style="font-size:9px;color:#FFCA28;margin-top:2px;">−3.6 kg ↓</div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:11px 12px;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:3px;">BODY</div><div style="font-size:16px;font-weight:800;color:#F7F7F8;">81 <span style="font-size:10px;color:#83878F;">cm</span></div><div style="font-size:9px;color:#5BAAF5;margin-top:2px;">~17% BF ↓</div></div>
+      </div>
+
+    </div>
+
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;"><div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div><div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
