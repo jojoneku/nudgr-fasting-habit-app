@@ -1,7 +1,6 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
@@ -9,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
+import 'package:intermittent_fasting/views/treasury/shared/forms/forms.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddTransactionSheet extends StatefulWidget {
@@ -311,9 +311,44 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     });
   }
 
+  Future<void> _pickAccount({required bool isFrom}) async {
+    if (_accounts.isEmpty) return;
+    final current = isFrom ? _selectedAccountId : _transferToAccountId;
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: isFrom
+          ? (_type == TransactionType.transfer ? 'From account' : 'Account')
+          : 'To account',
+      actions: [
+        for (final a in _accounts)
+          AppActionSheetItem(
+            label: a.name,
+            value: a.id,
+            isPrimary: a.id == current,
+          ),
+      ],
+    );
+    if (picked != null) {
+      setState(() {
+        if (isFrom) {
+          _selectedAccountId = picked;
+        } else {
+          _transferToAccountId = picked;
+        }
+      });
+    }
+  }
+
+  String _accountName(String? id) => _accounts
+      .where((a) => a.id == id)
+      .map((a) => a.name)
+      .firstOrNull ??
+      '';
+
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.existing != null;
+    final isTransfer = _type == TransactionType.transfer;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -333,55 +368,92 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             _selectedCategoryId = null;
                           })),
                   const SizedBox(height: 16),
-                  _DescriptionField(controller: _descriptionController),
+                  AppFormField(
+                    label: 'Description',
+                    child: TextFormField(
+                      controller: _descriptionController,
+                      maxLength: 60,
+                      validator: (v) => (v == null || v.trim().isEmpty)
+                          ? 'Enter a description'
+                          : null,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Expanded(
                         flex: 3,
-                        child: _AmountField(controller: _amountController),
+                        child: AppFormField(
+                          label: 'Amount',
+                          child: AppAmountField(
+                            controller: _amountController,
+                            hint: '0.00',
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Enter an amount';
+                              }
+                              final parsed = double.tryParse(v);
+                              if (parsed == null || parsed <= 0) {
+                                return 'Amount must be > 0';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         flex: 2,
-                        child: _DatePickerRow(
-                            date: _date, onTap: _pickDate, compact: true),
+                        child: AppFormField(
+                          label: 'Date',
+                          child: AppSelectField(
+                            value: DateFormat('MMM d, yyyy').format(_date),
+                            leadingIcon: Icons.calendar_today_outlined,
+                            onTap: _pickDate,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  _AccountDropdown(
-                    accounts: _accounts,
-                    label: _type == TransactionType.transfer
-                        ? 'From Account'
-                        : 'Account',
-                    value: _selectedAccountId,
-                    onChanged: (v) => setState(() => _selectedAccountId = v),
+                  const SizedBox(height: 16),
+                  AppFormField(
+                    label: isTransfer ? 'From account' : 'Account',
+                    child: AppSelectField(
+                      value: _accountName(_selectedAccountId),
+                      placeholder: 'Select account',
+                      leadingIcon: Icons.account_balance_wallet_outlined,
+                      onTap: () => _pickAccount(isFrom: true),
+                    ),
                   ),
-                  if (_type == TransactionType.transfer) ...[
-                    const SizedBox(height: 12),
-                    _AccountDropdown(
-                      accounts: _accounts,
-                      label: 'To Account',
-                      value: _transferToAccountId,
-                      onChanged: (v) =>
-                          setState(() => _transferToAccountId = v),
+                  if (isTransfer) ...[
+                    const SizedBox(height: 16),
+                    AppFormField(
+                      label: 'To account',
+                      child: AppSelectField(
+                        value: _accountName(_transferToAccountId),
+                        placeholder: 'Select account',
+                        leadingIcon: Icons.account_balance_wallet_outlined,
+                        onTap: () => _pickAccount(isFrom: false),
+                      ),
                     ),
                     const SizedBox(height: 12),
                     _PaidForSomeoneHint(
                         onUsePreset: _applyPaidForSomeonePreset),
                   ],
-                  if (_type != TransactionType.transfer) ...[
+                  if (!isTransfer) ...[
                     const SizedBox(height: 16),
                     if (_filteredCategories.isEmpty)
                       _NoCategoriesHint(type: _type)
                     else
-                      _CategoryChips(
-                        categories: _filteredCategories,
-                        selected: _selectedCategoryId,
-                        onSelected: (id) =>
-                            setState(() => _selectedCategoryId = id),
+                      AppFormField(
+                        label: 'Category',
+                        child: _CategoryChips(
+                          categories: _filteredCategories,
+                          selected: _selectedCategoryId,
+                          onSelected: (id) =>
+                              setState(() => _selectedCategoryId = id),
+                        ),
                       ),
                   ],
                   if (_type == TransactionType.outflow) ...[
@@ -396,8 +468,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           setState(() => _expectedReimbursementDate = null),
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  _NoteField(controller: _noteController),
+                  const SizedBox(height: 16),
+                  AppFormField(
+                    label: 'Note (optional)',
+                    child: TextFormField(
+                      controller: _noteController,
+                      maxLines: 2,
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   AppPrimaryButton(
                     label: isEdit ? 'Save' : 'Log Transaction',
@@ -464,19 +542,19 @@ class _TypeToggle extends StatelessWidget {
     return Row(
       children: [
         _TypeButton(
-          label: 'Inflow',
-          type: TransactionType.inflow,
-          selected: selected,
-          color: cs.tertiary,
-          onTap: () => onChanged(TransactionType.inflow),
-        ),
-        const SizedBox(width: 8),
-        _TypeButton(
-          label: 'Outflow',
+          label: 'Expense',
           type: TransactionType.outflow,
           selected: selected,
           color: cs.error,
           onTap: () => onChanged(TransactionType.outflow),
+        ),
+        const SizedBox(width: 8),
+        _TypeButton(
+          label: 'Income',
+          type: TransactionType.inflow,
+          selected: selected,
+          color: cs.tertiary,
+          onTap: () => onChanged(TransactionType.inflow),
         ),
         const SizedBox(width: 8),
         _TypeButton(
@@ -535,63 +613,6 @@ class _TypeButton extends StatelessWidget {
   }
 }
 
-// ── Amount Field ──────────────────────────────────────────────────────────────
-
-class _AmountField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _AmountField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      inputFormatters: amountInputFormatters,
-      decoration: const InputDecoration(
-        labelText: 'Amount',
-        prefixText: '₱ ',
-      ),
-      validator: (v) {
-        if (v == null || v.isEmpty) return 'Enter an amount';
-        final parsed = double.tryParse(v);
-        if (parsed == null || parsed <= 0) return 'Amount must be > 0';
-        return null;
-      },
-    );
-  }
-}
-
-// ── Account Dropdown ──────────────────────────────────────────────────────────
-
-class _AccountDropdown extends StatelessWidget {
-  final List<FinancialAccount> accounts;
-  final String label;
-  final String? value;
-  final ValueChanged<String?> onChanged;
-
-  const _AccountDropdown({
-    required this.accounts,
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      hint: Text(label),
-      decoration: InputDecoration(labelText: label),
-      items: accounts
-          .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
-          .toList(),
-      onChanged: onChanged,
-      validator: (v) => v == null ? 'Select an account' : null,
-    );
-  }
-}
-
 // ── Category Chips ────────────────────────────────────────────────────────────
 
 class _CategoryChips extends StatelessWidget {
@@ -607,111 +628,17 @@ class _CategoryChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Category',
-            style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12)),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: categories.map((cat) {
-            final isSelected = selected == cat.id;
-            return ChoiceChip(
-              label: Text(cat.name),
-              selected: isSelected,
-              onSelected: (_) => onSelected(cat.id),
-            );
-          }).toList(),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Description Field ─────────────────────────────────────────────────────────
-
-class _DescriptionField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _DescriptionField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      maxLength: 60,
-      decoration: const InputDecoration(
-        labelText: 'Description',
-      ),
-      validator: (v) =>
-          (v == null || v.trim().isEmpty) ? 'Enter a description' : null,
-    );
-  }
-}
-
-// ── Date Picker Row ───────────────────────────────────────────────────────────
-
-class _DatePickerRow extends StatelessWidget {
-  final DateTime date;
-  final VoidCallback onTap;
-  final bool compact;
-
-  const _DatePickerRow(
-      {required this.date, required this.onTap, this.compact = false});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        height: 56,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: cs.outline.withValues(alpha: 0.5)),
-        ),
-        child: Row(
-          children: [
-            Icon(Icons.calendar_today_outlined,
-                color: cs.onSurfaceVariant, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                compact
-                    ? DateFormat('MMM d, yyyy').format(date)
-                    : DateFormat('MMMM d, yyyy').format(date),
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: cs.onSurface, fontSize: 14),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Note Field ────────────────────────────────────────────────────────────────
-
-class _NoteField extends StatelessWidget {
-  final TextEditingController controller;
-
-  const _NoteField({required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      maxLines: 2,
-      decoration: const InputDecoration(
-        labelText: 'Note (optional)',
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: categories.map((cat) {
+        final isSelected = selected == cat.id;
+        return ChoiceChip(
+          label: Text(cat.name),
+          selected: isSelected,
+          onSelected: (_) => onSelected(cat.id),
+        );
+      }).toList(),
     );
   }
 }
