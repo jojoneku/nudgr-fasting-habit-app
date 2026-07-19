@@ -94,36 +94,46 @@ class _MetricCard extends StatelessWidget {
     return AppCard(
       variant: AppCardVariant.elevated,
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      // Icon badge on the left; label over value on the right — one row.
+      child: Row(
         children: [
-          // Icon in a tinted badge — the same identity treatment the budget,
-          // account and category cards use (one icon with a background).
           Container(
-            width: 32,
-            height: 32,
+            width: 34,
+            height: 34,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 18, color: color),
           ),
-          const SizedBox(height: 10),
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-              letterSpacing: 0.8,
-              fontWeight: FontWeight.w600,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AppNumberDisplay(
+                    value: value,
+                    size: AppNumberSize.body,
+                    color: color,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 3),
-          AppNumberDisplay(
-            value: value,
-            size: AppNumberSize.body,
-            color: color,
           ),
         ],
       ),
