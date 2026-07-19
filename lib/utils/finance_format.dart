@@ -55,6 +55,17 @@ String monthShortLabel(String monthKey) {
   return DateFormat('MMM').format(date);
 }
 
+/// Compact label for a month chip/dropdown: the month name alone within the
+/// current year (e.g. 'June'), or month + year across years (e.g. "Dec 2025")
+/// so the control stays short but never ambiguous.
+String monthChipLabel(String monthKey) {
+  final date = DateTime.parse('$monthKey-01');
+  if (date.year == DateTime.now().year) {
+    return DateFormat('MMMM').format(date);
+  }
+  return DateFormat('MMM yyyy').format(date);
+}
+
 /// Returns the month key for the month before [monthKey].
 /// e.g. '2026-03' → '2026-02', '2026-01' → '2025-12'
 String previousMonth(String monthKey) {

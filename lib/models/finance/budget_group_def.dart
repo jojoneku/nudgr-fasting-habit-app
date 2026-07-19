@@ -47,17 +47,20 @@ class BudgetGroupDef {
   static const String idSavings = 'savings';
 
   static const defaultGroups = [
+    // Order (sortOrder) drives the Budget tab's section order:
+    // Living Expense → Savings → Variable / Optional → Non-Negotiables. A user's
+    // manage-groups reordering still wins — merge() overrides these from stored.
     BudgetGroupDef(
-      id: idNonNegotiables,
-      name: 'Non-Negotiables',
+      id: idLivingExpense,
+      name: 'Living Expense',
       isSavings: false,
       isBuiltIn: true,
       sortOrder: 0,
     ),
     BudgetGroupDef(
-      id: idLivingExpense,
-      name: 'Living Expense',
-      isSavings: false,
+      id: idSavings,
+      name: 'Savings / Goals',
+      isSavings: true,
       isBuiltIn: true,
       sortOrder: 1,
     ),
@@ -69,9 +72,9 @@ class BudgetGroupDef {
       sortOrder: 2,
     ),
     BudgetGroupDef(
-      id: idSavings,
-      name: 'Savings / Goals',
-      isSavings: true,
+      id: idNonNegotiables,
+      name: 'Non-Negotiables',
+      isSavings: false,
       isBuiltIn: true,
       sortOrder: 3,
     ),
