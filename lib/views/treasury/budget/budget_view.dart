@@ -195,19 +195,12 @@ class _MonthSwitcher extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         child: Container(
           constraints: const BoxConstraints(minHeight: 44),
-          padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                monthChipLabel(month),
-                style: theme.textTheme.titleSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(width: 4),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  size: 20, color: cs.onSurfaceVariant),
-            ],
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+          child: Text(
+            monthChipLabel(month),
+            style:
+                theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
       ),
@@ -283,6 +276,16 @@ class _BudgetRingHero extends StatelessWidget {
                   'of ${formatPeso(allocated)}',
                   style: theme.textTheme.labelSmall
                       ?.copyWith(color: appColors.textMuted),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  over
+                      ? '${formatPeso(presenter.totalRemaining.abs())} over'
+                      : '${formatPeso(presenter.totalRemaining)} left',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: over ? cs.error : appColors.success,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
                 if (presenter.isCurrentMonth) ...[
                   const SizedBox(height: 10),

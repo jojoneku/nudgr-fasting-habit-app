@@ -2,9 +2,9 @@
 
 ### Requirement: Title + month-dropdown header
 The Budget tab SHALL present a large "Budget" title with a month-switcher control top-right. The
-switcher MUST show the selected month (e.g. "June") with a dropdown affordance and, when tapped, MUST
-open a month picker letting the user jump to another month. Manage-groups MUST remain reachable from
-the header. The control MUST meet the ≥44×44px touch target.
+switcher MUST show the selected month (e.g. "June") as a single tappable control (no separate stepper
+chevrons) and, when tapped, MUST open a month picker letting the user jump to another month.
+Manage-groups MUST remain reachable from the header. The control MUST meet the ≥44×44px touch target.
 
 #### Scenario: Header shows title and current month
 - **WHEN** the Budget tab opens on the current month
@@ -24,7 +24,8 @@ the header. The control MUST meet the ≥44×44px touch target.
 
 ### Requirement: Spent-vs-budgeted ring hero
 The Budget tab SHALL lead with a ring hero showing the percentage of the total allocation spent, the
-SPENT amount, and the total allocated ("of ₱x"). For the current month it MUST also show an on-pace
+SPENT amount, the total allocated ("of ₱x"), and the remaining amount ("₱x left", or "₱x over" in the
+danger accent when overspent). For the current month it MUST also show an on-pace
 pill reading "Ahead of pace", "Over pace", or "Over budget". The ring and pill MUST escalate to the
 danger accent when spending exceeds the allocation. The hero MUST be hidden when no budgets exist so
 the empty state carries the screen. The tab MUST NOT show a "safe to spend" callout.
