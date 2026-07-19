@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBillSheet extends StatefulWidget {
@@ -132,7 +133,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
           // Name
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Name'),
+            decoration: sheetFieldDecoration(context, label: 'Name'),
             textInputAction: TextInputAction.next,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
@@ -152,8 +153,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
               Expanded(
                 child: TextFormField(
                   controller: _amountController,
-                  decoration: const InputDecoration(
-                      labelText: 'Amount', prefixText: '₱ '),
+                  decoration: sheetFieldDecoration(context,
+                      label: 'Amount', prefixText: '₱ ', emphasize: true),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: amountInputFormatters,
@@ -170,7 +171,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
                 child: TextFormField(
                   controller: _dueDayController,
                   decoration:
-                      const InputDecoration(labelText: 'Due Day (1–31)'),
+                      sheetFieldDecoration(context, label: 'Due Day (1–31)'),
                   keyboardType: TextInputType.number,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
@@ -195,7 +196,8 @@ class _AddBillSheetState extends State<AddBillSheet> {
               hint: Text('Account (optional)',
                   style: TextStyle(
                       color: colorScheme.onSurfaceVariant, fontSize: 14)),
-              decoration: const InputDecoration(labelText: 'Payment Account'),
+              decoration:
+                  sheetFieldDecoration(context, label: 'Payment Account'),
               items: widget.presenter.accounts
                   .map(
                       (a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
@@ -250,7 +252,7 @@ class _AddBillSheetState extends State<AddBillSheet> {
             const SizedBox(height: 8),
             DropdownButtonFormField<RecurrenceType>(
               initialValue: _recurrenceType,
-              decoration: const InputDecoration(labelText: 'Recurrence'),
+              decoration: sheetFieldDecoration(context, label: 'Recurrence'),
               items: RecurrenceType.values
                   .map((r) => DropdownMenuItem(
                       value: r, child: Text(_recurrenceLabel(r))))

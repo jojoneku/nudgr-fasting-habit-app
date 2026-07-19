@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddReceivableSheet extends StatefulWidget {
@@ -118,7 +119,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
           // Name
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Source / Name'),
+            decoration: sheetFieldDecoration(context, label: 'Source / Name'),
             textInputAction: TextInputAction.next,
             validator: (v) =>
                 (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
@@ -138,8 +139,10 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
               Expanded(
                 child: TextFormField(
                   controller: _amountController,
-                  decoration: const InputDecoration(
-                      labelText: 'Expected Amount', prefixText: '₱ '),
+                  decoration: sheetFieldDecoration(context,
+                      label: 'Expected Amount',
+                      prefixText: '₱ ',
+                      emphasize: true),
                   keyboardType:
                       const TextInputType.numberWithOptions(decimal: true),
                   inputFormatters: amountInputFormatters,
@@ -213,8 +216,9 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
             const SizedBox(height: 16),
             DropdownButtonFormField<String?>(
               initialValue: _selectedAccountId,
-              decoration: const InputDecoration(
-                labelText: 'Destination account (optional)',
+              decoration: sheetFieldDecoration(
+                context,
+                label: 'Destination account (optional)',
                 helperText: 'Pre-fills when you mark this received',
               ),
               items: [
@@ -246,7 +250,7 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
             const SizedBox(height: 8),
             DropdownButtonFormField<RecurrenceType>(
               initialValue: _recurrenceType,
-              decoration: const InputDecoration(labelText: 'Recurrence'),
+              decoration: sheetFieldDecoration(context, label: 'Recurrence'),
               items: RecurrenceType.values
                   .map((r) => DropdownMenuItem(
                       value: r, child: Text(_recurrenceLabel(r))))

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class ManageCategoriesSheet extends StatefulWidget {
@@ -343,11 +344,7 @@ class _AddCategoryForm extends StatelessWidget {
             child: TextFormField(
               controller: controller,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Category name',
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              ),
+              decoration: sheetFieldDecoration(context, label: 'Category name'),
               validator: (v) =>
                   (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
               onFieldSubmitted: (_) => onSubmit(),

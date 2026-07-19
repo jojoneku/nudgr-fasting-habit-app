@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
@@ -31,6 +32,10 @@ class LedgerView extends StatefulWidget {
 class _LedgerViewState extends State<LedgerView> {
   LedgerPresenter get presenter => widget.presenter;
   String? _lastSnackbarSummary;
+
+  /// List (default) vs full-month spending-heat Calendar view of the ledger
+  /// (reference "Spending calendar · ledger alt view").
+  bool _calendarView = false;
 
   @override
   void initState() {
@@ -114,11 +119,25 @@ class _LedgerViewState extends State<LedgerView> {
                   ),
                 _SummaryCard(presenter: presenter),
                 _AccountFilterRow(presenter: presenter),
+                _LedgerViewToggle(
+                  calendarView: _calendarView,
+                  onChanged: (v) => setState(() => _calendarView = v),
+                ),
                 Expanded(
-                  child: _TransactionList(
-                    presenter: presenter,
-                    onEditTransaction: _showEditTransactionSheet,
-                  ),
+                  child: _calendarView
+                      ? _CalendarBody(
+                          presenter: presenter,
+                          onDaySelected: (day) {
+                            presenter.setSelectedDate(day);
+                            // Drop back to the list so the tapped day's entries
+                            // are visible (the date-filter chip shows the day).
+                            setState(() => _calendarView = false);
+                          },
+                        )
+                      : _TransactionList(
+                          presenter: presenter,
+                          onEditTransaction: _showEditTransactionSheet,
+                        ),
                 ),
                 _ChatHardErrorChip(presenter: presenter),
                 _LedgerChatDrawer(presenter: presenter),
@@ -377,10 +396,14 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final blue = context.appColors.fast;
     // Quick chat-logging stamps "today", so it stays gated to the current day.
     // The form, however, is always reachable and pre-fills the filtered day.
     final canSend = widget.presenter.isSelectedDateToday;
+    final busy =
+        _sending || widget.presenter.chatState.phase == ChatPhase.classifying;
     return Container(
       color: cs.surface,
       padding: EdgeInsets.fromLTRB(
@@ -401,41 +424,71 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
             tooltip: 'Open form',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
+          // Reference-style input pill: a sparkle glyph hinting at AI parsing +
+          // the free-text field, inside a single rounded container.
           Expanded(
-            child: TextField(
-              controller: _ctrl,
-              focusNode: _focus,
-              enabled: canSend,
-              decoration: InputDecoration(
-                hintText: _hint(widget.presenter),
-                filled: true,
-                fillColor: cs.surfaceContainerHigh,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  borderSide: BorderSide.none,
+            child: Container(
+              height: 44,
+              padding: const EdgeInsets.only(left: 14, right: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.5),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                isDense: true,
               ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _send(),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 16, color: blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _ctrl,
+                      focusNode: _focus,
+                      enabled: canSend,
+                      decoration: InputDecoration(
+                        hintText: _hint(widget.presenter),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: _sending ||
-                      widget.presenter.chatState.phase == ChatPhase.classifying
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              onPressed: canSend ? _send : null,
+          const SizedBox(width: 8),
+          // Circular accent send button (reference's blue mic/send affordance).
+          Semantics(
+            button: true,
+            label: 'Send',
+            child: Material(
+              color: canSend ? blue : cs.surfaceContainerHighest,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: canSend ? _send : null,
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: busy
+                      ? const Padding(
+                          padding: EdgeInsets.all(13),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          Icons.arrow_upward_rounded,
+                          size: 20,
+                          color: canSend ? Colors.white : cs.onSurfaceVariant,
+                        ),
+                ),
+              ),
             ),
           ),
         ],
@@ -894,27 +947,39 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
               child: GestureDetector(
                 key: _labelKey,
                 onTap: _showCalendarPopover,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.presenter.selectedDate != null
-                          ? _dateFilterFmt
-                              .format(widget.presenter.selectedDate!)
-                          : monthLabel(widget.presenter.selectedMonth),
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
+                // Reference-style bordered month pill with a caret.
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.6),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        widget.presenter.selectedDate != null
+                            ? _dateFilterFmt
+                                .format(widget.presenter.selectedDate!)
+                            : monthLabel(widget.presenter.selectedMonth),
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: cs.onSurfaceVariant,
-                      size: 20,
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: cs.onSurfaceVariant,
+                        size: 18,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1249,6 +1314,118 @@ class _SummaryChip extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── List / Calendar view toggle ──────────────────────────────────────────────
+
+/// Right-aligned List / Calendar segmented toggle (reference Frame 11). Switches
+/// the ledger body between the grouped transaction list and the full-month
+/// spending-heat calendar.
+class _LedgerViewToggle extends StatelessWidget {
+  final bool calendarView;
+  final ValueChanged<bool> onChanged;
+
+  const _LedgerViewToggle(
+      {required this.calendarView, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          _ToggleChip(
+            label: 'List',
+            icon: Icons.view_list_rounded,
+            selected: !calendarView,
+            onTap: () => onChanged(false),
+          ),
+          const SizedBox(width: 6),
+          _ToggleChip(
+            label: 'Calendar',
+            icon: Icons.calendar_month_rounded,
+            selected: calendarView,
+            onTap: () => onChanged(true),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ToggleChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _ToggleChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(
+            color: selected ? cs.primary : cs.outlineVariant,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon,
+                size: 13, color: selected ? cs.primary : cs.onSurfaceVariant),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected ? cs.primary : cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Scrollable full-month spending-heat calendar body for the Calendar view.
+class _CalendarBody extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final ValueChanged<DateTime> onDaySelected;
+
+  const _CalendarBody({required this.presenter, required this.onDaySelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 100),
+      children: [
+        SpendingCalendar(
+          presenter: presenter,
+          onDaySelected: onDaySelected,
+        ),
+      ],
     );
   }
 }

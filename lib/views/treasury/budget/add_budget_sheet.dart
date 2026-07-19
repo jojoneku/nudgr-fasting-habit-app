@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBudgetSheet extends StatefulWidget {
@@ -145,17 +146,17 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               if (_isSavings) ...[
                 if (savingsTargets.isEmpty)
                   _NoSavingsHint()
-                else
+                else ...[
+                  const SheetFieldLabel('Savings / Goal Account'),
                   DropdownButtonFormField<String>(
                     initialValue: _selectedCategoryId,
                     hint: Text(
-                      'Select Account',
+                      'Select account',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color:
                               Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
-                    decoration: const InputDecoration(
-                        labelText: 'Savings / Goal Account'),
+                    decoration: sheetFieldDecoration(context),
                     items: savingsTargets
                         .map((a) => DropdownMenuItem(
                               value: a.id,
@@ -165,6 +166,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                     onChanged: (v) => setState(() => _selectedCategoryId = v),
                     validator: (v) => v == null ? 'Select an account' : null,
                   ),
+                ],
               ] else if (expenseCategories.isEmpty) ...[
                 _NoCategoriesHint(
                   onAdd: () async {
@@ -178,14 +180,15 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                   },
                 ),
               ] else ...[
+                const SheetFieldLabel('Category'),
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
                         initialValue: _selectedCategoryId,
                         hint: Text(
-                          'Select Category',
+                          'Select category',
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium
@@ -194,8 +197,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
                                       .colorScheme
                                       .onSurfaceVariant),
                         ),
-                        decoration:
-                            const InputDecoration(labelText: 'Category'),
+                        decoration: sheetFieldDecoration(context),
                         items: expenseCategories
                             .map((c) => DropdownMenuItem(
                                 value: c.id, child: Text(c.name)))
@@ -237,14 +239,16 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             ],
 
             // Amount field
+            const SheetFieldLabel('Budget Amount'),
             TextFormField(
               controller: _amountController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: amountInputFormatters,
-              decoration: const InputDecoration(
-                labelText: 'Budget Amount',
+              decoration: sheetFieldDecoration(
+                context,
                 prefixText: '₱ ',
+                emphasize: true,
               ),
               validator: (v) {
                 final p = double.tryParse(v ?? '');
@@ -255,12 +259,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
 
             // Budget Group
-            Text(
-              'Budget Group',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
+            const SheetFieldLabel('Budget Group'),
             AppSegmentedControl<String>(
               segments: [
                 for (final g in widget.presenter.groups)
@@ -286,12 +285,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             const SizedBox(height: 16),
 
             // Budget Type
-            Text(
-              'Budget Type',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
+            const SheetFieldLabel('Budget Type'),
             AppSegmentedControl<BudgetType>(
               segments: const [
                 (value: BudgetType.monthly, label: 'Monthly', icon: null),

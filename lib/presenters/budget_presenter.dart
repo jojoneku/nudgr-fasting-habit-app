@@ -157,6 +157,47 @@ class BudgetPresenter extends ChangeNotifier {
   double get percentUsed =>
       totalAllocated > 0 ? totalSpent / totalAllocated : 0.0;
 
+  // ─── Pace + safe-to-spend (Nudgr redesign) ─────────────────────────────────────
+  // Pure derivations for the pace-ring hero. Pace and safe-to-spend only make
+  // sense for the in-progress month; for a past/future month the UI omits them.
+
+  /// True when the selected month is the current calendar month.
+  bool get isCurrentMonth => _selectedMonth == toMonthKey(DateTime.now());
+
+  /// Whole days remaining in the selected month (0 when it isn't the current
+  /// month — pace/safe-to-spend don't apply to a closed or future month).
+  int get daysLeftInSelectedMonth {
+    if (!isCurrentMonth) return 0;
+    final now = DateTime.now();
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    return (lastDay - now.day).clamp(0, lastDay);
+  }
+
+  /// Fraction of the selected month elapsed (0–1): 1.0 for a past month, 0.0 for
+  /// a future month, today/last-day for the current month.
+  double get monthElapsedFraction {
+    final nowKey = toMonthKey(DateTime.now());
+    if (_selectedMonth.compareTo(nowKey) < 0) return 1.0;
+    if (_selectedMonth.compareTo(nowKey) > 0) return 0.0;
+    final now = DateTime.now();
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    return (now.day / lastDay).clamp(0.0, 1.0);
+  }
+
+  /// True when spending is at or under the month's elapsed pace (small tolerance
+  /// so being exactly on pace still reads as "ahead"). Meaningful for the
+  /// current month; a future month (0 elapsed, 0 spent) also reads as ahead.
+  bool get isAheadOfPace => percentUsed <= monthElapsedFraction + 0.02;
+
+  /// Remaining budget spread across the days left this month — the reference's
+  /// "safe to spend / day". Never negative; falls back to the raw remaining when
+  /// no days remain (or the month isn't current).
+  double get safeToSpendPerDay {
+    final remaining = totalRemaining < 0 ? 0.0 : totalRemaining;
+    final days = daysLeftInSelectedMonth;
+    return days > 0 ? remaining / days : remaining;
+  }
+
   // ─── Web aggregates (Plan 050-D) ───────────────────────────────────────────────
 
   /// Human label for a group ID — shared by the web chart + table.

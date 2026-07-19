@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
 import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
@@ -193,7 +194,7 @@ class _BreakdownLine extends StatelessWidget {
     ];
     if (presenter.hasEstimates) {
       parts.add(_chip(context, '~${formatPeso(presenter.estimatedTotal)} est',
-          cs.secondary));
+          context.appColors.fast));
     }
     if (presenter.unpricedCount > 0) {
       parts
@@ -240,25 +241,45 @@ class _BudgetRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              over ? Icons.warning_amber_rounded : Icons.account_balance_wallet,
-              size: 18,
-              color: over ? cs.error : cs.primary,
+            Row(
+              children: [
+                Icon(
+                  over
+                      ? Icons.warning_amber_rounded
+                      : Icons.account_balance_wallet,
+                  size: 18,
+                  color: over ? cs.error : cs.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  over
+                      ? 'Over by ${formatPeso(remaining.abs())}'
+                      : '${formatPeso(remaining)} left of ${formatPeso(presenter.budget!)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: over ? cs.error : cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.edit_outlined, size: 16, color: cs.onSurfaceVariant),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              over
-                  ? 'Over by ${formatPeso(remaining.abs())}'
-                  : '${formatPeso(remaining)} left of ${formatPeso(presenter.budget!)}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: over ? cs.error : cs.onSurface,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            // Reference budget bar: how much of the trip budget is used.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: presenter.budget! > 0
+                    ? (presenter.grandTotal / presenter.budget!).clamp(0.0, 1.0)
+                    : 0.0,
+                minHeight: 7,
+                backgroundColor: cs.surfaceContainerHighest,
+                color: over ? cs.error : context.appColors.fast,
               ),
             ),
-            const Spacer(),
-            Icon(Icons.edit_outlined, size: 16, color: cs.onSurfaceVariant),
           ],
         ),
       ),
@@ -319,7 +340,7 @@ class _CartItemTile extends StatelessWidget {
         break;
       case PriceState.remembered:
         subtitle = '~${formatPeso(item.unitPrice!)} $suffix · tap to confirm';
-        subtitleColor = cs.secondary;
+        subtitleColor = context.appColors.fast;
         break;
       case PriceState.unknown:
         subtitle = 'No price · tap to add';
@@ -387,7 +408,7 @@ class _CartItemTile extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: item.priceState == PriceState.remembered
-                        ? cs.secondary
+                        ? context.appColors.fast
                         : cs.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
