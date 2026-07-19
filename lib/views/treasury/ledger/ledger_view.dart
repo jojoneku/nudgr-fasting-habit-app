@@ -527,13 +527,18 @@ class _LedgerControlsRow extends StatelessWidget {
     return Container(
       color: theme.scaffoldBackgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      // Expanded left cluster + natural-width month pill: guarantees the two
+      // pills never overflow on narrow screens (the filter label ellipsizes
+      // under pressure instead of throwing a RenderFlex overflow).
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _FilterSortButton(
-            presenter: presenter,
-            onOpenFilters: onOpenFilters,
+          Expanded(
+            child: _FilterSortButton(
+              presenter: presenter,
+              onOpenFilters: onOpenFilters,
+            ),
           ),
+          const SizedBox(width: 8),
           _MonthPill(presenter: presenter),
         ],
       ),
@@ -558,34 +563,45 @@ class _FilterSortButton extends StatelessWidget {
     final blue = context.appColors.fast;
     final count = presenter.activeFilterCount;
     final active = count > 0 || presenter.isCustomSort;
+    // Inside an Expanded (see _LedgerControlsRow): a loose Flexible lets the pill
+    // size to its content but shrink (label ellipsizes) if space is tight, so it
+    // never overflows the row on a narrow screen.
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        GestureDetector(
-          onTap: onOpenFilters,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-            decoration: BoxDecoration(
-              color:
-                  active ? blue.withValues(alpha: 0.15) : cs.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: active ? blue : cs.outlineVariant),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.tune_rounded,
-                    size: 15, color: active ? blue : cs.onSurfaceVariant),
-                const SizedBox(width: 6),
-                Text(
-                  'Filter & sort',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: active ? blue : cs.onSurfaceVariant,
+        Flexible(
+          fit: FlexFit.loose,
+          child: GestureDetector(
+            onTap: onOpenFilters,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+              decoration: BoxDecoration(
+                color: active
+                    ? blue.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: active ? blue : cs.outlineVariant),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded,
+                      size: 15, color: active ? blue : cs.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Filter & sort',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: active ? blue : cs.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                ),
-                if (count > 0) ...[
+                  if (count > 0) ...[
                   const SizedBox(width: 6),
                   Container(
                     padding:
@@ -607,6 +623,7 @@ class _FilterSortButton extends StatelessWidget {
               ],
             ),
           ),
+        ),
         ),
         // Quick clear — wipes the active filters (keeps sort) without opening
         // the sheet. Only shown when something is filtered.
