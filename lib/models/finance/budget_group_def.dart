@@ -42,43 +42,40 @@ class BudgetGroupDef {
   // IDs matching the old BudgetGroup enum names — backward-compatible with
   // existing stored budgets (Budget.toJson wrote group.name as a String).
   static const String idNonNegotiables = 'nonNegotiables';
-  static const String idLivingExpense = 'livingExpense';
   static const String idVariableOptional = 'variableOptional';
   static const String idSavings = 'savings';
 
+  /// Retired group. "Living" was a near-duplicate of "Essentials" and has been
+  /// merged into [idNonNegotiables]. The constant is kept only so the one-time
+  /// migration in BudgetPresenter can find and remap old budgets/overrides.
+  static const String idLivingExpense = 'livingExpense';
+
   static const defaultGroups = [
     // Order (sortOrder) drives the Budget tab's section order:
-    // Living → Savings → Variable → Essentials. Names are short (single word) so
-    // they fit the reference's segmented group selector without truncation; the
-    // stable IDs above are unchanged, and a user's manage-groups rename/reorder
-    // still wins — merge() overrides these defaults from stored.
+    // Essentials → Variable → Savings. Names are short (single word) so they fit
+    // the reference's segmented group selector without truncation; the stable IDs
+    // above are unchanged, and a user's manage-groups rename/reorder still wins —
+    // merge() overrides these defaults from stored.
     BudgetGroupDef(
-      id: idLivingExpense,
-      name: 'Living',
+      id: idNonNegotiables,
+      name: 'Essentials',
       isSavings: false,
       isBuiltIn: true,
       sortOrder: 0,
-    ),
-    BudgetGroupDef(
-      id: idSavings,
-      name: 'Savings',
-      isSavings: true,
-      isBuiltIn: true,
-      sortOrder: 1,
     ),
     BudgetGroupDef(
       id: idVariableOptional,
       name: 'Variable',
       isSavings: false,
       isBuiltIn: true,
-      sortOrder: 2,
+      sortOrder: 1,
     ),
     BudgetGroupDef(
-      id: idNonNegotiables,
-      name: 'Essentials',
-      isSavings: false,
+      id: idSavings,
+      name: 'Savings',
+      isSavings: true,
       isBuiltIn: true,
-      sortOrder: 3,
+      sortOrder: 2,
     ),
   ];
 

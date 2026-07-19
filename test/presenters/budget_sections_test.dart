@@ -152,8 +152,8 @@ void main() {
 
   group('budgetSections ordering', () {
     test(
-        'sections follow Living → Savings → Variable → Essentials and '
-        'omit empty groups', () async {
+        'sections follow Essentials → Variable → Savings (retired Living '
+        'migrates into Essentials); empty groups omitted', () async {
       final month = _nowMonth;
       stub(
         categories: [
@@ -189,11 +189,12 @@ void main() {
 
       final sections = p.budgetSections;
       expect(sections.map((s) => s.groupId).toList(), [
-        BudgetGroupDef.idLivingExpense,
-        BudgetGroupDef.idSavings,
+        BudgetGroupDef.idNonNegotiables,
         BudgetGroupDef.idVariableOptional,
+        BudgetGroupDef.idSavings,
       ]);
-      // Savings interleaved (not forced last) and Non-Negotiables omitted.
+      // The Living budget migrated into Essentials (nonNegotiables), which leads
+      // by default order; savings sorts last.
       final savings = sections.firstWhere((s) => s.isSavings);
       expect(savings.rows.single.isSavings, isTrue);
       expect(savings.rows.single.targetId, 'sav1');

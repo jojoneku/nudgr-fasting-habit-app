@@ -616,6 +616,7 @@ class BudgetPresenter extends ChangeNotifier {
   Future<void> load() async {
     _allBudgets = await _storage.loadBudgets();
     _groups = BudgetGroupDef.merge(await _storage.loadBudgetGroups());
+    await _migrateLivingIntoEssentials();
     _categories = await _storage.loadFinanceCategories();
     _allTransactions = await _storage.loadTransactions();
     _accounts = await _storage.loadAccounts();
@@ -631,6 +632,28 @@ class BudgetPresenter extends ChangeNotifier {
     _warnedKeysLoaded = true;
     notifyListeners();
     await _checkBudgetWarnings(_cachedNotifPrefs);
+  }
+
+  /// One-time merge of the retired "Living" group into "Essentials": remap any
+  /// budget still on the old group id and drop a stored override for it, then
+  /// persist. Idempotent — a no-op once nothing references the old id (so it's
+  /// cheap to run on every load).
+  Future<void> _migrateLivingIntoEssentials() async {
+    const oldId = BudgetGroupDef.idLivingExpense;
+    const newId = BudgetGroupDef.idNonNegotiables;
+
+    if (_allBudgets.any((b) => b.group == oldId)) {
+      _allBudgets = [
+        for (final b in _allBudgets)
+          b.group == oldId ? b.copyWith(group: newId) : b,
+      ];
+      await _storage.saveBudgets(_allBudgets);
+    }
+
+    if (_groups.any((g) => g.id == oldId)) {
+      _groups = _groups.where((g) => g.id != oldId).toList();
+      await _storage.saveBudgetGroups(_groups);
+    }
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────

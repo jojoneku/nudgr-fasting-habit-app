@@ -28,7 +28,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   final _amountController = TextEditingController();
 
   String? _selectedCategoryId;
-  String _groupId = BudgetGroupDef.idLivingExpense;
+  String _groupId = BudgetGroupDef.idNonNegotiables;
   BudgetType _budgetType = BudgetType.variable;
   bool _isSubmitting = false;
 
@@ -346,28 +346,6 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
               segments: [
                 for (final g in widget.presenter.groups)
                   SheetSegment(label: g.name, value: g.id, accent: accent),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Budget type
-            SheetFieldLabel('Budget type'),
-            SheetSegmentedToggle<BudgetType>(
-              value: _budgetType,
-              onChanged: (t) => setState(() => _budgetType = t),
-              segments: [
-                SheetSegment(
-                    label: 'Monthly',
-                    value: BudgetType.monthly,
-                    accent: accent),
-                SheetSegment(
-                    label: 'Fixed', value: BudgetType.fixed, accent: accent),
-                SheetSegment(
-                    label: 'Goal', value: BudgetType.goal, accent: accent),
-                SheetSegment(
-                    label: 'Variable',
-                    value: BudgetType.variable,
-                    accent: accent),
               ],
             ),
             const SizedBox(height: 20),

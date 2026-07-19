@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
@@ -26,13 +25,6 @@ class BudgetCard extends StatelessWidget {
     }
     return categoryIcon(row.name, row.categoryType);
   }
-
-  static String _budgetTypeLabel(BudgetType type) => switch (type) {
-        BudgetType.monthly => 'MONTHLY',
-        BudgetType.fixed => 'FIXED',
-        BudgetType.goal => 'GOAL',
-        BudgetType.variable => 'VAR',
-      };
 
   void _showTransactions(BuildContext context) {
     AppBottomSheet.show(
@@ -92,25 +84,11 @@ class BudgetCard extends StatelessWidget {
                 _IconChip(icon: _icon, color: identity),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          row.name,
-                          style: theme.textTheme.bodyLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (!row.isSavings) ...[
-                        const SizedBox(width: 8),
-                        AppBadge(
-                          text: _budgetTypeLabel(row.budgetType),
-                          variant: AppBadgeVariant.tonal,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ],
-                    ],
+                  child: Text(
+                    row.name,
+                    style: theme.textTheme.bodyLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 const SizedBox(width: 8),
