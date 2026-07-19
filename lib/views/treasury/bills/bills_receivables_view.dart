@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/installment.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
+import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
@@ -19,6 +20,7 @@ import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/installment_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/receivable_list_tile.dart';
+import 'package:intermittent_fasting/views/treasury/shared/forms/forms.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class BillsReceivablesView extends StatefulWidget {
@@ -759,83 +761,84 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
     }
   }
 
+  Future<void> _pickPayer() async {
+    final payers = widget.presenter.payerAccountsFor(widget.bill);
+    if (payers.isEmpty) return;
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: 'Pay from',
+      actions: [
+        for (final a in payers)
+          AppActionSheetItem(
+            label: a.name,
+            value: a.id,
+            isPrimary: a.id == _selectedAccountId,
+          ),
+      ],
+    );
+    if (picked != null) setState(() => _selectedAccountId = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final payers = widget.presenter.payerAccountsFor(widget.bill);
+    final payerName = payers
+            .where((a) => a.id == _selectedAccountId)
+            .map((a) => a.name)
+            .firstOrNull ??
+        '';
+    // Reference presents this as a positive "Log to ledger" toggle; internally
+    // it is the inverse of the existing "already in ledger" flag.
+    final logToLedger = !_alreadyInLedger;
 
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mark Paid — ${widget.bill.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
+            AppEntityHeader(
+              icon: categoryIcon(widget.bill.name, CategoryType.expense),
+              name: widget.bill.name,
+              subtitle: 'Due day ${widget.bill.dueDay}',
+              amount: formatPeso(widget.bill.amount),
+            ),
+            const SizedBox(height: 18),
+            AppFormField(
+              label: 'Actual amount paid',
+              child: AppAmountField(controller: _amountController),
+            ),
             const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Paid',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 4),
-            CheckboxListTile(
-              value: _alreadyInLedger,
-              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Already added to ledger'),
-              subtitle: const Text(
-                  "Just mark it paid — don't record a transaction or debit an account."),
-            ),
-            if (!_alreadyInLedger) ...[
-              const SizedBox(height: 12),
-              Builder(builder: (context) {
-                final payers = widget.presenter.payerAccountsFor(widget.bill);
-                if (payers.isEmpty) return const SizedBox.shrink();
-                return DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedAccountId),
-                  initialValue: _selectedAccountId,
-                  decoration: const InputDecoration(labelText: 'Pay from'),
-                  items: payers
-                      .map((a) =>
-                          DropdownMenuItem(value: a.id, child: Text(a.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedAccountId = v),
-                );
-              }),
-            ],
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
+            if (logToLedger && payers.isNotEmpty) ...[
+              AppFormField(
+                label: 'Paid from',
+                child: AppSelectField(
+                  value: payerName,
+                  placeholder: 'Select account',
+                  leadingIcon: Icons.account_balance_wallet_outlined,
+                  onTap: _pickPayer,
                 ),
               ),
+              const SizedBox(height: 16),
+            ],
+            AppFormField(
+              label: 'Date paid',
+              child: AppSelectField(
+                value: DateFormat('MMMM d, yyyy').format(_paidDate),
+                leadingIcon: Icons.calendar_today_outlined,
+                onTap: _pickDate,
+              ),
+            ),
+            const SizedBox(height: 16),
+            AppFormToggle(
+              icon: Icons.menu_book_outlined,
+              title: 'Log to ledger',
+              subtitle: 'Already added it? Leave this off.',
+              value: logToLedger,
+              onChanged: (v) => setState(() => _alreadyInLedger = !v),
             ),
             const SizedBox(height: 20),
             AppPrimaryButton(
@@ -923,78 +926,85 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
     }
   }
 
+  Future<void> _pickAccount() async {
+    final accounts = widget.presenter.accounts;
+    if (accounts.isEmpty) return;
+    final picked = await AppActionSheet.show<String>(
+      context: context,
+      title: 'Deposit to',
+      actions: [
+        for (final a in accounts)
+          AppActionSheetItem(
+            label: a.name,
+            value: a.id,
+            isPrimary: a.id == _selectedAccountId,
+          ),
+      ],
+    );
+    if (picked != null) setState(() => _selectedAccountId = picked);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final accounts = widget.presenter.accounts;
+    final accountName = accounts
+            .where((a) => a.id == _selectedAccountId)
+            .map((a) => a.name)
+            .firstOrNull ??
+        '';
+    final logToLedger = !_alreadyInLedger;
 
     return Padding(
       padding:
           EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Mark Received — ${widget.receivable.name}',
-                style: TextStyle(
-                    color: colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold)),
+            AppEntityHeader(
+              icon: categoryIcon(widget.receivable.name, CategoryType.income),
+              accent: Theme.of(context).colorScheme.tertiary,
+              name: widget.receivable.name,
+              subtitle: widget.receivable.expectedDate != null
+                  ? 'Expected ${DateFormat('MMM d').format(widget.receivable.expectedDate!)}'
+                  : null,
+              amount: formatPeso(widget.receivable.amount),
+            ),
+            const SizedBox(height: 18),
+            AppFormField(
+              label: 'Actual amount received',
+              child: AppAmountField(controller: _amountController),
+            ),
             const SizedBox(height: 16),
-            AppTextField(
-              controller: _amountController,
-              label: 'Amount Received',
-              prefix: const Text('₱ '),
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-            ),
-            const SizedBox(height: 4),
-            CheckboxListTile(
-              value: _alreadyInLedger,
-              onChanged: (v) => setState(() => _alreadyInLedger = v ?? false),
-              controlAffinity: ListTileControlAffinity.leading,
-              contentPadding: EdgeInsets.zero,
-              dense: true,
-              title: const Text('Already added to ledger'),
-              subtitle: const Text(
-                  "Just mark it received — don't record a transaction or credit an account."),
-            ),
-            if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId,
-                decoration: const InputDecoration(labelText: 'Account'),
-                items: widget.presenter.accounts
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
+            if (logToLedger && accounts.isNotEmpty) ...[
+              AppFormField(
+                label: 'Deposit to',
+                child: AppSelectField(
+                  value: accountName,
+                  placeholder: 'Select account',
+                  leadingIcon: Icons.account_balance_wallet_outlined,
+                  onTap: _pickAccount,
+                ),
               ),
+              const SizedBox(height: 16),
             ],
-            const SizedBox(height: 12),
-            InkWell(
-              onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_receivedDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
-                ),
+            AppFormField(
+              label: 'Date received',
+              child: AppSelectField(
+                value: DateFormat('MMMM d, yyyy').format(_receivedDate),
+                leadingIcon: Icons.calendar_today_outlined,
+                onTap: _pickDate,
               ),
+            ),
+            const SizedBox(height: 16),
+            AppFormToggle(
+              icon: Icons.menu_book_outlined,
+              title: 'Log to ledger',
+              subtitle: 'Already added it? Leave this off.',
+              value: logToLedger,
+              onChanged: (v) => setState(() => _alreadyInLedger = !v),
             ),
             const SizedBox(height: 20),
             AppPrimaryButton(

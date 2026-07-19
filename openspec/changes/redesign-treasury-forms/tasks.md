@@ -1,17 +1,17 @@
-> Specs-only change. These tasks describe the intended implementation for a later `/opsx:apply` pass;
-> none are done yet.
+> Implementation in progress. Done so far: the shared kit (§1.1–1.6) and the bill + received
+> mark-as-paid sheets (part of §6). Remaining: expense/installment mark-as-paid and the entry forms.
 
 ## 1. Shared form kit (land before any form migration)
 
-- [ ] 1.1 Add `lib/views/treasury/shared/forms/app_form_field.dart` — labeled wrapper (UPPERCASE tracked
+- [x] 1.1 Add `lib/views/treasury/shared/forms/app_form_field.dart` — labeled wrapper (UPPERCASE tracked
       muted label + child + optional trailing/hint). Theme-aware.
-- [ ] 1.2 Add `app_amount_field.dart` — big ₱-prefixed numeric field (reuses `amountInputFormatters`),
-      with validator hook.
-- [ ] 1.3 Add `app_select_field.dart` — presentational `label ▾ value` row calling `onTap`; the form
+- [x] 1.2 Add `app_amount_field.dart` — big ₱-prefixed numeric field (reuses `amountInputFormatters`).
+- [x] 1.3 Add `app_select_field.dart` — presentational `label ▾ value` row calling `onTap`; the form
       supplies options + opens `AppActionSheet`.
-- [ ] 1.4 Add `app_chip_select.dart` — `AppChipSelect<T>` single-select chip row (+ optional "Custom").
-- [ ] 1.5 Add `app_form_toggle.dart` — icon · title · helper subtitle · switch row (≥44px).
-- [ ] 1.6 Add `app_entity_header.dart` — icon tile · name · subtitle · amount, for mark-as-paid.
+- [x] 1.4 Add `app_chip_select.dart` — `AppChipSelect<T>` single-select chip row (+ optional "Custom").
+- [x] 1.5 Add `app_form_toggle.dart` — icon · title · helper subtitle · switch row (≥44px).
+- [x] 1.6 Add `app_entity_header.dart` — icon tile · name · subtitle · amount, for mark-as-paid.
+      Barrel: `forms.dart`.
 - [ ] 1.7 Widget tests: each renders in light + dark and reports value changes.
 
 ## 2. Migrate Add Transaction (simplest — validates the kit)
@@ -40,10 +40,11 @@
 - [ ] 5.2 Point both existing entry points at the combined sheet with the toggle pre-set; remove the
       old `add_bill_sheet`/`add_receivable_sheet` only once parity is confirmed.
 
-## 6. Migrate Mark-as-paid (bill / expense / installment)
+## 6. Migrate Mark-as-paid (bill / received / expense / installment)
 
-- [ ] 6.1 Rebuild the three mark-as-paid sheets on `AppEntityHeader` + ₱ actual-paid + paid-from select
-      + "log to ledger" toggle, wired to the current mark-paid calls. No behavior change.
+- [x] 6.1 Bill + Received sheets rebuilt on `AppEntityHeader` + ₱ actual-paid + paid-from/deposit-to
+      select + "Log to ledger" toggle (inverse of the old "already in ledger" flag). Logic unchanged.
+- [ ] 6.2 Expense (Fund from + Set aside into) and Installment mark-as-paid sheets — same treatment.
 
 ## 7. Verification
 
