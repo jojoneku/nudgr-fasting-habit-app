@@ -164,8 +164,16 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedAccountId == null) return;
+    // Account fields are pickers (not form fields), so validate them here and
+    // surface feedback the old dropdown validator used to show.
+    if (_selectedAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Select an account')));
+      return;
+    }
     if (_type == TransactionType.transfer && _transferToAccountId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Select a destination account')));
       return;
     }
 
@@ -462,76 +470,23 @@ class _TypeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        _TypeButton(
-          label: 'Inflow',
-          type: TransactionType.inflow,
-          selected: selected,
-          color: cs.tertiary,
-          onTap: () => onChanged(TransactionType.inflow),
-        ),
-        const SizedBox(width: 8),
-        _TypeButton(
-          label: 'Outflow',
-          type: TransactionType.outflow,
-          selected: selected,
-          color: cs.error,
-          onTap: () => onChanged(TransactionType.outflow),
-        ),
-        const SizedBox(width: 8),
-        _TypeButton(
-          label: 'Transfer',
-          type: TransactionType.transfer,
-          selected: selected,
-          color: cs.primary,
-          onTap: () => onChanged(TransactionType.transfer),
-        ),
+    return SheetSegmentedToggle<TransactionType>(
+      value: selected,
+      onChanged: onChanged,
+      segments: [
+        SheetSegment(
+            label: 'Inflow',
+            value: TransactionType.inflow,
+            accent: cs.tertiary),
+        SheetSegment(
+            label: 'Outflow',
+            value: TransactionType.outflow,
+            accent: cs.error),
+        SheetSegment(
+            label: 'Transfer',
+            value: TransactionType.transfer,
+            accent: cs.primary),
       ],
-    );
-  }
-}
-
-class _TypeButton extends StatelessWidget {
-  final String label;
-  final TransactionType type;
-  final TransactionType selected;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _TypeButton({
-    required this.label,
-    required this.type,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = selected == type;
-    return Expanded(
-      child: SizedBox(
-        height: 44,
-        child: OutlinedButton(
-          onPressed: onTap,
-          style: OutlinedButton.styleFrom(
-            backgroundColor:
-                isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-            side: BorderSide(
-                color: isSelected
-                    ? color
-                    : Theme.of(context).colorScheme.outlineVariant),
-            foregroundColor: isSelected
-                ? color
-                : Theme.of(context).colorScheme.onSurfaceVariant,
-            padding: EdgeInsets.zero,
-          ),
-          child: Text(label,
-              style:
-                  const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-        ),
-      ),
     );
   }
 }
@@ -578,15 +533,30 @@ class _AccountDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButtonFormField<String>(
-      initialValue: value,
-      hint: Text(label),
-      decoration: sheetFieldDecoration(context, label: label),
-      items: accounts
-          .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
-          .toList(),
-      onChanged: onChanged,
-      validator: (v) => v == null ? 'Select an account' : null,
+    FinancialAccount? selected;
+    for (final a in accounts) {
+      if (a.id == value) {
+        selected = a;
+        break;
+      }
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SheetFieldLabel(label),
+        SheetAccountField(
+          account: selected,
+          placeholder: 'Select account',
+          onTap: () async {
+            final choice = await showAccountPicker(
+              context,
+              accounts: accounts,
+              selectedId: value,
+            );
+            if (choice != null) onChanged(choice.id);
+          },
+        ),
+      ],
     );
   }
 }
