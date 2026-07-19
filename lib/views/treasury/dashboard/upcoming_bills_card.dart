@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
@@ -89,12 +90,17 @@ class _BillRow extends StatelessWidget {
     final dueLabel = isOverdue ? 'Overdue' : 'Due ${bill.dueDay}';
     final dueLabelColor =
         isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant;
+    final badgeColor = isOverdue ? colorScheme.error : context.appColors.bills;
 
     return AppListTile(
-      leading: Icon(
-        Icons.receipt_long_outlined,
-        size: 16,
-        color: isOverdue ? colorScheme.error : colorScheme.onSurfaceVariant,
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: badgeColor.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(Icons.receipt_long_outlined, size: 17, color: badgeColor),
       ),
       title: Text(
         bill.name,
