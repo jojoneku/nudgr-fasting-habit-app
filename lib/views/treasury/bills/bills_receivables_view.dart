@@ -27,9 +27,9 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 /// The redesigned Bills tab: a swipeable due-soon stack, Pending/Paid/
 /// Installments chips, a unified "Coming up" timeline, and titled sections of
 /// Pay/Receive cards for bills, receivables, budgeted expenses, and
-/// installments. The "Bills" title + month·year picker live in the shared
-/// Treasury app bar (see `TreasuryModuleView`); credit cards live on the
-/// Dashboard under Accounts.
+/// installments. The "Bills" title + month·year picker are rendered in an
+/// in-page header (the shared Treasury app bar is hidden on this tab — see
+/// `TreasuryModuleView`); credit cards live on the Dashboard under Accounts.
 class BillsReceivablesView extends StatefulWidget {
   final BillsReceivablesPresenter presenter;
   final InstallmentPresenter installmentPresenter;
@@ -756,6 +756,22 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
     if (picked != null) setState(() => _paidDate = picked);
   }
 
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.payerAccountsFor(widget.bill)) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.payerAccountsFor(widget.bill),
+      selectedId: _selectedAccountId,
+    );
+    if (choice != null) setState(() => _selectedAccountId = choice.id);
+  }
+
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
@@ -818,41 +834,23 @@ class _MarkBillPaidSheetState extends State<_MarkBillPaidSheet> {
               Builder(builder: (context) {
                 final payers = widget.presenter.payerAccountsFor(widget.bill);
                 if (payers.isEmpty) return const SizedBox.shrink();
-                return DropdownButtonFormField<String>(
-                  key: ValueKey(_selectedAccountId),
-                  initialValue: _selectedAccountId,
-                  decoration: sheetFieldDecoration(context, label: 'Pay from'),
-                  items: payers
-                      .map((a) =>
-                          DropdownMenuItem(value: a.id, child: Text(a.name)))
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedAccountId = v),
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SheetFieldLabel('Pay from'),
+                    SheetAccountField(
+                        account: _selectedAccount, onTap: _pickAccount),
+                  ],
                 );
               }),
             ],
             const SizedBox(height: 12),
-            InkWell(
+            const SheetFieldLabel('Date'),
+            SheetPickerBox(
               onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
-                ),
-              ),
+              trailingIcon: Icons.calendar_today_outlined,
+              child: Text(DateFormat('MMMM d, yyyy').format(_paidDate),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
             ),
             const SizedBox(height: 20),
             AppPrimaryButton(
@@ -920,6 +918,22 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
     if (picked != null) setState(() => _receivedDate = picked);
   }
 
+  FinancialAccount? get _selectedAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickAccount() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.accounts,
+      selectedId: _selectedAccountId,
+    );
+    if (choice != null) setState(() => _selectedAccountId = choice.id);
+  }
+
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
@@ -979,39 +993,17 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
             ),
             if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId,
-                decoration: sheetFieldDecoration(context, label: 'Account'),
-                items: widget.presenter.accounts
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() => _selectedAccountId = v),
-              ),
+              const SheetFieldLabel('Account'),
+              SheetAccountField(
+                  account: _selectedAccount, onTap: _pickAccount),
             ],
             const SizedBox(height: 12),
-            InkWell(
+            const SheetFieldLabel('Date'),
+            SheetPickerBox(
               onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_receivedDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
-                ),
-              ),
+              trailingIcon: Icons.calendar_today_outlined,
+              child: Text(DateFormat('MMMM d, yyyy').format(_receivedDate),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
             ),
             const SizedBox(height: 20),
             AppPrimaryButton(
@@ -1101,6 +1093,49 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
     if (picked != null) setState(() => _paidDate = picked);
   }
 
+  FinancialAccount? get _selectedFromAccount {
+    for (final a in widget.presenter.accounts) {
+      if (a.id == _selectedAccountId) return a;
+    }
+    return null;
+  }
+
+  FinancialAccount? get _selectedToAccount {
+    for (final a in _destinations) {
+      if (a.id == _selectedToAccountId) return a;
+    }
+    return null;
+  }
+
+  Future<void> _pickFrom() async {
+    final choice = await showAccountPicker(
+      context,
+      accounts: widget.presenter.accounts,
+      selectedId: _selectedAccountId,
+    );
+    if (choice != null) {
+      setState(() {
+        _selectedAccountId = choice.id;
+        if (_selectedToAccountId == _selectedAccountId) {
+          _selectedToAccountId = null; // can't transfer to itself
+        }
+      });
+    }
+  }
+
+  Future<void> _pickTo() async {
+    final dests =
+        _destinations.where((a) => a.id != _selectedAccountId).toList();
+    final choice = await showAccountPicker(
+      context,
+      accounts: dests,
+      selectedId: _selectedToAccountId,
+      allowNone: true,
+      noneLabel: 'Spend it (no transfer)',
+    );
+    if (choice != null) setState(() => _selectedToAccountId = choice.id);
+  }
+
   Future<void> _confirm() async {
     final amount = double.tryParse(_amountController.text.replaceAll(',', ''));
     if (amount == null || amount <= 0) return;
@@ -1148,58 +1183,24 @@ class _MarkExpensePaidSheetState extends State<_MarkExpensePaidSheet> {
             ),
             if (widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedAccountId,
-                decoration: sheetFieldDecoration(context, label: 'Fund from'),
-                items: widget.presenter.accounts
-                    .map((a) =>
-                        DropdownMenuItem(value: a.id, child: Text(a.name)))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  _selectedAccountId = v;
-                  if (_selectedToAccountId == v) {
-                    _selectedToAccountId = null; // can't transfer to itself
-                  }
-                }),
-              ),
+              const SheetFieldLabel('Fund from'),
+              SheetAccountField(
+                  account: _selectedFromAccount, onTap: _pickFrom),
               const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _selectedToAccountId,
-                decoration:
-                    sheetFieldDecoration(context, label: 'Set aside into'),
-                items: [
-                  const DropdownMenuItem<String>(
-                      value: null, child: Text('Spend it (no transfer)')),
-                  for (final a in _destinations)
-                    if (a.id != _selectedAccountId)
-                      DropdownMenuItem(value: a.id, child: Text(a.name)),
-                ],
-                onChanged: (v) => setState(() => _selectedToAccountId = v),
+              const SheetFieldLabel('Set aside into'),
+              SheetAccountField(
+                account: _selectedToAccount,
+                placeholder: 'Spend it (no transfer)',
+                onTap: _pickTo,
               ),
             ],
             const SizedBox(height: 12),
-            InkWell(
+            const SheetFieldLabel('Date'),
+            SheetPickerBox(
               onTap: _pickDate,
-              borderRadius: BorderRadius.circular(8),
-              child: Container(
-                height: 52,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: colorScheme.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.calendar_today_outlined,
-                        color: colorScheme.onSurfaceVariant, size: 18),
-                    const SizedBox(width: 12),
-                    Text(DateFormat('MMMM d, yyyy').format(_paidDate),
-                        style: TextStyle(
-                            color: colorScheme.onSurface, fontSize: 14)),
-                  ],
-                ),
-              ),
+              trailingIcon: Icons.calendar_today_outlined,
+              child: Text(DateFormat('MMMM d, yyyy').format(_paidDate),
+                  style: TextStyle(color: colorScheme.onSurface, fontSize: 14)),
             ),
             const SizedBox(height: 20),
             AppPrimaryButton(
@@ -1301,10 +1302,7 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
                     color: colorScheme.onSurfaceVariant, fontSize: 13),
               ),
               const SizedBox(height: 20),
-              Text('Amount',
-                  style: TextStyle(
-                      color: colorScheme.onSurfaceVariant, fontSize: 12)),
-              const SizedBox(height: 6),
+              const SheetFieldLabel('Amount'),
               AppTextField(
                 controller: _amountCtrl,
                 prefix: const Text('₱ '),
@@ -1312,19 +1310,9 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
                     const TextInputType.numberWithOptions(decimal: true),
               ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text('Date',
-                    style: TextStyle(
-                        color: colorScheme.onSurfaceVariant, fontSize: 12)),
-                subtitle: Text(
-                  '${_date.day}/${_date.month}/${_date.year}',
-                  style: TextStyle(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w500),
-                ),
-                trailing: Icon(Icons.calendar_today_outlined,
-                    color: colorScheme.primary, size: 18),
+              const SheetFieldLabel('Date'),
+              SheetPickerBox(
+                trailingIcon: Icons.calendar_today_outlined,
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: context,
@@ -1334,6 +1322,9 @@ class _MarkInstallmentPaidSheetState extends State<_MarkInstallmentPaidSheet> {
                   );
                   if (picked != null) setState(() => _date = picked);
                 },
+                child: Text(DateFormat('MMMM d, yyyy').format(_date),
+                    style:
+                        TextStyle(color: colorScheme.onSurface, fontSize: 14)),
               ),
               const SizedBox(height: 20),
               AppPrimaryButton(

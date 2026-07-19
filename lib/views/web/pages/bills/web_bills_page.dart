@@ -1919,7 +1919,7 @@ class _BudgetedExpenseRow extends StatelessWidget {
 }
 
 /// Desktop add/edit form for a budgeted set-aside. Mirrors the mobile
-/// [_AddBudgetedExpenseSheet]: Name, Type, Amount, optional Category, and a
+/// [AddBudgetedExpenseSheet]: Name, Type, Amount, optional Category, and a
 /// free-text Note (e.g. "Maya Savings"). Calls
 /// [BillsReceivablesPresenter.addBudgetedExpense] / `updateBudgetedExpense`.
 class _BudgetedExpenseDialog extends StatefulWidget {
