@@ -303,7 +303,10 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       icon: v.icon,
       iconColor: v.color,
       name: b.name,
-      badgeLabel: _billTypeLabel(b.billType),
+      // "Other" carries no meaning now the type picker is gone — hide the badge
+      // rather than stamp every manual bill with a noisy "OTHER".
+      badgeLabel:
+          b.billType == BillType.other ? null : _billTypeLabel(b.billType),
       badgeColor: _billTypeColor(b.billType),
       note: note,
       amount: b.amount,
@@ -348,7 +351,9 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       icon: v.icon,
       iconColor: v.color,
       name: r.name,
-      badgeLabel: _receivableTypeLabel(r.receivableType),
+      badgeLabel: r.receivableType == ReceivableType.other
+          ? null
+          : _receivableTypeLabel(r.receivableType),
       badgeColor: _receivableTypeColor(r.receivableType),
       note: note,
       amount: r.amount,
