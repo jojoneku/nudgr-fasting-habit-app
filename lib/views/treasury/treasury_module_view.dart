@@ -49,6 +49,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   static const int _ledgerTabIndex = 1;
   static const int _billsTabIndex = 2;
   static const int _budgetTabIndex = 3;
+  static const int _historyTabIndex = 4;
 
   // The redesigned Ledger, Bills and Budget tabs render their own in-page
   // headers (Ledger's "Ledger" title; Bills' header + month·year picker;
@@ -79,7 +80,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     final index = _tabController.index;
     final hide = index == _ledgerTabIndex ||
         index == _billsTabIndex ||
-        index == _budgetTabIndex;
+        index == _budgetTabIndex ||
+        index == _historyTabIndex;
     if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
 
     if (_tabController.indexIsChanging) return;
