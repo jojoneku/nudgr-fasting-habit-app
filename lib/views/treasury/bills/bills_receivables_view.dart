@@ -684,13 +684,16 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 11),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          // Neutral surface with the status color as the outline (per reference),
+          // rather than a colored fill.
+          color: cs.surfaceContainerLow,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,9 +703,7 @@ class _StatChip extends StatelessWidget {
                     color: color, fontWeight: FontWeight.w800, fontSize: 14)),
             const SizedBox(height: 1),
             Text(label,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontSize: 10)),
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10)),
           ],
         ),
       ),
