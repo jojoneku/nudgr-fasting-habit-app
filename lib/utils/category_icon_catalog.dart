@@ -127,24 +127,19 @@ class CategoryBadgeSpec {
 /// A short, name-derived monogram for a category (1 letter for a single word,
 /// initials of the first two words otherwise; up to 2 chars, uppercased).
 /// Returns '' when the name has no usable letters/digits.
+///
+/// Words with no Latin letter/digit (e.g. a leading emoji) are skipped, so
+/// "🎮 Games" → "G" rather than falling through to a generic glyph.
 String categoryMonogram(String? name) {
-  final words = (name ?? '')
+  final initials = (name ?? '')
       .trim()
       .split(RegExp(r'\s+'))
-      .where((w) => w.isNotEmpty)
+      .map((w) => RegExp(r'[A-Za-z0-9]').firstMatch(w)?.group(0))
+      .whereType<String>()
       .toList();
-  String initial(String w) {
-    final m = RegExp(r'[A-Za-z0-9]').firstMatch(w);
-    return m?.group(0) ?? '';
-  }
-
-  if (words.isEmpty) return '';
-  if (words.length >= 2) {
-    final a = initial(words[0]);
-    final b = initial(words[1]);
-    if (a.isNotEmpty && b.isNotEmpty) return (a + b).toUpperCase();
-  }
-  return initial(words.first).toUpperCase();
+  if (initials.isEmpty) return '';
+  if (initials.length >= 2) return (initials[0] + initials[1]).toUpperCase();
+  return initials.first.toUpperCase();
 }
 
 /// Resolves the badge for a category (icon-or-monogram), Option-1 order:

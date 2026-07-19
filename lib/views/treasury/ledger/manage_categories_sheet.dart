@@ -148,6 +148,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                 type: _type,
                 iconKey: _iconKey,
                 onPickIcon: _pickAddIcon,
+                previewColorHex: _nextColor(),
               ),
               const SizedBox(height: 28),
               if (expense.isEmpty && income.isEmpty)
@@ -359,6 +360,10 @@ class _AddCategoryForm extends StatelessWidget {
   final String iconKey;
   final VoidCallback onPickIcon;
 
+  /// Hex of the color the new category will be assigned — used to tint the icon
+  /// preview so it matches how the category will look in the ledger row.
+  final String previewColorHex;
+
   const _AddCategoryForm({
     required this.formKey,
     required this.controller,
@@ -367,12 +372,20 @@ class _AddCategoryForm extends StatelessWidget {
     required this.type,
     required this.iconKey,
     required this.onPickIcon,
+    required this.previewColorHex,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = type == CategoryType.expense ? cs.error : cs.tertiary;
+    Color previewColor;
+    try {
+      previewColor = Color(
+          int.parse('FF${previewColorHex.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      previewColor = color;
+    }
 
     return Form(
       key: formKey,
@@ -393,7 +406,7 @@ class _AddCategoryForm extends StatelessWidget {
                   iconKey: iconKey,
                   name: controller.text,
                   type: type,
-                  color: color,
+                  color: previewColor,
                   size: 52,
                   iconSize: 24,
                 ),

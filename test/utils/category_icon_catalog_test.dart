@@ -65,6 +65,11 @@ void main() {
       expect(categoryMonogram('   '), '');
       expect(categoryMonogram(null), '');
     });
+
+    test('skips words with no letter/digit (emoji-prefixed names)', () {
+      expect(categoryMonogram('🎮 Games'), 'G');
+      expect(categoryMonogram('🍔'), '');
+    });
   });
 
   group('resolveCategoryBadge', () {

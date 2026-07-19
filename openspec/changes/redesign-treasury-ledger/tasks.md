@@ -42,6 +42,7 @@
 
 - [x] 9.1 Restore the account color dot in the ledger row subtitle (dropped in the reskin) — superset guardrail; category name stays removed (icon carries it).
 - [x] 9.2 Manage Categories: live-rebuild the add-form icon/monogram preview as the name is typed.
-- [x] 9.3 Manage Categories: tint the category badge with the category's own color (matches the ledger row) instead of the flat type accent; 44×44 hit area around the tappable icon.
-- [x] 9.4 Add screen-reader semantics (Income/Expenses/Net) to the abbreviated IN/OUT/NET strip.
+- [x] 9.3 Manage Categories: tint the category badge with the category's own color (matches the ledger row) instead of the flat type accent — on existing-category tiles AND the add-form icon preview (previews the color the new category will get); 44×44 hit area around the tappable icon.
+- [x] 9.4 Add screen-reader semantics (Income/Expenses/Net + value) to the abbreviated IN/OUT/NET strip via `excludeSemantics` so the value isn't announced twice.
+- [x] 9.6 `categoryMonogram` skips words with no Latin letter/digit (e.g. a leading emoji), so "🎮 Games" → "G" instead of a generic glyph. Unit-tested.
 - [x] 9.5 Unify the minus glyph (U+2212) across the strip, row amounts, and daily-net badge; the daily-net badge now signs negatives explicitly (was color-only).

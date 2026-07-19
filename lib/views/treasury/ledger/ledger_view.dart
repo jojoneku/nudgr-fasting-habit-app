@@ -1295,21 +1295,22 @@ class _SummarySegment extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
+      // One clean announcement ("Income, ₱68,000"); child text nodes are
+      // excluded so the value isn't read twice.
       child: Semantics(
         label: semanticsLabel,
         value: value,
+        excludeSemantics: true,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ExcludeSemantics(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: context.appColors.textTertiary,
-                  fontSize: 9,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
+            Text(
+              label,
+              style: TextStyle(
+                color: context.appColors.textTertiary,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
               ),
             ),
             const SizedBox(height: 2),
