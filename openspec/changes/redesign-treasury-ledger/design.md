@@ -12,47 +12,66 @@ The single visual gap from the reference is iconography: non-transfer rows use o
 briefcase, shopping-bag). Categories in this app do not persist a usable icon — users create
 categories by name only — so the glyph must be inferred.
 
+This change extends that increment into a full reference reskin (header, cash-flow strip, "no
+background" rows, taller chat input) and promotes the icon from an inferred glyph to a user-chosen
+one — the reference treats a category's icon+color as its identity, and the row now drops the category
+name from its text and leans on the icon to carry it.
+
 ## Goals / Non-Goals
 
 **Goals:**
-- Give transaction rows reference-style, category-specific icons.
-- Keep the helper pure and reusable for later tabs (budget/dashboard breakdowns).
+- Bring the whole Ledger screen to the reference's visual language (header title + in-line
+  Filter&sort/month pills, segmented IN/OUT/NET strip, no-bg rows, taller chat input).
+- Let users choose a category's icon; keep a name-heuristic fallback so nothing regresses and no
+  migration is needed.
+- Keep the icon helpers pure and reusable for later tabs (budget/dashboard breakdowns).
 
 **Non-Goals:**
-- Any change to `LedgerPresenter`, parsing, grouping, filtering, chat, or persistence.
-- A category-icon picker or persisted glyph, and any data migration.
-- Restructuring the filter row, chat drawer, calendar popover, or input bar.
+- Any change to `LedgerPresenter`, parsing, grouping, filtering, chat, or persistence semantics.
+- Text-to-speech / voice input (deferred).
+- A data migration — `FinanceCategory.icon` already persists.
+- Changes to the web Treasury ledger table or other tabs.
 
 ## Decisions
 
-- **Name-based keyword heuristic, not a persisted glyph.** `categoryIcon(name, type)` matches
-  lowercased name substrings against an ordered keyword table and returns a Material icon, with a
-  per-`CategoryType` fallback (income → down-arrow, expense → receipt, transfer → swap). Rationale:
-  categories carry no reliable icon field and users never pick one, so the name is the only signal;
-  inferring at render time needs no model/storage change or migration. *Alternatives:* (a) add an
-  icon field + picker — rejected as scope creep and a data migration for a visual nicety; (b) keep the
-  generic icon — rejected as the whole point of the increment.
-- **Order keywords specific-before-general** (e.g. "grocer" before "food"; "salary" before generic
-  income) so the closest match wins. Fallback guarantees every row gets a valid glyph.
-- **Wire only at the badge glyph.** `TransactionListTile._categoryIcon()` calls the helper; the badge
-  color, subtitle, amount, and all interactions are untouched — minimizing blast radius.
-- **Transfers keep their explicit swap glyph** at the call site (before the heuristic), matching the
-  reference and the reserved transfer category.
+- **Persisted, user-chosen icon with a heuristic fallback.** `resolveCategoryIcon(iconKey, name, type)`
+  returns the catalog icon for an explicit `FinanceCategory.icon` key, else falls back to the earlier
+  `categoryIcon(name, type)` heuristic. Rationale: the reference makes the icon a category's identity
+  (the row no longer prints the category name), so users must be able to set it — but the field already
+  exists and legacy values (e.g. `'tag'`, `'bank-transfer'`) simply route through the heuristic, so
+  there is **no migration**. This reverses the earlier increment's "no picker / no persisted glyph"
+  non-goal by design. *Alternative:* keep inference-only — rejected because identity-by-icon needs a
+  deterministic, user-controllable glyph.
+- **`'tag'` is the "Auto" sentinel, deliberately NOT a catalog key**, so the historical default and any
+  legacy free-text still render the name-derived glyph.
+- **Const icon catalog.** `kCategoryIconCatalog` is a fixed `Map<String, IconData>` (no dynamic
+  codepoints) so icon-font tree-shaking keeps working in release — the same constraint the account
+  icon catalog follows.
+- **Order heuristic keywords specific-before-general** (e.g. "grocer" before "food") so the closest
+  match wins; the fallback guarantees every row gets a valid glyph.
+- **Amounts stay semantic** (expense red, income green, transfer neutral grey) rather than the
+  reference's neutral no-bg amount, so the red/green scan reads on every row (product decision).
+- **View/util only.** All new state is derived from the unchanged presenter; the row keeps its
+  edit/delete/undo and long-press actions. Transfers keep their explicit swap glyph at the call site.
 
 ## Risks / Trade-offs
 
-- **[Wrong glyph for an oddly-named category]** → The badge color and text still identify it; the
-  worst case is a fallback receipt/arrow icon — never worse than today's generic icon. Covered by a
-  unit test over the keyword map.
-- **[Keyword table drift over time]** → It's a pure function with a unit test; extending it is a
-  one-line addition. Kept in `utils/` so budget/dashboard can share it later.
+- **[Category name dropped from the row]** → identity now rests on icon + color, so a category with a
+  default/auto icon and a muted color could read ambiguously. Mitigated by the account subtitle, the
+  settable icon, and the name-heuristic auto glyph; the category name is still visible in Manage
+  Categories and the filter sheet.
+- **[Wrong heuristic glyph for an oddly-named auto category]** → worst case is a fallback receipt/arrow
+  icon — never worse than the earlier generic icon. Covered by the keyword-map unit test.
+- **[Catalog must stay const]** → dynamic `IconData` would break icon-font tree-shaking in release;
+  `kCategoryIconCatalog` is const and only grows by adding entries.
 
 ## Migration Plan
 
-None — render-time inference, no data or storage change. Ships on `feat/redesign-treasury`; rollback
-is reverting the row's one-line glyph source.
+None — the picker writes the already-persisted `FinanceCategory.icon`; legacy/unset values route
+through the name heuristic via `resolveCategoryIcon`. View/util only; rollback is reverting the three
+touched view files + the new catalog util.
 
 ## Open Questions
 
-- Later: reuse `categoryIcon` in the Budget "by category" rows and the dashboard category breakdown so
-  iconography is consistent across Treasury (out of scope for this increment).
+- Later: reuse `resolveCategoryIcon` in the Budget "by category" rows and the dashboard category
+  breakdown so iconography is consistent across Treasury (out of scope for this increment).

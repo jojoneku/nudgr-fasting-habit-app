@@ -1,60 +1,71 @@
 ## Why
 
 The Ledger is the second Treasury tab in the Nudgr redesign and the screen users touch most after the
-Dashboard. It is already well-architected and structurally close to the reference
-(`Nutrition Focus Treasury.dc.html`, Frame 2) — colored icon badges, day-grouped entries, a
-category·account subtitle, and a signed/colored amount. The one distinctive reference detail it
-lacks is **category-specific glyphs** (fork-knife for food, car for transport, briefcase for salary):
-today every non-transfer row shows the same generic `label_outline` icon, so the list reads flatter
-and less scannable than the reference. This is a **restyle** — bring the transaction rows to the
-reference's per-category iconography — not a rebuild of the ledger flow.
+Dashboard. An earlier increment already brought the transaction rows close to the reference
+(`Nutrition Focus Treasury.dc.html`) with a name-based category-icon **heuristic**. This change
+completes the Ledger reskin to the reference as a **superset** — adopting the reference's visual
+language for the whole screen while keeping every existing capability (chat/AI logging, the unified
+Filter & sort sheet, sort, month grid, day filter, transfers, reimbursables, swipe-delete + undo,
+daily-net badge). It also promotes category iconography from an inferred glyph to a **user-settable**
+choice, since the reference treats the icon as a category's identity.
 
 ## What Changes
 
-- **Add a name-based category-icon heuristic** (`utils/category_icon.dart`): map a category to a
-  representative Material icon from its name (grocer→cart, food/dining→fork-knife, transport/grab→car,
-  salary→briefcase, rent→home, bills/utilities→bolt, health→medical, …) with a per-`CategoryType`
-  fallback. Pure and side-effect-free; categories in this app don't persist a usable glyph, so the
-  name is the only available signal.
-- **Use it in the transaction row** (`transaction_list_tile.dart`): the leading `AppIconBadge` now
-  shows the inferred glyph instead of the generic label icon; transfers keep their swap glyph and the
-  account/amount styling is unchanged.
-- **Verify the rest of the Ledger already matches the reference** — day headers (Today/Yesterday),
-  filter chips (Category/Account), summary card, and input bar — and align any token drift. No
-  structural change to the filter row, chat drawer, calendar popover, or month selector.
+- **Header layout (reference).** A `Ledger` title on its own row; below it a single controls row with
+  the **Filter & sort** pill (left) and the **month/year** pill (right) in line. The standalone
+  centered month row is removed; the day filter stays inside the Filter & sort sheet.
+- **Segmented IN / OUT / NET strip.** Replace the three separate summary chips with one card split
+  into three equal columns (green IN, red OUT, blue NET; NET turns red when the month is in deficit),
+  values in JetBrains Mono. Fed by the existing presenter getters.
+- **"No background" transaction rows.** Drop the per-row card fill; rows sit directly on the screen
+  background. The category identity is carried by the **color-tinted category icon**; the subtitle is
+  the **account name only** (falls back to the category when a txn has no account). Amounts stay
+  semantic — expense red, income green, transfer neutral grey.
+- **User-settable category icons.** Add a catalog picker (`utils/category_icon_catalog.dart` +
+  `resolveCategoryIcon`) to the Manage Categories sheet; the choice persists in the existing
+  `FinanceCategory.icon` field. Legacy categories with no explicit pick fall back to the name
+  heuristic (`category_icon.dart`), so **no data migration** is required.
+- **Taller chat input.** Keep chat logging; restyle the input pill and send button taller per the
+  reference. Voice/TTS is deferred.
 
-Non-breaking. No presenter/model/storage/navigation change; the row keeps its edit/delete/undo,
-long-press actions, and account-dot subtitle.
+Non-breaking. No presenter/model/storage/navigation change; `FinanceCategory.icon` already persists,
+so the picker needs no migration.
 
 ## Non-goals
 
 - **No presenter/business-logic change.** `LedgerPresenter` keeps its public API; this is view/util
   only. Parsing, chat/AI logging, grouping, filtering, and persistence are untouched.
-- **Not a filter/chat/input-bar rebuild.** Those already read theme tokens and match the reference's
-  intent; only token drift (if any) is corrected.
-- **No user-facing category-icon picker** and no data migration — the glyph is inferred at render
-  time, nothing is persisted.
+- **No text-to-speech / voice input.** The reference's blue mic is deferred; the current send-arrow
+  affordance stays.
+- **No data migration.** The picker writes the already-persisted `FinanceCategory.icon`; legacy values
+  route through the name heuristic.
 - **No new dependencies.** Material icons only (no Phosphor).
+- **No changes to the web Treasury ledger table or other tabs** (Dashboard, Bills, Budget, History).
 
 ## Capabilities
 
 ### New Capabilities
-- `treasury-ledger`: The Treasury Ledger tab's transaction row iconography — a category is rendered
-  with a representative Material glyph inferred from its name (with a per-type fallback and the
-  reserved transfer glyph), inside the existing colored badge, preserving the row's edit/delete/undo
-  and account·amount styling; theme-aware (no hardcoded per-mode colors).
+- `treasury-ledger`: The Treasury Ledger tab — reference header (title + in-line Filter&sort/month
+  pills), a segmented IN/OUT/NET strip, "no background" transaction rows whose identity is a
+  color-tinted, **user-chosen** category icon (with a name-heuristic fallback and the reserved
+  transfer glyph) over an account-only subtitle and a semantically-colored amount, plus a taller chat
+  input — all theme-aware, preserving the row's edit/delete/undo and every existing Ledger feature.
 
 ### Modified Capabilities
-<!-- None. openspec/specs/ contains only `hub`; there is no existing `treasury`/`ledger` capability,
-     and no other capability's spec-level requirements change. -->
+<!-- None at the spec level beyond the treasury-ledger capability this change owns. openspec/specs/
+     contains only `hub`; no other capability's requirements change. -->
 
 ## Impact
 
-- **New:** `lib/utils/category_icon.dart` (pure `categoryIcon(name, type)` helper) — reusable by the
-  budget/dashboard tabs in later increments.
-- **Modified:** `lib/views/treasury/ledger/transaction_list_tile.dart` (leading glyph source).
-- **Reuses (unchanged):** `LedgerPresenter`, `TransactionListTile`'s badge/subtitle/amount,
+- **New:** `lib/utils/category_icon_catalog.dart` (`kCategoryIconCatalog`, grouped picker list,
+  `resolveCategoryIcon`) — reusable by budget/dashboard tabs later.
+- **Modified:**
+  - `lib/views/treasury/ledger/ledger_view.dart` — header title row, in-line controls row
+    (Filter&sort + month pill), segmented IN/OUT/NET strip, no-bg rows, taller chat input.
+  - `lib/views/treasury/ledger/transaction_list_tile.dart` — stored-icon rendering, account-only
+    subtitle, reference sizes, semantic amount colors (transfer → neutral grey).
+  - `lib/views/treasury/ledger/manage_categories_sheet.dart` — category icon picker + live preview.
+- **Reuses (unchanged):** `LedgerPresenter`, `category_icon.dart` (now the heuristic fallback),
   `AppIconBadge`/`AppListTile`/`AppNumberDisplay`, `finance_format.dart`, theme tokens.
-- **Deps:** none new. **Risk:** low — the heuristic falls back to the current generic icon behavior
-  for unmatched names, so no row can render worse than today; verified with a unit test over the
-  keyword map and a widget test on the row.
+- **Deps:** none new. **Risk:** low — view/util only, no presenter/model/storage change; legacy
+  categories keep a sensible glyph via the heuristic fallback, so no row renders worse than before.
