@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+<template id="__bundler_thumbnail" data-bg-color="#0A0A0B">
+  <svg viewBox="0 0 400 600" xmlns="http://www.w3.org/2000/svg">
+    <!-- Phone bezel -->
+    <rect x="80" y="40" width="240" height="520" rx="36" fill="#141414" stroke="#2A2A2A" stroke-width="1.5"/>
+    <!-- Status bar -->
+    <rect x="120" y="60" width="60" height="6" rx="3" fill="#3A3A3A"/>
+    <rect x="210" y="60" width="50" height="6" rx="3" fill="#3A3A3A"/>
+    <!-- Three rings row -->
+    <!-- Fast ring -->
+    <circle cx="155" cy="220" r="38" fill="none" stroke="#1A2535" stroke-width="9"/>
+    <circle cx="155" cy="220" r="38" fill="none" stroke="#2E90FA" stroke-width="9" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="64" transform="rotate(-90 155 220)"/>
+    <text x="155" y="215" text-anchor="middle" font-size="11" font-weight="800" fill="#F7F7F8" font-family="sans-serif">11:41</text>
+    <text x="155" y="228" text-anchor="middle" font-size="7" fill="#5BAAF5" font-family="sans-serif">FAST</text>
+    <!-- Food ring -->
+    <circle cx="200" cy="220" r="38" fill="none" stroke="#1A2826" stroke-width="9"/>
+    <circle cx="200" cy="220" r="38" fill="none" stroke="#26C6DA" stroke-width="9" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="76" transform="rotate(-90 200 220)"/>
+    <text x="200" y="215" text-anchor="middle" font-size="11" font-weight="800" fill="#F7F7F8" font-family="sans-serif">678</text>
+    <text x="200" y="228" text-anchor="middle" font-size="7" fill="#26C6DA" font-family="sans-serif">FOOD</text>
+    <!-- Move ring -->
+    <circle cx="245" cy="220" r="38" fill="none" stroke="#152218" stroke-width="9"/>
+    <circle cx="245" cy="220" r="38" fill="none" stroke="#46BD6B" stroke-width="9" stroke-linecap="round" stroke-dasharray="239" stroke-dashoffset="5" transform="rotate(-90 245 220)"/>
+    <text x="245" y="215" text-anchor="middle" font-size="10" font-weight="800" fill="#4CAF50" font-family="sans-serif">7,840</text>
+    <text x="245" y="228" text-anchor="middle" font-size="7" fill="#46BD6B" font-family="sans-serif">MOVE</text>
+    <!-- Cards sketch -->
+    <rect x="100" y="290" width="200" height="44" rx="10" fill="#1C1C20"/>
+    <rect x="100" y="342" width="200" height="44" rx="10" fill="#1C1C20"/>
+    <rect x="100" y="394" width="200" height="44" rx="10" fill="#1C1C20"/>
+    <!-- Nudgr label -->
+    <text x="200" y="510" text-anchor="middle" font-size="13" font-weight="800" fill="#F7F7F8" font-family="sans-serif" letter-spacing="1">NUDGR</text>
+    <text x="200" y="526" text-anchor="middle" font-size="8" fill="#5C6068" font-family="sans-serif" letter-spacing="2">INTERACTIVE PROTOTYPE</text>
+  </svg>
+</template>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}
+@keyframes slideRight{from{transform:translateX(100%)}to{transform:translateX(0)}}
+@keyframes slideLeft{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes fadeUp{from{transform:translateY(100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scPop{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes checkBounce{0%{transform:scale(0)}60%{transform:scale(1.3)}100%{transform:scale(1)}}
+.tap{cursor:pointer;transition:opacity .08s ease;}
+.tap:hover{opacity:.82;}
+.tap:active{opacity:.55;}
+input.sc-in{background:transparent;border:none;outline:none;color:#F2F2F3;font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;width:100%;}
+input.sc-in::placeholder{color:#797D85;}
+.sc-scroll{scrollbar-width:none;-ms-overflow-style:none;}
+.sc-scroll::-webkit-scrollbar{display:none;}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:#0A0A0B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px 16px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="text-align:center;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:#5C6068;">Nudgr · Focus</div>
+    <div style="font-size:13px;color:#797D85;margin-top:4px;">Tap the rings or cards to navigate · 1 sec = 1 fast-hour in demo</div>
+  </div>
+
+  <!-- Phone -->
+  <div style="width:360px;height:780px;background:#141414;border-radius:46px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.4),0 50px 90px -40px rgba(0,0,0,.8);">
+
+    <!-- ═══ HUB SCREEN ═══ -->
+    <sc-if value="{{ isHub }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <!-- status -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <!-- header -->
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+        <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="tap" style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;" onClick="{{ goProgress }}"><i class="ph-fill ph-flame" style="font-size:13px;color:#FF8A4C;"></i><span style="font-size:12px;font-weight:700;color:#C9CDD3;">12</span></div>
+          <i class="ph ph-gear-six tap" style="font-size:20px;color:#8C9097;" onClick="{{ goSettings }}"></i>
+        </div>
+      </div>
+      <!-- three rings -->
+      <div style="padding:16px 18px 0;display:flex;justify-content:space-between;align-items:center;">
+        <!-- Fast ring -->
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:6px;" onClick="{{ goFasting }}">
+          <div style="position:relative;width:90px;height:90px;">
+            <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+              <circle cx="45" cy="45" r="39" fill="none" stroke="{{ fastTrackColor }}" stroke-width="9"/>
+              <circle cx="45" cy="45" r="39" fill="none" stroke="{{ fastRingColor }}" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="{{ fastDashOffset }}" style="transition:stroke-dashoffset .8s ease,stroke .4s ease;"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div style="font-size:13px;font-weight:800;color:{{ fastTextColor }};line-height:1;letter-spacing:-.01em;">{{ fastTimeStr }}</div>
+              <div style="font-size:7.5px;font-weight:700;letter-spacing:.06em;color:{{ fastTextColor }};margin-top:2px;">FAST</div>
+            </div>
+          </div>
+          <div style="font-size:9px;font-weight:700;color:{{ fastTextColor }};text-align:center;">{{ fastSubLabel }}</div>
+        </div>
+        <!-- Food ring -->
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:6px;" onClick="{{ goNutrition }}">
+          <div style="position:relative;width:90px;height:90px;">
+            <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+              <circle cx="45" cy="45" r="39" fill="none" stroke="#1A2826" stroke-width="9"/>
+              <circle cx="45" cy="45" r="39" fill="none" stroke="#26C6DA" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="{{ foodDashOffset }}" style="transition:stroke-dashoffset .8s ease;"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div style="font-size:13px;font-weight:800;color:#F7F7F8;line-height:1;">{{ leftKcal }}</div>
+              <div style="font-size:7.5px;font-weight:700;letter-spacing:.06em;color:#26C6DA;margin-top:2px;">KCAL LEFT</div>
+            </div>
+          </div>
+          <div style="font-size:9px;font-weight:700;color:#26C6DA;text-align:center;">{{ foodSubLabel }}</div>
+        </div>
+        <!-- Move ring -->
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:6px;" onClick="{{ goActivity }}">
+          <div style="position:relative;width:90px;height:90px;">
+            <svg width="90" height="90" viewBox="0 0 90 90" style="transform:rotate(-90deg);">
+              <circle cx="45" cy="45" r="39" fill="none" stroke="#152218" stroke-width="9"/>
+              <circle cx="45" cy="45" r="39" fill="none" stroke="#46BD6B" stroke-width="9" stroke-linecap="round" stroke-dasharray="245" stroke-dashoffset="4.9"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+              <div style="font-size:13px;font-weight:800;color:#4CAF50;line-height:1;">7,840</div>
+              <div style="font-size:7.5px;font-weight:700;letter-spacing:.06em;color:#46BD6B;margin-top:2px;">STEPS</div>
+            </div>
+          </div>
+          <div style="font-size:9px;font-weight:700;color:#46BD6B;text-align:center;">Goal done</div>
+        </div>
+      </div>
+      <!-- AI insight -->
+      <div style="margin:11px 18px 0;padding:9px 13px;background:#1B1F2A;border-radius:11px;border:1px solid #252D3D;display:flex;align-items:flex-start;gap:8px;">
+        <i class="ph-fill ph-sparkle" style="font-size:12px;color:#5BAAF5;flex-shrink:0;margin-top:2px;"></i>
+        <span style="font-size:11.5px;color:#9DB6DC;line-height:1.45;flex:1;">{{ aiInsight }}</span>
+      </div>
+      <!-- Cards -->
+      <div style="padding:10px 14px 0;display:flex;flex-direction:column;gap:7px;">
+        <!-- Quests card -->
+        <div class="tap" style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;" onClick="{{ goQuests }}">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+            <i class="ph ph-lightning" style="font-size:13px;color:#9A9FA8;"></i>
+            <span style="flex:1;font-size:12px;font-weight:700;color:#C9CDD3;">Quests</span>
+            <div style="background:rgba(255,202,40,.14);border-radius:999px;padding:2px 7px;"><span style="font-size:9px;font-weight:700;color:#FFCA28;">{{ questsXpLabel }}</span></div>
+            <i class="ph ph-caret-right" style="font-size:11px;color:#4A4E55;"></i>
+          </div>
+          <div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:7px;"><div style="width:{{ questsBarWidth }};height:100%;background:#46BD6B;border-radius:999px;transition:width .5s ease;"></div></div>
+          <div style="display:flex;align-items:center;gap:7px;">
+            <div style="width:2px;height:28px;background:rgba(46,144,250,.7);border-radius:2px;flex-shrink:0;"></div>
+            <div><div style="font-size:12px;font-weight:600;color:#F2F2F3;">{{ nextQuestTitle }}</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">{{ nextQuestMeta }}</div></div>
+          </div>
+        </div>
+        <!-- Finance card -->
+        <div class="tap" style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;" onClick="{{ goTreasury }}">
+          <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;">
+            <i class="ph-fill ph-vault" style="font-size:13px;color:#FFCA28;"></i>
+            <span style="flex:1;font-size:12px;font-weight:700;color:#C9CDD3;">Finance</span>
+            <i class="ph ph-caret-right" style="font-size:11px;color:#4A4E55;"></i>
+          </div>
+          <div style="font-size:8.5px;font-weight:700;letter-spacing:.06em;color:#9A9FA8;margin-bottom:2px;">SAFE TO SPEND TODAY</div>
+          <div style="display:flex;align-items:baseline;gap:6px;margin-bottom:7px;"><div style="font-size:20px;font-weight:800;color:#5BAAF5;letter-spacing:-.02em;">₱19,855</div><div style="background:rgba(70,189,107,.14);border-radius:999px;padding:2px 7px;"><span style="font-size:9px;font-weight:700;color:#6FCB8A;">39% saved</span></div></div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <div style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-arrow-down" style="font-size:9px;color:#6FCB8A;"></i><div style="flex:1;height:3px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#46BD6B;border-radius:999px;"></div></div><span style="font-size:9.5px;font-weight:700;color:#6FCB8A;min-width:26px;text-align:right;">₱68k</span></div>
+            <div style="display:flex;align-items:center;gap:6px;"><i class="ph-bold ph-arrow-up" style="font-size:9px;color:#FF8A80;"></i><div style="flex:1;height:3px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:61%;height:100%;background:#F6685E;border-radius:999px;"></div></div><span style="font-size:9.5px;font-weight:700;color:#FF8A80;min-width:26px;text-align:right;">₱41k</span></div>
+          </div>
+        </div>
+        <!-- Coach shortcut -->
+        <div class="tap" style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:9px;" onClick="{{ goCoach }}">
+          <div style="width:32px;height:32px;border-radius:10px;background:rgba(46,144,250,.14);display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-brain" style="font-size:16px;color:#5BAAF5;"></i></div>
+          <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#F2F2F3;">AI Coach</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">Ask about fasting, macros, or goals</div></div>
+          <i class="ph ph-caret-right" style="font-size:11px;color:#4A4E55;"></i>
+        </div>
+        <!-- Weight card -->
+        <div class="tap" style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:9px;" onClick="{{ goWeight }}">
+          <div style="width:32px;height:32px;border-radius:10px;background:rgba(146,106,250,.14);display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-scales" style="font-size:16px;color:#926AFA;"></i></div>
+          <div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#F2F2F3;">Weight &amp; Body</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">74.2 kg · −0.8 kg this week</div></div>
+          <i class="ph ph-caret-right" style="font-size:11px;color:#4A4E55;"></i>
+        </div>
+      </div>
+      <!-- quick-log bar -->
+      <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:7px;">
+        <div class="tap" style="flex:1;height:40px;background:#1C1C20;border-radius:20px;display:flex;align-items:center;gap:7px;padding:0 13px;" onClick="{{ openCompose }}">
+          <i class="ph ph-sparkle" style="font-size:13px;color:#6A6E76;"></i><span style="font-size:12.5px;color:#6A6E76;">Log food or an expense…</span>
+        </div>
+        <div class="tap" style="width:40px;height:40px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;" onClick="{{ openCompose }}">
+          <i class="ph-fill ph-paper-plane-right" style="font-size:15px;color:#5BAAF5;"></i>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ FASTING SCREEN ═══ -->
+    <sc-if value="{{ isFasting }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;gap:10px;">
+        <i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i>
+        <span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Fasting</span>
+      </div>
+
+      <!-- IDLE STATE -->
+      <sc-if value="{{ isFastIdle }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:50px 24px 0;">
+        <div style="position:relative;width:180px;height:180px;">
+          <svg width="180" height="180" viewBox="0 0 180 180">
+            <circle cx="90" cy="90" r="78" fill="none" stroke="#1E1E22" stroke-width="13"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <i class="ph ph-timer" style="font-size:40px;color:#4A4E55;"></i>
+          </div>
+        </div>
+        <div style="font-size:24px;font-weight:800;color:#F7F7F8;margin-top:24px;letter-spacing:-.02em;">Ready to start</div>
+        <div style="font-size:13px;color:#83878F;margin-top:6px;">16:8 protocol · last fast ended 8h ago</div>
+        <div class="tap" style="margin-top:28px;height:52px;width:240px;border-radius:15px;background:rgba(46,144,250,.14);border:1px solid rgba(46,144,250,.35);display:flex;align-items:center;justify-content:center;gap:9px;" onClick="{{ startFast }}">
+          <i class="ph-fill ph-play-circle" style="font-size:18px;color:#5BAAF5;"></i>
+          <span style="font-size:14px;font-weight:700;color:#5BAAF5;">Start 16:8 fast</span>
+        </div>
+        <div style="font-size:11px;color:#6A6E76;margin-top:16px;">Last fast: 16h 4m · Jun 27</div>
+      </div>
+      </sc-if>
+
+      <!-- ACTIVE STATE -->
+      <sc-if value="{{ isFastActive }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:32px 24px 0;">
+        <div style="background:rgba(46,144,250,.08);border-radius:999px;padding:4px 14px;margin-bottom:16px;"><span style="font-size:10.5px;font-weight:700;color:#5BAAF5;">{{ fastPhaseLabel }}</span></div>
+        <div style="position:relative;width:200px;height:200px;">
+          <svg width="200" height="200" viewBox="0 0 200 200" style="transform:rotate(-90deg);">
+            <circle cx="100" cy="100" r="86" fill="none" stroke="#1A2535" stroke-width="14"/>
+            <circle cx="100" cy="100" r="86" fill="none" stroke="#2E90FA" stroke-width="14" stroke-linecap="round" stroke-dasharray="540.4" stroke-dashoffset="{{ fastBigOffset }}" style="transition:stroke-dashoffset .9s ease;"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+            <div style="font-size:34px;font-weight:800;color:#F7F7F8;letter-spacing:-.03em;line-height:1;">{{ fastTimeStr }}</div>
+            <div style="font-size:11px;color:#9DB6DC;margin-top:4px;">elapsed</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:#9DB6DC;margin-top:12px;">{{ fastRemaining }} left · of 16h goal · 16:8</div>
+        <div style="display:flex;gap:12px;margin-top:28px;">
+          <div class="tap" style="height:48px;border-radius:14px;border:1px solid #2A2A2E;background:#1C1C20;padding:0 24px;display:flex;align-items:center;" onClick="{{ endFast }}">
+            <span style="font-size:13.5px;font-weight:700;color:#C9CDD3;">End fast</span>
+          </div>
+          <div class="tap" style="height:48px;border-radius:14px;background:#2E90FA;padding:0 24px;display:flex;align-items:center;box-shadow:0 8px 20px -8px rgba(46,144,250,.7);" onClick="{{ goBack }}">
+            <span style="font-size:13.5px;font-weight:700;color:#fff;">Back to hub</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- COMPLETE STATE -->
+      <sc-if value="{{ isFastComplete }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;flex-direction:column;align-items:center;padding:48px 24px 0;">
+        <div style="width:100px;height:100px;border-radius:30px;background:linear-gradient(160deg,rgba(70,189,107,.22),rgba(70,189,107,.06));border:1px solid rgba(70,189,107,.3);display:flex;align-items:center;justify-content:center;animation:scPop .4s ease;">
+          <i class="ph-fill ph-trophy" style="font-size:48px;color:#46BD6B;"></i>
+        </div>
+        <div style="font-size:26px;font-weight:800;color:#F7F7F8;margin-top:22px;letter-spacing:-.02em;">Fast complete!</div>
+        <div style="font-size:13px;color:#9A9FA8;margin-top:8px;">16 hours · Fat burning phase</div>
+        <div style="display:flex;gap:12px;margin-top:18px;">
+          <div style="background:rgba(70,189,107,.14);border-radius:12px;padding:12px 18px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#46BD6B;">+25</div><div style="font-size:9px;color:#9A9FA8;margin-top:2px;">XP earned</div></div>
+          <div style="background:rgba(255,202,40,.14);border-radius:12px;padding:12px 18px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#FFCA28;">12🔥</div><div style="font-size:9px;color:#9A9FA8;margin-top:2px;">day streak</div></div>
+        </div>
+        <div class="tap" style="margin-top:32px;height:52px;width:220px;border-radius:15px;background:#46BD6B;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 22px -8px rgba(70,189,107,.6);" onClick="{{ dismissFast }}">
+          <span style="font-size:14px;font-weight:800;color:#fff;">Nice — back to hub</span>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ═══ NUTRITION SCREEN ═══ -->
+    <sc-if value="{{ isNutrition }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Nutrition</span></div>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(46,144,250,.14);border:1px solid rgba(46,144,250,.3);border-radius:999px;padding:3px 9px;"><i class="ph-fill ph-cloud" style="font-size:11px;color:#5BAAF5;"></i><span style="font-size:11px;font-weight:700;color:#5BAAF5;">Cloud</span></div>
+      </div>
+      <!-- calorie hero -->
+      <div style="margin:12px 16px 0;background:linear-gradient(160deg,#222325,#191919);border:1px solid #2E2F31;border-radius:20px;padding:14px 16px 13px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+          <div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:#7E828A;">EATEN TODAY</div><div style="display:flex;align-items:baseline;gap:5px;margin-top:3px;"><span style="font-size:36px;font-weight:800;color:#F7F7F8;letter-spacing:-.04em;line-height:.85;">{{ eatenKcal }}</span><span style="font-size:13px;font-weight:600;color:#7E828A;">kcal</span></div></div>
+          <div style="text-align:right;padding-top:3px;"><div style="font-size:20px;font-weight:800;color:#5BAAF5;letter-spacing:-.02em;">{{ leftKcal }}</div><div style="font-size:10.5px;font-weight:600;color:#7E828A;margin-top:1px;">left of 2,098</div></div>
+        </div>
+        <div style="margin-top:10px;height:6px;background:#2E2F31;border-radius:999px;overflow:hidden;"><div style="width:{{ calPctStr }};height:100%;background:linear-gradient(90deg,#1E88E5,#42A5F5);border-radius:999px;transition:width .5s ease;"></div></div>
+        <div style="display:flex;gap:10px;margin-top:11px;">
+          <div style="flex:1;"><span style="font-size:13px;font-weight:800;color:#F2F2F3;">{{ pStr }}<span style="font-size:9.5px;color:#7E828A;font-weight:600;">g</span></span><div style="margin-top:4px;height:3.5px;background:#2E2F31;border-radius:999px;overflow:hidden;"><div style="width:{{ pPct }};height:100%;background:#4DA3FF;transition:width .5s ease;"></div></div><div style="font-size:9px;font-weight:600;color:#7E828A;margin-top:4px;">Protein</div></div>
+          <div style="flex:1;"><span style="font-size:13px;font-weight:800;color:#F2F2F3;">{{ cStr }}<span style="font-size:9.5px;color:#7E828A;font-weight:600;">g</span></span><div style="margin-top:4px;height:3.5px;background:#2E2F31;border-radius:999px;overflow:hidden;"><div style="width:{{ cPct }};height:100%;background:#FFC107;transition:width .5s ease;"></div></div><div style="font-size:9px;font-weight:600;color:#7E828A;margin-top:4px;">Carbs</div></div>
+          <div style="flex:1;"><span style="font-size:13px;font-weight:800;color:#F2F2F3;">{{ fStr }}<span style="font-size:9.5px;color:#7E828A;font-weight:600;">g</span></span><div style="margin-top:4px;height:3.5px;background:#2E2F31;border-radius:999px;overflow:hidden;"><div style="width:{{ fPct }};height:100%;background:#FF6B6B;transition:width .5s ease;"></div></div><div style="font-size:9px;font-weight:600;color:#7E828A;margin-top:4px;">Fat</div></div>
+        </div>
+      </div>
+      <!-- entries -->
+      <div style="padding:13px 22px 0;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Today's log</span><span style="font-size:11px;font-weight:700;color:#7E828A;">{{ eatenKcal }} kcal</span></div>
+      <div class="sc-scroll" style="padding:9px 16px 90px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:270px;">
+        <sc-for list="{{ entries }}" as="e" hint-placeholder-count="2">
+          <div style="background:#1D1D1E;border:1px solid #2A2A2B;border-radius:15px;padding:12px 14px;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="flex:1;"><div style="font-size:13.5px;font-weight:700;color:#F2F2F3;">{{ e.name }}</div><div style="font-size:10.5px;color:#797D85;margin-top:4px;">{{ e.sub }}</div></div>
+              <div style="text-align:right;margin-right:4px;"><div style="font-size:15px;font-weight:800;color:#F2F2F3;">{{ e.kcalStr }}</div><div style="font-size:9.5px;color:#797D85;">kcal</div></div>
+              <div class="tap" style="width:30px;height:30px;border-radius:9px;background:rgba(246,104,94,.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;" onClick="{{ e.del }}"><i class="ph ph-trash" style="font-size:14px;color:#F6685E;"></i></div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <!-- input bar -->
+      <div class="tap" style="position:absolute;bottom:0;left:0;right:0;padding:8px 14px 14px;background:#141414;border-top:1px solid #1E1E22;display:flex;align-items:center;gap:8px;" onClick="{{ openCompose }}">
+        <i class="ph ph-camera" style="font-size:18px;color:#8C9097;"></i>
+        <span style="flex:1;font-size:13.5px;color:#797D85;">Log a meal or exercise…</span>
+        <div style="width:38px;height:38px;border-radius:12px;background:#2196F3;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:16px;color:#fff;"></i></div>
+      </div>
+      <!-- Compose sheet -->
+      <sc-if value="{{ isCompose }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div class="tap" style="position:absolute;inset:0;background:rgba(0,0,0,.55);animation:fadeIn .2s ease;" onClick="{{ closeCompose }}"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#171718;border-top:1px solid #2E2F31;border-radius:24px 24px 0 0;padding:12px 16px 16px;animation:fadeUp .28s cubic-bezier(.22,1,.36,1);">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><div style="width:38px;height:4px;border-radius:999px;background:#3A3B3D;margin:0 auto;"></div></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;"><span style="font-size:13px;font-weight:700;color:#C9CDD3;">Log a meal</span><span class="tap" style="font-size:13px;font-weight:700;color:#797D85;" onClick="{{ closeCompose }}">Cancel</span></div>
+          <!-- analyzing spinner -->
+          <sc-if value="{{ isAnalyzing }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;align-items:center;gap:9px;padding:10px 4px 14px;">
+            <div style="width:16px;height:16px;border-radius:50%;border:2px solid #2E2F31;border-top-color:#5BAAF5;animation:spin .8s linear infinite;"></div>
+            <span style="font-size:13px;color:#9BA0A8;font-weight:600;">Analyzing your meal…</span>
+          </div>
+          </sc-if>
+          <!-- estimate -->
+          <sc-if value="{{ hasEstimate }}" hint-placeholder-val="{{ false }}">
+          <div style="background:linear-gradient(160deg,#222325,#191919);border:1px solid #2E2F31;border-radius:20px;padding:14px 15px;animation:scPop .25s ease;margin-bottom:8px;">
+            <div style="display:flex;align-items:center;gap:7px;margin-bottom:10px;"><i class="ph-fill ph-sparkle" style="font-size:12px;color:#5BAAF5;"></i><span style="font-size:10.5px;font-weight:700;letter-spacing:.08em;color:#5BAAF5;">ESTIMATE</span></div>
+            <sc-for list="{{ estItems }}" as="it" hint-placeholder-count="2">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;"><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">{{ it.name }}</div></div><span style="font-size:13.5px;font-weight:800;color:#F2F2F3;">{{ it.kcalStr }}</span></div>
+            </sc-for>
+            <div style="margin-top:10px;padding-top:10px;border-top:1px solid #2E2F31;display:flex;align-items:center;justify-content:space-between;">
+              <div style="display:flex;gap:10px;"><span style="font-size:10.5px;font-weight:700;color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> {{ estP }}P</span><span style="font-size:10.5px;font-weight:700;color:#9BA0A8;"><span style="color:#FFC107;">●</span> {{ estC }}C</span><span style="font-size:10.5px;font-weight:700;color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> {{ estF }}F</span></div>
+              <span style="font-size:15px;font-weight:800;color:#F2F2F3;">{{ estTotalStr }} <span style="font-size:10px;color:#797D85;">kcal</span></span>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:12px;">
+              <div class="tap" style="flex:1;height:44px;border-radius:12px;background:#2196F3;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 6px 14px -6px rgba(33,150,243,.6);" onClick="{{ logIt }}"><i class="ph-bold ph-check" style="font-size:14px;color:#fff;"></i><span style="font-size:13.5px;font-weight:700;color:#fff;">Log it</span></div>
+              <div class="tap" style="width:90px;height:44px;border-radius:12px;background:#252628;display:flex;align-items:center;justify-content:center;" onClick="{{ backToCompose }}"><span style="font-size:13.5px;font-weight:700;color:#C9CDD3;">Edit</span></div>
+            </div>
+          </div>
+          </sc-if>
+          <!-- quick chips -->
+          <sc-if value="{{ showChips }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:11px;">
+            <div class="tap" style="display:flex;align-items:center;gap:5px;background:#1D1D1E;border:1px solid #2A2A2B;border-radius:999px;padding:6px 12px;" onClick="{{ quickEggs }}"><i class="ph-fill ph-egg" style="font-size:12px;color:#FFC107;"></i><span style="font-size:11.5px;font-weight:700;color:#C9CDD3;">2 eggs &amp; toast</span></div>
+            <div class="tap" style="display:flex;align-items:center;gap:5px;background:#1D1D1E;border:1px solid #2A2A2B;border-radius:999px;padding:6px 12px;" onClick="{{ quickChicken }}"><i class="ph-fill ph-bowl-food" style="font-size:12px;color:#FFC107;"></i><span style="font-size:11.5px;font-weight:700;color:#C9CDD3;">Chicken &amp; rice</span></div>
+            <div class="tap" style="display:flex;align-items:center;gap:5px;background:#1D1D1E;border:1px solid #2A2A2B;border-radius:999px;padding:6px 12px;" onClick="{{ quickCoffee }}"><i class="ph-fill ph-coffee" style="font-size:12px;color:#FFC107;"></i><span style="font-size:11.5px;font-weight:700;color:#C9CDD3;">Flat white</span></div>
+          </div>
+          </sc-if>
+          <!-- input row -->
+          <div style="height:50px;background:#202021;border:1.5px solid {{ inputBorder }};border-radius:15px;display:flex;align-items:center;gap:10px;padding:0 8px 0 14px;">
+            <i class="ph ph-camera" style="font-size:19px;color:#8C9097;"></i>
+            <input class="sc-in" value="{{ draft }}" placeholder="{{ inputPlaceholder }}" onInput="{{ onDraftInput }}" onKeyDown="{{ onKeyDown }}" autofocus="{{ true }}">
+            <div class="tap" style="width:38px;height:38px;border-radius:11px;background:{{ sendBg }};display:flex;align-items:center;justify-content:center;" onClick="{{ sendMeal }}"><i class="ph-fill ph-arrow-up" style="font-size:16px;color:#fff;"></i></div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ═══ QUESTS SCREEN ═══ -->
+    <sc-if value="{{ isQuests }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Quests</span></div><i class="ph ph-sliders-horizontal" style="font-size:20px;color:#8C9097;"></i></div>
+      <!-- progress header -->
+      <div style="margin:12px 16px 0;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:12px 14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;"><span style="font-size:12.5px;font-weight:700;color:#E7E7E9;">Today's progress</span><span style="font-size:11px;font-weight:700;color:#9A9FA8;">{{ questsDoneCount }} / 5</span></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:{{ questsBarWidth }};height:100%;background:linear-gradient(90deg,#1E88E5,#42A5F5);border-radius:999px;transition:width .5s ease;"></div></div>
+      </div>
+      <!-- quest list -->
+      <div style="margin:10px 16px 0;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;overflow:hidden;">
+        <sc-for list="{{ quests }}" as="q" hint-placeholder-count="5">
+          <div class="tap" style="display:flex;align-items:center;gap:11px;padding:13px 14px;border-bottom:1px solid #1E1E22;" onClick="{{ q.toggle }}">
+            <div style="width:24px;height:24px;border-radius:8px;background:{{ q.checkBg }};border:{{ q.checkBorder }};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .2s ease;">
+              <sc-if value="{{ q.done }}" hint-placeholder-val="{{ false }}">
+                <i class="ph-bold ph-check" style="font-size:13px;color:#fff;animation:checkBounce .3s ease;"></i>
+              </sc-if>
+            </div>
+            <div style="flex:1;">
+              <div style="font-size:13px;font-weight:600;color:{{ q.titleColor }};text-decoration:{{ q.titleDecor }};transition:color .2s ease;">{{ q.title }}</div>
+              <div style="font-size:10px;color:#6A6E76;margin-top:1px;">{{ q.meta }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <!-- FAB -->
+      <div class="tap" style="position:absolute;bottom:20px;right:18px;height:50px;border-radius:15px;background:#2E90FA;display:flex;align-items:center;gap:7px;padding:0 18px;box-shadow:0 8px 20px -8px rgba(46,144,250,.7);" onClick="{{ goBack }}">
+        <i class="ph-bold ph-arrow-left" style="font-size:15px;color:#fff;"></i><span style="font-size:13px;font-weight:800;color:#fff;">Hub</span>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ TREASURY SCREEN ═══ -->
+    <sc-if value="{{ isTreasury }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 20px 0;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:20px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Treasury</span></div>
+        <div style="display:flex;align-items:center;gap:5px;background:rgba(70,189,107,.12);border-radius:999px;padding:5px 10px;"><span style="width:6px;height:6px;border-radius:50%;background:#46BD6B;"></span><span style="font-size:10.5px;font-weight:700;color:#6FCB8A;">Synced</span></div>
+      </div>
+      <div class="sc-scroll" style="position:absolute;top:78px;bottom:58px;left:0;right:0;overflow-y:auto;">
+      <!-- Dashboard tab -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="padding:11px 16px 16px;display:flex;flex-direction:column;gap:10px;">
+        <!-- net worth hero with sparkline -->
+        <div style="background:linear-gradient(155deg,#1B2A44,#172033 55%,#15171C);border:1px solid #29354B;border-radius:20px;padding:16px 17px 0;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:10px;font-weight:700;letter-spacing:.09em;color:#8FB4E8;">NET WORTH</span><div style="display:flex;align-items:center;gap:3px;background:rgba(70,189,107,.16);border-radius:999px;padding:3px 8px;"><i class="ph-bold ph-trend-up" style="font-size:11px;color:#6FCB8A;"></i><span style="font-size:10px;font-weight:700;color:#6FCB8A;">+2.7%</span></div></div>
+          <div style="display:flex;align-items:baseline;gap:3px;margin-top:6px;"><span style="font-size:15px;font-weight:700;color:#EBF1FB;">₱</span><span style="font-size:34px;font-weight:800;color:#FBFCFE;letter-spacing:-.03em;line-height:.9;">486,210</span></div>
+          <div style="font-size:11.5px;color:#9DB6DC;margin-top:5px;"><span style="font-weight:700;color:#6FCB8A;">+₱12,840</span> this month</div>
+          <svg viewBox="0 0 300 52" width="100%" height="52" preserveAspectRatio="none" style="display:block;margin-top:6px;">
+            <defs><linearGradient id="nwfill2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5BAAF5" stop-opacity=".3"></stop><stop offset="1" stop-color="#5BAAF5" stop-opacity="0"></stop></linearGradient></defs>
+            <path d="M0,46 L40,42 L80,48 L120,33 L160,37 L200,24 L240,20 L300,10 L300,52 L0,52 Z" fill="url(#nwfill2)"></path>
+            <path d="M0,46 L40,42 L80,48 L120,33 L160,37 L200,24 L240,20 L300,10" fill="none" stroke="#6FB6F7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+            <circle cx="300" cy="10" r="3.5" fill="#fff"></circle>
+          </svg>
+        </div>
+        <!-- cashflow strip -->
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span style="font-size:12px;font-weight:700;color:#E7E7E9;">June cashflow</span><span style="font-size:10.5px;color:#83878F;">5 days left</span></div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;"><i class="ph-bold ph-arrow-down" style="font-size:12px;color:#46BD6B;flex-shrink:0;"></i><div style="flex:1;height:7px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#46BD6B;border-radius:999px;"></div></div><span style="font-size:11.5px;font-weight:800;color:#6FCB8A;min-width:52px;text-align:right;">₱68,000</span></div>
+          <div style="display:flex;align-items:center;gap:8px;"><i class="ph-bold ph-arrow-up" style="font-size:12px;color:#F6685E;flex-shrink:0;"></i><div style="flex:1;height:7px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:61%;height:100%;background:#F6685E;border-radius:999px;"></div></div><span style="font-size:11.5px;font-weight:800;color:#FF8A80;min-width:52px;text-align:right;">₱41,305</span></div>
+          <div style="margin-top:11px;padding-top:10px;border-top:1px solid #26262A;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:11px;color:#9A9FA8;">Projected spare</span><span style="font-size:14px;font-weight:800;color:#5BAAF5;">₱19,855</span></div>
+        </div>
+        <!-- accounts -->
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 2px;"><span style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Accounts</span><span style="font-size:11px;color:#83878F;">₱94,320 liquid</span></div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:center;gap:12px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:11px 13px;"><div style="width:36px;height:36px;border-radius:11px;background:#9B2C2C;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;font-weight:800;color:#fff;">BPI</span></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">BPI Personal</div><div style="font-size:10px;color:#83878F;">Bank · primary</div></div><span style="font-size:13px;font-weight:800;color:#E7E7E9;">₱42,100</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:11px 13px;"><div style="width:36px;height:36px;border-radius:11px;background:#1565C0;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px;color:#fff;"></i></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">GCash</div><div style="font-size:10px;color:#83878F;">eWallet</div></div><span style="font-size:13px;font-weight:800;color:#E7E7E9;">₱18,400</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:11px 13px;"><div style="width:36px;height:36px;border-radius:11px;background:#1B7A4B;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px;color:#fff;"></i></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">Maya</div><div style="font-size:10px;color:#83878F;">eWallet</div></div><span style="font-size:13px;font-weight:800;color:#E7E7E9;">₱9,200</span></div>
+          <div style="display:flex;align-items:center;gap:12px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:11px 13px;"><div style="width:36px;height:36px;border-radius:11px;background:#2A2566;display:flex;align-items:center;justify-content:center;"><span style="font-size:9px;font-weight:800;color:#fff;">Mari</span></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">Maribank Savings</div><div style="font-size:10px;color:#83878F;">Bank · savings</div></div><span style="font-size:13px;font-weight:800;color:#E7E7E9;">₱24,620</span></div>
+        </div>
+        <!-- bills alert -->
+        <div style="background:#1C1C20;border:1px solid rgba(246,104,94,.3);border-radius:13px;padding:12px 14px;display:flex;align-items:center;gap:9px;"><i class="ph-fill ph-warning-circle" style="font-size:15px;color:#F6685E;flex-shrink:0;"></i><div style="flex:1;"><div style="font-size:12px;font-weight:700;color:#F6685E;">Meralco due in 3 days</div><div style="font-size:10px;color:#C9897A;margin-top:1px;">₱3,200 · Jun 28</div></div><div class="tap" style="background:#F6685E;border-radius:9px;padding:6px 11px;"><span style="font-size:11px;font-weight:800;color:#fff;">Pay</span></div></div>
+      </div>
+      </sc-if>
+      <!-- Ledger tab -->
+      <sc-if value="{{ isLedger }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 16px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div style="display:flex;gap:7px;">
+            <div style="display:flex;align-items:center;gap:5px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph ph-funnel" style="font-size:11px;color:#9A9FA8;"></i><span style="font-size:11px;font-weight:600;color:#9A9FA8;">Category</span></div>
+            <div style="display:flex;align-items:center;gap:5px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><i class="ph ph-bank" style="font-size:11px;color:#9A9FA8;"></i><span style="font-size:11px;font-weight:600;color:#9A9FA8;">Account</span></div>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 10px;"><span style="font-size:11px;font-weight:700;color:#E7E7E9;">June 2026</span><i class="ph-fill ph-caret-down" style="font-size:9px;color:#83878F;"></i></div>
+        </div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:13px;padding:10px 13px;margin-bottom:10px;display:flex;">
+          <div style="flex:1;text-align:center;"><div style="font-size:9px;font-weight:700;color:#9A9FA8;">IN</div><div style="font-size:13px;font-weight:800;color:#6FCB8A;margin-top:2px;">₱68,000</div></div>
+          <div style="width:1px;background:#2A2A2E;"></div>
+          <div style="flex:1;text-align:center;"><div style="font-size:9px;font-weight:700;color:#9A9FA8;">OUT</div><div style="font-size:13px;font-weight:800;color:#FF8A80;margin-top:2px;">₱41,305</div></div>
+          <div style="width:1px;background:#2A2A2E;"></div>
+          <div style="flex:1;text-align:center;"><div style="font-size:9px;font-weight:700;color:#9A9FA8;">NET</div><div style="font-size:13px;font-weight:800;color:#5BAAF5;margin-top:2px;">+₱26,695</div></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#9A9FA8;margin-bottom:6px;">Today</div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;overflow:hidden;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-bottom:1px solid #1E1E22;"><div style="width:38px;height:38px;border-radius:11px;background:rgba(246,104,94,.14);display:flex;align-items:center;justify-content:center;"><i class="ph ph-fork-knife" style="font-size:17px;color:#F6685E;"></i></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">Jollibee lunch</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">GCash</div></div><span style="font-size:13.5px;font-weight:700;color:#F2F2F3;">−₱285</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;"><div style="width:38px;height:38px;border-radius:11px;background:rgba(46,144,250,.14);display:flex;align-items:center;justify-content:center;"><i class="ph ph-arrows-left-right" style="font-size:17px;color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">To Maribank savings</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">Transfer</div></div><span style="font-size:13.5px;font-weight:600;color:#83878F;">₱5,000</span></div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:#9A9FA8;margin-bottom:6px;">Yesterday</div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-bottom:1px solid #1E1E22;"><div style="width:38px;height:38px;border-radius:11px;background:rgba(70,189,107,.14);display:flex;align-items:center;justify-content:center;"><i class="ph ph-briefcase" style="font-size:17px;color:#46BD6B;"></i></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">Salary</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">BPI</div></div><span style="font-size:13.5px;font-weight:800;color:#6FCB8A;">+₱34,000</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-bottom:1px solid #1E1E22;"><div style="width:38px;height:38px;border-radius:11px;background:rgba(255,197,66,.14);display:flex;align-items:center;justify-content:center;"><i class="ph ph-car" style="font-size:17px;color:#FFC542;"></i></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">Grab to office</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">GCash</div></div><span style="font-size:13.5px;font-weight:700;color:#F2F2F3;">−₱180</span></div>
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;"><div style="width:38px;height:38px;border-radius:11px;background:rgba(179,107,212,.14);display:flex;align-items:center;justify-content:center;"><i class="ph ph-shopping-bag" style="font-size:17px;color:#B36BD4;"></i></div><div style="flex:1;"><div style="font-size:13.5px;font-weight:600;color:#F2F2F3;">Groceries · SM</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">Cash</div></div><span style="font-size:13.5px;font-weight:700;color:#F2F2F3;">−₱2,340</span></div>
+        </div>
+      </div>
+      </sc-if>
+      <!-- Bills tab -->
+      <sc-if value="{{ isBills }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 16px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="background:linear-gradient(155deg,#3A2417,#241813 70%,#15171C);border:1px solid #4A2F1C;border-radius:20px;padding:16px 17px;">
+          <div style="display:flex;align-items:center;gap:7px;"><i class="ph-fill ph-warning-circle" style="font-size:14px;color:#FF8A4C;"></i><span style="font-size:10.5px;font-weight:700;letter-spacing:.06em;color:#FFB37A;">DUE IN 3 DAYS</span></div>
+          <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:11px;"><div><div style="font-size:17px;font-weight:800;color:#F7F7F8;">Meralco</div><div style="font-size:11px;color:#B89478;margin-top:2px;">Electricity · due Jun 28</div></div><div style="font-size:24px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">₱3,200</div></div>
+          <div style="margin-top:13px;display:flex;gap:8px;"><div class="tap" style="flex:1;height:42px;border-radius:13px;background:#FF8A4C;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="ph-fill ph-check" style="font-size:14px;color:#241813;"></i><span style="font-size:13px;font-weight:800;color:#241813;">Mark paid</span></div><div style="width:46px;height:42px;border-radius:13px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;"><i class="ph ph-bell-simple" style="font-size:17px;color:#FFB37A;"></i></div></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:10px 11px;"><div style="font-size:13.5px;font-weight:800;color:#FF8A80;">₱8.4k</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">Pending</div></div>
+          <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:10px 11px;"><div style="font-size:13.5px;font-weight:800;color:#6FCB8A;">₱12.3k</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">Paid</div></div>
+          <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:10px 11px;"><div style="font-size:13.5px;font-weight:800;color:#5BAAF5;">₱4.5k</div><div style="font-size:9.5px;color:#83878F;margin-top:1px;">Installments</div></div>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Coming up</div>
+        <div style="padding:0 2px;position:relative;">
+          <div style="position:absolute;left:9px;top:10px;bottom:10px;width:2px;background:#26262A;"></div>
+          <div style="display:flex;align-items:center;gap:13px;margin-bottom:13px;"><div style="width:20px;height:20px;border-radius:50%;background:#131315;border:2px solid #FF8A4C;display:flex;align-items:center;justify-content:center;z-index:1;flex-shrink:0;"><span style="width:7px;height:7px;border-radius:50%;background:#FF8A4C;"></span></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;color:#F2F2F3;">Internet · PLDT</div><div style="font-size:10px;color:#83878F;">Jul 1 · 6 days</div></div><span style="font-size:13px;font-weight:700;color:#E7E7E9;">₱2,099</span></div></div>
+          <div style="display:flex;align-items:center;gap:13px;margin-bottom:13px;"><div style="width:20px;height:20px;border-radius:50%;background:#131315;border:2px solid #46BD6B;display:flex;align-items:center;justify-content:center;z-index:1;flex-shrink:0;"><i class="ph-bold ph-arrow-down" style="font-size:9px;color:#46BD6B;"></i></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;color:#F2F2F3;">Refund · Lazada</div><div style="font-size:10px;color:#6FCB8A;">incoming</div></div><span style="font-size:13px;font-weight:700;color:#6FCB8A;">+₱1,240</span></div></div>
+          <div style="display:flex;align-items:center;gap:13px;margin-bottom:13px;"><div style="width:20px;height:20px;border-radius:50%;background:#131315;border:2px solid #3A3A40;display:flex;align-items:center;justify-content:center;z-index:1;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#5A5E66;"></span></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;color:#F2F2F3;">Spotify</div><div style="font-size:10px;color:#83878F;">Jul 5 · 10 days</div></div><span style="font-size:13px;font-weight:700;color:#E7E7E9;">₱149</span></div></div>
+          <div style="display:flex;align-items:center;gap:13px;"><div style="width:20px;height:20px;border-radius:50%;background:#131315;border:2px solid #3A3A40;display:flex;align-items:center;justify-content:center;z-index:1;flex-shrink:0;"><span style="width:6px;height:6px;border-radius:50%;background:#5A5E66;"></span></div><div style="flex:1;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:13px;font-weight:600;color:#F2F2F3;">Globe Broadband</div><div style="font-size:10px;color:#83878F;">Jul 10 · 15 days</div></div><span style="font-size:13px;font-weight:700;color:#E7E7E9;">₱1,699</span></div></div>
+        </div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 14px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:8px;"><i class="ph ph-credit-card" style="font-size:15px;color:#F6685E;"></i><span style="font-size:12.5px;font-weight:700;color:#F2F2F3;">BPI Credit Card</span></div><span style="font-size:13px;font-weight:800;color:#FF8A80;">₱14,200</span></div>
+          <div style="margin-top:9px;height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:28%;height:100%;background:#2E90FA;border-radius:999px;"></div></div>
+          <div style="font-size:10px;color:#83878F;margin-top:5px;">₱35,800 available · due Jul 5</div>
+        </div>
+      </div>
+      </sc-if>
+      <!-- Budget tab -->
+      <sc-if value="{{ isBudget }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 16px 16px;display:flex;flex-direction:column;gap:10px;">
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:20px;padding:18px;display:flex;align-items:center;gap:16px;">
+          <div style="position:relative;width:100px;height:100px;flex-shrink:0;">
+            <svg viewBox="0 0 120 120" width="100" height="100" style="transform:rotate(-90deg);">
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#26262A" stroke-width="12"></circle>
+              <circle cx="60" cy="60" r="50" fill="none" stroke="#5BAAF5" stroke-width="12" stroke-linecap="round" stroke-dasharray="314.16" stroke-dashoffset="91.1"></circle>
+            </svg>
+            <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><div style="font-size:22px;font-weight:800;color:#F7F7F8;line-height:.9;">71%</div><div style="font-size:9px;color:#83878F;margin-top:3px;">spent</div></div>
+          </div>
+          <div style="flex:1;"><div style="font-size:10px;font-weight:700;letter-spacing:.06em;color:#83878F;">SPENT</div><div style="font-size:20px;font-weight:800;color:#F7F7F8;margin-top:2px;letter-spacing:-.02em;">₱28,540</div><div style="font-size:10.5px;color:#83878F;margin-top:1px;">of ₱40,000</div><div style="margin-top:10px;display:inline-flex;align-items:center;gap:5px;background:rgba(70,189,107,.14);border-radius:999px;padding:4px 9px;"><i class="ph-fill ph-check-circle" style="font-size:11px;color:#46BD6B;"></i><span style="font-size:10px;font-weight:700;color:#6FCB8A;">Ahead of pace</span></div></div>
+        </div>
+        <div style="background:rgba(46,144,250,.07);border:1px solid rgba(46,144,250,.22);border-radius:14px;padding:12px 15px;display:flex;align-items:center;gap:12px;"><i class="ph-fill ph-hand-coins" style="font-size:20px;color:#5BAAF5;flex-shrink:0;"></i><div style="flex:1;"><div style="font-size:10px;color:#9DB6DC;">Safe to spend · 5 days left</div><div style="font-size:15px;font-weight:800;color:#F7F7F8;margin-top:1px;">₱2,292 <span style="font-size:11px;font-weight:600;color:#83878F;">/ day</span></div></div></div>
+        <div style="font-size:12.5px;font-weight:700;color:#C9CDD3;">By category</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:13px;padding:11px 13px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:3px;background:#F6685E;"></span><span style="font-size:12.5px;font-weight:600;color:#E7E7E9;">Food &amp; dining</span></div><span style="font-size:11px;font-weight:700;color:#C9CDD3;">₱9,200 / 10k</span></div><div style="margin-top:7px;height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:92%;height:100%;background:#F6685E;border-radius:999px;"></div></div></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:13px;padding:11px 13px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:3px;background:#FFC542;"></span><span style="font-size:12.5px;font-weight:600;color:#E7E7E9;">Transport</span></div><span style="font-size:11px;font-weight:700;color:#C9CDD3;">₱3,140 / 5k</span></div><div style="margin-top:7px;height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:63%;height:100%;background:#FFC542;border-radius:999px;"></div></div></div>
+          <div style="background:#1C1C20;border:1px solid rgba(246,104,94,.4);border-radius:13px;padding:11px 13px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:3px;background:#B36BD4;"></span><span style="font-size:12.5px;font-weight:600;color:#E7E7E9;">Groceries</span></div><span style="font-size:11px;font-weight:700;color:#FF8A80;">₱8,700 / 8k ⚠</span></div><div style="margin-top:7px;height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:100%;height:100%;background:#F6685E;border-radius:999px;"></div></div><div style="font-size:9.5px;color:#FF8A80;margin-top:4px;font-weight:600;">Over by ₱700</div></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:13px;padding:11px 13px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;border-radius:3px;background:#5BAAF5;"></span><span style="font-size:12.5px;font-weight:600;color:#E7E7E9;">Shopping</span></div><span style="font-size:11px;font-weight:700;color:#C9CDD3;">₱4,200 / 9k</span></div><div style="margin-top:7px;height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:47%;height:100%;background:#5BAAF5;border-radius:999px;"></div></div></div>
+        </div>
+      </div>
+      </sc-if>
+      <!-- History tab -->
+      <sc-if value="{{ isHistory }}" hint-placeholder-val="{{ false }}">
+      <div style="padding:10px 16px 16px;display:flex;flex-direction:column;gap:9px;">
+        <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;">CURRENT MONTH</span><span style="font-size:9px;font-weight:800;color:#131315;background:#2E90FA;border-radius:999px;padding:2px 7px;">LIVE</span></div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:14px;font-weight:700;color:#E7E7E9;">June 2026</span><span style="font-size:11px;color:#9A9FA8;">in progress</span></div>
+          <div style="display:flex;gap:7px;margin-top:11px;">
+            <div style="flex:1;text-align:center;background:#131315;border-radius:10px;padding:9px 6px;"><div style="font-size:9.5px;color:#9A9FA8;">IN</div><div style="font-size:12.5px;font-weight:800;color:#6FCB8A;margin-top:2px;">₱68,000</div></div>
+            <div style="flex:1;text-align:center;background:#131315;border-radius:10px;padding:9px 6px;"><div style="font-size:9.5px;color:#9A9FA8;">OUT</div><div style="font-size:12.5px;font-weight:800;color:#FF8A80;margin-top:2px;">₱41,305</div></div>
+            <div style="flex:1;text-align:center;background:#131315;border-radius:10px;padding:9px 6px;"><div style="font-size:9.5px;color:#9A9FA8;">SAVED</div><div style="font-size:12.5px;font-weight:800;color:#5BAAF5;margin-top:2px;">39%</div></div>
+          </div>
+        </div>
+        <div style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Past months</div>
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:13px 15px;"><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13px;font-weight:700;color:#F2F2F3;">May 2026</span><span style="font-size:11px;font-weight:700;color:#6FCB8A;">+₱27,400 saved</span></div><div style="display:flex;gap:14px;margin-top:7px;"><span style="font-size:11px;color:#83878F;">In: <span style="color:#6FCB8A;">₱65,000</span></span><span style="font-size:11px;color:#83878F;">Out: <span style="color:#FF8A80;">₱37,600</span></span></div></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:13px 15px;"><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13px;font-weight:700;color:#F2F2F3;">April 2026</span><span style="font-size:11px;font-weight:700;color:#6FCB8A;">+₱21,800 saved</span></div><div style="display:flex;gap:14px;margin-top:7px;"><span style="font-size:11px;color:#83878F;">In: <span style="color:#6FCB8A;">₱65,000</span></span><span style="font-size:11px;color:#83878F;">Out: <span style="color:#FF8A80;">₱43,200</span></span></div></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:13px 15px;"><div style="display:flex;align-items:center;justify-content:space-between;"><span style="font-size:13px;font-weight:700;color:#F2F2F3;">March 2026</span><span style="font-size:11px;font-weight:700;color:#FF8A80;">−₱3,200 over</span></div><div style="display:flex;gap:14px;margin-top:7px;"><span style="font-size:11px;color:#83878F;">In: <span style="color:#6FCB8A;">₱65,000</span></span><span style="font-size:11px;color:#83878F;">Out: <span style="color:#FF8A80;">₱68,200</span></span></div></div>
+        </div>
+      </div>
+      </sc-if>
+      </div><!-- end scroll -->
+      <!-- bottom tab bar -->
+      <div style="position:absolute;bottom:0;left:0;right:0;height:58px;background:#0E0E10;border-top:1px solid #232327;display:flex;align-items:center;justify-content:space-around;padding-bottom:4px;">
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:2px;" onClick="{{ setDashboard }}"><i class="{{ dashTabIcon }}" style="font-size:19px;color:{{ dashTabColor }};"></i><span style="font-size:8px;font-weight:700;color:{{ dashTabColor }};">Dashboard</span></div>
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:2px;" onClick="{{ setLedger }}"><i class="{{ ledgerTabIcon }}" style="font-size:19px;color:{{ ledgerTabColor }};"></i><span style="font-size:8px;font-weight:700;color:{{ ledgerTabColor }};">Ledger</span></div>
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:2px;" onClick="{{ setBills }}"><i class="{{ billsTabIcon }}" style="font-size:19px;color:{{ billsTabColor }};"></i><span style="font-size:8px;font-weight:700;color:{{ billsTabColor }};">Bills</span></div>
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:2px;" onClick="{{ setBudget }}"><i class="{{ budgetTabIcon }}" style="font-size:19px;color:{{ budgetTabColor }};"></i><span style="font-size:8px;font-weight:700;color:{{ budgetTabColor }};">Budget</span></div>
+        <div class="tap" style="display:flex;flex-direction:column;align-items:center;gap:2px;" onClick="{{ setHistory }}"><i class="{{ historyTabIcon }}" style="font-size:19px;color:{{ historyTabColor }};"></i><span style="font-size:8px;font-weight:700;color:{{ historyTabColor }};">History</span></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ COACH SCREEN ═══ -->
+    <sc-if value="{{ isCoach }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;display:flex;flex-direction:column;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;flex-shrink:0;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 6px;display:flex;align-items:center;gap:10px;flex-shrink:0;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><div style="flex:1;"><div style="font-size:18px;font-weight:800;color:#F7F7F8;">AI Coach</div><div style="font-size:10.5px;color:#46BD6B;font-weight:600;">Qwen3 0.6B · Ready</div></div></div>
+      <!-- messages -->
+      <div class="sc-scroll" style="flex:1;overflow-y:auto;padding:8px 14px;">
+        <sc-for list="{{ coachMsgs }}" as="m" hint-placeholder-count="1">
+          <sc-if value="{{ m.isUser }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><div style="max-width:78%;background:#202021;border:1px solid #2A2A2B;border-radius:16px 16px 4px 16px;padding:10px 13px;"><span style="font-size:13px;color:#E7E7E9;line-height:1.4;">{{ m.text }}</span></div></div>
+          </sc-if>
+          <sc-if value="{{ m.isAssistant }}" hint-placeholder-val="{{ true }}">
+          <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:9px;background:rgba(46,144,250,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ph-fill ph-sparkle" style="font-size:13px;color:#5BAAF5;"></i></div><div style="flex:1;background:#1A1A1E;border:1px solid #2A2A2E;border-radius:4px 16px 16px 16px;padding:10px 12px;"><span style="font-size:13px;color:#C9CDD3;line-height:1.4;">{{ m.text }}</span></div></div>
+          </sc-if>
+        </sc-for>
+        <!-- typing indicator -->
+        <sc-if value="{{ isCoachTyping }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:8px;margin-bottom:10px;align-items:flex-start;"><div style="width:28px;height:28px;border-radius:9px;background:rgba(46,144,250,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ph-fill ph-sparkle" style="font-size:13px;color:#5BAAF5;"></i></div><div style="background:#1A1A1E;border:1px solid #2A2A2E;border-radius:4px 16px 16px 16px;padding:12px 16px;display:flex;gap:5px;align-items:center;"><div style="width:7px;height:7px;border-radius:50%;background:#5BAAF5;animation:spin 1s linear infinite;"></div><div style="width:7px;height:7px;border-radius:50%;background:#5BAAF5;animation:spin 1s .2s linear infinite;"></div><div style="width:7px;height:7px;border-radius:50%;background:#5BAAF5;animation:spin 1s .4s linear infinite;"></div></div></div>
+        </sc-if>
+      </div>
+      <!-- input -->
+      <div style="padding:8px 14px 14px;background:#131315;border-top:1px solid #1E1E22;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <div style="flex:1;height:42px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;">
+          <input class="sc-in" value="{{ coachDraft }}" placeholder="Ask about your fast, macros, goals…" onInput="{{ onCoachInput }}" onKeyDown="{{ onCoachKey }}">
+        </div>
+        <div class="tap" style="width:42px;height:42px;border-radius:50%;background:#2E90FA;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px -6px rgba(46,144,250,.7);" onClick="{{ sendCoach }}"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#fff;"></i></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ PROGRESS SCREEN ═══ -->
+    <sc-if value="{{ isProgress }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Progress</span></div><i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i></div>
+      <div style="margin:14px 16px 0;background:linear-gradient(160deg,#222325,#191919);border:1px solid #2E2F31;border-radius:20px;padding:16px 17px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:64px;height:64px;border-radius:20px;background:linear-gradient(160deg,#42A5F5,#1565C0);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 10px 22px -8px rgba(33,150,243,.6);"><span style="font-size:9px;font-weight:700;color:rgba(255,255,255,.75);">LVL</span><span style="font-size:24px;font-weight:800;color:#fff;line-height:.9;">21</span></div>
+          <div style="flex:1;"><div style="font-size:18px;font-weight:800;color:#F7F7F8;letter-spacing:-.01em;">Hitting your stride</div><div style="font-size:11.5px;color:#9BA0A8;margin-top:2px;">1,570 points to level 22</div></div>
+        </div>
+        <div style="margin-top:13px;height:7px;background:#2C2D2F;border-radius:999px;overflow:hidden;"><div style="width:64%;height:100%;background:linear-gradient(90deg,#1E88E5,#42A5F5);border-radius:999px;"></div></div>
+      </div>
+      <div style="padding:14px 16px 0;display:flex;gap:9px;">
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 13px;text-align:center;"><i class="ph-fill ph-flame" style="font-size:18px;color:#FF8A4C;"></i><div style="font-size:20px;font-weight:800;color:#F7F7F8;margin-top:5px;">12</div><div style="font-size:9.5px;color:#83878F;margin-top:2px;">day streak</div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 13px;text-align:center;"><i class="ph-fill ph-lightning" style="font-size:18px;color:#FFCA28;"></i><div style="font-size:20px;font-weight:800;color:#F7F7F8;margin-top:5px;">2,840</div><div style="font-size:9.5px;color:#83878F;margin-top:2px;">total XP</div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;padding:12px 13px;text-align:center;"><i class="ph-fill ph-medal" style="font-size:18px;color:#FFCA28;"></i><div style="font-size:20px;font-weight:800;color:#F7F7F8;margin-top:5px;">9</div><div style="font-size:9.5px;color:#83878F;margin-top:2px;">badges</div></div>
+      </div>
+      <div style="padding:14px 18px 0;"><span style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Today's wins</span></div>
+      <div style="padding:9px 16px 0;display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;align-items:center;gap:9px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:10px 13px;"><i class="ph-fill ph-check-circle" style="font-size:17px;color:#4CAF50;"></i><span style="flex:1;font-size:13px;font-weight:600;color:#E7E7E9;">Finished your 16h fast</span><span style="font-size:10.5px;font-weight:700;color:#5BAAF5;">+160</span></div>
+        <div style="display:flex;align-items:center;gap:9px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:12px;padding:10px 13px;"><i class="ph-fill ph-check-circle" style="font-size:17px;color:#4CAF50;"></i><span style="flex:1;font-size:13px;font-weight:600;color:#E7E7E9;">Hit your protein goal</span><span style="font-size:10.5px;font-weight:700;color:#5BAAF5;">+40</span></div>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ ACTIVITY SCREEN ═══ -->
+    <sc-if value="{{ isActivity }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;justify-content:space-between;"><div style="display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:20px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Training Grounds</span></div><i class="ph ph-sliders-horizontal" style="font-size:18px;color:#8C9097;"></i></div>
+      <!-- ring hero -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:20px 0 0;">
+        <div style="position:relative;width:172px;height:172px;">
+          <svg width="172" height="172" viewBox="0 0 172 172" style="transform:rotate(-90deg);">
+            <circle cx="86" cy="86" r="78" fill="none" stroke="#252528" stroke-width="13"/>
+            <circle cx="86" cy="86" r="78" fill="none" stroke="#4CAF50" stroke-width="13" stroke-linecap="round" stroke-dasharray="490" stroke-dashoffset="10"/>
+            <circle cx="86" cy="86" r="60" fill="none" stroke="#202024" stroke-width="11"/>
+            <circle cx="86" cy="86" r="60" fill="none" stroke="#26C6DA" stroke-width="11" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="144"/>
+          </svg>
+          <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;"><i class="ph-fill ph-trophy" style="font-size:13px;color:#4CAF50;"></i><div style="font-size:28px;font-weight:800;color:#4CAF50;letter-spacing:-.03em;line-height:.95;">7,840</div><div style="font-size:9.5px;letter-spacing:.12em;color:#9A9FA8;margin-top:2px;">STEPS</div></div>
+        </div>
+        <div style="font-size:12.5px;font-weight:600;color:#4CAF50;margin-top:7px;">Daily goal crushed!</div>
+      </div>
+      <div style="padding:12px 16px 0;display:flex;gap:7px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:5px;background:#1C1C20;border:1px solid rgba(76,175,80,.35);border-radius:999px;padding:5px 11px;"><i class="ph-fill ph-check-circle" style="font-size:12px;color:#4CAF50;"></i><span style="font-size:11px;font-weight:700;color:#6FCB8A;">Goal 100%</span></div>
+        <div style="display:flex;align-items:center;gap:5px;background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:5px 11px;"><i class="ph-fill ph-flame" style="font-size:12px;color:#FFCA28;"></i><span style="font-size:11px;font-weight:700;color:#C9CDD3;">412 kcal</span></div>
+        <div style="display:flex;align-items:center;gap:5px;background:#1C1C20;border:1px solid rgba(38,198,218,.3);border-radius:999px;padding:5px 11px;"><i class="ph ph-path" style="font-size:12px;color:#26C6DA;"></i><span style="font-size:11px;font-weight:700;color:#C9CDD3;">6.2 km</span></div>
+      </div>
+      <!-- Logged workouts -->
+      <div class="sc-scroll" style="padding:10px 16px 80px;display:flex;flex-direction:column;gap:7px;overflow-y:auto;max-height:190px;margin-top:2px;">
+        <sc-for list="{{ workouts }}" as="w" hint-placeholder-count="0">
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:13px;padding:11px 13px;display:flex;align-items:center;gap:10px;">
+            <div style="width:30px;height:30px;border-radius:9px;background:rgba(76,175,80,.14);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ph-fill ph-barbell" style="font-size:15px;color:#4CAF50;"></i></div>
+            <div style="flex:1;"><div style="font-size:12.5px;font-weight:700;color:#F2F2F3;">{{ w.name }}</div><div style="font-size:10px;color:#797D85;margin-top:2px;">{{ w.detail }}</div></div>
+            <span style="font-size:10px;font-weight:700;color:#9A9FA8;">{{ w.time }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <!-- Log Workout FAB -->
+      <div class="tap" style="position:absolute;bottom:20px;right:18px;height:46px;border-radius:14px;background:#4CAF50;display:flex;align-items:center;gap:7px;padding:0 18px;box-shadow:0 8px 20px -8px rgba(76,175,80,.6);" onClick="{{ openWorkout }}">
+        <i class="ph-bold ph-plus" style="font-size:14px;color:#fff;"></i><span style="font-size:13px;font-weight:800;color:#fff;">Log Workout</span>
+      </div>
+      <!-- Workout toast -->
+      <sc-if value="{{ workoutToast }}" hint-placeholder-val="{{ false }}">
+        <div style="position:absolute;bottom:78px;left:50%;transform:translateX(-50%);background:#46BD6B;border-radius:999px;padding:9px 20px;display:flex;align-items:center;gap:7px;box-shadow:0 8px 20px -8px rgba(70,189,107,.6);white-space:nowrap;">
+          <i class="ph-fill ph-check-circle" style="font-size:14px;color:#fff;"></i><span style="font-size:12.5px;font-weight:700;color:#fff;">Workout logged! +40 XP</span>
+        </div>
+      </sc-if>
+      <!-- Workout sheet -->
+      <sc-if value="{{ isWorkoutSheet }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div class="tap" style="position:absolute;inset:0;background:rgba(0,0,0,.55);animation:fadeIn .2s ease;" onClick="{{ closeWorkout }}"></div>
+        <div style="position:absolute;left:0;right:0;bottom:0;background:#171718;border-top:1px solid #2E2F31;border-radius:24px 24px 0 0;padding:12px 16px 20px;animation:fadeUp .28s cubic-bezier(.22,1,.36,1);">
+          <div style="width:38px;height:4px;border-radius:999px;background:#3A3B3D;margin:0 auto 12px;"></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;"><span style="font-size:14px;font-weight:800;color:#F2F2F3;">Log Workout</span><span class="tap" style="font-size:13px;font-weight:700;color:#797D85;" onClick="{{ closeWorkout }}">Cancel</span></div>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+            <div style="background:#1D1D1E;border:1px solid #2A2A2B;border-radius:13px;padding:10px 12px;">
+              <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:#7E828A;margin-bottom:6px;">EXERCISE 1</div>
+              <div style="display:flex;gap:7px;"><div style="flex:2;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;padding:0 10px;"><span style="font-size:12px;color:#C9CDD3;">Push-ups</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">4 sets</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">15 reps</span></div></div>
+            </div>
+            <div style="background:#1D1D1E;border:1px solid #2A2A2B;border-radius:13px;padding:10px 12px;">
+              <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:#7E828A;margin-bottom:6px;">EXERCISE 2</div>
+              <div style="display:flex;gap:7px;"><div style="flex:2;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;padding:0 10px;"><span style="font-size:12px;color:#C9CDD3;">Pull-ups</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">3 sets</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">10 reps</span></div></div>
+            </div>
+            <div style="background:#1D1D1E;border:1px solid #2A2A2B;border-radius:13px;padding:10px 12px;">
+              <div style="font-size:9.5px;font-weight:700;letter-spacing:.07em;color:#7E828A;margin-bottom:6px;">EXERCISE 3</div>
+              <div style="display:flex;gap:7px;"><div style="flex:2;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;padding:0 10px;"><span style="font-size:12px;color:#C9CDD3;">Squats</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">4 sets</span></div><div style="flex:1;height:34px;background:#252628;border-radius:9px;display:flex;align-items:center;justify-content:center;"><span style="font-size:12px;color:#C9CDD3;">20 reps</span></div></div>
+            </div>
+          </div>
+          <div class="tap" style="height:50px;border-radius:15px;background:#4CAF50;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 8px 20px -8px rgba(76,175,80,.6);" onClick="{{ saveWorkout }}">
+            <i class="ph-fill ph-check-circle" style="font-size:17px;color:#fff;"></i><span style="font-size:14px;font-weight:800;color:#fff;">Save Workout</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+    </sc-if>
+
+    <!-- ═══ WEIGHT SCREEN ═══ -->
+    <sc-if value="{{ isWeight }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Weight &amp; Body</span></div>
+      <!-- Stats row -->
+      <div style="margin:12px 16px 0;display:flex;gap:8px;">
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:12px 13px;"><div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#7E828A;">CURRENT</div><div style="font-size:22px;font-weight:800;color:#F2F2F3;letter-spacing:-.03em;margin-top:3px;">74.2<span style="font-size:12px;color:#7E828A;font-weight:600;"> kg</span></div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:12px 13px;"><div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#7E828A;">CHANGE</div><div style="font-size:22px;font-weight:800;color:#46BD6B;letter-spacing:-.03em;margin-top:3px;">−2.2<span style="font-size:12px;color:#7E828A;font-weight:600;"> kg</span></div></div>
+        <div style="flex:1;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:12px 13px;"><div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:#7E828A;">GOAL</div><div style="font-size:22px;font-weight:800;color:#926AFA;letter-spacing:-.03em;margin-top:3px;">72.0<span style="font-size:12px;color:#7E828A;font-weight:600;"> kg</span></div></div>
+      </div>
+      <!-- Sparkline -->
+      <div style="margin:9px 16px 0;background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:14px 15px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;color:#7E828A;margin-bottom:10px;">LAST 8 WEEKS</div>
+        <svg width="100%" viewBox="0 0 300 64" preserveAspectRatio="none" style="height:64px;">
+          <defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#926AFA" stop-opacity=".22"></stop><stop offset="100%" stop-color="#926AFA" stop-opacity="0"></stop></linearGradient></defs>
+          <path d="M0,12 L43,16 L86,24 L129,30 L171,34 L214,44 L257,50 L300,56" fill="none" stroke="#926AFA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path>
+          <path d="M0,12 L43,16 L86,24 L129,30 L171,34 L214,44 L257,50 L300,56 L300,64 L0,64 Z" fill="url(#wg)"></path>
+          <circle cx="300" cy="56" r="4" fill="#926AFA"></circle>
+        </svg>
+        <div style="display:flex;justify-content:space-between;margin-top:5px;"><span style="font-size:9px;color:#5A5E65;">May 4</span><span style="font-size:9px;color:#5A5E65;">Jun 28</span></div>
+      </div>
+      <!-- Log entries -->
+      <div style="padding:13px 22px 0;display:flex;align-items:center;justify-content:space-between;"><span style="font-size:12.5px;font-weight:700;color:#C9CDD3;">Log</span></div>
+      <div style="padding:8px 16px 0;display:flex;flex-direction:column;gap:7px;">
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:14px;overflow:hidden;">
+          <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #1E1E22;gap:12px;"><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">74.2 kg</div><div style="font-size:10px;color:#797D85;margin-top:2px;">Jun 28 · today</div></div><span style="font-size:11.5px;font-weight:700;color:#46BD6B;">−0.3</span></div>
+          <div style="display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #1E1E22;gap:12px;"><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">74.5 kg</div><div style="font-size:10px;color:#797D85;margin-top:2px;">Jun 21</div></div><span style="font-size:11.5px;font-weight:700;color:#46BD6B;">−0.5</span></div>
+          <div style="display:flex;align-items:center;padding:12px 14px;gap:12px;"><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">75.0 kg</div><div style="font-size:10px;color:#797D85;margin-top:2px;">Jun 14</div></div><span style="font-size:11.5px;font-weight:700;color:#46BD6B;">−0.8</span></div>
+        </div>
+      </div>
+      <!-- Log weight FAB -->
+      <div class="tap" style="position:absolute;bottom:20px;right:18px;height:46px;border-radius:14px;background:#926AFA;display:flex;align-items:center;gap:7px;padding:0 18px;box-shadow:0 8px 20px -8px rgba(146,106,250,.6);" onClick="{{ goBack }}">
+        <i class="ph-bold ph-plus" style="font-size:14px;color:#fff;"></i><span style="font-size:13px;font-weight:800;color:#fff;">Log Weight</span>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- ═══ SETTINGS SCREEN ═══ -->
+    <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;inset:0;background:#141414;overflow:hidden;animation:{{ screenAnim }};">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 0;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+      <div style="padding:10px 22px 0;display:flex;align-items:center;gap:10px;"><i class="ph ph-caret-left tap" style="font-size:20px;color:#8C9097;" onClick="{{ goBack }}"></i><span style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Settings</span></div>
+      <div style="padding:14px 16px 0;display:flex;flex-direction:column;gap:2px;">
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8;padding:0 4px;margin-bottom:5px;">Account</div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;overflow:hidden;margin-bottom:9px;">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1E1E22;"><div style="width:34px;height:34px;border-radius:50%;background:rgba(46,144,250,.18);display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:800;color:#5BAAF5;">M</span></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">migs@gmail.com</div><div style="font-size:10px;color:#83878F;margin-top:1px;">Signed in</div></div><i class="ph-fill ph-check-circle" style="font-size:14px;color:#46BD6B;"></i></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1E1E22;"><i class="ph ph-shield" style="font-size:15px;color:#9A9FA8;"></i><div style="flex:1;"><div style="font-size:13px;font-weight:600;color:#F2F2F3;">Character</div><div style="font-size:10px;color:#83878F;margin-top:1px;">Level 21 · 2,840 XP</div></div><i class="ph ph-caret-right" style="font-size:12px;color:#6A6E76;"></i></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1E1E22;"><i class="ph ph-bell" style="font-size:15px;color:#9A9FA8;"></i><span style="flex:1;font-size:13px;font-weight:600;color:#F2F2F3;">Notifications</span><i class="ph ph-caret-right" style="font-size:12px;color:#6A6E76;"></i></div>
+          <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;"><i class="ph ph-palette" style="font-size:15px;color:#9A9FA8;"></i><span style="flex:1;font-size:13px;font-weight:600;color:#F2F2F3;">Theme</span>
+            <div style="display:flex;gap:4px;background:#141414;border-radius:9px;padding:3px;"><div style="padding:4px 9px;border-radius:7px;background:#2E90FA;"><span style="font-size:10px;font-weight:700;color:#fff;">Auto</span></div><div style="padding:4px 9px;"><span style="font-size:10px;font-weight:600;color:#9A9FA8;">Light</span></div><div style="padding:4px 9px;"><span style="font-size:10px;font-weight:600;color:#9A9FA8;">Dark</span></div></div>
+          </div>
+        </div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8;padding:0 4px;margin-bottom:5px;">Cloud AI</div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;padding:12px 14px;margin-bottom:9px;display:flex;align-items:center;gap:10px;"><div style="width:30px;height:30px;border-radius:9px;background:rgba(46,144,250,.12);display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-cloud" style="font-size:15px;color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:13px;font-weight:700;color:#F2F2F3;">Cloud AI Coach</div><div style="font-size:10px;color:#83878F;margin-top:1px;">Claude Haiku · primary food parser</div></div><div style="width:40px;height:23px;border-radius:999px;background:#2E90FA;position:relative;"><div style="position:absolute;right:2px;top:2px;width:19px;height:19px;border-radius:50%;background:#fff;"></div></div></div>
+        <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#9A9FA8;padding:0 4px;margin-bottom:5px;">About</div>
+        <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:15px;overflow:hidden;">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid #1E1E22;"><span style="flex:1;font-size:13px;font-weight:600;color:#F2F2F3;">Version</span><span style="font-size:12.5px;color:#83878F;">1.4.2</span></div>
+          <div class="tap" style="display:flex;align-items:center;gap:10px;padding:12px 14px;" onClick="{{ goBack }}"><i class="ph ph-sign-out" style="font-size:15px;color:#F6685E;"></i><span style="flex:1;font-size:13px;font-weight:600;color:#F6685E;">Sign Out</span></div>
+        </div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    screen: 'hub',
+    animDir: 'right',
+    fastState: 'idle',
+    fastElapsed: 0,
+    nutPhase: 'today',
+    draft: '',
+    entries: [
+      { id: 1, name: 'White rice, fried fish & uni', sub: '9:16 AM · 431 kcal', kcal: 431, p: 29, c: 46, f: 15 },
+      { id: 2, name: 'Bear Brand milk powder', sub: '9:40 AM · 150 kcal', kcal: 150, p: 4, c: 22, f: 5 },
+    ],
+    isAnalyzing: false,
+    estimate: null,
+    questDone: [true, true, false, false, false],
+    coachMessages: [{ role: 'assistant', text: "Hey Migs! You're on a 12-day streak — impressive. What can I help you with today?" }],
+    coachDraft: '',
+    coachTyping: false,
+    treasuryTab: 'dashboard',
+    showWorkoutSheet: false,
+    workoutToast: false,
+    workouts: [],
+  };
+
+  _fastTimer = null;
+
+  componentDidMount() {
+    this._fastTimer = setInterval(() => {
+      if (this.state.fastState !== 'active') return;
+      this.setState(s => {
+        const n = s.fastElapsed + 1;
+        return n >= 16 ? { fastElapsed: 16, fastState: 'complete' } : { fastElapsed: n };
+      });
+    }, 1000);
+  }
+
+  componentWillUnmount() { clearInterval(this._fastTimer); }
+
+  goTo(screen) { this.setState({ screen, animDir: 'right' }); }
+  goFasting = () => this.goTo('fasting');
+  goNutrition = () => { this.setState({ screen: 'nutrition', animDir: 'right', nutPhase: 'today' }); }
+  goQuests = () => this.goTo('quests');
+  goTreasury = () => this.goTo('treasury');
+  goProgress = () => this.goTo('progress');
+  goActivity = () => this.goTo('activity');
+  goCoach = () => this.goTo('coach');
+  goSettings = () => this.goTo('settings');
+  goWeight = () => this.goTo('weight');
+  goBack = () => this.setState({ screen: 'hub', animDir: 'left' });
+
+  deleteEntry = (id) => { this.setState(s => ({ entries: s.entries.filter(e => e.id !== id) })); };
+
+  openWorkout = () => this.setState({ showWorkoutSheet: true });
+  closeWorkout = () => this.setState({ showWorkoutSheet: false });
+  saveWorkout = () => {
+    const now = new Date();
+    const t = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    const w = { id: Date.now(), name: 'Push-ups / Pull-ups / Squats', detail: '4×15 · 3×10 · 4×20 · 3 exercises', time: t };
+    this.setState(s => ({ workouts: [w, ...s.workouts], showWorkoutSheet: false, workoutToast: true }));
+    setTimeout(() => this.setState({ workoutToast: false }), 2500);
+  };
+
+  startFast = () => this.setState({ fastState: 'active', fastElapsed: 0 });
+  endFast = () => this.setState({ fastState: 'complete' });
+  dismissFast = () => this.setState({ screen: 'hub', animDir: 'left' });
+
+  openCompose = () => this.setState({ nutPhase: 'compose', draft: '', estimate: null, isAnalyzing: false });
+  closeCompose = () => this.setState({ nutPhase: 'today' });
+  backToCompose = () => this.setState({ nutPhase: 'compose', estimate: null, isAnalyzing: false });
+  onDraftInput = (e) => this.setState({ draft: e.target.value });
+  onKeyDown = (e) => { if (e.key === 'Enter') this.sendMeal(); };
+
+  quickMeal = (text) => { this.setState({ draft: text, nutPhase: 'compose', isAnalyzing: true, estimate: null }, () => {
+    setTimeout(() => { this.setState({ isAnalyzing: false, nutPhase: 'estimate', estimate: this._estimate(text) }); }, 900);
+  }); };
+  quickEggs = () => this.quickMeal('2 eggs and toast');
+  quickChicken = () => this.quickMeal('chicken adobo with rice');
+  quickCoffee = () => this.quickMeal('flat white coffee');
+
+  sendMeal = () => {
+    const t = (this.state.draft || '').trim();
+    if (!t || this.state.isAnalyzing) return;
+    this.setState({ isAnalyzing: true, nutPhase: 'compose' });
+    setTimeout(() => { this.setState({ isAnalyzing: false, nutPhase: 'estimate', estimate: this._estimate(t) }); }, 900);
+  };
+
+  _estimate(text) {
+    const t = text.toLowerCase();
+    const items = [];
+    if (/egg/.test(t)) items.push({ name: 'Fried eggs ×2', kcal: 180, p: 13, c: 1, f: 15 });
+    if (/toast|bread/.test(t)) items.push({ name: 'Toast ×2', kcal: 180, p: 8, c: 30, f: 4 });
+    if (/flat white|coffee|latte/.test(t)) items.push({ name: 'Flat white (oat)', kcal: 120, p: 6, c: 12, f: 7 });
+    if (/chicken/.test(t)) items.push({ name: 'Chicken adobo', kcal: 470, p: 40, c: 8, f: 30 });
+    if (/rice/.test(t)) items.push({ name: 'White rice 1 cup', kcal: 205, p: 4, c: 45, f: 0 });
+    if (items.length === 0) items.push({ name: text.charAt(0).toUpperCase() + text.slice(1), kcal: 250, p: 12, c: 30, f: 8 });
+    const tot = items.reduce((a, i) => ({ kcal: a.kcal+i.kcal, p: a.p+i.p, c: a.c+i.c, f: a.f+i.f }), { kcal:0,p:0,c:0,f:0 });
+    return { items, total: tot.kcal, p: tot.p, c: tot.c, f: tot.f, name: items.length===1 ? items[0].name : (text.charAt(0).toUpperCase()+text.slice(1)) };
+  }
+
+  logIt = () => {
+    const est = this.state.estimate;
+    if (!est) return;
+    const now = new Date();
+    const t = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    this.setState(s => ({ entries: [{ id: Date.now(), name: est.name, sub: `${t} · ${est.total} kcal`, kcal: est.total, p: est.p, c: est.c, f: est.f }, ...s.entries], nutPhase: 'today', draft: '', estimate: null }));
+  };
+
+  toggleQuest = (i) => { this.setState(s => { const q = [...s.questDone]; q[i] = !q[i]; return { questDone: q }; }); };
+
+  onCoachInput = (e) => this.setState({ coachDraft: e.target.value });
+  onCoachKey = (e) => { if (e.key === 'Enter') this.sendCoach(); };
+  sendCoach = () => {
+    const t = (this.state.coachDraft || '').trim();
+    if (!t || this.state.coachTyping) return;
+    this.setState(s => ({ coachMessages: [...s.coachMessages, { role: 'user', text: t }], coachDraft: '', coachTyping: true }));
+    const resp = [
+      "You're in fat burning territory — keep the window closed. Your protein consistency is excellent at 84% of days.",
+      "Great progress on weight — down 3.6kg since you started. Keep your deficit at −300 kcal and you'll hit your goal by August.",
+      "Your savings rate is 39% this month — well above average. The Meralco bill is due in 3 days; you have plenty to cover it.",
+    ][Math.floor(Math.random() * 3)];
+    setTimeout(() => { this.setState(s => ({ coachMessages: [...s.coachMessages, { role: 'assistant', text: resp }], coachTyping: false })); }, 1400);
+  };
+
+  setDashboard = () => this.setState({ treasuryTab: 'dashboard' });
+  setLedger = () => this.setState({ treasuryTab: 'ledger' });
+  setHistory = () => this.setState({ treasuryTab: 'history' });
+
+  renderVals() {
+    const s = this.state;
+    const GOAL = 16;
+    const fp = Math.min(s.fastElapsed / GOAL, 1.0);
+    const fastDashOffset = Math.round(245 * (1 - fp));
+    const fastBigOffset = Math.round(540.4 * (1 - fp));
+    const fh = s.fastElapsed;
+    const fastTimeStr = s.fastState === 'idle' ? 'Ready' : `${String(fh).padStart(2,'0')}:00`;
+    const fastRingColor = s.fastState === 'complete' ? '#46BD6B' : '#2E90FA';
+    const fastTrackColor = s.fastState === 'complete' ? '#152218' : '#1A2535';
+    const fastTextColor = s.fastState === 'complete' ? '#4CAF50' : (s.fastState === 'idle' ? '#4A4E55' : '#F7F7F8');
+    const fastPhaseLabel = fp>=0.75 ? 'Deep ketosis' : fp>=0.4 ? 'Fat burning' : fp>=0.1 ? 'Glycogen depleting' : fp>0 ? 'Starting' : 'Ready to start';
+    const fastSubLabel = s.fastState === 'complete' ? 'Complete ✓' : s.fastState === 'idle' ? 'Tap to start' : fastPhaseLabel;
+    const fastRemaining = `${String(Math.max(0, GOAL - fh)).padStart(2,'0')}:00`;
+
+    const KCAL_GOAL = 2098;
+    const total = s.entries.reduce((a, e) => ({ kcal: a.kcal+e.kcal, p: a.p+e.p, c: a.c+e.c, f: a.f+e.f }), { kcal:0,p:0,c:0,f:0 });
+    const eatenKcal = String(total.kcal);
+    const leftKcal = String(Math.max(0, KCAL_GOAL - total.kcal));
+    const eatPct = Math.min(total.kcal / KCAL_GOAL, 1.0);
+    const foodDashOffset = Math.round(245 * (1 - eatPct));
+    const foodSubLabel = eatPct > 1.0 ? 'Over goal' : eatPct > 0.85 ? 'Almost full' : eatPct > 0.5 ? 'On track' : 'Plenty left';
+    const calPctStr = `${Math.round(eatPct * 100)}%`;
+    const PG=140, CG=210, FG=70;
+    const pStr = String(Math.round(total.p));
+    const cStr = String(Math.round(total.c));
+    const fStr = String(Math.round(total.f));
+    const pPct = `${Math.min(Math.round(total.p/PG*100), 100)}%`;
+    const cPct = `${Math.min(Math.round(total.c/CG*100), 100)}%`;
+    const fPct = `${Math.min(Math.round(total.f/FG*100), 100)}%`;
+
+    const questDefs = [
+      { title: '100 push-ups', meta: '8:00 AM · STR · +30 XP' },
+      { title: 'Cold shower', meta: '8:30 AM · VIT · +20 XP' },
+      { title: '10-min journal', meta: '9:00 AM · INT · +20 XP' },
+      { title: 'Evening walk', meta: '7:00 PM · AGI · +30 XP' },
+      { title: 'Read 10 pages', meta: '9:00 PM · INT · +20 XP' },
+    ];
+    const done = s.questDone.filter(Boolean).length;
+    const left = questDefs.length - done;
+    const xpLeft = questDefs.reduce((s2, _, i) => s2 + (s.questDone[i] ? 0 : [30,20,20,30,20][i] || 20), 0);
+    const questsBarWidth = `${(done / questDefs.length) * 100}%`;
+    const questsXpLabel = left > 0 ? `+${xpLeft} XP left` : 'All done! 🎉';
+    const next = questDefs.find((_, i) => !s.questDone[i]);
+
+    const fastAiPart = s.fastState === 'complete' ? 'Fast complete! +25 XP.' : s.fastState === 'active' ? `${fastPhaseLabel} · ${fastRemaining} left.` : 'Start your fast for +25 XP.';
+    const questAiPart = left > 0 ? `${left} quest${left>1?'s':''} for +${xpLeft} XP.` : 'All quests done!';
+    const aiInsight = `${fastAiPart} ${questAiPart} Meralco due in 3 days.`;
+
+    const screenAnim = s.animDir === 'right' ? 'slideRight .28s cubic-bezier(.22,1,.36,1) forwards' : 'slideLeft .28s cubic-bezier(.22,1,.36,1) forwards';
+    const est = s.estimate;
+
+    return {
+      isHub: s.screen === 'hub',
+      isFasting: s.screen === 'fasting',
+      isNutrition: s.screen === 'nutrition',
+      isQuests: s.screen === 'quests',
+      isTreasury: s.screen === 'treasury',
+      isProgress: s.screen === 'progress',
+      isActivity: s.screen === 'activity',
+      isCoach: s.screen === 'coach',
+      isSettings: s.screen === 'settings',
+      screenAnim,
+      fastDashOffset, fastBigOffset, fastTimeStr, fastRingColor, fastTrackColor, fastTextColor, fastSubLabel, fastPhaseLabel, fastRemaining,
+      isFastIdle: s.fastState === 'idle',
+      isFastActive: s.fastState === 'active',
+      isFastComplete: s.fastState === 'complete',
+      aiInsight,
+      eatenKcal, leftKcal, foodDashOffset, foodSubLabel, calPctStr, pStr, cStr, fStr, pPct, cPct, fPct,
+      isCompose: ['compose','analyzing','estimate'].includes(s.nutPhase),
+      isAnalyzing: s.isAnalyzing,
+      hasEstimate: s.nutPhase === 'estimate' && !!est,
+      showChips: !s.isAnalyzing && s.nutPhase !== 'estimate',
+      draft: s.draft,
+      entries: s.entries.map(e => ({ ...e, kcalStr: String(e.kcal), del: () => this.deleteEntry(e.id) })),
+      estItems: est ? est.items.map(i => ({ ...i, kcalStr: String(i.kcal) })) : [],
+      estP: est ? est.p : 0,
+      estC: est ? est.c : 0,
+      estF: est ? est.f : 0,
+      estTotalStr: est ? String(est.total) : '',
+      inputBorder: (s.draft||'').trim() ? '#2196F3' : '#2E2F31',
+      sendBg: (s.draft||'').trim() ? '#2196F3' : '#3A3B3D',
+      inputPlaceholder: s.nutPhase === 'estimate' ? 'Add another item…' : 'What did you eat?',
+      quests: questDefs.map((q, i) => ({
+        ...q,
+        done: s.questDone[i],
+        checkBg: s.questDone[i] ? '#2196F3' : 'transparent',
+        checkBorder: s.questDone[i] ? 'none' : '1.5px solid #3A3A40',
+        titleColor: s.questDone[i] ? '#9A9FA8' : '#F2F2F3',
+        titleDecor: s.questDone[i] ? 'line-through' : 'none',
+        toggle: () => this.toggleQuest(i),
+      })),
+      questsDoneCount: done,
+      questsBarWidth, questsXpLabel,
+      nextQuestTitle: next?.title || '🎉 All done!',
+      nextQuestMeta: next?.meta || '',
+      coachMsgs: s.coachMessages.map(m => ({ ...m, isUser: m.role==='user', isAssistant: m.role==='assistant' })),
+      coachDraft: s.coachDraft,
+      isCoachTyping: s.coachTyping,
+      isDashboard: s.treasuryTab === 'dashboard',
+      isLedger: s.treasuryTab === 'ledger',
+      isBills: s.treasuryTab === 'bills',
+      isBudget: s.treasuryTab === 'budget',
+      isHistory: s.treasuryTab === 'history',
+      setHistory: this.setHistory,
+      dashTabIcon: s.treasuryTab === 'dashboard' ? 'ph-fill ph-squares-four' : 'ph ph-squares-four',
+      dashTabColor: s.treasuryTab === 'dashboard' ? '#5BAAF5' : '#6A6E76',
+      ledgerTabIcon: s.treasuryTab === 'ledger' ? 'ph-fill ph-list-dashes' : 'ph ph-list-dashes',
+      ledgerTabColor: s.treasuryTab === 'ledger' ? '#5BAAF5' : '#6A6E76',
+      billsTabIcon: s.treasuryTab === 'bills' ? 'ph-fill ph-receipt' : 'ph ph-receipt',
+      billsTabColor: s.treasuryTab === 'bills' ? '#5BAAF5' : '#6A6E76',
+      budgetTabIcon: s.treasuryTab === 'budget' ? 'ph-fill ph-chart-pie-slice' : 'ph ph-chart-pie-slice',
+      budgetTabColor: s.treasuryTab === 'budget' ? '#5BAAF5' : '#6A6E76',
+      historyTabIcon: s.treasuryTab === 'history' ? 'ph-fill ph-clock-counter-clockwise' : 'ph ph-clock-counter-clockwise',
+      historyTabColor: s.treasuryTab === 'history' ? '#5BAAF5' : '#6A6E76',
+      dashBg: s.treasuryTab === 'dashboard' ? '#2E90FA' : '#1C1C20',
+      dashBorder: s.treasuryTab === 'dashboard' ? 'none' : '1px solid #2A2A2E',
+      dashColor: s.treasuryTab === 'dashboard' ? '#fff' : '#9A9FA8',
+      ledgerBg: s.treasuryTab === 'ledger' ? '#2E90FA' : '#1C1C20',
+      ledgerBorder: s.treasuryTab === 'ledger' ? 'none' : '1px solid #2A2A2E',
+      ledgerColor: s.treasuryTab === 'ledger' ? '#fff' : '#9A9FA8',
+      billsBg: s.treasuryTab === 'bills' ? '#2E90FA' : '#1C1C20',
+      billsBorder: s.treasuryTab === 'bills' ? 'none' : '1px solid #2A2A2E',
+      billsColor: s.treasuryTab === 'bills' ? '#fff' : '#9A9FA8',
+      budgetBg: s.treasuryTab === 'budget' ? '#2E90FA' : '#1C1C20',
+      budgetBorder: s.treasuryTab === 'budget' ? 'none' : '1px solid #2A2A2E',
+      budgetColor: s.treasuryTab === 'budget' ? '#fff' : '#9A9FA8',
+      setBills: () => this.setState({ treasuryTab: 'bills' }),
+      setBudget: () => this.setState({ treasuryTab: 'budget' }),
+      goFasting: this.goFasting, goNutrition: this.goNutrition, goQuests: this.goQuests,
+      goTreasury: this.goTreasury, goProgress: this.goProgress, goActivity: this.goActivity,
+      goCoach: this.goCoach, goSettings: this.goSettings, goWeight: this.goWeight, goBack: this.goBack,
+      isWeight: s.screen === 'weight',
+      isWorkoutSheet: s.showWorkoutSheet,
+      workoutToast: s.workoutToast,
+      workouts: s.workouts,
+      openWorkout: this.openWorkout, closeWorkout: this.closeWorkout, saveWorkout: this.saveWorkout,
+      startFast: this.startFast, endFast: this.endFast, dismissFast: this.dismissFast,
+      openCompose: this.openCompose, closeCompose: this.closeCompose, backToCompose: this.backToCompose,
+      onDraftInput: this.onDraftInput, onKeyDown: this.onKeyDown, sendMeal: this.sendMeal, logIt: this.logIt,
+      quickEggs: this.quickEggs, quickChicken: this.quickChicken, quickCoffee: this.quickCoffee,
+      onCoachInput: this.onCoachInput, onCoachKey: this.onCoachKey, sendCoach: this.sendCoach,
+      setDashboard: this.setDashboard, setLedger: this.setLedger,
+    };
+  }
+}
+</script>
+</body>
+</html>

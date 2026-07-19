@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Onboarding · The Awakening</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">First-run wizard that turns an empty Hub into an awakening — build a real TDEE profile, pick a fasting protocol, and see your starting stats. Skippable on every step; the math is the app's existing Mifflin-St Jeor.</div>
+</div>
+
+<!-- ROW 1 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Awaken &amp; profile</div><div style="font-size:14px; color:#5C6068;">steps 0–3 · accept · identity · vessel · training</div></div>
+</div>
+
+<!-- ============ STEP 0 · AWAKENING ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">0 · Awakening</div>
+  <div style="width:340px; height:740px; background:#0A0A0B; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:0 32px;">
+      <div style="position:relative; width:108px; height:108px;">
+        <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,202,40,.28), rgba(255,202,40,0) 70%);"></div>
+        <div style="position:absolute; inset:24px; border-radius:50%; border:1.5px solid rgba(255,202,40,.5); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-sparkle" style="font-size:30px; color:#FFCA28;"></i></div>
+      </div>
+      <div style="font-size:11px; font-weight:800; letter-spacing:.26em; text-transform:uppercase; color:#FFCA28; margin-top:30px;">System notice</div>
+      <div style="font-size:25px; font-weight:800; color:#F7F7F8; margin-top:14px; line-height:1.25; letter-spacing:-.01em;">You have been chosen as a Player.</div>
+      <div style="font-size:14px; color:#9BA0A8; margin-top:13px; line-height:1.55;">Accept to begin your awakening — we'll build your profile and set your first protocol.</div>
+    </div>
+    <div style="position:absolute; bottom:22px; left:18px; right:18px;">
+      <div style="height:56px; border-radius:17px; background:linear-gradient(160deg,#FFD75E,#F1A300); display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 30px -10px rgba(255,202,40,.5);"><span style="font-size:15px; font-weight:800; color:#2A1A00; letter-spacing:.03em;">Accept</span><i class="ph-bold ph-arrow-right" style="font-size:15px; color:#2A1A00;"></i></div>
+      <div style="text-align:center; margin-top:13px;"><span style="font-size:13px; font-weight:700; color:#5A5E66;">Skip awakening</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 1 · IDENTITY ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">1 · Identity</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="display:flex; gap:5px;"><span style="width:18px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span></div><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:24px 24px 0;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Claim your identity</div><div style="font-size:13.5px; color:#9BA0A8; margin-top:8px; line-height:1.5;">Sign in to sync across devices — or walk alone and stay fully on-device.</div></div>
+
+    <div style="padding:30px 18px 0; display:flex; flex-direction:column; gap:11px;">
+      <div style="height:54px; border-radius:15px; background:#F5F5F5; display:flex; align-items:center; justify-content:center; gap:10px;"><i class="ph-bold ph-google-logo" style="font-size:18px; color:#1A1A1A;"></i><span style="font-size:14.5px; font-weight:700; color:#1A1A1A;">Continue with Google</span></div>
+      <div style="height:54px; border-radius:15px; background:#1D1D1E; border:1px solid #313132; display:flex; align-items:center; justify-content:center; gap:10px;"><i class="ph ph-person-simple-walk" style="font-size:18px; color:#C9CDD3;"></i><span style="font-size:14.5px; font-weight:700; color:#C9CDD3;">Walk alone for now</span></div>
+    </div>
+
+    <div style="margin:26px 18px 0; background:rgba(33,150,243,.06); border:1px solid rgba(33,150,243,.2); border-radius:14px; padding:13px 14px; display:flex; align-items:flex-start; gap:10px;"><i class="ph-fill ph-shield-check" style="font-size:17px; color:#5BAAF5; margin-top:1px;"></i><span style="font-size:11.5px; color:#9BC6EE; line-height:1.45;">Guest mode keeps everything on your device. You can sign in later without losing data.</span></div>
+  </div>
+</div>
+
+<!-- ============ STEP 2 · VESSEL ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">2 · Vessel</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="display:flex; gap:5px;"><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:18px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span></div><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:22px 24px 0;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Your vessel</div><div style="font-size:13.5px; color:#9BA0A8; margin-top:8px; line-height:1.5;">The basics behind your energy math.</div></div>
+
+    <div style="padding:24px 18px 0; display:flex; flex-direction:column; gap:11px;">
+      <div style="display:flex; gap:9px;">
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><div style="font-size:10.5px; color:#7E828A;">Age</div><div style="display:flex; align-items:baseline; gap:4px; margin-top:3px;"><span style="font-size:22px; font-weight:800; color:#F2F2F3;">29</span><span style="font-size:11px; color:#7E828A;">yrs</span></div></div>
+        <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><div style="font-size:10.5px; color:#7E828A;">Height</div><div style="display:flex; align-items:baseline; gap:4px; margin-top:3px;"><span style="font-size:22px; font-weight:800; color:#F2F2F3;">176</span><span style="font-size:11px; color:#7E828A;">cm</span></div></div>
+      </div>
+      <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><div style="font-size:10.5px; color:#7E828A;">Weight</div><div style="display:flex; align-items:baseline; gap:4px; margin-top:3px;"><span style="font-size:22px; font-weight:800; color:#F2F2F3;">74.6</span><span style="font-size:11px; color:#7E828A;">kg</span></div></div>
+      <div><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A; margin:6px 2px 8px;">Sex</div><div style="display:flex; gap:9px;"><div style="flex:1; height:46px; border-radius:13px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 14px -7px rgba(33,150,243,.6);"><span style="font-size:14px; font-weight:700; color:#fff;">Male</span></div><div style="flex:1; height:46px; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#9BA0A8;">Female</span></div></div></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Continue</span><i class="ph-bold ph-arrow-right" style="font-size:14px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ============ STEP 3 · TRAINING ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">3 · Training</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="display:flex; gap:5px;"><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:18px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span></div><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:22px 24px 0;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Training load</div><div style="font-size:13.5px; color:#9BA0A8; margin-top:8px; line-height:1.5;">How active is a typical week?</div></div>
+
+    <div style="padding:22px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; align-items:center; gap:12px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph ph-armchair" style="font-size:19px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Sedentary</div><div style="font-size:10.5px; color:#7E828A;">Desk job · little exercise</div></div></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph ph-person-simple-walk" style="font-size:19px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Light</div><div style="font-size:10.5px; color:#7E828A;">1–3 sessions / week</div></div></div>
+      <div style="display:flex; align-items:center; gap:12px; background:linear-gradient(160deg,#222325,#191919); border:1.5px solid #2196F3; border-radius:14px; padding:13px 14px; box-shadow:0 0 0 4px rgba(33,150,243,.08);"><i class="ph-fill ph-barbell" style="font-size:19px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:800; color:#F7F7F8;">Moderate</div><div style="font-size:10.5px; color:#9BA0A8;">3–5 sessions / week</div></div><i class="ph-fill ph-check-circle" style="font-size:19px; color:#5BAAF5;"></i></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph ph-fire" style="font-size:19px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Active</div><div style="font-size:10.5px; color:#7E828A;">6–7 sessions / week</div></div></div>
+      <div style="display:flex; align-items:center; gap:12px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph-fill ph-lightning" style="font-size:19px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Very active</div><div style="font-size:10.5px; color:#7E828A;">Athlete · physical job</div></div></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Continue</span><i class="ph-bold ph-arrow-right" style="font-size:14px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ROW 2 LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:1000px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Path → status → first quest</div><div style="font-size:14px; color:#5C6068;">steps 4–8 · goal · stats · protocol · summons · hub</div></div>
+</div>
+
+<!-- ============ STEP 4 · PATH ============ -->
+<div style="position:absolute; left:40px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">4 · Path</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="display:flex; gap:5px;"><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:18px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2E2F31;"></span></div><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:22px 24px 0;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Choose your path</div><div style="font-size:13.5px; color:#9BA0A8; margin-top:8px; line-height:1.5;">We'll size your targets around it.</div></div>
+
+    <div style="padding:22px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; align-items:center; gap:13px; background:linear-gradient(160deg,#222325,#191919); border:1.5px solid #2196F3; border-radius:15px; padding:14px 15px; box-shadow:0 0 0 4px rgba(33,150,243,.08);"><i class="ph-fill ph-trend-down" style="font-size:21px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:14.5px; font-weight:800; color:#F7F7F8;">Cut</div><div style="font-size:11px; color:#9BA0A8; margin-top:1px;">Lose fat · −15% deficit</div></div><i class="ph-fill ph-check-circle" style="font-size:20px; color:#5BAAF5;"></i></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:14px 15px;"><i class="ph ph-equals" style="font-size:21px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Maintain</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">Hold weight · at TDEE</div></div></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:14px 15px;"><i class="ph ph-trend-up" style="font-size:21px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Lean gain</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">Build muscle · +10% surplus</div></div></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:14px 15px;"><i class="ph ph-arrows-clockwise" style="font-size:21px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:14.5px; font-weight:700; color:#F2F2F3;">Recomp</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">Trade fat for muscle · at TDEE</div></div></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Reveal my stats</span><i class="ph-fill ph-sparkle" style="font-size:14px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ============ STEP 5 · STATUS WINDOW ============ -->
+<div style="position:absolute; left:420px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">5 · Starting stats</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="display:flex; gap:5px;"><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:7px; height:4px; border-radius:999px; background:#2196F3;"></span><span style="width:18px; height:4px; border-radius:999px; background:#2196F3;"></span></div><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:18px 24px 0; text-align:center;"><div style="font-size:11px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#FFCA28;">Status window</div><div style="font-size:23px; font-weight:800; color:#F7F7F8; margin-top:7px; letter-spacing:-.02em;">Your starting stats</div></div>
+
+    <!-- target hero -->
+    <div style="margin:18px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid rgba(255,202,40,.25); border-radius:20px; padding:17px 18px; text-align:center;">
+      <div style="font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#7E828A;">Daily target</div>
+      <div style="display:flex; align-items:baseline; gap:7px; justify-content:center; margin-top:6px;"><span style="font-size:44px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.9;">2,098</span><span style="font-size:14px; font-weight:600; color:#7E828A;">kcal</span></div>
+      <div style="font-size:12px; color:#5BAAF5; font-weight:700; margin-top:7px;">Cut · −15% from TDEE</div>
+    </div>
+
+    <div style="padding:14px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 13px;"><div style="font-size:10px; color:#7E828A;">BMR</div><div style="font-size:18px; font-weight:800; color:#F2F2F3; margin-top:3px;">1,712</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 13px;"><div style="font-size:10px; color:#7E828A;">TDEE</div><div style="font-size:18px; font-weight:800; color:#F2F2F3; margin-top:3px;">2,468</div></div>
+    </div>
+
+    <div style="padding:14px 18px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Suggested macros</div></div>
+    <div style="padding:11px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 13px;"><div style="font-size:17px; font-weight:800; color:#4DA3FF;">140<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:2px;">Protein</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 13px;"><div style="font-size:17px; font-weight:800; color:#FFC107;">210<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:2px;">Carbs</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 13px;"><div style="font-size:17px; font-weight:800; color:#FF6B6B;">70<span style="font-size:10px; font-weight:600;">g</span></div><div style="font-size:10px; color:#7E828A; margin-top:2px;">Fat</div></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Looks right — continue</span></div>
+  </div>
+</div>
+
+<!-- ============ STEP 6 · PROTOCOL ============ -->
+<div style="position:absolute; left:800px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">6 · Protocol</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:space-between;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+    <div style="padding:14px 24px 0;"><div style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Pick a protocol</div><div style="font-size:13.5px; color:#9BA0A8; margin-top:8px; line-height:1.5;">You can change this anytime.</div></div>
+
+    <div style="padding:22px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 15px;"><div style="width:46px; height:46px; border-radius:13px; background:#252628; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:800; color:#9BA0A8;">14</span><span style="font-size:8px; color:#7E828A;">:10</span></div><div style="flex:1;"><div style="font-size:14px; font-weight:700; color:#F2F2F3;">Initiate</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">14h fast · gentle start</div></div></div>
+      <div style="display:flex; align-items:center; gap:13px; background:linear-gradient(160deg,#222325,#191919); border:1.5px solid #2196F3; border-radius:15px; padding:13px 15px; box-shadow:0 0 0 4px rgba(33,150,243,.08);"><div style="width:46px; height:46px; border-radius:13px; background:#2196F3; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 6px 14px -7px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:800; color:#fff;">16</span><span style="font-size:8px; color:rgba(255,255,255,.8);">:8</span></div><div style="flex:1;"><div style="font-size:14px; font-weight:800; color:#F7F7F8;">Warrior</div><div style="font-size:11px; color:#9BA0A8; margin-top:1px;">16h fast · most popular</div></div><i class="ph-fill ph-check-circle" style="font-size:20px; color:#5BAAF5;"></i></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 15px;"><div style="width:46px; height:46px; border-radius:13px; background:#252628; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:800; color:#9BA0A8;">18</span><span style="font-size:8px; color:#7E828A;">:6</span></div><div style="flex:1;"><div style="font-size:14px; font-weight:700; color:#F2F2F3;">Berserker</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">18h fast · tighter window</div></div></div>
+      <div style="display:flex; align-items:center; gap:13px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 15px; opacity:.7;"><div style="width:46px; height:46px; border-radius:13px; background:#252628; display:flex; flex-direction:column; align-items:center; justify-content:center;"><span style="font-size:15px; font-weight:800; color:#9BA0A8;">20</span><span style="font-size:8px; color:#7E828A;">:4</span></div><div style="flex:1;"><div style="font-size:14px; font-weight:700; color:#F2F2F3;">Void</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">20h fast · advanced</div></div><span style="font-size:10px; font-weight:700; color:#7E828A;">Later</span></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Continue</span><i class="ph-bold ph-arrow-right" style="font-size:14px; color:#fff;"></i></div>
+  </div>
+</div>
+
+<!-- ============ STEP 7 · SUMMONS ============ -->
+<div style="position:absolute; left:1180px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">7 · Summons</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; justify-content:flex-end;"><span style="font-size:13px; font-weight:700; color:#7E828A;">Skip</span></div>
+
+    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:36px 30px 0;">
+      <div style="width:70px; height:70px; border-radius:22px; background:rgba(33,150,243,.12); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-bell-ringing" style="font-size:32px; color:#5BAAF5;"></i></div>
+      <div style="font-size:21px; font-weight:800; color:#F7F7F8; margin-top:18px; letter-spacing:-.01em;">Let the System summon you</div>
+      <div style="font-size:13.5px; color:#9BA0A8; margin-top:9px; line-height:1.55;">Timely nudges keep your fasts and logs on track — never spam.</div>
+    </div>
+
+    <div style="padding:26px 18px 0; display:flex; flex-direction:column; gap:9px;">
+      <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><i class="ph-fill ph-flag-checkered" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:13px; font-weight:600; color:#E7E7E9;">Fast complete &amp; window open</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><i class="ph-fill ph-fork-knife" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:13px; font-weight:600; color:#E7E7E9;">Daily log reminders</span></div>
+      <div style="display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 14px;"><i class="ph-fill ph-flame" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:13px; font-weight:600; color:#E7E7E9;">Streak at risk</span></div>
+    </div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px;">
+      <div style="height:54px; border-radius:16px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><span style="font-size:15px; font-weight:800; color:#fff;">Allow notifications</span></div>
+      <div style="text-align:center; margin-top:12px;"><span style="font-size:13px; font-weight:700; color:#5A5E66;">Not now</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 8 · FIRST QUEST ============ -->
+<div style="position:absolute; left:1560px; top:1042px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">8 · First quest</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <!-- faint hub behind -->
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between; opacity:.4;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Hub</span><div style="width:34px; height:34px; border-radius:50%; background:#1D1D1E;"></div></div>
+    <div style="padding:16px 18px 0; opacity:.4;"><div style="height:120px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:20px;"></div></div>
+
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:0 22px;">
+      <div style="width:100%; background:#1B1B1C; border:1px solid #2E2F31; border-radius:24px; padding:24px 20px 20px; text-align:center; box-shadow:0 30px 60px -24px rgba(0,0,0,.8);">
+        <div style="position:relative; width:84px; height:84px; margin:0 auto;">
+          <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,202,40,.3), rgba(255,202,40,0) 70%);"></div>
+          <div style="position:absolute; inset:14px; border-radius:50%; background:linear-gradient(160deg,#FFD75E,#F1A300); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -8px rgba(255,202,40,.55);"><i class="ph-fill ph-scroll" style="font-size:30px; color:#2A1A00;"></i></div>
+        </div>
+        <div style="font-size:11px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#FFCA28; margin-top:16px;">New quest</div>
+        <div style="font-size:20px; font-weight:800; color:#F7F7F8; margin-top:7px; letter-spacing:-.01em;">Begin your first fast</div>
+        <div style="font-size:13px; color:#9BA0A8; margin-top:6px; line-height:1.5;">Your profile is set. Start a 16h Warrior fast to earn your first XP.</div>
+
+        <div style="margin-top:16px; display:flex; align-items:center; gap:11px; background:#141414; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px; text-align:left;"><i class="ph-fill ph-timer" style="font-size:20px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">First Quest · Start a fast</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">Warrior 16:8</div></div><span style="font-size:11.5px; font-weight:800; color:#5BAAF5;">+160 XP</span></div>
+
+        <div style="margin-top:16px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:7px; box-shadow:0 8px 20px -8px rgba(33,150,243,.6);"><i class="ph-fill ph-play" style="font-size:15px; color:#fff;"></i><span style="font-size:15px; font-weight:800; color:#fff;">Start my first fast</span></div>
+        <div style="margin-top:11px;"><span style="font-size:13px; font-weight:700; color:#7E828A;">Explore the Hub first</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

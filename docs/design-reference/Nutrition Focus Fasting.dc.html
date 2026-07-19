@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Fasting loop</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">The intermittent-fasting surface, in the Focus style — a calm take on the gamified loop. Pick a window and start, watch the live ring while fasting, push into bonus time past your goal, then bank the streak &amp; XP on completion.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Fast → track → bank</div><div style="font-size:14px; color:#5C6068;">idle · active · overdrive · complete</div></div>
+</div>
+
+<!-- ============ FRAME 1 · IDLE ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Idle · pick a window</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Fasting</span><div style="display:flex; align-items:center; gap:4px; background:rgba(255,255,255,.06); border-radius:999px; padding:4px 10px;"><i class="ph-fill ph-flame" style="font-size:12px; color:#FF8A4C;"></i><span style="font-size:11px; font-weight:700; color:#C9CDD3;">12d</span></div></div>
+
+    <!-- idle ring -->
+    <div style="display:flex; flex-direction:column; align-items:center; margin-top:18px;">
+      <div style="position:relative; width:206px; height:206px;">
+        <svg viewBox="0 0 240 240" width="206" height="206" style="display:block; transform:rotate(-90deg);">
+          <circle cx="120" cy="120" r="104" fill="none" stroke="#222325" stroke-width="14"></circle>
+          <circle cx="120" cy="120" r="104" fill="none" stroke="#2A2B2E" stroke-width="14" stroke-dasharray="3 11" stroke-linecap="round"></circle>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#7E828A;">Eating window</div>
+          <div style="font-size:34px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; margin-top:4px;">3:24</div>
+          <div style="font-size:12px; color:#7E828A; margin-top:3px;">left until next fast</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- duration selector -->
+    <div style="padding:20px 22px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Target window</div></div>
+    <div style="padding:11px 16px 0; display:flex; gap:7px; overflow:hidden;">
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B;"><div style="font-size:15px; font-weight:800; color:#9BA0A8;">12</div><div style="font-size:9px; color:#7E828A; margin-top:1px;">h</div></div>
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B;"><div style="font-size:15px; font-weight:800; color:#9BA0A8;">14</div><div style="font-size:9px; color:#7E828A; margin-top:1px;">h</div></div>
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#2196F3; box-shadow:0 8px 18px -8px rgba(33,150,243,.6);"><div style="font-size:15px; font-weight:800; color:#fff;">16</div><div style="font-size:9px; color:rgba(255,255,255,.8); margin-top:1px;">h</div></div>
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B;"><div style="font-size:15px; font-weight:800; color:#9BA0A8;">18</div><div style="font-size:9px; color:#7E828A; margin-top:1px;">h</div></div>
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B;"><div style="font-size:15px; font-weight:800; color:#9BA0A8;">20</div><div style="font-size:9px; color:#7E828A; margin-top:1px;">h</div></div>
+      <div style="flex:1; text-align:center; padding:9px 0; border-radius:13px; background:#1D1D1E; border:1px solid #2A2A2B;"><div style="font-size:15px; font-weight:800; color:#9BA0A8;">24</div><div style="font-size:9px; color:#7E828A; margin-top:1px;">h</div></div>
+    </div>
+
+    <!-- projected -->
+    <div style="margin:16px 18px 0; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:12px 15px; display:flex; align-items:center; gap:11px;"><i class="ph ph-moon-stars" style="font-size:18px; color:#5BAAF5;"></i><div style="flex:1;"><div style="font-size:10.5px; color:#7E828A;">16:8 · ends tomorrow</div><div style="font-size:14px; font-weight:700; color:#F2F2F3; margin-top:1px;">Projected 1:50 AM</div></div></div>
+
+    <!-- start button -->
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:56px; border-radius:17px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 12px 26px -10px rgba(33,150,243,.7);"><i class="ph-fill ph-play" style="font-size:17px; color:#fff;"></i><span style="font-size:15px; font-weight:800; color:#fff; letter-spacing:.02em;">Start fast</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · ACTIVE ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Active · fasting</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Fasting</span><div style="display:flex; align-items:center; gap:4px; background:rgba(33,150,243,.14); border:1px solid rgba(33,150,243,.3); border-radius:999px; padding:3px 10px;"><span style="width:6px; height:6px; border-radius:50%; background:#5BAAF5;"></span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">In progress</span></div></div>
+
+    <!-- active ring -->
+    <div style="display:flex; flex-direction:column; align-items:center; margin-top:20px;">
+      <div style="position:relative; width:224px; height:224px;">
+        <svg viewBox="0 0 240 240" width="224" height="224" style="display:block; transform:rotate(-90deg);">
+          <defs><linearGradient id="far" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1E88E5"></stop><stop offset="1" stop-color="#5BAAF5"></stop></linearGradient></defs>
+          <circle cx="120" cy="120" r="104" fill="none" stroke="#222325" stroke-width="14"></circle>
+          <circle cx="120" cy="120" r="104" fill="none" stroke="url(#far)" stroke-width="14" stroke-linecap="round" stroke-dasharray="653.45" stroke-dashoffset="189.5"></circle>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#5BAAF5;">Elapsed</div>
+          <div style="font-size:38px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; margin-top:3px; font-variant-numeric:tabular-nums;">11:24:06</div>
+          <div style="font-size:12px; color:#7E828A; margin-top:3px;">71% of 16h goal</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- remaining / end -->
+    <div style="padding:18px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 13px;"><div style="font-size:10px; color:#7E828A;">Remaining</div><div style="font-size:16px; font-weight:800; color:#F2F2F3; margin-top:3px; font-variant-numeric:tabular-nums;">4:35</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 13px;"><div style="font-size:10px; color:#7E828A;">Ends</div><div style="font-size:16px; font-weight:800; color:#F2F2F3; margin-top:3px;">1:50 AM</div></div>
+    </div>
+
+    <!-- phase -->
+    <div style="margin:13px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:16px; padding:13px 15px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-fire" style="font-size:16px; color:#FF8A4C;"></i><span style="font-size:13px; font-weight:700; color:#F2F2F3;">Fat burning</span></div><span style="font-size:11px; font-weight:700; color:#7E828A;">Phase 3 / 4</span></div>
+      <div style="margin-top:10px; display:flex; gap:5px;"><div style="flex:1; height:4px; border-radius:999px; background:#5BAAF5;"></div><div style="flex:1; height:4px; border-radius:999px; background:#5BAAF5;"></div><div style="flex:1; height:4px; border-radius:999px; background:#5BAAF5;"></div><div style="flex:1; height:4px; border-radius:999px; background:#2E2F31;"></div></div>
+    </div>
+
+    <!-- terminate -->
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:56px; border-radius:17px; background:#1D1D1E; border:1px solid #313132; display:flex; align-items:center; justify-content:center; gap:9px;"><i class="ph ph-stop-circle" style="font-size:18px; color:#9BA0A8;"></i><span style="font-size:14px; font-weight:700; color:#C9CDD3;">Hold to end fast</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · OVERDRIVE ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Overdrive · bonus time</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Fasting</span><div style="display:flex; align-items:center; gap:4px; background:rgba(255,138,76,.16); border:1px solid rgba(255,138,76,.4); border-radius:999px; padding:3px 10px;"><i class="ph-fill ph-lightning" style="font-size:11px; color:#FF8A4C;"></i><span style="font-size:11px; font-weight:700; color:#FF8A4C;">Overdrive</span></div></div>
+
+    <!-- overdrive ring -->
+    <div style="display:flex; flex-direction:column; align-items:center; margin-top:20px;">
+      <div style="position:relative; width:224px; height:224px;">
+        <svg viewBox="0 0 240 240" width="224" height="224" style="display:block; transform:rotate(-90deg);">
+          <defs><linearGradient id="fov" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E5732B"></stop><stop offset="1" stop-color="#FF9F5A"></stop></linearGradient></defs>
+          <circle cx="120" cy="120" r="104" fill="none" stroke="rgba(255,138,76,.18)" stroke-width="14"></circle>
+          <circle cx="120" cy="120" r="104" fill="none" stroke="url(#fov)" stroke-width="14" stroke-linecap="round" stroke-dasharray="653.45" stroke-dashoffset="0"></circle>
+        </svg>
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <div style="font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#FF8A4C;">Goal beaten</div>
+          <div style="font-size:38px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; margin-top:3px; font-variant-numeric:tabular-nums;">17:38:12</div>
+          <div style="font-size:12px; color:#FF8A4C; margin-top:3px; font-weight:700;">+1:38 bonus</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- bonus stats -->
+    <div style="padding:18px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 13px;"><div style="font-size:10px; color:#7E828A;">Bonus time</div><div style="font-size:16px; font-weight:800; color:#FF8A4C; margin-top:3px; font-variant-numeric:tabular-nums;">1:38</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:11px 13px;"><div style="font-size:10px; color:#7E828A;">XP so far</div><div style="font-size:16px; font-weight:800; color:#F2F2F3; margin-top:3px;">+226</div></div>
+    </div>
+
+    <!-- nudge -->
+    <div style="margin:13px 18px 0; background:rgba(255,138,76,.08); border:1px solid rgba(255,138,76,.25); border-radius:16px; padding:13px 15px; display:flex; align-items:center; gap:11px;"><i class="ph-fill ph-trophy" style="font-size:18px; color:#FF8A4C;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:700; color:#F2F2F3;">Golden ratio in reach</div><div style="font-size:11px; color:#9BA0A8; margin-top:2px;">22 min more for the +50 XP bonus</div></div></div>
+
+    <!-- end -->
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:56px; border-radius:17px; background:#FF8A4C; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 12px 26px -10px rgba(255,138,76,.6);"><i class="ph-fill ph-check" style="font-size:17px; color:#1A0F08;"></i><span style="font-size:15px; font-weight:800; color:#1A0F08; letter-spacing:.02em;">Hold to bank fast</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · COMPLETE ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Complete · banked</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Fasting</span></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; padding:0 20px;">
+      <div style="width:100%; background:#1B1B1C; border:1px solid #2E2F31; border-radius:24px; padding:24px 20px 20px; text-align:center; box-shadow:0 30px 60px -24px rgba(0,0,0,.8);">
+        <div style="position:relative; width:84px; height:84px; margin:0 auto;">
+          <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(33,150,243,.35), rgba(33,150,243,0) 70%);"></div>
+          <div style="position:absolute; inset:14px; border-radius:50%; background:linear-gradient(160deg,#2196F3,#1565C0); display:flex; align-items:center; justify-content:center; box-shadow:0 10px 24px -8px rgba(33,150,243,.7);"><i class="ph-fill ph-check-circle" style="font-size:34px; color:#fff;"></i></div>
+        </div>
+        <div style="font-size:20px; font-weight:800; color:#F7F7F8; margin-top:16px; letter-spacing:-.01em;">Fast complete</div>
+        <div style="font-size:13px; color:#9BA0A8; margin-top:5px;">16h goal cleared — refeed authorized.</div>
+
+        <div style="margin-top:18px; background:#141414; border:1px solid #2A2A2B; border-radius:16px; padding:4px 16px;">
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid #262627;"><div style="display:flex; align-items:center; gap:9px;"><i class="ph ph-clock" style="font-size:16px; color:#5BAAF5;"></i><span style="font-size:13.5px; color:#C9CDD3;">Total time</span></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">17h 38m</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid #262627;"><div style="display:flex; align-items:center; gap:9px;"><i class="ph-fill ph-lightning" style="font-size:16px; color:#FFCA28;"></i><span style="font-size:13.5px; color:#C9CDD3;">XP earned</span></div><span style="font-size:14px; font-weight:800; color:#FFCA28;">+286</span></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;"><div style="display:flex; align-items:center; gap:9px;"><i class="ph-fill ph-flame" style="font-size:16px; color:#FF8A4C;"></i><span style="font-size:13.5px; color:#C9CDD3;">Streak</span></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">13 days</span></div>
+        </div>
+
+        <div style="margin-top:14px; display:flex; align-items:center; gap:8px; background:rgba(33,150,243,.08); border:1px solid rgba(33,150,243,.22); border-radius:13px; padding:11px 13px; text-align:left;"><i class="ph-fill ph-trophy" style="font-size:16px; color:#5BAAF5;"></i><span style="font-size:11.5px; color:#9BC6EE; line-height:1.4;">Golden ratio hit — +50 bonus XP included.</span></div>
+
+        <div style="margin-top:16px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -8px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:800; color:#fff;">Start eating window</span></div>
+        <div style="margin-top:11px;"><span style="font-size:13px; font-weight:700; color:#7E828A;">View stats</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
