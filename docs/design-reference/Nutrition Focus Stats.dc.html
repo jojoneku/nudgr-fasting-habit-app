@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Progress</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">The progress layer, reframed for everyone — keeps the hooks people love (streaks, levels, badges, daily wins) and drops the RPG cosplay. Personality lives in the copy, not in stat sheets.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Home · streak · badges · level up</div><div style="font-size:14px; color:#5C6068;">friendly, modern, a little quirky</div></div>
+</div>
+
+<!-- ============ FRAME 1 · PROGRESS HOME ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Progress home</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Progress</span><i class="ph ph-gear-six" style="font-size:20px; color:#8C9097;"></i></div>
+
+    <!-- level hero -->
+    <div style="margin:16px 18px 0; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:22px; padding:16px 17px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <div style="width:64px; height:64px; border-radius:20px; background:linear-gradient(160deg,#42A5F5,#1565C0); display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 10px 22px -8px rgba(33,150,243,.6);"><span style="font-size:9px; font-weight:700; letter-spacing:.1em; color:rgba(255,255,255,.75);">LVL</span><span style="font-size:24px; font-weight:800; color:#fff; line-height:.9;">21</span></div>
+        <div style="flex:1;"><div style="font-size:18px; font-weight:800; color:#F7F7F8; letter-spacing:-.01em;">Hitting your stride</div><div style="font-size:12px; color:#9BA0A8; margin-top:2px;">1,570 points to level 22</div></div>
+      </div>
+      <div style="margin-top:14px; height:8px; background:#2C2D2F; border-radius:999px; overflow:hidden;"><div style="width:64%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5); border-radius:999px;"></div></div>
+      <div style="display:flex; justify-content:space-between; margin-top:7px;"><span style="font-size:10.5px; font-weight:600; color:#7E828A;">2,840 pts</span><span style="font-size:10.5px; font-weight:600; color:#7E828A;">4,410 pts</span></div>
+    </div>
+
+    <!-- streak card -->
+    <div style="margin:11px 18px 0; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:18px; padding:14px 16px; display:flex; align-items:center; gap:13px;">
+      <div style="width:46px; height:46px; border-radius:14px; background:rgba(255,138,76,.14); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-flame" style="font-size:24px; color:#FF8A4C;"></i></div>
+      <div style="flex:1;"><div style="display:flex; align-items:baseline; gap:6px;"><span style="font-size:22px; font-weight:800; color:#F7F7F8;">12</span><span style="font-size:13px; font-weight:700; color:#C9CDD3;">day streak</span></div><div style="font-size:11.5px; color:#9BA0A8; margin-top:2px;">Not a single miss since Jun 15. Showoff.</div></div>
+    </div>
+
+    <!-- today's wins -->
+    <div style="padding:18px 18px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Today's wins</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">2 of 3</span></div>
+    <div style="padding:10px 18px 0; display:flex; flex-direction:column; gap:7px;">
+      <div style="display:flex; align-items:center; gap:10px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 13px;"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#4CAF50;"></i><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Finished your 16h fast</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">+160</span></div>
+      <div style="display:flex; align-items:center; gap:10px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 13px;"><i class="ph-fill ph-check-circle" style="font-size:18px; color:#4CAF50;"></i><span style="flex:1; font-size:13.5px; font-weight:600; color:#E7E7E9;">Hit your protein goal</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">+40</span></div>
+      <div style="display:flex; align-items:center; gap:10px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:12px; padding:10px 13px;"><i class="ph ph-circle" style="font-size:18px; color:#5A5E66;"></i><span style="flex:1; font-size:13.5px; font-weight:600; color:#9BA0A8;">Take a 10-min walk</span><span style="font-size:11px; font-weight:700; color:#7E828A;">+30</span></div>
+    </div>
+
+    <!-- badges peek -->
+    <div style="padding:18px 18px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Recent badges</span><span style="font-size:11px; font-weight:700; color:#5BAAF5;">See all</span></div>
+    <div style="padding:11px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; aspect-ratio:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-medal" style="font-size:26px; color:#FFCA28;"></i></div>
+      <div style="flex:1; aspect-ratio:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-sun-horizon" style="font-size:26px; color:#FF8A4C;"></i></div>
+      <div style="flex:1; aspect-ratio:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-barbell" style="font-size:26px; color:#5BAAF5;"></i></div>
+      <div style="flex:1; aspect-ratio:1; background:#161617; border:1px dashed #313234; border-radius:16px; display:flex; align-items:center; justify-content:center;"><i class="ph ph-lock-simple" style="font-size:22px; color:#4A4E55;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · STREAK ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Streak &amp; consistency</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Your streak</span></div>
+
+    <!-- streak hero -->
+    <div style="display:flex; flex-direction:column; align-items:center; padding:18px 0 0;">
+      <div style="position:relative; width:140px; height:140px; display:flex; align-items:center; justify-content:center;">
+        <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(255,138,76,.22), rgba(255,138,76,0) 70%);"></div>
+        <i class="ph-fill ph-flame" style="font-size:64px; color:#FF8A4C;"></i>
+      </div>
+      <div style="font-size:46px; font-weight:800; color:#F7F7F8; letter-spacing:-.03em; line-height:.9; margin-top:4px;">12</div>
+      <div style="font-size:13px; font-weight:700; color:#C9CDD3; margin-top:8px;">days in a row</div>
+      <div style="font-size:12px; color:#9BA0A8; margin-top:5px;">6 more to beat your record of 18.</div>
+    </div>
+
+    <!-- last 14 days -->
+    <div style="padding:24px 18px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Last 14 days</div></div>
+    <div style="padding:12px 18px 0; display:flex; gap:6px;">
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.22);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.45);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:#252628;"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.45);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.65);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.45);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.85);"></div>
+    </div>
+    <div style="padding:6px 18px 0; display:flex; gap:6px;">
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.65);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.85);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.65);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,.85);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,1);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:rgba(255,138,76,1);"></div>
+      <div style="flex:1; aspect-ratio:1; border-radius:9px; background:#FF8A4C; box-shadow:0 0 0 2px rgba(255,138,76,.4);"></div>
+    </div>
+
+    <!-- stat tiles -->
+    <div style="padding:22px 18px 0; display:flex; gap:9px;">
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 13px;"><i class="ph-fill ph-trophy" style="font-size:16px; color:#FFCA28;"></i><div style="font-size:18px; font-weight:800; color:#F2F2F3; margin-top:7px;">18</div><div style="font-size:10px; color:#7E828A; margin-top:3px;">Best streak</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 13px;"><i class="ph-fill ph-calendar-check" style="font-size:16px; color:#5BAAF5;"></i><div style="font-size:18px; font-weight:800; color:#F2F2F3; margin-top:7px;">86%</div><div style="font-size:10px; color:#7E828A; margin-top:3px;">This month</div></div>
+      <div style="flex:1; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:15px; padding:13px 13px;"><i class="ph-fill ph-shield-check" style="font-size:16px; color:#4CAF50;"></i><div style="font-size:18px; font-weight:800; color:#F2F2F3; margin-top:7px;">2</div><div style="font-size:10px; color:#7E828A; margin-top:3px;">Freezes left</div></div>
+    </div>
+
+    <div style="margin:18px 18px 0; background:rgba(33,150,243,.06); border:1px solid rgba(33,150,243,.2); border-radius:14px; padding:12px 14px; display:flex; align-items:center; gap:10px;"><i class="ph-fill ph-snowflake" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:11.5px; color:#9BC6EE; line-height:1.45;">Busy day coming up? A streak freeze keeps it alive — no guilt.</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · BADGES ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Badges</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Badges</span></div>
+    <div style="padding:6px 22px 0;"><span style="font-size:12.5px; color:#9BA0A8;">9 of 24 unlocked — go collect 'em.</span></div>
+
+    <!-- earned -->
+    <div style="padding:16px 18px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Earned</div></div>
+    <div style="padding:11px 18px 0; display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#2a2417,#1c1a13); border:1px solid rgba(255,202,40,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-medal" style="font-size:30px; color:#FFCA28;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">First Fast</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#2a1f17,#1c1612); border:1px solid rgba(255,138,76,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-sun-horizon" style="font-size:30px; color:#FF8A4C;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">Early Bird</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#15212e,#121922); border:1px solid rgba(91,170,245,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-barbell" style="font-size:30px; color:#5BAAF5;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">Protein Pro</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#2a1f17,#1c1612); border:1px solid rgba(255,138,76,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-flame" style="font-size:30px; color:#FF8A4C;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">Two Weeks Strong</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#15212e,#121922); border:1px solid rgba(91,170,245,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-camera" style="font-size:30px; color:#5BAAF5;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">Photo Logger</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:linear-gradient(160deg,#172a1c,#121c15); border:1px solid rgba(76,175,80,.3); border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-u-up-left" style="font-size:30px; color:#4CAF50;"></i></div><span style="font-size:10px; font-weight:700; color:#C9CDD3; text-align:center;">Comeback Kid</span></div>
+    </div>
+
+    <!-- locked -->
+    <div style="padding:20px 18px 0;"><div style="font-size:11px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:#7E828A;">Keep going</div></div>
+    <div style="padding:11px 18px 0; display:grid; grid-template-columns:1fr 1fr 1fr; gap:9px;">
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:#161617; border:1px dashed #313234; border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph ph-moon-stars" style="font-size:28px; color:#4A4E55;"></i></div><span style="font-size:10px; font-weight:600; color:#7E828A; text-align:center;">Night Owl</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:#161617; border:1px dashed #313234; border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph ph-crown-simple" style="font-size:28px; color:#4A4E55;"></i></div><span style="font-size:10px; font-weight:600; color:#7E828A; text-align:center;">30 Days</span></div>
+      <div style="display:flex; flex-direction:column; align-items:center; gap:7px;"><div style="width:100%; aspect-ratio:1; background:#161617; border:1px dashed #313234; border-radius:18px; display:flex; align-items:center; justify-content:center;"><i class="ph ph-confetti" style="font-size:28px; color:#4A4E55;"></i></div><span style="font-size:10px; font-weight:600; color:#7E828A; text-align:center;">Goal Crusher</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · LEVEL UP ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Level up moment</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Progress</span></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.66); display:flex; align-items:center; justify-content:center; padding:0 22px; overflow:hidden;">
+      <!-- confetti -->
+      <div style="position:absolute; left:54px; top:150px; width:8px; height:8px; border-radius:2px; background:#FFCA28; transform:rotate(20deg);"></div>
+      <div style="position:absolute; right:48px; top:174px; width:7px; height:7px; border-radius:50%; background:#5BAAF5;"></div>
+      <div style="position:absolute; left:70px; top:250px; width:6px; height:12px; border-radius:2px; background:#FF8A4C; transform:rotate(-25deg);"></div>
+      <div style="position:absolute; right:62px; top:300px; width:9px; height:9px; border-radius:2px; background:#4CAF50; transform:rotate(35deg);"></div>
+      <div style="position:absolute; left:100px; top:560px; width:7px; height:7px; border-radius:50%; background:#FFCA28;"></div>
+      <div style="position:absolute; right:90px; top:580px; width:6px; height:12px; border-radius:2px; background:#5BAAF5; transform:rotate(15deg);"></div>
+
+      <div style="width:100%; background:#1B1B1C; border:1px solid #2E2F31; border-radius:24px; padding:26px 20px 20px; text-align:center; box-shadow:0 30px 60px -24px rgba(0,0,0,.8); position:relative;">
+        <div style="position:relative; width:104px; height:104px; margin:0 auto;">
+          <div style="position:absolute; inset:0; border-radius:50%; background:radial-gradient(circle, rgba(33,150,243,.34), rgba(33,150,243,0) 70%);"></div>
+          <div style="position:absolute; inset:12px; border-radius:30px; background:linear-gradient(160deg,#42A5F5,#1565C0); display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 12px 28px -8px rgba(33,150,243,.7);"><span style="font-size:10px; font-weight:700; letter-spacing:.12em; color:rgba(255,255,255,.8);">LVL</span><span style="font-size:34px; font-weight:800; color:#fff; line-height:.85;">22</span></div>
+        </div>
+        <div style="font-size:12px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; color:#5BAAF5; margin-top:18px;">Level up</div>
+        <div style="font-size:22px; font-weight:800; color:#F7F7F8; margin-top:6px; letter-spacing:-.01em;">Look at you go</div>
+        <div style="font-size:13px; color:#9BA0A8; margin-top:6px; line-height:1.45;">12 days straight pushed you to level 22. Treat yourself (within macros).</div>
+
+        <div style="margin-top:18px; display:flex; gap:9px;">
+          <div style="flex:1; background:#141414; border:1px solid #2A2A2B; border-radius:14px; padding:13px 10px;"><div style="font-size:11px; color:#7E828A;">Points</div><div style="font-size:18px; font-weight:800; color:#5BAAF5; margin-top:3px;">+286</div></div>
+          <div style="flex:1; background:#141414; border:1px solid #2A2A2B; border-radius:14px; padding:13px 10px;"><div style="font-size:11px; color:#7E828A;">Streak</div><div style="display:flex; align-items:center; justify-content:center; gap:4px; margin-top:3px;"><span style="font-size:18px; font-weight:800; color:#FF8A4C;">12</span><i class="ph-fill ph-flame" style="font-size:14px; color:#FF8A4C;"></i></div></div>
+        </div>
+
+        <div style="margin-top:14px; display:flex; align-items:center; gap:10px; background:rgba(255,202,40,.08); border:1px solid rgba(255,202,40,.22); border-radius:13px; padding:11px 13px; text-align:left;"><div style="width:34px; height:34px; border-radius:11px; background:rgba(255,202,40,.16); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-flame" style="font-size:18px; color:#FFCA28;"></i></div><div style="flex:1;"><div style="font-size:9px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:#C9A23A;">New badge</div><div style="font-size:13px; font-weight:800; color:#F7F7F8;">Two Weeks Strong</div></div></div>
+
+        <div style="margin-top:16px; height:52px; border-radius:14px; background:#2196F3; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 20px -8px rgba(33,150,243,.6);"><span style="font-size:15px; font-weight:800; color:#fff;">Nice — keep going</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

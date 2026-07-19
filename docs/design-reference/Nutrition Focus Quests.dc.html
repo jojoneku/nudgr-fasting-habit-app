@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Quests</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">The daily habit-completion loop — grouped routines, standalone quests, streak tracking, a heatmap history, stat contributions, and the full create/edit flow.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Daily · manage · add quest · detail · group editor</div></div>
+</div>
+
+<!-- ============ FRAME 1 · DAILY VIEW ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Daily view</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:26px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Quests</span><i class="ph ph-sliders-horizontal" style="font-size:21px; color:#8C9097;"></i></div>
+
+    <!-- progress header -->
+    <div style="margin:14px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:13px 15px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;"><span style="font-size:13px; font-weight:700; color:#E7E7E9;">Today's progress</span><span style="font-size:12px; font-weight:700; color:#9A9FA8;">3 / 7</span></div>
+      <div style="height:6px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:43%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5); border-radius:999px;"></div></div>
+    </div>
+
+    <!-- group card: Morning Ritual -->
+    <div style="margin:11px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:10px; padding:11px 14px; border-bottom:1px solid #26262A;">
+        <div style="width:3px; height:18px; border-radius:2px; background:#29B6F6; flex-shrink:0;"></div>
+        <span style="flex:1; font-size:13px; font-weight:700; color:#29B6F6;">Morning Ritual</span>
+        <div style="display:flex; align-items:center; gap:4px; background:rgba(41,182,246,.14); border-radius:999px; padding:3px 9px;"><span style="font-size:10.5px; font-weight:700; color:#29B6F6;">2 / 3</span></div>
+      </div>
+      <!-- quest rows -->
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #1E1E22;">
+        <div style="width:22px; height:22px; border-radius:7px; background:#2196F3; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-check" style="font-size:12px; color:#fff;"></i></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#9A9FA8; text-decoration:line-through;">100 push-ups</div><div style="font-size:10.5px; color:#5A5E66; margin-top:1px;">8:00 AM · STR · 🔥21</div></div>
+        <span style="font-size:11px; font-weight:700; color:#5BAAF5;">+30</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #1E1E22;">
+        <div style="width:22px; height:22px; border-radius:7px; background:#2196F3; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-check" style="font-size:12px; color:#fff;"></i></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#9A9FA8; text-decoration:line-through;">Cold shower</div><div style="font-size:10.5px; color:#5A5E66; margin-top:1px;">8:30 AM · VIT · 🔥8</div></div>
+        <span style="font-size:11px; font-weight:700; color:#5BAAF5;">+20</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px;">
+        <div style="width:22px; height:22px; border-radius:7px; border:1.5px solid #3A3A40; flex-shrink:0;"></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">10-min journal</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">9:00 AM · INT · 🔥5</div></div>
+        <span style="font-size:11px; font-weight:700; color:#83878F;">+20</span>
+      </div>
+    </div>
+
+    <!-- Today section -->
+    <div style="padding:14px 20px 6px;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">TODAY</span></div>
+    <div style="margin:0 16px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px; border-bottom:1px solid #1E1E22;">
+        <div style="width:22px; height:22px; border-radius:7px; background:#2196F3; display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-check" style="font-size:12px; color:#fff;"></i></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#9A9FA8; text-decoration:line-through;">Read 10 pages</div><div style="font-size:10.5px; color:#5A5E66; margin-top:1px;">9:00 PM · INT · 🔥4</div></div>
+        <span style="font-size:11px; font-weight:700; color:#5BAAF5;">+20</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px;">
+        <div style="width:22px; height:22px; border-radius:7px; border:1.5px solid #3A3A40; flex-shrink:0;"></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Evening walk</div><div style="font-size:10.5px; color:#83878F; margin-top:1px;">7:00 PM · AGI · 🔥12</div></div>
+        <span style="font-size:11px; font-weight:700; color:#83878F;">+30</span>
+      </div>
+    </div>
+
+    <!-- Missed section -->
+    <div style="padding:12px 20px 6px;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#FF8A80;">MISSED</span></div>
+    <div style="margin:0 16px; background:#1C1C20; border:1px solid rgba(246,104,94,.25); border-radius:16px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:11px; padding:11px 14px;">
+        <div style="width:22px; height:22px; border-radius:7px; background:rgba(246,104,94,.15); display:flex; align-items:center; justify-content:center; flex-shrink:0;"><i class="ph-bold ph-x" style="font-size:12px; color:#F6685E;"></i></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#9A9FA8;">Midday stretch</div><div style="font-size:10.5px; color:#5A5E66; margin-top:1px;">12:00 PM · AGI</div></div>
+        <span style="font-size:11px; font-weight:600; color:#6A6E76;">+15</span>
+      </div>
+    </div>
+
+    <!-- FAB -->
+    <div style="position:absolute; bottom:18px; right:18px; height:52px; border-radius:16px; background:#2E90FA; display:flex; align-items:center; gap:8px; padding:0 18px; box-shadow:0 8px 20px -8px rgba(46,144,250,.7);"><i class="ph-bold ph-plus" style="font-size:16px; color:#fff;"></i><span style="font-size:13.5px; font-weight:800; color:#fff;">Add Quest</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · MANAGE VIEW ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Manage</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 22px 0; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:11px;"><i class="ph ph-x" style="font-size:19px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Manage</span></div><i class="ph ph-folder-plus" style="font-size:21px; color:#8C9097;"></i></div>
+
+    <!-- groups section -->
+    <div style="padding:16px 20px 8px;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">GROUPS</span></div>
+    <div style="margin:0 16px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <div style="width:3px; height:34px; border-radius:2px; background:#29B6F6; flex-shrink:0;"></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Morning Ritual</div><div style="font-size:11px; color:#83878F; margin-top:1px;">3 quests in this group</div></div>
+        <i class="ph ph-caret-right" style="font-size:15px; color:#6A6E76;"></i>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px;">
+        <div style="width:3px; height:34px; border-radius:2px; background:#66BB6A; flex-shrink:0;"></div>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Evening Wind-Down</div><div style="font-size:11px; color:#83878F; margin-top:1px;">2 quests in this group</div></div>
+        <i class="ph ph-caret-right" style="font-size:15px; color:#6A6E76;"></i>
+      </div>
+    </div>
+
+    <!-- all quests -->
+    <div style="padding:16px 20px 8px;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">ALL QUESTS</span></div>
+    <div style="margin:0 16px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-barbell" style="font-size:17px; color:#EF9A9A; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">100 push-ups</div><div style="font-size:11px; color:#83878F; margin-top:1px;">8:00 AM · STR</div></div>
+        <i class="ph ph-pencil-simple" style="font-size:15px; color:#6A6E76;"></i><i class="ph ph-trash" style="font-size:15px; color:#F6685E; margin-left:8px;"></i>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-drop" style="font-size:17px; color:#90CAF9; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Cold shower</div><div style="font-size:11px; color:#83878F; margin-top:1px;">8:30 AM · VIT</div></div>
+        <i class="ph ph-pencil-simple" style="font-size:15px; color:#6A6E76;"></i><i class="ph ph-trash" style="font-size:15px; color:#F6685E; margin-left:8px;"></i>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-book-open" style="font-size:17px; color:#CE93D8; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Read 10 pages</div><div style="font-size:11px; color:#83878F; margin-top:1px;">9:00 PM · INT</div></div>
+        <i class="ph ph-pencil-simple" style="font-size:15px; color:#6A6E76;"></i><i class="ph ph-trash" style="font-size:15px; color:#F6685E; margin-left:8px;"></i>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px;">
+        <i class="ph-fill ph-person-simple-walk" style="font-size:17px; color:#A5D6A7; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Evening walk</div><div style="font-size:11px; color:#83878F; margin-top:1px;">7:00 PM · AGI</div></div>
+        <i class="ph ph-pencil-simple" style="font-size:15px; color:#6A6E76;"></i><i class="ph ph-trash" style="font-size:15px; color:#F6685E; margin-left:8px;"></i>
+      </div>
+    </div>
+
+    <!-- FAB -->
+    <div style="position:absolute; bottom:18px; right:18px; height:52px; border-radius:16px; background:#2E90FA; display:flex; align-items:center; gap:8px; padding:0 18px; box-shadow:0 8px 20px -8px rgba(46,144,250,.7);"><i class="ph-bold ph-plus" style="font-size:16px; color:#fff;"></i><span style="font-size:13.5px; font-weight:800; color:#fff;">Add Quest</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · ADD QUEST SHEET ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Add / edit quest</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:24px; font-weight:800; color:#F7F7F8;">Quests</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:72px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 20px; overflow:hidden; display:flex; flex-direction:column; gap:12px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto;"></div>
+      <div style="display:flex; align-items:center; gap:9px;"><div style="width:30px; height:30px; border-radius:9px; background:rgba(46,144,250,.18); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-lightning" style="font-size:15px; color:#5BAAF5;"></i></div><span style="font-size:16px; font-weight:800; color:#F7F7F8;">New Quest</span><div style="margin-left:auto;"><i class="ph ph-x" style="font-size:17px; color:#6A6E76;"></i></div></div>
+
+      <!-- title -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">QUEST TITLE</div>
+      <div style="height:46px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:14px; font-weight:600; color:#F2F2F3;">100 push-ups</span></div></div>
+
+      <!-- schedule row -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">SCHEDULE</div>
+      <div style="display:flex; gap:0; background:#202024; border:1px solid #2E2E33; border-radius:12px; overflow:hidden;">
+        <div style="flex:1; padding:12px 13px; display:flex; align-items:center; gap:8px; border-right:1px solid #2E2E33;"><i class="ph ph-clock" style="font-size:14px; color:#5BAAF5;"></i><span style="font-size:13.5px; color:#F2F2F3; flex:1;">8:00 AM</span><i class="ph ph-caret-right" style="font-size:12px; color:#6A6E76;"></i></div>
+        <div style="flex:1; padding:12px 13px; display:flex; align-items:center; gap:8px;"><i class="ph ph-bell" style="font-size:14px; color:#5BAAF5;"></i><span style="font-size:12px; color:#C9CDD3; flex:1;">30 min before</span><i class="ph ph-caret-down" style="font-size:11px; color:#6A6E76;"></i></div>
+      </div></div>
+
+      <!-- recurrence -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">RECURRENCE</div>
+      <div style="background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:12px;">
+        <div style="display:flex; gap:5px; margin-bottom:11px;">
+          <div style="flex:1; text-align:center; background:#2E90FA; border-radius:8px; padding:7px 0;"><span style="font-size:11px; font-weight:700; color:#fff;">Daily</span></div>
+          <div style="flex:1; text-align:center; background:#131315; border:1px solid #2E2E33; border-radius:8px; padding:7px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Weekly</span></div>
+          <div style="flex:1; text-align:center; background:#131315; border:1px solid #2E2E33; border-radius:8px; padding:7px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">2-Week</span></div>
+          <div style="flex:1; text-align:center; background:#131315; border:1px solid #2E2E33; border-radius:8px; padding:7px 0;"><span style="font-size:11px; font-weight:600; color:#9A9FA8;">Monthly</span></div>
+        </div>
+        <!-- day pills -->
+        <div style="display:flex; gap:5px; justify-content:space-between;">
+          <div style="width:34px; height:34px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:700; color:#fff;">M</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:700; color:#fff;">T</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:700; color:#fff;">W</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:700; color:#fff;">T</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:700; color:#fff;">F</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; border:1.5px solid #3A3A40; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">S</span></div>
+          <div style="width:34px; height:34px; border-radius:50%; border:1.5px solid #3A3A40; display:flex; align-items:center; justify-content:center;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">S</span></div>
+        </div>
+      </div></div>
+
+      <!-- group + stat -->
+      <div style="display:flex; gap:8px;">
+        <div style="flex:1;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">GROUP</div>
+        <div style="height:46px; background:#202024; border:1px solid #29B6F6; border-radius:12px; display:flex; align-items:center; gap:7px; padding:0 12px;"><div style="width:3px; height:16px; border-radius:2px; background:#29B6F6;"></div><span style="font-size:13px; font-weight:700; color:#29B6F6;">Morning Ritual</span></div></div>
+        <div style="flex:1;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">TRAINS</div>
+        <div style="height:46px; background:#202024; border:1px solid rgba(239,154,154,.5); border-radius:12px; display:flex; align-items:center; gap:7px; padding:0 12px;"><i class="ph-fill ph-barbell" style="font-size:14px; color:#EF9A9A;"></i><span style="font-size:13px; font-weight:700; color:#EF9A9A;">STR</span></div></div>
+      </div>
+
+      <div style="flex:1;"></div>
+      <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -8px rgba(46,144,250,.7);"><span style="font-size:14.5px; font-weight:800; color:#fff;">Add Quest</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · QUEST DETAIL ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Quest detail</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 22px 0; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:11px;"><i class="ph ph-caret-left" style="font-size:19px; color:#8C9097;"></i><span style="font-size:20px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">100 push-ups</span></div><i class="ph ph-pencil-simple" style="font-size:18px; color:#8C9097;"></i></div>
+
+    <!-- stats card -->
+    <div style="margin:13px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:14px 16px; display:flex; align-items:center;">
+      <div style="flex:1; text-align:center;"><div style="font-size:22px; font-weight:800; color:#5BAAF5; letter-spacing:-.02em;">21 🔥</div><div style="font-size:10px; color:#83878F; margin-top:3px;">Streak</div></div>
+      <div style="width:1px; background:#2A2A2E; height:36px;"></div>
+      <div style="flex:1; text-align:center;"><div style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">86%</div><div style="font-size:10px; color:#83878F; margin-top:3px;">30-day rate</div></div>
+      <div style="width:1px; background:#2A2A2E; height:36px;"></div>
+      <div style="flex:1; text-align:center;"><div style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">94</div><div style="font-size:10px; color:#83878F; margin-top:3px;">Total done</div></div>
+    </div>
+
+    <!-- habit heatmap -->
+    <div style="padding:14px 18px 0;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">HABIT HISTORY · 12 WEEKS</span></div>
+    <div style="margin:8px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:12px 14px;">
+      <div style="display:grid; grid-template-columns:repeat(12,1fr); gap:3px;">
+        <!-- 12 cols × 7 rows — filled cells are blue, missed are dark, empty transparent -->
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#F44336; opacity:.7;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#F44336; opacity:.7;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1565C0;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+        <div style="display:flex; flex-direction:column; gap:3px;"><div style="height:14px; border-radius:3px; background:#1E88E5; border:1.5px solid #42A5F5;"></div><div style="height:14px; border-radius:3px; background:#1565C0; border:1.5px solid #42A5F5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#26262A;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div><div style="height:14px; border-radius:3px; background:#1E88E5;"></div></div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:8px; align-items:center;"><span style="width:10px; height:10px; border-radius:3px; background:#1E88E5;"></span><span style="font-size:10px; color:#83878F;">Done</span><span style="width:10px; height:10px; border-radius:3px; background:#F44336; opacity:.7;"></span><span style="font-size:10px; color:#83878F;">Missed</span><span style="width:10px; height:10px; border-radius:3px; background:#1565C0;"></span><span style="font-size:10px; color:#83878F;">Partial</span></div>
+    </div>
+
+    <!-- streak milestones -->
+    <div style="padding:14px 18px 0;"><span style="font-size:11px; font-weight:700; letter-spacing:.08em; color:#9A9FA8;">STREAK MILESTONES</span></div>
+    <div style="padding:9px 16px 0; display:flex; gap:8px;">
+      <div style="flex:1; text-align:center; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 6px;"><i class="ph-fill ph-medal" style="font-size:18px; color:#FFCA28;"></i><div style="font-size:10px; font-weight:700; color:#E7E7E9; margin-top:4px;">7</div></div>
+      <div style="flex:1; text-align:center; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 6px;"><i class="ph-fill ph-medal" style="font-size:18px; color:#FFCA28;"></i><div style="font-size:10px; font-weight:700; color:#E7E7E9; margin-top:4px;">14</div></div>
+      <div style="flex:1; text-align:center; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; padding:10px 6px;"><i class="ph-fill ph-medal" style="font-size:18px; color:#FFCA28;"></i><div style="font-size:10px; font-weight:700; color:#E7E7E9; margin-top:4px;">21</div></div>
+      <div style="flex:1; text-align:center; background:#161617; border:1px dashed #313234; border-radius:12px; padding:10px 6px;"><i class="ph ph-medal" style="font-size:18px; color:#4A4E55;"></i><div style="font-size:10px; font-weight:600; color:#4A4E55; margin-top:4px;">30</div></div>
+      <div style="flex:1; text-align:center; background:#161617; border:1px dashed #313234; border-radius:12px; padding:10px 6px;"><i class="ph ph-medal" style="font-size:18px; color:#4A4E55;"></i><div style="font-size:10px; font-weight:600; color:#4A4E55; margin-top:4px;">60</div></div>
+    </div>
+
+    <!-- stat contribution -->
+    <div style="margin:13px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; padding:12px 14px;"><div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><div style="display:flex; align-items:center; gap:7px;"><i class="ph-fill ph-barbell" style="font-size:14px; color:#EF9A9A;"></i><span style="font-size:12.5px; font-weight:700; color:#F2F2F3;">STR contribution</span></div><span style="font-size:11px; font-weight:700; color:#EF9A9A;">14 / 21</span></div><div style="height:7px; background:#26262A; border-radius:999px; overflow:hidden;"><div style="width:67%; height:100%; background:#EF9A9A; border-radius:999px;"></div></div><div style="font-size:10.5px; color:#83878F; margin-top:6px;">14 / 21 completions toward +1 STR</div></div>
+
+    <!-- anchor note -->
+    <div style="margin:11px 16px 0; background:rgba(255,202,40,.06); border:1px solid rgba(255,202,40,.18); border-radius:13px; padding:11px 13px; display:flex; gap:9px;"><i class="ph-fill ph-anchor" style="font-size:14px; color:#FFCA28; flex-shrink:0; margin-top:1px;"></i><div><div style="font-size:10.5px; font-weight:700; color:#FFCA28; margin-bottom:3px;">ANCHOR</div><div style="font-size:12.5px; color:#C9CDD3; line-height:1.4;">After my morning coffee, before I open my phone.</div></div></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 5 · GROUP EDITOR ============ -->
+<div style="position:absolute; left:1560px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Quest group editor</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 22px 0; display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:11px;"><i class="ph ph-caret-left" style="font-size:19px; color:#8C9097;"></i><span style="font-size:20px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">New Quest Group</span></div><span style="font-size:14px; font-weight:700; color:#5BAAF5;">Save</span></div>
+
+    <!-- name -->
+    <div style="margin:14px 16px 0;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">GROUP NAME</div><div style="height:46px; background:#1C1C20; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; padding:0 14px;"><span style="font-size:14px; font-weight:600; color:#F2F2F3;">Morning Ritual</span></div></div>
+
+    <!-- time -->
+    <div style="margin:11px 16px 0;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:6px;">SUGGESTED START TIME</div><div style="height:46px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:12px; display:flex; align-items:center; justify-content:space-between; padding:0 14px;"><span style="font-size:16px; font-weight:700; color:#F2F2F3;">7:00 AM</span><i class="ph ph-clock" style="font-size:17px; color:#9A9FA8;"></i></div></div>
+
+    <!-- color -->
+    <div style="margin:11px 16px 0;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:8px;">COLOR</div>
+    <div style="display:flex; gap:9px;">
+      <div style="width:32px; height:32px; border-radius:50%; background:#29B6F6; box-shadow:0 0 0 2px #141414, 0 0 0 4px #29B6F6;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#66BB6A;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#CE93D8;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#FFCA28;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#EF5350;"></div>
+      <div style="width:32px; height:32px; border-radius:50%; background:#26C6DA;"></div>
+    </div></div>
+
+    <!-- quests in group -->
+    <div style="margin:14px 16px 0;"><div style="font-size:10px; font-weight:700; letter-spacing:.06em; color:#9A9FA8; margin-bottom:8px;">QUESTS IN THIS GROUP</div>
+    <div style="background:#1C1C20; border:1px solid #2A2A2E; border-radius:14px; overflow:hidden;">
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-barbell" style="font-size:16px; color:#EF9A9A; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">100 push-ups</div><div style="font-size:10.5px; color:#83878F;">8:00 AM · STR</div></div>
+        <div style="width:22px; height:22px; border-radius:7px; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-drop" style="font-size:16px; color:#90CAF9; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Cold shower</div><div style="font-size:10.5px; color:#83878F;">8:30 AM · VIT</div></div>
+        <div style="width:22px; height:22px; border-radius:7px; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-bottom:1px solid #1E1E22;">
+        <i class="ph-fill ph-notebook" style="font-size:16px; color:#CE93D8; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">10-min journal</div><div style="font-size:10.5px; color:#83878F;">9:00 AM · INT</div></div>
+        <div style="width:22px; height:22px; border-radius:7px; background:#2E90FA; display:flex; align-items:center; justify-content:center;"><i class="ph-bold ph-check" style="font-size:11px; color:#fff;"></i></div>
+      </div>
+      <div style="display:flex; align-items:center; gap:11px; padding:12px 14px;">
+        <i class="ph-fill ph-person-simple-walk" style="font-size:16px; color:#A5D6A7; flex-shrink:0;"></i>
+        <div style="flex:1;"><div style="font-size:13px; font-weight:600; color:#F2F2F3;">Evening walk</div><div style="font-size:10.5px; color:#83878F;">7:00 PM · AGI</div></div>
+        <div style="width:22px; height:22px; border-radius:7px; border:1.5px solid #3A3A40; display:flex; align-items:center; justify-content:center;"></div>
+      </div>
+    </div>
+    <div style="font-size:10.5px; color:#6A6E76; margin-top:7px; padding-left:2px;">Quests run in the order selected above.</div></div>
+
+    <div style="position:absolute; bottom:18px; left:16px; right:16px; height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -8px rgba(46,144,250,.7);"><span style="font-size:14.5px; font-weight:800; color:#fff;">Create Group</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

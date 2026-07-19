@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute;left:40px;top:8px;width:1520px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px;font-weight:800;color:#15161A;margin-top:4px;letter-spacing:-.025em;">Hub</div>
+  <div style="font-size:15px;color:#5C6068;margin-top:7px;max-width:980px;line-height:1.5;">The main entry point — a reorderable card stack where every module surfaces its most important today-stat. Cards are draggable, everything taps into its module, and the docked quick-log bar handles food and finance in one input.</div>
+</div>
+
+<div data-drags-parent="1" style="position:absolute;left:40px;top:128px;width:1520px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex;align-items:baseline;gap:12px;"><div style="font-size:22px;font-weight:800;color:#15161A;letter-spacing:-.02em;">Active · idle · reorder · quick-log AI</div></div>
+</div>
+
+<!-- ============ FRAME 1 · ACTIVE HUB ============ -->
+<div style="position:absolute;left:40px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Hub — mid-day active</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <!-- sticky app bar -->
+    <div style="padding:10px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i>
+    </div>
+
+    <!-- scrollable card list -->
+    <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:582px;">
+
+      <!-- FASTING card — ACTIVE -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px;">
+          <i class="ph-fill ph-timer" style="font-size:16px;color:#2E90FA;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Fasting</span>
+          <div style="background:rgba(46,144,250,.15);border-radius:999px;padding:3px 8px;"><span style="font-size:10px;font-weight:700;color:#5BAAF5;">Active</span></div>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <svg width="72" height="72" viewBox="0 0 72 72" style="flex-shrink:0;transform:rotate(-90deg);">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="#252528" stroke-width="7"/>
+            <circle cx="36" cy="36" r="30" fill="none" stroke="#2E90FA" stroke-width="7" stroke-linecap="round" stroke-dasharray="188.5" stroke-dashoffset="50.9"/>
+          </svg>
+          <div style="flex:1;"><div style="font-size:26px;font-weight:800;color:#F7F7F8;letter-spacing:-.03em;line-height:1;">11:41</div><div style="font-size:11.5px;font-weight:700;color:#5BAAF5;margin-top:3px;">Fat burning</div><div style="font-size:10.5px;color:#83878F;">of 16h goal · 16:8</div></div>
+          <div style="text-align:right;"><div style="font-size:11.5px;color:#83878F;">left</div><div style="font-size:14px;font-weight:700;color:#C9CDD3;margin-top:2px;">04:19</div></div>
+        </div>
+      </div>
+
+      <!-- NUTRITION card -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph ph-fork-knife" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Nutrition</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:4px;">CALORIES</div>
+        <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:5px;"><span style="font-size:18px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">1,420</span><span style="font-size:11.5px;color:#83878F;">/ 2,098 kcal</span></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:11px;"><div style="width:68%;height:100%;background:#2E90FA;border-radius:999px;"></div></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:6px;">MACROS</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;"><div style="display:flex;gap:3px;align-items:baseline;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#F6685E;">P</span><span style="font-size:9.5px;color:#83878F;">96/140g</span></div><div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:69%;height:100%;background:#F6685E;border-radius:999px;"></div></div></div>
+          <div style="flex:1;"><div style="display:flex;gap:3px;align-items:baseline;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#26C6DA;">C</span><span style="font-size:9.5px;color:#83878F;">142/200g</span></div><div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:71%;height:100%;background:#26C6DA;border-radius:999px;"></div></div></div>
+          <div style="flex:1;"><div style="display:flex;gap:3px;align-items:baseline;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#FFCA28;">F</span><span style="font-size:9.5px;color:#83878F;">48/67g</span></div><div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:72%;height:100%;background:#FFCA28;border-radius:999px;"></div></div></div>
+        </div>
+      </div>
+
+      <!-- QUESTS card -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;">
+          <i class="ph ph-lightning" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Quests</span>
+          <span style="font-size:10.5px;color:#83878F;">2 / 5 done</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:10px;"><div style="width:40%;height:100%;background:#46BD6B;border-radius:999px;"></div></div>
+        <!-- quest items with left bar -->
+        <div style="display:flex;flex-direction:column;gap:7px;">
+          <div style="display:flex;align-items:stretch;gap:8px;"><div style="width:2.5px;background:rgba(46,144,250,.6);border-radius:2px;flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:12.5px;font-weight:600;color:#F2F2F3;line-height:1.3;">100 push-ups</div><div style="font-size:10px;color:#83878F;margin-top:1px;">8:00 AM · 🔥21 · STR</div></div></div>
+          <div style="display:flex;align-items:stretch;gap:8px;"><div style="width:2.5px;background:rgba(46,144,250,.6);border-radius:2px;flex-shrink:0;"></div><div style="flex:1;"><div style="font-size:12.5px;font-weight:600;color:#F2F2F3;line-height:1.3;">Evening walk</div><div style="font-size:10px;color:#83878F;margin-top:1px;">7:00 PM · 🔥12 · AGI</div></div></div>
+          <div style="font-size:10.5px;font-weight:600;color:#83878F;padding-left:10px;">See 1 more →</div>
+        </div>
+      </div>
+
+      <!-- ACTIVITY card -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph ph-person-simple-run" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Activity</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="flex:1;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:4px;">STEPS</div><div style="display:flex;align-items:baseline;gap:2px;margin-bottom:5px;"><span style="font-size:16px;font-weight:800;color:#F7F7F8;">7,840</span><span style="font-size:10px;color:#83878F;">/8,000</span></div><div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:98%;height:100%;background:#4CAF50;border-radius:999px;"></div></div></div>
+          <div style="width:1px;background:#2A2A2E;margin:0 12px;"></div>
+          <div style="flex:1;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:4px;">DISTANCE</div><div style="display:flex;align-items:baseline;gap:2px;margin-bottom:5px;"><span style="font-size:16px;font-weight:800;color:#F7F7F8;">6.20</span><span style="font-size:10px;color:#83878F;">/8.0 km</span></div><div style="height:4px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:78%;height:100%;background:#2E90FA;border-radius:999px;"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- quick-log bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div>
+      <div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · IDLE HUB ============ -->
+<div style="position:absolute;left:420px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Hub — early morning idle</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>7:02</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+
+    <div style="padding:10px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hey, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i>
+    </div>
+
+    <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- FASTING — IDLE -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph ph-timer" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Fasting</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="font-size:13.5px;color:#F2F2F3;font-weight:500;">Ready to start</div>
+        <div style="font-size:11px;color:#83878F;margin-top:2px;">16:8 protocol · last fast ended 8h ago</div>
+      </div>
+
+      <!-- NUTRITION — empty -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph ph-fork-knife" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Nutrition</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:4px;">CALORIES</div>
+        <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:5px;"><span style="font-size:18px;font-weight:800;color:#F7F7F8;">0</span><span style="font-size:11.5px;color:#83878F;">/ 2,098 kcal</span></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;margin-bottom:11px;"><div style="width:0%;height:100%;background:#2E90FA;border-radius:999px;"></div></div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:6px;">MACROS</div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;"><div style="display:flex;gap:3px;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#F6685E;">P</span><span style="font-size:9.5px;color:#83878F;">0/140g</span></div><div style="height:4px;background:#26262A;border-radius:999px;"></div></div>
+          <div style="flex:1;"><div style="display:flex;gap:3px;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#26C6DA;">C</span><span style="font-size:9.5px;color:#83878F;">0/200g</span></div><div style="height:4px;background:#26262A;border-radius:999px;"></div></div>
+          <div style="flex:1;"><div style="display:flex;gap:3px;margin-bottom:3px;"><span style="font-size:9.5px;font-weight:700;color:#FFCA28;">F</span><span style="font-size:9.5px;color:#83878F;">0/67g</span></div><div style="height:4px;background:#26262A;border-radius:999px;"></div></div>
+        </div>
+      </div>
+
+      <!-- TREASURY card — bill warning -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph-fill ph-vault" style="font-size:16px;color:#FFCA28;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Finance</span>
+          <div style="background:rgba(255,107,107,.14);border-radius:999px;padding:3px 8px;"><span style="font-size:10px;font-weight:700;color:#FF6B6B;">Bill due</span></div>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="display:flex;gap:0;align-items:stretch;">
+          <div style="flex:1;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:3px;">EXPENSE</div><div style="font-size:15px;font-weight:800;color:#FF8A80;">₱41k</div></div>
+          <div style="width:1px;background:#2A2A2E;margin:0 8px;"></div>
+          <div style="flex:1;text-align:center;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:3px;">INCOME</div><div style="font-size:15px;font-weight:800;color:#6FCB8A;">₱68k</div></div>
+          <div style="width:1px;background:#2A2A2E;margin:0 8px;"></div>
+          <div style="flex:1;text-align:right;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:3px;">ENDING</div><div style="font-size:15px;font-weight:800;color:#F7F7F8;">₱27k</div></div>
+        </div>
+        <!-- bill warning row -->
+        <div style="display:flex;align-items:center;gap:5px;margin-top:9px;"><i class="ph-fill ph-warning" style="font-size:13px;color:#FF6B6B;"></i><span style="font-size:11px;font-weight:600;color:#FF6B6B;">Due today · Meralco</span></div>
+      </div>
+
+      <!-- QUESTS — all pending -->
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:8px;">
+          <i class="ph ph-lightning" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Quests</span>
+          <span style="font-size:10.5px;color:#83878F;">0 / 5 done</span>
+          <i class="ph ph-caret-right" style="font-size:13px;color:#6A6E76;"></i>
+        </div>
+        <div style="height:5px;background:#26262A;border-radius:999px;"></div>
+        <div style="font-size:11.5px;color:#83878F;margin-top:8px;">5 missions waiting · first at 8:00 AM</div>
+      </div>
+    </div>
+
+    <!-- quick-log bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#6A6E76;"></i><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div>
+      <div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · REORDER MODE ============ -->
+<div style="position:absolute;left:800px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Hub — card reorder (drag)</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i>
+    </div>
+
+    <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;">
+
+      <!-- DRAGGED card — elevated, blue border, slight lift -->
+      <div style="background:#222327;border:1.5px solid rgba(46,144,250,.6);border-radius:16px;padding:14px 15px;box-shadow:0 12px 28px -8px rgba(0,0,0,.7);transform:scale(1.015);position:relative;z-index:2;">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:10px;">
+          <i class="ph ph-fork-knife" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Nutrition</span>
+          <i class="ph ph-dots-six-vertical" style="font-size:18px;color:#5BAAF5;"></i>
+        </div>
+        <div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:#9A9FA8;margin-bottom:4px;">CALORIES</div>
+        <div style="display:flex;align-items:baseline;gap:3px;margin-bottom:5px;"><span style="font-size:18px;font-weight:800;color:#F7F7F8;">1,420</span><span style="font-size:11.5px;color:#83878F;">/ 2,098 kcal</span></div>
+        <div style="height:5px;background:#26262A;border-radius:999px;overflow:hidden;"><div style="width:68%;height:100%;background:#2E90FA;border-radius:999px;"></div></div>
+      </div>
+
+      <!-- drop placeholder -->
+      <div style="height:64px;border:1.5px dashed rgba(46,144,250,.35);border-radius:16px;background:rgba(46,144,250,.05);display:flex;align-items:center;justify-content:center;"><span style="font-size:11.5px;color:rgba(91,170,245,.5);font-weight:600;">Drop here</span></div>
+
+      <!-- other cards — slightly opaque -->
+      <div style="opacity:.5;background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <i class="ph-fill ph-timer" style="font-size:16px;color:#2E90FA;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Fasting</span>
+          <div style="background:rgba(46,144,250,.15);border-radius:999px;padding:3px 8px;"><span style="font-size:10px;font-weight:700;color:#5BAAF5;">Active</span></div>
+        </div>
+      </div>
+
+      <div style="opacity:.5;background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <i class="ph ph-lightning" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Quests</span>
+          <span style="font-size:10.5px;color:#83878F;">2 / 5 done</span>
+        </div>
+      </div>
+
+      <div style="opacity:.5;background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <i class="ph-fill ph-vault" style="font-size:16px;color:#FFCA28;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Finance</span>
+        </div>
+      </div>
+
+      <div style="opacity:.5;background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <i class="ph ph-person-simple-run" style="font-size:16px;color:#9A9FA8;"></i>
+          <span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Activity</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- quick-log bar -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:8px 14px 14px;display:flex;align-items:center;gap:8px;">
+      <div style="flex:1;height:42px;background:#1C1C20;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><span style="font-size:13px;color:#6A6E76;">Log food or an expense…</span></div>
+      <div style="width:42px;height:42px;border-radius:50%;border:1px solid #2A2A2E;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#5BAAF5;"></i></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · QUICK-LOG AI RESPONSE ============ -->
+<div style="position:absolute;left:1180px;top:170px;width:340px;font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#9AA0A8;margin-bottom:12px;">Quick-log · AI clarification</div>
+  <div style="width:340px;height:740px;background:#141414;border-radius:42px;overflow:hidden;position:relative;border:1px solid #2A2A2A;box-shadow:0 1px 2px rgba(0,0,0,.2),0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:15px 26px 2px;font-size:13px;font-weight:600;color:#F5F5F5;"><span>9:50</span><div style="display:flex;gap:6px;align-items:center;font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 20px 8px;display:flex;align-items:flex-end;justify-content:space-between;">
+      <div><div style="font-size:22px;font-weight:800;color:#F7F7F8;letter-spacing:-.02em;">Hi, Migs</div><div style="font-size:11.5px;color:#83878F;margin-top:1px;">Saturday, June 28</div></div>
+      <i class="ph ph-gear-six" style="font-size:20px;color:#8C9097;"></i>
+    </div>
+
+    <!-- hub cards (condensed, faded) -->
+    <div style="padding:0 14px;display:flex;flex-direction:column;gap:8px;opacity:.4;">
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;"><div style="display:flex;align-items:center;gap:9px;"><i class="ph-fill ph-timer" style="font-size:16px;color:#2E90FA;"></i><span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Fasting</span></div></div>
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;"><div style="display:flex;align-items:center;gap:9px;"><i class="ph ph-fork-knife" style="font-size:16px;color:#9A9FA8;"></i><span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Nutrition</span></div></div>
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;"><div style="display:flex;align-items:center;gap:9px;"><i class="ph ph-lightning" style="font-size:16px;color:#9A9FA8;"></i><span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Quests</span></div></div>
+      <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:16px;padding:14px 15px;"><div style="display:flex;align-items:center;gap:9px;"><i class="ph-fill ph-vault" style="font-size:16px;color:#FFCA28;"></i><span style="flex:1;font-size:13.5px;font-weight:700;color:#F2F2F3;">Finance</span></div></div>
+    </div>
+
+    <!-- quick-log bar + AI panel (keyboard up) -->
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#131315;border-top:1px solid #1E1E22;padding:0;">
+
+      <!-- AI response panel (LedgerChatPanel) -->
+      <div style="padding:10px 14px;background:#131315;border-bottom:1px solid #1E1E22;">
+        <!-- user bubble -->
+        <div style="display:flex;justify-content:flex-end;margin-bottom:9px;">
+          <div style="max-width:78%;background:#202024;border:1px solid #2A2A2E;border-radius:16px 16px 4px 16px;padding:9px 13px;">
+            <span style="font-size:13px;color:#E7E7E9;">₱285 Jollibee lunch</span>
+          </div>
+        </div>
+        <!-- AI clarification -->
+        <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px;">
+          <div style="width:26px;height:26px;border-radius:8px;background:rgba(46,144,250,.16);display:flex;align-items:center;justify-content:center;flex-shrink:0;"><i class="ph-fill ph-sparkle" style="font-size:12px;color:#5BAAF5;"></i></div>
+          <div style="flex:1;background:#1A1A1E;border:1px solid #2A2A2E;border-radius:4px 16px 16px 16px;padding:9px 12px;">
+            <div style="font-size:12.5px;color:#C9CDD3;line-height:1.45;">Got it — ₱285 outflow at Jollibee. Which account should I use?</div>
+          </div>
+        </div>
+        <!-- quick reply chips -->
+        <div style="display:flex;gap:7px;flex-wrap:wrap;">
+          <div style="background:rgba(46,144,250,.15);border:1px solid #2E90FA;border-radius:999px;padding:6px 13px;"><span style="font-size:11.5px;font-weight:700;color:#5BAAF5;">GCash</span></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:6px 13px;"><span style="font-size:11.5px;font-weight:600;color:#C9CDD3;">BPI</span></div>
+          <div style="background:#1C1C20;border:1px solid #2A2A2E;border-radius:999px;padding:6px 13px;"><span style="font-size:11.5px;font-weight:600;color:#C9CDD3;">Cash</span></div>
+        </div>
+      </div>
+
+      <!-- input -->
+      <div style="padding:8px 14px 14px;display:flex;align-items:center;gap:8px;">
+        <div style="flex:1;height:42px;background:#1C1C20;border:1.5px solid #2E90FA;border-radius:21px;display:flex;align-items:center;gap:8px;padding:0 14px;"><i class="ph ph-sparkle" style="font-size:14px;color:#5BAAF5;"></i><span style="font-size:13px;color:#F2F2F3;">Reply…</span></div>
+        <div style="width:42px;height:42px;border-radius:50%;background:#2E90FA;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px -6px rgba(46,144,250,.7);"><i class="ph-fill ph-paper-plane-right" style="font-size:16px;color:#fff;"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

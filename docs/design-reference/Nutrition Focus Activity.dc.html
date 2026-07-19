@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}
+</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">Training Grounds</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">The activity module — Health Connect permission gate, the double-ring step/distance hero, weekly bar chart, month calendar with mini-rings, set-goals sheet, and manual entry.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Permission · main · calendar detail · set goals · manual entry</div></div>
+</div>
+
+<!-- ============ FRAME 1 · HEALTH CONNECT PERMISSION ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Permission gate</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:13px 22px 0;"><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Training Grounds</span></div>
+
+    <!-- hero icon -->
+    <div style="display:flex; flex-direction:column; align-items:center; padding:42px 0 0;">
+      <div style="width:96px; height:96px; border-radius:30px; background:rgba(76,175,80,.14); border:1px solid rgba(76,175,80,.3); display:flex; align-items:center; justify-content:center;">
+        <i class="ph-fill ph-heart-pulse" style="font-size:48px; color:#4CAF50;"></i>
+      </div>
+      <div style="font-size:22px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em; margin-top:22px; text-align:center;">Connect Health Connect</div>
+      <div style="font-size:14px; color:#9A9FA8; margin-top:10px; text-align:center; max-width:260px; line-height:1.55;">Training Grounds reads your daily steps to track physical discipline and award AGI points.</div>
+    </div>
+
+    <!-- benefit rows -->
+    <div style="padding:32px 26px 0; display:flex; flex-direction:column; gap:14px;">
+      <div style="display:flex; align-items:center; gap:13px;"><i class="ph-fill ph-trophy" style="font-size:22px; color:#4CAF50; flex-shrink:0;"></i><span style="font-size:14px; color:#C9CDD3; line-height:1.4;">+25 XP when you hit your daily step goal</span></div>
+      <div style="display:flex; align-items:center; gap:13px;"><i class="ph-fill ph-lightning" style="font-size:22px; color:#4CAF50; flex-shrink:0;"></i><span style="font-size:14px; color:#C9CDD3; line-height:1.4;">+1 AGI every 5 consecutive days goal met</span></div>
+      <div style="display:flex; align-items:center; gap:13px;"><i class="ph-fill ph-lock-simple" style="font-size:22px; color:#4CAF50; flex-shrink:0;"></i><span style="font-size:14px; color:#C9CDD3; line-height:1.4;">Read-only — we never write to Health Connect</span></div>
+    </div>
+
+    <!-- buttons -->
+    <div style="position:absolute; bottom:0; left:0; right:0; padding:18px 22px 28px; display:flex; flex-direction:column; gap:10px;">
+      <div style="height:54px; border-radius:16px; background:#4CAF50; display:flex; align-items:center; justify-content:center; gap:9px; box-shadow:0 10px 22px -8px rgba(76,175,80,.6);"><i class="ph-fill ph-heart-pulse" style="font-size:18px; color:#fff;"></i><span style="font-size:15px; font-weight:800; color:#fff;">Connect Health Connect</span></div>
+      <div style="height:50px; border-radius:16px; background:#1C1C20; border:1px solid #2A2A2E; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#9A9FA8;">Use manual entry instead</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · MAIN SCREEN ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Training Grounds · main</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 22px 0; display:flex; align-items:center; justify-content:space-between;">
+      <span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Training Grounds</span>
+      <div style="display:flex; align-items:center; gap:10px;"><i class="ph ph-arrows-clockwise" style="font-size:18px; color:#8C9097;"></i><i class="ph ph-sliders-horizontal" style="font-size:18px; color:#8C9097;"></i></div>
+    </div>
+
+    <!-- double ring hero -->
+    <div style="display:flex; flex-direction:column; align-items:center; padding:16px 0 0; position:relative;">
+      <div style="position:relative; width:172px; height:172px;">
+        <svg width="172" height="172" viewBox="0 0 172 172" style="transform:rotate(-90deg);">
+          <!-- outer track (steps) -->
+          <circle cx="86" cy="86" r="78" fill="none" stroke="#252528" stroke-width="13"></circle>
+          <!-- outer fill (steps — 78% green) -->
+          <circle cx="86" cy="86" r="78" fill="none" stroke="#4CAF50" stroke-width="13" stroke-linecap="round" stroke-dasharray="490.09" stroke-dashoffset="107.8"></circle>
+          <!-- inner track (distance) -->
+          <circle cx="86" cy="86" r="60" fill="none" stroke="#202024" stroke-width="11"></circle>
+          <!-- inner fill (distance — 62% teal) -->
+          <circle cx="86" cy="86" r="60" fill="none" stroke="#26C6DA" stroke-width="11" stroke-linecap="round" stroke-dasharray="376.99" stroke-dashoffset="143.3"></circle>
+        </svg>
+        <!-- center text -->
+        <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+          <i class="ph-fill ph-trophy" style="font-size:14px; color:#4CAF50; margin-bottom:2px;"></i>
+          <div style="font-size:30px; font-weight:800; color:#4CAF50; letter-spacing:-.03em; line-height:.9;">7,840</div>
+          <div style="font-size:10px; letter-spacing:.12em; color:#9A9FA8; margin-top:3px;">STEPS</div>
+        </div>
+      </div>
+      <div style="font-size:12.5px; font-weight:600; color:#4CAF50; margin-top:8px;">Daily goal crushed!</div>
+    </div>
+
+    <!-- metric pills -->
+    <div style="padding:13px 18px 0; display:flex; gap:7px; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:5px; background:#1C1C20; border:1px solid rgba(76,175,80,.35); border-radius:999px; padding:6px 12px;"><i class="ph-fill ph-check-circle" style="font-size:13px; color:#4CAF50;"></i><span style="font-size:11.5px; font-weight:700; color:#6FCB8A;">Goal 100%</span></div>
+      <div style="display:flex; align-items:center; gap:5px; background:#1C1C20; border:1px solid #2A2A2E; border-radius:999px; padding:6px 12px;"><i class="ph-fill ph-flame" style="font-size:13px; color:#FFCA28;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">412 kcal</span></div>
+      <div style="display:flex; align-items:center; gap:5px; background:#1C1C20; border:1px solid rgba(38,198,218,.3); border-radius:999px; padding:6px 12px;"><i class="ph ph-path" style="font-size:13px; color:#26C6DA;"></i><span style="font-size:11.5px; font-weight:700; color:#C9CDD3;">6.2 km</span></div>
+    </div>
+
+    <!-- weekly bar chart -->
+    <div style="margin:13px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:13px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;"><span style="font-size:12px; font-weight:700; color:#C9CDD3;">Weekly activity</span><span style="font-size:10.5px; color:#9A9FA8;">48.2k this week</span></div>
+      <div style="display:flex; align-items:flex-end; gap:6px; height:60px;">
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;"><div style="width:100%; border-radius:4px 4px 0 0; background:#4CAF50;" style="height:42px;"></div><span style="font-size:9px; color:#9A9FA8;">Mo</span></div>
+        <!-- manually sized bars -->
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:38px; border-radius:4px 4px 0 0; background:#4CAF50;"></div><span style="font-size:9px; color:#9A9FA8;">Tu</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:28px; border-radius:4px 4px 0 0; background:#FFCA28;"></div><span style="font-size:9px; color:#9A9FA8;">We</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:44px; border-radius:4px 4px 0 0; background:#4CAF50;"></div><span style="font-size:9px; color:#9A9FA8;">Th</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:50px; border-radius:4px 4px 0 0; background:#4CAF50;"></div><span style="font-size:9px; color:#9A9FA8;">Fr</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:32px; border-radius:4px 4px 0 0; background:#FFCA28;"></div><span style="font-size:9px; color:#9A9FA8;">Sa</span></div>
+        <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; height:100%; justify-content:flex-end;"><div style="width:100%; height:50px; border-radius:4px 4px 0 0; background:#4CAF50; border:1.5px solid #81C784;"></div><span style="font-size:9px; font-weight:700; color:#F2F2F3;">Su</span></div>
+      </div>
+      <div style="display:flex; gap:12px; margin-top:10px; align-items:center;"><span style="width:8px; height:8px; border-radius:2px; background:#4CAF50; flex-shrink:0;"></span><span style="font-size:10px; color:#9A9FA8;">Goal met</span><span style="width:8px; height:8px; border-radius:2px; background:#FFCA28; flex-shrink:0;"></span><span style="font-size:10px; color:#9A9FA8;">Active</span><span style="margin-left:auto; font-size:10px; color:#9A9FA8;">Goal 8,000</span></div>
+    </div>
+
+    <!-- HC status chip -->
+    <div style="position:absolute; top:50px; right:18px; display:flex; align-items:center; gap:4px; background:rgba(76,175,80,.12); border:1px solid rgba(76,175,80,.3); border-radius:999px; padding:3px 9px;"><i class="ph-fill ph-heart-pulse" style="font-size:11px; color:#4CAF50;"></i><span style="font-size:10.5px; font-weight:700; color:#6FCB8A;">Connected</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · CALENDAR + DAY DETAIL ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Month calendar · day detail</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:10px 22px 0; display:flex; align-items:center; justify-content:space-between;"><span style="font-size:23px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Training Grounds</span><div style="display:flex; align-items:center; gap:10px;"><i class="ph ph-arrows-clockwise" style="font-size:18px; color:#8C9097;"></i><i class="ph ph-sliders-horizontal" style="font-size:18px; color:#8C9097;"></i></div></div>
+
+    <!-- calendar card — full June, dual-ring cells -->
+    <div style="margin:12px 16px 0; background:#1C1C20; border:1px solid #2A2A2E; border-radius:16px; padding:13px 14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:9px;"><span style="font-size:12px; font-weight:700; color:#C9CDD3;">June 2026</span><span style="font-size:11.5px; font-weight:700; color:#5BAAF5;">Full history →</span></div>
+      <!-- day labels -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); text-align:center; margin-bottom:3px;">
+        <span style="font-size:9px; font-weight:700; color:#6A6E76;">Su</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">Mo</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">Tu</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">We</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">Th</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">Fr</span><span style="font-size:9px; font-weight:700; color:#6A6E76;">Sa</span>
+      </div>
+      <!-- week 1: [empty] Mon 1 – Sat 6 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+        <div></div>
+        <!-- 1 green 7.8k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="2"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="10.7"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">1</text></svg><span style="font-size:7px;color:#4CAF50;">7.8k</span></div>
+        <!-- 2 green 8.1k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="5.3"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">2</text></svg><span style="font-size:7px;color:#4CAF50;">8.1k</span></div>
+        <!-- 3 gold 5.3k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="27.6"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="25.6"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">3</text></svg><span style="font-size:7px;color:#FFCA28;">5.3k</span></div>
+        <!-- 4 green 9.2k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="6.4"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">4</text></svg><span style="font-size:7px;color:#4CAF50;">9.2k</span></div>
+        <!-- 5 green 8.5k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="4.8"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">5</text></svg><span style="font-size:7px;color:#4CAF50;">8.5k</span></div>
+        <!-- 6 gold 5.8k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="22.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="24"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">6</text></svg><span style="font-size:7px;color:#FFCA28;">5.8k</span></div>
+      </div>
+      <!-- week 2: Sun 7 – Sat 13 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+        <!-- 7 green 10k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="0"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">7</text></svg><span style="font-size:7px;color:#4CAF50;">10k</span></div>
+        <!-- 8 rest -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#6A6E76" font-size="9">8</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 9 green 8.4k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="9.6"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">9</text></svg><span style="font-size:7px;color:#4CAF50;">8.4k</span></div>
+        <!-- 10 gold selected 7.8k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;background:rgba(255,202,40,.1);border-radius:5px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="1.6"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="20.3"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">10</text></svg><span style="font-size:7px;color:#FFCA28;">7.8k</span></div>
+        <!-- 11 rest -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#6A6E76" font-size="9">11</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 12 rest -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#6A6E76" font-size="9">12</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 13 green 8.2k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="11.7"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">13</text></svg><span style="font-size:7px;color:#4CAF50;">8.2k</span></div>
+      </div>
+      <!-- week 3: Sun 14 – Sat 20 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+        <!-- 14 gold 7.0k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="10.2"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="19.2"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">14</text></svg><span style="font-size:7px;color:#FFCA28;">7.0k</span></div>
+        <!-- 15 green 8.8k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="4.3"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">15</text></svg><span style="font-size:7px;color:#4CAF50;">8.8k</span></div>
+        <!-- 16 green 8.0k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="8"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">16</text></svg><span style="font-size:7px;color:#4CAF50;">8.0k</span></div>
+        <!-- 17 gold 4.4k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="36.8"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="32"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">17</text></svg><span style="font-size:7px;color:#FFCA28;">4.4k</span></div>
+        <!-- 18 rest -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#6A6E76" font-size="9">18</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 19 rest -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#6A6E76" font-size="9">19</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 20 green 8.0k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="6.4"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">20</text></svg><span style="font-size:7px;color:#4CAF50;">8.0k</span></div>
+      </div>
+      <!-- week 4: Sun 21 – Sat 27 -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+        <!-- 21 gold 7.4k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="6.1"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="12.8"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">21</text></svg><span style="font-size:7px;color:#FFCA28;">7.4k</span></div>
+        <!-- 22 green 8.0k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="5.3"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">22</text></svg><span style="font-size:7px;color:#4CAF50;">8.0k</span></div>
+        <!-- 23 green 9.6k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="0"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">23</text></svg><span style="font-size:7px;color:#4CAF50;">9.6k</span></div>
+        <!-- 24 gold 6.8k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="12.3"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="18.7"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">24</text></svg><span style="font-size:7px;color:#FFCA28;">6.8k</span></div>
+        <!-- 25 green 8.4k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="6.4"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">25</text></svg><span style="font-size:7px;color:#4CAF50;">8.4k</span></div>
+        <!-- 26 gold 5.6k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#FFCA28" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="24.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="26.7"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#FFCA28" font-size="9" font-weight="bold">26</text></svg><span style="font-size:7px;color:#FFCA28;">5.6k</span></div>
+        <!-- 27 green 8.0k -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="9.6"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#4CAF50" font-size="9" font-weight="bold">27</text></svg><span style="font-size:7px;color:#4CAF50;">8.0k</span></div>
+      </div>
+      <!-- week 5: Sun 28 today, Mon 29 future, Tue 30 future -->
+      <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:2px; margin-bottom:2px;">
+        <!-- 28 today blue -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30" style="transform:rotate(-90deg)"><circle cx="15" cy="15" r="13" fill="none" stroke="#252528" stroke-width="3.5"/><circle cx="15" cy="15" r="13" fill="none" stroke="#2E90FA" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="81.68" stroke-dashoffset="0"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#1E1E22" stroke-width="2.5"/><circle cx="15" cy="15" r="8.5" fill="none" stroke="#26C6DA" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="53.4" stroke-dashoffset="11.7"/><circle cx="15" cy="15" r="5.5" fill="#2E90FA" transform="rotate(-90,15,15)"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" transform="rotate(90,15,15)" fill="#fff" font-size="9" font-weight="bold">28</text></svg><span style="font-size:7px;color:#5BAAF5;">8.2k</span></div>
+        <!-- 29 future -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#1E1E22" stroke-width="3.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#3A3A40" font-size="9">29</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <!-- 30 future -->
+        <div style="display:flex;flex-direction:column;align-items:center;gap:1px;"><svg width="30" height="30" viewBox="0 0 30 30"><circle cx="15" cy="15" r="13" fill="none" stroke="#1E1E22" stroke-width="3.5"/><text x="15" y="15" text-anchor="middle" dominant-baseline="middle" fill="#3A3A40" font-size="9">30</text></svg><span style="font-size:7px;color:transparent;">·</span></div>
+        <div></div><div></div><div></div><div></div>
+      </div>
+      <!-- legend -->
+      <div style="display:flex; gap:10px; margin-top:7px; align-items:center;"><span style="width:9px; height:9px; border-radius:50%; background:#4CAF50;"></span><span style="font-size:9px; color:#9A9FA8;">Goal met</span><span style="width:9px; height:9px; border-radius:50%; background:#FFCA28;"></span><span style="font-size:9px; color:#9A9FA8;">Active</span><span style="width:9px; height:9px; border-radius:50%; background:#26C6DA;"></span><span style="font-size:9px; color:#9A9FA8;">Distance</span></div>
+    </div>
+
+    <!-- day detail (Jun 10 selected) -->
+    <div style="margin:11px 16px 0; background:#1C1C20; border:1px solid rgba(46,144,250,.3); border-radius:14px; padding:13px 14px;">
+      <div style="font-size:11px; font-weight:700; color:#5BAAF5; margin-bottom:10px;">Wed, Jun 10</div>
+      <div style="display:flex; gap:8px;">
+        <div style="flex:1; background:#131315; border-radius:10px; padding:10px 9px; text-align:center;"><div style="font-size:15px; font-weight:800; color:#F2F2F3;">7,840</div><div style="font-size:9px; color:#9A9FA8; margin-top:2px;">steps</div></div>
+        <div style="flex:1; background:#131315; border-radius:10px; padding:10px 9px; text-align:center;"><div style="font-size:15px; font-weight:800; color:#26C6DA;">6.2 km</div><div style="font-size:9px; color:#9A9FA8; margin-top:2px;">distance</div></div>
+        <div style="flex:1; background:#131315; border-radius:10px; padding:10px 9px; text-align:center;"><div style="font-size:15px; font-weight:800; color:#FFCA28;">412</div><div style="font-size:9px; color:#9A9FA8; margin-top:2px;">kcal</div></div>
+      </div>
+      <div style="margin-top:10px; display:flex; align-items:center; gap:7px; background:rgba(46,144,250,.1); border-radius:9px; padding:7px 10px;"><i class="ph-fill ph-check-circle" style="font-size:13px; color:#5BAAF5;"></i><span style="font-size:11.5px; font-weight:600; color:#9DB6DC;">98% of step goal · 84% of distance goal</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · SET GOALS ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Set goals</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Training Grounds</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; top:80px; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 24px; display:flex; flex-direction:column; gap:13px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Daily goals</div>
+
+      <!-- steps field -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:6px;">STEPS</div>
+      <div style="height:52px; background:#202024; border:1px solid #2E90FA; border-radius:12px; display:flex; align-items:center; gap:8px; padding:0 14px;"><i class="ph-fill ph-person-simple-walk" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:17px; font-weight:800; color:#F7F7F8; letter-spacing:-.01em;">8,000</span></div></div>
+
+      <!-- quick step presets -->
+      <div style="display:flex; gap:6px; margin-top:-4px;">
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">5k</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">7.5k</span></div>
+        <div style="flex:1; text-align:center; background:#2E90FA; border-radius:9px; padding:7px 0;"><span style="font-size:11.5px; font-weight:700; color:#fff;">8k</span></div>
+        <div style="flex:1; text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:9px; padding:7px 0;"><span style="font-size:11.5px; font-weight:600; color:#9A9FA8;">10k</span></div>
+      </div>
+
+      <!-- distance field -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:6px;">DISTANCE (KM)</div>
+      <div style="height:46px; background:#202024; border:1px solid #2E2E33; border-radius:12px; display:flex; align-items:center; gap:8px; padding:0 14px;"><i class="ph ph-path" style="font-size:15px; color:#26C6DA;"></i><span style="font-size:15px; font-weight:700; color:#F2F2F3;">5.0</span><span style="font-size:12px; color:#9A9FA8; margin-left:2px;">km</span></div></div>
+
+      <!-- step source picker -->
+      <div><div style="font-size:10px; font-weight:700; letter-spacing:.05em; color:#9A9FA8; margin-bottom:6px;">STEP DATA SOURCE</div>
+      <div style="font-size:11.5px; color:#83878F; margin-bottom:9px; line-height:1.4;">Pick one source to prevent double-counting.</div>
+      <div style="display:flex; flex-direction:column; gap:7px;">
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E90FA; border-radius:12px; padding:11px 13px;"><i class="ph-fill ph-radio-button" style="font-size:16px; color:#5BAAF5; flex-shrink:0;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:700; color:#F2F2F3;">Pixel 8 Pro</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">Your phone (Health Connect)</div></div></div>
+        <div style="display:flex; align-items:center; gap:11px; background:#202024; border:1px solid #2E2E33; border-radius:12px; padding:11px 13px;"><i class="ph ph-circle" style="font-size:16px; color:#6A6E76; flex-shrink:0;"></i><div style="flex:1;"><div style="font-size:13.5px; font-weight:600; color:#C9CDD3;">Garmin Forerunner</div><div style="font-size:10.5px; color:#9A9FA8; margin-top:1px;">com.garmin.android.apps</div></div></div>
+      </div></div>
+
+      <div style="flex:1;"></div>
+      <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -8px rgba(46,144,250,.7);"><span style="font-size:14.5px; font-weight:800; color:#fff;">Save</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ FRAME 5 · MANUAL ENTRY ============ -->
+<div style="position:absolute; left:1560px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Manual entry</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:14px 20px 0; opacity:.2;"><div style="font-size:23px; font-weight:800; color:#F7F7F8;">Training Grounds</div></div>
+    <div style="position:absolute; inset:0; background:rgba(0,0,0,.55);"></div>
+    <div style="position:absolute; bottom:0; left:0; right:0; background:#1A1A1E; border-radius:26px 26px 0 0; border-top:1px solid #2E2E33; padding:12px 18px 28px; display:flex; flex-direction:column; gap:14px;">
+      <div style="width:36px; height:4px; border-radius:999px; background:#3A3A40; margin:0 auto;"></div>
+      <div style="font-size:17px; font-weight:800; color:#F7F7F8;">Enter steps manually</div>
+      <div style="font-size:13px; color:#9A9FA8; line-height:1.5; margin-top:-4px;">No Health Connect — that's fine. Type your step count for today and we'll track it the same way.</div>
+
+      <!-- large step input -->
+      <div style="text-align:center; padding:20px 0 10px;">
+        <div style="display:inline-flex; align-items:baseline; gap:6px;"><span style="font-size:52px; font-weight:800; color:#F7F7F8; letter-spacing:-.04em; line-height:.85;">7,840</span></div>
+        <div style="font-size:12px; letter-spacing:.14em; color:#9A9FA8; margin-top:8px;">STEPS TODAY</div>
+        <!-- fake number pad hint -->
+        <div style="margin-top:16px; height:2px; background:#2E90FA; border-radius:999px; width:56px; margin-left:auto; margin-right:auto;"></div>
+      </div>
+
+      <!-- quick presets -->
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:6px;">
+        <div style="text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">2k</span></div>
+        <div style="text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">5k</span></div>
+        <div style="text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">8k</span></div>
+        <div style="text-align:center; background:#202024; border:1px solid #2E2E33; border-radius:10px; padding:9px 0;"><span style="font-size:12px; font-weight:600; color:#9A9FA8;">10k</span></div>
+      </div>
+
+      <!-- context note -->
+      <div style="background:rgba(255,202,40,.07); border:1px solid rgba(255,202,40,.2); border-radius:12px; padding:11px 13px; display:flex; align-items:flex-start; gap:9px;"><i class="ph ph-info" style="font-size:14px; color:#FFCA28; flex-shrink:0; margin-top:1px;"></i><span style="font-size:11.5px; color:#C9A23A; line-height:1.45;">You can still connect Health Connect later in Settings to switch to automatic tracking.</span></div>
+
+      <div style="height:50px; border-radius:14px; background:#2E90FA; display:flex; align-items:center; justify-content:center; box-shadow:0 8px 18px -8px rgba(46,144,250,.7);"><span style="font-size:14.5px; font-weight:800; color:#fff;">Save steps</span></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+* { box-sizing: border-box; }
+body { margin: 0; background: #F4F4F8; font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+code { font-family: 'JetBrains Mono', monospace; }
+</style>
+</helmet>
+
+<div style="max-width:1120px;margin:0 auto;padding:48px 32px 80px;">
+
+  <!-- Header -->
+  <div style="margin-bottom:48px;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(140deg,#2E90FA,#926AFA);display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-palette" style="font-size:18px;color:#fff;"></i></div>
+      <div style="font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8C9097;">Nudgr · Design System</div>
+    </div>
+    <div style="font-size:42px;font-weight:800;color:#0F0F14;letter-spacing:-.03em;line-height:.95;">Color Tokens</div>
+    <div style="font-size:15px;color:#72767F;margin-top:10px;max-width:600px;line-height:1.6;">All color decisions from the Nudgr prototype, organised by role. Each token ships in both dark and light variants — the dark values are canonical; light values are derived by maintaining luminance contrast relationships.</div>
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <div style="display:flex;align-items:center;gap:6px;background:#1A1A1E;border-radius:8px;padding:7px 13px;"><span style="width:10px;height:10px;border-radius:3px;background:#141414;border:1px solid #3A3A3E;"></span><span style="font-size:12px;font-weight:700;color:#C9CDD3;">Dark mode</span></div>
+      <div style="display:flex;align-items:center;gap:6px;background:#FFFFFF;border:1px solid #DCDCE3;border-radius:8px;padding:7px 13px;"><span style="width:10px;height:10px;border-radius:3px;background:#F0F0F6;border:1px solid #DCDCE3;"></span><span style="font-size:12px;font-weight:700;color:#4A4E58;">Light mode</span></div>
+    </div>
+  </div>
+
+  <!-- Section: Backgrounds -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Backgrounds &amp; Surfaces</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#0A0A0B;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F5;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-page</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#0A0A0B</code><code style="font-size:11px;color:#72767F;">#F0F0F5</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Outermost page shell, browser chrome</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#0E0E10;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#E8E8EF;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-shell</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#0E0E10</code><code style="font-size:11px;color:#72767F;">#E8E8EF</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Bottom tab bar, persistent chrome</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#131315;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#FFFFFF;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-screen</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#131315</code><code style="font-size:11px;color:#72767F;">#FFFFFF</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Primary screen background</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#141414;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#FAFAFA;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-elevated</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#141414</code><code style="font-size:11px;color:#72767F;">#FAFAFA</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Phone bezel, slightly elevated surfaces</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#171718;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F5F5FA;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-sheet</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#171718</code><code style="font-size:11px;color:#72767F;">#F5F5FA</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Bottom sheets, modal surfaces</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-card</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#1C1C20</code><code style="font-size:11px;color:#72767F;">#F0F0F6</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Primary card, tile, and list-item bg</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#252628;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#E4E4EA;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-input</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#252628</code><code style="font-size:11px;color:#72767F;">#E4E4EA</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Input fields, workout set pills</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#26262A;border:1px solid #2A2A2E;"></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#E0E0E6;border:1px solid #E0E0E6;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--bg-track</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#26262A</code><code style="font-size:11px;color:#72767F;">#E0E0E6</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Progress bars, macro bars, chart tracks</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section: Borders -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Borders &amp; Dividers</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:12px;border-radius:4px;background:#2A2A2E;"></div>
+          <div style="flex:1;height:12px;border-radius:4px;background:#DCDCE3;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--border-card</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#2A2A2E</code><code style="font-size:11px;color:#72767F;">#DCDCE3</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Standard card border</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:12px;border-radius:4px;background:#1E1E22;"></div>
+          <div style="flex:1;height:12px;border-radius:4px;background:#E8E8EF;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--border-inner</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#1E1E22</code><code style="font-size:11px;color:#72767F;">#E8E8EF</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Row dividers inside list cards</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:12px;border-radius:4px;background:#2E2F31;"></div>
+          <div style="flex:1;height:12px;border-radius:4px;background:#D4D4DC;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--border-sheet</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#2E2F31</code><code style="font-size:11px;color:#72767F;">#D4D4DC</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Bottom sheet top border</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section: Text -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Typography Colors</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;">
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;font-weight:800;color:#F7F7F8;">Aa</span></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;font-weight:800;color:#1A1A1E;">Aa</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--text-primary</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#F7F7F8</code><code style="font-size:11px;color:#72767F;">#1A1A1E</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Headings, key numbers, titles</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;font-weight:600;color:#C9CDD3;">Aa</span></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:14px;font-weight:600;color:#4A4E58;">Aa</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--text-secondary</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#C9CDD3</code><code style="font-size:11px;color:#72767F;">#4A4E58</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Body copy, list item labels</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:600;color:#9A9FA8;">Aa</span></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:600;color:#72767F;">Aa</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--text-tertiary</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#9A9FA8</code><code style="font-size:11px;color:#72767F;">#72767F</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Section labels, timestamps, metadata</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:500;color:#83878F;">Aa</span></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:500;color:#8C9097;">Aa</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--text-muted</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#83878F</code><code style="font-size:11px;color:#72767F;">#8C9097</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Subtext, unit labels (kcal, g, km)</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;">
+          <div style="flex:1;height:44px;border-radius:8px;background:#1C1C20;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:500;color:#6A6E76;">Aa</span></div>
+          <div style="flex:1;height:44px;border-radius:8px;background:#F0F0F6;border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:13px;font-weight:500;color:#B2B6BE;">Aa</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--text-inactive</code>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;"><code style="font-size:11px;color:#72767F;">#6A6E76</code><code style="font-size:11px;color:#72767F;">#B2B6BE</code></div>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Inactive tab icons, disabled states</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section: Accents -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Brand Accents</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;">
+
+      <!-- Fast / Blue -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#2E90FA;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2E90FA;">Fast · Blue</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#2E90FA;flex:1;"></div><div style="height:28px;border-radius:6px;background:#2E90FA;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--fast-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#2E90FA both</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#5BAAF5;flex:1;"></div><div style="height:28px;border-radius:6px;background:#1860C8;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--fast-light</code><br><code style="font-size:10px;color:#A0A4AC;">#5BAAF5 / #1860C8</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#1A2535;flex:1;"></div><div style="height:28px;border-radius:6px;background:#D0E5FF;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--fast-track</code><br><code style="font-size:10px;color:#A0A4AC;">#1A2535 / #D0E5FF</code></div></div>
+        </div>
+      </div>
+
+      <!-- Food / Teal -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#26C6DA;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#26C6DA;">Food · Teal</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#26C6DA;flex:1;"></div><div style="height:28px;border-radius:6px;background:#0AACBF;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--food-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#26C6DA / #0AACBF</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#1A2826;flex:1;"></div><div style="height:28px;border-radius:6px;background:#C8EEF4;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--food-track</code><br><code style="font-size:10px;color:#A0A4AC;">#1A2826 / #C8EEF4</code></div></div>
+        </div>
+      </div>
+
+      <!-- Move / Green -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#46BD6B;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2A8A4A;">Move · Green</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#46BD6B;flex:1;"></div><div style="height:28px;border-radius:6px;background:#2EA055;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--move-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#46BD6B / #2EA055</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#6FCB8A;flex:1;"></div><div style="height:28px;border-radius:6px;background:#1A7A3A;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--move-light</code><br><code style="font-size:10px;color:#A0A4AC;">#6FCB8A / #1A7A3A</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#152218;flex:1;"></div><div style="height:28px;border-radius:6px;background:#C8EDD6;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--move-track</code><br><code style="font-size:10px;color:#A0A4AC;">#152218 / #C8EDD6</code></div></div>
+        </div>
+      </div>
+
+      <!-- Danger / Red -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#F6685E;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#D04040;">Danger · Red</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#F6685E;flex:1;"></div><div style="height:28px;border-radius:6px;background:#D84840;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--danger-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#F6685E / #D84840</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#FF8A80;flex:1;"></div><div style="height:28px;border-radius:6px;background:#B83030;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--danger-light</code><br><code style="font-size:10px;color:#A0A4AC;">#FF8A80 / #B83030</code></div></div>
+        </div>
+      </div>
+
+      <!-- Warning / Orange -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#FF8A4C;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#C86820;">Bills · Orange</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#FF8A4C;flex:1;"></div><div style="height:28px;border-radius:6px;background:#D06010;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--warning-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#FF8A4C / #D06010</code></div></div>
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#FFB37A;flex:1;"></div><div style="height:28px;border-radius:6px;background:#A85020;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--warning-light</code><br><code style="font-size:10px;color:#A0A4AC;">#FFB37A / #A85020</code></div></div>
+        </div>
+      </div>
+
+      <!-- Gold / Treasury -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#FFCA28;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#A07800;">Treasury · Gold</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#FFCA28;flex:1;"></div><div style="height:28px;border-radius:6px;background:#C89000;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--gold-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#FFCA28 / #C89000</code></div></div>
+        </div>
+      </div>
+
+      <!-- Purple / Weight -->
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;"><div style="width:8px;height:8px;border-radius:50%;background:#926AFA;"></div><span style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#7040D0;">Weight · Purple</span></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:10px;"><div style="display:flex;gap:5px;flex:1;"><div style="height:28px;border-radius:6px;background:#926AFA;flex:1;"></div><div style="height:28px;border-radius:6px;background:#6840D8;flex:1;"></div></div><div style="width:120px;"><code style="font-size:10.5px;color:#72767F;">--purple-primary</code><br><code style="font-size:10px;color:#A0A4AC;">#926AFA / #6840D8</code></div></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section: Special Surfaces -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Special Surfaces &amp; Gradients</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;">
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(155deg,#1B2A44,#172033 55%,#15171C);border:1px solid #29354B;"></div>
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(155deg,#EBF2FF,#F0F6FF 55%,#F8FAFF);border:1px solid #B8CFEE;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--surface-treasury</code>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Net worth hero gradient</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(155deg,#3A2417,#241813 70%,#15171C);border:1px solid #4A2F1C;"></div>
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(155deg,#FFF4EE,#FFF8F4 70%,#FAFAFA);border:1px solid #F0C8A8;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#FF8A4C;">--surface-bills</code>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Bills due-soon hero gradient</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(160deg,#222325,#191919);border:1px solid #2E2F31;"></div>
+          <div style="flex:1;height:60px;border-radius:10px;background:linear-gradient(160deg,#F5F5F8,#F0F0F4);border:1px solid #D8D8DF;"></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--surface-card-gradient</code>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Subtle depth on stats cards</div>
+      </div>
+
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:16px 18px;">
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <div style="flex:1;height:60px;border-radius:10px;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;"><span style="font-size:11px;color:rgba(255,255,255,.5);">dark overlay</span></div>
+          <div style="flex:1;height:60px;border-radius:10px;background:rgba(0,0,0,.28);border:1px solid #E0E0E6;display:flex;align-items:center;justify-content:center;"><span style="font-size:11px;color:rgba(0,0,0,.3);">light overlay</span></div>
+        </div>
+        <code style="font-size:11.5px;color:#2E90FA;">--overlay-backdrop</code>
+        <div style="font-size:11px;color:#A0A4AC;margin-top:4px;">Sheet backdrop scrim</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Section: Account Brand Colors -->
+  <div style="margin-bottom:40px;">
+    <div style="font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#8C9097;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #E0E0E6;">Account Brand Colors <span style="font-weight:500;text-transform:none;letter-spacing:0;">(static, same in both modes)</span></div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:170px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#9B2C2C;display:flex;align-items:center;justify-content:center;"><span style="font-size:11px;font-weight:800;color:#fff;">BPI</span></div>
+        <div><code style="font-size:11px;color:#72767F;">#9B2C2C</code><div style="font-size:11px;color:#A0A4AC;">BPI Bank</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:170px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#1565C0;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px;color:#fff;"></i></div>
+        <div><code style="font-size:11px;color:#72767F;">#1565C0</code><div style="font-size:11px;color:#A0A4AC;">GCash</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:170px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#1B7A4B;display:flex;align-items:center;justify-content:center;"><i class="ph-fill ph-wallet" style="font-size:17px;color:#fff;"></i></div>
+        <div><code style="font-size:11px;color:#72767F;">#1B7A4B</code><div style="font-size:11px;color:#A0A4AC;">Maya</div></div>
+      </div>
+      <div style="background:#fff;border:1px solid #E4E4EA;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px;min-width:170px;">
+        <div style="width:36px;height:36px;border-radius:10px;background:#2A2566;display:flex;align-items:center;justify-content:center;"><span style="font-size:9px;font-weight:800;color:#fff;">Mari</span></div>
+        <div><code style="font-size:11px;color:#72767F;">#2A2566</code><div style="font-size:11px;color:#A0A4AC;">Maribank</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer note -->
+  <div style="background:#fff;border:1px solid #E4E4EA;border-radius:14px;padding:18px 20px;display:flex;align-items:flex-start;gap:12px;">
+    <i class="ph-fill ph-info" style="font-size:18px;color:#2E90FA;flex-shrink:0;margin-top:1px;"></i>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:#1A1A1E;margin-bottom:4px;">Usage notes</div>
+      <div style="font-size:12.5px;color:#72767F;line-height:1.7;">Accent colors with <code style="background:#F0F0F6;padding:1px 5px;border-radius:4px;">rgba()</code> tinted backgrounds use the same hue at <code style="background:#F0F0F6;padding:1px 5px;border-radius:4px;">.10–.16</code> opacity. Ring track colors (the dark fill behind each ring arc) are tinted dark on dark mode and tinted light on light mode. The <code style="background:#F0F0F6;padding:1px 5px;border-radius:4px;">--fast-light</code>, <code style="background:#F0F0F6;padding:1px 5px;border-radius:4px;">--move-light</code>, and <code style="background:#F0F0F6;padding:1px 5px;border-radius:4px;">--danger-light</code> values serve as on-dark text variants — they are replaced with deeper values in light mode for sufficient contrast.</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

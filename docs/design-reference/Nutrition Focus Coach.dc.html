@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/bold/style.css">
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>*{box-sizing:border-box;}body{margin:0;-webkit-font-smoothing:antialiased;}</style>
+</helmet>
+
+<!-- TITLE -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:8px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="font-size:13px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:#8A8F98;">Nudgr · Focus</div>
+  <div style="font-size:34px; font-weight:800; color:#15161A; margin-top:4px; letter-spacing:-.025em;">AI Coach</div>
+  <div style="font-size:15px; color:#5C6068; margin-top:7px; max-width:980px; line-height:1.5;">One coach, surfaced from anywhere — the header persona switches with the entry point. Calm take on the spec: parse-then-confirm food logging (no hallucinated macros), a fasting coach, and the offline / download states.</div>
+</div>
+
+<!-- ROW LABEL -->
+<div data-drags-parent="1" style="position:absolute; left:40px; top:128px; width:1520px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div style="display:flex; align-items:baseline; gap:12px;"><div style="font-size:22px; font-weight:800; color:#15161A; letter-spacing:-.02em;">Download · log · ask · offline</div><div style="font-size:14px; color:#5C6068;">first run · nutrition · fasting · error states</div></div>
+</div>
+
+<!-- ============ FRAME 1 · DOWNLOAD ============ -->
+<div style="position:absolute; left:40px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">First run · download</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 20px 0; display:flex; align-items:center; gap:12px;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><span style="font-size:24px; font-weight:800; color:#F7F7F8; letter-spacing:-.02em;">Coach</span></div>
+
+    <div style="display:flex; flex-direction:column; align-items:center; text-align:center; padding:40px 26px 0;">
+      <div style="width:64px; height:64px; border-radius:20px; background:rgba(33,150,243,.12); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-sparkle" style="font-size:30px; color:#5BAAF5;"></i></div>
+      <div style="font-size:19px; font-weight:800; color:#F7F7F8; margin-top:16px; letter-spacing:-.01em;">Meet your Coach</div>
+      <div style="font-size:13px; color:#9BA0A8; margin-top:7px; line-height:1.5;">Reads your meals, paces your fasts, and answers in plain language. Runs on-device — private by default.</div>
+    </div>
+
+    <!-- progress -->
+    <div style="margin:26px 18px 0; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px; padding:15px;">
+      <div style="display:flex; align-items:center; justify-content:space-between;"><div style="display:flex; align-items:center; gap:9px;"><i class="ph-fill ph-device-mobile" style="font-size:17px; color:#5BAAF5;"></i><span style="font-size:13.5px; font-weight:700; color:#F2F2F3;">On-device model</span></div><span style="font-size:12px; font-weight:700; color:#5BAAF5;">42%</span></div>
+      <div style="margin-top:11px; height:7px; background:#2C2D2F; border-radius:999px; overflow:hidden;"><div style="width:42%; height:100%; background:linear-gradient(90deg,#1E88E5,#42A5F5); border-radius:999px;"></div></div>
+      <div style="font-size:10.5px; color:#7E828A; margin-top:8px;">246 MB of 586 MB · ~1 min left</div>
+    </div>
+
+    <div style="margin:14px 18px 0; display:flex; align-items:center; gap:11px; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:14px; padding:13px 14px;"><i class="ph-fill ph-cloud" style="font-size:18px; color:#7E828A;"></i><div style="flex:1;"><div style="font-size:13px; font-weight:700; color:#F2F2F3;">Use Cloud AI instead</div><div style="font-size:11px; color:#7E828A; margin-top:1px;">Higher quality · needs sign-in</div></div><i class="ph ph-caret-right" style="font-size:14px; color:#5A5E66;"></i></div>
+
+    <div style="position:absolute; bottom:22px; left:18px; right:18px; height:54px; border-radius:16px; background:#1D1D1E; border:1px solid #313132; display:flex; align-items:center; justify-content:center;"><span style="font-size:14px; font-weight:700; color:#9BA0A8;">Skip — use keyword matching</span></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 2 · NUTRITION CHAT ============ -->
+<div style="position:absolute; left:420px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Nutrition · parse &amp; confirm</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <!-- persona header -->
+    <div style="padding:12px 18px 12px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #1F1F20;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="width:34px; height:34px; border-radius:11px; background:rgba(33,150,243,.14); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-bowl-food" style="font-size:17px; color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#F7F7F8;">Nutrition Coach</div><div style="display:flex; align-items:center; gap:5px; margin-top:1px;"><span style="width:6px; height:6px; border-radius:50%; background:#4CAF50;"></span><span style="font-size:10.5px; color:#7E828A;">On-device · ready</span></div></div></div>
+
+    <!-- messages -->
+    <div style="padding:16px 16px 0; display:flex; flex-direction:column; gap:11px;">
+      <div style="align-self:flex-end; max-width:80%; background:rgba(33,150,243,.16); border:1px solid rgba(33,150,243,.28); border-radius:16px 16px 6px 16px; padding:10px 13px;"><span style="font-size:14px; color:#E7F1FD; line-height:1.4;">had 2 cups rice and chicken adobo</span></div>
+      <div style="align-self:flex-start; max-width:84%; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px 16px 16px 6px; padding:11px 13px;"><span style="font-size:14px; color:#E7E7E9; line-height:1.45;">Found both in your food DB — here's the estimate. Confirm to log it.</span></div>
+
+      <!-- confirm card -->
+      <div style="align-self:flex-start; width:90%; background:linear-gradient(160deg,#222325,#191919); border:1px solid #2E2F31; border-radius:18px; padding:13px 14px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0; border-bottom:1px solid #2A2B2D;"><div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">White rice · 240g</div><div style="font-size:10px; color:#797D85; margin-top:1px;">P8 · C90 · F0</div></div><span style="font-size:13.5px; font-weight:800; color:#F2F2F3;">410</span></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:7px 0;"><div><div style="font-size:13.5px; font-weight:600; color:#F2F2F3;">Chicken adobo · 150g</div><div style="font-size:10px; color:#797D85; margin-top:1px;">P40 · C8 · F30</div></div><span style="font-size:13.5px; font-weight:800; color:#F2F2F3;">470</span></div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:9px; padding-top:9px; border-top:1px solid #2E2F31;"><div style="display:flex; align-items:center; gap:9px;"><span style="font-size:10.5px; font-weight:700; color:#9BA0A8;"><span style="color:#4DA3FF;">●</span> 48P</span><span style="font-size:10.5px; font-weight:700; color:#9BA0A8;"><span style="color:#FFC107;">●</span> 98C</span><span style="font-size:10.5px; font-weight:700; color:#9BA0A8;"><span style="color:#FF6B6B;">●</span> 30F</span></div><span style="font-size:14px; font-weight:800; color:#F2F2F3;">880 <span style="font-size:10px; color:#797D85; font-weight:600;">kcal</span></span></div>
+        <div style="margin-top:12px; display:flex; gap:8px;"><div style="flex:1; height:40px; border-radius:11px; background:#2196F3; display:flex; align-items:center; justify-content:center; gap:6px; box-shadow:0 6px 14px -6px rgba(33,150,243,.6);"><i class="ph-bold ph-check" style="font-size:13px; color:#fff;"></i><span style="font-size:13px; font-weight:700; color:#fff;">Log it</span></div><div style="width:84px; height:40px; border-radius:11px; background:#252628; display:flex; align-items:center; justify-content:center;"><span style="font-size:13px; font-weight:700; color:#C9CDD3;">Edit</span></div></div>
+      </div>
+    </div>
+
+    <!-- input -->
+    <div style="position:absolute; bottom:18px; left:16px; right:16px; height:52px; background:#202021; border:1px solid #313132; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;"><i class="ph ph-microphone" style="font-size:19px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">Ask or log a meal…</span><div style="width:38px; height:38px; border-radius:12px; background:#2196F3; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:16px; color:#fff;"></i></div></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 3 · FASTING CHAT ============ -->
+<div style="position:absolute; left:800px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Fasting · ask &amp; stream</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-high"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 18px 12px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #1F1F20;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="width:34px; height:34px; border-radius:11px; background:rgba(255,138,76,.14); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-lightning" style="font-size:17px; color:#FF8A4C;"></i></div><div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#F7F7F8;">Fasting Coach</div><div style="display:flex; align-items:center; gap:5px; margin-top:1px;"><span style="width:6px; height:6px; border-radius:50%; background:#5BAAF5;"></span><span style="font-size:10.5px; color:#7E828A;">11h 24m into 16h fast</span></div></div></div>
+
+    <div style="padding:16px 16px 0; display:flex; flex-direction:column; gap:11px;">
+      <div style="align-self:flex-end; max-width:80%; background:rgba(33,150,243,.16); border:1px solid rgba(33,150,243,.28); border-radius:16px 16px 6px 16px; padding:10px 13px;"><span style="font-size:14px; color:#E7F1FD; line-height:1.4;">starting to feel hungry — should I push to 16h?</span></div>
+      <div style="align-self:flex-start; max-width:86%; background:#1D1D1E; border:1px solid #2A2A2B; border-radius:16px 16px 16px 6px; padding:11px 13px;"><span style="font-size:14px; color:#E7E7E9; line-height:1.5;">You're at 71% — deep in fat-burning now. The hunger wave usually passes in ~20 min. Water or black coffee helps. You've got <span style="color:#5BAAF5; font-weight:700;">4h 35m</span> left<span style="display:inline-block; width:7px; height:15px; background:#5BAAF5; margin-left:2px; vertical-align:-2px; border-radius:1px;"></span></span></div>
+      <!-- typing chips suggestion -->
+      <div style="display:flex; gap:7px; flex-wrap:wrap; margin-top:2px;">
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px; font-size:12px; font-weight:600; color:#C9CDD3;">What breaks my fast?</div>
+        <div style="background:#1D1D1E; border:1px solid #2A2A2B; border-radius:999px; padding:7px 13px; font-size:12px; font-weight:600; color:#C9CDD3;">End early</div>
+      </div>
+    </div>
+
+    <div style="position:absolute; bottom:18px; left:16px; right:16px; height:52px; background:#202021; border:1px solid #313132; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;"><i class="ph ph-microphone" style="font-size:19px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">Ask the coach…</span><div style="width:38px; height:38px; border-radius:12px; background:#3A3B3D; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:16px; color:#fff;"></i></div></div>
+  </div>
+</div>
+
+<!-- ============ FRAME 4 · OFFLINE / ERROR ============ -->
+<div style="position:absolute; left:1180px; top:170px; width:340px; font-family:'Plus Jakarta Sans',sans-serif;">
+  <div data-drags-parent="1" style="font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:#9AA0A8; margin-bottom:12px;">Offline · error &amp; retry</div>
+  <div style="width:340px; height:740px; background:#141414; border-radius:42px; overflow:hidden; position:relative; border:1px solid #2A2A2A; box-shadow:0 1px 2px rgba(0,0,0,.2), 0 40px 70px -34px rgba(0,0,0,.55);">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 26px 2px; font-size:13px; font-weight:600; color:#F5F5F5;"><span>9:50</span><div style="display:flex; gap:6px; align-items:center; font-size:12px;"><i class="ph-fill ph-cell-signal-full"></i><i class="ph-fill ph-wifi-slash"></i><i class="ph-fill ph-battery-high"></i></div></div>
+    <div style="padding:12px 18px 12px; display:flex; align-items:center; gap:11px; border-bottom:1px solid #1F1F20;"><i class="ph ph-caret-left" style="font-size:20px; color:#8C9097;"></i><div style="width:34px; height:34px; border-radius:11px; background:rgba(33,150,243,.14); display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-bowl-food" style="font-size:17px; color:#5BAAF5;"></i></div><div style="flex:1;"><div style="font-size:15px; font-weight:800; color:#F7F7F8;">Nutrition Coach</div><div style="display:flex; align-items:center; gap:5px; margin-top:1px;"><span style="width:6px; height:6px; border-radius:50%; background:#FF8A4C;"></span><span style="font-size:10.5px; color:#FF8A4C;">Offline · on-device only</span></div></div></div>
+
+    <!-- offline banner -->
+    <div style="margin:14px 16px 0; background:rgba(255,138,76,.08); border:1px solid rgba(255,138,76,.25); border-radius:13px; padding:10px 13px; display:flex; align-items:center; gap:10px;"><i class="ph-fill ph-wifi-slash" style="font-size:16px; color:#FF8A4C;"></i><span style="font-size:11.5px; color:#E0B48F; line-height:1.4;">Cloud unreachable — switched to on-device. Estimates may be simpler.</span></div>
+
+    <div style="padding:14px 16px 0; display:flex; flex-direction:column; gap:11px;">
+      <div style="align-self:flex-end; max-width:80%; background:rgba(33,150,243,.16); border:1px solid rgba(33,150,243,.28); border-radius:16px 16px 6px 16px; padding:10px 13px;"><span style="font-size:14px; color:#E7F1FD; line-height:1.4;">macros for a Jollibee Chickenjoy meal?</span></div>
+
+      <!-- error chip -->
+      <div style="align-self:flex-start; width:88%; background:rgba(244,67,54,.08); border:1px solid rgba(244,67,54,.28); border-radius:16px; padding:12px 14px;">
+        <div style="display:flex; align-items:center; gap:8px;"><i class="ph-fill ph-warning-circle" style="font-size:16px; color:#FF6B6B;"></i><span style="font-size:13px; font-weight:700; color:#FF8A80;">Couldn't reach the model</span></div>
+        <div style="font-size:11.5px; color:#9BA0A8; margin-top:6px; line-height:1.45;">Not in your offline food DB and cloud is unavailable. Try again, or log it manually.</div>
+        <div style="margin-top:11px; display:flex; gap:8px;"><div style="flex:1; height:38px; border-radius:11px; background:#252628; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph ph-arrow-clockwise" style="font-size:13px; color:#C9CDD3;"></i><span style="font-size:12.5px; font-weight:700; color:#C9CDD3;">Retry</span></div><div style="flex:1; height:38px; border-radius:11px; background:#252628; display:flex; align-items:center; justify-content:center; gap:6px;"><i class="ph ph-pencil-simple" style="font-size:13px; color:#C9CDD3;"></i><span style="font-size:12.5px; font-weight:700; color:#C9CDD3;">Log manually</span></div></div>
+      </div>
+    </div>
+
+    <div style="position:absolute; bottom:18px; left:16px; right:16px; height:52px; background:#202021; border:1px solid #313132; border-radius:16px; display:flex; align-items:center; gap:11px; padding:0 8px 0 15px;"><i class="ph ph-microphone" style="font-size:19px; color:#8C9097;"></i><span style="flex:1; font-size:14px; color:#797D85;">Ask or log a meal…</span><div style="width:38px; height:38px; border-radius:12px; background:#2196F3; display:flex; align-items:center; justify-content:center;"><i class="ph-fill ph-arrow-up" style="font-size:16px; color:#fff;"></i></div></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>
