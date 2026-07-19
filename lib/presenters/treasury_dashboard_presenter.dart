@@ -635,6 +635,26 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Flexible — used by the full spending history sheet.
   List<DailySpend> lastNDaysSpending(int n) => _lastNDaysSpending(n);
 
+  /// Daily spend for an inclusive whole-day range [start, end]. Powers the
+  /// dashboard spending card's range selector (this month / last month / etc.).
+  List<DailySpend> dailySpendForRange(DateTime start, DateTime end) {
+    final excluded = _excludedCategoryIds;
+    final s = DateTime(start.year, start.month, start.day);
+    final e = DateTime(end.year, end.month, end.day);
+    final count = e.difference(s).inDays + 1;
+    return List.generate(count.clamp(1, 366), (i) {
+      final day = DateTime(s.year, s.month, s.day + i);
+      final total = _transactions
+          .where((t) =>
+              isSpendingOutflow(t, excluded) &&
+              t.date.year == day.year &&
+              t.date.month == day.month &&
+              t.date.day == day.day)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      return DailySpend(day, total);
+    });
+  }
+
   List<DailySpend> _lastNDaysSpending(int n) {
     final now = DateTime.now();
     final excluded = _excludedCategoryIds;

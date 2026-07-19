@@ -8,24 +8,66 @@ import 'package:intermittent_fasting/views/treasury/dashboard/full_spending_hist
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import 'package:intl/intl.dart';
 
-class SpendingAnalyticsCard extends StatelessWidget {
+enum _SpendRange {
+  last7('7D'),
+  last30('30D'),
+  thisMonth('This mo'),
+  lastMonth('Last mo');
+
+  const _SpendRange(this.label);
+  final String label;
+}
+
+class SpendingAnalyticsCard extends StatefulWidget {
   final TreasuryDashboardPresenter presenter;
 
   const SpendingAnalyticsCard({super.key, required this.presenter});
 
   @override
+  State<SpendingAnalyticsCard> createState() => _SpendingAnalyticsCardState();
+}
+
+class _SpendingAnalyticsCardState extends State<SpendingAnalyticsCard> {
+  _SpendRange _range = _SpendRange.last7;
+
+  (DateTime, DateTime) _rangeDates() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    switch (_range) {
+      case _SpendRange.last7:
+        return (today.subtract(const Duration(days: 6)), today);
+      case _SpendRange.last30:
+        return (today.subtract(const Duration(days: 29)), today);
+      case _SpendRange.thisMonth:
+        return (DateTime(now.year, now.month, 1), today);
+      case _SpendRange.lastMonth:
+        final lastEnd =
+            DateTime(now.year, now.month, 1).subtract(const Duration(days: 1));
+        return (DateTime(lastEnd.year, lastEnd.month, 1), lastEnd);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final days = presenter.last7DaysSpending;
-    final peak = presenter.peakDaySpend7;
-    final avg = presenter.avgDailySpend7;
+    final (start, end) = _rangeDates();
+    final days = widget.presenter.dailySpendForRange(start, end);
     final hasData = days.any((d) => d.amount > 0);
+    final peak = days.fold(0.0, (m, d) => d.amount > m ? d.amount : m);
+    final nonZero = days.where((d) => d.amount > 0).toList();
+    final avg = nonZero.isEmpty
+        ? 0.0
+        : nonZero.fold(0.0, (s, d) => s + d.amount) / nonZero.length;
+    final total = days.fold(0.0, (s, d) => s + d.amount);
+    final peakDay = hasData
+        ? days.reduce((a, b) => a.amount >= b.amount ? a : b).date
+        : null;
 
     return AppSection(
-      title: 'Spending — Last 7 Days',
+      title: 'Spending',
       trailing: GestureDetector(
-        onTap: () => FullSpendingHistorySheet.show(context, presenter),
+        onTap: () => FullSpendingHistorySheet.show(context, widget.presenter),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
           child: Row(
@@ -47,13 +89,18 @@ class SpendingAnalyticsCard extends StatelessWidget {
         variant: AppCardVariant.elevated,
         child: Column(
           children: [
+            _RangeSelector(
+              value: _range,
+              onChanged: (r) => setState(() => _range = r),
+            ),
+            const SizedBox(height: 14),
             SizedBox(
               height: 120,
               child: hasData
                   ? _BarChart(days: days, peak: peak)
                   : const AppEmptyState(
                       icon: Icons.bar_chart_rounded,
-                      title: 'No spending recorded yet',
+                      title: 'No spending in this range',
                       iconSize: 36,
                       padding: EdgeInsets.all(AppSpacing.md),
                     ),
@@ -67,11 +114,63 @@ class SpendingAnalyticsCard extends StatelessWidget {
             _StatsRow(
               avgDaily: avg,
               peak: peak,
-              peakDay: presenter.peakSpendDay,
-              todaySpend: days.isNotEmpty ? days.last.amount : 0.0,
+              peakDay: peakDay,
+              total: total,
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Compact segmented control for the spending window.
+class _RangeSelector extends StatelessWidget {
+  final _SpendRange value;
+  final ValueChanged<_SpendRange> onChanged;
+
+  const _RangeSelector({required this.value, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          for (final r in _SpendRange.values)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(r),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  curve: Curves.easeOut,
+                  padding: const EdgeInsets.symmetric(vertical: 7),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: r == value ? cs.primary : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    r.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight:
+                          r == value ? FontWeight.w700 : FontWeight.w600,
+                      color: r == value ? cs.onPrimary : cs.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -303,13 +402,13 @@ class _StatsRow extends StatelessWidget {
   final double avgDaily;
   final double peak;
   final DateTime? peakDay;
-  final double todaySpend;
+  final double total;
 
   const _StatsRow({
     required this.avgDaily,
     required this.peak,
     required this.peakDay,
-    required this.todaySpend,
+    required this.total,
   });
 
   @override
@@ -322,8 +421,8 @@ class _StatsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         _StatChip(
-          label: 'TODAY',
-          value: formatPesoCompact(todaySpend),
+          label: 'TOTAL',
+          value: formatPesoCompact(total),
           color: colorScheme.primary,
         ),
         _StatDivider(),

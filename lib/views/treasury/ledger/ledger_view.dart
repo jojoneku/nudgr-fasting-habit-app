@@ -121,7 +121,8 @@ class _LedgerViewState extends State<LedgerView> {
                   presenter: presenter,
                   onOpenFilters: _showFilterSortSheet,
                 ),
-                _SummaryStrip(presenter: presenter),
+                // In / Out / Net moved to the Dashboard's cashflow strip — no
+                // need to duplicate the month totals on the Ledger.
                 Expanded(
                   child: _TransactionList(
                     presenter: presenter,
@@ -1208,128 +1209,6 @@ class _MonthCell extends StatelessWidget {
 }
 
 // ── Summary Card ─────────────────────────────────────────────────────────────
-
-/// Segmented IN / OUT / NET strip (reference) — one card split into three equal
-/// columns by hairline dividers. Values come straight from the presenter.
-class _SummaryStrip extends StatelessWidget {
-  final LedgerPresenter presenter;
-
-  const _SummaryStrip({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final net = presenter.filteredMonthNet;
-    // NET is blue when non-negative; red when the month is in deficit (spec §3).
-    final netColor = net < 0 ? cs.error : context.appColors.fast;
-    final netPrefix = net > 0 ? '+' : (net < 0 ? '−' : '');
-
-    return Container(
-      width: double.infinity,
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
-          borderRadius: BorderRadius.circular(13),
-          border: Border.all(color: cs.outlineVariant),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
-        child: IntrinsicHeight(
-          child: Row(
-            children: [
-              _SummarySegment(
-                label: 'IN',
-                semanticsLabel: 'Income',
-                value: formatPeso(presenter.filteredMonthInflow),
-                color: cs.tertiary,
-              ),
-              _SummaryDivider(color: cs.outlineVariant),
-              _SummarySegment(
-                label: 'OUT',
-                semanticsLabel: 'Expenses',
-                value: formatPeso(presenter.filteredMonthOutflow),
-                color: cs.error,
-              ),
-              _SummaryDivider(color: cs.outlineVariant),
-              _SummarySegment(
-                label: 'NET',
-                semanticsLabel: 'Net',
-                value: '$netPrefix${formatPeso(net.abs())}',
-                color: netColor,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SummaryDivider extends StatelessWidget {
-  final Color color;
-  const _SummaryDivider({required this.color});
-
-  @override
-  Widget build(BuildContext context) => Container(
-      width: 1,
-      color: color,
-      margin: const EdgeInsets.symmetric(horizontal: 4));
-}
-
-class _SummarySegment extends StatelessWidget {
-  final String label;
-
-  /// Spoken label for screen readers (the on-screen [label] is an abbreviation
-  /// like "IN"/"OUT"/"NET").
-  final String semanticsLabel;
-  final String value;
-  final Color color;
-
-  const _SummarySegment({
-    required this.label,
-    required this.semanticsLabel,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      // One clean announcement ("Income, ₱68,000"); child text nodes are
-      // excluded so the value isn't read twice.
-      child: Semantics(
-        label: semanticsLabel,
-        value: value,
-        excludeSemantics: true,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: context.appColors.textTertiary,
-                fontSize: 9,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              value,
-              style:
-                  AppTextStyles.numeric(fontSize: 13, weight: FontWeight.w800)
-                      .copyWith(color: color),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 // ── Transaction List ─────────────────────────────────────────────────────────
 
