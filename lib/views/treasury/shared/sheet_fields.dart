@@ -227,7 +227,8 @@ class SheetSegmentedToggle<T> extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 9),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: seg.value == value ? seg.accent : Colors.transparent,
+                      color:
+                          seg.value == value ? seg.accent : Colors.transparent,
                       borderRadius: BorderRadius.circular(9),
                     ),
                     child: Text(

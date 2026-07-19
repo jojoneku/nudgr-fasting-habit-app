@@ -99,9 +99,8 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
   }
 
   // Only liquid accounts can fund a set-aside — funding it later debits one.
-  List<FinancialAccount> get _liquidAccounts => widget.presenter.accounts
-      .where((a) => a.isActive && a.isLiquid)
-      .toList();
+  List<FinancialAccount> get _liquidAccounts =>
+      widget.presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
 
   FinancialAccount? get _selectedAccount {
     for (final a in _liquidAccounts) {
@@ -161,7 +160,8 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
             items: SetAsideType.values
                 .map((t) => DropdownMenuItem(value: t, child: Text(t.label)))
                 .toList(),
-            onChanged: (v) => setState(() => _budgetedType = v ?? _budgetedType),
+            onChanged: (v) =>
+                setState(() => _budgetedType = v ?? _budgetedType),
           ),
           const SizedBox(height: 12),
           AppTextField(
@@ -192,8 +192,8 @@ class _AddBudgetedExpenseSheetState extends State<AddBudgetedExpenseSheet> {
                 return ChoiceChip(
                   label: Text(cat.name),
                   selected: isSelected,
-                  onSelected: (_) => setState(() =>
-                      _selectedCategoryId = isSelected ? null : cat.id),
+                  onSelected: (_) => setState(
+                      () => _selectedCategoryId = isSelected ? null : cat.id),
                 );
               }).toList(),
             ),

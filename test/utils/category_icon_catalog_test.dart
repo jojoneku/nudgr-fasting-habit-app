@@ -21,7 +21,8 @@ void main() {
       // kAutoCategoryIconKey ("tag") is deliberately NOT a catalog key.
       expect(kCategoryIconCatalog.containsKey(kAutoCategoryIconKey), isFalse);
       expect(
-        resolveCategoryIcon(kAutoCategoryIconKey, 'Groceries', CategoryType.expense),
+        resolveCategoryIcon(
+            kAutoCategoryIconKey, 'Groceries', CategoryType.expense),
         categoryIcon('Groceries', CategoryType.expense),
       );
     });

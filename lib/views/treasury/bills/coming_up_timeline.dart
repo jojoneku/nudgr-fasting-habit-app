@@ -59,8 +59,7 @@ class _TimelineRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final amountColor =
         item.isInflow ? context.appColors.success : cs.onSurface;
-    final amountText =
-        '${item.isInflow ? '+' : ''}${formatPeso(item.amount)}';
+    final amountText = '${item.isInflow ? '+' : ''}${formatPeso(item.amount)}';
 
     return InkWell(
       onTap: onTap,

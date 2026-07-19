@@ -994,8 +994,7 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
             if (!_alreadyInLedger && widget.presenter.accounts.isNotEmpty) ...[
               const SizedBox(height: 12),
               const SheetFieldLabel('Account'),
-              SheetAccountField(
-                  account: _selectedAccount, onTap: _pickAccount),
+              SheetAccountField(account: _selectedAccount, onTap: _pickAccount),
             ],
             const SizedBox(height: 12),
             const SheetFieldLabel('Date'),

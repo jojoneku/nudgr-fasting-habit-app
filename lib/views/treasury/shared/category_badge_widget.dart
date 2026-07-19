@@ -44,7 +44,8 @@ class CategoryBadge extends StatelessWidget {
                 color: color,
                 fontWeight: FontWeight.w800,
                 // Scale text to the badge; slightly smaller for 2-char monograms.
-                fontSize: spec.monogram!.length >= 2 ? size * 0.34 : size * 0.42,
+                fontSize:
+                    spec.monogram!.length >= 2 ? size * 0.34 : size * 0.42,
                 height: 1,
               ),
             )

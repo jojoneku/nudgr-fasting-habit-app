@@ -189,11 +189,12 @@ void main() {
         'Installment i1', // undated
       ]);
       // Only the receivable is an inflow.
-      expect(items.where((i) => i.isInflow).map((i) => i.name), ['Receivable r1']);
+      expect(
+          items.where((i) => i.isInflow).map((i) => i.name), ['Receivable r1']);
       expect(items.firstWhere((i) => i.kind == ComingUpKind.installment).amount,
           500);
-      expect(items.firstWhere((i) => i.kind == ComingUpKind.budgeted).amount,
-          400);
+      expect(
+          items.firstWhere((i) => i.kind == ComingUpKind.budgeted).amount, 400);
     });
 
     test('caps at 5, dropping undated items when dated ones fill the list',
@@ -269,8 +270,7 @@ void main() {
 
       final saved =
           verify(mockStorage.saveBills(captureAny)).captured.last as List<Bill>;
-      expect(
-          saved.firstWhere((b) => b.id == 'r1').reminderDaysBefore, 2);
+      expect(saved.firstWhere((b) => b.id == 'r1').reminderDaysBefore, 2);
     });
   });
 }

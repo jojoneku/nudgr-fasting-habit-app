@@ -81,16 +81,15 @@ const Map<String, IconData> kCategoryIconCatalog = {
 const List<CategoryIconGroup> kCategoryIconGroups = [
   CategoryIconGroup(
       'Food & drink', ['food', 'coffee', 'fastfood', 'grocery', 'bar']),
-  CategoryIconGroup(
-      'Transport', ['car', 'ride', 'fuel', 'transit', 'flight']),
+  CategoryIconGroup('Transport', ['car', 'ride', 'fuel', 'transit', 'flight']),
   CategoryIconGroup(
       'Home & bills', ['home', 'bolt', 'water', 'wifi', 'phone', 'bill']),
   CategoryIconGroup('Shopping & lifestyle',
       ['shopping', 'gift', 'entertainment', 'subscription', 'sports']),
   CategoryIconGroup('Life & family',
       ['health', 'fitness', 'pet', 'baby', 'education', 'book']),
-  CategoryIconGroup('Income',
-      ['salary', 'bonus', 'refund', 'invest', 'business', 'savings']),
+  CategoryIconGroup(
+      'Income', ['salary', 'bonus', 'refund', 'invest', 'business', 'savings']),
   CategoryIconGroup('More', ['transfer', 'label', 'star', 'heart']),
 ];
 

@@ -167,8 +167,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     // Account fields are pickers (not form fields), so validate them here and
     // surface feedback the old dropdown validator used to show.
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Select an account')));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Select an account')));
       return;
     }
     if (_type == TransactionType.transfer && _transferToAccountId == null) {
@@ -479,9 +479,7 @@ class _TypeToggle extends StatelessWidget {
             value: TransactionType.inflow,
             accent: cs.tertiary),
         SheetSegment(
-            label: 'Outflow',
-            value: TransactionType.outflow,
-            accent: cs.error),
+            label: 'Outflow', value: TransactionType.outflow, accent: cs.error),
         SheetSegment(
             label: 'Transfer',
             value: TransactionType.transfer,

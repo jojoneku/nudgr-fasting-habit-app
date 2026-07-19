@@ -924,7 +924,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     // Stamp a real creation time so the row syncs up (categories default to
     // epoch-0 updatedAt otherwise, which loses to any remote copy under
     // last-write-wins).
-    _categories = [..._categories, category.copyWith(updatedAt: DateTime.now())];
+    _categories = [
+      ..._categories,
+      category.copyWith(updatedAt: DateTime.now())
+    ];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);
   }

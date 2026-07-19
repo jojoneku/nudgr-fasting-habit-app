@@ -604,28 +604,28 @@ class _FilterSortButton extends StatelessWidget {
                     ),
                   ),
                   if (count > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                    decoration: BoxDecoration(
-                      color: blue,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: blue,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
-        ),
         ),
         // Quick clear — wipes the active filters (keeps sort) without opening
         // the sheet. Only shown when something is filtered.
@@ -1272,8 +1272,10 @@ class _SummaryDivider extends StatelessWidget {
   const _SummaryDivider({required this.color});
 
   @override
-  Widget build(BuildContext context) =>
-      Container(width: 1, color: color, margin: const EdgeInsets.symmetric(horizontal: 4));
+  Widget build(BuildContext context) => Container(
+      width: 1,
+      color: color,
+      margin: const EdgeInsets.symmetric(horizontal: 4));
 }
 
 class _SummarySegment extends StatelessWidget {

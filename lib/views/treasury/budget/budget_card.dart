@@ -241,7 +241,8 @@ class _HintLine extends StatelessWidget {
   final Color color;
   final String text;
 
-  const _HintLine({required this.icon, required this.color, required this.text});
+  const _HintLine(
+      {required this.icon, required this.color, required this.text});
 
   @override
   Widget build(BuildContext context) {

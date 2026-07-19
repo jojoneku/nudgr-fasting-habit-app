@@ -98,7 +98,8 @@ class _QuickPaySheetState extends State<QuickPaySheet> {
         widget.presenter.accounts.where((a) => !a.isLiability).toList();
 
     return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      padding:
+          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
         child: Column(
@@ -126,7 +127,8 @@ class _QuickPaySheetState extends State<QuickPaySheet> {
               controller: _amountController,
               label: 'Amount to Pay',
               prefix: const Text('₱ '),
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
             ),
             if (payers.isNotEmpty) ...[
               const SizedBox(height: 12),

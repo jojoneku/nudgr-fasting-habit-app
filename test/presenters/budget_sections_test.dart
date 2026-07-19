@@ -151,7 +151,8 @@ void main() {
   });
 
   group('budgetSections ordering', () {
-    test('sections follow Living → Savings → Variable → Essentials and '
+    test(
+        'sections follow Living → Savings → Variable → Essentials and '
         'omit empty groups', () async {
       final month = _nowMonth;
       stub(

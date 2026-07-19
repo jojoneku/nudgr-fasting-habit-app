@@ -177,9 +177,8 @@ class _TypeChip extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: selected
-                  ? color
-                  : cs.outlineVariant.withValues(alpha: 0.6),
+              color:
+                  selected ? color : cs.outlineVariant.withValues(alpha: 0.6),
             ),
           ),
           child: Row(
