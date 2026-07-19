@@ -1,3 +1,10 @@
+> **⚠️ Superseded by [`redesign-treasury-budget-cards`](../redesign-treasury-budget-cards/proposal.md).**
+> This pace-hero design was **not shipped**. The canonical Budget redesign keeps the spent-vs-budgeted
+> ring hero + on-pace pill but lists budgets as **individual cards** (replacing the per-group tiles).
+> The `daysLeftInSelectedMonth` / `safeToSpendPerDay` getters and the `_SafeToSpendCallout` described
+> below were **dropped**; only `isCurrentMonth`, `monthElapsedFraction`, `isAheadOfPace`, and
+> `percentUsed` survive in the shipped cards design.
+
 ## Why
 
 The Budget tab is the fourth Treasury screen in the Nudgr redesign. It already lists per-group

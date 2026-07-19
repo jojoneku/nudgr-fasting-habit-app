@@ -1,3 +1,9 @@
+> **⚠️ Superseded by [`redesign-treasury-budget-cards`](../redesign-treasury-budget-cards/design.md).**
+> This pace-hero design was not shipped. The shipped design keeps the ring hero + on-pace pill but
+> lists budgets as individual `BudgetCard`s (the `CategoryBudgetTile` referenced below was deleted).
+> The `daysLeftInSelectedMonth` / `safeToSpendPerDay` getters and the safe-to-spend callout were
+> dropped; `isCurrentMonth`, `monthElapsedFraction`, `isAheadOfPace`, and `percentUsed` survive.
+
 ## Context
 
 The Budget tab (`budget_view.dart`) has a month selector, a flat `_SummaryBanner`

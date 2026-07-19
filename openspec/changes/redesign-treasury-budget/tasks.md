@@ -1,17 +1,24 @@
+> **⚠️ Superseded by [`redesign-treasury-budget-cards`](../redesign-treasury-budget-cards/tasks.md).**
+> The pace-hero + safe-to-spend UI below was not shipped. What survives (in the cards design): the
+> `isCurrentMonth` / `monthElapsedFraction` / `isAheadOfPace` / `percentUsed` getters and the ring
+> hero + on-pace pill. What was dropped: `daysLeftInSelectedMonth`, `safeToSpendPerDay`, the
+> `_SafeToSpendCallout`, and the `budget_pace_test.dart` unit tests (pace is now covered by
+> `budget_sections_test.dart`).
+
 ## 1. Presenter (additive only)
 
-- [x] 1.1 Add pure getters to `BudgetPresenter`: `isCurrentMonth`, `daysLeftInSelectedMonth`, `monthElapsedFraction`, `isAheadOfPace`, `safeToSpendPerDay` (reusing `percentUsed`/`totalRemaining`). Unit-test past/current/future month.
+- [~] 1.1 ~~Add pure getters `isCurrentMonth`, `daysLeftInSelectedMonth`, `monthElapsedFraction`, `isAheadOfPace`, `safeToSpendPerDay`.~~ Superseded: only `isCurrentMonth`, `monthElapsedFraction`, `isAheadOfPace` shipped (see cards design); `daysLeftInSelectedMonth`/`safeToSpendPerDay` dropped.
 
 ## 2. Pace hero + safe-to-spend
 
-- [x] 2.1 Replace `_SummaryBanner` with `_BudgetPaceHero` (AppRingProgress % ring + SPENT / of-allocated + Ahead-of-pace / Over-pace / Over-budget pill) and a `_SafeToSpendCallout` (current-month only). Remove the dead `_SummaryBanner`.
+- [~] 2.1 ~~Replace `_SummaryBanner` with `_BudgetPaceHero` + `_SafeToSpendCallout`.~~ Superseded by the cards design's ring hero (no safe-to-spend callout).
 
 ## 3. Wire into the view
 
-- [x] 3.1 Show the hero + callout in the header when budgets exist; keep the empty state, category/savings sections, month selector, manage-groups, and FAB unchanged.
+- [~] 3.1 ~~Show the hero + callout in the header.~~ Superseded by the per-budget cards layout.
 
 ## 4. Verification
 
-- [x] 4.1 `dart format` + `flutter analyze` clean.
-- [x] 4.2 Presenter unit tests for the pace getters (past = fully elapsed / 0 days, future = 0 elapsed, current = live safe-to-spend). 3 tests passing.
-- [ ] 4.3 Live smoke on device/web in both themes (ahead / over-budget states). → Deferred with the other tabs' live smoke.
+- [~] 4.1 ~~`dart format` + `flutter analyze` clean.~~ Superseded; the cards design is analyze-clean.
+- [~] 4.2 ~~Presenter unit tests for the pace getters (`budget_pace_test.dart`).~~ Superseded: `budget_pace_test.dart` removed; pace covered by `budget_sections_test.dart`.
+- [ ] 4.3 Live smoke on device/web in both themes → tracked under the cards design.

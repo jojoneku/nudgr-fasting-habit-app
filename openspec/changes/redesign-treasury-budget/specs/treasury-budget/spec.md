@@ -1,3 +1,8 @@
+<!-- ⚠️ SUPERSEDED by redesign-treasury-budget-cards. This pace-hero spec delta was
+     not shipped; the canonical Budget requirements live in that change. The ring
+     hero + on-pace pill survive, but the safe-to-spend callout was dropped. This
+     delta is retained for history and should NOT be synced into the main specs. -->
+
 ## ADDED Requirements
 
 ### Requirement: Pace-ring budget hero
