@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class AddBudgetSheet extends StatefulWidget {
@@ -31,6 +32,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   BudgetType _budgetType = BudgetType.variable;
   bool _isSubmitting = false;
 
+  static const _newCategorySentinel = '__new_category__';
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +53,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     _amountController.dispose();
     super.dispose();
   }
+
+  bool get _isSavings => _groupId == BudgetGroupDef.idSavings;
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -126,12 +131,126 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
     return cat;
   }
 
-  bool get _isSavings => _groupId == BudgetGroupDef.idSavings;
+  Future<void> _createCategory() async {
+    final newCat = await _showCreateCategoryDialog(context);
+    if (newCat != null) {
+      await widget.presenter.addCategory(newCat);
+      if (mounted) setState(() => _selectedCategoryId = newCat.id);
+    }
+  }
+
+  /// The label shown in the target picker box for the current selection.
+  String get _selectedTargetName {
+    final id = _selectedCategoryId;
+    if (id == null) return '';
+    if (_isSavings) {
+      final a = widget.presenter.savingsTargets
+          .where((x) => x.id == id)
+          .firstOrNull;
+      return a != null ? _savingsAccountLabel(a) : '';
+    }
+    final c =
+        widget.presenter.expenseCategories.where((x) => x.id == id).firstOrNull;
+    return c?.name ?? '';
+  }
+
+  Future<void> _pickTarget() async {
+    if (_isSavings) {
+      final targets = widget.presenter.savingsTargets;
+      final picked = await _showTargetPicker(
+        title: 'Savings / Goal account',
+        rows: [for (final a in targets) (_savingsAccountLabel(a), a.id)],
+      );
+      if (picked != null) setState(() => _selectedCategoryId = picked);
+    } else {
+      final cats = widget.presenter.expenseCategories;
+      final picked = await _showTargetPicker(
+        title: 'Category',
+        rows: [for (final c in cats) (c.name, c.id)],
+        newLabel: 'New category…',
+      );
+      if (picked == _newCategorySentinel) {
+        await _createCategory();
+      } else if (picked != null) {
+        setState(() => _selectedCategoryId = picked);
+      }
+    }
+  }
+
+  /// A bottom-sheet single-select list matching the reference picker. Returns
+  /// the chosen id, [_newCategorySentinel] for the optional "new" row, or null.
+  Future<String?> _showTargetPicker({
+    required String title,
+    required List<(String, String)> rows,
+    String? newLabel,
+  }) {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        final theme = Theme.of(ctx);
+        final cs = theme.colorScheme;
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 14),
+                    decoration: BoxDecoration(
+                      color: cs.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(title,
+                      style: TextStyle(
+                          color: cs.onSurface,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800)),
+                ),
+                if (newLabel != null)
+                  _TargetPickerRow(
+                    leading:
+                        Icon(Icons.add_rounded, size: 20, color: cs.primary),
+                    label: newLabel,
+                    selected: false,
+                    onTap: () =>
+                        Navigator.of(ctx).pop(_newCategorySentinel),
+                  ),
+                for (final (label, id) in rows)
+                  _TargetPickerRow(
+                    leading: Icon(Icons.sell_outlined,
+                        size: 18, color: cs.onSurfaceVariant),
+                    label: label,
+                    selected: id == _selectedCategoryId,
+                    onTap: () => Navigator.of(ctx).pop(id),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final expenseCategories = widget.presenter.expenseCategories;
     final savingsTargets = widget.presenter.savingsTargets;
+    final isPreselected = widget.preselectedCategoryId != null;
+    final targetName = _selectedTargetName;
 
     return Form(
       key: _formKey,
@@ -140,111 +259,64 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Category / account selector or display
-            if (widget.preselectedCategoryId == null) ...[
-              if (_isSavings) ...[
-                if (savingsTargets.isEmpty)
-                  _NoSavingsHint()
-                else
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedCategoryId,
-                    hint: Text(
-                      'Select Account',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant),
-                    ),
-                    decoration: const InputDecoration(
-                        labelText: 'Savings / Goal Account'),
-                    items: savingsTargets
-                        .map((a) => DropdownMenuItem(
-                              value: a.id,
-                              child: Text(_savingsAccountLabel(a)),
-                            ))
-                        .toList(),
-                    onChanged: (v) => setState(() => _selectedCategoryId = v),
-                    validator: (v) => v == null ? 'Select an account' : null,
+            // Category / account target
+            if (isPreselected) ...[
+              SheetFieldLabel(_isSavings ? 'Account' : 'Category'),
+              SheetPickerBox(
+                trailingIcon: Icons.lock_outline_rounded,
+                child: Text(
+                  targetName.isEmpty ? '—' : targetName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
-              ] else if (expenseCategories.isEmpty) ...[
-                _NoCategoriesHint(
-                  onAdd: () async {
-                    final newCat = await _showCreateCategoryDialog(context);
-                    if (newCat != null) {
-                      await widget.presenter.addCategory(newCat);
-                      if (mounted) {
-                        setState(() => _selectedCategoryId = newCat.id);
-                      }
-                    }
-                  },
                 ),
-              ] else ...[
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _selectedCategoryId,
-                        hint: Text(
-                          'Select Category',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
-                              ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant),
-                        ),
-                        decoration:
-                            const InputDecoration(labelText: 'Category'),
-                        items: expenseCategories
-                            .map((c) => DropdownMenuItem(
-                                value: c.id, child: Text(c.name)))
-                            .toList(),
-                        onChanged: (v) =>
-                            setState(() => _selectedCategoryId = v),
-                        validator: (v) =>
-                            v == null ? 'Select a category' : null,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton.outlined(
-                      icon: const Icon(Icons.add, size: 20),
-                      tooltip: 'Create category',
-                      onPressed: () async {
-                        final newCat = await _showCreateCategoryDialog(context);
-                        if (newCat != null) {
-                          await widget.presenter.addCategory(newCat);
-                          if (mounted) {
-                            setState(() => _selectedCategoryId = newCat.id);
-                          }
-                        }
-                      },
-                    ),
-                  ],
-                ),
-              ],
-              const SizedBox(height: 12),
-            ] else ...[
-              _CategoryDisplay(
-                category: widget.presenter.expenseCategories
-                    .cast<FinanceCategory?>()
-                    .firstWhere(
-                      (c) => c?.id == _selectedCategoryId,
-                      orElse: () => null,
-                    ),
               ),
-              const SizedBox(height: 12),
+            ] else if (_isSavings && savingsTargets.isEmpty) ...[
+              _NoSavingsHint(),
+            ] else if (!_isSavings && expenseCategories.isEmpty) ...[
+              _NoCategoriesHint(onAdd: _createCategory),
+            ] else ...[
+              SheetFieldLabel(_isSavings ? 'Savings / Goal account' : 'Category'),
+              SheetPickerBox(
+                onTap: _pickTarget,
+                child: Text(
+                  targetName.isEmpty
+                      ? (_isSavings ? 'Select account' : 'Select category')
+                      : targetName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: targetName.isEmpty
+                        ? Theme.of(context).colorScheme.onSurfaceVariant
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
             ],
+            const SizedBox(height: 16),
 
-            // Amount field
+            // Budget amount (emphasized field)
+            SheetFieldLabel('Budget amount'),
             TextFormField(
               controller: _amountController,
               keyboardType:
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: amountInputFormatters,
-              decoration: const InputDecoration(
-                labelText: 'Budget Amount',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w800),
+              decoration: sheetFieldDecoration(
+                context,
+                hint: '0.00',
                 prefixText: '₱ ',
+                emphasize: true,
               ),
               validator: (v) {
                 final p = double.tryParse(v ?? '');
@@ -254,13 +326,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Budget Group
-            Text(
-              'Budget Group',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
+            // Budget group
+            SheetFieldLabel('Budget group'),
             AppSegmentedControl<String>(
               segments: [
                 for (final g in widget.presenter.groups)
@@ -285,13 +352,8 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Budget Type
-            Text(
-              'Budget Type',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
-            ),
-            const SizedBox(height: 8),
+            // Budget type
+            SheetFieldLabel('Budget type'),
             AppSegmentedControl<BudgetType>(
               segments: const [
                 (value: BudgetType.monthly, label: 'Monthly', icon: null),
@@ -338,6 +400,52 @@ String _savingsAccountLabel(FinancialAccount a) {
     return '${a.name}  ·  goal ${formatPesoCompact(a.goalTarget!)}';
   }
   return a.name;
+}
+
+class _TargetPickerRow extends StatelessWidget {
+  final Widget leading;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _TargetPickerRow({
+    required this.leading,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 52),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+        child: Row(
+          children: [
+            leading,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (selected)
+              Icon(Icons.check_rounded, size: 20, color: cs.primary),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _NoSavingsHint extends StatelessWidget {
@@ -387,36 +495,6 @@ class _NoCategoriesHint extends StatelessWidget {
           TextButton(
             onPressed: onAdd,
             child: const Text('Create'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CategoryDisplay extends StatelessWidget {
-  final FinanceCategory? category;
-
-  const _CategoryDisplay({required this.category});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return AppCard(
-      variant: AppCardVariant.outlined,
-      child: Row(
-        children: [
-          Text(
-            'Category',
-            style: theme.textTheme.labelMedium
-                ?.copyWith(color: cs.onSurfaceVariant),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            category?.name ?? '—',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),
