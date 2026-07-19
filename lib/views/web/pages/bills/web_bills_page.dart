@@ -213,7 +213,7 @@ class _SideBySideCards extends StatelessWidget {
 
 // ─── Add-bill dialog ────────────────────────────────────────────────────────
 
-/// Desktop add-bill form (Plan 050). Mirrors the mobile [AddBillSheet]'s core
+/// Desktop add-bill form (Plan 050). Mirrors the mobile [EntrySheet]'s core
 /// single-bill case: Name, Bill Type, Amount, Due Day, Payment Account, and
 /// (expense) Category, then calls [BillsReceivablesPresenter.addBill] with a
 /// freshly built [Bill] keyed to `presenter.selectedMonth`.

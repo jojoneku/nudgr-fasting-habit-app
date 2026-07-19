@@ -13,9 +13,8 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
-import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
-import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/bills/entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/budgeted_expense_tile.dart';
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_hero.dart';
@@ -58,8 +57,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) =>
-          AddBillSheet(presenter: widget.presenter, existing: existing),
+      builder: (_) => EntrySheet(
+        presenter: widget.presenter,
+        initialKind: EntryKind.bill,
+        existingBill: existing,
+      ),
     );
   }
 
@@ -71,8 +73,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) =>
-          AddReceivableSheet(presenter: widget.presenter, existing: existing),
+      builder: (_) => EntrySheet(
+        presenter: widget.presenter,
+        initialKind: EntryKind.receivable,
+        existingReceivable: existing,
+      ),
     );
   }
 
