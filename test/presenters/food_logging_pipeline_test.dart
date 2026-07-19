@@ -777,6 +777,56 @@ void main() {
       expect(p.chatMessages, hasLength(2));
       expect(p.todayLog.allEntries, hasLength(2));
     });
+
+    test('previewChat ACCUMULATES a second item into the pending estimate',
+        () async {
+      final p = await _makePresenter();
+
+      await p.previewChat('100g chicken breast');
+      final firstCount = p.pendingChatEntries.length;
+      final firstKcal = p.pendingChatTotalCalories;
+      expect(firstCount, greaterThan(0));
+
+      // Second item BEFORE committing — must add to the estimate, not replace.
+      await p.previewChat('100g white rice');
+
+      expect(p.hasPendingChat, isTrue);
+      expect(p.pendingChatEntries.length, greaterThan(firstCount));
+      expect(p.pendingChatTotalCalories, greaterThan(firstKcal));
+      // Still nothing logged until commit.
+      expect(p.todayLog.allEntries, isEmpty);
+
+      // Committing the merged estimate produces ONE combined log row.
+      await p.commitPendingChat();
+      expect(p.chatMessages, hasLength(1));
+      expect(p.todayLog.allEntries.length, greaterThan(firstCount));
+    });
+
+    test('recomputePendingChatEntry re-resolves and keeps the typed name',
+        () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      expect(p.pendingChatEntries, isNotEmpty);
+
+      await p.recomputePendingChatEntry(0, 'Grilled chicken');
+
+      // The user's typed name is kept as the label…
+      expect(p.pendingChatEntries.first.name, 'Grilled chicken');
+      // …and nothing is committed by editing.
+      expect(p.hasPendingChat, isTrue);
+      expect(p.todayLog.allEntries, isEmpty);
+    });
+
+    test('recomputePendingChatEntry ignores empty name / bad index', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      final original = p.pendingChatEntries.first.name;
+
+      await p.recomputePendingChatEntry(0, '   '); // empty after trim
+      await p.recomputePendingChatEntry(5, 'Nope'); // out of range
+
+      expect(p.pendingChatEntries.first.name, original);
+    });
   });
 
   // ── TIER PRIORITY ───────────────────────────────────────────────────────────

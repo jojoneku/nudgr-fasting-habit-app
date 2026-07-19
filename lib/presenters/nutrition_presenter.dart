@@ -1287,7 +1287,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     }
     _isChatParsing = true;
     _chatParseError = null;
-    _clearPending();
+    // NOTE: we intentionally do NOT clear the pending estimate here. A second
+    // food submission while an estimate is on screen ACCUMULATES into it (the
+    // composer hint says "Add another item…"). A fresh composer already has no
+    // pending (dispose/Edit call discardPendingChat), so the first item still
+    // starts clean. Exercise still logs atomically without touching pending.
     safeNotify();
 
     try {
@@ -1296,13 +1300,80 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
       } else {
         final resolved = await _resolveChatFood(trimmed);
         if (resolved != null) {
-          _pendingResolved = resolved;
-          _pendingText = trimmed;
+          final existing = _pendingResolved;
+          if (existing != null) {
+            // Merge into the existing estimate so both items are reviewed and
+            // logged together.
+            _pendingResolved = (
+              entries: [...existing.entries, ...resolved.entries],
+              alts: [...existing.alts, ...resolved.alts],
+              rawTexts: [...existing.rawTexts, ...resolved.rawTexts],
+            );
+            _pendingText = [
+              if (_pendingText != null && _pendingText!.isNotEmpty)
+                _pendingText!,
+              trimmed,
+            ].join('; ');
+          } else {
+            _pendingResolved = resolved;
+            _pendingText = trimmed;
+          }
         }
       }
     } catch (e) {
       _chatParseError = 'Something went wrong. Please try again.';
       debugPrint('NutritionPresenter: previewChat error: $e');
+    } finally {
+      _isChatParsing = false;
+      safeNotify();
+    }
+  }
+
+  /// Re-resolve a pending item after an inline rename so its calories/macros
+  /// reflect the new name (runs the same resolver as chat food). Keeps the
+  /// user's typed [newName] as the label but swaps in the freshly-resolved
+  /// nutrition. On resolver failure the name still updates (macros unchanged).
+  /// No-op for empty name / bad index / no pending estimate.
+  Future<void> recomputePendingChatEntry(int index, String newName) async {
+    final resolved = _pendingResolved;
+    final name = newName.trim();
+    if (resolved == null || name.isEmpty) return;
+    if (index < 0 || index >= resolved.entries.length) return;
+    if (_isChatParsing) return;
+
+    _isChatParsing = true;
+    final priorError = _chatParseError;
+    safeNotify();
+    try {
+      final r = await _resolveChatFood(name);
+      // Recompute must never surface a chat error to the composer.
+      _chatParseError = priorError;
+      final cur = _pendingResolved;
+      if (cur == null || index >= cur.entries.length) return;
+      final base = cur.entries[index];
+      final src = (r != null && r.entries.isNotEmpty) ? r.entries.first : null;
+      final updated = src == null
+          ? base.copyWith(name: name)
+          : base.copyWith(
+              name: name,
+              calories: src.calories,
+              protein: src.protein,
+              carbs: src.carbs,
+              fat: src.fat,
+              grams: src.grams,
+              estimationSource: src.estimationSource,
+              confidence: src.confidence,
+            );
+      final entries = [...cur.entries];
+      entries[index] = updated;
+      _pendingResolved = (
+        entries: entries,
+        alts: cur.alts,
+        rawTexts: cur.rawTexts,
+      );
+    } catch (e) {
+      _chatParseError = priorError;
+      debugPrint('NutritionPresenter: recomputePendingChatEntry error: $e');
     } finally {
       _isChatParsing = false;
       safeNotify();

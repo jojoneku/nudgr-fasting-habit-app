@@ -55,8 +55,20 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
   bool _analyzing = false;
   bool _showEstimate = false;
   bool _committing = false; // guards double-tap on "Log it"
+
+  // Inline rename of an estimate item: index of the row being edited (null =
+  // none) and its editing controller/focus. _recomputingIndex is the row whose
+  // nutrition is being re-resolved after a rename; _editedIndices marks rows
+  // the user has renamed (shows an "edited" tag).
+  int? _editingIndex;
+  int? _recomputingIndex;
+  final Set<int> _editedIndices = {};
+  final _editCtrl = TextEditingController();
+  final _editFocus = FocusNode();
   String? _error;
-  String? _draftText; // echoed as a chat bubble during analyze/estimate
+  // Each submitted message echoed as a chat bubble; accumulates so adding a
+  // second item keeps the first bubble on screen (chat history, not a swap).
+  final List<String> _draftTexts = [];
   bool _aiPromptShown = false;
 
   static const _quickChips = <_QuickChip>[
@@ -82,7 +94,42 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     widget.presenter.discardPendingChat();
     _ctrl.dispose();
     _focus.dispose();
+    _editCtrl.dispose();
+    _editFocus.dispose();
     super.dispose();
+  }
+
+  /// Enter inline-rename mode for the estimate item at [index].
+  void _startEditingName(int index, String currentName) {
+    setState(() {
+      _editingIndex = index;
+      _editCtrl.text = currentName;
+      _editCtrl.selection =
+          TextSelection(baseOffset: 0, extentOffset: currentName.length);
+    });
+    _editFocus.requestFocus();
+  }
+
+  /// Commit the inline rename: re-resolve the item's nutrition for the new
+  /// name (with a per-row spinner), then mark it edited. Idempotent — a second
+  /// call while already committing (e.g. onTapOutside + check tap) is a no-op.
+  Future<void> _commitEditingName() async {
+    final index = _editingIndex;
+    if (index == null) return;
+    final newName = _editCtrl.text.trim();
+    setState(() => _editingIndex = null);
+    if (newName.isEmpty) return;
+
+    final entries = widget.presenter.pendingChatEntries;
+    if (index < entries.length && entries[index].name == newName) return;
+
+    setState(() => _recomputingIndex = index);
+    await widget.presenter.recomputePendingChatEntry(index, newName);
+    if (!mounted) return;
+    setState(() {
+      _recomputingIndex = null;
+      _editedIndices.add(index);
+    });
   }
 
   // The fasting "lock" is a now-only concept — past days can always be
@@ -176,7 +223,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     setState(() {
       _analyzing = true;
       _error = null;
-      _draftText = text;
+      _draftTexts.add(text);
     });
     _ctrl.clear();
     // Resolve WITHOUT logging — food yields an estimate to review; exercise is
@@ -185,12 +232,13 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     if (!mounted) return;
     final err = widget.presenter.chatParseError;
     if (err != null) {
-      // Put the text back so the user can fix it instead of retyping.
-      _ctrl.text = _draftText ?? '';
+      // Put the text back so the user can fix it instead of retyping, and drop
+      // its bubble (the item never made it into the estimate).
+      _ctrl.text = text;
       setState(() {
         _analyzing = false;
         _error = err;
-        _draftText = null;
+        if (_draftTexts.isNotEmpty) _draftTexts.removeLast();
       });
     } else if (widget.presenter.hasPendingChat) {
       setState(() {
@@ -234,8 +282,9 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     setState(() {
       _showEstimate = false;
       _analyzing = false;
-      if (_draftText != null) _ctrl.text = _draftText!;
-      _draftText = null;
+      final last = _draftTexts.isNotEmpty ? _draftTexts.last : null;
+      _draftTexts.clear();
+      if (last != null) _ctrl.text = last;
     });
     _focus.requestFocus();
   }
@@ -343,8 +392,8 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
               ],
             ),
             const SizedBox(height: 6),
-            if (_draftText != null && (_analyzing || _showEstimate))
-              _buildDraftBubble(cs),
+            if (_draftTexts.isNotEmpty && (_analyzing || _showEstimate))
+              for (final draft in _draftTexts) _buildDraftBubble(cs, draft),
             if (_analyzing)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -504,7 +553,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
 
   /// The user's submission echoed as a right-aligned chat bubble while the
   /// estimate is being prepared/reviewed (mirrors the reference composer).
-  Widget _buildDraftBubble(ColorScheme cs) {
+  Widget _buildDraftBubble(ColorScheme cs, String draft) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 11),
       child: Align(
@@ -525,7 +574,7 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
             ),
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             child: Text(
-              _draftText!,
+              draft,
               style: TextStyle(
                 color: cs.onSurface,
                 fontSize: 14,
@@ -569,50 +618,16 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
                   letterSpacing: 0.8,
                 ),
               ),
+              const Spacer(),
+              Text(
+                'tap a name to edit',
+                style: TextStyle(color: cs.onSurfaceVariant, fontSize: 10.5),
+              ),
             ],
           ),
           const SizedBox(height: 12),
-          for (final e in entries)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          e.name,
-                          style: TextStyle(
-                            color: cs.onSurface,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          _macroSub(e.protein, e.carbs, e.fat),
-                          style: TextStyle(
-                            color: cs.onSurfaceVariant,
-                            fontSize: 10.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '${e.calories}',
-                    style: TextStyle(
-                      color: cs.onSurface,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          // One card; each detected food is a row with inline name editing.
+          for (final (i, e) in entries.indexed) _buildItemRow(cs, i, e),
           Divider(height: 1, color: cs.outlineVariant),
           const SizedBox(height: 11),
           Row(
@@ -658,17 +673,17 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
               const SizedBox(width: 9),
               SizedBox(
                 height: 46,
-                width: 104,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: cs.onSurfaceVariant,
                     side: BorderSide(color: cs.outlineVariant),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(13)),
                   ),
                   onPressed: _editEstimate,
-                  icon: const Icon(Icons.edit_outlined, size: 15),
-                  label: const Text('Edit'),
+                  icon: const Icon(Icons.close, size: 15),
+                  label: const Text('Discard', maxLines: 1),
                 ),
               ),
             ],
@@ -676,6 +691,157 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
         ],
       ),
     );
+  }
+
+  /// One detected food as a row inside the estimate card: name (tap to rename →
+  /// recompute), macro subline, and calories (or a spinner while recomputing).
+  Widget _buildItemRow(ColorScheme cs, int i, FoodEntry e) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _editingIndex == i
+                    ? _buildNameEditor(cs)
+                    : InkWell(
+                        onTap: _recomputingIndex == i
+                            ? null
+                            : () => _startEditingName(i, e.name),
+                        borderRadius: BorderRadius.circular(6),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                e.name,
+                                style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 5),
+                            Icon(Icons.edit_outlined,
+                                size: 12, color: cs.onSurfaceVariant),
+                            if (_editedIndices.contains(i)) ...[
+                              const SizedBox(width: 6),
+                              _editedTag(cs),
+                            ],
+                          ],
+                        ),
+                      ),
+                const SizedBox(height: 2),
+                Text(
+                  _portionSub(e),
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 10.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          if (_recomputingIndex == i)
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: cs.primary,
+              ),
+            )
+          else
+            Text(
+              '${e.calories}',
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// A small "edited" pill shown after an item the user has renamed.
+  Widget _editedTag(ColorScheme cs) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        'edited',
+        style: TextStyle(
+          color: cs.primary,
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
+  }
+
+  /// The inline name field shown in place of an estimate item's name while it
+  /// is being renamed. Commits on submit, on the check tap, or on focus loss.
+  Widget _buildNameEditor(ColorScheme cs) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _editCtrl,
+            focusNode: _editFocus,
+            autofocus: true,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _commitEditingName(),
+            onTapOutside: (_) => _commitEditingName(),
+            decoration: InputDecoration(
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(vertical: 4),
+              border: UnderlineInputBorder(
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: cs.outlineVariant),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: cs.primary, width: 1.5),
+              ),
+            ),
+          ),
+        ),
+        IconButton(
+          onPressed: _commitEditingName,
+          icon: Icon(Icons.check, size: 18, color: cs.primary),
+          visualDensity: VisualDensity.compact,
+          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+          tooltip: 'Done',
+        ),
+      ],
+    );
+  }
+
+  /// Sub-line under an estimate item: portion (grams) then macros, e.g.
+  /// "150g · P31 · C0 · F4". Grams omitted when unknown.
+  String _portionSub(FoodEntry e) {
+    final macro = _macroSub(e.protein, e.carbs, e.fat);
+    final hasGrams = e.grams != null && e.grams! > 0;
+    if (!hasGrams) return macro;
+    final grams = '${e.grams!.round()}g';
+    return macro.isEmpty ? grams : '$grams · $macro';
   }
 
   String _macroSub(double? p, double? c, double? f) {
