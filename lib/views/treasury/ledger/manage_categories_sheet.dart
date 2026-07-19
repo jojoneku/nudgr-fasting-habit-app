@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
@@ -21,6 +22,9 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   final _formKey = GlobalKey<FormState>();
   CategoryType _type = CategoryType.expense;
   bool _isSubmitting = false;
+  // Icon chosen for the category being added. Defaults to the "Auto" sentinel
+  // (name-derived glyph) until the user explicitly picks one.
+  String _iconKey = kAutoCategoryIconKey;
 
   String _nextColor() {
     final index =
@@ -44,12 +48,26 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
         id: id,
         name: _nameController.text.trim(),
         type: _type,
-        icon: 'tag',
+        icon: _iconKey,
         colorHex: _nextColor(),
       ));
       _nameController.clear();
+      _iconKey = kAutoCategoryIconKey; // reset for the next add
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _pickAddIcon() async {
+    final picked = await showCategoryIconPicker(context, current: _iconKey);
+    if (picked != null && mounted) setState(() => _iconKey = picked);
+  }
+
+  Future<void> _changeCategoryIcon(FinanceCategory category) async {
+    final picked =
+        await showCategoryIconPicker(context, current: category.icon);
+    if (picked != null && picked != category.icon) {
+      await widget.presenter.updateCategory(category.copyWith(icon: picked));
     }
   }
 
@@ -115,6 +133,8 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                 isSubmitting: _isSubmitting,
                 onSubmit: _addCategory,
                 type: _type,
+                iconKey: _iconKey,
+                onPickIcon: _pickAddIcon,
               ),
               const SizedBox(height: 28),
               if (expense.isEmpty && income.isEmpty)
@@ -140,6 +160,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                     Theme.of(context).colorScheme.error,
                                 onDelete: () => _confirmDelete(context, c),
                                 onToggleExclude: (v) => _toggleExclude(c, v),
+                                onChangeIcon: () => _changeCategoryIcon(c),
                               ))
                           .toList(),
                     ),
@@ -161,6 +182,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                     Theme.of(context).colorScheme.tertiary,
                                 onDelete: () => _confirmDelete(context, c),
                                 onToggleExclude: (v) => _toggleExclude(c, v),
+                                onChangeIcon: () => _changeCategoryIcon(c),
                               ))
                           .toList(),
                     ),
@@ -321,6 +343,8 @@ class _AddCategoryForm extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onSubmit;
   final CategoryType type;
+  final String iconKey;
+  final VoidCallback onPickIcon;
 
   const _AddCategoryForm({
     required this.formKey,
@@ -328,6 +352,8 @@ class _AddCategoryForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.type,
+    required this.iconKey,
+    required this.onPickIcon,
   });
 
   @override
@@ -340,6 +366,32 @@ class _AddCategoryForm extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Tappable icon preview — opens the catalog picker.
+          Semantics(
+            button: true,
+            label: 'Choose category icon',
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: InkWell(
+                onTap: onPickIcon,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: color.withValues(alpha: 0.4)),
+                  ),
+                  child: Icon(
+                    resolveCategoryIcon(iconKey, controller.text, type),
+                    color: color,
+                    size: 22,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: TextFormField(
               controller: controller,
@@ -390,6 +442,7 @@ class _CategoryTile extends StatelessWidget {
   final Color accentColor;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggleExclude;
+  final VoidCallback onChangeIcon;
 
   const _CategoryTile({
     super.key,
@@ -397,6 +450,7 @@ class _CategoryTile extends StatelessWidget {
     required this.accentColor,
     required this.onDelete,
     required this.onToggleExclude,
+    required this.onChangeIcon,
   });
 
   @override
@@ -405,11 +459,20 @@ class _CategoryTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: AppListTile(
-        leading: AppIconBadge(
-          icon: Icons.label_outline_rounded,
-          color: accentColor,
-          size: 40,
-          iconSize: 18,
+        leading: Semantics(
+          button: true,
+          label: 'Change icon for ${category.name}',
+          child: InkWell(
+            onTap: onChangeIcon,
+            borderRadius: BorderRadius.circular(12),
+            child: AppIconBadge(
+              icon: resolveCategoryIcon(
+                  category.icon, category.name, category.type),
+              color: accentColor,
+              size: 40,
+              iconSize: 18,
+            ),
+          ),
         ),
         title: Text(category.name),
         subtitle: category.excludeFromTotals
@@ -452,6 +515,146 @@ class _CategoryTile extends StatelessWidget {
           ],
         ),
         onTap: () {},
+      ),
+    );
+  }
+}
+
+// ─── Icon Picker ──────────────────────────────────────────────────────────────
+
+/// Opens the category-icon catalog picker. Returns the chosen catalog key, the
+/// [kAutoCategoryIconKey] sentinel ("Auto" — name-derived glyph), or null if the
+/// user dismissed without choosing.
+Future<String?> showCategoryIconPicker(
+  BuildContext context, {
+  required String current,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => _CategoryIconPickerSheet(current: current),
+  );
+}
+
+class _CategoryIconPickerSheet extends StatelessWidget {
+  final String current;
+  const _CategoryIconPickerSheet({required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Choose an icon',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            // "Auto" — routes through the name heuristic.
+            _IconChoice(
+              icon: Icons.auto_awesome_rounded,
+              label: 'Auto',
+              selected: current == kAutoCategoryIconKey ||
+                  !kCategoryIconCatalog.containsKey(current),
+              onTap: () => Navigator.of(context).pop(kAutoCategoryIconKey),
+            ),
+            for (final group in kCategoryIconGroups) ...[
+              const SizedBox(height: 14),
+              Text(
+                group.label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final key in group.keys)
+                    _IconChoice(
+                      icon: kCategoryIconCatalog[key]!,
+                      selected: key == current,
+                      onTap: () => Navigator.of(context).pop(key),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconChoice extends StatelessWidget {
+  final IconData icon;
+  final String? label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _IconChoice({
+    required this.icon,
+    this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final child = Container(
+      height: 52,
+      width: label == null ? 52 : null,
+      padding: label == null
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected
+            ? cs.primary.withValues(alpha: 0.15)
+            : cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 22, color: selected ? cs.primary : cs.onSurface),
+          if (label != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              label!,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected ? cs.primary : cs.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: child,
       ),
     );
   }

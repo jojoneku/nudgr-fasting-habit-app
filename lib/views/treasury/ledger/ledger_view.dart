@@ -114,12 +114,12 @@ class _LedgerViewState extends State<LedgerView> {
             top: false,
             child: Column(
               children: [
-                _MonthSelectorRow(presenter: presenter),
-                _SummaryCard(presenter: presenter),
-                _FilterSortBar(
+                const _LedgerHeader(),
+                _LedgerControlsRow(
                   presenter: presenter,
                   onOpenFilters: _showFilterSortSheet,
                 ),
+                _SummaryStrip(presenter: presenter),
                 Expanded(
                   child: _TransactionList(
                     presenter: presenter,
@@ -394,7 +394,7 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
     return Container(
       color: cs.surface,
       padding: EdgeInsets.fromLTRB(
-          12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
+          12, 10, 12, MediaQuery.of(context).padding.bottom + 10),
       child: Row(
         children: [
           IconButton(
@@ -415,11 +415,11 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
           // the free-text field, inside a single rounded container.
           Expanded(
             child: Container(
-              height: 44,
+              height: 52,
               padding: const EdgeInsets.only(left: 14, right: 8),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHigh,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(26),
                 border: Border.all(
                   color: cs.outlineVariant.withValues(alpha: 0.5),
                 ),
@@ -459,8 +459,8 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
                 customBorder: const CircleBorder(),
                 onTap: canSend ? _send : null,
                 child: SizedBox(
-                  width: 44,
-                  height: 44,
+                  width: 48,
+                  height: 48,
                   child: busy
                       ? const Padding(
                           padding: EdgeInsets.all(13),
@@ -486,13 +486,68 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 
 // ── Filter & Sort ─────────────────────────────────────────────────────────
 
-/// Single-button filter/sort bar (reference "Filter & sort"): a pill button
-/// with an active-count badge that opens [_FilterSortSheet].
-class _FilterSortBar extends StatelessWidget {
+/// Page title row — `Ledger` on its own line, left-aligned (reference header).
+class _LedgerHeader extends StatelessWidget {
+  const _LedgerHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(20, 13, 20, 0),
+      child: Text(
+        'Ledger',
+        style: theme.textTheme.headlineSmall?.copyWith(
+          fontSize: 23,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          color: theme.colorScheme.onSurface,
+        ),
+      ),
+    );
+  }
+}
+
+/// Controls row: the `Filter & sort` pill (+ quick-clear ✕) on the left and the
+/// month/year pill on the right, **in line** on one row (spec §2).
+class _LedgerControlsRow extends StatelessWidget {
   final LedgerPresenter presenter;
   final VoidCallback onOpenFilters;
 
-  const _FilterSortBar({
+  const _LedgerControlsRow({
+    required this.presenter,
+    required this.onOpenFilters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _FilterSortButton(
+            presenter: presenter,
+            onOpenFilters: onOpenFilters,
+          ),
+          _MonthPill(presenter: presenter),
+        ],
+      ),
+    );
+  }
+}
+
+/// The `Filter & sort` pill with an active-count badge (opens [_FilterSortSheet])
+/// plus a quick-clear ✕ that wipes active filters without opening the sheet.
+class _FilterSortButton extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final VoidCallback onOpenFilters;
+
+  const _FilterSortButton({
     required this.presenter,
     required this.onOpenFilters,
   });
@@ -503,86 +558,83 @@ class _FilterSortBar extends StatelessWidget {
     final blue = context.appColors.fast;
     final count = presenter.activeFilterCount;
     final active = count > 0 || presenter.isCustomSort;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: onOpenFilters,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
-              decoration: BoxDecoration(
-                color: active
-                    ? blue.withValues(alpha: 0.15)
-                    : cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: active ? blue : cs.outlineVariant),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.tune_rounded,
-                      size: 15, color: active ? blue : cs.onSurfaceVariant),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: onOpenFilters,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+            decoration: BoxDecoration(
+              color:
+                  active ? blue.withValues(alpha: 0.15) : cs.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: active ? blue : cs.outlineVariant),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.tune_rounded,
+                    size: 15, color: active ? blue : cs.onSurfaceVariant),
+                const SizedBox(width: 6),
+                Text(
+                  'Filter & sort',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: active ? blue : cs.onSurfaceVariant,
+                  ),
+                ),
+                if (count > 0) ...[
                   const SizedBox(width: 6),
-                  Text(
-                    'Filter & sort',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: active ? blue : cs.onSurfaceVariant,
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: blue,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '$count',
+                      style: const TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  if (count > 0) ...[
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 1),
-                      decoration: BoxDecoration(
-                        color: blue,
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      child: Text(
-                        '$count',
-                        style: const TextStyle(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
+              ],
+            ),
+          ),
+        ),
+        // Quick clear — wipes the active filters (keeps sort) without opening
+        // the sheet. Only shown when something is filtered.
+        if (count > 0) ...[
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            label: 'Clear filters',
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                presenter.clearAllFilters();
+              },
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Icon(Icons.close_rounded,
+                    size: 16, color: cs.onSurfaceVariant),
               ),
             ),
           ),
-          // Quick clear — wipes the active filters (keeps sort) without opening
-          // the sheet. Only shown when something is filtered.
-          if (count > 0) ...[
-            const SizedBox(width: 8),
-            Semantics(
-              button: true,
-              label: 'Clear filters',
-              child: GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  presenter.clearAllFilters();
-                },
-                child: Container(
-                  width: 34,
-                  height: 34,
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: Icon(Icons.close_rounded,
-                      size: 16, color: cs.onSurfaceVariant),
-                ),
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 }
@@ -890,18 +942,20 @@ class _SelectChip extends StatelessWidget {
 
 // ── Month / Year Switcher ────────────────────────────────────────────────────
 
-/// A tappable month pill (no chevrons) that opens a month-grid popover with
-/// year navigation — pick any month the way you'd pick a day on the calendar.
-class _MonthSelectorRow extends StatefulWidget {
+/// A tappable month/year pill (reference, top-right) that opens a month-grid
+/// popover with year navigation — pick any month the way you'd pick a day on the
+/// calendar. Lives on the right of [_LedgerControlsRow], in line with the filter
+/// pill.
+class _MonthPill extends StatefulWidget {
   final LedgerPresenter presenter;
 
-  const _MonthSelectorRow({required this.presenter});
+  const _MonthPill({required this.presenter});
 
   @override
-  State<_MonthSelectorRow> createState() => _MonthSelectorRowState();
+  State<_MonthPill> createState() => _MonthPillState();
 }
 
-class _MonthSelectorRowState extends State<_MonthSelectorRow> {
+class _MonthPillState extends State<_MonthPill> {
   final _pillKey = GlobalKey();
 
   Future<void> _openPicker() async {
@@ -923,44 +977,34 @@ class _MonthSelectorRowState extends State<_MonthSelectorRow> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Container(
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      child: Center(
-        child: GestureDetector(
-          key: _pillKey,
-          onTap: _openPicker,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.6),
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      key: _pillKey,
+      onTap: _openPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              monthLabel(widget.presenter.selectedMonth),
+              style: TextStyle(
+                color: cs.onSurface,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.calendar_today_rounded,
-                    size: 14, color: cs.onSurfaceVariant),
-                const SizedBox(width: 8),
-                Text(
-                  monthLabel(widget.presenter.selectedMonth),
-                  style: TextStyle(
-                    color: cs.onSurface,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                Icon(Icons.keyboard_arrow_down_rounded,
-                    color: cs.onSurfaceVariant, size: 18),
-              ],
-            ),
-          ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: cs.onSurfaceVariant, size: 16),
+          ],
         ),
       ),
     );
@@ -1146,56 +1190,76 @@ class _MonthCell extends StatelessWidget {
 
 // ── Summary Card ─────────────────────────────────────────────────────────────
 
-class _SummaryCard extends StatelessWidget {
+/// Segmented IN / OUT / NET strip (reference) — one card split into three equal
+/// columns by hairline dividers. Values come straight from the presenter.
+class _SummaryStrip extends StatelessWidget {
   final LedgerPresenter presenter;
 
-  const _SummaryCard({required this.presenter});
+  const _SummaryStrip({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final inflow = presenter.filteredMonthInflow;
-    final outflow = presenter.filteredMonthOutflow;
     final net = presenter.filteredMonthNet;
-    final netColor = net >= 0 ? cs.tertiary : cs.error;
-    final netPrefix = net >= 0 ? '+' : '';
+    // NET is blue when non-negative; red when the month is in deficit (spec §3).
+    final netColor = net < 0 ? cs.error : context.appColors.fast;
+    final netPrefix = net > 0 ? '+' : (net < 0 ? '−' : '');
 
     return Container(
       width: double.infinity,
       color: theme.scaffoldBackgroundColor,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
-          _SummaryChip(
-            label: 'Income',
-            value: formatPeso(inflow),
-            color: cs.tertiary,
+      child: Container(
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(13),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 10),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              _SummarySegment(
+                label: 'IN',
+                value: formatPeso(presenter.filteredMonthInflow),
+                color: cs.tertiary,
+              ),
+              _SummaryDivider(color: cs.outlineVariant),
+              _SummarySegment(
+                label: 'OUT',
+                value: formatPeso(presenter.filteredMonthOutflow),
+                color: cs.error,
+              ),
+              _SummaryDivider(color: cs.outlineVariant),
+              _SummarySegment(
+                label: 'NET',
+                value: '$netPrefix${formatPeso(net.abs())}',
+                color: netColor,
+              ),
+            ],
           ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Expenses',
-            value: formatPeso(outflow),
-            color: cs.error,
-          ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Net',
-            value: '$netPrefix${formatPeso(net.abs())}',
-            color: netColor,
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _SummaryChip extends StatelessWidget {
+class _SummaryDivider extends StatelessWidget {
+  final Color color;
+  const _SummaryDivider({required this.color});
+
+  @override
+  Widget build(BuildContext context) =>
+      Container(width: 1, color: color, margin: const EdgeInsets.symmetric(horizontal: 4));
+}
+
+class _SummarySegment extends StatelessWidget {
   final String label;
   final String value;
   final Color color;
 
-  const _SummaryChip({
+  const _SummarySegment({
     required this.label,
     required this.value,
     required this.color,
@@ -1204,37 +1268,32 @@ class _SummaryChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: context.appColors.textTertiary,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
             ),
-            Text(
-              label,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 10,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: AppTextStyles.mono(
+              textStyle: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w800,
+                fontSize: 13,
               ),
             ),
-          ],
-        ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -1254,36 +1313,26 @@ Widget _buildTxnTile(
       presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
   final category =
       presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
-  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
-  final accountColor = idx < 0
-      ? null
-      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
-          brightness: Theme.of(context).brightness);
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 4),
-    child: AppCard(
-      variant: AppCardVariant.filled,
-      padding: EdgeInsets.zero,
-      child: TransactionListTile(
-        key: ValueKey(txn.id),
-        txn: txn,
-        account: account,
-        accountColor: accountColor,
-        category: category,
-        onTap: () => onEdit(txn),
-        onDelete: () {
-          HapticFeedback.mediumImpact();
-          final deleted = txn;
-          presenter.deleteTransaction(deleted.id);
-          AppToast.action(
-            context,
-            message: 'Deleted "${deleted.description}"',
-            actionLabel: 'Undo',
-            onAction: () => presenter.restoreTransaction(deleted),
-          );
-        },
-      ),
-    ),
+  // Reference "no background" rows: no per-row card fill — rows sit directly on
+  // the screen background, separated only by the list tile's own padding. Swipe
+  // -to-delete + undo is preserved by TransactionListTile's onDelete.
+  return TransactionListTile(
+    key: ValueKey(txn.id),
+    txn: txn,
+    account: account,
+    category: category,
+    onTap: () => onEdit(txn),
+    onDelete: () {
+      HapticFeedback.mediumImpact();
+      final deleted = txn;
+      presenter.deleteTransaction(deleted.id);
+      AppToast.action(
+        context,
+        message: 'Deleted "${deleted.description}"',
+        actionLabel: 'Undo',
+        onAction: () => presenter.restoreTransaction(deleted),
+      );
+    },
   );
 }
 
