@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/category_icon.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_bill_sheet.dart';
+import 'package:intermittent_fasting/views/treasury/bills/add_entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_installment_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/add_receivable_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bill_list_tile.dart';
@@ -73,6 +74,23 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       ),
       builder: (_) =>
           AddReceivableSheet(presenter: widget.presenter, existing: existing),
+    );
+  }
+
+  /// Combined bill/receivable entry (reference "New entry" toggle). Edits still
+  /// open the specific sheet above so the correct form loads pre-filled.
+  void _showAddEntrySheet({bool asReceivable = false}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => AddEntrySheet(
+        presenter: widget.presenter,
+        startAsReceivable: asReceivable,
+      ),
     );
   }
 
@@ -180,19 +198,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
             ListTile(
               leading:
                   Icon(Icons.receipt_long_outlined, color: colorScheme.primary),
-              title: const Text('Add Bill'),
+              title: const Text('Add bill / receivable'),
+              subtitle: const Text('A bill to pay or money owed to you'),
               onTap: () {
                 Navigator.pop(context);
-                _showAddBillSheet();
-              },
-            ),
-            ListTile(
-              leading:
-                  Icon(Icons.attach_money, color: context.appColors.success),
-              title: const Text('Add Receivable'),
-              onTap: () {
-                Navigator.pop(context);
-                _showAddReceivableSheet();
+                _showAddEntrySheet();
               },
             ),
             ListTile(

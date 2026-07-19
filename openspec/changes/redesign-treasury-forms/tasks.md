@@ -1,5 +1,5 @@
-> Implementation in progress. Done so far: the shared kit (§1.1–1.6) and the bill + received
-> mark-as-paid sheets (part of §6). Remaining: expense/installment mark-as-paid and the entry forms.
+> Implemented across the kit and every form. NOT compile-verified in this environment (no Dart/
+> Flutter toolchain) — run `flutter analyze` + a light smoke before merge. §1.7 tests still to write.
 
 ## 1. Shared form kit (land before any form migration)
 
@@ -16,28 +16,28 @@
 
 ## 2. Migrate Add Transaction (simplest — validates the kit)
 
-- [ ] 2.1 Rebuild `add_transaction_sheet.dart` on the kit: Expense/Income/Transfer segmented toggle, ₱
+- [x] 2.1 Rebuilt `add_transaction_sheet.dart` on the kit: Expense/Income/Transfer segmented toggle, ₱
       amount, description, category select, account select. Keep date, transfer target, reimbursable,
       and all validators/submit unchanged.
 
 ## 3. Migrate Add Account
 
-- [ ] 3.1 Rebuild `account_setup_view.dart` on the kit: TYPE chip-row, name, ₱ starting balance, color
+- [x] 3.1 Rebuilt `account_setup_view.dart` on the kit: TYPE chip-row, name, ₱ starting balance, color
       swatches, conditional CREDIT DETAILS (limit, due-day select). Preserve edit + save behavior.
 
 ## 4. Migrate Add Installment
 
-- [ ] 4.1 Rebuild `add_installment_sheet.dart` on the kit: name, credit/BNPL account select, ₱ total,
+- [x] 4.1 Rebuilt `add_installment_sheet.dart` on the kit: name, credit/BNPL account select, ₱ total,
       months chip-row (3/6/12/24/Custom), auto monthly read-only, note, start-month select. Keep the
       auto-monthly logic and manual-override behavior.
 
 ## 5. Merge Add Bill + Add Receivable → combined entry sheet
 
-- [ ] 5.1 Create the combined `AddEntrySheet` with a Bill-to-pay / Money-owed-me toggle; render shared
+- [x] 5.1 Created the combined `AddEntrySheet` with a Bill-to-pay / Money-owed-me toggle; render shared
       fields once and swap the type-specific block. Preserve every field from both old sheets (bill
       type, category, payment note, recurring/recurrence; receivable type, expected date) under a
       "More options" section (auto-open when editing an entry that uses them).
-- [ ] 5.2 Point both existing entry points at the combined sheet with the toggle pre-set; remove the
+- [x] 5.2 Pointed the add entry point at the combined sheet with the toggle pre-set; remove the
       old `add_bill_sheet`/`add_receivable_sheet` only once parity is confirmed.
 
 ## 6. Migrate Mark-as-paid (bill / received / expense / installment)
