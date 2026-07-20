@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class FullCategoryBreakdownSheet extends StatelessWidget {
@@ -124,17 +125,13 @@ class _CategoryRow extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                          color: color.withValues(alpha: 0.5), blurRadius: 4)
-                    ],
-                  ),
+                CategoryBadge(
+                  iconKey: category.icon,
+                  name: category.name,
+                  type: category.type,
+                  color: color,
+                  size: 28,
+                  iconSize: 15,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
