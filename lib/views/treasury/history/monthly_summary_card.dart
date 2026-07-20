@@ -170,7 +170,9 @@ class _MiniTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerLowest,
+        // A soft tint of the metric's own color (not a near-black fill), so the
+        // tiles read as light, colored chips on the card.
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Column(
