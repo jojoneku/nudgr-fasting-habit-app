@@ -4,6 +4,8 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class MonthlySummaryDetailView extends StatelessWidget {
@@ -181,12 +183,11 @@ class _BillsReceivablesSection extends StatelessWidget {
           children: [
             AppListTile(
               dense: true,
-              leading: Icon(
-                allBillsPaid
-                    ? Icons.check_circle_outline
-                    : Icons.pending_outlined,
+              leading: AppIconBadge(
+                icon: Icons.receipt_long_outlined,
                 color: allBillsPaid ? cs.tertiary : cs.secondary,
-                size: 18,
+                size: 34,
+                iconSize: 16,
               ),
               title: const Text('Bills Paid'),
               subtitle: Text(
@@ -197,12 +198,11 @@ class _BillsReceivablesSection extends StatelessWidget {
             ),
             AppListTile(
               dense: true,
-              leading: Icon(
-                allReceived
-                    ? Icons.check_circle_outline
-                    : Icons.schedule_outlined,
+              leading: AppIconBadge(
+                icon: Icons.account_balance_wallet_outlined,
                 color: allReceived ? cs.tertiary : cs.primary,
-                size: 18,
+                size: 34,
+                iconSize: 16,
               ),
               title: const Text('Receivables'),
               subtitle: Text(
@@ -249,23 +249,23 @@ class _CategorySpendSection extends StatelessWidget {
                     (c) => c?.id == entry.key,
                     orElse: () => null,
                   );
-              final dot = cat != null
+              final color = cat != null
                   ? resolveSliceColor(cat.colorHex, i,
                       brightness: theme.brightness)
                   : cs.onSurfaceVariant;
               return AppCard(
                 variant: AppCardVariant.filled,
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
                   children: [
-                    Container(
-                      width: 9,
-                      height: 9,
-                      decoration: BoxDecoration(
-                        color: dot,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
+                    CategoryBadge(
+                      iconKey: cat?.icon,
+                      name: cat?.name ?? entry.key,
+                      type: cat?.type ?? CategoryType.expense,
+                      color: color,
+                      size: 32,
+                      iconSize: 16,
                     ),
                     const SizedBox(width: 11),
                     Expanded(
@@ -311,9 +311,8 @@ class _AccountSnapshotsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     if (summary.accountSnapshots.isEmpty) return const SizedBox.shrink();
 
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final nameById = {for (final a in accounts) a.id: a.name};
+    final cs = Theme.of(context).colorScheme;
+    final accountById = {for (final a in accounts) a.id: a};
 
     return AppSection(
       title: 'ACCOUNT BALANCES AT CLOSE',
@@ -324,7 +323,10 @@ class _AccountSnapshotsSection extends StatelessWidget {
               .map(
                 (e) => AppListTile(
                   dense: true,
-                  title: Text(nameById[e.key] ?? e.key),
+                  leading: accountById[e.key] != null
+                      ? AccountBadge.of(accountById[e.key]!, size: 30)
+                      : null,
+                  title: Text(accountById[e.key]?.name ?? e.key),
                   trailing: AppNumberDisplay(
                     value: formatPeso(e.value),
                     size: AppNumberSize.body,
