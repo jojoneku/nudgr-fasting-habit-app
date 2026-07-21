@@ -59,12 +59,7 @@ class _AddBudgetSheetState extends State<AddBudgetSheet> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategoryId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Select a category'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      AppToast.error(context, 'Select a category');
       return;
     }
     setState(() => _isSubmitting = true);

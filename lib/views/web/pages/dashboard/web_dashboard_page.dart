@@ -6,6 +6,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Web Dashboard page (Plan 050-A) — desktop redesign mirroring the Claude
@@ -518,11 +519,8 @@ class _CreditAccountRow extends StatelessWidget {
 
   Future<void> _payNow(BuildContext context) async {
     final funders = presenter.liquidAccounts;
-    final messenger = ScaffoldMessenger.of(context);
     if (funders.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('No liquid account to pay from.')),
-      );
+      AppToast.error(context, 'No liquid account to pay from.');
       return;
     }
     var fromId = funders.first.id;
@@ -581,10 +579,10 @@ class _CreditAccountRow extends StatelessWidget {
           fromAccountId: fromId,
           amount: amount,
         );
-        messenger.showSnackBar(
-          SnackBar(
-              content: Text('Paid ${formatPeso(amount)} to ${account.name}.')),
-        );
+        if (context.mounted) {
+          AppToast.success(
+              context, 'Paid ${formatPeso(amount)} to ${account.name}.');
+        }
       }
     }
     amountController.dispose();

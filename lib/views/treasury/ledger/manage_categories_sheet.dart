@@ -90,7 +90,6 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
 
   Future<void> _confirmDelete(
       BuildContext context, FinanceCategory category) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await AppConfirmDialog.confirm(
       context: context,
       title: 'Delete category?',
@@ -104,17 +103,12 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
     try {
       await widget.presenter.deleteCategory(category.id);
     } on StateError catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       final message = e.message == 'has_transactions'
           ? 'This category has transactions linked to it. '
               'Delete or reassign those entries first.'
           : 'Could not delete category: ${e.message}';
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     }
   }
 

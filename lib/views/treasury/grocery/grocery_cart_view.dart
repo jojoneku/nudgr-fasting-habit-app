@@ -657,12 +657,8 @@ class _SetBudgetSheetState extends State<_SetBudgetSheet> {
     if (text.isNotEmpty) {
       final amount = double.tryParse(text.replaceAll(',', ''));
       if (amount == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Enter a valid amount, or leave blank to remove.'),
-          ),
-        );
+        AppToast.error(
+            context, 'Enter a valid amount, or leave blank to remove.');
         return;
       }
       await widget.presenter.setBudget(amount);
@@ -730,11 +726,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     );
     if (mounted) {
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(post ? 'Trip saved & logged to ledger' : 'Trip saved'),
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.success(
+        context,
+        post ? 'Trip saved & logged to ledger' : 'Trip saved',
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -856,12 +851,8 @@ class _TripHistorySheet extends StatelessWidget {
                 await presenter.repeatTrip(trip.id);
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Items added to your cart'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  AppToast.show(context, 'Items added to your cart',
+                      duration: const Duration(seconds: 2));
                 }
               },
               child: const Text('Repeat'),

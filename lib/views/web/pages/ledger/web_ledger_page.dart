@@ -13,6 +13,7 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Hoisted so the per-row date cells don't allocate a new [DateFormat] on
@@ -418,9 +419,7 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     final picked = _draftCategoryId;
     if (cats.isNotEmpty &&
         (picked == null || !cats.any((c) => c.id == picked))) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick a category before adding the row.')),
-      );
+      AppToast.error(context, 'Pick a category before adding the row.');
       return;
     }
     final categoryId = picked ?? '';

@@ -465,9 +465,7 @@ class SettingsScreen extends StatelessWidget {
     if (confirmed == true) {
       await presenter.clearLearnedFoods();
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Learned foods reset.')),
-        );
+        AppToast.success(context, 'Learned foods reset.');
       }
     }
   }

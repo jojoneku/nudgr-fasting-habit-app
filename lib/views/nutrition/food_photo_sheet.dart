@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../app_colors.dart';
 import '../../presenters/nutrition_presenter.dart';
+import '../widgets/system/system.dart';
 
 /// Plan 029 — photo food logging entry point (restyled to Nudgr "More" spec).
 ///
@@ -212,19 +213,12 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
     if (!mounted) return;
     Navigator.of(context).pop(_PreviewOutcome.done);
     if (id != null) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Logged · $kcal kcal'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () => widget.presenter.removeChatMessage(id),
-            ),
-          ),
-        );
+      AppToast.action(
+        messenger.context,
+        message: 'Logged · $kcal kcal',
+        actionLabel: 'Undo',
+        onAction: () => widget.presenter.removeChatMessage(id),
+      );
     }
   }
 

@@ -743,9 +743,7 @@ class _LearnedFoodRow extends StatelessWidget {
       fatPer100g: updated.fat,
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Updated ${entry.name}')),
-      );
+      AppToast.success(context, 'Updated ${entry.name}');
     }
   }
 

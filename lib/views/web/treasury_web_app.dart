@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../utils/app_scroll_behavior.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../presenters/auth_presenter.dart';
 import '../../presenters/bills_receivables_presenter.dart';
 import '../../presenters/budget_presenter.dart';
@@ -248,15 +249,14 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
       _currentUserId = null;
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: $e'),
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'Retry',
-              onPressed: () => _initSync(userId),
-            ),
-          ),
+        AppToast.action(
+          context,
+          message: 'Sync failed: $e',
+          actionLabel: 'Retry',
+          onAction: () => _initSync(userId),
+          icon: Icons.error_outline,
+          color: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 8),
         );
       }
     }

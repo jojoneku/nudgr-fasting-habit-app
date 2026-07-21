@@ -229,41 +229,30 @@ class _FoodEntryCardState extends State<_FoodEntryCard> {
   }
 
   Future<void> _onDislike() async {
-    final messenger = ScaffoldMessenger.of(context);
     await widget.presenter.markChatMessageDisliked(widget.message.id);
     if (!mounted) return;
     setState(() => _menuOpen = false);
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text("Thanks — we'll improve the match next time."),
-        duration: Duration(seconds: 2),
-      ),
+    AppToast.show(
+      context,
+      "Thanks — we'll improve the match next time.",
+      duration: const Duration(seconds: 2),
     );
   }
 
   Future<void> _onDelete() async {
-    final messenger = ScaffoldMessenger.of(context);
     final msg = widget.message;
     final name = msg.rawText;
     await widget.presenter.removeChatMessage(msg.id);
     if (!mounted) return;
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Removed · $name'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => widget.presenter.restoreChatMessage(msg),
-          ),
-        ),
-      );
+    AppToast.action(
+      context,
+      message: 'Removed · $name',
+      actionLabel: 'Undo',
+      onAction: () => widget.presenter.restoreChatMessage(msg),
+    );
   }
 
   Future<void> _saveAsTemplate() async {
-    final messenger = ScaffoldMessenger.of(context);
     final savedName = await showSaveAsTemplateSheet(
       context,
       widget.presenter,
@@ -271,12 +260,7 @@ class _FoodEntryCardState extends State<_FoodEntryCard> {
     );
     if (savedName == null || !mounted) return;
     setState(() => _menuOpen = false);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text('Saved "$savedName" to library'),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    AppToast.success(context, 'Saved "$savedName" to library');
   }
 
   @override
@@ -564,24 +548,16 @@ class _ExerciseEntryCardState extends State<_ExerciseEntryCard> {
   bool _menuOpen = false;
 
   Future<void> _onDelete() async {
-    final messenger = ScaffoldMessenger.of(context);
     final msg = widget.message;
     final name = msg.exerciseEntry?.name ?? 'Exercise';
     await widget.presenter.removeChatMessage(msg.id);
     if (!mounted) return;
-    messenger
-      ..clearSnackBars()
-      ..showSnackBar(
-        SnackBar(
-          content: Text('Removed · $name'),
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () => widget.presenter.restoreChatMessage(msg),
-          ),
-        ),
-      );
+    AppToast.action(
+      context,
+      message: 'Removed · $name',
+      actionLabel: 'Undo',
+      onAction: () => widget.presenter.restoreChatMessage(msg),
+    );
   }
 
   @override

@@ -260,19 +260,12 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
     if (!mounted) return;
     Navigator.of(context).pop();
     if (id != null) {
-      messenger
-        ..clearSnackBars()
-        ..showSnackBar(
-          SnackBar(
-            content: Text('Logged · $kcal kcal'),
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 4),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () => widget.presenter.removeChatMessage(id),
-            ),
-          ),
-        );
+      AppToast.action(
+        messenger.context,
+        message: 'Logged · $kcal kcal',
+        actionLabel: 'Undo',
+        onAction: () => widget.presenter.removeChatMessage(id),
+      );
     }
   }
 

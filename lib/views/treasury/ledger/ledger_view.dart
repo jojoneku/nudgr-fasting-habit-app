@@ -51,9 +51,7 @@ class _LedgerViewState extends State<LedgerView> {
     final summary = presenter.lastCommittedSummary;
     if (summary != null && summary != _lastSnackbarSummary) {
       _lastSnackbarSummary = summary;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(summary), duration: const Duration(seconds: 2)),
-      );
+      AppToast.show(context, summary, duration: const Duration(seconds: 2));
       presenter.clearLastCommittedSummary();
     }
     final prefill = presenter.pendingFormPrefill;

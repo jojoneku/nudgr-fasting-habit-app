@@ -244,12 +244,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
       // failed save looks identical to a successful one. Mirrors the delete
       // handler and the web form's error feedback.
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Could not save account: $e'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, 'Could not save account: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -318,12 +313,7 @@ class _AccountSetupViewState extends State<AccountSetupView> {
               'Delete or reassign them first.',
         _ => 'Could not delete account: ${e.message}',
       };
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

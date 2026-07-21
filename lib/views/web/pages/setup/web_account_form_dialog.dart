@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 
@@ -231,7 +232,6 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
 
     try {
@@ -285,16 +285,14 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     } catch (e) {
       // A save failure was previously invisible (try/finally with no catch) —
       // the spinner reset and the dialog just sat there. Surface it. (C7)
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not save account: $e')),
-      );
+      if (!mounted) return;
+      AppToast.error(context, 'Could not save account: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   Future<void> _confirmDelete() async {
-    final messenger = ScaffoldMessenger.of(context);
     final cs = Theme.of(context).colorScheme;
 
     final confirmed = await showDialog<bool>(
@@ -335,12 +333,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
               'Delete or reassign them first.',
         _ => 'Could not delete account: ${e.message}',
       };
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }

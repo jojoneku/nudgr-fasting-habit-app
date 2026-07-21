@@ -188,21 +188,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     // Account fields are pickers (not form fields), so validate them here and
     // surface feedback the old dropdown validator used to show.
     if (_selectedAccountId == null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Select an account')));
+      AppToast.error(context, 'Select an account');
       return;
     }
     if (_type == TransactionType.transfer && _transferToAccountId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Select a destination account')));
+      AppToast.error(context, 'Select a destination account');
       return;
     }
     // The amount is a borderless calculator field (no inline error): evaluate
     // any `+ - × ÷` expression to a value and validate here.
     final amount = evalAmountExpression(_amountController.text);
     if (amount == null || amount <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Enter an amount greater than 0')));
+      AppToast.error(context, 'Enter an amount greater than 0');
       return;
     }
 
