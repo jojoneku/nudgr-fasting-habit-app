@@ -204,6 +204,19 @@ class _MacroColumn extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 3),
               Text(
                 '${grams.round()}',
                 style: TextStyle(
@@ -230,15 +243,6 @@ class _MacroColumn extends StatelessWidget {
               minHeight: 4,
               backgroundColor: cs.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: TextStyle(
-              color: cs.onSurfaceVariant,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
             ),
           ),
         ],

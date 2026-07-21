@@ -297,18 +297,36 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   int? get carbsGoal => _goals.carbsGrams?.round();
   int? get fatGoal => _goals.fatGrams?.round();
 
-  double get proteinProgress =>
+  // ── Effective macro targets (grams) ──────────────────────────────────────────
+  // When the user hasn't set explicit macro targets, derive a sensible default
+  // split from the effective calorie goal so the progress bars still track
+  // intake (protein 30% @ 4 kcal/g, carbs 40% @ 4 kcal/g, fat 30% @ 9 kcal/g).
+  // Explicit targets always win.
+  double get effectiveProteinGoalGrams =>
       _goals.proteinGrams != null && _goals.proteinGrams! > 0
-          ? (todayProtein / _goals.proteinGrams!).clamp(0.0, 1.0)
-          : 0.0;
+          ? _goals.proteinGrams!
+          : effectiveGoal * 0.30 / 4;
 
-  double get carbsProgress =>
+  double get effectiveCarbsGoalGrams =>
       _goals.carbsGrams != null && _goals.carbsGrams! > 0
-          ? (todayCarbs / _goals.carbsGrams!).clamp(0.0, 1.0)
-          : 0.0;
+          ? _goals.carbsGrams!
+          : effectiveGoal * 0.40 / 4;
 
-  double get fatProgress => _goals.fatGrams != null && _goals.fatGrams! > 0
-      ? (todayFat / _goals.fatGrams!).clamp(0.0, 1.0)
+  double get effectiveFatGoalGrams =>
+      _goals.fatGrams != null && _goals.fatGrams! > 0
+          ? _goals.fatGrams!
+          : effectiveGoal * 0.30 / 9;
+
+  double get proteinProgress => effectiveProteinGoalGrams > 0
+      ? (todayProtein / effectiveProteinGoalGrams).clamp(0.0, 1.0)
+      : 0.0;
+
+  double get carbsProgress => effectiveCarbsGoalGrams > 0
+      ? (todayCarbs / effectiveCarbsGoalGrams).clamp(0.0, 1.0)
+      : 0.0;
+
+  double get fatProgress => effectiveFatGoalGrams > 0
+      ? (todayFat / effectiveFatGoalGrams).clamp(0.0, 1.0)
       : 0.0;
 
   bool get isProteinGoalMet =>
