@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../app_colors.dart';
 import '../../models/daily_nutrition_log.dart';
 import '../../models/dashboard_status.dart';
 import '../../models/weight_entry.dart';
@@ -116,8 +117,6 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
     });
   }
 
-  static const _gold = Color(0xFFFFD700);
-
   (IconData, Color) _chipStyle(BuildContext context, GoalStatusLabel label) {
     final cs = Theme.of(context).colorScheme;
     return switch (label) {
@@ -126,7 +125,10 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
       GoalStatusLabel.tooAggressive => (Icons.warning_amber_outlined, cs.error),
       GoalStatusLabel.notEnoughSurplus => (Icons.arrow_downward, cs.tertiary),
       GoalStatusLabel.lowProtein => (Icons.warning_amber_outlined, cs.tertiary),
-      GoalStatusLabel.possibleRecomp => (Icons.auto_awesome_outlined, _gold),
+      GoalStatusLabel.possibleRecomp => (
+          Icons.auto_awesome_outlined,
+          context.appColors.gold
+        ),
       GoalStatusLabel.needsMoreData => (
           Icons.hourglass_empty_outlined,
           cs.onSurfaceVariant
@@ -154,131 +156,125 @@ class _GoalStatusCardState extends State<_GoalStatusCard> {
 
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border:
-            Border.all(color: chipColor.withValues(alpha: 0.45), width: 1.5),
+        gradient: LinearGradient(
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+          colors: [cs.surfaceContainerHigh, cs.surfaceContainerLow],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: cs.outlineVariant),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(11),
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: goal micro-label + status chip
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Colored left accent bar
-              Container(width: 4, color: chipColor),
-              // Content
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                child: Text(
+                  (goalLabel ?? 'Custom goal').toUpperCase(),
+                  style: TextStyle(
+                    color: cs.onSurfaceVariant,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              AnimatedOpacity(
+                opacity: _chipVisible ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: chipColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Top row: goal label + status chip
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              goalLabel ?? 'Custom goal',
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: cs.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          AnimatedOpacity(
-                            opacity: _chipVisible ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 9, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: chipColor.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(chipIcon, size: 12, color: chipColor),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    status.headline,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w700,
-                                      color: chipColor,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      // Big average number
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            avg > 0 ? NumberFormat('#,###').format(avg) : '—',
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1,
-                              height: 1,
-                            ),
-                          ),
-                          if (avg > 0) ...[
-                            const SizedBox(width: 5),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 2),
-                              child: Text(
-                                'kcal',
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurfaceVariant,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      const SizedBox(height: 2),
+                      Icon(chipIcon, size: 12, color: chipColor),
+                      const SizedBox(width: 4),
                       Text(
-                        '7-day average',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: cs.onSurfaceVariant,
+                        status.headline,
+                        style: TextStyle(
                           fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: chipColor,
                         ),
                       ),
-                      if (deltaText != null) ...[
-                        const SizedBox(height: 6),
-                        Text(
-                          deltaText,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: chipColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                      if (isSimpleMode) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Set up Standard Mode to unlock goal tracking.',
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
               ),
             ],
           ),
-        ),
+          const SizedBox(height: 12),
+          // Big average number
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                avg > 0 ? NumberFormat('#,###').format(avg) : '—',
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 40,
+                  fontWeight: FontWeight.w800,
+                  height: 0.9,
+                  letterSpacing: -1.2,
+                ),
+              ),
+              if (avg > 0) ...[
+                const SizedBox(width: 6),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    'kcal',
+                    style: TextStyle(
+                      color: cs.onSurfaceVariant,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '7-DAY AVERAGE',
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.0,
+            ),
+          ),
+          if (deltaText != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              deltaText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: chipColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          if (isSimpleMode) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Set up Standard Mode to unlock goal tracking.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -379,8 +375,8 @@ class _StatTile extends StatelessWidget {
             Text(
               value,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -0.4,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -993,26 +989,30 @@ class _SortPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected
-              ? cs.primary.withValues(alpha: 0.15)
-              : cs.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? cs.primary : Colors.transparent,
-            width: 1,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: Ink(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: selected
+                ? cs.primary.withValues(alpha: 0.15)
+                : cs.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? cs.primary : Colors.transparent,
+              width: 1,
+            ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-            color: selected ? cs.primary : cs.onSurfaceVariant,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? cs.primary : cs.onSurfaceVariant,
+            ),
           ),
         ),
       ),
@@ -1074,7 +1074,7 @@ class _MacroAveragesSection extends StatelessWidget {
           children: [
             if (total > 0) ...[
               ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(999),
                 child: SizedBox(
                   height: 6,
                   child: Row(
@@ -1177,10 +1177,10 @@ class _MacroTile extends StatelessWidget {
         if (progress >= 0) ...[
           const SizedBox(height: 6),
           ClipRRect(
-            borderRadius: BorderRadius.circular(3),
+            borderRadius: BorderRadius.circular(999),
             child: LinearProgressIndicator(
               value: progress,
-              minHeight: 3,
+              minHeight: 4,
               backgroundColor: color.withValues(alpha: 0.15),
               valueColor: AlwaysStoppedAnimation(color),
             ),
@@ -1231,18 +1231,10 @@ class _WeightSection extends StatelessWidget {
         child: const Text('View all'),
       ),
       child: recent.isEmpty
-          ? AppCard(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: Text(
-                    'Tap Log to start tracking your weight',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
+          ? const AppEmptyState(
+              icon: Icons.monitor_weight_outlined,
+              title: 'No weight logged yet',
+              body: 'Tap Log to start tracking your weight',
             )
           : AppCard(
               child: Column(
@@ -1253,7 +1245,8 @@ class _WeightSection extends StatelessWidget {
                       Text(
                         '${recent.last.weightKg.toStringAsFixed(1)} kg',
                         style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
                         ),
                       ),
                       if (delta != null) ...[
@@ -1313,12 +1306,19 @@ class _WeightSection extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () => presenter.deleteWeight(entry.id),
-                                child: Icon(
-                                  Icons.close,
-                                  size: 14,
-                                  color: theme.colorScheme.onSurfaceVariant,
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => presenter.deleteWeight(entry.id),
+                                  borderRadius: BorderRadius.circular(999),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
@@ -1479,7 +1479,8 @@ class _DayCard extends StatelessWidget {
                       '${_calFmt.format(cal)} kcal',
                       style: TextStyle(
                         color: goalMet ? primary : theme.colorScheme.onSurface,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.4,
                         fontSize: 14,
                       ),
                     ),
@@ -1500,10 +1501,10 @@ class _DayCard extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             ClipRRect(
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(999),
               child: LinearProgressIndicator(
                 value: ratio.clamp(0.0, 1.0),
-                minHeight: 3,
+                minHeight: 4,
                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation(barColor),
               ),
@@ -1596,19 +1597,10 @@ class _MeasurementSection extends StatelessWidget {
         child: const Text('View all'),
       ),
       child: latest == null
-          ? AppCard(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 20),
-                child: Center(
-                  child: Text(
-                    'Log a measurement to track body composition',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ),
+          ? const AppEmptyState(
+              icon: Icons.straighten_outlined,
+              title: 'No measurements yet',
+              body: 'Log a measurement to track body composition',
             )
           : AppCard(
               child: Column(
@@ -1620,7 +1612,8 @@ class _MeasurementSection extends StatelessWidget {
                         Text(
                           'Waist ${presenter.formatMeasurement(latest.waistCm!)}',
                           style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.4,
                           ),
                         ),
                       const Spacer(),
