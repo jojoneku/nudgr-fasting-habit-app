@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../app_colors.dart';
-import '../../../../utils/app_spacing.dart';
 
 /// TextField wrapper with consistent padding, error/helper text, and optional icons.
 class AppTextField extends StatelessWidget {
@@ -28,8 +27,8 @@ class AppTextField extends StatelessWidget {
     this.validator,
     this.enabled = true,
     this.contentPadding = const EdgeInsets.symmetric(
-      horizontal: AppSpacing.md,
-      vertical: 12,
+      horizontal: 14,
+      vertical: 10,
     ),
     this.textStyle,
     this.focusNode,
