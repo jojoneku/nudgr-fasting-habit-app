@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Web Bills & Receivables page (Plan 050-C).
@@ -275,7 +276,6 @@ class _AddBillDialogState extends State<_AddBillDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
@@ -308,8 +308,7 @@ class _AddBillDialogState extends State<_AddBillDialog> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       // Previously a save failure left the dialog open with no message. (C7)
-      messenger
-          .showSnackBar(SnackBar(content: Text('Could not save bill: $e')));
+      if (mounted) AppToast.error(context, 'Could not save bill: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -558,7 +557,6 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
@@ -592,8 +590,7 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text('Could not save receivable: $e')));
+      if (mounted) AppToast.error(context, 'Could not save receivable: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -1074,7 +1071,6 @@ class _BillRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1095,7 +1091,8 @@ class _BillRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.deleteBill(bill.id);
-    messenger.showSnackBar(SnackBar(content: Text('Deleted "${bill.name}".')));
+    if (!context.mounted) return;
+    AppToast.show(context, 'Deleted "${bill.name}".');
   }
 
   String? _accountName(String? accountId) {
@@ -1114,7 +1111,6 @@ class _BillRow extends StatelessWidget {
         .payerAccountsFor(bill)
         .where((a) => a.isActive && a.isLiquid)
         .toList();
-    final messenger = ScaffoldMessenger.of(context);
 
     // Marking paid moves real money out of an account and can't be undone in
     // one click — confirm, let the user pick which account is debited, and
@@ -1178,13 +1174,11 @@ class _BillRow extends StatelessWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     // An account is only required when we're actually recording the payment.
     if (!alreadyInLedger && selectedAccountId == null) {
-      messenger.showSnackBar(
-        const SnackBar(
-            content: Text('Add a funding account before marking paid.')),
-      );
+      AppToast.error(context, 'Add a funding account before marking paid.');
       return;
     }
 
@@ -1198,17 +1192,18 @@ class _BillRow extends StatelessWidget {
     } catch (e) {
       // Surface the failure instead of discarding the Future — a rejected
       // payer (or any error) would otherwise leave the bill silently unpaid.
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not mark "${bill.name}" paid: $e')),
-      );
+      if (context.mounted) {
+        AppToast.error(context, 'Could not mark "${bill.name}" paid: $e');
+      }
       return;
     }
+    if (!context.mounted) return;
     final payerName = _accountName(selectedAccountId) ?? 'your account';
-    messenger.showSnackBar(
-      SnackBar(
-          content: Text(alreadyInLedger
-              ? 'Marked "${bill.name}" paid.'
-              : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.')),
+    AppToast.success(
+      context,
+      alreadyInLedger
+          ? 'Marked "${bill.name}" paid.'
+          : 'Paid ${formatPeso(bill.amount)} for "${bill.name}" from $payerName.',
     );
   }
 }
@@ -1370,7 +1365,6 @@ class _ReceivableRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1391,8 +1385,8 @@ class _ReceivableRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.deleteReceivable(receivable.id);
-    messenger
-        .showSnackBar(SnackBar(content: Text('Deleted "${receivable.name}".')));
+    if (!context.mounted) return;
+    AppToast.show(context, 'Deleted "${receivable.name}".');
   }
 
   Future<void> _markReceived(BuildContext context) async {
@@ -1403,7 +1397,6 @@ class _ReceivableRow extends StatelessWidget {
         presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
     final accountId = receivable.accountId ??
         (fallback.isNotEmpty ? fallback.first.id : null);
-    final messenger = ScaffoldMessenger.of(context);
     final accountName = presenter.accountName(accountId) ?? 'your account';
 
     var alreadyInLedger = false;
@@ -1446,13 +1439,11 @@ class _ReceivableRow extends StatelessWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
 
     // An account is only required when we're actually recording the receipt.
     if (!alreadyInLedger && accountId == null) {
-      messenger.showSnackBar(
-        const SnackBar(
-            content: Text('Add an account before marking received.')),
-      );
+      AppToast.error(context, 'Add an account before marking received.');
       return;
     }
 
@@ -1462,11 +1453,12 @@ class _ReceivableRow extends StatelessWidget {
       accountId: alreadyInLedger ? null : accountId,
       recordInLedger: !alreadyInLedger,
     );
-    messenger.showSnackBar(
-      SnackBar(
-          content: Text(alreadyInLedger
-              ? 'Marked "${receivable.name}" received.'
-              : 'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.')),
+    if (!context.mounted) return;
+    AppToast.success(
+      context,
+      alreadyInLedger
+          ? 'Marked "${receivable.name}" received.'
+          : 'Received ${formatPeso(receivable.amount)} for "${receivable.name}" into $accountName.',
     );
   }
 }
@@ -1784,7 +1776,6 @@ class _BudgetedExpenseRow extends StatelessWidget {
   }
 
   Future<void> _delete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1805,8 +1796,8 @@ class _BudgetedExpenseRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.deleteBudgetedExpense(expense.id);
-    messenger
-        .showSnackBar(SnackBar(content: Text('Deleted "${expense.name}".')));
+    if (!context.mounted) return;
+    AppToast.show(context, 'Deleted "${expense.name}".');
   }
 
   Future<void> _markFunded(BuildContext context) async {
@@ -1816,11 +1807,8 @@ class _BudgetedExpenseRow extends StatelessWidget {
     // mobile flow.
     final payers =
         presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
-    final messenger = ScaffoldMessenger.of(context);
     if (payers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Add an account before funding.')),
-      );
+      AppToast.error(context, 'Add an account before funding.');
       return;
     }
 
@@ -1906,20 +1894,20 @@ class _BudgetedExpenseRow extends StatelessWidget {
       accountId: fromId!,
       toAccountId: toId,
     );
+    if (!context.mounted) return;
     final fromName = presenter.accountName(fromId) ?? 'your account';
     final toName = presenter.accountName(toId);
-    messenger.showSnackBar(
-      SnackBar(
-        content: Text(toName != null
-            ? 'Transferred ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName to $toName.'
-            : 'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName.'),
-      ),
+    AppToast.success(
+      context,
+      toName != null
+          ? 'Transferred ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName to $toName.'
+          : 'Set aside ${formatPeso(expense.allocatedAmount)} for "${expense.name}" from $fromName.',
     );
   }
 }
 
 /// Desktop add/edit form for a budgeted set-aside. Mirrors the mobile
-/// [_AddBudgetedExpenseSheet]: Name, Type, Amount, optional Category, and a
+/// [AddBudgetedExpenseSheet]: Name, Type, Amount, optional Category, and a
 /// free-text Note (e.g. "Maya Savings"). Calls
 /// [BillsReceivablesPresenter.addBudgetedExpense] / `updateBudgetedExpense`.
 class _BudgetedExpenseDialog extends StatefulWidget {
@@ -1985,7 +1973,6 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
@@ -2018,8 +2005,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text('Could not save set-aside: $e')));
+      if (mounted) AppToast.error(context, 'Could not save set-aside: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -2368,7 +2354,6 @@ class _InstallmentRow extends StatelessWidget {
   }
 
   Future<void> _markPaid(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final accountName =
         presenter.accountName(installment.accountId) ?? 'the linked account';
     final confirmed = await showDialog<bool>(
@@ -2390,15 +2375,14 @@ class _InstallmentRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.markPaid(installment.id);
-    messenger.showSnackBar(
-      SnackBar(
-          content: Text(
-              'Recorded ${formatPeso(installment.monthlyAmount)} for "${installment.name}".')),
+    if (!context.mounted) return;
+    AppToast.success(
+      context,
+      'Recorded ${formatPeso(installment.monthlyAmount)} for "${installment.name}".',
     );
   }
 
   Future<void> _delete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -2421,8 +2405,8 @@ class _InstallmentRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.deleteInstallment(installment.id);
-    messenger.showSnackBar(
-        SnackBar(content: Text('Deleted "${installment.name}".')));
+    if (!context.mounted) return;
+    AppToast.show(context, 'Deleted "${installment.name}".');
   }
 }
 
@@ -2514,7 +2498,6 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_accountId == null) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
     try {
       final total = double.parse(_totalController.text.replaceAll(',', ''));
@@ -2540,8 +2523,7 @@ class _InstallmentDialogState extends State<_InstallmentDialog> {
       }
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text('Could not save installment: $e')));
+      if (mounted) AppToast.error(context, 'Could not save installment: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -2928,7 +2910,6 @@ class _WebQuickPayDialogState extends State<_WebQuickPayDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (_fromAccountId == null) return;
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _saving = true);
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
@@ -2938,12 +2919,13 @@ class _WebQuickPayDialogState extends State<_WebQuickPayDialog> {
         amount: amount,
         date: _date,
       );
-      if (mounted) Navigator.of(context).pop();
-      messenger.showSnackBar(SnackBar(
-          content: Text('Paid ${formatPeso(amount)} to ${widget.card.name}.')));
+      if (mounted) {
+        Navigator.of(context).pop();
+        AppToast.success(
+            context, 'Paid ${formatPeso(amount)} to ${widget.card.name}.');
+      }
     } catch (e) {
-      messenger.showSnackBar(
-          SnackBar(content: Text('Could not record payment: $e')));
+      if (mounted) AppToast.error(context, 'Could not record payment: $e');
     } finally {
       if (mounted) setState(() => _saving = false);
     }

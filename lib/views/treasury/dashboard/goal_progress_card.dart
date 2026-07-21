@@ -48,12 +48,21 @@ class GoalProgressCard extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 8,
-                  height: 8,
-                  decoration:
-                      BoxDecoration(color: color, shape: BoxShape.circle),
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    account.goalTarget != null
+                        ? Icons.flag_outlined
+                        : Icons.savings_outlined,
+                    size: 17,
+                    color: color,
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     account.name,

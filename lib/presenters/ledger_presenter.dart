@@ -15,6 +15,9 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/finance_nlp_parser.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
+/// Field the ledger list is ordered by (reference "Filter & sort" sheet).
+enum LedgerSortField { date, amount }
+
 class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerPresenter(
     StorageService storage,
@@ -64,8 +67,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   bool _isLoading = true;
   String _selectedMonth = toMonthKey(DateTime.now());
-  String? _selectedAccountId;
-  String? _selectedCategoryId;
+  // Multi-select filters — the "Filter & sort" sheet lets the user pick any
+  // combination of categories and accounts. Empty set = no constraint (all).
+  final Set<String> _selectedAccountIds = {};
+  final Set<String> _selectedCategoryIds = {};
+  // Sort applied to the transaction list (date newest/oldest, amount high/low).
+  LedgerSortField _sortField = LedgerSortField.date;
+  bool _sortDescending = true;
   // When true, the feed shows only outstanding reimbursable expenses — money
   // you've spent and are still owed back.
   bool _owedOnly = false;
@@ -114,12 +122,36 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
 
   bool get isLoading => _isLoading;
   String get selectedMonth => _selectedMonth;
-  String? get selectedAccountId => _selectedAccountId;
+
+  /// Backward-compatible single-selection accessors (web table view + tests).
+  /// Return the sole selected id, or null when zero or many are selected.
+  String? get selectedAccountId =>
+      _selectedAccountIds.length == 1 ? _selectedAccountIds.first : null;
 
   /// Optional category filter applied to both the mobile transaction list
   /// ([groupedTransactions]) and the web table view. Null = all categories.
   /// Independent of the chat view, which doesn't filter by category.
-  String? get selectedCategoryId => _selectedCategoryId;
+  String? get selectedCategoryId =>
+      _selectedCategoryIds.length == 1 ? _selectedCategoryIds.first : null;
+
+  // Multi-select filter + sort state for the "Filter & sort" sheet.
+  Set<String> get selectedAccountIds => Set.unmodifiable(_selectedAccountIds);
+  Set<String> get selectedCategoryIds => Set.unmodifiable(_selectedCategoryIds);
+  LedgerSortField get sortField => _sortField;
+  bool get sortDescending => _sortDescending;
+
+  /// Number of active filters (each selected category/account, the owed flag,
+  /// and a single-day filter) — drives the count badge on the Filter & sort
+  /// button.
+  int get activeFilterCount =>
+      _selectedCategoryIds.length +
+      _selectedAccountIds.length +
+      (_owedOnly ? 1 : 0) +
+      (_selectedDate != null ? 1 : 0);
+
+  /// True when the sort is anything other than the default newest-first date.
+  bool get isCustomSort =>
+      _sortField != LedgerSortField.date || !_sortDescending;
   List<FinancialAccount> get accounts => _accounts;
   List<FinanceCategory> get categories => _categories;
   List<TransactionRecord> get allTransactions =>
@@ -223,31 +255,33 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  double get filteredAccountBalance {
-    if (_selectedAccountId == null) return 0.0;
-    final account =
-        _accounts.where((a) => a.id == _selectedAccountId).firstOrNull;
-    return account?.balance ?? 0.0;
-  }
+  double get filteredAccountBalance => _accounts
+      .where((a) => _selectedAccountIds.contains(a.id))
+      .fold(0.0, (sum, a) => sum + a.balance);
 
   /// Transactions in [selectedMonth] filtered by [selectedAccountId] and
   /// [selectedCategoryId].
   /// In "All" view: deduplicates transfers — keeps only the outflow leg.
   /// In single-account view: shows both legs belonging to that account.
-  Map<DateTime, List<TransactionRecord>> get groupedTransactions {
+  /// Transactions in [selectedMonth] after every active filter — accounts and
+  /// categories (multi-select), the owed flag, and an optional single day. The
+  /// shared base for both the grouped and flat list views.
+  List<TransactionRecord> get _visibleTransactions {
     var txns = _filteredTransactions;
 
-    // Apply optional category filter (mirrors the web table view).
-    if (_selectedCategoryId != null) {
-      txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
+    // Multi-select category filter (mirrors the web table view).
+    if (_selectedCategoryIds.isNotEmpty) {
+      txns = txns
+          .where((t) => _selectedCategoryIds.contains(t.categoryId))
+          .toList();
     }
 
-    // Apply optional "money I'm owed" filter.
+    // Optional "money I'm owed" filter.
     if (_owedOnly) {
       txns = txns.where(isOutstandingReimbursable).toList();
     }
 
-    // Apply optional single-day filter (from calendar tap)
+    // Optional single-day filter (from calendar tap).
     if (_selectedDate != null) {
       txns = txns
           .where((t) =>
@@ -256,17 +290,41 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
               t.date.day == _selectedDate!.day)
           .toList();
     }
+    return txns;
+  }
 
+  /// Day-grouped transactions honouring the date sort direction. Used when
+  /// [sortField] is [LedgerSortField.date].
+  Map<DateTime, List<TransactionRecord>> get groupedTransactions {
+    final asc = !_sortDescending;
     final grouped = <DateTime, List<TransactionRecord>>{};
-    for (final txn in txns) {
+    for (final txn in _visibleTransactions) {
       final day = DateTime(txn.date.year, txn.date.month, txn.date.day);
       grouped.putIfAbsent(day, () => []).add(txn);
     }
     for (final list in grouped.values) {
-      list.sort((a, b) => b.date.compareTo(a.date));
+      list.sort(
+          (a, b) => asc ? a.date.compareTo(b.date) : b.date.compareTo(a.date));
     }
-    final sortedKeys = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    final sortedKeys = grouped.keys.toList()
+      ..sort((a, b) => asc ? a.compareTo(b) : b.compareTo(a));
     return {for (final k in sortedKeys) k: grouped[k]!};
+  }
+
+  /// Flat transaction list sorted by the active [sortField]/[sortDescending].
+  /// Used when sorting by amount (day grouping doesn't apply).
+  List<TransactionRecord> get sortedTransactions {
+    int cmp(TransactionRecord a, TransactionRecord b) {
+      final c = switch (_sortField) {
+        LedgerSortField.amount => a.amount.compareTo(b.amount),
+        LedgerSortField.date => a.date.compareTo(b.date),
+      };
+      // Stable tiebreak on id so equal keys keep a deterministic order.
+      return c != 0 ? c : a.id.compareTo(b.id);
+    }
+
+    return [..._visibleTransactions]
+      ..sort((a, b) => _sortDescending ? cmp(b, a) : cmp(a, b));
   }
 
   // --- Web table view (Plan 050-B) ---
@@ -284,8 +342,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final cached = _rowsForMonthCache;
     if (cached != null) return cached;
     var txns = _filteredTransactions;
-    if (_selectedCategoryId != null) {
-      txns = txns.where((t) => t.categoryId == _selectedCategoryId).toList();
+    if (_selectedCategoryIds.isNotEmpty) {
+      txns = txns
+          .where((t) => _selectedCategoryIds.contains(t.categoryId))
+          .toList();
     }
 
     // Accumulate chronologically (oldest first) so the running balance reads as
@@ -390,14 +450,46 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  /// Backward-compatible single setter (web + tests): selects exactly [id], or
+  /// clears the account filter when null.
   void setAccount(String? id) {
-    _selectedAccountId = id;
+    _selectedAccountIds.clear();
+    if (id != null) _selectedAccountIds.add(id);
     safeNotify();
   }
 
-  /// Sets the active category filter. Null clears it (all categories).
+  /// Sets the active category filter to exactly [id]. Null clears it.
   void setCategoryFilter(String? id) {
-    _selectedCategoryId = id;
+    _selectedCategoryIds.clear();
+    if (id != null) _selectedCategoryIds.add(id);
+    safeNotify();
+  }
+
+  /// Toggles a category in the multi-select filter.
+  void toggleCategoryFilter(String id) {
+    if (!_selectedCategoryIds.remove(id)) _selectedCategoryIds.add(id);
+    safeNotify();
+  }
+
+  /// Toggles an account in the multi-select filter.
+  void toggleAccountFilter(String id) {
+    if (!_selectedAccountIds.remove(id)) _selectedAccountIds.add(id);
+    safeNotify();
+  }
+
+  /// Sets the list sort field and direction.
+  void setSort(LedgerSortField field, {required bool descending}) {
+    _sortField = field;
+    _sortDescending = descending;
+    safeNotify();
+  }
+
+  /// Clears all filters (categories, accounts, owed, day); leaves sort untouched.
+  void clearAllFilters() {
+    _selectedCategoryIds.clear();
+    _selectedAccountIds.clear();
+    _owedOnly = false;
+    _selectedDate = null;
     safeNotify();
   }
 
@@ -829,7 +921,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   // --- Category CRUD ---
 
   Future<void> addCategory(FinanceCategory category) async {
-    _categories = [..._categories, category];
+    // Stamp a real creation time so the row syncs up (categories default to
+    // epoch-0 updatedAt otherwise, which loses to any remote copy under
+    // last-write-wins).
+    _categories = [
+      ..._categories,
+      category.copyWith(updatedAt: DateTime.now())
+    ];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);
   }
@@ -838,9 +936,13 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Setup categories table for inline rename / recolor / type change. A no-op
   /// if the id isn't present.
   Future<void> updateCategory(FinanceCategory category) async {
+    // Bump updatedAt on every edit (rename, recolor, type, icon, exclude-toggle)
+    // so the change wins under last-write-wins sync — the call sites use
+    // copyWith without touching the timestamp.
+    final stamped = category.copyWith(updatedAt: DateTime.now());
     _categories = [
       for (final c in _categories)
-        if (c.id == category.id) category else c
+        if (c.id == stamped.id) stamped else c
     ];
     safeNotify();
     await _storage.saveFinanceCategories(_categories);
@@ -1305,8 +1407,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     final inMonth =
         _allTransactions.where((t) => t.month == _selectedMonth).toList();
 
-    if (_selectedAccountId != null) {
-      return inMonth.where((t) => t.accountId == _selectedAccountId).toList();
+    if (_selectedAccountIds.isNotEmpty) {
+      return inMonth
+          .where((t) => _selectedAccountIds.contains(t.accountId))
+          .toList();
     }
 
     // All-accounts view: show every transaction, including BOTH transfer legs

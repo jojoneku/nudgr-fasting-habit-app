@@ -164,8 +164,10 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Total set aside in savings + goal pockets — powers the Setup
   /// "Savings & Goals" KPI. Matches the set of accounts the Setup page groups
   /// under that heading ([savingsAccounts] + [goalAccounts]).
-  double get totalSavingsAndGoals => [...savingsAccounts, ...goalAccounts]
-      .fold(0.0, (sum, a) => sum + a.balance);
+  double get totalSavingsAndGoals => [
+        ...savingsAccounts,
+        ...goalAccounts,
+      ].fold(0.0, (sum, a) => sum + a.balance);
 
   /// Count of all active accounts (every role + sub-accounts) — for the Setup
   /// "Accounts" KPI tile.
@@ -185,8 +187,10 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     // total; a custodian linked to a non-liquid account isn't liquid cash
     // either. heldAmountByAccountId keys held amounts by their linked account.
     final held = heldAmountByAccountId;
-    final heldInLiquid =
-        liquidAccounts.fold(0.0, (sum, a) => sum + (held[a.id] ?? 0.0));
+    final heldInLiquid = liquidAccounts.fold(
+      0.0,
+      (sum, a) => sum + (held[a.id] ?? 0.0),
+    );
     return parents - heldInLiquid;
   }
 
@@ -231,8 +235,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final reimb = _reimbursementIds;
     final excluded = _excludedCategoryIds;
     return _transactions
-        .where((t) =>
-            t.month == _currentMonth && isIncomeInflow(t, reimb, excluded))
+        .where(
+          (t) => t.month == _currentMonth && isIncomeInflow(t, reimb, excluded),
+        )
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -240,7 +245,8 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final excluded = _excludedCategoryIds;
     return _transactions
         .where(
-            (t) => t.month == _currentMonth && isSpendingOutflow(t, excluded))
+          (t) => t.month == _currentMonth && isSpendingOutflow(t, excluded),
+        )
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -249,11 +255,13 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Only top-level accounts are summed: sub-account balances are already
   /// reflected in their parent via the propagation rule in
   /// [LedgerPresenter._applyBalanceDelta], so summing both would double-count.
-  Iterable<FinancialAccount> get _assetAccounts => _accounts.where((a) =>
-      a.isActive &&
-      !a.isLiability &&
-      !a.isCustodian &&
-      a.parentAccountId == null);
+  Iterable<FinancialAccount> get _assetAccounts => _accounts.where(
+        (a) =>
+            a.isActive &&
+            !a.isLiability &&
+            !a.isCustodian &&
+            a.parentAccountId == null,
+      );
 
   double get totalAssets =>
       _assetAccounts.fold(0.0, (sum, a) => sum + a.balance);
@@ -319,10 +327,11 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get budgetedExpensesRemaining => _budgetedExpenses
       .where((e) => e.month == _currentMonth && !e.isPaid)
       .fold(
-          0.0,
-          (sum, e) =>
-              sum +
-              (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity));
+        0.0,
+        (sum, e) =>
+            sum +
+            (e.allocatedAmount - e.spentAmount).clamp(0.0, double.infinity),
+      );
 
   /// What you owe this month: unpaid bills only. Budgeted-expense set-asides are
   /// surfaced separately as "Budget / Savings Due" ([budgetedExpensesRemaining]),
@@ -391,8 +400,11 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     final lastDay = DateTime(now.year, now.month + 1, 0).day;
     final tomorrow = today + 1;
     return upcomingBills
-        .where((b) =>
-            b.dueDay == today || (b.dueDay == tomorrow && tomorrow <= lastDay))
+        .where(
+          (b) =>
+              b.dueDay == today ||
+              (b.dueDay == tomorrow && tomorrow <= lastDay),
+        )
         .firstOrNull;
   }
 
@@ -494,10 +506,12 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     // (consistent with headline Expenses and BudgetPresenter.spentFor).
     final excluded = _excludedCategoryIds;
     return _transactions
-        .where((t) =>
-            t.month == _currentMonth &&
-            t.categoryId == b.categoryId &&
-            isSpendingOutflow(t, excluded))
+        .where(
+          (t) =>
+              t.month == _currentMonth &&
+              t.categoryId == b.categoryId &&
+              isSpendingOutflow(t, excluded),
+        )
         .fold(0.0, (sum, t) => sum + t.amount);
   }
 
@@ -621,17 +635,39 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   /// Flexible — used by the full spending history sheet.
   List<DailySpend> lastNDaysSpending(int n) => _lastNDaysSpending(n);
 
-  List<DailySpend> _lastNDaysSpending(int n) {
-    final now = DateTime.now();
+  /// Daily spend for an inclusive whole-day range [start, end]. Powers the
+  /// dashboard spending card's range selector (this month / last month / etc.).
+  List<DailySpend> dailySpendForRange(DateTime start, DateTime end) {
     final excluded = _excludedCategoryIds;
-    return List.generate(n, (i) {
-      final day = DateTime(now.year, now.month, now.day - (n - 1 - i));
+    final s = DateTime(start.year, start.month, start.day);
+    final e = DateTime(end.year, end.month, end.day);
+    final count = e.difference(s).inDays + 1;
+    return List.generate(count.clamp(1, 366), (i) {
+      final day = DateTime(s.year, s.month, s.day + i);
       final total = _transactions
           .where((t) =>
               isSpendingOutflow(t, excluded) &&
               t.date.year == day.year &&
               t.date.month == day.month &&
               t.date.day == day.day)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      return DailySpend(day, total);
+    });
+  }
+
+  List<DailySpend> _lastNDaysSpending(int n) {
+    final now = DateTime.now();
+    final excluded = _excludedCategoryIds;
+    return List.generate(n, (i) {
+      final day = DateTime(now.year, now.month, now.day - (n - 1 - i));
+      final total = _transactions
+          .where(
+            (t) =>
+                isSpendingOutflow(t, excluded) &&
+                t.date.year == day.year &&
+                t.date.month == day.month &&
+                t.date.day == day.day,
+          )
           .fold(0.0, (sum, t) => sum + t.amount);
       return DailySpend(day, total);
     });
@@ -717,11 +753,43 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     return result;
   }
 
+  // --- Net-worth momentum (dashboard hero pill) ---
+  //
+  // Pure derivations over [netWorthTrend] — no stored state. Used by the redesign
+  // hero's trend pill and "this month" line. Both return null when there is no
+  // usable prior month-end, so the UI omits the pill rather than dividing by zero.
+
+  /// Change in net worth versus the previous month-end. Null when fewer than two
+  /// trend points exist.
+  double? get netWorthMonthDelta {
+    final trend = netWorthTrend(months: 2);
+    if (trend.length < 2) return null;
+    return trend.last.value - trend.first.value;
+  }
+
+  /// Net-worth month-over-month change as a fraction of the previous month-end
+  /// (0.027 → +2.7%). Null when there is no prior point or its value is zero.
+  double? get netWorthMonthDeltaPct {
+    final trend = netWorthTrend(months: 2);
+    if (trend.length < 2) return null;
+    final base = trend.first.value;
+    if (base == 0) return null;
+    return (trend.last.value - trend.first.value) / base.abs();
+  }
+
+  /// Whole days remaining in the current calendar month (0 on the last day).
+  int get daysLeftInMonth {
+    final now = DateTime.now();
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    return (lastDay - now.day).clamp(0, lastDay);
+  }
+
   /// Income vs expenses for the last [months] months, oldest → newest. The
   /// current month uses live totals; closed months come from their summary.
   /// Months with no summary are omitted.
-  List<({String label, double income, double expense})> incomeExpenseTrend(
-      {int months = 6}) {
+  List<({String label, double income, double expense})> incomeExpenseTrend({
+    int months = 6,
+  }) {
     final result = <({String label, double income, double expense})>[];
     for (final key in _lastNMonthKeys(months)) {
       final label = monthShortLabel(key);
@@ -803,25 +871,27 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         if (id != null) categorySpend[id] = amount;
       });
       final monthNetWorth = nwEnd[m.month];
-      added.add(MonthlySummary(
-        month: m.month,
-        totalInflow: m.income,
-        totalOutflow: m.expenses,
-        totalBills: 0,
-        totalBillsPaid: 0,
-        billCount: 0,
-        billsPaidCount: 0,
-        totalReceivables: 0,
-        totalReceived: 0,
-        receivableCount: 0,
-        netSavings: m.net,
-        // True month-end liquid cash isn't recoverable from the legacy summary,
-        // so endingCash mirrors the reconstructed net worth for these months.
-        endingCash: monthNetWorth ?? 0,
-        netWorth: monthNetWorth,
-        accountSnapshots: const {},
-        categorySpend: categorySpend,
-      ));
+      added.add(
+        MonthlySummary(
+          month: m.month,
+          totalInflow: m.income,
+          totalOutflow: m.expenses,
+          totalBills: 0,
+          totalBillsPaid: 0,
+          billCount: 0,
+          billsPaidCount: 0,
+          totalReceivables: 0,
+          totalReceived: 0,
+          receivableCount: 0,
+          netSavings: m.net,
+          // True month-end liquid cash isn't recoverable from the legacy summary,
+          // so endingCash mirrors the reconstructed net worth for these months.
+          endingCash: monthNetWorth ?? 0,
+          netWorth: monthNetWorth,
+          accountSnapshots: const {},
+          categorySpend: categorySpend,
+        ),
+      );
     }
 
     final merged = [..._summaries, ...added];
@@ -840,9 +910,7 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   }
 
   Future<void> updateAccount(FinancialAccount account) async {
-    _accounts = [
-      for (final a in _accounts) a.id == account.id ? account : a,
-    ];
+    _accounts = [for (final a in _accounts) a.id == account.id ? account : a];
     notifyListeners();
     await _storage.saveAccounts(_accounts);
     await _syncAccountsToLedger();
@@ -855,8 +923,9 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   Future<void> deleteAccount(String id) async {
     final hasSubs = _accounts.any((a) => a.parentAccountId == id);
     if (hasSubs) throw StateError('has_sub_accounts');
-    final hasTxns = _transactions
-        .any((t) => t.accountId == id || t.transferToAccountId == id);
+    final hasTxns = _transactions.any(
+      (t) => t.accountId == id || t.transferToAccountId == id,
+    );
     final hasBills = _bills.any((b) => b.accountId == id);
     if (hasTxns || hasBills) throw StateError('has_transactions');
     _accounts = _accounts.where((a) => a.id != id).toList();

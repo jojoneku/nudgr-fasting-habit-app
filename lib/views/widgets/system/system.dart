@@ -34,5 +34,6 @@ export 'inputs/app_secondary_button.dart';
 export 'inputs/app_destructive_button.dart';
 export 'inputs/app_icon_button.dart';
 export 'inputs/app_text_field.dart';
+export 'inputs/labeled_field.dart';
 export 'inputs/app_segmented_control.dart';
 export 'inputs/app_day_chip_row.dart';

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../services/local_storage_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../utils/app_spacing.dart';
+import '../widgets/system/system.dart';
 
 /// Restore-from-snapshot UI (Plan 053 Phase 3.5). Lists the user's immutable
 /// cloud snapshots newest-first and lets them roll the device back to one.
@@ -90,11 +91,17 @@ class _RestoreBackupSheetState extends State<_RestoreBackupSheet> {
     }
     if (!mounted) return;
     Navigator.of(context).pop();
-    messenger.showSnackBar(SnackBar(
-      content: Text(ok
-          ? 'Restored your backup from ${_format(takenAt)}.'
-          : 'Could not restore that backup. Please try again.'),
-    ));
+    if (ok) {
+      AppToast.success(
+        messenger.context,
+        'Restored your backup from ${_format(takenAt)}.',
+      );
+    } else {
+      AppToast.error(
+        messenger.context,
+        'Could not restore that backup. Please try again.',
+      );
+    }
   }
 
   String _format(DateTime utc) =>

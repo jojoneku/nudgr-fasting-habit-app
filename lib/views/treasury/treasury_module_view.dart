@@ -44,6 +44,20 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
+  // Indices of tabs that own their in-page header — keep in sync with the
+  // TabBar order below.
+  static const int _ledgerTabIndex = 1;
+  static const int _billsTabIndex = 2;
+  static const int _budgetTabIndex = 3;
+  static const int _historyTabIndex = 4;
+
+  // The redesigned Ledger, Bills and Budget tabs render their own in-page
+  // headers (Ledger's "Ledger" title; Bills' header + month·year picker;
+  // Budget's "Budget" title + month dropdown), so the shared "TREASURY" app bar
+  // is hidden while any is active (per the reference frame). Other tabs keep the
+  // app bar until they get the same treatment.
+  bool _appBarHidden = false;
+
   @override
   void initState() {
     super.initState();
@@ -60,6 +74,16 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   }
 
   void _onTabChanged() {
+    // Toggle the app bar as soon as we cross into/out of a header-owning tab
+    // (Ledger, Bills) — even mid-animation — so there's no flash of the shared
+    // "TREASURY" bar over that tab's own in-page header.
+    final index = _tabController.index;
+    final hide = index == _ledgerTabIndex ||
+        index == _billsTabIndex ||
+        index == _budgetTabIndex ||
+        index == _historyTabIndex;
+    if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
+
     if (_tabController.indexIsChanging) return;
     // Each tab keeps its own presenter cache. Reload on focus so cross-tab
     // mutations (e.g. mark-paid in Bills, transfer in Ledger) show up without
@@ -93,16 +117,20 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: theme.scaffoldBackgroundColor,
-        title: Text(
-          'TREASURY',
-          style: theme.textTheme.titleSmall?.copyWith(
-            letterSpacing: 2.0,
-          ),
-        ),
-        centerTitle: true,
-      ),
+      // Hidden on the Ledger and Bills tabs, which supply their own in-page
+      // headers ("Ledger" title / "Bills" header + month·year picker).
+      appBar: _appBarHidden
+          ? null
+          : AppBar(
+              backgroundColor: theme.scaffoldBackgroundColor,
+              title: Text(
+                'TREASURY',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  letterSpacing: 2.0,
+                ),
+              ),
+              centerTitle: true,
+            ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: colorScheme.surfaceContainer,
@@ -134,7 +162,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         controller: _tabController,
         physics: const NeverScrollableScrollPhysics(),
         children: [
-          TreasuryDashboardView(presenter: widget.dashPresenter),
+          TreasuryDashboardView(
+            presenter: widget.dashPresenter,
+            billsPresenter: widget.billsPresenter,
+          ),
           LedgerView(presenter: widget.ledgerPresenter),
           BillsReceivablesView(
             presenter: widget.billsPresenter,

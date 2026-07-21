@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/utils/app_text_styles.dart';
 import 'package:intl/intl.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
-import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
@@ -17,7 +17,6 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
 final _filterChipFmt = DateFormat('MMM d');
-final _dateFilterFmt = DateFormat('MMM d, yyyy');
 
 class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
@@ -52,9 +51,7 @@ class _LedgerViewState extends State<LedgerView> {
     final summary = presenter.lastCommittedSummary;
     if (summary != null && summary != _lastSnackbarSummary) {
       _lastSnackbarSummary = summary;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(summary), duration: const Duration(seconds: 2)),
-      );
+      AppToast.show(context, summary, duration: const Duration(seconds: 2));
       presenter.clearLastCommittedSummary();
     }
     final prefill = presenter.pendingFormPrefill;
@@ -96,24 +93,34 @@ class _LedgerViewState extends State<LedgerView> {
     );
   }
 
+  void _showFilterSortSheet() {
+    HapticFeedback.selectionClick();
+    AppBottomSheet.show(
+      context: context,
+      title: 'Filter & sort',
+      body: _FilterSortSheet(presenter: presenter),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: presenter,
       builder: (context, _) {
         return Scaffold(
+          // The module hides its "TREASURY" app bar on this tab, so the Ledger
+          // owns the top: keep the top safe-area inset here to clear the status
+          // bar under the "Ledger" title.
           body: SafeArea(
-            top: false,
             child: Column(
               children: [
-                _MonthSelectorRow(presenter: presenter),
-                if (presenter.selectedDate != null)
-                  _DateFilterChip(
-                    date: presenter.selectedDate!,
-                    onClear: () => presenter.setSelectedDate(null),
-                  ),
-                _SummaryCard(presenter: presenter),
-                _AccountFilterRow(presenter: presenter),
+                const _LedgerHeader(),
+                _LedgerControlsRow(
+                  presenter: presenter,
+                  onOpenFilters: _showFilterSortSheet,
+                ),
+                // In / Out / Net moved to the Dashboard's cashflow strip — no
+                // need to duplicate the month totals on the Ledger.
                 Expanded(
                   child: _TransactionList(
                     presenter: presenter,
@@ -377,14 +384,18 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final blue = context.appColors.fast;
     // Quick chat-logging stamps "today", so it stays gated to the current day.
     // The form, however, is always reachable and pre-fills the filtered day.
     final canSend = widget.presenter.isSelectedDateToday;
+    final busy =
+        _sending || widget.presenter.chatState.phase == ChatPhase.classifying;
     return Container(
       color: cs.surface,
       padding: EdgeInsets.fromLTRB(
-          12, 8, 12, MediaQuery.of(context).padding.bottom + 8),
+          12, 10, 12, MediaQuery.of(context).padding.bottom + 10),
       child: Row(
         children: [
           IconButton(
@@ -401,41 +412,71 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
             tooltip: 'Open form',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
+          // Reference-style input pill: a sparkle glyph hinting at AI parsing +
+          // the free-text field, inside a single rounded container.
           Expanded(
-            child: TextField(
-              controller: _ctrl,
-              focusNode: _focus,
-              enabled: canSend,
-              decoration: InputDecoration(
-                hintText: _hint(widget.presenter),
-                filled: true,
-                fillColor: cs.surfaceContainerHigh,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(22),
-                  borderSide: BorderSide.none,
+            child: Container(
+              height: 52,
+              padding: const EdgeInsets.only(left: 14, right: 8),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(26),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.5),
                 ),
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                isDense: true,
               ),
-              textInputAction: TextInputAction.send,
-              onSubmitted: (_) => _send(),
+              child: Row(
+                children: [
+                  Icon(Icons.auto_awesome, size: 16, color: blue),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _ctrl,
+                      focusNode: _focus,
+                      enabled: canSend,
+                      decoration: InputDecoration(
+                        hintText: _hint(widget.presenter),
+                        border: InputBorder.none,
+                        isDense: true,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      textInputAction: TextInputAction.send,
+                      onSubmitted: (_) => _send(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 4),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: _sending ||
-                      widget.presenter.chatState.phase == ChatPhase.classifying
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.send),
-              onPressed: canSend ? _send : null,
+          const SizedBox(width: 8),
+          // Circular accent send button (reference's blue mic/send affordance).
+          Semantics(
+            button: true,
+            label: 'Send',
+            child: Material(
+              color: canSend ? blue : cs.surfaceContainerHighest,
+              shape: const CircleBorder(),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: canSend ? _send : null,
+                child: SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: busy
+                      ? const Padding(
+                          padding: EdgeInsets.all(13),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Icon(
+                          Icons.arrow_upward_rounded,
+                          size: 20,
+                          color: canSend ? Colors.white : cs.onSurfaceVariant,
+                        ),
+                ),
+              ),
             ),
           ),
         ],
@@ -444,286 +485,425 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
   }
 }
 
-// ── Account Filter ──────────────────────────────────────────────────────────
+// ── Filter & Sort ─────────────────────────────────────────────────────────
 
-class _AccountFilterRow extends StatelessWidget {
-  final LedgerPresenter presenter;
-
-  const _AccountFilterRow({required this.presenter});
-
-  Future<void> _openCategoryFilter(BuildContext context) async {
-    HapticFeedback.selectionClick();
-    await AppBottomSheet.show(
-      context: context,
-      title: 'Filter by Category',
-      body: _CategoryFilterSheet(presenter: presenter),
-    );
-  }
+/// Page title row — `Ledger` on its own line, left-aligned (reference header).
+class _LedgerHeader extends StatelessWidget {
+  const _LedgerHeader();
 
   @override
   Widget build(BuildContext context) {
-    final selectedCategory = presenter.categories
-        .where((c) => c.id == presenter.selectedCategoryId)
-        .firstOrNull;
-
-    return SizedBox(
-      height: 48,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        children: [
-          // Category filter: a clearable active chip when one is selected,
-          // otherwise a plain "Category" affordance that opens the picker.
-          if (selectedCategory != null)
-            _CategoryActiveChip(
-              category: selectedCategory,
-              onClear: () => presenter.setCategoryFilter(null),
-              onTap: () => _openCategoryFilter(context),
-            )
-          else
-            _AccountPill(
-              label: 'Category',
-              icon: Icons.filter_list_rounded,
-              selected: false,
-              onTap: () => _openCategoryFilter(context),
-            ),
-          // The owed filter now lives inside the category picker; when it's
-          // active we still surface a clearable chip here so the engaged filter
-          // stays visible — mirroring the active-category chip above.
-          if (presenter.owedOnly)
-            _OwedActiveChip(
-              total: presenter.outstandingOwedTotal,
-              onClear: () => presenter.setOwedFilter(false),
-            ),
-          _FilterDivider(),
-          _AccountPill(
-            label: 'All',
-            icon: Icons.account_balance_wallet_outlined,
-            selected: presenter.selectedAccountId == null,
-            onTap: () => presenter.setAccount(null),
-          ),
-          ...presenter.accounts.map((a) => _AccountPill(
-                label: a.name,
-                selected: presenter.selectedAccountId == a.id,
-                onTap: () => presenter.setAccount(a.id),
-              )),
-        ],
-      ),
-    );
-  }
-}
-
-/// Thin vertical separator between the category affordance and the account
-/// pills so the two filter dimensions read as distinct groups.
-class _FilterDivider extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Center(
-        child: Container(
-          width: 1,
-          height: 22,
-          color: cs.outlineVariant,
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(20, 13, 20, 0),
+      child: Text(
+        'Ledger',
+        style: theme.textTheme.headlineSmall?.copyWith(
+          fontSize: 23,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
+          color: theme.colorScheme.onSurface,
         ),
       ),
     );
   }
 }
 
-/// Active category filter shown as a colored chip with an ✕ to clear it.
-/// Tapping the body reopens the picker; tapping the ✕ clears the filter.
-class _CategoryActiveChip extends StatelessWidget {
-  final FinanceCategory category;
-  final VoidCallback onClear;
-  final VoidCallback onTap;
+/// Controls row: the `Filter & sort` pill (+ quick-clear ✕) on the left and the
+/// month/year pill on the right, **in line** on one row (spec §2).
+class _LedgerControlsRow extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final VoidCallback onOpenFilters;
 
-  const _CategoryActiveChip({
-    required this.category,
-    required this.onClear,
-    required this.onTap,
+  const _LedgerControlsRow({
+    required this.presenter,
+    required this.onOpenFilters,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      color: theme.scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
+      // Expanded left cluster + natural-width month pill: guarantees the two
+      // pills never overflow on narrow screens (the filter label ellipsizes
+      // under pressure instead of throwing a RenderFlex overflow).
+      child: Row(
+        children: [
+          Expanded(
+            child: _FilterSortButton(
+              presenter: presenter,
+              onOpenFilters: onOpenFilters,
+            ),
+          ),
+          const SizedBox(width: 8),
+          _MonthPill(presenter: presenter),
+        ],
+      ),
+    );
+  }
+}
+
+/// The `Filter & sort` pill with an active-count badge (opens [_FilterSortSheet])
+/// plus a quick-clear ✕ that wipes active filters without opening the sheet.
+class _FilterSortButton extends StatelessWidget {
+  final LedgerPresenter presenter;
+  final VoidCallback onOpenFilters;
+
+  const _FilterSortButton({
+    required this.presenter,
+    required this.onOpenFilters,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final dotColor = resolveSliceColor(
-      category.colorHex,
-      0,
-      brightness: Theme.of(context).brightness,
-    );
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: Container(
-          padding: const EdgeInsets.only(left: 12, right: 6),
-          decoration: BoxDecoration(
-            color: cs.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: cs.primary),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  color: dotColor,
-                  shape: BoxShape.circle,
-                ),
+    final blue = context.appColors.fast;
+    final count = presenter.activeFilterCount;
+    final active = count > 0 || presenter.isCustomSort;
+    // Inside an Expanded (see _LedgerControlsRow): a loose Flexible lets the pill
+    // size to its content but shrink (label ellipsizes) if space is tight, so it
+    // never overflows the row on a narrow screen.
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          fit: FlexFit.loose,
+          child: GestureDetector(
+            onTap: onOpenFilters,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
+              decoration: BoxDecoration(
+                color: active
+                    ? blue.withValues(alpha: 0.15)
+                    : cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: active ? blue : cs.outlineVariant),
               ),
-              const SizedBox(width: 6),
-              Text(
-                category.name,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: cs.primary,
-                ),
-              ),
-              SizedBox(
-                width: 32,
-                height: 44,
-                child: Semantics(
-                  label: 'Clear category filter',
-                  button: true,
-                  child: InkWell(
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      onClear();
-                    },
-                    borderRadius: BorderRadius.circular(22),
-                    child:
-                        Icon(Icons.close_rounded, size: 16, color: cs.primary),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.tune_rounded,
+                      size: 15, color: active ? blue : cs.onSurfaceVariant),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      'Filter & sort',
+                      maxLines: 1,
+                      softWrap: false,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: active ? blue : cs.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                ),
+                  if (count > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: blue,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '$count',
+                        style: const TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
+        // Quick clear — wipes the active filters (keeps sort) without opening
+        // the sheet. Only shown when something is filtered.
+        if (count > 0) ...[
+          const SizedBox(width: 8),
+          Semantics(
+            button: true,
+            label: 'Clear filters',
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                presenter.clearAllFilters();
+              },
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Icon(Icons.close_rounded,
+                    size: 16, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
 
-/// Modal picker listing every selectable category (income + expense), each
-/// with a color dot, plus an "All categories" reset option at the top.
-class _CategoryFilterSheet extends StatelessWidget {
-  final LedgerPresenter presenter;
+/// The Filter & sort bottom sheet: multi-select categories + accounts, the owed
+/// toggle, and Date/Amount sort with direction. Applies live via the presenter.
+/// Opens the spending-heat calendar to pick a single day within the selected
+/// month (tapping the active day again clears it). Used by the Day filter.
+Future<void> _pickLedgerDay(
+    BuildContext context, LedgerPresenter presenter) async {
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 16),
+      child: SpendingCalendar(
+        presenter: presenter,
+        onDaySelected: (day) {
+          final cur = presenter.selectedDate;
+          final same = cur != null &&
+              cur.year == day.year &&
+              cur.month == day.month &&
+              cur.day == day.day;
+          presenter.setSelectedDate(same ? null : day);
+          Navigator.of(ctx).pop();
+        },
+      ),
+    ),
+  );
+}
 
-  const _CategoryFilterSheet({required this.presenter});
+/// Opens the month grid to change the selected month from inside the sheet.
+Future<void> _pickLedgerMonth(
+    BuildContext context, LedgerPresenter presenter) async {
+  await showDialog<void>(
+    context: context,
+    builder: (ctx) => Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+      child: _MonthGridPicker(
+        presenter: presenter,
+        onPicked: () => Navigator.of(ctx).pop(),
+      ),
+    ),
+  );
+}
+
+class _FilterSortSheet extends StatelessWidget {
+  final LedgerPresenter presenter;
+  const _FilterSortSheet({required this.presenter});
 
   @override
   Widget build(BuildContext context) {
     final brightness = Theme.of(context).brightness;
-    // Exclude the reserved transfer category — it is never a user filter target.
-    final expense = presenter.categories
-        .where((c) => c.type == CategoryType.expense)
-        .toList();
-    final income = presenter.categories
-        .where((c) => c.type == CategoryType.income)
-        .toList();
-
-    void select(String? id) {
-      HapticFeedback.selectionClick();
-      presenter.setCategoryFilter(id);
-      Navigator.of(context).pop();
-    }
-
-    void toggleOwed() {
-      HapticFeedback.selectionClick();
-      presenter.setOwedFilter(!presenter.owedOnly);
-      Navigator.of(context).pop();
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.only(bottom: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Money-owed filter — shown whenever there's an outstanding
-          // reimbursable (or the filter is already on). Independent of the
-          // category selection below.
-          if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
-            _OwedFilterTile(
-              total: presenter.outstandingOwedTotal,
-              active: presenter.owedOnly,
-              onTap: toggleOwed,
-            ),
-            const Divider(height: 8),
-          ],
-          _CategoryFilterTile(
-            label: 'All categories',
-            selected: presenter.selectedCategoryId == null,
-            onTap: () => select(null),
+    return ListenableBuilder(
+      listenable: presenter,
+      builder: (context, _) {
+        final expense = presenter.categories
+            .where((c) => c.type == CategoryType.expense)
+            .toList();
+        final income = presenter.categories
+            .where((c) => c.type == CategoryType.income)
+            .toList();
+        return SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const _FilterHeading('Month'),
+              _SelectChip(
+                label: monthLabel(presenter.selectedMonth),
+                selected: false,
+                onTap: () => _pickLedgerMonth(context, presenter),
+              ),
+              const SizedBox(height: 16),
+              const _FilterHeading('Sort by'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _SelectChip(
+                    label: 'Newest',
+                    selected: presenter.sortField == LedgerSortField.date &&
+                        presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.date,
+                        descending: true),
+                  ),
+                  _SelectChip(
+                    label: 'Oldest',
+                    selected: presenter.sortField == LedgerSortField.date &&
+                        !presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.date,
+                        descending: false),
+                  ),
+                  _SelectChip(
+                    label: 'Largest',
+                    selected: presenter.sortField == LedgerSortField.amount &&
+                        presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.amount,
+                        descending: true),
+                  ),
+                  _SelectChip(
+                    label: 'Smallest',
+                    selected: presenter.sortField == LedgerSortField.amount &&
+                        !presenter.sortDescending,
+                    onTap: () => presenter.setSort(LedgerSortField.amount,
+                        descending: false),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const _FilterHeading('Day'),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _SelectChip(
+                    label: 'Any day',
+                    selected: presenter.selectedDate == null,
+                    onTap: () => presenter.setSelectedDate(null),
+                  ),
+                  _SelectChip(
+                    label: presenter.selectedDate != null
+                        ? _filterChipFmt.format(presenter.selectedDate!)
+                        : 'Pick a day…',
+                    selected: presenter.selectedDate != null,
+                    onTap: () => _pickLedgerDay(context, presenter),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              if (presenter.hasOutstandingOwed || presenter.owedOnly) ...[
+                const _FilterHeading('Money owed to you'),
+                _SelectChip(
+                  label: 'Owed: ${formatPeso(presenter.outstandingOwedTotal)}',
+                  selected: presenter.owedOnly,
+                  onTap: () => presenter.setOwedFilter(!presenter.owedOnly),
+                ),
+                const SizedBox(height: 16),
+              ],
+              // Accounts + Categories always show (with an empty hint) so the
+              // filter dimensions are never a mystery — even before any account
+              // or category exists on this device.
+              const _FilterHeading('Accounts'),
+              if (presenter.accounts.isEmpty)
+                const _FilterEmptyHint('No accounts yet')
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final a in presenter.accounts)
+                      _SelectChip(
+                        label: a.name,
+                        selected: presenter.selectedAccountIds.contains(a.id),
+                        onTap: () => presenter.toggleAccountFilter(a.id),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 16),
+              const _FilterHeading('Categories'),
+              if (expense.isEmpty && income.isEmpty)
+                const _FilterEmptyHint('No categories yet')
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (final c in [...expense, ...income])
+                      _SelectChip(
+                        label: c.name,
+                        dotColor: resolveSliceColor(c.colorHex, 0,
+                            brightness: brightness),
+                        selected: presenter.selectedCategoryIds.contains(c.id),
+                        onTap: () => presenter.toggleCategoryFilter(c.id),
+                      ),
+                  ],
+                ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppSecondaryButton(
+                      label: 'Clear all',
+                      onPressed: presenter.activeFilterCount == 0
+                          ? null
+                          : presenter.clearAllFilters,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: AppPrimaryButton(
+                      label: 'Done',
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          if (expense.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            AppSection(
-              title: 'Expense',
-              child: Column(
-                children: [
-                  for (final c in expense)
-                    _CategoryFilterTile(
-                      key: ValueKey(c.id),
-                      label: c.name,
-                      dotColor: resolveSliceColor(c.colorHex, 0,
-                          brightness: brightness),
-                      selected: presenter.selectedCategoryId == c.id,
-                      onTap: () => select(c.id),
-                    ),
-                ],
-              ),
+        );
+      },
+    );
+  }
+}
+
+class _FilterHeading extends StatelessWidget {
+  final String text;
+  const _FilterHeading(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Text(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: context.appColors.textMuted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
             ),
-          ],
-          if (income.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            AppSection(
-              title: 'Income',
-              child: Column(
-                children: [
-                  for (final c in income)
-                    _CategoryFilterTile(
-                      key: ValueKey(c.id),
-                      label: c.name,
-                      dotColor: resolveSliceColor(c.colorHex, 0,
-                          brightness: brightness),
-                      selected: presenter.selectedCategoryId == c.id,
-                      onTap: () => select(c.id),
-                    ),
-                ],
-              ),
-            ),
-          ],
-          if (expense.isEmpty && income.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: AppEmptyState(
-                icon: Icons.label_off_outlined,
-                title: 'No categories yet',
-                body: 'Add categories to filter your transactions by them.',
-              ),
-            ),
-        ],
       ),
     );
   }
 }
 
-class _CategoryFilterTile extends StatelessWidget {
+class _FilterEmptyHint extends StatelessWidget {
+  final String text;
+  const _FilterEmptyHint(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: context.appColors.textMuted,
+            ),
+      ),
+    );
+  }
+}
+
+class _SelectChip extends StatelessWidget {
   final String label;
   final Color? dotColor;
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryFilterTile({
-    super.key,
+  const _SelectChip({
     required this.label,
     this.dotColor,
     required this.selected,
@@ -733,214 +913,130 @@ class _CategoryFilterTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (dotColor != null) ...[
               Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: dotColor ?? cs.onSurfaceVariant,
-                  shape:
-                      dotColor != null ? BoxShape.circle : BoxShape.rectangle,
-                  borderRadius:
-                      dotColor == null ? BorderRadius.circular(3) : null,
-                ),
-                child: dotColor == null
-                    ? Icon(Icons.clear_all_rounded, size: 12, color: cs.surface)
-                    : null,
+                width: 9,
+                height: 9,
+                decoration:
+                    BoxDecoration(color: dotColor, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                    color: selected ? cs.primary : cs.onSurface,
-                  ),
-                ),
-              ),
-              if (selected)
-                Icon(Icons.check_rounded, size: 18, color: cs.primary),
+              const SizedBox(width: 7),
             ],
-          ),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? cs.primary : cs.onSurface,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.check_rounded, size: 14, color: cs.primary),
+            ],
+          ],
         ),
       ),
     );
   }
 }
 
-class _AccountPill extends StatelessWidget {
-  final String label;
-  final IconData? icon;
-  final bool selected;
-  final VoidCallback onTap;
+// ── Month / Year Switcher ────────────────────────────────────────────────────
 
-  const _AccountPill({
-    required this.label,
-    this.icon,
-    required this.selected,
-    required this.onTap,
-  });
+/// A tappable month/year pill (reference, top-right) that opens a month-grid
+/// popover with year navigation — pick any month the way you'd pick a day on the
+/// calendar. Lives on the right of [_LedgerControlsRow], in line with the filter
+/// pill.
+class _MonthPill extends StatefulWidget {
+  final LedgerPresenter presenter;
+
+  const _MonthPill({required this.presenter});
+
+  @override
+  State<_MonthPill> createState() => _MonthPillState();
+}
+
+class _MonthPillState extends State<_MonthPill> {
+  final _pillKey = GlobalKey();
+
+  Future<void> _openPicker() async {
+    HapticFeedback.selectionClick();
+    final box = _pillKey.currentContext?.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final topOffset = offset.dy + box.size.height + 8;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.25),
+      builder: (ctx) => _MonthPickerPopover(
+        presenter: widget.presenter,
+        topOffset: topOffset,
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          onTap();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 0),
-          decoration: BoxDecoration(
-            color: selected
-                ? cs.primary.withValues(alpha: 0.15)
-                : cs.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: selected ? cs.primary : cs.outlineVariant,
-            ),
+    return GestureDetector(
+      key: _pillKey,
+      onTap: _openPicker,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.6),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon,
-                    size: 13,
-                    color: selected ? cs.primary : cs.onSurfaceVariant),
-                const SizedBox(width: 5),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: selected ? cs.primary : cs.onSurfaceVariant,
-                ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              monthLabel(widget.presenter.selectedMonth),
+              style: TextStyle(
+                color: cs.onSurface,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.keyboard_arrow_down_rounded,
+                color: cs.onSurfaceVariant, size: 16),
+          ],
         ),
       ),
     );
   }
 }
 
-// ── Month Selector ──────────────────────────────────────────────────────────
-
-class _MonthSelectorRow extends StatefulWidget {
-  final LedgerPresenter presenter;
-
-  const _MonthSelectorRow({required this.presenter});
-
-  @override
-  State<_MonthSelectorRow> createState() => _MonthSelectorRowState();
-}
-
-class _MonthSelectorRowState extends State<_MonthSelectorRow> {
-  final _labelKey = GlobalKey();
-
-  Future<void> _showCalendarPopover() async {
-    HapticFeedback.selectionClick();
-    final box = _labelKey.currentContext?.findRenderObject() as RenderBox?;
-    if (box == null) return;
-    final offset = box.localToGlobal(Offset.zero);
-    final size = box.size;
-    final topOffset = offset.dy + size.height + 6;
-
-    await showDialog<void>(
-      context: context,
-      barrierColor: Colors.transparent,
-      builder: (dialogContext) => _CalendarPopover(
-        presenter: widget.presenter,
-        topOffset: topOffset,
-        onDismiss: () => Navigator.of(dialogContext).pop(),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    return Container(
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter.stepDay(-1),
-            ),
-          ),
-          Expanded(
-            child: Center(
-              child: GestureDetector(
-                key: _labelKey,
-                onTap: _showCalendarPopover,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      widget.presenter.selectedDate != null
-                          ? _dateFilterFmt
-                              .format(widget.presenter.selectedDate!)
-                          : monthLabel(widget.presenter.selectedMonth),
-                      style: TextStyle(
-                        color: cs.onSurface,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(width: 2),
-                    Icon(
-                      Icons.arrow_drop_down_rounded,
-                      color: cs.onSurfaceVariant,
-                      size: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
-              onPressed: () => widget.presenter.stepDay(1),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Calendar Popover ─────────────────────────────────────────────────────────
-
-class _CalendarPopover extends StatelessWidget {
+/// Anchored popover: a year header (‹ 2026 ›) + a 3-column grid of the twelve
+/// months. Selecting a month sets it and closes.
+class _MonthPickerPopover extends StatelessWidget {
   final LedgerPresenter presenter;
   final double topOffset;
   final VoidCallback onDismiss;
 
-  const _CalendarPopover({
+  const _MonthPickerPopover({
     required this.presenter,
     required this.topOffset,
     required this.onDismiss,
@@ -954,39 +1050,11 @@ class _CalendarPopover extends StatelessWidget {
       child: Align(
         alignment: Alignment.topCenter,
         child: GestureDetector(
-          // Swallow taps inside so they don't propagate to the dismiss handler
           onTap: () {},
           child: Container(
+            width: 300,
             margin: EdgeInsets.only(top: topOffset, left: 12, right: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .shadow
-                      .withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: SpendingCalendar(
-              presenter: presenter,
-              onDaySelected: (day) {
-                HapticFeedback.selectionClick();
-                final current = presenter.selectedDate;
-                if (current != null &&
-                    current.year == day.year &&
-                    current.month == day.month &&
-                    current.day == day.day) {
-                  presenter.setSelectedDate(null);
-                } else {
-                  presenter.setSelectedDate(day);
-                }
-                onDismiss();
-              },
-            ),
+            child: _MonthGridPicker(presenter: presenter, onPicked: onDismiss),
           ),
         ),
       ),
@@ -994,49 +1062,94 @@ class _CalendarPopover extends StatelessWidget {
   }
 }
 
-// ── Date Filter Chip ─────────────────────────────────────────────────────────
+/// Year header (‹ 2026 ›) + a 3-column grid of the twelve months. Selecting a
+/// month sets it on the presenter and calls [onPicked]. Reused by the header
+/// popover and the Filter & sort sheet's Month control.
+class _MonthGridPicker extends StatefulWidget {
+  final LedgerPresenter presenter;
+  final VoidCallback onPicked;
 
-class _DateFilterChip extends StatelessWidget {
-  final DateTime date;
-  final VoidCallback onClear;
+  const _MonthGridPicker({required this.presenter, required this.onPicked});
 
-  const _DateFilterChip({required this.date, required this.onClear});
+  @override
+  State<_MonthGridPicker> createState() => _MonthGridPickerState();
+}
+
+class _MonthGridPickerState extends State<_MonthGridPicker> {
+  late int _year;
+  late final int _selYear;
+  late final int _selMonth;
+
+  @override
+  void initState() {
+    super.initState();
+    final parts = widget.presenter.selectedMonth.split('-');
+    _selYear = int.parse(parts[0]);
+    _selMonth = int.parse(parts[1]);
+    _year = _selYear;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-      child: Row(
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final now = DateTime.now();
+    return AppCard(
+      variant: AppCardVariant.elevated,
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 14),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.calendar_today_outlined,
-                    size: 12, color: cs.primary),
-                const SizedBox(width: 6),
-                Text(
-                  'Filtered: ${_filterChipFmt.format(date)}',
-                  style: TextStyle(
-                    color: cs.primary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
+          Row(
+            children: [
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: IconButton(
+                  icon: Icon(Icons.chevron_left, color: cs.onSurfaceVariant),
+                  tooltip: 'Previous year',
+                  onPressed: () => setState(() => _year--),
                 ),
-                const SizedBox(width: 6),
-                GestureDetector(
-                  onTap: onClear,
-                  child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text('$_year',
+                      style: theme.textTheme.titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w800)),
                 ),
-              ],
-            ),
+              ),
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: IconButton(
+                  icon: Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+                  tooltip: 'Next year',
+                  onPressed: () => setState(() => _year++),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 3,
+            childAspectRatio: 2.2,
+            mainAxisSpacing: 8,
+            crossAxisSpacing: 8,
+            children: [
+              for (var m = 1; m <= 12; m++)
+                _MonthCell(
+                  label: DateFormat('MMM').format(DateTime(_year, m)),
+                  selected: _year == _selYear && m == _selMonth,
+                  isCurrent: _year == now.year && m == now.month,
+                  onTap: () {
+                    widget.presenter
+                        .setMonth('$_year-${m.toString().padLeft(2, '0')}');
+                    widget.onPicked();
+                  },
+                ),
+            ],
           ),
         ],
       ),
@@ -1044,112 +1157,48 @@ class _DateFilterChip extends StatelessWidget {
   }
 }
 
-// ── Owed Filter Chip ───────────────────────────────────────────────────────
-
-/// Tappable chip surfacing money you're still owed this month (reimbursable
-/// expenses not yet paid back). Tapping toggles a filter to just those rows.
-/// Owed-filter row inside the category picker. Toggles [LedgerPresenter.owedOnly]
-/// and reads as a sibling option to the category list. Styled like
-/// [_CategoryFilterTile] but tinted tertiary to match the "money owed" accent.
-class _OwedFilterTile extends StatelessWidget {
-  final double total;
-  final bool active;
+class _MonthCell extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final bool isCurrent;
   final VoidCallback onTap;
 
-  const _OwedFilterTile({
-    required this.total,
-    required this.active,
+  const _MonthCell({
+    required this.label,
+    required this.selected,
+    required this.isCurrent,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fg = active ? cs.tertiary : cs.onSurface;
-    return Semantics(
-      selected: active,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 16,
-                color: active ? cs.tertiary : cs.onSurfaceVariant,
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Owed to you: ${formatPeso(total)}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                    color: fg,
-                  ),
-                ),
-              ),
-              if (active)
-                Icon(Icons.check_rounded, size: 18, color: cs.tertiary),
-            ],
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: selected
+              ? cs.primary.withValues(alpha: 0.15)
+              : cs.surfaceContainerHigh,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected
+                ? cs.primary
+                : (isCurrent
+                    ? cs.primary.withValues(alpha: 0.5)
+                    : cs.outlineVariant.withValues(alpha: 0.5)),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Compact active-state chip for the filter row, shown only while the owed
-/// filter is on. Tapping anywhere clears it. Mirrors [_CategoryActiveChip].
-class _OwedActiveChip extends StatelessWidget {
-  final double total;
-  final VoidCallback onClear;
-
-  const _OwedActiveChip({required this.total, required this.onClear});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: Semantics(
-        label: 'Clear owed filter',
-        button: true,
-        child: GestureDetector(
-          onTap: () {
-            HapticFeedback.selectionClick();
-            onClear();
-          },
-          child: Container(
-            padding: const EdgeInsets.only(left: 12, right: 8),
-            decoration: BoxDecoration(
-              color: cs.tertiaryContainer,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: cs.tertiary.withValues(alpha: 0.4)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.account_balance_wallet_outlined,
-                    size: 12, color: cs.onTertiaryContainer),
-                const SizedBox(width: 6),
-                Text(
-                  'Owed: ${formatPeso(total)}',
-                  style: TextStyle(
-                    color: cs.onTertiaryContainer,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: 6),
-                Icon(Icons.close_rounded,
-                    size: 14, color: cs.onTertiaryContainer),
-              ],
-            ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+            color: selected ? cs.primary : cs.onSurface,
           ),
         ),
       ),
@@ -1159,101 +1208,48 @@ class _OwedActiveChip extends StatelessWidget {
 
 // ── Summary Card ─────────────────────────────────────────────────────────────
 
-class _SummaryCard extends StatelessWidget {
-  final LedgerPresenter presenter;
-
-  const _SummaryCard({required this.presenter});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final inflow = presenter.filteredMonthInflow;
-    final outflow = presenter.filteredMonthOutflow;
-    final net = presenter.filteredMonthNet;
-    final netColor = net >= 0 ? cs.tertiary : cs.error;
-    final netPrefix = net >= 0 ? '+' : '';
-
-    return Container(
-      width: double.infinity,
-      color: theme.scaffoldBackgroundColor,
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-      child: Row(
-        children: [
-          _SummaryChip(
-            label: 'Income',
-            value: formatPeso(inflow),
-            color: cs.tertiary,
-          ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Expenses',
-            value: formatPeso(outflow),
-            color: cs.error,
-          ),
-          const SizedBox(width: 8),
-          _SummaryChip(
-            label: 'Net',
-            value: '$netPrefix${formatPeso(net.abs())}',
-            color: netColor,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SummaryChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final Color color;
-
-  const _SummaryChip({
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: AppTextStyles.mono(
-                textStyle: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 12,
-                ),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── Transaction List ─────────────────────────────────────────────────────────
+
+/// Builds one transaction row — account/category resolved, swipe-to-delete with
+/// undo. Shared by the day-grouped list and the flat (amount-sorted) list.
+Widget _buildTxnTile(
+  BuildContext context,
+  LedgerPresenter presenter,
+  TransactionRecord txn,
+  void Function(TransactionRecord txn) onEdit,
+) {
+  final account =
+      presenter.accounts.where((a) => a.id == txn.accountId).firstOrNull;
+  final category =
+      presenter.categories.where((c) => c.id == txn.categoryId).firstOrNull;
+  final idx = presenter.accounts.indexWhere((a) => a.id == txn.accountId);
+  final accountColor = idx < 0
+      ? null
+      : resolveSliceColor(presenter.accounts[idx].colorHex, idx,
+          brightness: Theme.of(context).brightness);
+  // Reference "no background" rows: no per-row card fill — rows sit directly on
+  // the screen background, separated only by the list tile's own padding. Swipe
+  // -to-delete + undo is preserved by TransactionListTile's onDelete.
+  return TransactionListTile(
+    key: ValueKey(txn.id),
+    txn: txn,
+    account: account,
+    accountColor: accountColor,
+    category: category,
+    onTap: () => onEdit(txn),
+    onDelete: () {
+      HapticFeedback.mediumImpact();
+      final deleted = txn;
+      presenter.deleteTransaction(deleted.id);
+      AppToast.action(
+        context,
+        message: 'Deleted "${deleted.description}"',
+        actionLabel: 'Undo',
+        onAction: () => presenter.restoreTransaction(deleted),
+      );
+    },
+  );
+}
 
 class _TransactionList extends StatelessWidget {
   final LedgerPresenter presenter;
@@ -1264,29 +1260,39 @@ class _TransactionList extends StatelessWidget {
     required this.onEditTransaction,
   });
 
+  static const _empty = AppEmptyState(
+    icon: Icons.receipt_long_outlined,
+    title: 'No transactions this month',
+    body: 'Tap + to log your first one',
+  );
+
   @override
   Widget build(BuildContext context) {
-    final grouped = presenter.groupedTransactions;
-
-    if (grouped.isEmpty) {
-      return const AppEmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'No transactions this month',
-        body: 'Tap + to log your first one',
+    // Amount sort → a flat list ordered by amount (day grouping doesn't apply).
+    if (presenter.sortField == LedgerSortField.amount) {
+      final txns = presenter.sortedTransactions;
+      if (txns.isEmpty) return _empty;
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 100),
+        itemCount: txns.length,
+        itemBuilder: (context, i) =>
+            _buildTxnTile(context, presenter, txns[i], onEditTransaction),
       );
     }
 
-    final sortedDates = grouped.keys.toList()..sort((a, b) => b.compareTo(a));
+    // Date sort → day-grouped; the presenter already ordered the day keys.
+    final grouped = presenter.groupedTransactions;
+    if (grouped.isEmpty) return _empty;
+    final dates = grouped.keys.toList();
 
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: 100),
-      itemCount: sortedDates.length,
+      itemCount: dates.length,
       itemBuilder: (context, index) {
-        final date = sortedDates[index];
-        final txns = grouped[date]!;
+        final date = dates[index];
         return _DateGroup(
           date: date,
-          transactions: txns,
+          transactions: grouped[date]!,
           presenter: presenter,
           onEditTransaction: onEditTransaction,
         );
@@ -1318,34 +1324,6 @@ class _DateGroup extends StatelessWidget {
             TransactionType.transfer => sum,
           });
 
-  FinancialAccount? _findAccount(String id) {
-    try {
-      return presenter.accounts.firstWhere((a) => a.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  FinanceCategory? _findCategory(String id) {
-    try {
-      return presenter.categories.firstWhere((c) => c.id == id);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Resolves an account's swatch color (palette-indexed, brightness-aware)
-  /// for the subtitle dot. Null when the account is unknown.
-  Color? _accountColor(BuildContext context, String id) {
-    final idx = presenter.accounts.indexWhere((a) => a.id == id);
-    if (idx < 0) return null;
-    return resolveSliceColor(
-      presenter.accounts[idx].colorHex,
-      idx,
-      brightness: Theme.of(context).brightness,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -1356,34 +1334,8 @@ class _DateGroup extends StatelessWidget {
         padding: const EdgeInsets.only(top: 14, bottom: 4),
         child: Column(
           children: [
-            ...transactions.map(
-              (txn) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: AppCard(
-                  variant: AppCardVariant.filled,
-                  padding: EdgeInsets.zero,
-                  child: TransactionListTile(
-                    key: ValueKey(txn.id),
-                    txn: txn,
-                    account: _findAccount(txn.accountId),
-                    accountColor: _accountColor(context, txn.accountId),
-                    category: _findCategory(txn.categoryId),
-                    onTap: () => onEditTransaction(txn),
-                    onDelete: () {
-                      HapticFeedback.mediumImpact();
-                      final deleted = txn;
-                      presenter.deleteTransaction(deleted.id);
-                      AppToast.action(
-                        context,
-                        message: 'Deleted "${deleted.description}"',
-                        actionLabel: 'Undo',
-                        onAction: () => presenter.restoreTransaction(deleted),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ),
+            ...transactions.map((txn) =>
+                _buildTxnTile(context, presenter, txn, onEditTransaction)),
             const SizedBox(height: 4),
           ],
         ),
@@ -1431,17 +1383,14 @@ class _DailyNetBadge extends StatelessWidget {
         : dailyNet < 0
             ? cs.error
             : cs.onSurfaceVariant;
-    final prefix = dailyNet > 0 ? '+' : '';
+    // Sign the value explicitly (U+2212 minus) — a negative day used to read as
+    // a plain figure distinguished only by color.
+    final prefix = dailyNet > 0 ? '+' : (dailyNet < 0 ? '−' : '');
 
     return Text(
       '$prefix${formatPeso(dailyNet.abs())}',
-      style: AppTextStyles.mono(
-        textStyle: TextStyle(
-          color: netColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
+      style: AppTextStyles.numeric(fontSize: 11, weight: FontWeight.w600)
+          .copyWith(color: netColor),
     );
   }
 }

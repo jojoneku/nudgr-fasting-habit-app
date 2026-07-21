@@ -879,21 +879,25 @@ class _GoalSheetState extends State<_GoalSheet> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextField(
-                    controller: _stepsCtrl,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    decoration: const InputDecoration(labelText: 'Steps'),
-                    autofocus: true,
+                  LabeledField(
+                    label: 'Steps',
+                    child: TextField(
+                      controller: _stepsCtrl,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      autofocus: true,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  TextField(
-                    controller: _distCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
-                      labelText: 'Distance (km)',
-                      hintText: 'e.g. 5.0',
+                  LabeledField(
+                    label: 'Distance (km)',
+                    child: TextField(
+                      controller: _distCtrl,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        hintText: 'e.g. 5.0',
+                      ),
                     ),
                   ),
                   if (sources.isNotEmpty) ...[
@@ -1034,13 +1038,14 @@ class _ManualEntrySheetState extends State<_ManualEntrySheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              TextField(
-                controller: _ctrl,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration:
-                    const InputDecoration(labelText: 'Steps taken today'),
-                autofocus: true,
+              LabeledField(
+                label: 'Steps taken today',
+                child: TextField(
+                  controller: _ctrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  autofocus: true,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               AppPrimaryButton(label: 'Save', onPressed: _save),

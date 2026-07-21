@@ -601,15 +601,17 @@ class _AddEntrySheetState extends State<_AddEntrySheet> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        TextField(
-          controller: _ctrl,
-          autofocus: true,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _save(),
-          decoration: const InputDecoration(
-            labelText: 'Weight (kg)',
-            border: OutlineInputBorder(),
+        LabeledField(
+          label: 'Weight (kg)',
+          child: TextField(
+            controller: _ctrl,
+            autofocus: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _save(),
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+            ),
           ),
         ),
         const SizedBox(height: 16),

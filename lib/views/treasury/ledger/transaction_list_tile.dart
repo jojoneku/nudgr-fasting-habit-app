@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class TransactionListTile extends StatelessWidget {
@@ -26,17 +27,20 @@ class TransactionListTile extends StatelessWidget {
     this.onDelete,
   });
 
+  // Amount coloring stays semantic (spec §4): income green, expense red,
+  // transfer neutral grey — so the red/green scan reads on every row.
   Color _typeColor(ColorScheme cs) => switch (txn.type) {
         TransactionType.inflow => cs.tertiary,
         TransactionType.outflow => cs.error,
-        TransactionType.transfer => cs.primary,
+        TransactionType.transfer => cs.onSurfaceVariant,
       };
 
   String get _amountText {
     final f = formatPeso(txn.amount);
     return switch (txn.type) {
       TransactionType.inflow => '+$f',
-      TransactionType.outflow => '-$f',
+      // U+2212 minus (matches the IN/OUT/NET strip and daily-net badge).
+      TransactionType.outflow => '−$f',
       TransactionType.transfer => f,
     };
   }
@@ -49,11 +53,6 @@ class TransactionListTile extends StatelessWidget {
     }
   }
 
-  IconData _categoryIcon() {
-    if (txn.type == TransactionType.transfer) return Icons.swap_horiz_rounded;
-    return Icons.label_outline_rounded;
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -64,33 +63,42 @@ class TransactionListTile extends StatelessWidget {
     final categoryLabel =
         isTransfer ? 'Transfer' : (category?.name ?? 'Uncategorized');
     final accountLabel = account?.name ?? '';
+    // The colored category icon now carries the category identity, so the row
+    // subtitle is the account name only (spec §4). When a txn has no account we
+    // fall back to the category label so the subtitle is never blank. The
+    // account color dot (kept from the pre-redesign row) precedes the account
+    // name so accounts stay distinguishable at a glance.
+    final subtitleText = accountLabel.isNotEmpty ? accountLabel : categoryLabel;
     final showAccountDot = accountLabel.isNotEmpty && accountColor != null;
 
     return Semantics(
       label: '${txn.description}, $_amountText, $accountLabel',
       child: AppListTile(
         key: key,
-        leading: AppIconBadge(
-          icon: _categoryIcon(),
-          color: catColor,
-          size: 44,
-          iconSize: 20,
-        ),
+        leading: isTransfer
+            ? AppIconBadge(
+                icon: Icons.swap_horiz_rounded,
+                color: catColor,
+                size: 40,
+                iconSize: 18,
+              )
+            : CategoryBadge(
+                iconKey: category?.icon,
+                name: category?.name,
+                type: category?.type ?? CategoryType.expense,
+                color: catColor,
+                size: 40,
+                iconSize: 18,
+              ),
         title: Text(
           txn.description,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600),
         ),
         subtitle: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Flexible(
-              child: Text(
-                accountLabel.isEmpty ? categoryLabel : '$categoryLabel · ',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
             if (showAccountDot) ...[
               Container(
                 width: 8,
@@ -102,14 +110,14 @@ class TransactionListTile extends StatelessWidget {
               ),
               const SizedBox(width: 6),
             ],
-            if (accountLabel.isNotEmpty)
-              Flexible(
-                child: Text(
-                  accountLabel,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+            Flexible(
+              child: Text(
+                subtitleText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
               ),
+            ),
           ],
         ),
         trailing: AppNumberDisplay(

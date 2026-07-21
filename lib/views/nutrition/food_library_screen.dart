@@ -9,6 +9,31 @@ import '../../models/personal_food_entry.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
 
+/// Shared "Nudgr redesign" row/card surface — top-right→bottom-left gradient,
+/// hairline [outlineVariant] border, generous corner radius.
+BoxDecoration _rowSurface(
+  ColorScheme cs, {
+  double radius = 18,
+  Color? borderColor,
+}) =>
+    BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topRight,
+        end: Alignment.bottomLeft,
+        colors: [cs.surfaceContainerHigh, cs.surfaceContainerLow],
+      ),
+      borderRadius: BorderRadius.circular(radius),
+      border: Border.all(color: borderColor ?? cs.outlineVariant),
+    );
+
+/// Uppercase micro-label used for row sublabels and section hints.
+TextStyle _microLabel(ColorScheme cs) => TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 1.0,
+      color: cs.onSurfaceVariant,
+    );
+
 class FoodLibraryScreen extends StatelessWidget {
   final NutritionPresenter presenter;
   const FoodLibraryScreen({super.key, required this.presenter});
@@ -106,18 +131,27 @@ class _EmptyLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: cs.outlineVariant),
+      ),
       child: Row(
         children: [
-          Icon(Icons.inbox_outlined,
-              color: Theme.of(context).colorScheme.onSurfaceVariant, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            text,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-              fontSize: 12,
+          Icon(Icons.inbox_outlined, color: cs.onSurfaceVariant, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                color: cs.onSurfaceVariant,
+                fontSize: 12.5,
+                height: 1.3,
+              ),
             ),
           ),
         ],
@@ -133,18 +167,22 @@ class _CreateTemplateFab extends StatelessWidget {
   const _CreateTemplateFab({required this.presenter});
 
   @override
-  Widget build(BuildContext context) => FloatingActionButton.extended(
-        onPressed: () => showModalBottomSheet(
-          context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => _CreateTemplateSheet(presenter: presenter),
-        ),
-        icon: const Icon(Icons.add, size: 20),
-        label: const Text('New Template',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      );
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FloatingActionButton.extended(
+      onPressed: () => AppBottomSheet.show(
+        context: context,
+        title: 'New Template',
+        body: _CreateTemplateSheet(presenter: presenter),
+      ),
+      backgroundColor: cs.primary,
+      foregroundColor: cs.onPrimary,
+      icon: const Icon(Icons.add, size: 20),
+      label: const Text('New Template',
+          style: TextStyle(fontWeight: FontWeight.w700)),
+      shape: const StadiumBorder(),
+    );
+  }
 }
 
 // ── Create template sheet ──────────────────────────────────────────────────────
@@ -207,11 +245,10 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
 
   void _onResultTapped(FoodDbEntry entry) {
     HapticFeedback.selectionClick();
-    showModalBottomSheet(
+    AppBottomSheet.show(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _GramPickerSheet(
+      title: entry.name,
+      body: _GramPickerSheet(
         entry: entry,
         onConfirm: (grams) {
           final foodEntry = entry.toFoodEntry(grams);
@@ -254,102 +291,66 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final cs = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      constraints: BoxConstraints(maxHeight: screenHeight * 0.88),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildHandle(),
-          _buildHeader(),
-          const SizedBox(height: 12),
-          _buildNameField(),
-          const SizedBox(height: 12),
-          if (_items.isNotEmpty) _buildItemsList(),
-          _buildSearchField(),
-          if (_isSearching)
-            LinearProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
-              backgroundColor: Colors.transparent,
-              minHeight: 2,
-            ),
-          if (_searchResults.isNotEmpty) _buildSearchResults(),
-          if (_searchResults.isEmpty &&
-              _searchCtrl.text.isEmpty &&
-              _items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-              child: Text(
-                'Search for foods to add to your template',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_items.isNotEmpty) ...[
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(
+              '$_totalCalories kcal',
+              style: TextStyle(
+                color: context.appColors.gold,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          _buildSaveButton(bottomPad),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHandle() => Padding(
-        padding: const EdgeInsets.only(top: 10),
-        child: Container(
-          width: 36,
-          height: 4,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.outlineVariant,
-            borderRadius: BorderRadius.circular(2),
           ),
-        ),
-      );
-
-  Widget _buildHeader() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-        child: Row(
-          children: [
-            Text(
-              'New Template',
-              style: Theme.of(context)
-                  .textTheme
-                  .titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const Spacer(),
-            if (_items.isNotEmpty)
-              Text(
-                '$_totalCalories kcal',
-                style: TextStyle(
-                    color: context.appColors.gold,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600),
-              ),
-          ],
-        ),
-      );
-
-  Widget _buildNameField() => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: AppTextField(
+          const SizedBox(height: 8),
+        ],
+        AppTextField(
           controller: _nameCtrl,
           hint: 'Template name (e.g. Pre-workout meal)',
           onChanged: (_) => setState(() {}),
         ),
-      );
+        const SizedBox(height: 12),
+        if (_items.isNotEmpty) _buildItemsList(),
+        _buildSearchField(),
+        if (_isSearching)
+          LinearProgressIndicator(
+            color: cs.primary,
+            backgroundColor: Colors.transparent,
+            minHeight: 2,
+          ),
+        if (_searchResults.isNotEmpty) _buildSearchResults(),
+        if (_searchResults.isEmpty &&
+            _searchCtrl.text.isEmpty &&
+            _items.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 4),
+            child: Text(
+              'Search for foods to add to your template',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+          ),
+        const SizedBox(height: 12),
+        AppPrimaryButton(
+          label: 'Save Template',
+          isLoading: _isSaving,
+          onPressed: _canSave && !_isSaving ? _save : null,
+        ),
+      ],
+    );
+  }
 
   Widget _buildItemsList() => ConstrainedBox(
         constraints: const BoxConstraints(maxHeight: 200),
         child: ListView.builder(
           shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+          padding: const EdgeInsets.only(bottom: 4),
           itemCount: _items.length,
           itemBuilder: (_, i) => _ItemChip(
             entry: _items[i],
@@ -359,7 +360,7 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
       );
 
   Widget _buildSearchField() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
+        padding: const EdgeInsets.only(top: 8, bottom: 4),
         child: AppTextField(
           controller: _searchCtrl,
           focusNode: _searchFocus,
@@ -377,60 +378,48 @@ class _CreateTemplateSheetState extends State<_CreateTemplateSheet> {
         constraints: const BoxConstraints(maxHeight: 220),
         child: ListView.builder(
           shrinkWrap: true,
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 4),
+          padding: const EdgeInsets.only(bottom: 4),
           itemCount: _searchResults.length,
           itemBuilder: (_, i) {
             final entry = _searchResults[i];
-            return InkWell(
-              onTap: () => _onResultTapped(entry),
-              borderRadius: BorderRadius.circular(10),
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 6),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        entry.name,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
+            final cs = Theme.of(context).colorScheme;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => _onResultTapped(entry),
+                  borderRadius: BorderRadius.circular(18),
+                  child: Ink(
+                    decoration: _rowSurface(cs),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            entry.name,
+                            style: TextStyle(
+                              color: cs.onSurface,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                        const SizedBox(width: 8),
+                        Text(entry.densityLabel, style: _microLabel(cs)),
+                        const SizedBox(width: 6),
+                        Icon(Icons.add_circle_outline,
+                            color: cs.primary, size: 18),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      entry.densityLabel,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.add_circle_outline,
-                        color: Theme.of(context).colorScheme.primary, size: 18),
-                  ],
+                  ),
                 ),
               ),
             );
           },
-        ),
-      );
-
-  Widget _buildSaveButton(double bottomPad) => Padding(
-        padding: EdgeInsets.fromLTRB(20, 8, 20, 20 + bottomPad),
-        child: AppPrimaryButton(
-          label: 'Save Template',
-          isLoading: _isSaving,
-          onPressed: _canSave && !_isSaving ? _save : null,
         ),
       );
 }
@@ -469,117 +458,92 @@ class _GramPickerSheetState extends State<_GramPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
-    final theme = Theme.of(context);
+    final cs = Theme.of(context).colorScheme;
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.entry.name,
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(fontWeight: FontWeight.w600),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            widget.entry.densityLabel,
-            style: TextStyle(
-                color: theme.colorScheme.onSurfaceVariant, fontSize: 12),
-          ),
-          const SizedBox(height: 16),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _quickAmounts.map((g) {
-                final selected =
-                    _gramCtrl.text.trim() == g.toStringAsFixed(0) ||
-                        _gramCtrl.text.trim() == '${g.round()}';
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () =>
-                        setState(() => _gramCtrl.text = g.round().toString()),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                            : theme.colorScheme.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: selected
-                              ? theme.colorScheme.primary
-                              : Colors.transparent,
-                        ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.entry.densityLabel, style: _microLabel(cs)),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: _quickAmounts.map((g) {
+              final selected = _gramCtrl.text.trim() == g.toStringAsFixed(0) ||
+                  _gramCtrl.text.trim() == '${g.round()}';
+              return Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: GestureDetector(
+                  onTap: () =>
+                      setState(() => _gramCtrl.text = g.round().toString()),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? cs.primary.withValues(alpha: 0.15)
+                          : cs.surfaceContainerHigh,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: selected ? cs.primary : cs.outlineVariant,
                       ),
-                      child: Text(
-                        '${g.round()}g',
-                        style: TextStyle(
-                          color: selected
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    ),
+                    child: Text(
+                      '${g.round()}g',
+                      style: TextStyle(
+                        color: selected ? cs.primary : cs.onSurfaceVariant,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
-                );
-              }).toList(),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: ListenableBuilder(
+                listenable: _gramCtrl,
+                builder: (_, __) => AppTextField(
+                  controller: _gramCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  hint: 'Grams',
+                  suffix: const Text('g'),
+                  onChanged: (_) => setState(() {}),
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: _gramCtrl,
-                  builder: (_, __) => AppTextField(
-                    controller: _gramCtrl,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
-                    hint: 'Grams',
-                    suffix: const Text('g'),
-                    onChanged: (_) => setState(() {}),
-                  ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Text(
+                '$_previewCalories kcal',
+                style: TextStyle(
+                  color: context.appColors.gold,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '$_previewCalories kcal',
-                  style: TextStyle(
-                      color: context.appColors.gold,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          AppPrimaryButton(
-            label: 'Add to Template',
-            onPressed: _grams > 0 ? _confirm : null,
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        AppPrimaryButton(
+          label: 'Add to Template',
+          onPressed: _grams > 0 ? _confirm : null,
+        ),
+      ],
     );
   }
 }
@@ -594,6 +558,7 @@ class _ItemChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final macros = [
       if (entry.protein != null) 'P ${entry.protein!.round()}g',
       if (entry.carbs != null) 'C ${entry.carbs!.round()}g',
@@ -602,11 +567,8 @@ class _ItemChip extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: _rowSurface(cs),
       child: Row(
         children: [
           Expanded(
@@ -618,32 +580,33 @@ class _ItemChip extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall
-                      ?.copyWith(fontWeight: FontWeight.w500),
+                      ?.copyWith(fontWeight: FontWeight.w600),
                 ),
-                if (entry.grams != null)
+                if (entry.grams != null) ...[
+                  const SizedBox(height: 3),
                   Text(
-                    '${entry.grams!.round()}g${macros.isNotEmpty ? ' · $macros' : ''}',
-                    style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 11),
+                    '${entry.grams!.round()}g${macros.isNotEmpty ? ' · $macros' : ''}'
+                        .toUpperCase(),
+                    style: _microLabel(cs),
                   ),
+                ],
               ],
             ),
           ),
           Text(
             '${entry.calories} kcal',
             style: TextStyle(
-                color: context.appColors.gold,
-                fontSize: 12,
-                fontWeight: FontWeight.w600),
+              color: context.appColors.gold,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRemove,
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(Icons.close,
-                  color: theme.colorScheme.onSurfaceVariant, size: 16),
+              child: Icon(Icons.close, color: cs.onSurfaceVariant, size: 16),
             ),
           ),
         ],
@@ -666,74 +629,175 @@ class _LearnedFoodRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => _showEditDialog(context),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    entry.name,
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(fontWeight: FontWeight.w500),
+    final cs = theme.colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: () => _showEditDialog(context),
+          child: Ink(
+            decoration: _rowSurface(cs),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        entry.name,
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        '${entry.kcalPer100g.round()} kcal / 100g  ·  '
+                                '${entry.hits} ${entry.hits == 1 ? 'use' : 'uses'}'
+                            .toUpperCase(),
+                        style: _microLabel(cs),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${entry.kcalPer100g.round()} kcal / 100g  ·  '
-                    '${entry.hits} ${entry.hits == 1 ? 'use' : 'uses'}',
-                    style: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontSize: 11),
+                ),
+                SizedBox(
+                  width: 36,
+                  height: 44,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      color: cs.onSurfaceVariant,
+                      size: 18,
+                    ),
+                    tooltip: 'Edit macros',
+                    onPressed: () => _showEditDialog(context),
                   ),
-                ],
-              ),
-            ),
-            SizedBox(
-              width: 36,
-              height: 44,
-              child: IconButton(
-                icon: Icon(
-                  Icons.edit_outlined,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  size: 18,
                 ),
-                tooltip: 'Edit macros',
-                onPressed: () => _showEditDialog(context),
-              ),
-            ),
-            SizedBox(
-              width: 36,
-              height: 44,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close,
-                  color: theme.colorScheme.onSurfaceVariant,
-                  size: 18,
+                SizedBox(
+                  width: 36,
+                  height: 44,
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.close,
+                      color: cs.onSurfaceVariant,
+                      size: 18,
+                    ),
+                    tooltip: 'Remove from learned',
+                    onPressed: () => _confirmDelete(context),
+                  ),
                 ),
-                tooltip: 'Remove from learned',
-                onPressed: () => _confirmDelete(context),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
   Future<void> _showEditDialog(BuildContext context) async {
-    final updated = await showDialog<_EditedMacros>(
+    final kcalCtrl =
+        TextEditingController(text: entry.kcalPer100g.toStringAsFixed(0));
+    final proteinCtrl = TextEditingController(
+        text: entry.proteinPer100g?.toStringAsFixed(1) ?? '');
+    final carbsCtrl = TextEditingController(
+        text: entry.carbsPer100g?.toStringAsFixed(1) ?? '');
+    final fatCtrl =
+        TextEditingController(text: entry.fatPer100g?.toStringAsFixed(1) ?? '');
+    final errorNotifier = ValueNotifier<String?>(null);
+
+    double? parseOptional(String s) {
+      final t = s.trim();
+      if (t.isEmpty) return null;
+      return double.tryParse(t);
+    }
+
+    final updated = await AppDialog.show<_EditedMacros>(
       context: context,
-      builder: (_) => _EditMacrosDialog(entry: entry),
+      title: entry.name,
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Builder(
+              builder: (ctx) => Text('PER 100G',
+                  style: _microLabel(Theme.of(ctx).colorScheme)),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Calories (kcal)',
+              controller: kcalCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Protein (g)',
+              controller: proteinCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Carbs (g)',
+              controller: carbsCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            const SizedBox(height: 12),
+            AppTextField(
+              label: 'Fat (g)',
+              controller: fatCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+            ),
+            ValueListenableBuilder<String?>(
+              valueListenable: errorNotifier,
+              builder: (ctx, err, __) => err == null
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(err,
+                          style: TextStyle(
+                              color: Theme.of(ctx).colorScheme.error)),
+                    ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            final kcal = double.tryParse(kcalCtrl.text.trim());
+            if (kcal == null || kcal <= 0) {
+              errorNotifier.value = 'Calories must be a number > 0';
+              return;
+            }
+            Navigator.of(context).pop(_EditedMacros(
+              kcal,
+              parseOptional(proteinCtrl.text),
+              parseOptional(carbsCtrl.text),
+              parseOptional(fatCtrl.text),
+            ));
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
+
+    kcalCtrl.dispose();
+    proteinCtrl.dispose();
+    carbsCtrl.dispose();
+    fatCtrl.dispose();
+    errorNotifier.dispose();
+
     if (updated == null) return;
     await presenter.updateLearnedFood(
       name: entry.name,
@@ -743,32 +807,20 @@ class _LearnedFoodRow extends StatelessWidget {
       fatPer100g: updated.fat,
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Updated ${entry.name}')),
-      );
+      AppToast.success(context, 'Updated ${entry.name}');
     }
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await AppConfirmDialog.confirm(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Remove learned food?'),
-        content: Text(
-            'The next time you log "${entry.name}", the AI will resolve it from scratch.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+      title: 'Remove learned food?',
+      body:
+          'The next time you log "${entry.name}", the AI will resolve it from scratch.',
+      confirmLabel: 'Remove',
+      isDestructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await presenter.removeLearnedFood(entry.name);
     }
   }
@@ -780,120 +832,6 @@ class _EditedMacros {
   final double? carbs;
   final double? fat;
   const _EditedMacros(this.kcal, this.protein, this.carbs, this.fat);
-}
-
-/// Compact form for correcting a learned food's per-100g macros. The user
-/// only sees this when AI-estimated macros came out wrong and they want to
-/// pin in the correct values for instant future lookups.
-class _EditMacrosDialog extends StatefulWidget {
-  final PersonalFoodEntry entry;
-  const _EditMacrosDialog({required this.entry});
-
-  @override
-  State<_EditMacrosDialog> createState() => _EditMacrosDialogState();
-}
-
-class _EditMacrosDialogState extends State<_EditMacrosDialog> {
-  late final TextEditingController _kcal;
-  late final TextEditingController _protein;
-  late final TextEditingController _carbs;
-  late final TextEditingController _fat;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _kcal = TextEditingController(
-        text: widget.entry.kcalPer100g.toStringAsFixed(0));
-    _protein = TextEditingController(
-        text: widget.entry.proteinPer100g?.toStringAsFixed(1) ?? '');
-    _carbs = TextEditingController(
-        text: widget.entry.carbsPer100g?.toStringAsFixed(1) ?? '');
-    _fat = TextEditingController(
-        text: widget.entry.fatPer100g?.toStringAsFixed(1) ?? '');
-  }
-
-  @override
-  void dispose() {
-    _kcal.dispose();
-    _protein.dispose();
-    _carbs.dispose();
-    _fat.dispose();
-    super.dispose();
-  }
-
-  void _submit() {
-    final kcal = double.tryParse(_kcal.text.trim());
-    if (kcal == null || kcal <= 0) {
-      setState(() => _error = 'Calories must be a number > 0');
-      return;
-    }
-    final protein = _parseOptional(_protein.text);
-    final carbs = _parseOptional(_carbs.text);
-    final fat = _parseOptional(_fat.text);
-    Navigator.pop(context, _EditedMacros(kcal, protein, carbs, fat));
-  }
-
-  double? _parseOptional(String s) {
-    final t = s.trim();
-    if (t.isEmpty) return null;
-    return double.tryParse(t);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(widget.entry.name),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Per 100g'),
-            const SizedBox(height: 8),
-            _MacroField(label: 'Calories (kcal)', controller: _kcal),
-            const SizedBox(height: 8),
-            _MacroField(label: 'Protein (g)', controller: _protein),
-            const SizedBox(height: 8),
-            _MacroField(label: 'Carbs (g)', controller: _carbs),
-            const SizedBox(height: 8),
-            _MacroField(label: 'Fat (g)', controller: _fat),
-            if (_error != null) ...[
-              const SizedBox(height: 8),
-              Text(_error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(onPressed: _submit, child: const Text('Save')),
-      ],
-    );
-  }
-}
-
-class _MacroField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  const _MacroField({required this.label, required this.controller});
-
-  @override
-  Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(
-        labelText: label,
-        isDense: true,
-        border: const OutlineInputBorder(),
-      ),
-    );
-  }
 }
 
 class _TemplateRow extends StatelessWidget {
@@ -909,17 +847,14 @@ class _TemplateRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: template.isPinned
-            ? Border.all(
-                color: theme.colorScheme.primary.withValues(alpha: 0.25),
-                width: 0.5)
-            : null,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: _rowSurface(
+        cs,
+        borderColor:
+            template.isPinned ? cs.primary.withValues(alpha: 0.45) : null,
       ),
       child: Row(
         children: [
@@ -930,25 +865,27 @@ class _TemplateRow extends StatelessWidget {
                 Row(
                   children: [
                     if (template.isPinned) ...[
-                      Icon(Icons.push_pin,
-                          color: theme.colorScheme.primary, size: 11),
+                      Icon(Icons.push_pin, color: cs.primary, size: 11),
                       const SizedBox(width: 4),
                     ],
                     Expanded(
                       child: Text(
                         template.name,
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(fontWeight: FontWeight.w500),
+                        style: theme.textTheme.bodyMedium
+                            ?.copyWith(fontWeight: FontWeight.w600),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
+                const SizedBox(height: 3),
                 Text(
-                  template.isMeal
-                      ? '${template.totalCalories} kcal · ${template.entries.length} items'
-                      : '${template.totalCalories} kcal',
-                  style: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant, fontSize: 11),
+                  (template.isMeal
+                          ? '${template.totalCalories} kcal · ${template.entries.length} items'
+                          : '${template.totalCalories} kcal')
+                      .toUpperCase(),
+                  style: _microLabel(cs),
                 ),
               ],
             ),
@@ -971,9 +908,8 @@ class _TemplateRow extends StatelessWidget {
                 icon: Icon(
                   Icons.push_pin,
                   color: template.isPinned
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.5),
+                      ? cs.primary
+                      : cs.onSurfaceVariant.withValues(alpha: 0.5),
                   size: 16,
                 ),
                 tooltip: template.isPinned ? 'Unpin' : 'Pin to top',
@@ -985,7 +921,7 @@ class _TemplateRow extends StatelessWidget {
               height: 44,
               child: IconButton(
                 icon: Icon(Icons.edit_outlined,
-                    color: theme.colorScheme.onSurfaceVariant, size: 16),
+                    color: cs.onSurfaceVariant, size: 16),
                 tooltip: 'Rename',
                 onPressed: () => _showRenameDialog(context),
               ),
@@ -995,7 +931,7 @@ class _TemplateRow extends StatelessWidget {
               height: 44,
               child: IconButton(
                 icon: Icon(Icons.delete_outline,
-                    color: theme.colorScheme.onSurfaceVariant, size: 16),
+                    color: cs.onSurfaceVariant, size: 16),
                 onPressed: () => presenter.deleteFoodTemplate(template.id),
               ),
             ),
@@ -1022,29 +958,27 @@ class _TemplateRow extends StatelessWidget {
 
   void _showRenameDialog(BuildContext context) {
     final ctrl = TextEditingController(text: template.name);
-    showDialog<void>(
+    AppDialog.show<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Rename'),
-        content: AppTextField(
-          controller: ctrl,
-          autofocus: true,
-          hint: 'Template name',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              presenter.renameTemplate(template.id, ctrl.text);
-              Navigator.pop(ctx);
-            },
-            child: const Text('Save'),
-          ),
-        ],
+      title: 'Rename',
+      body: AppTextField(
+        controller: ctrl,
+        autofocus: true,
+        hint: 'Template name',
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () {
+            presenter.renameTemplate(template.id, ctrl.text);
+            Navigator.of(context).pop();
+          },
+          child: const Text('Save'),
+        ),
+      ],
     );
   }
 }

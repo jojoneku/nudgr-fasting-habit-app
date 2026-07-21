@@ -90,6 +90,35 @@ class TreasuryHistoryPresenter extends ChangeNotifier {
     return maxMag == 0 ? 1 : maxMag;
   }
 
+  /// Number of closed months on record.
+  int get closedMonthCount => _summaries.length;
+
+  /// Average monthly income across all closed months (0 when none).
+  double get averageInflow {
+    if (_summaries.isEmpty) return 0;
+    return _summaries.fold(0.0, (s, m) => s + m.totalInflow) /
+        _summaries.length;
+  }
+
+  /// Average monthly spending across all closed months (0 when none).
+  double get averageOutflow {
+    if (_summaries.isEmpty) return 0;
+    return _summaries.fold(0.0, (s, m) => s + m.totalOutflow) /
+        _summaries.length;
+  }
+
+  /// The closed month with the highest net savings (null when none).
+  MonthlySummary? get bestNetMonth {
+    if (_summaries.isEmpty) return null;
+    return _summaries.reduce((a, b) => a.netSavings >= b.netSavings ? a : b);
+  }
+
+  /// The most recent closed month (null when none).
+  MonthlySummary? get latestClosedMonth {
+    if (_summaries.isEmpty) return null;
+    return _summaries.reduce((a, b) => a.month.compareTo(b.month) >= 0 ? a : b);
+  }
+
   /// Average monthly net savings across all closed months (0 when none).
   double get averageNetSavings {
     if (_summaries.isEmpty) return 0;
