@@ -77,6 +77,36 @@
         "localhost"
       ],
       "port": 8092
+    },
+    {
+      "name": "Full App (web-server)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main.dart",
+        "-d",
+        "web-server",
+        "--web-port",
+        "8093",
+        "--web-hostname",
+        "localhost"
+      ],
+      "port": 8093
+    },
+    {
+      "name": "Full App (Chrome)",
+      "runtimeExecutable": "flutter",
+      "runtimeArgs": [
+        "run",
+        "-t",
+        "lib/main.dart",
+        "-d",
+        "chrome",
+        "--web-port",
+        "8094"
+      ],
+      "port": 8094
     }
   ]
 }

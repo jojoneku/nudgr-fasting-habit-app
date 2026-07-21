@@ -83,6 +83,29 @@ ThemeData buildDarkTheme() {
       surfaceTintColor: Colors.transparent,
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+    // Chips (category / reminder-day / filter pills). Flex's default selected
+    // fill lands on the near-black secondaryContainer; override with a legible
+    // blue tint and a comfortable height (~44px, meeting the touch target) so
+    // pills aren't dark or dwarfed by the 48px field boxes beside them.
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColors.surfaceVariant,
+      selectedColor: AppColors.primary.withValues(alpha: 0.20),
+      disabledColor: AppColors.surfaceVariant,
+      showCheckmark: false,
+      side: const BorderSide(color: AppColors.borderInner),
+      shape: const RoundedRectangleBorder(borderRadius: AppRadii.smBorder),
+      labelStyle: const TextStyle(
+        color: AppColors.textSecondary,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      secondaryLabelStyle: const TextStyle(
+        color: AppColors.primary,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+    ),
     textTheme: AppTextStyles.textTheme.apply(
       bodyColor: AppColors.textPrimary,
       displayColor: AppColors.textPrimary,
@@ -170,6 +193,27 @@ ThemeData buildLightTheme() {
       surfaceTintColor: Colors.transparent,
     ),
     snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+    // See dark theme: keep chip pills legible (blue tint, not a dark fill) and
+    // tall enough to sit proportionately beside the field boxes.
+    chipTheme: ChipThemeData(
+      backgroundColor: AppColorsLight.surfaceVariant,
+      selectedColor: AppColorsLight.primary.withValues(alpha: 0.16),
+      disabledColor: AppColorsLight.surfaceVariant,
+      showCheckmark: false,
+      side: const BorderSide(color: AppColorsLight.borderInner),
+      shape: const RoundedRectangleBorder(borderRadius: AppRadii.smBorder),
+      labelStyle: const TextStyle(
+        color: AppColorsLight.textSecondary,
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+      ),
+      secondaryLabelStyle: const TextStyle(
+        color: AppColorsLight.primary,
+        fontSize: 13,
+        fontWeight: FontWeight.w700,
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+    ),
     textTheme: AppTextStyles.textTheme.apply(
       bodyColor: AppColorsLight.textPrimary,
       displayColor: AppColorsLight.textPrimary,

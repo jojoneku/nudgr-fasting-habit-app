@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/models/finance/credit_brand_presets.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/utils/account_badge.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 
@@ -111,6 +114,9 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
 
   AccountCategory _category = AccountCategory.bank;
   String _selectedColor = _colorOptions[0];
+
+  /// Stored badge choice (catalog key / [kMonogramBadgeKey] / '' = default).
+  String _iconKey = '';
   DateTime? _maturityDate;
   String? _linkedAccountId;
   int? _statementDay;
@@ -157,6 +163,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
       _balanceController.text = existing.balance.toStringAsFixed(2);
       _category = existing.category;
       _selectedColor = existing.colorHex;
+      _iconKey = existing.icon;
       _maturityDate = existing.maturityDate;
       _linkedAccountId = existing.linkedAccountId;
       if (existing.goalTarget != null) {
@@ -186,6 +193,18 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     super.dispose();
   }
 
+  /// Opens the icon/monogram picker and stores the chosen badge key.
+  Future<void> _pickIcon() async {
+    final chosen = await showAccountBadgePicker(
+      context,
+      current: _iconKey,
+      category: _category,
+      name: _nameController.text.trim(),
+      colorHex: _selectedColor,
+    );
+    if (chosen != null && mounted) setState(() => _iconKey = chosen);
+  }
+
   /// Applies a brand preset's defaults into the editable fields. The user can
   /// still override the finance rate afterwards.
   void _applyBrand(String? key) {
@@ -213,7 +232,6 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     setState(() => _isSubmitting = true);
 
     try {
@@ -239,12 +257,9 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
         parentAccountId: _effectiveParentId,
         balance: balance,
         colorHex: _selectedColor,
-        // Preserve the existing icon unless the category itself changed —
-        // blindly writing `_category.name` discarded a customised icon. (C5)
-        icon:
-            (widget.existing != null && widget.existing!.category == _category)
-                ? widget.existing!.icon
-                : _category.name,
+        // The badge choice: a catalog key / monogram sentinel, or the category
+        // name as the "default" marker when the user hasn't picked one.
+        icon: _iconKey.isEmpty ? _category.name : _iconKey,
         goalTarget: goalTarget,
         maturityDate: _isTimeDeposit ? _maturityDate : null,
         linkedAccountId:
@@ -270,16 +285,14 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
     } catch (e) {
       // A save failure was previously invisible (try/finally with no catch) —
       // the spinner reset and the dialog just sat there. Surface it. (C7)
-      messenger.showSnackBar(
-        SnackBar(content: Text('Could not save account: $e')),
-      );
+      if (!mounted) return;
+      AppToast.error(context, 'Could not save account: $e');
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
   Future<void> _confirmDelete() async {
-    final messenger = ScaffoldMessenger.of(context);
     final cs = Theme.of(context).colorScheme;
 
     final confirmed = await showDialog<bool>(
@@ -320,12 +333,7 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
               'Delete or reassign them first.',
         _ => 'Could not delete account: ${e.message}',
       };
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
@@ -443,6 +451,41 @@ class _WebAccountFormDialogState extends State<WebAccountFormDialog> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: WebInsets.lg),
+                      // Icon / monogram picker
+                      Text(
+                        'Icon',
+                        style: theme.textTheme.labelMedium
+                            ?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                      const SizedBox(height: WebInsets.sm),
+                      InkWell(
+                        onTap: _pickIcon,
+                        borderRadius: BorderRadius.circular(AppRadii.sm),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              AccountBadge(
+                                category: _category,
+                                name: _nameController.text,
+                                iconKey: _iconKey,
+                                colorHex: _selectedColor,
+                                size: 40,
+                              ),
+                              const SizedBox(width: WebInsets.md),
+                              Expanded(
+                                child: Text(
+                                  'Tap to choose an icon or monogram',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ),
+                              Icon(Icons.chevron_right_rounded,
+                                  color: cs.onSurfaceVariant),
+                            ],
+                          ),
+                        ),
                       ),
                       const SizedBox(height: WebInsets.lg),
                       // Color picker

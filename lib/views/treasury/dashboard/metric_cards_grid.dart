@@ -26,50 +26,53 @@ class MetricCardsGrid extends StatelessWidget {
             ? colorScheme.error
             : colorScheme.onSurfaceVariant);
 
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            children: [
-              _MetricCard(
-                label: 'ENDING CASH',
-                value: formatPeso(presenter.endingCash),
-                color: colorScheme.primary,
-                icon: Icons.account_balance_wallet_outlined,
-              ),
-              const SizedBox(height: 8),
-              _MetricCard(
-                label: 'MONTH OUT',
-                value: formatPeso(presenter.monthTotalOutflow),
-                color: colorScheme.error,
-                icon: Icons.arrow_upward_rounded,
-              ),
-            ],
+    return AppSection(
+      title: 'Month Outlook',
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _MetricCard(
+                  label: 'ENDING CASH',
+                  value: formatPeso(presenter.endingCash),
+                  color: colorScheme.primary,
+                  icon: Icons.account_balance_wallet_outlined,
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  label: 'MONTH OUT',
+                  value: formatPeso(presenter.monthTotalOutflow),
+                  color: colorScheme.error,
+                  icon: Icons.arrow_upward_rounded,
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            children: [
-              _MetricCard(
-                label: 'MONTH IN',
-                value: formatPeso(presenter.monthTotalInflow),
-                color: colorScheme.tertiary,
-                icon: Icons.arrow_downward_rounded,
-              ),
-              const SizedBox(height: 8),
-              _MetricCard(
-                label: fourthLabel.toUpperCase(),
-                value: fourthValue,
-                color: fourthColor,
-                icon: presenter.hasBudget
-                    ? Icons.track_changes_outlined
-                    : Icons.credit_card_outlined,
-              ),
-            ],
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              children: [
+                _MetricCard(
+                  label: 'MONTH IN',
+                  value: formatPeso(presenter.monthTotalInflow),
+                  color: colorScheme.tertiary,
+                  icon: Icons.arrow_downward_rounded,
+                ),
+                const SizedBox(height: 8),
+                _MetricCard(
+                  label: fourthLabel.toUpperCase(),
+                  value: fourthValue,
+                  color: fourthColor,
+                  icon: presenter.hasBudget
+                      ? Icons.track_changes_outlined
+                      : Icons.credit_card_outlined,
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -93,29 +96,47 @@ class _MetricCard extends StatelessWidget {
 
     return AppCard(
       variant: AppCardVariant.elevated,
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+      // Icon badge on the left; label over value on the right — one row.
+      child: Row(
         children: [
-          Row(
-            children: [
-              Icon(icon, size: 13, color: color),
-              const SizedBox(width: 5),
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  letterSpacing: 0.8,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, size: 18, color: color),
           ),
-          const SizedBox(height: 6),
-          AppNumberDisplay(
-            value: value,
-            size: AppNumberSize.body,
-            color: color,
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 0.8,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AppNumberDisplay(
+                    value: value,
+                    size: AppNumberSize.body,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

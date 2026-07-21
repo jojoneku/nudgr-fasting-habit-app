@@ -190,13 +190,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Body stats',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 20),
+        const TdeeHeading('About you', 'The basics behind your calorie math.'),
         BodyStatsForm(
           weightCtrl: _weightCtrl,
           heightCtrl: _heightCtrl,
@@ -212,13 +206,7 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Activity level',
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
-        ),
-        const SizedBox(height: 20),
+        const TdeeHeading('Activity level', 'How active is a typical week?'),
         ActivityLevelSelector(
           selected: _activityLevel,
           onChanged: (v) => setState(() => _activityLevel = v),
@@ -232,34 +220,28 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Goal',
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-          ),
-          const SizedBox(height: 20),
-          TdeeRadioTile<String>(
-            label: 'Cut — Lose weight',
-            subtitle: 'Calorie deficit',
-            value: 'cut',
-            groupValue: _goal,
-            onChanged: (v) => _onGoalChanged(v!),
+          const TdeeHeading("Your goal", "We'll size your targets around it."),
+          TdeeSelectCard(
+            icon: Icons.trending_down,
+            title: 'Cut',
+            subtitle: 'Lose fat · calorie deficit',
+            selected: _goal == 'cut',
+            onTap: () => _onGoalChanged('cut'),
           ),
           if (_goal == 'cut') _buildAdjPicker(isCut: true),
-          TdeeRadioTile<String>(
-            label: 'Maintain',
-            subtitle: 'Hold current weight',
-            value: 'maintain',
-            groupValue: _goal,
-            onChanged: (v) => _onGoalChanged(v!),
+          TdeeSelectCard(
+            icon: Icons.drag_handle,
+            title: 'Maintain',
+            subtitle: 'Hold weight · at TDEE',
+            selected: _goal == 'maintain',
+            onTap: () => _onGoalChanged('maintain'),
           ),
-          TdeeRadioTile<String>(
-            label: 'Bulk — Gain muscle',
-            subtitle: 'Calorie surplus',
-            value: 'bulk',
-            groupValue: _goal,
-            onChanged: (v) => _onGoalChanged(v!),
+          TdeeSelectCard(
+            icon: Icons.trending_up,
+            title: 'Lean gain',
+            subtitle: 'Build muscle · calorie surplus',
+            selected: _goal == 'bulk',
+            onTap: () => _onGoalChanged('bulk'),
           ),
           if (_goal == 'bulk') _buildAdjPicker(isCut: false),
         ],
@@ -351,106 +333,103 @@ class _TdeeSetupScreenState extends State<TdeeSetupScreen> {
       );
     }
 
+    final goalLabel = switch (_goal) {
+      'cut' => 'Cut',
+      'bulk' => 'Lean gain',
+      _ => 'Maintain',
+    };
     final delta = profile.targetCalories - profile.tdee;
-    final deltaStr =
-        delta == 0 ? 'None' : (delta > 0 ? '+$delta kcal' : '$delta kcal');
+    final goalLine = delta == 0
+        ? goalLabel
+        : '$goalLabel · ${delta > 0 ? '+' : '−'}${delta.abs()} kcal';
 
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Review',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 20),
+          const TdeeHeading(
+              'Your targets', 'Fine-tune your macros if you like.'),
           AppCard(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _ReviewRow(
-                  label: 'BMR',
-                  value: '${profile.bmr} kcal',
-                ),
-                _ReviewRow(
-                  label: 'Activity',
-                  value: profile.activityLevel.label,
-                ),
-                _ReviewRow(
-                  label: 'TDEE',
-                  value: '${profile.tdee} kcal',
-                ),
-                if (delta != 0)
-                  _ReviewRow(
-                    label: 'Adjustment',
-                    value: deltaStr,
-                  ),
-                const SizedBox(height: 12),
-                Divider(
-                  height: 1,
-                  color: theme.colorScheme.outlineVariant,
-                ),
-                const SizedBox(height: 12),
                 Text(
-                  'Target',
-                  style: theme.textTheme.labelMedium?.copyWith(
+                  'DAILY TARGET',
+                  style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
+                    letterSpacing: 1,
                   ),
                 ),
                 const SizedBox(height: 4),
-                AppNumberDisplay(
-                  value: '${profile.targetCalories}',
-                  suffix: 'kcal / day',
-                  size: AppNumberSize.headline,
-                  color: context.appColors.gold,
-                  textAlign: TextAlign.start,
+                TdeeCountUp(
+                  value: profile.targetCalories,
+                  suffix: ' kcal',
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface,
+                    letterSpacing: -1,
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 4),
                 Text(
-                  'Macro targets (g)',
+                  goalLine,
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(children: [
-                  Expanded(
-                    child: AppTextField(
-                      controller: _reviewProteinCtrl,
-                      label: 'Protein',
-                      hint: 'g',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AppTextField(
-                      controller: _reviewCarbsCtrl,
-                      label: 'Carbs',
-                      hint: 'g',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: AppTextField(
-                      controller: _reviewFatCtrl,
-                      label: 'Fat',
-                      hint: 'g',
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                ]),
-                const SizedBox(height: 6),
-                Text(
-                  'Pre-filled from TDEE — adjust if needed.',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: context.appColors.fast,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+                child: TdeeStatTile(label: 'BMR', value: '${profile.bmr}')),
+            const SizedBox(width: 8),
+            Expanded(
+                child: TdeeStatTile(label: 'TDEE', value: '${profile.tdee}')),
+          ]),
+          const SizedBox(height: 16),
+          Text(
+            'MACRO TARGETS (G)',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: AppTextField(
+                controller: _reviewProteinCtrl,
+                label: 'Protein',
+                hint: 'g',
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AppTextField(
+                controller: _reviewCarbsCtrl,
+                label: 'Carbs',
+                hint: 'g',
+                keyboardType: TextInputType.number,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: AppTextField(
+                controller: _reviewFatCtrl,
+                label: 'Fat',
+                hint: 'g',
+                keyboardType: TextInputType.number,
+              ),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Text(
+            'Pre-filled from TDEE — adjust if needed.',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -543,7 +522,7 @@ class _StepIndicator extends StatelessWidget {
             height: 3,
             decoration: BoxDecoration(
               color: active
-                  ? context.appColors.gold
+                  ? context.appColors.fast
                   : theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(2),
             ),
@@ -612,44 +591,6 @@ class _AdjChip extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// ─── Review Row ───────────────────────────────────────────────────────────────
-
-class _ReviewRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ReviewRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 96,
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

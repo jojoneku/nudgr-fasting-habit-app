@@ -88,43 +88,67 @@ class _BudgetProgressRow extends StatelessWidget {
     final percentText =
         allocated > 0 ? '${(spent / allocated * 100).round()}%' : '—';
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: (isTotal
-                        ? theme.textTheme.bodyMedium
-                        : theme.textTheme.bodySmall)
-                    ?.copyWith(
-                  fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
-                ),
-              ),
-            ),
-            Text(
-              percentText,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: barColor,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(width: 8),
-            AppNumberDisplay(
-              value:
-                  '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
-              size: AppNumberSize.body,
-              color: colorScheme.onSurfaceVariant,
-            ),
-          ],
+        // Icon badge — same tinted treatment as the other dashboard cards.
+        Container(
+          width: isTotal ? 34 : 30,
+          height: isTotal ? 34 : 30,
+          decoration: BoxDecoration(
+            color: barColor.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(9),
+          ),
+          child: Icon(
+            isTotal
+                ? Icons.account_balance_wallet_outlined
+                : Icons.pie_chart_outline_rounded,
+            size: isTotal ? 17 : 15,
+            color: barColor,
+          ),
         ),
-        const SizedBox(height: 5),
-        _AnimatedProgressBar(
-          ratio: ratio,
-          color: barColor,
-          height: isTotal ? 6.0 : 4.0,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: (isTotal
+                              ? theme.textTheme.bodyMedium
+                              : theme.textTheme.bodySmall)
+                          ?.copyWith(
+                        fontWeight: isTotal ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    percentText,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: barColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  AppNumberDisplay(
+                    value:
+                        '${formatPesoCompact(spent)} / ${formatPesoCompact(allocated)}',
+                    size: AppNumberSize.body,
+                    color: colorScheme.onSurfaceVariant,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              _AnimatedProgressBar(
+                ratio: ratio,
+                color: barColor,
+                height: isTotal ? 6.0 : 4.0,
+              ),
+            ],
+          ),
         ),
       ],
     );

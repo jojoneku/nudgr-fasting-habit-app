@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
+import 'package:intermittent_fasting/utils/category_icon_catalog.dart';
+import 'package:intermittent_fasting/views/treasury/shared/category_badge_widget.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class ManageCategoriesSheet extends StatefulWidget {
@@ -20,6 +23,9 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   final _formKey = GlobalKey<FormState>();
   CategoryType _type = CategoryType.expense;
   bool _isSubmitting = false;
+  // Icon chosen for the category being added. Defaults to the "Auto" sentinel
+  // (name-derived glyph) until the user explicitly picks one.
+  String _iconKey = kAutoCategoryIconKey;
 
   String _nextColor() {
     final index =
@@ -28,7 +34,19 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    // Rebuild so the add-form icon/monogram preview tracks the typed name live.
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     super.dispose();
   }
@@ -43,12 +61,26 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
         id: id,
         name: _nameController.text.trim(),
         type: _type,
-        icon: 'tag',
+        icon: _iconKey,
         colorHex: _nextColor(),
       ));
       _nameController.clear();
+      _iconKey = kAutoCategoryIconKey; // reset for the next add
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  Future<void> _pickAddIcon() async {
+    final picked = await showCategoryIconPicker(context, current: _iconKey);
+    if (picked != null && mounted) setState(() => _iconKey = picked);
+  }
+
+  Future<void> _changeCategoryIcon(FinanceCategory category) async {
+    final picked =
+        await showCategoryIconPicker(context, current: category.icon);
+    if (picked != null && picked != category.icon) {
+      await widget.presenter.updateCategory(category.copyWith(icon: picked));
     }
   }
 
@@ -58,7 +90,6 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
 
   Future<void> _confirmDelete(
       BuildContext context, FinanceCategory category) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await AppConfirmDialog.confirm(
       context: context,
       title: 'Delete category?',
@@ -72,17 +103,12 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
     try {
       await widget.presenter.deleteCategory(category.id);
     } on StateError catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       final message = e.message == 'has_transactions'
           ? 'This category has transactions linked to it. '
               'Delete or reassign those entries first.'
           : 'Could not delete category: ${e.message}';
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     }
   }
 
@@ -114,6 +140,9 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                 isSubmitting: _isSubmitting,
                 onSubmit: _addCategory,
                 type: _type,
+                iconKey: _iconKey,
+                onPickIcon: _pickAddIcon,
+                previewColorHex: _nextColor(),
               ),
               const SizedBox(height: 28),
               if (expense.isEmpty && income.isEmpty)
@@ -139,6 +168,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                     Theme.of(context).colorScheme.error,
                                 onDelete: () => _confirmDelete(context, c),
                                 onToggleExclude: (v) => _toggleExclude(c, v),
+                                onChangeIcon: () => _changeCategoryIcon(c),
                               ))
                           .toList(),
                     ),
@@ -160,6 +190,7 @@ class _ManageCategoriesSheetState extends State<ManageCategoriesSheet> {
                                     Theme.of(context).colorScheme.tertiary,
                                 onDelete: () => _confirmDelete(context, c),
                                 onToggleExclude: (v) => _toggleExclude(c, v),
+                                onChangeIcon: () => _changeCategoryIcon(c),
                               ))
                           .toList(),
                     ),
@@ -320,6 +351,12 @@ class _AddCategoryForm extends StatelessWidget {
   final bool isSubmitting;
   final VoidCallback onSubmit;
   final CategoryType type;
+  final String iconKey;
+  final VoidCallback onPickIcon;
+
+  /// Hex of the color the new category will be assigned — used to tint the icon
+  /// preview so it matches how the category will look in the ledger row.
+  final String previewColorHex;
 
   const _AddCategoryForm({
     required this.formKey,
@@ -327,30 +364,63 @@ class _AddCategoryForm extends StatelessWidget {
     required this.isSubmitting,
     required this.onSubmit,
     required this.type,
+    required this.iconKey,
+    required this.onPickIcon,
+    required this.previewColorHex,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final color = type == CategoryType.expense ? cs.error : cs.tertiary;
+    Color previewColor;
+    try {
+      previewColor = Color(
+          int.parse('FF${previewColorHex.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      previewColor = color;
+    }
 
     return Form(
       key: formKey,
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        // Bottom-align so the icon preview + add button line up with the input
+        // box, not the field's label that now sits above it.
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Expanded(
-            child: TextFormField(
-              controller: controller,
-              textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Category name',
-                contentPadding:
-                    EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          // Tappable icon preview — opens the catalog picker.
+          Semantics(
+            button: true,
+            label: 'Choose category icon',
+            child: SizedBox(
+              width: 52,
+              height: 52,
+              child: InkWell(
+                onTap: onPickIcon,
+                borderRadius: BorderRadius.circular(12),
+                child: CategoryBadge(
+                  iconKey: iconKey,
+                  name: controller.text,
+                  type: type,
+                  color: previewColor,
+                  size: 52,
+                  iconSize: 24,
+                ),
               ),
-              validator: (v) =>
-                  (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
-              onFieldSubmitted: (_) => onSubmit(),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SheetLabeledField(
+              label: 'Category name',
+              child: TextFormField(
+                controller: controller,
+                textCapitalization: TextCapitalization.words,
+                decoration: sheetFieldDecoration(context),
+                validator: (v) =>
+                    (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+                onFieldSubmitted: (_) => onSubmit(),
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -393,6 +463,7 @@ class _CategoryTile extends StatelessWidget {
   final Color accentColor;
   final VoidCallback onDelete;
   final ValueChanged<bool> onToggleExclude;
+  final VoidCallback onChangeIcon;
 
   const _CategoryTile({
     super.key,
@@ -400,7 +471,20 @@ class _CategoryTile extends StatelessWidget {
     required this.accentColor,
     required this.onDelete,
     required this.onToggleExclude,
+    required this.onChangeIcon,
   });
+
+  /// The category's own color — matches how the ledger row tints the badge, so
+  /// the icon looks identical here and in the feed. Falls back to the type
+  /// accent if the stored hex can't be parsed.
+  Color get _badgeColor {
+    try {
+      return Color(
+          int.parse('FF${category.colorHex.replaceFirst('#', '')}', radix: 16));
+    } catch (_) {
+      return accentColor;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -408,11 +492,28 @@ class _CategoryTile extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 6),
       child: AppListTile(
-        leading: AppIconBadge(
-          icon: Icons.label_outline_rounded,
-          color: accentColor,
-          size: 40,
-          iconSize: 18,
+        // 44×44 hit area (touch-target rule) around the 40px badge.
+        leading: Semantics(
+          button: true,
+          label: 'Change icon for ${category.name}',
+          child: SizedBox(
+            width: 44,
+            height: 44,
+            child: InkWell(
+              onTap: onChangeIcon,
+              borderRadius: BorderRadius.circular(12),
+              child: Center(
+                child: CategoryBadge(
+                  iconKey: category.icon,
+                  name: category.name,
+                  type: category.type,
+                  color: _badgeColor,
+                  size: 40,
+                  iconSize: 18,
+                ),
+              ),
+            ),
+          ),
         ),
         title: Text(category.name),
         subtitle: category.excludeFromTotals
@@ -455,6 +556,146 @@ class _CategoryTile extends StatelessWidget {
           ],
         ),
         onTap: () {},
+      ),
+    );
+  }
+}
+
+// ─── Icon Picker ──────────────────────────────────────────────────────────────
+
+/// Opens the category-icon catalog picker. Returns the chosen catalog key, the
+/// [kAutoCategoryIconKey] sentinel ("Auto" — name-derived glyph), or null if the
+/// user dismissed without choosing.
+Future<String?> showCategoryIconPicker(
+  BuildContext context, {
+  required String current,
+}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Theme.of(context).colorScheme.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => _CategoryIconPickerSheet(current: current),
+  );
+}
+
+class _CategoryIconPickerSheet extends StatelessWidget {
+  final String current;
+  const _CategoryIconPickerSheet({required this.current});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                'Choose an icon',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+            ),
+            // "Auto" — routes through the name heuristic.
+            _IconChoice(
+              icon: Icons.auto_awesome_rounded,
+              label: 'Auto',
+              selected: current == kAutoCategoryIconKey ||
+                  !kCategoryIconCatalog.containsKey(current),
+              onTap: () => Navigator.of(context).pop(kAutoCategoryIconKey),
+            ),
+            for (final group in kCategoryIconGroups) ...[
+              const SizedBox(height: 14),
+              Text(
+                group.label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  for (final key in group.keys)
+                    _IconChoice(
+                      icon: kCategoryIconCatalog[key]!,
+                      selected: key == current,
+                      onTap: () => Navigator.of(context).pop(key),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconChoice extends StatelessWidget {
+  final IconData icon;
+  final String? label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _IconChoice({
+    required this.icon,
+    this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final child = Container(
+      height: 52,
+      width: label == null ? 52 : null,
+      padding: label == null
+          ? EdgeInsets.zero
+          : const EdgeInsets.symmetric(horizontal: 16),
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: selected
+            ? cs.primary.withValues(alpha: 0.15)
+            : cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: selected ? cs.primary : cs.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 22, color: selected ? cs.primary : cs.onSurface),
+          if (label != null) ...[
+            const SizedBox(width: 8),
+            Text(
+              label!,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: selected ? cs.primary : cs.onSurface,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: child,
       ),
     );
   }

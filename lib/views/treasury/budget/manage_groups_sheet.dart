@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 class ManageGroupsSheet extends StatefulWidget {
@@ -23,8 +24,9 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            hintText: 'Group name',
+          decoration: sheetFieldDecoration(
+            context,
+            hint: 'Group name',
           ),
         ),
         actions: [
@@ -56,7 +58,7 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
           controller: ctrl,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(hintText: 'Group name'),
+          decoration: sheetFieldDecoration(context, hint: 'Group name'),
         ),
         actions: [
           TextButton(
@@ -131,8 +133,10 @@ class _ManageGroupsSheetState extends State<ManageGroupsSheet> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   title: Text(g.name, style: theme.textTheme.bodyMedium),
+                  // Role descriptor derived from the group's flags — not a
+                  // hardcoded name, so a renamed savings group still reads right.
                   subtitle: g.isSavings
-                      ? Text('Savings / Goals',
+                      ? Text('Savings group',
                           style: theme.textTheme.bodySmall
                               ?.copyWith(color: cs.onSurfaceVariant))
                       : g.isBuiltIn

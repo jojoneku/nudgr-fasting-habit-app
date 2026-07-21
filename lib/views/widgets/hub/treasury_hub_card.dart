@@ -355,27 +355,31 @@ class _PayBillSheetState extends State<_PayBillSheet> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          controller: _amountCtrl,
-          enabled: !_paying,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          inputFormatters: [
-            FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-          ],
-          style: AppTextStyles.bodyMedium,
-          decoration: const InputDecoration(
-            labelText: 'Amount',
-            prefixText: '₱ ',
+        LabeledField(
+          label: 'Amount',
+          child: TextField(
+            controller: _amountCtrl,
+            enabled: !_paying,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+            ],
+            style: AppTextStyles.bodyMedium,
+            decoration: const InputDecoration(
+              prefixText: '₱ ',
+            ),
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        DropdownButtonFormField<String>(
-          initialValue: _accountId,
-          decoration: const InputDecoration(labelText: 'Pay from'),
-          items: accounts
-              .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
-              .toList(),
-          onChanged: _paying ? null : (v) => setState(() => _accountId = v),
+        LabeledField(
+          label: 'Pay from',
+          child: DropdownButtonFormField<String>(
+            initialValue: _accountId,
+            items: accounts
+                .map((a) => DropdownMenuItem(value: a.id, child: Text(a.name)))
+                .toList(),
+            onChanged: _paying ? null : (v) => setState(() => _accountId = v),
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         FilledButton(

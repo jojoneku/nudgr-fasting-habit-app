@@ -10,6 +10,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Web Budget page (Plan 050-D) — tabular, editable budget setup + an
@@ -609,7 +610,6 @@ class _DataRow extends StatelessWidget {
   }
 
   Future<void> _confirmRemove(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -632,8 +632,8 @@ class _DataRow extends StatelessWidget {
     );
     if (confirmed != true) return;
     await presenter.removeBudget(row.id);
-    messenger.showSnackBar(
-        SnackBar(content: Text('Removed "${row.name}" from the budget.')));
+    if (!context.mounted) return;
+    AppToast.show(context, 'Removed "${row.name}" from the budget.');
   }
 }
 

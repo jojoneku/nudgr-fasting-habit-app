@@ -16,6 +16,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:mockito/mockito.dart';
 
 import 'package:intermittent_fasting/models/daily_nutrition_log.dart';
@@ -24,8 +25,6 @@ import 'package:intermittent_fasting/models/meal_slot.dart';
 import 'package:intermittent_fasting/models/estimation_source.dart';
 import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/food_db_entry.dart';
-import 'package:intermittent_fasting/models/food_parse_result.dart';
-import 'package:intermittent_fasting/models/food_search_candidate.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/nutrition_goals.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
@@ -81,7 +80,10 @@ Matcher _calApprox(int expected, {double pct = 0.15}) => predicate<int>(
 
 // ── Presenter factory ─────────────────────────────────────────────────────────
 
-const _today = '2026-05-27';
+// Must be the real current day: the presenter's day-rollover guard
+// (_ensureTodayLogFresh) compares _todayLog.date to DateTime.now(); a stale
+// constant makes it think the day rolled over and reload/reset mid-test.
+final _today = DateFormat('yyyy-MM-dd').format(DateTime.now());
 
 /// Creates a [NutritionPresenter] with all storage methods stubbed.
 /// Pass [localAi] / [cloudAi] / [foodDb] to inject specific mock instances;
@@ -675,6 +677,155 @@ void main() {
       final before = p.todayCalories;
       await p.parseChat('100g chicken breast');
       expect(p.todayCalories, greaterThan(before));
+    });
+  });
+
+  // ── DELETE + UNDO (Nudgr nutrition redesign) ──────────────────────────────────
+
+  group('Delete + undo', () {
+    test('restoreChatMessage re-adds the entry and its calories', () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      expect(p.chatMessages, hasLength(1));
+
+      final msg = p.chatMessages.single;
+      final calWith = p.todayCalories;
+      expect(calWith, greaterThan(0));
+
+      await p.removeChatMessage(msg.id);
+      expect(p.chatMessages, isEmpty);
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.todayCalories, 0);
+
+      await p.restoreChatMessage(msg);
+      expect(p.chatMessages, hasLength(1));
+      expect(p.chatMessages.single.id, msg.id);
+      expect(p.todayLog.allEntries, hasLength(1));
+      expect(p.todayCalories, calWith);
+    });
+
+    test('restoreChatMessage is a no-op if the message is still present',
+        () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      final msg = p.chatMessages.single;
+
+      await p.restoreChatMessage(msg); // not removed — must not duplicate
+      expect(p.chatMessages, hasLength(1));
+      expect(p.todayLog.allEntries, hasLength(1));
+    });
+  });
+
+  // ── COMPOSER REVIEW FLOW (resolve → preview → commit) ─────────────────────────
+
+  group('Composer review flow', () {
+    test('previewChat resolves WITHOUT logging', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+
+      expect(p.hasPendingChat, isTrue);
+      expect(p.pendingChatEntries, isNotEmpty);
+      // Nothing committed yet — log + feed are still empty.
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.chatMessages, isEmpty);
+      expect(p.todayCalories, 0);
+    });
+
+    test('commitPendingChat logs the reviewed estimate', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      final kcal = p.pendingChatEntries.fold<int>(0, (s, e) => s + e.calories);
+
+      await p.commitPendingChat();
+
+      expect(p.hasPendingChat, isFalse);
+      expect(p.todayLog.allEntries, hasLength(1));
+      expect(p.chatMessages, hasLength(1)); // creates the log-entry row
+      expect(p.todayCalories, kcal);
+    });
+
+    test('discardPendingChat drops the estimate without logging', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      expect(p.hasPendingChat, isTrue);
+
+      p.discardPendingChat();
+
+      expect(p.hasPendingChat, isFalse);
+      expect(p.todayLog.allEntries, isEmpty);
+      expect(p.chatMessages, isEmpty);
+    });
+
+    test('CONTROL: two atomic parseChat calls are additive', () async {
+      final p = await _makePresenter();
+      await p.parseChat('100g chicken breast');
+      await p.parseChat('100g white rice');
+      expect(p.chatMessages, hasLength(2));
+      expect(p.todayLog.allEntries, hasLength(2));
+    });
+
+    test('logging two meals via the composer is ADDITIVE', () async {
+      final p = await _makePresenter();
+
+      await p.previewChat('100g chicken breast');
+      await p.commitPendingChat();
+
+      await p.previewChat('100g white rice');
+      await p.commitPendingChat();
+
+      // Both meals must survive — the second must not replace the first.
+      expect(p.chatMessages, hasLength(2));
+      expect(p.todayLog.allEntries, hasLength(2));
+    });
+
+    test('previewChat ACCUMULATES a second item into the pending estimate',
+        () async {
+      final p = await _makePresenter();
+
+      await p.previewChat('100g chicken breast');
+      final firstCount = p.pendingChatEntries.length;
+      final firstKcal = p.pendingChatTotalCalories;
+      expect(firstCount, greaterThan(0));
+
+      // Second item BEFORE committing — must add to the estimate, not replace.
+      await p.previewChat('100g white rice');
+
+      expect(p.hasPendingChat, isTrue);
+      expect(p.pendingChatEntries.length, greaterThan(firstCount));
+      expect(p.pendingChatTotalCalories, greaterThan(firstKcal));
+      // Still nothing logged until commit.
+      expect(p.todayLog.allEntries, isEmpty);
+
+      // Committing the merged estimate produces ONE combined log row.
+      await p.commitPendingChat();
+      expect(p.chatMessages, hasLength(1));
+      expect(p.todayLog.allEntries.length, greaterThan(firstCount));
+    });
+
+    test('recomputePendingChatEntry re-resolves and keeps the typed name',
+        () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      expect(p.pendingChatEntries, isNotEmpty);
+
+      await p.recomputePendingChatEntry(0, 'Grilled chicken');
+
+      // The user's typed name is kept as the label…
+      expect(p.pendingChatEntries.first.name, 'Grilled chicken');
+      // …and nothing is committed by editing.
+      expect(p.hasPendingChat, isTrue);
+      expect(p.todayLog.allEntries, isEmpty);
+    });
+
+    test('recomputePendingChatEntry ignores empty name / bad index', () async {
+      final p = await _makePresenter();
+      await p.previewChat('100g chicken breast');
+      final original = p.pendingChatEntries.first.name;
+
+      await p.recomputePendingChatEntry(0, '   '); // empty after trim
+      await p.recomputePendingChatEntry(5, 'Nope'); // out of range
+
+      expect(p.pendingChatEntries.first.name, original);
     });
   });
 

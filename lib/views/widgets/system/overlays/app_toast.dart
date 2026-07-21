@@ -1,26 +1,40 @@
 import 'package:flutter/material.dart';
 
 /// SnackBar helper — success, error, action, and plain variants.
+///
+/// All variants share one floating, rounded, single-at-a-time presentation so
+/// toasts read consistently across the app. Pass [duration] to override the
+/// default 4s dwell (e.g. a shorter confirmation or a longer actionable error).
 class AppToast {
-  static void show(BuildContext context, String message) {
-    _show(context, message: message);
+  static void show(BuildContext context, String message, {Duration? duration}) {
+    _show(context, message: message, duration: duration);
   }
 
-  static void success(BuildContext context, String message) {
+  static void success(
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) {
     _show(
       context,
       message: message,
       icon: Icons.check_circle_outline,
       color: Theme.of(context).colorScheme.tertiary,
+      duration: duration,
     );
   }
 
-  static void error(BuildContext context, String message) {
+  static void error(
+    BuildContext context,
+    String message, {
+    Duration? duration,
+  }) {
     _show(
       context,
       message: message,
       icon: Icons.error_outline,
       color: Theme.of(context).colorScheme.error,
+      duration: duration,
     );
   }
 
@@ -29,9 +43,19 @@ class AppToast {
     required String message,
     required String actionLabel,
     required VoidCallback onAction,
+    IconData? icon,
+    Color? color,
+    Duration? duration,
   }) {
-    _show(context,
-        message: message, actionLabel: actionLabel, onAction: onAction);
+    _show(
+      context,
+      message: message,
+      actionLabel: actionLabel,
+      onAction: onAction,
+      icon: icon,
+      color: color,
+      duration: duration,
+    );
   }
 
   static void _show(
@@ -41,6 +65,7 @@ class AppToast {
     Color? color,
     String? actionLabel,
     VoidCallback? onAction,
+    Duration? duration,
   }) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -58,6 +83,7 @@ class AppToast {
       SnackBar(
         backgroundColor: bg,
         elevation: 0,
+        duration: duration ?? const Duration(seconds: 4),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: BorderSide(

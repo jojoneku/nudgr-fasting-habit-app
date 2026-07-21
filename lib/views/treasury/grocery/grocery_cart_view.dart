@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/grocery/cart_item.dart';
 import 'package:intermittent_fasting/models/grocery/item_unit.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
@@ -193,7 +194,7 @@ class _BreakdownLine extends StatelessWidget {
     ];
     if (presenter.hasEstimates) {
       parts.add(_chip(context, '~${formatPeso(presenter.estimatedTotal)} est',
-          cs.secondary));
+          context.appColors.fast));
     }
     if (presenter.unpricedCount > 0) {
       parts
@@ -240,25 +241,45 @@ class _BudgetRow extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              over ? Icons.warning_amber_rounded : Icons.account_balance_wallet,
-              size: 18,
-              color: over ? cs.error : cs.primary,
+            Row(
+              children: [
+                Icon(
+                  over
+                      ? Icons.warning_amber_rounded
+                      : Icons.account_balance_wallet,
+                  size: 18,
+                  color: over ? cs.error : cs.primary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  over
+                      ? 'Over by ${formatPeso(remaining.abs())}'
+                      : '${formatPeso(remaining)} left of ${formatPeso(presenter.budget!)}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: over ? cs.error : cs.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                Icon(Icons.edit_outlined, size: 16, color: cs.onSurfaceVariant),
+              ],
             ),
-            const SizedBox(width: 6),
-            Text(
-              over
-                  ? 'Over by ${formatPeso(remaining.abs())}'
-                  : '${formatPeso(remaining)} left of ${formatPeso(presenter.budget!)}',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: over ? cs.error : cs.onSurface,
-                fontWeight: FontWeight.w600,
+            const SizedBox(height: 8),
+            // Reference budget bar: how much of the trip budget is used.
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: presenter.budget! > 0
+                    ? (presenter.grandTotal / presenter.budget!).clamp(0.0, 1.0)
+                    : 0.0,
+                minHeight: 7,
+                backgroundColor: cs.surfaceContainerHighest,
+                color: over ? cs.error : context.appColors.fast,
               ),
             ),
-            const Spacer(),
-            Icon(Icons.edit_outlined, size: 16, color: cs.onSurfaceVariant),
           ],
         ),
       ),
@@ -319,7 +340,7 @@ class _CartItemTile extends StatelessWidget {
         break;
       case PriceState.remembered:
         subtitle = '~${formatPeso(item.unitPrice!)} $suffix · tap to confirm';
-        subtitleColor = cs.secondary;
+        subtitleColor = context.appColors.fast;
         break;
       case PriceState.unknown:
         subtitle = 'No price · tap to add';
@@ -387,7 +408,7 @@ class _CartItemTile extends StatelessWidget {
                   textAlign: TextAlign.right,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: item.priceState == PriceState.remembered
-                        ? cs.secondary
+                        ? context.appColors.fast
                         : cs.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
@@ -636,12 +657,8 @@ class _SetBudgetSheetState extends State<_SetBudgetSheet> {
     if (text.isNotEmpty) {
       final amount = double.tryParse(text.replaceAll(',', ''));
       if (amount == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Enter a valid amount, or leave blank to remove.'),
-          ),
-        );
+        AppToast.error(
+            context, 'Enter a valid amount, or leave blank to remove.');
         return;
       }
       await widget.presenter.setBudget(amount);
@@ -709,11 +726,10 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
     );
     if (mounted) {
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(post ? 'Trip saved & logged to ledger' : 'Trip saved'),
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.success(
+        context,
+        post ? 'Trip saved & logged to ledger' : 'Trip saved',
+        duration: const Duration(seconds: 2),
       );
     }
   }
@@ -752,26 +768,29 @@ class _CheckoutSheetState extends State<_CheckoutSheet> {
             onChanged: (v) => setState(() => _logToLedger = v),
           ),
           if (_logToLedger) ...[
-            DropdownButtonFormField<String>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Account'),
-              items: [
-                for (final a in accounts)
-                  DropdownMenuItem(value: a.id, child: Text(a.name)),
-              ],
-              onChanged: (v) => setState(() => _accountId = v),
+            LabeledField(
+              label: 'Account',
+              child: DropdownButtonFormField<String>(
+                initialValue: _accountId,
+                items: [
+                  for (final a in accounts)
+                    DropdownMenuItem(value: a.id, child: Text(a.name)),
+                ],
+                onChanged: (v) => setState(() => _accountId = v),
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
-            DropdownButtonFormField<String>(
-              initialValue: _categoryId,
-              decoration:
-                  const InputDecoration(labelText: 'Category (optional)'),
-              items: [
-                const DropdownMenuItem(value: null, child: Text('None')),
-                for (final c in categories)
-                  DropdownMenuItem(value: c.id, child: Text(c.name)),
-              ],
-              onChanged: (v) => setState(() => _categoryId = v),
+            LabeledField(
+              label: 'Category (optional)',
+              child: DropdownButtonFormField<String>(
+                initialValue: _categoryId,
+                items: [
+                  const DropdownMenuItem(value: null, child: Text('None')),
+                  for (final c in categories)
+                    DropdownMenuItem(value: c.id, child: Text(c.name)),
+                ],
+                onChanged: (v) => setState(() => _categoryId = v),
+              ),
             ),
           ],
         ],
@@ -832,12 +851,8 @@ class _TripHistorySheet extends StatelessWidget {
                 await presenter.repeatTrip(trip.id);
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Items added to your cart'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  AppToast.show(context, 'Items added to your cart',
+                      duration: const Duration(seconds: 2));
                 }
               },
               child: const Text('Repeat'),

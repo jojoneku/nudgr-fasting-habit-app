@@ -35,7 +35,7 @@ class SpendingCalendar extends StatelessWidget {
     return RepaintBoundary(
       child: AppCard(
         variant: AppCardVariant.outlined,
-        padding: EdgeInsets.zero,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         child: TableCalendar(
           firstDay: firstDay,
           lastDay: lastDay,

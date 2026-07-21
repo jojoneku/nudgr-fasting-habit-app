@@ -39,6 +39,7 @@ import '../presenters/update_presenter.dart';
 import 'auth/login_view.dart';
 import 'hub_screen.dart';
 import 'onboarding/onboarding_flow.dart';
+import 'widgets/system/system.dart';
 import 'widgets/update_prompt.dart';
 
 class AppShell extends StatefulWidget {
@@ -350,15 +351,14 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       _currentUserId = null;
       if (mounted) {
         setState(() {});
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Sync failed: $e'),
-            duration: const Duration(seconds: 8),
-            action: SnackBarAction(
-              label: 'Retry',
-              onPressed: () => _initSync(userId),
-            ),
-          ),
+        AppToast.action(
+          context,
+          message: 'Sync failed: $e',
+          actionLabel: 'Retry',
+          onAction: () => _initSync(userId),
+          icon: Icons.error_outline,
+          color: Theme.of(context).colorScheme.error,
+          duration: const Duration(seconds: 8),
         );
       }
     }

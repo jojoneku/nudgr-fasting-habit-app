@@ -8,6 +8,7 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/receivable.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
+import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
@@ -15,11 +16,54 @@ import 'package:intermittent_fasting/services/notification_service.dart';
 import 'package:intermittent_fasting/services/storage_service.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/utils/safe_notifier.dart';
+import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Lifecycle status of a bill relative to today — drives the web status badge
 /// so the view never computes due-date conditionals in `build` (Rule 1).
 enum BillStatus { paid, overdue, dueSoon, unpaid }
+
+/// The obligation type behind one "Coming up" timeline row — drives the row's
+/// accent dot and the sheet the view routes its action to.
+enum ComingUpKind { bill, receivable, budgeted, installment }
+
+/// One entry in the unified "Coming up" timeline — a pure value type merged
+/// across bills, receivables, budgeted expenses, and installments so the view
+/// renders the timeline without doing the merge/sort/slice in `build` (Rule 1).
+///
+/// Carries no Flutter types (keeping the presenter UI-free); [source] holds the
+/// originating model (Bill/Receivable/BudgetedExpense/Installment) so the view
+/// can route the row's tap back to the right existing sheet.
+class ComingUpItem {
+  final ComingUpKind kind;
+  final String name;
+  final double amount;
+
+  /// True for money coming *in* (receivables) — the view renders a `+` and the
+  /// success color; false for outflows (bills, set-asides, installments).
+  final bool isInflow;
+
+  /// Due/expected date when the item has one (bills, dated receivables); null
+  /// for undated items (set-asides, installments), which sort to the end.
+  final DateTime? date;
+
+  /// Pre-formatted date/relation label, e.g. "Jun 28 · 3 days",
+  /// "ASAP · incoming", "This month".
+  final String dateLabel;
+
+  /// The originating model, so the view can resolve the row's action.
+  final Object source;
+
+  const ComingUpItem({
+    required this.kind,
+    required this.name,
+    required this.amount,
+    required this.isInflow,
+    required this.date,
+    required this.dateLabel,
+    required this.source,
+  });
+}
 
 class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   BillsReceivablesPresenter(
@@ -87,6 +131,10 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
   final Set<String> _awardedXpKeys = {};
   bool _awardedXpLoaded = false;
 
+  /// Cached global bills-reminder preference (see load) — gates whether a bill's
+  /// per-bill reminder is actually scheduled.
+  bool _billsReminderEnabled = true;
+
   // ─── Public state ────────────────────────────────────────────────────────────
 
   String get selectedMonth => _selectedMonth;
@@ -95,6 +143,12 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
   List<FinancialAccount> get accounts => _ledger.accounts;
   List<FinanceCategory> get categories => _ledger.categories;
+
+  /// The category for [id], or null when unknown — lets a bill/receivable card
+  /// resolve its icon and color from the linked category without scanning the
+  /// list in `build`.
+  FinanceCategory? categoryById(String id) =>
+      _ledger.categories.where((c) => c.id == id).firstOrNull;
 
   // ─── Bill getters ────────────────────────────────────────────────────────────
 
@@ -133,6 +187,144 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         .where((e) => e.month == _selectedMonth)
         .fold(0.0, (sum, e) => sum + (e.nextMonthAmount ?? 0.0));
     return billsNm + receivablesNm + expensesNm;
+  }
+
+  // ─── Due-soon hero (Nudgr redesign) ───────────────────────────────────────────
+
+  /// The soonest-due unpaid bill in the selected month, or null when none is
+  /// unpaid. [bills] is already ordered unpaid-first then by due day, so the
+  /// first unpaid entry is the most imminent.
+  Bill? get imminentUnpaidBill => bills.where((b) => !b.isPaid).firstOrNull;
+
+  /// [bill]'s due date, derived from its month + dueDay. The due day is clamped
+  /// to the month length (day 31 in a 30-day month), and a malformed month key
+  /// falls back to the current year/month.
+  DateTime billDueDate(Bill bill) {
+    final now = DateTime.now();
+    final parts = bill.month.split('-');
+    final year = int.tryParse(parts.isNotEmpty ? parts[0] : '') ?? now.year;
+    final mon = int.tryParse(parts.length > 1 ? parts[1] : '') ?? now.month;
+    final lastDay = DateTime(year, mon + 1, 0).day;
+    return DateTime(year, mon, bill.dueDay.clamp(1, lastDay));
+  }
+
+  /// Whole days until [bill]'s due date relative to today. Negative when
+  /// overdue. The bill's own month is honoured so a past-month unpaid bill reads
+  /// as overdue and a future-month one as far off.
+  int billDaysUntilDue(Bill bill) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return billDueDate(bill).difference(today).inDays;
+  }
+
+  /// Due-status descriptor for the bills hero: a human label, whether the bill
+  /// is overdue, and whether it is imminent (due within 3 days or overdue).
+  ({String label, bool overdue, bool imminent}) billDueInfo(Bill bill) {
+    final d = billDaysUntilDue(bill);
+    if (d < 0) {
+      final n = -d;
+      return (
+        label: n == 1 ? 'Overdue by 1 day' : 'Overdue by $n days',
+        overdue: true,
+        imminent: true,
+      );
+    }
+    final label = d == 0
+        ? 'Due today'
+        : d == 1
+            ? 'Due tomorrow'
+            : 'Due in $d days';
+    return (label: label, overdue: false, imminent: d <= 3);
+  }
+
+  /// Every unpaid bill that is overdue or due within a week, soonest-first — the
+  /// data behind the swipeable due-soon stack at the top of the Bills tab. Empty
+  /// when nothing is imminent, so the stack renders nothing.
+  List<Bill> get imminentUnpaidBills =>
+      bills.where((b) => !b.isPaid && billDaysUntilDue(b) <= 7).toList()
+        ..sort((a, b) => billDaysUntilDue(a).compareTo(billDaysUntilDue(b)));
+
+  // ─── Coming up (unified timeline) ─────────────────────────────────────────────
+
+  /// The next few things across every obligation type, merged into one
+  /// timeline: unpaid bills, un-received receivables, unpaid budgeted expenses,
+  /// and due-but-unpaid installments. Sorted soonest-first with undated items
+  /// (set-asides, installments) last, capped at five. Installments live in a
+  /// separate presenter, so it is passed in rather than injected. The whole
+  /// merge/sort/slice lives here so the view never computes it in `build`.
+  List<ComingUpItem> comingUpItems(InstallmentPresenter installments) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final items = <ComingUpItem>[];
+
+    for (final b in bills.where((b) => !b.isPaid)) {
+      final due = billDueDate(b);
+      items.add(ComingUpItem(
+        kind: ComingUpKind.bill,
+        name: b.name,
+        amount: b.amount,
+        isInflow: false,
+        date: due,
+        dateLabel: _comingUpBillLabel(due.difference(today).inDays, due),
+        source: b,
+      ));
+    }
+    for (final r in receivables.where((r) => !r.isReceived)) {
+      final d = r.expectedDate;
+      items.add(ComingUpItem(
+        kind: ComingUpKind.receivable,
+        name: r.name,
+        amount: r.amount,
+        isInflow: true,
+        date: d,
+        dateLabel: d == null
+            ? 'ASAP · incoming'
+            : '${DateFormat('MMM d').format(d)} · incoming',
+        source: r,
+      ));
+    }
+    for (final e in budgetedExpenses.where((e) => !e.isPaid)) {
+      items.add(ComingUpItem(
+        kind: ComingUpKind.budgeted,
+        name: e.name,
+        amount: e.allocatedAmount,
+        isInflow: false,
+        date: null,
+        dateLabel: 'Set aside',
+        source: e,
+      ));
+    }
+    for (final i in installments.dueThisMonth
+        .where((i) => !installments.isPaidForMonth(i.id))) {
+      items.add(ComingUpItem(
+        kind: ComingUpKind.installment,
+        name: i.name,
+        amount: i.monthlyAmount,
+        isInflow: false,
+        date: null,
+        dateLabel: 'This month',
+        source: i,
+      ));
+    }
+
+    // Dated items first, ascending; undated (set-asides, installments) last so
+    // concrete due dates lead the timeline.
+    items.sort((a, b) {
+      if (a.date == null && b.date == null) return 0;
+      if (a.date == null) return 1;
+      if (b.date == null) return -1;
+      return a.date!.compareTo(b.date!);
+    });
+    return items.take(5).toList();
+  }
+
+  /// Short "MMM d · <relation>" label for a coming-up bill row.
+  String _comingUpBillLabel(int days, DateTime due) {
+    final md = DateFormat('MMM d').format(due);
+    if (days < 0) return '$md · overdue';
+    if (days == 0) return '$md · today';
+    if (days == 1) return '$md · tomorrow';
+    return '$md · $days days';
   }
 
   // ─── Receivable getters ───────────────────────────────────────────────────────
@@ -287,6 +479,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
 
     // Schedule or cancel monthly bills reminder based on user preferences.
     final prefs = await _storage.loadNotificationPreferences();
+    _billsReminderEnabled = prefs.billsReminderEnabled;
     if (prefs.billsReminderEnabled && _allBills.isNotEmpty) {
       await _notifications.scheduleBillsReminder(prefs.billsReminderDayOfMonth);
     } else {
@@ -412,6 +605,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = [..._allBills, bill];
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _syncBillReminder(bill);
     await _notifyDependents();
   }
 
@@ -419,6 +613,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = [for (final b in _allBills) b.id == bill.id ? bill : b];
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _syncBillReminder(bill);
     await _notifyDependents();
   }
 
@@ -426,7 +621,26 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     _allBills = _allBills.where((b) => b.id != id).toList();
     safeNotify();
     await _storage.saveBills(_allBills);
+    await _notifications.cancelBillReminder(id);
     await _notifyDependents();
+  }
+
+  /// Schedules or cancels a bill's per-bill "remind me N days before" reminder.
+  /// Scheduled only for an unpaid bill that has a lead time and while the global
+  /// bills-reminder preference is on; otherwise the reminder is cancelled.
+  Future<void> _syncBillReminder(Bill bill) async {
+    if (bill.reminderDaysBefore != null &&
+        !bill.isPaid &&
+        _billsReminderEnabled) {
+      await _notifications.scheduleBillReminder(
+        billId: bill.id,
+        billName: bill.name,
+        dueDate: billDueDate(bill),
+        daysBefore: bill.reminderDaysBefore!,
+      );
+    } else {
+      await _notifications.cancelBillReminder(bill.id);
+    }
   }
 
   /// Marks [billId] paid. When [recordInLedger] is true (default) this also
@@ -500,6 +714,8 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     ));
     safeNotify();
     await _storage.saveBills(_allBills);
+    // A paid bill needs no reminder.
+    await _notifications.cancelBillReminder(bill.id);
     await _checkAllBillsPaidXp();
     await _notifyDependents();
   }
@@ -1123,6 +1339,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           paymentNote: b.paymentNote,
           isRecurring: b.isRecurring,
           recurrenceType: b.recurrenceType,
+          reminderDaysBefore: b.reminderDaysBefore,
         ));
     _allBills = [..._allBills, ...copies];
     await _storage.saveBills(_allBills);

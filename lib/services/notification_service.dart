@@ -1478,6 +1478,70 @@ class NotificationService {
   int _creditDueId(String accountId) =>
       notifIdCreditDueBase + (accountId.hashCode.abs() % 100);
 
+  // Per-bill reminder ids live in a dedicated high range (5000–5999) to avoid
+  // colliding with the credit-due (620–719) and budget-warning (560–599) ranges.
+  static const int notifIdBillReminderBase = 5000;
+  int _billReminderId(String billId) =>
+      notifIdBillReminderBase + (billId.hashCode.abs() % 1000);
+
+  /// Schedules a one-shot reminder [daysBefore] days before a bill's [dueDate]
+  /// (at 9:00 AM). No-ops if the fire time is already in the past. Paired with
+  /// [cancelBillReminder]. Gated by the master switch like every other schedule.
+  Future<void> scheduleBillReminder({
+    required String billId,
+    required String billName,
+    required DateTime dueDate,
+    required int daysBefore,
+  }) async {
+    if (!_isInitialized || !_masterEnabled) return;
+    final id = _billReminderId(billId);
+    final target = DateTime(dueDate.year, dueDate.month, dueDate.day, 9, 0)
+        .subtract(Duration(days: daysBefore));
+    if (!_scheduleChanged(
+        'billReminder/$billId', '${target.toIso8601String()}|$billName')) {
+      return;
+    }
+    await flutterLocalNotificationsPlugin.cancel(id);
+    // Nothing to schedule if the reminder moment has already passed.
+    if (!target.isAfter(DateTime.now())) return;
+    final scheduled = _getRelativeScheduledTime(target);
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      channelIdFinance,
+      channelNameFinance,
+      channelDescription: 'Bill reminders and budget-over-limit warnings',
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true,
+      enableVibration: false,
+    );
+    const NotificationDetails details =
+        NotificationDetails(android: androidDetails);
+    final lead = daysBefore == 1 ? '1 day' : '$daysBefore days';
+
+    try {
+      await flutterLocalNotificationsPlugin.zonedSchedule(
+        id,
+        'Bill due soon',
+        '$billName is due in $lead. Settle it in Treasury.',
+        scheduled,
+        details,
+        androidScheduleMode: AndroidScheduleMode.alarmClock,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (e) {
+      debugPrint('NotificationService: Error scheduling bill reminder: $e');
+    }
+  }
+
+  Future<void> cancelBillReminder(String billId) async {
+    if (!_isInitialized) return;
+    _invalidateSchedule('billReminder/$billId');
+    await flutterLocalNotificationsPlugin.cancel(_billReminderId(billId));
+  }
+
   /// Schedule a monthly reminder on a credit account's payment [dueDay] at 9 AM.
   Future<void> scheduleCreditDueReminder({
     required String accountId,

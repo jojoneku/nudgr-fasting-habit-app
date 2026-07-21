@@ -3,10 +3,12 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../design/account_category_label.dart';
 import '../../widgets/web_widgets.dart';
 import 'web_account_form_dialog.dart';
@@ -167,7 +169,6 @@ class _CategoriesCardState extends State<_CategoriesCard> {
   }
 
   Future<void> _confirmDelete(FinanceCategory category) async {
-    final messenger = ScaffoldMessenger.of(context);
     final cs = Theme.of(context).colorScheme;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -194,16 +195,13 @@ class _CategoriesCardState extends State<_CategoriesCard> {
     try {
       await widget.ledger.deleteCategory(category.id);
     } on StateError catch (e) {
-      messenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            e.message == 'has_transactions'
-                ? 'This category has transactions linked to it. '
-                    'Delete or reassign those entries first.'
-                : 'Could not delete category: ${e.message}',
-          ),
-        ),
+      if (!mounted) return;
+      AppToast.error(
+        context,
+        e.message == 'has_transactions'
+            ? 'This category has transactions linked to it. '
+                'Delete or reassign those entries first.'
+            : 'Could not delete category: ${e.message}',
       );
     }
   }
@@ -955,17 +953,12 @@ class _TypeDropdown extends StatelessWidget {
 
   Future<void> _changeType(BuildContext context, AccountCategory? c) async {
     if (c == null || c == account.category) return;
-    final messenger = ScaffoldMessenger.of(context);
     await presenter.updateAccount(account.copyWith(category: c));
+    if (!context.mounted) return;
     // A Goal with no target won't show progress or surface in dashboard goals
     // until a target is set — nudge the user toward the edit form for that.
     if (c == AccountCategory.goal && (account.goalTarget ?? 0) <= 0) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Set a goal target in Edit to track progress.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.show(context, 'Set a goal target in Edit to track progress.');
     }
   }
 }
@@ -992,24 +985,9 @@ class _AccountTableRow extends StatelessWidget {
     }
   }
 
-  IconData get _icon => switch (account.category) {
-        AccountCategory.bank => Icons.account_balance_outlined,
-        AccountCategory.ewallet => Icons.account_balance_wallet_outlined,
-        AccountCategory.cash => Icons.payments_outlined,
-        AccountCategory.savings => Icons.savings_outlined,
-        AccountCategory.goal => Icons.flag_outlined,
-        AccountCategory.timeDeposit => Icons.lock_clock_outlined,
-        AccountCategory.creditCard => Icons.credit_card_outlined,
-        AccountCategory.creditLine => Icons.account_balance_outlined,
-        AccountCategory.bnpl => Icons.schedule_outlined,
-        AccountCategory.investment => Icons.trending_up_outlined,
-        AccountCategory.custodian => Icons.group_outlined,
-      };
-
   String get _typeLabel => account.category.label;
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final messenger = ScaffoldMessenger.of(context);
     final cs = Theme.of(context).colorScheme;
 
     final confirmed = await showDialog<bool>(
@@ -1039,6 +1017,7 @@ class _AccountTableRow extends StatelessWidget {
     try {
       await presenter.deleteAccount(account.id);
     } on StateError catch (e) {
+      if (!context.mounted) return;
       final message = switch (e.message) {
         'has_sub_accounts' =>
           'Remove all sub-accounts first before deleting this account.',
@@ -1047,12 +1026,7 @@ class _AccountTableRow extends StatelessWidget {
               'Delete or reassign them first.',
         _ => 'Could not delete account: ${e.message}',
       };
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(message),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppToast.error(context, message);
     }
   }
 
@@ -1072,15 +1046,7 @@ class _AccountTableRow extends StatelessWidget {
       padding: EdgeInsets.only(left: indented ? WebInsets.lg : 0),
       child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              borderRadius: BorderRadius.circular(AppRadii.sm),
-            ),
-            child: Icon(_icon, size: 17, color: color),
-          ),
+          AccountBadge.of(account, size: 32),
           const SizedBox(width: WebInsets.md),
           Flexible(
             child: Column(
