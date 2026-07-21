@@ -870,7 +870,7 @@ class _IconTapTarget extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 44,
-      height: 32,
+      height: 44,
       child: IconButton(
         padding: EdgeInsets.zero,
         iconSize: 20,
