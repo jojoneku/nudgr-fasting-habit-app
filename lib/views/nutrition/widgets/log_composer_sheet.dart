@@ -253,8 +253,18 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
   /// Commit the reviewed estimate to the log, then close with an undo toast.
   Future<void> _logEstimate() async {
     if (_committing) return; // guard double-tap
-    _committing = true;
     final messenger = ScaffoldMessenger.of(context);
+    // Gate check before committing: if the eating window has closed while the
+    // user lingered on the review step, keep the estimate on screen and explain
+    // rather than silently dropping it.
+    if (widget.presenter.isLoggingBlockedNow) {
+      AppToast.error(
+        messenger.context,
+        "Outside your eating window — can't log this right now.",
+      );
+      return;
+    }
+    _committing = true;
     final kcal = widget.presenter.pendingChatTotalCalories;
     final id = await widget.presenter.commitPendingChat();
     if (!mounted) return;
@@ -265,6 +275,13 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
         message: 'Logged · $kcal kcal',
         actionLabel: 'Undo',
         onAction: () => widget.presenter.removeChatMessage(id),
+      );
+    } else {
+      // Residual race (window closed mid-commit): the estimate is gone, but at
+      // least tell the user instead of a silent no-op.
+      AppToast.error(
+        messenger.context,
+        "Couldn't log that — outside your eating window.",
       );
     }
   }

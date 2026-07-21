@@ -564,6 +564,13 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   DateTime get selectedDate => _selectedDate;
   bool get isSelectedDateToday =>
       _dateFmt.format(_selectedDate) == _dateFmt.format(DateTime.now());
+
+  /// True when committing a log right now would be blocked by the IF-Sync gate
+  /// (today only, eating window closed). Callers should check this before
+  /// committing a pending estimate so they can explain the block and keep the
+  /// estimate on screen, rather than silently dropping it (`isEatingWindowOpen`
+  /// already returns true when IF-Sync is disabled).
+  bool get isLoggingBlockedNow => isSelectedDateToday && !isEatingWindowOpen;
   List<ChatMessage> get chatMessages => List.unmodifiable(_chatMessages);
 
   /// The selected day's log entries ordered newest-first — the source for the

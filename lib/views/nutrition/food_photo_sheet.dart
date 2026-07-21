@@ -206,8 +206,18 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
   /// Commit the reviewed photo estimate to the log, then close.
   Future<void> _logPhoto() async {
     if (_committing) return; // guard double-tap
-    _committing = true;
     final messenger = ScaffoldMessenger.of(context);
+    // Gate check before committing: keep the estimate on screen and explain if
+    // the eating window closed while the user reviewed, rather than a silent
+    // no-op that looks like a successful log.
+    if (widget.presenter.isLoggingBlockedNow) {
+      AppToast.error(
+        messenger.context,
+        "Outside your eating window — can't log this right now.",
+      );
+      return;
+    }
+    _committing = true;
     final kcal = widget.presenter.pendingChatTotalCalories;
     final id = await widget.presenter.commitPendingChat();
     if (!mounted) return;
@@ -218,6 +228,11 @@ class _PhotoPreviewSheetState extends State<_PhotoPreviewSheet> {
         message: 'Logged · $kcal kcal',
         actionLabel: 'Undo',
         onAction: () => widget.presenter.removeChatMessage(id),
+      );
+    } else {
+      AppToast.error(
+        messenger.context,
+        "Couldn't log that — outside your eating window.",
       );
     }
   }
