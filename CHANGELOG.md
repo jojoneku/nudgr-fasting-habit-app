@@ -13,6 +13,88 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.49] - 2026-07-21
+
+### Added
+- compact macro row + derive macro targets from calorie goal
+- History overview + lighter live tiles
+- spending range selector; drop duplicate ledger totals
+- calculator amount + hero layout on Log Transaction
+- rework Budget tab — hide app bar, restructure card, txn popup
+- new-entry type picker as a segmented control
+- redress bills mark/confirm sheets to shared chrome
+- redesign the Set/Edit Budget sheet to the Nudgr field language
+- reskin Add/Edit Transaction sheet to the reference
+- consolidate bill forms — graft reference account picker
+- combined bill/receivable entry + kit restyle of both forms
+- migrate add-account form to the form kit
+- migrate add-installment + add-transaction to the form kit
+- implement redesign-bills-forms (unified sheet + reminder)
+- migrate expense + installment mark-as-paid to the form kit
+- add Nudgr form kit + migrate mark-as-paid (bill, received)
+- restore card detail on the Bills obligation cards
+- show remaining in ring hero, simplify month switcher
+- name-monogram fallback for category badges
+- redesign Budget tab as per-budget cards
+- restructure the Bills tab (redesign-bills-page)
+- hide module app bar on Ledger tab (title owns the top)
+- redesign Ledger page (reskin + superset)
+- choosable account icons + brand monograms
+- month-grid popover picker (drop header chevrons)
+- month/year switcher + move day filter into Filter & sort
+- month/year switcher + move day filter into Filter & sort
+- quick-clear (X) button on Ledger Filter & sort bar
+- unified Ledger filter & sort (multi-select + ordering)
+- photo estimate review before logging
+- reference field-boxes in Account Setup, Categories, Budget Groups (7-10/10)
+- reference field-boxes in Add/Edit Transaction (6/10)
+- reference field-boxes in Add Bill + Add Receivable (4-5/10)
+- reference field-boxes in Bills sheets (3/10)
+- reference field-boxes in Add Installment (2/10)
+- reference sheet field-boxes — shared helper + Add Budget (1/10)
+- dedicated Goals & Savings screen (Nudgr redesign)
+- List/Calendar view toggle in Ledger (Nudgr redesign)
+- budget progress bar in Cart header (Nudgr redesign)
+- reference month pill in Bills (Nudgr redesign)
+- reference input pill + month pill in Ledger (Nudgr redesign)
+- composer draft bubble, persistent input, log undo
+- review estimate before logging (composer)
+- blue estimate accent in Cart (Nudgr redesign, increment 6)
+- per-month savings rate in History (Nudgr redesign, increment 5)
+- pace-aware budget hero (Nudgr redesign, increment 4)
+- DUE SOON bills hero (Nudgr redesign, increment 3)
+- full "Save as template" sheet
+- category-specific ledger icons (Nudgr redesign, increment 2)
+- add delete-undo for Today's log entries
+- Nudgr dashboard redesign — hero, cashflow strip, accounts (increment 1)
+- Nudgr redesign — flat log list, composer sheet, photo restyle
+- add EATEN TODAY hero (Nudgr redesign, increment 1)
+
+### Fixed
+- don't silently drop a log when the eating window closes
+- make log-card menu tap target a full 44x44
+- monthly detail uses category/account icon badges
+- enable mouse/trackpad drag so PageViews swipe on web/desktop
+- reskin monthly detail page
+- reskin History tab — compact month cards, in-page title
+- hide OTHER type badge on bill/receivable rows
+- full-width due-soon card
+- budget card — progress bar under name, drop txn popup
+- form consistency — segment height, category picker, notes, installment
+- budget card — full-width progress, drop txn count, tap hint
+- shorten the new-entry type segmented control
+- label the receivable Date picker so it aligns with Amount
+- align manage-categories row + numbers to Jakarta Sans
+- make month-year picker sheet scrollable (pre-existing overflow)
+- stamp category updatedAt on add/update (sync correctness)
+- a11y double-read, monogram emoji-names, add-preview color
+- ring hero "remaining" reads "over" for zero-allocation spend
+- restore budget-card parity dropped in the redesign
+- restore account color dot; live category-icon preview
+- guard Ledger controls-row overflow; test resolveCategoryIcon
+- always show Accounts + Categories in Ledger filter sheet
+- address review findings on the estimate flow
+
 ## [1.1.48] - 2026-07-19
 
 - Maintenance and internal improvements.
@@ -429,7 +511,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.48...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.49...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -479,3 +561,4 @@ distributed via `manifest.json`.
 [1.1.46]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.46
 [1.1.47]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.47
 [1.1.48]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.48
+[1.1.49]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.49
