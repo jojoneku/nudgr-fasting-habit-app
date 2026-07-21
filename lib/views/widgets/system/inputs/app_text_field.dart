@@ -28,7 +28,7 @@ class AppTextField extends StatelessWidget {
     this.enabled = true,
     this.contentPadding = const EdgeInsets.symmetric(
       horizontal: 14,
-      vertical: 10,
+      vertical: 14,
     ),
     this.textStyle,
     this.focusNode,
