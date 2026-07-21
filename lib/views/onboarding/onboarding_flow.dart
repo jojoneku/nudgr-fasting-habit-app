@@ -184,31 +184,6 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     );
   }
 
-  Widget _heading(String title, String subtitle) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -0.5,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          subtitle,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-      ],
-    );
-  }
-
   // ── Step 0 · Awakening ────────────────────────────────────────────────────────
   Widget _awakening() {
     final theme = Theme.of(context);
@@ -272,7 +247,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _heading('Welcome back',
+            const TdeeHeading('Welcome back',
                 'We found your record in the cloud. Pick up right where you left off.'),
             _InfoBanner(
               icon: Icons.cloud_done,
@@ -292,7 +267,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Sign in',
+          const TdeeHeading('Sign in',
               'Sync across devices — or continue on this device only.'),
           _InfoBanner(
             icon: Icons.shield_outlined,
@@ -328,7 +303,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('About you', 'The basics behind your calorie math.'),
+          const TdeeHeading(
+              'About you', 'The basics behind your calorie math.'),
           BodyStatsForm(
             weightCtrl: _weightCtrl,
             heightCtrl: _heightCtrl,
@@ -357,7 +333,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Activity level', 'How active is a typical week?'),
+          const TdeeHeading('Activity level', 'How active is a typical week?'),
           ActivityLevelSelector(
             selected: p.activityLevel,
             onChanged: p.setActivity,
@@ -400,9 +376,9 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Your goal', "We'll size your targets around it."),
+          const TdeeHeading('Your goal', "We'll size your targets around it."),
           for (final g in goals)
-            _SelectCard(
+            TdeeSelectCard(
               icon: g.icon,
               title: g.label,
               subtitle: g.desc,
@@ -424,7 +400,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
     final profile = p.previewProfile;
     if (profile == null) {
       return _stepScaffold(
-        body: _heading('Your daily targets',
+        body: const TdeeHeading('Your daily targets',
             'Add your body details to see your numbers — or continue and set them later.'),
         cta: Column(
           children: [
@@ -455,7 +431,7 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
                       letterSpacing: 1,
                     )),
                 const SizedBox(height: AppSpacing.xs),
-                _CountUp(
+                TdeeCountUp(
                   value: profile.targetCalories,
                   style: theme.textTheme.displaySmall?.copyWith(
                     fontWeight: FontWeight.w800,
@@ -475,9 +451,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(children: [
-            Expanded(child: _StatTile(label: 'BMR', value: '${profile.bmr}')),
+            Expanded(
+                child: TdeeStatTile(label: 'BMR', value: '${profile.bmr}')),
             const SizedBox(width: AppSpacing.sm),
-            Expanded(child: _StatTile(label: 'TDEE', value: '${profile.tdee}')),
+            Expanded(
+                child: TdeeStatTile(label: 'TDEE', value: '${profile.tdee}')),
           ]),
           const SizedBox(height: AppSpacing.md),
           Text('SUGGESTED MACROS',
@@ -488,19 +466,19 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
           const SizedBox(height: AppSpacing.sm),
           Row(children: [
             Expanded(
-                child: _MacroTile(
+                child: TdeeMacroTile(
                     label: 'Protein',
                     grams: profile.suggestedProteinG,
                     color: context.appColors.fast)),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-                child: _MacroTile(
+                child: TdeeMacroTile(
                     label: 'Carbs',
                     grams: profile.suggestedCarbsG,
                     color: context.appColors.gold)),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
-                child: _MacroTile(
+                child: TdeeMacroTile(
                     label: 'Fat',
                     grams: profile.suggestedFatG,
                     color: context.appColors.orange)),
@@ -520,11 +498,11 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Pick a protocol', 'You can change this anytime.'),
+          const TdeeHeading('Pick a protocol', 'You can change this anytime.'),
           for (final proto in protocols)
             Opacity(
               opacity: proto.isExtended ? 0.6 : 1,
-              child: _SelectCard(
+              child: TdeeSelectCard(
                 leading: _ProtocolBadge(
                     hours: proto.hours,
                     selected: p.protocolHours == proto.hours),
@@ -607,7 +585,8 @@ class _OnboardingFlowState extends State<OnboardingFlow> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _heading('Review your setup', 'Tap Edit to change anything.'),
+          const TdeeHeading(
+              'Review your setup', 'Tap Edit to change anything.'),
           _ReviewRow(
               label: 'Account',
               value: p.identitySummary,
@@ -904,81 +883,6 @@ class _InfoBanner extends StatelessWidget {
   }
 }
 
-// ── Generic selectable card (goal / protocol) ──────────────────────────────────
-class _SelectCard extends StatelessWidget {
-  final IconData? icon;
-  final Widget? leading;
-  final String title;
-  final String subtitle;
-  final bool selected;
-  final VoidCallback onTap;
-  const _SelectCard({
-    this.icon,
-    this.leading,
-    required this.title,
-    required this.subtitle,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final fast = context.appColors.fast;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-        constraints: const BoxConstraints(minHeight: 44),
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
-        decoration: BoxDecoration(
-          color: selected
-              ? fast.withValues(alpha: 0.1)
-              : theme.colorScheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(
-            color: selected
-                ? fast.withValues(alpha: 0.6)
-                : theme.colorScheme.outlineVariant,
-            width: selected ? 1.5 : 1,
-          ),
-        ),
-        child: Row(
-          children: [
-            if (leading != null) ...[
-              leading!,
-              const SizedBox(width: AppSpacing.md),
-            ] else if (icon != null) ...[
-              Icon(icon,
-                  color: selected ? fast : theme.colorScheme.onSurfaceVariant,
-                  size: 22),
-              const SizedBox(width: AppSpacing.md),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        color: selected ? theme.colorScheme.onSurface : null,
-                      )),
-                  const SizedBox(height: 1),
-                  Text(subtitle,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      )),
-                ],
-              ),
-            ),
-            if (selected) Icon(Icons.check_circle, color: fast, size: 20),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _ProtocolBadge extends StatelessWidget {
   final int hours;
   final bool selected;
@@ -1001,60 +905,6 @@ class _ProtocolBadge extends StatelessWidget {
             fontWeight: FontWeight.w800,
             color: selected ? Colors.white : theme.colorScheme.onSurfaceVariant,
           )),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final String label;
-  final String value;
-  const _StatTile({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              )),
-          const SizedBox(height: 2),
-          Text(value,
-              style: theme.textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800)),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroTile extends StatelessWidget {
-  final String label;
-  final int grams;
-  final Color color;
-  const _MacroTile(
-      {required this.label, required this.grams, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('${grams}g',
-              style: theme.textTheme.titleMedium
-                  ?.copyWith(fontWeight: FontWeight.w800, color: color)),
-          const SizedBox(height: 2),
-          Text(label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              )),
-        ],
-      ),
     );
   }
 }
@@ -1087,51 +937,5 @@ class _SummonRow extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// ── Count-up number (Status Window reveal ≤400ms) ──────────────────────────────
-class _CountUp extends StatelessWidget {
-  final int value;
-  final TextStyle? style;
-  final String suffix;
-  const _CountUp({required this.value, this.style, this.suffix = ''});
-
-  @override
-  Widget build(BuildContext context) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0, end: value.toDouble()),
-      duration: AppMotion.modal, // 300ms, within the ≤400ms budget
-      curve: AppMotion.decelerate,
-      builder: (context, v, _) {
-        final theme = Theme.of(context);
-        return RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(
-            text: _fmt(v.round()),
-            style: style,
-            children: [
-              TextSpan(
-                text: suffix,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  static String _fmt(int n) {
-    final s = n.toString();
-    final buf = StringBuffer();
-    for (int i = 0; i < s.length; i++) {
-      if (i > 0 && (s.length - i) % 3 == 0) buf.write(',');
-      buf.write(s[i]);
-    }
-    return buf.toString();
   }
 }
