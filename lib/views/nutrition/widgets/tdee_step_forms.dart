@@ -53,9 +53,9 @@ class TdeeRadioTile<T> extends StatelessWidget {
         child: Row(
           children: [
             Radio<T>(
+              // groupValue/onChanged now come from the RadioGroup ancestor
+              // supplied by the parent selector (new Flutter Radio API).
               value: value,
-              groupValue: groupValue,
-              onChanged: onChanged,
               activeColor: gold,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
@@ -183,17 +183,23 @@ class ActivityLevelSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ...ActivityLevel.values.map((level) => TdeeRadioTile<ActivityLevel>(
-              label: level.label,
-              subtitle: activityLevelDescription(level),
-              value: level,
-              groupValue: selected,
-              onChanged: (v) => onChanged(v!),
-            )),
-      ],
+    return RadioGroup<ActivityLevel>(
+      groupValue: selected,
+      onChanged: (v) {
+        if (v != null) onChanged(v);
+      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...ActivityLevel.values.map((level) => TdeeRadioTile<ActivityLevel>(
+                label: level.label,
+                subtitle: activityLevelDescription(level),
+                value: level,
+                groupValue: selected,
+                onChanged: (v) => onChanged(v!),
+              )),
+        ],
+      ),
     );
   }
 }
