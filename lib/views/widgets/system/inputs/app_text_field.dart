@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../app_colors.dart';
 import '../../../../utils/app_spacing.dart';
 
 /// TextField wrapper with consistent padding, error/helper text, and optional icons.
@@ -64,6 +65,17 @@ class AppTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final blue = context.appColors.fast;
+    // Filled, bordered, rounded field box matching the finance forms'
+    // `sheetFieldDecoration` so every field reads as one system.
+    OutlineInputBorder box(Color c, [double w = 1]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    final idle = cs.outlineVariant.withValues(alpha: 0.6);
+
     final field = TextField(
       controller: controller,
       focusNode: focusNode,
@@ -94,14 +106,22 @@ class AppTextField extends StatelessWidget {
                 onPressed: onSuffixIconTap,
               )
             : null,
+        filled: true,
+        fillColor: cs.surfaceContainerHigh,
+        isDense: true,
         contentPadding: contentPadding,
+        enabledBorder: box(idle),
+        border: box(idle),
+        focusedBorder: box(blue, 1.5),
+        errorBorder: box(cs.error),
+        focusedErrorBorder: box(cs.error, 1.5),
+        disabledBorder: box(cs.outlineVariant.withValues(alpha: 0.3)),
       ),
     );
 
     if (label == null) return field;
 
     // Label above the field box (reference style), matching SheetFieldLabel.
-    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
