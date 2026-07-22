@@ -33,7 +33,7 @@ class InsightTrigger {
   final bool Function(InsightSnapshot snapshot) test;
 
   /// Template one-liner used when zero AI is configured/available — written
-  /// in the System's RPG voice. Always produces a complete, sensible line
+  /// in plain, everyday language. Always produces a complete, sensible line
   /// from snapshot data alone.
   final String Function(InsightSnapshot snapshot) fallbackText;
 }
@@ -57,8 +57,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       final cals = _num(s.nutrition.markers, 'todayCalories') ?? 0;
       final goal = _num(s.nutrition.markers, 'effectiveGoal') ?? 0;
       final over = (cals - goal).round();
-      return 'Directive: intake exceeded target by $over kcal — close the '
-          'kitchen for tonight.';
+      return 'You\'re about $over kcal over your goal today — might be a good '
+          'time to call it a night on eating.';
     },
   ),
   InsightTrigger(
@@ -76,8 +76,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       if (avg == null || target == null || target <= 0) return false;
       return avg > target * 1.25;
     },
-    fallbackText: (s) => 'Directive: fat intake has run hot for several '
-        'days — dial back fried and fatty foods this week.',
+    fallbackText: (s) => 'Your fat intake has been high for a few days — try '
+        'easing up on fried and fatty foods this week.',
   ),
   InsightTrigger(
     id: 'nutrition.proteinLow',
@@ -92,8 +92,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       final loggedDays7 = ((consistency ?? 0) * 7).round();
       return rate < 0.4 && loggedDays7 >= 5;
     },
-    fallbackText: (s) => 'Directive: protein has missed target most days '
-        'this week — prioritize a protein source at your next meal.',
+    fallbackText: (s) => 'Protein has come up short most days this week — try '
+        'to work a protein source into your next meal.',
   ),
   InsightTrigger(
     id: 'finance.spendPace',
@@ -115,24 +115,24 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       final expectedPace = budget * (day / daysInMonth) * 1.15;
       return spent > expectedPace;
     },
-    fallbackText: (s) => 'Directive: spending is outpacing the month — '
-        'you are ahead of budget pace. Ease off discretionary buys.',
+    fallbackText: (s) => 'Your spending is running ahead of budget for this '
+        'point in the month — worth easing off the extras.',
   ),
   InsightTrigger(
     id: 'finance.categoryBlown',
     mood: InsightMood.urgent,
     cooldown: const Duration(days: 2),
     test: (s) => _bool(s.finance.markers, 'anyCategoryOverBudget') ?? false,
-    fallbackText: (s) => 'Directive: at least one budget category has been '
-        'blown this month — review it before it compounds.',
+    fallbackText: (s) => 'At least one budget category is over this month — '
+        'worth a quick look before it adds up.',
   ),
   InsightTrigger(
     id: 'finance.billImminent',
     mood: InsightMood.urgent,
     cooldown: const Duration(days: 1),
     test: (s) => _bool(s.finance.markers, 'billImminent') ?? false,
-    fallbackText: (s) => 'Directive: a bill is due within 48 hours — settle '
-        'it before it becomes overdue.',
+    fallbackText: (s) => 'You have a bill due within 48 hours — good to pay '
+        'it before it\'s overdue.',
   ),
   InsightTrigger(
     id: 'fasting.streakAtRisk',
@@ -152,8 +152,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
     },
     fallbackText: (s) {
       final streak = (_num(s.fasting.markers, 'streak') ?? 0).round();
-      return 'Directive: your $streak-day fasting streak is at risk — '
-          'start tonight\'s fast before it slips.';
+      return 'Your $streak-day fasting streak is at risk — starting tonight\'s '
+          'fast now keeps it going.';
     },
   ),
   InsightTrigger(
@@ -170,8 +170,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       if (rate == null || due == null) return false;
       return rate < 0.5 && due > 0;
     },
-    fallbackText: (s) => 'Directive: quest completion has slipped this '
-        'week — clear today\'s list to steady the routine.',
+    fallbackText: (s) => 'Your tasks have slipped a bit this week — finishing '
+        'today\'s list will help you get back on track.',
   ),
   InsightTrigger(
     id: 'body.weightStale',
@@ -182,8 +182,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
       if (days == null) return false;
       return days >= 7;
     },
-    fallbackText: (s) => 'Directive: no weight log in over a week — step '
-        'on the scale to keep the trend line honest.',
+    fallbackText: (s) => 'You haven\'t logged your weight in over a week — a '
+        'quick step on the scale keeps your trend accurate.',
   ),
   InsightTrigger(
     id: 'positive.onFire',
@@ -211,8 +211,8 @@ final List<InsightTrigger> _kTriggers = <InsightTrigger>[
 
       return green >= 3;
     },
-    fallbackText: (s) => 'Analysis complete: three or more fronts are green '
-        'today. The System approves — keep this pace.',
+    fallbackText: (s) => 'Three or more areas are on track today — great '
+        'work, keep it up!',
   ),
 ];
 

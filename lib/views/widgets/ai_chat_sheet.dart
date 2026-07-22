@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
+import '../../presenters/ledger_presenter.dart';
+import 'advisor_log_card.dart';
+import 'advisor_memory_sheet.dart';
 import 'system/system.dart';
 
 /// Entry point labels and icons per context.
@@ -22,6 +25,10 @@ const _entryMeta = {
   AiCoachEntryPoint.treasury: (
     label: 'Ledger Protocol',
     icon: Icons.account_balance_wallet_outlined
+  ),
+  AiCoachEntryPoint.financeAdvisor: (
+    label: 'Money Mentor',
+    icon: Icons.savings_outlined
   ),
   AiCoachEntryPoint.general: (
     label: 'The System',
@@ -71,8 +78,43 @@ class _AiChatSheetState extends State<AiChatSheet> {
 
   AiCoachPresenter get _presenter => widget.presenter;
 
+  bool get _advisorMode =>
+      widget.entryPoint == AiCoachEntryPoint.financeAdvisor &&
+      _presenter.advisorLedger != null;
+  LedgerPresenter? get _ledger => _presenter.advisorLedger;
+
+  String? _lastLoggedSummary;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_advisorMode) _ledger!.addListener(_onLedgerSideEffects);
+  }
+
+  /// Bridge ledger commits back into the conversation: post a "✓ Logged …"
+  /// note when an in-chat entry commits, and swallow any form-fallback so it
+  /// doesn't leak to the hub bar behind this sheet.
+  void _onLedgerSideEffects() {
+    if (!mounted) return;
+    final ledger = _ledger!;
+    final summary = ledger.lastCommittedSummary;
+    if (summary != null && summary != _lastLoggedSummary) {
+      _lastLoggedSummary = summary;
+      _presenter.appendAssistantNote('✓ $summary');
+      ledger.clearLastCommittedSummary();
+      _scrollToBottom();
+    }
+    if (ledger.pendingFormPrefill != null) {
+      ledger.consumeFormPrefill();
+      _presenter.appendAssistantNote(
+          "I couldn't pin that down — try rephrasing the amount and where it "
+          "came from, and I'll prepare it again.");
+    }
+  }
+
   @override
   void dispose() {
+    if (_advisorMode) _ledger!.removeListener(_onLedgerSideEffects);
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -171,6 +213,11 @@ class _AiChatSheetState extends State<AiChatSheet> {
                 message: _presenter.errorMessage!,
                 onDismiss: _presenter.clearError,
               ),
+            if (_advisorMode)
+              ListenableBuilder(
+                listenable: _ledger!,
+                builder: (_, __) => AdvisorLogCard(ledger: _ledger!),
+              ),
             Padding(
               padding: EdgeInsets.only(bottom: bottomInset),
               child: ListenableBuilder(
@@ -236,6 +283,16 @@ class _SheetHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
+            IconButton(
+              icon: Icon(Icons.bookmark_border,
+                  color: cs.onSurfaceVariant, size: 20),
+              tooltip: 'Advisor memory',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: () => AdvisorMemorySheet.show(context, presenter),
+            ),
+            const SizedBox(width: 4),
+          ],
           ListenableBuilder(
             listenable: presenter,
             builder: (_, __) => GestureDetector(

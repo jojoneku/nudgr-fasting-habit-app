@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import '../models/ai_coach_context.dart';
 import '../models/chat_message.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/quest.dart';
@@ -35,6 +36,7 @@ import 'stats_view.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/ledger/add_transaction_sheet.dart';
 import 'treasury/treasury_module_view.dart';
+import 'widgets/ai_chat_sheet.dart';
 import 'widgets/finance/ledger_chat_panel.dart';
 import 'widgets/hub/activity_hub_card.dart';
 import 'widgets/hub/fasting_hub_card.dart';
@@ -250,7 +252,11 @@ class _HubScreenState extends State<HubScreen> {
     final ledger = widget.ledgerPresenter;
     final nutrition = widget.nutritionPresenter;
     final quickLogBar = (ledger != null && nutrition != null)
-        ? _QuickLogBar(ledger: ledger, nutrition: nutrition)
+        ? _QuickLogBar(
+            ledger: ledger,
+            nutrition: nutrition,
+            aiCoach: widget.aiCoachPresenter,
+          )
         : null;
 
     return Scaffold(
@@ -586,10 +592,19 @@ class _HubScreenState extends State<HubScreen> {
 // directly and toasts. Feature navigation now lives on the hub cards.
 
 class _QuickLogBar extends StatefulWidget {
-  const _QuickLogBar({required this.ledger, required this.nutrition});
+  const _QuickLogBar({
+    required this.ledger,
+    required this.nutrition,
+    this.aiCoach,
+  });
 
   final LedgerPresenter ledger;
   final NutritionPresenter nutrition;
+
+  /// When present, the bar becomes dual-mode: the ✨ button opens the
+  /// conversational financial advisor over the Hub; the text field keeps
+  /// quick-logging inline as before.
+  final AiCoachPresenter? aiCoach;
 
   @override
   State<_QuickLogBar> createState() => _QuickLogBarState();
@@ -603,6 +618,20 @@ class _QuickLogBarState extends State<_QuickLogBar> {
 
   LedgerPresenter get _ledger => widget.ledger;
   NutritionPresenter get _nutrition => widget.nutrition;
+  AiCoachPresenter? get _aiCoach => widget.aiCoach;
+
+  /// Expand the bar into the conversational financial advisor (opens over the
+  /// Hub as a draggable sheet; dismissing it returns to the pinned bar).
+  void _openAdvisor() {
+    final coach = _aiCoach;
+    if (coach == null) return;
+    _focus.unfocus();
+    AiChatSheet.show(
+      context,
+      presenter: coach,
+      entryPoint: AiCoachEntryPoint.financeAdvisor,
+    );
+  }
 
   @override
   void initState() {
@@ -710,6 +739,7 @@ class _QuickLogBarState extends State<_QuickLogBar> {
 
   String _hint() {
     if (_ledger.chatState.phase == ChatPhase.clarifying) return 'Reply…';
+    if (_aiCoach != null) return 'Log food or money — or tap ✨ to ask…';
     return 'Log food or an expense…';
   }
 
@@ -746,6 +776,19 @@ class _QuickLogBarState extends State<_QuickLogBar> {
                     _buildResponseArea(cs),
                     Row(
                       children: [
+                        if (_aiCoach != null) ...[
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              icon: const Icon(Icons.auto_awesome_outlined),
+                              color: cs.primary,
+                              tooltip: 'Ask your money mentor',
+                              onPressed: busy ? null : _openAdvisor,
+                            ),
+                          ),
+                          const SizedBox(width: AppSpacing.xs),
+                        ],
                         Expanded(
                           child: TextField(
                             controller: _ctrl,

@@ -8,6 +8,7 @@ enum SyncDomain {
   nutritionLog,
   activityLog,
   financeRecord,
+  advisorState,
 }
 
 class SyncQueueEntry {

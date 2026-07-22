@@ -229,6 +229,23 @@ class OnDeviceAiCoachService implements AiCoachService {
     }
   }
 
+  // ── Advise finance ────────────────────────────────────────────────────────
+
+  @override
+  Stream<String> adviseFinance({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+  }) async* {
+    // The 0.6B on-device model can't do reliable financial reasoning with the
+    // anti-hallucination contract — the advisor is cloud-only. The presenter
+    // wires the cloud service in directly, so this tier should never be asked;
+    // fail loudly if it is.
+    throw const AiCoachException(
+        'The financial advisor requires Cloud AI, not the on-device model.');
+  }
+
   // ── Parse food ────────────────────────────────────────────────────────────
 
   @override
@@ -370,6 +387,8 @@ class OnDeviceAiCoachService implements AiCoachService {
           'Download the AI Coach to get RPG strategy advice.',
         AiCoachEntryPoint.treasury =>
           'Download the AI Coach to get finance insights.',
+        AiCoachEntryPoint.financeAdvisor =>
+          'The financial advisor requires Cloud AI, not the on-device model.',
         AiCoachEntryPoint.general =>
           'AI Coach not downloaded. Tap "Download" to get started (~586 MB).',
       };

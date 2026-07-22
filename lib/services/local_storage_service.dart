@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity_goals.dart';
 import '../models/activity_log.dart';
+import '../models/advisor_profile.dart';
+import '../models/ai_chat_message.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
 import '../models/food_template.dart';
@@ -1019,6 +1021,71 @@ class LocalStorageService extends StorageService {
           'LocalStorageService: Error loading chat messages for $date: $e');
       return [];
     }
+  }
+
+  // ── Financial advisor ──────────────────────────────────────────────────────
+  // Synced as a single LWW document (SyncDomain.advisorState / 'default'),
+  // mirroring userProfile — so history + profile follow the user across devices
+  // and survive sign-out (flush-before-wipe).
+
+  static const int _maxAdvisorHistory = 100;
+
+  @override
+  Future<void> saveAdvisorHistory(List<AiChatMessage> messages) async {
+    final prefs = await SharedPreferences.getInstance();
+    // Persist only settled turns, capped to the newest [_maxAdvisorHistory].
+    final settled = messages.where((m) => !m.isStreaming && m.text.isNotEmpty);
+    final capped = settled.length > _maxAdvisorHistory
+        ? settled.skip(settled.length - _maxAdvisorHistory).toList()
+        : settled.toList();
+    final encoded = jsonEncode(capped.map((m) => m.toJson()).toList());
+    await prefs.setString(_k(StorageService.keyAdvisorHistory), encoded);
+    _markDirty(SyncDomain.advisorState, 'default');
+  }
+
+  @override
+  Future<List<AiChatMessage>> loadAdvisorHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyAdvisorHistory));
+    if (raw == null) return [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list
+          .cast<Map<String, dynamic>>()
+          .map(AiChatMessage.fromJson)
+          .toList();
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading advisor history: $e');
+      return [];
+    }
+  }
+
+  @override
+  Future<void> saveAdvisorProfile(AdvisorProfile profile) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _k(StorageService.keyAdvisorProfile), jsonEncode(profile.toJson()));
+    _markDirty(SyncDomain.advisorState, 'default');
+  }
+
+  @override
+  Future<AdvisorProfile?> loadAdvisorProfile() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyAdvisorProfile));
+    if (raw == null) return null;
+    try {
+      return AdvisorProfile.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (e) {
+      debugPrint('LocalStorageService: Error loading advisor profile: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> clearAdvisorHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_k(StorageService.keyAdvisorHistory));
+    _markDirty(SyncDomain.advisorState, 'default');
   }
 
   // ── Finance ──────────────────────────────────────────────────────────────────

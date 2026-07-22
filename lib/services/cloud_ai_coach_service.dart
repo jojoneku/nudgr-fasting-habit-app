@@ -192,6 +192,80 @@ class CloudAiCoachService implements AiCoachService {
     yield text;
   }
 
+  // ── Advise finance (financial advisor) ────────────────────────────────────
+
+  @override
+  Stream<String> adviseFinance({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+  }) async* {
+    // Advisor gates on the Cloud AI opt-in (unlike the classifier) — it's an
+    // explicit conversational feature the user opted into.
+    if (!isAvailable) {
+      throw const AiCoachException(
+          'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
+    }
+
+    final body = jsonEncode({
+      'op': 'adviseFinance',
+      'payload': {
+        'context': {
+          'summary': context.financeSnapshotSummary(),
+          if (profile != null && profile.trim().isNotEmpty)
+            'profile': profile.trim(),
+          if (historical != null && historical.trim().isNotEmpty)
+            'historical': historical.trim(),
+        },
+        'messages': messages
+            .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
+            .map((m) => {
+                  'role': m.role == AiChatRole.user ? 'user' : 'assistant',
+                  'text': m.text,
+                })
+            .toList(),
+      },
+    });
+
+    http.Response response;
+    try {
+      response = await http
+          .post(Uri.parse(_endpoint), headers: _headers, body: body)
+          .timeout(const Duration(seconds: _timeoutSeconds));
+    } catch (e) {
+      debugPrint('CloudAiCoachService[adviseFinance] network error: $e');
+      throw const AiCoachException(
+          'Advisor unreachable. Check your connection and try again.');
+    }
+
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      throw const AiCoachException(
+          'Your session has expired. Sign in again to use the advisor.');
+    }
+    if (response.statusCode == 429) {
+      throw const AiCoachException(
+          'The advisor hit its daily limit. Try again tomorrow.');
+    }
+    if (response.statusCode != 200) {
+      debugPrint('CloudAiCoachService[adviseFinance] '
+          'server error HTTP ${response.statusCode}: ${response.body}');
+      throw const AiCoachException(
+          'The advisor had a hiccup on our end. Try again in a moment.');
+    }
+
+    final String text;
+    try {
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      text = (result['response'] as String?) ?? '';
+    } catch (e) {
+      debugPrint('CloudAiCoachService[adviseFinance] parse error: $e');
+      throw const AiCoachException(
+          'The advisor sent back something unreadable. Try again.');
+    }
+    yield text;
+  }
+
   // ── Parse food ────────────────────────────────────────────────────────────
 
   @override
