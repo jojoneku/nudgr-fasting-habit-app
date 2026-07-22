@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
@@ -181,10 +182,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
         }
         _activeTier = AiCoachTier.cloud;
+        final historical = context.financeHistoricalSummary();
         stream = cloud.adviseFinance(
           messages: _userVisibleMessages(),
           context: context,
           profile: _advisorProfile.promptSummary(),
+          historical: historical.isEmpty ? null : historical,
         );
       } else {
         // Prefer the primary (on-device) service; fall back to the cloud tier
@@ -388,6 +391,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final isAdvisor = _entryPoint == AiCoachEntryPoint.financeAdvisor;
     var topCategories = const <AdvisorCategoryLine>[];
     var outstandingBills = const <AdvisorBillLine>[];
+    var pendingReceivables = const <AdvisorReceivableLine>[];
+    var creditLines = const <AdvisorCreditLine>[];
+    var netWorthTrend = const <AdvisorNetWorthPoint>[];
+    var incomeExpenseTrend = const <AdvisorMonthFlow>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -397,7 +404,42 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               ))
           .toList();
       outstandingBills = t.upcomingBills
-          .map((bill) => AdvisorBillLine(name: bill.name, amount: bill.amount))
+          .map((bill) => AdvisorBillLine(
+                name: bill.name,
+                amount: bill.amount,
+                dueLabel: _billDueLabel(bill.dueDay),
+              ))
+          .toList();
+      pendingReceivables = t.outstandingReceivables
+          .map((r) => AdvisorReceivableLine(
+                name: r.name,
+                amount: r.amount,
+                expectedLabel: r.expectedDate == null
+                    ? 'ASAP'
+                    : DateFormat('MMM d').format(r.expectedDate!),
+              ))
+          .toList();
+      creditLines = t.creditAccounts.map((a) {
+        final due = t.creditDueInfo(a);
+        return AdvisorCreditLine(
+          name: a.name,
+          owed: a.currentPayable,
+          available: a.availableCredit,
+          dueLabel: due?.label,
+          minimumDue: t.creditMinimumDue(a),
+        );
+      }).toList();
+      netWorthTrend = t
+          .netWorthTrend(months: 6)
+          .map((p) => AdvisorNetWorthPoint(label: p.label, value: p.value))
+          .toList();
+      incomeExpenseTrend = t
+          .incomeExpenseTrend(months: 6)
+          .map((m) => AdvisorMonthFlow(
+                label: m.label,
+                income: m.income,
+                expense: m.expense,
+              ))
           .toList();
     }
     final savingsRate = t?.savingsRate;
@@ -432,7 +474,38 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       daysLeftInMonth: isAdvisor ? t?.daysLeftInMonth : null,
       topCategories: topCategories,
       outstandingBills: outstandingBills,
+      monthIncome: isAdvisor ? t?.monthTotalInflow : null,
+      pendingReceivablesTotal: isAdvisor ? t?.pendingReceivables : null,
+      totalSavingsAndGoals: isAdvisor ? t?.totalSavingsAndGoals : null,
+      creditLines: creditLines,
+      pendingReceivables: pendingReceivables,
+      nextMonthBillsTotal:
+          isAdvisor && (t?.nextMonthUnpaidBills ?? 0) > 0
+              ? t?.nextMonthUnpaidBills
+              : null,
+      nextMonthReceivablesTotal:
+          isAdvisor && (t?.nextMonthPendingReceivables ?? 0) > 0
+              ? t?.nextMonthPendingReceivables
+              : null,
+      netWorthTrend: netWorthTrend,
+      incomeExpenseTrend: incomeExpenseTrend,
     );
+  }
+
+  /// Due label for a current-month bill given its [dueDay], relative to today
+  /// ("Due today", "Due in 3 days", "Overdue by 2 days"). Kept here so the
+  /// snapshot the advisor sees carries the same urgency the Bills tab shows.
+  static String _billDueLabel(int dueDay) {
+    final now = DateTime.now();
+    final lastDay = DateTime(now.year, now.month + 1, 0).day;
+    final diff = dueDay.clamp(1, lastDay) - now.day;
+    if (diff < 0) {
+      final n = -diff;
+      return n == 1 ? 'Overdue by 1 day' : 'Overdue by $n days';
+    }
+    if (diff == 0) return 'Due today';
+    if (diff == 1) return 'Due tomorrow';
+    return 'Due in $diff days';
   }
 
   /// The cloud-tier service the advisor uses (it is cloud-only). Prefers the

@@ -210,6 +210,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((r) => r.month == _currentMonth && !r.isReceived)
       .fold(0.0, (sum, r) => sum + r.amount);
 
+  /// Still-outstanding receivables this month, soonest-expected first — lets the
+  /// advisor itemise money coming in, not just a total.
+  List<Receivable> get outstandingReceivables => _receivables
+      .where((r) => r.month == _currentMonth && !r.isReceived)
+      .toList()
+    ..sort((a, b) {
+      final ad = a.expectedDate, bd = b.expectedDate;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+
   double get monthUnpaidBills => _bills
       .where((b) => b.month == _currentMonth && !b.isPaid)
       .fold(0.0, (sum, b) => sum + b.amount);
@@ -388,6 +401,24 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
 
   bool get hasBills => upcomingBills.isNotEmpty;
+
+  /// Bills already scheduled for NEXT month (recurring copies, credit-card
+  /// statements filed forward). Powers the advisor's forward look — "what's
+  /// coming after this month". Unpaid only.
+  double get nextMonthUnpaidBills {
+    final nm = nextMonth(_currentMonth);
+    return _bills
+        .where((b) => b.month == nm && !b.isPaid)
+        .fold(0.0, (sum, b) => sum + b.amount);
+  }
+
+  /// Receivables expected NEXT month (money owed to you), still outstanding.
+  double get nextMonthPendingReceivables {
+    final nm = nextMonth(_currentMonth);
+    return _receivables
+        .where((r) => r.month == nm && !r.isReceived)
+        .fold(0.0, (sum, r) => sum + r.amount);
+  }
 
   bool get hasBillImminent => imminentBill != null;
 

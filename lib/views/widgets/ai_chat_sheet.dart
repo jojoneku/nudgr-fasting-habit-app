@@ -6,6 +6,7 @@ import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/ledger_presenter.dart';
 import 'advisor_log_card.dart';
 import 'advisor_memory_sheet.dart';
+import 'chat_markdown.dart';
 import 'system/system.dart';
 
 /// Entry point labels and icons per context.
@@ -456,16 +457,22 @@ class _MessageBubble extends StatelessWidget {
           ),
           child: message.isStreaming && message.text.isEmpty
               ? const _TypingIndicator()
-              : Text(
-                  message.text,
-                  style: TextStyle(
-                    color: isUser
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.onSurface,
-                    fontSize: 14,
-                    height: 1.45,
-                  ),
-                ),
+              : isUser
+                  // The user typed plain text — render verbatim (no Markdown).
+                  ? Text(
+                      message.text,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 14,
+                        height: 1.45,
+                      ),
+                    )
+                  // Coach replies carry light Markdown — render it properly so
+                  // '##', '**', and '-' don't leak into the bubble as text.
+                  : ChatMarkdown(
+                      message.text,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
         ),
       ),
     );

@@ -29,7 +29,72 @@ class AdvisorCategoryLine {
 class AdvisorBillLine {
   final String name;
   final double amount;
-  const AdvisorBillLine({required this.name, required this.amount});
+
+  /// Human-readable due label ("Due in 3 days", "Overdue by 1 day"), or null
+  /// when the bill has no meaningful due date to surface.
+  final String? dueLabel;
+
+  const AdvisorBillLine({required this.name, required this.amount, this.dueLabel});
+}
+
+/// One expected receivable (money owed TO the user) for the advisor snapshot.
+class AdvisorReceivableLine {
+  final String name;
+  final double amount;
+
+  /// When it's expected ("Jun 28", "ASAP"), or null when undated.
+  final String? expectedLabel;
+
+  const AdvisorReceivableLine({
+    required this.name,
+    required this.amount,
+    this.expectedLabel,
+  });
+}
+
+/// One credit card / line / BNPL account for the advisor snapshot. Gives the
+/// advisor per-card visibility instead of a single owed/available total.
+class AdvisorCreditLine {
+  final String name;
+
+  /// What's currently owed on this card.
+  final double owed;
+
+  /// Remaining spending capacity (limit − owed), or null when no limit is set.
+  final double? available;
+
+  /// Payment-due label ("Due in 5 days"), or null when no due day configured.
+  final String? dueLabel;
+
+  /// Estimated minimum due this cycle, or null when nothing is owed.
+  final double? minimumDue;
+
+  const AdvisorCreditLine({
+    required this.name,
+    required this.owed,
+    this.available,
+    this.dueLabel,
+    this.minimumDue,
+  });
+}
+
+/// One month's net-worth point for the historical benchmark (past context).
+class AdvisorNetWorthPoint {
+  final String label;
+  final double value;
+  const AdvisorNetWorthPoint({required this.label, required this.value});
+}
+
+/// One month's income-vs-expense point for the historical benchmark.
+class AdvisorMonthFlow {
+  final String label;
+  final double income;
+  final double expense;
+  const AdvisorMonthFlow({
+    required this.label,
+    required this.income,
+    required this.expense,
+  });
 }
 
 /// Snapshot of app state passed to the AI model as context.
@@ -74,6 +139,33 @@ class AiCoachContext {
   final List<AdvisorCategoryLine> topCategories;
   final List<AdvisorBillLine> outstandingBills;
 
+  // ── Finance advisor (extended: present money-in, savings, credit detail) ────
+  /// Income actually received this month (excludes transfers/reimbursements).
+  final double? monthIncome;
+
+  /// Money owed TO the user, still outstanding this month.
+  final double? pendingReceivablesTotal;
+
+  /// Total set aside across savings + goal pockets.
+  final double? totalSavingsAndGoals;
+
+  /// Per-card credit breakdown (owed / available / due / minimum).
+  final List<AdvisorCreditLine> creditLines;
+
+  /// Individual receivables expected this month.
+  final List<AdvisorReceivableLine> pendingReceivables;
+
+  // ── Finance advisor (future: next month's known obligations) ────────────────
+  /// Recurring bills already scheduled for next month, if any.
+  final double? nextMonthBillsTotal;
+
+  /// Receivables expected next month, if any.
+  final double? nextMonthReceivablesTotal;
+
+  // ── Finance advisor (past: historical benchmark, year-over-year context) ────
+  final List<AdvisorNetWorthPoint> netWorthTrend;
+  final List<AdvisorMonthFlow> incomeExpenseTrend;
+
   const AiCoachContext({
     required this.entryPoint,
     this.todayCalories,
@@ -101,6 +193,15 @@ class AiCoachContext {
     this.daysLeftInMonth,
     this.topCategories = const [],
     this.outstandingBills = const [],
+    this.monthIncome,
+    this.pendingReceivablesTotal,
+    this.totalSavingsAndGoals,
+    this.creditLines = const [],
+    this.pendingReceivables = const [],
+    this.nextMonthBillsTotal,
+    this.nextMonthReceivablesTotal,
+    this.netWorthTrend = const [],
+    this.incomeExpenseTrend = const [],
   });
 
   /// Human-readable summary injected into the RPG coach system prompt.
@@ -163,7 +264,32 @@ class AiCoachContext {
       buf.writeln('Budget this month: ${_peso(monthSpent!)} spent of '
           '${_peso(monthBudget!)} target (${_peso(remaining)} remaining)');
     }
-    if (totalCreditOwed != null || totalCreditAvailable != null) {
+    if (monthIncome != null) {
+      buf.writeln('Income received this month: ${_peso(monthIncome!)}');
+    }
+    if (totalSavingsAndGoals != null) {
+      buf.writeln('Savings & goals set aside: ${_peso(totalSavingsAndGoals!)}');
+    }
+    // Credit: prefer the per-card breakdown; fall back to totals when the
+    // caller only supplied aggregates.
+    if (creditLines.isNotEmpty) {
+      buf.writeln('Credit cards / lines (owed vs available capacity):');
+      for (final c in creditLines) {
+        final parts = <String>['${_peso(c.owed)} owed'];
+        if (c.available != null) {
+          parts.add('${_peso(c.available!)} available');
+        }
+        if (c.minimumDue != null) {
+          parts.add('min due ${_peso(c.minimumDue!)}');
+        }
+        if (c.dueLabel != null) parts.add(c.dueLabel!);
+        buf.writeln('  - ${c.name}: ${parts.join(', ')}');
+      }
+      if (totalCreditOwed != null) {
+        buf.writeln('  Total owed: ${_peso(totalCreditOwed!)}'
+            '${totalCreditAvailable != null ? ', ${_peso(totalCreditAvailable!)} available (unused capacity)' : ''}');
+      }
+    } else if (totalCreditOwed != null || totalCreditAvailable != null) {
       buf.writeln('Credit cards: ${_peso(totalCreditOwed ?? 0)} owed, '
           '${_peso(totalCreditAvailable ?? 0)} available (unused capacity)');
     }
@@ -171,13 +297,34 @@ class AiCoachContext {
       buf.writeln('Days left in month: $daysLeftInMonth');
     }
     if (outstandingBills.isNotEmpty) {
-      buf.writeln('Outstanding bills this month:');
+      buf.writeln('Outstanding bills this month (money going OUT):');
       for (final b in outstandingBills) {
-        buf.writeln('  - ${b.name}: ${_peso(b.amount)}');
+        final due = b.dueLabel != null ? ' (${b.dueLabel})' : '';
+        buf.writeln('  - ${b.name}: ${_peso(b.amount)}$due');
       }
       if (outstandingBillsTotal != null) {
         buf.writeln('  Total outstanding: ${_peso(outstandingBillsTotal!)}');
       }
+    }
+    if (pendingReceivables.isNotEmpty || pendingReceivablesTotal != null) {
+      buf.writeln('Receivables this month (money coming IN, owed to you):');
+      for (final r in pendingReceivables) {
+        final when = r.expectedLabel != null ? ' (${r.expectedLabel})' : '';
+        buf.writeln('  - ${r.name}: ${_peso(r.amount)}$when');
+      }
+      if (pendingReceivablesTotal != null) {
+        buf.writeln('  Total incoming: ${_peso(pendingReceivablesTotal!)}');
+      }
+    }
+    if (nextMonthBillsTotal != null || nextMonthReceivablesTotal != null) {
+      final parts = <String>[];
+      if (nextMonthBillsTotal != null) {
+        parts.add('${_peso(nextMonthBillsTotal!)} in scheduled bills');
+      }
+      if (nextMonthReceivablesTotal != null) {
+        parts.add('${_peso(nextMonthReceivablesTotal!)} expected receivables');
+      }
+      buf.writeln('Next month so far: ${parts.join('; ')}');
     }
     if (topCategories.isNotEmpty) {
       buf.writeln('Top spending categories (actual vs target this month):');
@@ -191,6 +338,26 @@ class AiCoachContext {
 
     final s = buf.toString().trim();
     return s.isEmpty ? '(no financial data available)' : s;
+  }
+
+  /// Prior-period benchmark for year-over-year / trend context. Kept separate
+  /// from the live snapshot so the model uses it for perspective, never for
+  /// current-liquidity math. Empty string when there's no usable history.
+  String financeHistoricalSummary() {
+    final buf = StringBuffer();
+    if (netWorthTrend.isNotEmpty) {
+      final pts =
+          netWorthTrend.map((p) => '${p.label} ${_peso(p.value)}').join(', ');
+      buf.writeln('Net worth by month (oldest → newest): $pts');
+    }
+    if (incomeExpenseTrend.isNotEmpty) {
+      buf.writeln('Income vs expenses by month:');
+      for (final m in incomeExpenseTrend) {
+        buf.writeln('  - ${m.label}: ${_peso(m.income)} in / '
+            '${_peso(m.expense)} out (net ${_peso(m.income - m.expense)})');
+      }
+    }
+    return buf.toString().trim();
   }
 }
 
