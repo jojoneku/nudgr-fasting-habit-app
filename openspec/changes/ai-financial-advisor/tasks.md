@@ -7,10 +7,10 @@
 
 ## 2. Persistence + models (before UI)
 
-- [ ] 2.1 Add an `AdvisorMessage` model (role, text, timestamp) and an `AdvisorProfile` model (goals, risk tolerance, freeform facts) in `lib/models/`, immutable with `fromJson`/`toJson`.
-- [ ] 2.2 Add StorageService keys + read/write methods for capped advisor chat history and the advisor profile (through the abstract `StorageService` interface only).
-- [ ] 2.3 Register advisor history + profile as sync domains, following the flush-before-wipe pattern used for weight/body so they survive sign-out and sync across devices.
-- [ ] 2.4 Unit-test round-trip persistence (save → load → equality) and history trimming/clearing.
+- [x] 2.1 Add an `AdvisorMessage` model (role, text, timestamp) and an `AdvisorProfile` model (goals, risk tolerance, freeform facts) in `lib/models/`, immutable with `fromJson`/`toJson`.
+- [x] 2.2 Add StorageService keys + read/write methods for capped advisor chat history and the advisor profile (through the abstract `StorageService` interface only). **History reuses `AiChatMessage.toJson`; local-only for now (no `_markDirty`).**
+- [ ] 2.3 **DEFERRED (needs a new `SyncDomain` + Supabase table + manual DB migration):** register advisor history + profile as sync domains (flush-before-wipe) for cross-device sync. Local persistence works today; this adds cloud sync.
+- [x] 2.4 Unit-test round-trip persistence (save → load → equality) and history trimming/clearing.
 
 ## 3. Service layer — advisor request
 
@@ -21,7 +21,7 @@
 ## 4. Presenter — advisor session + logging hook
 
 - [x] 4.1 Add `AiCoachEntryPoint.financeAdvisor` and extend `AiCoachPresenter._buildContext()` to populate the enriched Treasury fields (inject `TreasuryDashboardPresenter`, already available).
-- [ ] 4.2 Wire the advisor `send()` path to call the `adviseFinance` service op for advisory turns; load/persist conversation history and update the profile from validated model-proposed deltas.
+- [x] 4.2 Advisor `send()` calls `adviseFinance`; history is loaded on session open + persisted after each turn; the user-curated profile is injected each turn. **Design open-question resolved: profile is USER-CURATED (deterministic), not model-delta extracted — auto-extraction is a deferred enhancement.**
 - [ ] 4.3 Add an in-conversation logging hook: detect a money-logging intent (amount + verb/keyword heuristic; default to advice when ambiguous) and route to `LedgerPresenter.sendChatInput(text)`, surfacing the existing resolved/clarify/give-up result. No direct writes from the advisor model.
 - [x] 4.4 Inject `LedgerPresenter` into `AiCoachPresenter` via its constructor; construct in `AppShell._AppShellState.initState()` (`lib/views/home_screen.dart`) and pass down to `HubScreen` (constructor injection, no locators).
 - [ ] 4.5 Presenter tests: advisory turn calls the advisor op; logging intent routes to the ledger pipeline and does not commit without confirm; out-of-scope mutation (budget/bill) is refused; availability/cap/offline states surface correct messages.

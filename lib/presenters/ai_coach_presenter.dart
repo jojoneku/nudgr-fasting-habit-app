@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
 import '../models/food_db_entry.dart';
@@ -13,6 +14,7 @@ import '../presenters/treasury_dashboard_presenter.dart';
 import '../services/ai_coach_service.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
+import '../services/storage_service.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
@@ -28,6 +30,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// through the existing confirm-before-commit pipeline. Null when finance
   /// isn't wired (advisor logging simply unavailable).
   final LedgerPresenter? _ledger;
+
+  /// Persists advisor chat history + the learned profile (local-only for now).
+  final StorageService? _storage;
+
+  /// The user-curated advisor memory, injected into every advisor turn.
+  AdvisorProfile _advisorProfile = AdvisorProfile.empty();
 
   AiCoachService _service;
 
@@ -53,6 +61,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     TreasuryDashboardPresenter? treasury,
     BudgetPresenter? budget,
     LedgerPresenter? ledger,
+    StorageService? storage,
     AiCoachService? cloudFallback,
   })  : _stats = stats,
         _fasting = fasting,
@@ -60,6 +69,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _treasury = treasury,
         _budget = budget,
         _ledger = ledger,
+        _storage = storage,
         _cloudFallback = cloudFallback,
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
@@ -87,11 +97,34 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Session ───────────────────────────────────────────────────────────────
 
-  /// Open a new chat session scoped to [entryPoint].
+  /// Open a chat session scoped to [entryPoint].
+  ///
+  /// The financial advisor restores its persisted history + profile so the user
+  /// can keep confiding across sessions; other coaches start fresh.
   void openSession(AiCoachEntryPoint entryPoint) {
     _entryPoint = entryPoint;
-    _messages.clear();
     _errorMessage = null;
+    if (entryPoint == AiCoachEntryPoint.financeAdvisor) {
+      _loadAdvisorState();
+    } else {
+      _messages.clear();
+    }
+    safeNotify();
+  }
+
+  /// The user-curated advisor memory (goals, risk tolerance, notes).
+  AdvisorProfile get advisorProfile => _advisorProfile;
+
+  Future<void> _loadAdvisorState() async {
+    final storage = _storage;
+    if (storage == null) return;
+    final history = await storage.loadAdvisorHistory();
+    final profile = await storage.loadAdvisorProfile();
+    if (isDisposed) return;
+    _messages
+      ..clear()
+      ..addAll(history);
+    _advisorProfile = profile ?? AdvisorProfile.empty();
     safeNotify();
   }
 
@@ -127,7 +160,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         stream = cloud.adviseFinance(
           messages: _userVisibleMessages(),
           context: context,
-          // Learned profile + historical benchmark are wired in a later task.
+          profile: _advisorProfile.promptSummary(),
         );
       } else {
         // Prefer the primary (on-device) service; fall back to the cloud tier
@@ -166,6 +199,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     } finally {
       _isResponding = false;
       _trimHistory();
+      if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
+        _storage?.saveAdvisorHistory(_messages);
+      }
       safeNotify();
     }
   }
@@ -221,7 +257,61 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   void clearHistory() {
     _messages.clear();
     _errorMessage = null;
+    if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
+      _storage?.clearAdvisorHistory();
+    }
     safeNotify();
+  }
+
+  // ── Advisor profile (user-curated memory) ───────────────────────────────────
+
+  void _updateProfile(AdvisorProfile next) {
+    _advisorProfile = next;
+    _storage?.saveAdvisorProfile(next);
+    safeNotify();
+  }
+
+  void addAdvisorGoal(String goal) {
+    final g = goal.trim();
+    if (g.isEmpty || _advisorProfile.goals.contains(g)) return;
+    _updateProfile(_advisorProfile.copyWith(
+      goals: [..._advisorProfile.goals, g],
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  void removeAdvisorGoal(String goal) {
+    _updateProfile(_advisorProfile.copyWith(
+      goals: _advisorProfile.goals.where((g) => g != goal).toList(),
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  void setAdvisorRiskTolerance(String? value) {
+    _updateProfile(_advisorProfile.copyWith(
+      riskTolerance: value?.trim(),
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  void addAdvisorFact(String fact) {
+    final f = fact.trim();
+    if (f.isEmpty || _advisorProfile.facts.contains(f)) return;
+    _updateProfile(_advisorProfile.copyWith(
+      facts: [..._advisorProfile.facts, f],
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  void removeAdvisorFact(String fact) {
+    _updateProfile(_advisorProfile.copyWith(
+      facts: _advisorProfile.facts.where((f) => f != fact).toList(),
+      updatedAt: DateTime.now(),
+    ));
+  }
+
+  void clearAdvisorProfile() {
+    _updateProfile(AdvisorProfile(updatedAt: DateTime.now()));
   }
 
   void clearError() {
