@@ -22,7 +22,7 @@
 
 - [x] 4.1 Add `AiCoachEntryPoint.financeAdvisor` and extend `AiCoachPresenter._buildContext()` to populate the enriched Treasury fields (inject `TreasuryDashboardPresenter`, already available).
 - [x] 4.2 Advisor `send()` calls `adviseFinance`; history is loaded on session open + persisted after each turn; the user-curated profile is injected each turn. **Design open-question resolved: profile is USER-CURATED (deterministic), not model-delta extracted — auto-extraction is a deferred enhancement.**
-- [ ] 4.3 Add an in-conversation logging hook: detect a money-logging intent (amount + verb/keyword heuristic; default to advice when ambiguous) and route to `LedgerPresenter.sendChatInput(text)`, surfacing the existing resolved/clarify/give-up result. No direct writes from the advisor model.
+- [x] 4.3 Add an in-conversation logging hook: detect a money-logging intent (amount + verb/keyword heuristic; default to advice when ambiguous) and route to `LedgerPresenter.sendChatInput(text)`, surfacing the existing resolved/clarify/give-up result. No direct writes from the advisor model.
 - [x] 4.4 Inject `LedgerPresenter` into `AiCoachPresenter` via its constructor; construct in `AppShell._AppShellState.initState()` (`lib/views/home_screen.dart`) and pass down to `HubScreen` (constructor injection, no locators).
 - [ ] 4.5 Presenter tests: advisory turn calls the advisor op; logging intent routes to the ledger pipeline and does not commit without confirm; out-of-scope mutation (budget/bill) is refused; availability/cap/offline states surface correct messages.
 
@@ -30,7 +30,7 @@
 
 - [x] 5.1 Add a `financeAdvisor` entry to `_entryMeta` in `lib/views/widgets/ai_chat_sheet.dart` (gold Treasury accent, Phosphor icon, advisor label).
 - [x] 5.2 Convert `_QuickLogBar` (`lib/views/hub_screen.dart`) to dual-mode: collapsed = today's inline quick-log (unchanged routing); tap/expand opens the advisor surface anchored to the bar; collapse returns to pinned collapsed state. Keep it pinned as `bottomNavigationBar`.
-- [ ] 5.3 Render the in-conversation expense confirm/clarify (reuse `LedgerChatPanel` states or an in-sheet equivalent) so logging inside the advisor uses the same confirm-before-commit UX.
+- [x] 5.3 Render the in-conversation expense confirm/clarify (reuse `LedgerChatPanel` states or an in-sheet equivalent) so logging inside the advisor uses the same confirm-before-commit UX.
 - [x] 5.4 Add a memory/profile view where the user can see and clear stored facts and clear conversation history.
 - [x] 5.5 Verify UI rules: no logic in `build()`, theme-aware colors only (dark + light), touch targets ≥44px, expand/collapse animation 150–400ms, input stays in bottom 30%.
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
+import '../models/finance/finance_parse_result.dart';
 import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
 import '../presenters/budget_presenter.dart';
@@ -131,9 +132,32 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   // ── Send ──────────────────────────────────────────────────────────────────
 
   Future<void> send(String text) async {
-    if (text.trim().isEmpty || _isResponding) return;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty || _isResponding) return;
 
-    final userMsg = AiChatMessage.user(text.trim());
+    // Advisor logging: a clear expense-log intent — or any reply while the
+    // ledger is mid-clarify — goes through the ledger's confirm-before-commit
+    // pipeline instead of the advice model. The sheet renders the confirm card.
+    final ledger = _ledger;
+    if (_entryPoint == AiCoachEntryPoint.financeAdvisor &&
+        ledger != null &&
+        (ledger.chatState.phase == ChatPhase.clarifying ||
+            looksLikeExpenseLog(trimmed))) {
+      _messages.add(AiChatMessage.user(trimmed));
+      _errorMessage = null;
+      _isResponding = true;
+      safeNotify();
+      try {
+        await ledger.sendChatInput(trimmed);
+      } finally {
+        _isResponding = false;
+        _storage?.saveAdvisorHistory(_messages);
+        safeNotify();
+      }
+      return;
+    }
+
+    final userMsg = AiChatMessage.user(trimmed);
     _messages.add(userMsg);
     _errorMessage = null;
     _isResponding = true;
@@ -259,6 +283,20 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     _errorMessage = null;
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
       _storage?.clearAdvisorHistory();
+    }
+    safeNotify();
+  }
+
+  /// Append a settled assistant line to the advisor conversation (e.g. a
+  /// "✓ Logged …" acknowledgment after an in-chat expense commit). Persisted.
+  void appendAssistantNote(String text) {
+    _messages.add(
+      AiChatMessage.assistantStreaming()
+          .copyWith(text: text, isStreaming: false),
+    );
+    _trimHistory();
+    if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
+      _storage?.saveAdvisorHistory(_messages);
     }
     safeNotify();
   }
