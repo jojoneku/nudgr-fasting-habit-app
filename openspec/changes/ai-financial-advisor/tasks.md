@@ -1,9 +1,9 @@
 ## 1. Backend — advisor op + stronger model
 
 - [x] 1.1 Add an `adviseFinance` op to `backend/ai-coach/lambda_function.py` that builds the persona + principle-grounded system prompt (advisor/life-strategist/behavioral-coach persona; principles from *Broke Millennial*, *Financial Freedom*, *The Total Money Makeover*, *Atomic Habits*, *The Defining Decade*; Filipino/utang-na-loob context; no copyrighted text) and invokes a Sonnet-tier Bedrock model. Encode the anti-hallucination contract (cite-source, no invented numbers, labeled inferences/absolutes, fixed refusal phrase) and the four-part "financial position" diagnostic structure as a stable, cache-friendly prompt prefix. See design D7.
-- [x] 1.2 Add the advisor model id + token budget as parameters in `backend/ai-coach/template.yaml`, keeping `classifyFinance`/`respond` on the Haiku-tier model. **(Deploy-time: verify the `AdvisorModelId` default `apac.anthropic.claude-3-5-sonnet-20240620-v1:0` is enabled in Bedrock for `ap-southeast-1`; adjust if not.)**
-- [ ] 1.3 Confirm the new op passes through the existing Supabase JWT authorizer and `increment_ai_usage` daily-cap logic (fail-closed). Deploy the SAM stack.
-- [ ] 1.4 Verify with a manual curl (valid Bearer token) that `adviseFinance` returns a grounded response and that exceeding the cap returns 429.
+- [x] 1.2 Add the advisor model id + token budget as parameters in `backend/ai-coach/template.yaml`, keeping `classifyFinance`/`respond` on the Haiku-tier model. **Verified in Bedrock `ap-southeast-1` (2026-07-22): Sonnet 4.5 `global.anthropic.claude-sonnet-4-5-20250929-v1:0` is access-granted & invocable → chosen. Sonnet 5 NOT granted on the account.**
+- [x] 1.3 **Provisioned the live `food-coach-handler` function (hand-managed; no CFN stack exists):** merged `ADVISOR_MODEL_ID`/`ADVISOR_MAX_TOKENS` env vars (all Supabase keys preserved) + added additive inline IAM policy `AdvisorBedrockInvoke` for the Sonnet profile. JWT authorizer + `increment_ai_usage` are reused unchanged. **The `adviseFinance` code deploys via CI (`deploy_lambda`) when the PR merges — not via SAM.**
+- [ ] 1.4 After CI deploys the merged code: curl the `adviseFinance` op with a valid Bearer token to confirm a grounded response, and confirm the cap still returns 429.
 
 ## 2. Persistence + models (before UI)
 

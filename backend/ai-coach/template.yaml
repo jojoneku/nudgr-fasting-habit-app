@@ -21,13 +21,13 @@ Parameters:
     Description: Maximum Bedrock requests per user per day (rate limiting).
   AdvisorModelId:
     Type: String
-    Default: apac.anthropic.claude-3-5-sonnet-20240620-v1:0
+    Default: global.anthropic.claude-sonnet-4-5-20250929-v1:0
     Description: >
-      Bedrock model (or cross-region inference profile) used ONLY by the
-      adviseFinance op — a stronger model for financial reasoning. MUST be
-      enabled for ap-southeast-1 in the Bedrock console before deploy; in APAC,
-      Sonnet is typically a cross-region inference profile (apac.anthropic.*).
-      VERIFY availability and adjust this id at deploy time (tasks.md 1.2).
+      Bedrock model (cross-region inference profile) used ONLY by the
+      adviseFinance op — a stronger model for financial reasoning. Verified
+      access-granted and invocable from ap-southeast-1 (2026-07-22). Sonnet 5
+      (global.anthropic.claude-sonnet-5) was NOT access-granted on this account;
+      request access in the Bedrock console if you want to upgrade later.
   AdvisorMaxTokens:
     Type: Number
     Default: 900
