@@ -37,6 +37,18 @@ class NullAiCoachService implements AiCoachService {
   }
 
   @override
+  Stream<String> adviseFinance({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+  }) async* {
+    // The advisor requires the cloud tier; there's no canned equivalent.
+    throw const AiCoachException(
+        'The financial advisor is unavailable. Enable Cloud AI in Settings.');
+  }
+
+  @override
   Future<FoodParseResult?> parseFood(String description) async => null;
 
   @override
@@ -102,6 +114,8 @@ class NullAiCoachService implements AiCoachService {
         'Download the AI Coach to get RPG strategy tips and XP maximisation advice.',
       AiCoachEntryPoint.treasury =>
         'Download the AI Coach to get personalised finance analysis.',
+      AiCoachEntryPoint.financeAdvisor =>
+        'The financial advisor needs Cloud AI — enable it in Settings.',
       AiCoachEntryPoint.general => 'The AI Coach isn\'t downloaded yet. '
           'Tap "Download AI Coach" to unlock on-device intelligence (~586 MB).',
     };

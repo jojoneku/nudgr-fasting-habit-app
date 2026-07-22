@@ -6,6 +6,7 @@ import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
@@ -22,6 +23,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final NutritionPresenter? _nutrition;
   final TreasuryDashboardPresenter? _treasury;
   final BudgetPresenter? _budget;
+
+  /// Ledger used by the financial-advisor mode to log expenses in-conversation
+  /// through the existing confirm-before-commit pipeline. Null when finance
+  /// isn't wired (advisor logging simply unavailable).
+  final LedgerPresenter? _ledger;
 
   AiCoachService _service;
 
@@ -46,12 +52,14 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? service,
     TreasuryDashboardPresenter? treasury,
     BudgetPresenter? budget,
+    LedgerPresenter? ledger,
     AiCoachService? cloudFallback,
   })  : _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
         _treasury = treasury,
         _budget = budget,
+        _ledger = ledger,
         _cloudFallback = cloudFallback,
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
@@ -107,20 +115,37 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       final context = _buildContext();
       final buffer = StringBuffer();
 
-      // Prefer the primary (on-device) service; fall back to the cloud tier for
-      // this response when the primary isn't ready but the cloud is available.
-      final service = _service.isAvailable
-          ? _service
-          : (_cloudFallback?.isAvailable ?? false)
-              ? _cloudFallback!
-              : _service;
-      _activeTier = service.tier;
+      final Stream<String> stream;
+      if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
+        // Advisor is cloud-only and uses the stronger-model op.
+        final cloud = _advisorService;
+        if (cloud == null) {
+          throw const AiCoachException(
+              'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
+        }
+        _activeTier = AiCoachTier.cloud;
+        stream = cloud.adviseFinance(
+          messages: _userVisibleMessages(),
+          context: context,
+          // Learned profile + historical benchmark are wired in a later task.
+        );
+      } else {
+        // Prefer the primary (on-device) service; fall back to the cloud tier
+        // for this response when the primary isn't ready but the cloud is.
+        final service = _service.isAvailable
+            ? _service
+            : (_cloudFallback?.isAvailable ?? false)
+                ? _cloudFallback!
+                : _service;
+        _activeTier = service.tier;
+        stream = service.respond(
+          messages: _userVisibleMessages(),
+          context: context,
+          isThinking: _isThinkingEnabled,
+        );
+      }
 
-      await for (final token in service.respond(
-        messages: _userVisibleMessages(),
-        context: context,
-        isThinking: _isThinkingEnabled,
-      )) {
+      await for (final token in stream) {
         if (isDisposed) break; // sheet dismissed mid-stream — stop updating
         buffer.write(token);
         _updateLastMessage(buffer.toString(), isStreaming: true);
@@ -227,6 +252,27 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   AiCoachContext _buildContext() {
     final stats = _stats.stats;
     final n = _nutrition;
+    final t = _treasury;
+    final b = _budget;
+
+    // The rich finance snapshot is only assembled for the advisor — it keeps
+    // the RPG coach's prompt lean and avoids extra per-message computation.
+    final isAdvisor = _entryPoint == AiCoachEntryPoint.financeAdvisor;
+    var topCategories = const <AdvisorCategoryLine>[];
+    var outstandingBills = const <AdvisorBillLine>[];
+    if (isAdvisor && t != null) {
+      topCategories = t.categorySpendThisMonth
+          .map((e) => AdvisorCategoryLine(
+                name: e.$1.name,
+                target: b?.budgetFor(e.$1.id)?.allocatedAmount,
+                actual: e.$2,
+              ))
+          .toList();
+      outstandingBills = t.upcomingBills
+          .map((bill) => AdvisorBillLine(name: bill.name, amount: bill.amount))
+          .toList();
+    }
+    final savingsRate = t?.savingsRate;
 
     return AiCoachContext(
       entryPoint: _entryPoint,
@@ -245,7 +291,52 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       todayFat: n?.todayFat,
       monthBudget: _budget?.totalAllocated,
       monthSpent: _treasury?.monthTotalOutflow,
+      // Advisor-only rich snapshot (source of numeric truth for adviseFinance).
+      forecastedNetBalance: isAdvisor ? t?.forecastedNetBalance : null,
+      netWorth: isAdvisor ? t?.netWorth : null,
+      totalLiquidCash: isAdvisor ? t?.totalLiquidCash : null,
+      monthNetCashFlow: isAdvisor ? t?.monthNetCashFlow : null,
+      savingsRatePct:
+          isAdvisor && savingsRate != null ? savingsRate * 100 : null,
+      totalCreditAvailable: isAdvisor ? t?.totalCreditAvailable : null,
+      totalCreditOwed: isAdvisor ? t?.totalCreditOwed : null,
+      outstandingBillsTotal: isAdvisor ? t?.monthUnpaidBills : null,
+      daysLeftInMonth: isAdvisor ? t?.daysLeftInMonth : null,
+      topCategories: topCategories,
+      outstandingBills: outstandingBills,
     );
+  }
+
+  /// The cloud-tier service the advisor uses (it is cloud-only). Prefers the
+  /// dedicated cloud fallback, else the primary service if it happens to be cloud.
+  AiCoachService? get _advisorService {
+    final fallback = _cloudFallback;
+    if (fallback != null && fallback.tier == AiCoachTier.cloud) return fallback;
+    if (_service.tier == AiCoachTier.cloud) return _service;
+    return null;
+  }
+
+  /// Ledger presenter available to the advisor for in-conversation logging.
+  LedgerPresenter? get advisorLedger => _ledger;
+
+  /// Heuristic: does [text] read as an expense to log (an amount plus a spend
+  /// verb/keyword) rather than an advisory question? Used by the advisor mode
+  /// to route logging intents into the confirm-before-commit ledger pipeline.
+  /// Deliberately conservative — anything ambiguous stays as advice.
+  static bool looksLikeExpenseLog(String text) {
+    final t = text.toLowerCase().trim();
+    if (t.isEmpty) return false;
+    // A question is advice, never a log.
+    if (t.contains('?')) return false;
+    final hasAmount = RegExp(r'(₱|php|p)?\s?\d[\d,]*(\.\d+)?').hasMatch(t);
+    if (!hasAmount) return false;
+    final hasLogVerb = RegExp(
+      r'\b(log|spent|spend|paid|pay|bought|buy|add|record|got|grabbed|bill)\b',
+    ).hasMatch(t);
+    // Short "coffee 120"-style entries (2–4 tokens with an amount) are logs too.
+    final tokens = t.split(RegExp(r'\s+'));
+    final terse = tokens.length <= 4;
+    return hasLogVerb || terse;
   }
 
   List<AiChatMessage> _userVisibleMessages() =>

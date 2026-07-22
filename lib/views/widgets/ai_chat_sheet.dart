@@ -23,6 +23,10 @@ const _entryMeta = {
     label: 'Ledger Protocol',
     icon: Icons.account_balance_wallet_outlined
   ),
+  AiCoachEntryPoint.financeAdvisor: (
+    label: 'Money Mentor',
+    icon: Icons.savings_outlined
+  ),
   AiCoachEntryPoint.general: (
     label: 'The System',
     icon: Icons.psychology_outlined

@@ -19,6 +19,19 @@ Parameters:
     Type: Number
     Default: 100
     Description: Maximum Bedrock requests per user per day (rate limiting).
+  AdvisorModelId:
+    Type: String
+    Default: apac.anthropic.claude-3-5-sonnet-20240620-v1:0
+    Description: >
+      Bedrock model (or cross-region inference profile) used ONLY by the
+      adviseFinance op — a stronger model for financial reasoning. MUST be
+      enabled for ap-southeast-1 in the Bedrock console before deploy; in APAC,
+      Sonnet is typically a cross-region inference profile (apac.anthropic.*).
+      VERIFY availability and adjust this id at deploy time (tasks.md 1.2).
+  AdvisorMaxTokens:
+    Type: Number
+    Default: 900
+    Description: Max output tokens for the adviseFinance op (multi-section diagnostic).
 
 Globals:
   Function:
@@ -28,6 +41,8 @@ Globals:
     Environment:
       Variables:
         BEDROCK_MODEL_ID: anthropic.claude-haiku-20240307-v1:0
+        ADVISOR_MODEL_ID: !Ref AdvisorModelId
+        ADVISOR_MAX_TOKENS: !Ref AdvisorMaxTokens
         MAX_TOKENS: '1024'
         DAILY_CAP: !Ref DailyCap
         SUPABASE_URL: !Sub 'https://${SupabaseProjectRef}.supabase.co'
@@ -45,11 +60,17 @@ Resources:
       CodeUri: .
       Policies:
         - Statement:
+            # Scoped to Anthropic models only. Covers the Haiku base model plus
+            # the stronger advisor model (AdvisorModelId), which may be a
+            # cross-region inference profile (apac.anthropic.*) — those invoke the
+            # underlying foundation model in another APAC region, so both the
+            # foundation-model (any region) and inference-profile ARNs are allowed.
             - Effect: Allow
               Action:
                 - bedrock:InvokeModel
-              Resource: !Sub >-
-                arn:aws:bedrock:ap-southeast-1::foundation-model/anthropic.claude-haiku-20240307-v1:0
+              Resource:
+                - arn:aws:bedrock:*::foundation-model/anthropic.*
+                - !Sub arn:aws:bedrock:*:${AWS::AccountId}:inference-profile/*
       Events:
         CoachPost:
           Type: HttpApi
