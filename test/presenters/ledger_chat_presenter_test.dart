@@ -64,6 +64,14 @@ class FakeAiCoachService implements AiCoachService {
   }) async* {}
 
   @override
+  Stream<String> adviseFinance({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+  }) async* {}
+
+  @override
   Future<FoodParseResult?> parseFood(String description) async => null;
 
   @override

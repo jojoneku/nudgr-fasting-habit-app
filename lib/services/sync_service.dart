@@ -16,6 +16,8 @@ import '../models/notification_preferences.dart';
 import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
 import '../models/quest_achievement.dart';
+import '../models/advisor_profile.dart';
+import '../models/ai_chat_message.dart';
 import '../models/tdee_profile.dart';
 import '../models/user_stats.dart';
 import '../models/weight_entry.dart';
@@ -337,6 +339,8 @@ class SyncService {
         await _pushActivityLog(entry.key);
       case SyncDomain.financeRecord:
         await _pushFinanceRecord(entry.key);
+      case SyncDomain.advisorState:
+        await _pushAdvisorState();
     }
   }
 
@@ -505,6 +509,38 @@ class SyncService {
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: userProfile upserted ✓');
+  }
+
+  /// True when an advisor_state `data` blob carries no history and no profile.
+  static bool _advisorStateEmpty(Map<String, dynamic> d) {
+    final history = d['history'];
+    final profile = d['profile'] as Map<String, dynamic>?;
+    final historyEmpty = history is! List || history.isEmpty;
+    final profileEmpty =
+        profile == null || AdvisorProfile.fromJson(profile).isEmpty;
+    return historyEmpty && profileEmpty;
+  }
+
+  Future<void> _pushAdvisorState() async {
+    final history = await _storage.loadAdvisorHistory();
+    final profile = await _storage.loadAdvisorProfile();
+    final data = <String, dynamic>{
+      'history': history.map((m) => m.toJson()).toList(),
+      'profile': (profile ?? AdvisorProfile.empty()).toJson(),
+    };
+    // Don't let a freshly-signed-in empty device wipe a populated cloud copy.
+    if (await _wouldClobberRemote(
+        'advisor_state', _advisorStateEmpty(data), _advisorStateEmpty)) {
+      debugPrint(
+          'SyncService: _pushAdvisorState — local empty but cloud populated; skipping to avoid clobber');
+      return;
+    }
+    await _supabase.from('advisor_state').upsert({
+      'user_id': _userId,
+      'data': data,
+      'updated_at': DateTime.now().toUtc().toIso8601String(),
+    });
+    debugPrint('SyncService: advisorState upserted ✓');
   }
 
   Future<void> _pushFastingState() async {
@@ -754,6 +790,7 @@ class SyncService {
       await pull('nutritionLogs', _pullNutritionLogs);
       await pull('activityLogs', _pullActivityLogs);
       await pull('financeRecords', _pullFinanceRecords);
+      await pull('advisorState', _pullAdvisorState);
 
       _lastPullErrors = List.unmodifiable(errors);
       if (errors.length == attempted) {
@@ -876,6 +913,49 @@ class SyncService {
       }
     });
     _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
+  }
+
+  Future<void> _pullAdvisorState() async {
+    final row = await _supabase
+        .from('advisor_state')
+        .select('data, updated_at')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    if (row == null) {
+      debugPrint('SyncService: advisorState — no remote row found');
+      return;
+    }
+    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final localTime = _queue.getTimestamp(SyncDomain.advisorState, 'default');
+    if (!remoteTime.isAfter(localTime)) {
+      debugPrint('SyncService: advisorState — local is newer, skipping');
+      return;
+    }
+    final data = row['data'] as Map<String, dynamic>;
+    // Don't wipe a populated local device with an empty remote.
+    if (_advisorStateEmpty(data)) {
+      final localHistory = await _storage.loadAdvisorHistory();
+      final localProfile = await _storage.loadAdvisorProfile();
+      if (localHistory.isNotEmpty || (localProfile?.isEmpty == false)) {
+        debugPrint(
+            'SyncService: advisorState — remote empty but local populated; skipping');
+        return;
+      }
+    }
+    await _storage.applyRemote(() async {
+      final history = (data['history'] as List? ?? const [])
+          .cast<Map<String, dynamic>>()
+          .map(AiChatMessage.fromJson)
+          .toList();
+      await _storage.saveAdvisorHistory(history);
+      final profileJson = data['profile'] as Map<String, dynamic>?;
+      if (profileJson != null) {
+        await _storage.saveAdvisorProfile(AdvisorProfile.fromJson(profileJson));
+      }
+    });
+    _queue.setTimestamp(SyncDomain.advisorState, 'default', time: remoteTime);
+    debugPrint(
+        'SyncService: advisorState — applied remote (remote=$remoteTime)');
   }
 
   Future<void> _pullFastingState() async {
@@ -1270,6 +1350,8 @@ class SyncService {
       await _pushUserQuests();
       debugPrint('SyncService: pushAll — uploading userCollections...');
       await _pushUserCollections();
+      debugPrint('SyncService: pushAll — uploading advisorState...');
+      await _pushAdvisorState();
       await _markInitialPushDone();
       _lastSyncedAt = DateTime.now();
       debugPrint('SyncService: pushAll complete ✓');

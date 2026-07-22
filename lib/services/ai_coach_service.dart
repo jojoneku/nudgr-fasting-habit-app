@@ -59,6 +59,23 @@ abstract class AiCoachService {
     bool isThinking = false,
   });
 
+  /// Stream the financial advisor's reply (Plan: ai-financial-advisor).
+  ///
+  /// Uses a stronger cloud model than [respond]. [context] carries the
+  /// PHP-formatted financial snapshot ([AiCoachContext.financeSnapshotSummary]) —
+  /// the model's only source of numeric truth. [profile] is the user's durable
+  /// learned facts (goals, risk tolerance, freeform notes), and [historical] an
+  /// optional prior-period benchmark string.
+  ///
+  /// Only the cloud tier produces a real answer; the on-device and null tiers
+  /// throw [AiCoachException] (the small on-device model can't do this reasoning).
+  Stream<String> adviseFinance({
+    required List<AiChatMessage> messages,
+    required AiCoachContext context,
+    String? profile,
+    String? historical,
+  });
+
   /// Attempt to parse [description] as a food log entry.
   Future<FoodParseResult?> parseFood(String description);
 

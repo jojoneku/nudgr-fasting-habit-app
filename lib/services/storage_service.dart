@@ -1,5 +1,7 @@
 import '../models/activity_goals.dart';
 import '../models/activity_log.dart';
+import '../models/advisor_profile.dart';
+import '../models/ai_chat_message.dart';
 import '../models/daily_nutrition_log.dart';
 import '../models/fasting_log.dart';
 import '../models/food_template.dart';
@@ -72,6 +74,8 @@ abstract class StorageService {
   static const String keyActivityStreak = 'activityStreak';
   static const String keyPreferredStepsSource = 'preferredStepsSourceId';
   static const String keyChatMessages = 'nutritionChatMessages';
+  static const String keyAdvisorHistory = 'advisorChatHistory';
+  static const String keyAdvisorProfile = 'advisorProfile';
   static const String keyFinancialAccounts = 'finance_accounts';
   static const String keyTransactions = 'finance_transactions';
   static const String keyFinanceCategories = 'finance_categories';
@@ -198,6 +202,13 @@ abstract class StorageService {
   //  Chat ─
   Future<void> saveChatMessages(String date, List<dynamic> messages);
   Future<List<Map<String, dynamic>>> loadChatMessagesRaw(String date);
+
+  //  Financial advisor (local-only for now; cloud sync is a follow-up) ─
+  Future<void> saveAdvisorHistory(List<AiChatMessage> messages);
+  Future<List<AiChatMessage>> loadAdvisorHistory();
+  Future<void> saveAdvisorProfile(AdvisorProfile profile);
+  Future<AdvisorProfile?> loadAdvisorProfile();
+  Future<void> clearAdvisorHistory();
 
   //  Finance ─
   Future<void> saveAccounts(List<FinancialAccount> accounts);
