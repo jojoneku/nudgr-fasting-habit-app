@@ -76,7 +76,7 @@ class DailyBriefSheet extends StatelessWidget {
                         if (brief != null) _BriefHero(brief: brief),
                         if (nudges.isNotEmpty) ...[
                           const SizedBox(height: 20),
-                          const _SectionLabel('Recent Directives'),
+                          const _SectionLabel('Recent Tips'),
                           const SizedBox(height: 4),
                           for (final n in nudges) _DirectiveRow(insight: n),
                         ],
@@ -128,7 +128,7 @@ class _SheetHeader extends StatelessWidget {
           Icon(Icons.insights_outlined, color: cs.onSurfaceVariant, size: 18),
           const SizedBox(width: 10),
           Text(
-            'System Analysis',
+            'Daily Check-in',
             style: TextStyle(
               color: cs.onSurface,
               fontSize: 16,
@@ -288,7 +288,7 @@ class _EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'The System is observing.',
+              'Nothing to flag right now.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: cs.onSurfaceVariant,
