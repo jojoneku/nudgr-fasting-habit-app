@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
+import 'advisor_memory_sheet.dart';
 import 'system/system.dart';
 
 /// Entry point labels and icons per context.
@@ -240,6 +241,16 @@ class _SheetHeader extends StatelessWidget {
             ),
           ),
           const Spacer(),
+          if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
+            IconButton(
+              icon: Icon(Icons.bookmark_border,
+                  color: cs.onSurfaceVariant, size: 20),
+              tooltip: 'Advisor memory',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: () => AdvisorMemorySheet.show(context, presenter),
+            ),
+            const SizedBox(width: 4),
+          ],
           ListenableBuilder(
             listenable: presenter,
             builder: (_, __) => GestureDetector(
