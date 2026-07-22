@@ -9,7 +9,7 @@
 
 - [x] 2.1 Add an `AdvisorMessage` model (role, text, timestamp) and an `AdvisorProfile` model (goals, risk tolerance, freeform facts) in `lib/models/`, immutable with `fromJson`/`toJson`.
 - [x] 2.2 Add StorageService keys + read/write methods for capped advisor chat history and the advisor profile (through the abstract `StorageService` interface only). **History reuses `AiChatMessage.toJson`; local-only for now (no `_markDirty`).**
-- [x] 2.3 Registered `SyncDomain.advisorState` as a single LWW document (mirrors `userProfile`): `_markDirty` on save, `_pushAdvisorState`/`_pullAdvisorState` + pushAll/pullAll wiring, clobber-guard. Migration SQL in `docs/supabase_migration_advisor.sql`. **Pending: run the SQL in Supabase to create the `advisor_state` table.**
+- [x] 2.3 Registered `SyncDomain.advisorState` as a single LWW document (mirrors `userProfile`): `_markDirty` on save, `_pushAdvisorState`/`_pullAdvisorState` + pushAll/pullAll wiring, clobber-guard. Migration SQL in `docs/supabase_migration_advisor.sql`; **`advisor_state` table created in prod (Nudgr AppDB, RLS `user_owns_row` verified, 2026-07-22).**
 - [x] 2.4 Unit-test round-trip persistence (save → load → equality) and history trimming/clearing.
 
 ## 3. Service layer — advisor request
