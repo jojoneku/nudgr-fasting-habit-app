@@ -104,14 +104,17 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
   static const String _kLastReadKey = '_lastRead';
 
   static const String _kBriefInstruction =
-      'You are The System, an RPG-style coach. Given this player status '
-      'digest, write a 2-3 sentence morning briefing: one observation about a '
-      'trend or change, one concrete directive for today. No preamble.';
+      'You are a warm, practical personal coach. Given this status digest, '
+      'write a 2-3 sentence morning check-in in plain, everyday language: one '
+      'observation about a recent trend or change, then one concrete thing to '
+      'focus on today. Sound natural and encouraging — no game, RPG, or '
+      'military framing, no preamble.';
 
   static const String _kNudgeInstruction =
-      'You are The System, an RPG-style coach. Rewrite the following directive '
-      'as one short, specific, motivating line (max 22 words) using the '
-      "player's status digest for context. No preamble, no quotes.";
+      'You are a warm, practical personal coach. Rewrite the following '
+      'suggestion as one short, specific, encouraging line (max 22 words) in '
+      'plain everyday language, using the status digest for context. No game, '
+      'RPG, or military framing, no preamble, no quotes.';
 
   // ── State ─────────────────────────────────────────────────────────────────
 
@@ -407,9 +410,9 @@ class InsightsPresenter extends ChangeNotifier with SafeNotifier {
   String _templateBrief(InsightSnapshot snapshot) {
     final holding = allInsightTriggers.where((t) => t.test(snapshot)).toList()
       ..sort((a, b) => _moodRank(a.mood).compareTo(_moodRank(b.mood)));
-    final buffer = StringBuffer('System analysis complete. ');
+    final buffer = StringBuffer();
     if (holding.isEmpty) {
-      buffer.write('All fronts are holding — keep your lines steady today.');
+      buffer.write('Everything\'s looking good today — keep it up.');
       return buffer.toString();
     }
     final lead = holding.first;
