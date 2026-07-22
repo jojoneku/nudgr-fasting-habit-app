@@ -29,7 +29,7 @@
 ## 5. UI — dual-mode hub bar + advisor surface
 
 - [x] 5.1 Add a `financeAdvisor` entry to `_entryMeta` in `lib/views/widgets/ai_chat_sheet.dart` (gold Treasury accent, Phosphor icon, advisor label).
-- [ ] 5.2 Convert `_QuickLogBar` (`lib/views/hub_screen.dart`) to dual-mode: collapsed = today's inline quick-log (unchanged routing); tap/expand opens the advisor surface anchored to the bar; collapse returns to pinned collapsed state. Keep it pinned as `bottomNavigationBar`.
+- [x] 5.2 Convert `_QuickLogBar` (`lib/views/hub_screen.dart`) to dual-mode: collapsed = today's inline quick-log (unchanged routing); tap/expand opens the advisor surface anchored to the bar; collapse returns to pinned collapsed state. Keep it pinned as `bottomNavigationBar`.
 - [ ] 5.3 Render the in-conversation expense confirm/clarify (reuse `LedgerChatPanel` states or an in-sheet equivalent) so logging inside the advisor uses the same confirm-before-commit UX.
 - [ ] 5.4 Add a memory/profile view where the user can see and clear stored facts and clear conversation history.
 - [ ] 5.5 Verify UI rules: no logic in `build()`, theme-aware colors only (dark + light), touch targets ≥44px, expand/collapse animation 150–400ms, input stays in bottom 30%.
