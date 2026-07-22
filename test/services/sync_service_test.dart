@@ -256,8 +256,8 @@ void main() {
       // fails — this stands in for a total connectivity/auth outage.
       await expectLater(service.pullAll(), throwsA(isA<Exception>()));
 
-      // All seven domains were attempted and recorded as failures.
-      expect(service.lastPullErrors.length, 7);
+      // All eight domains were attempted and recorded as failures.
+      expect(service.lastPullErrors.length, 8);
       // isSyncing is reset by the finally block even on a total failure.
       expect(service.isSyncing, false);
       // No partial pull succeeded, so nothing was timestamped as synced.

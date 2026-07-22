@@ -1024,8 +1024,9 @@ class LocalStorageService extends StorageService {
   }
 
   // ── Financial advisor ──────────────────────────────────────────────────────
-  // Local-only for now. Cloud sync (cross-device) is a deferred follow-up that
-  // adds a SyncDomain + Supabase table + manual migration — hence no _markDirty.
+  // Synced as a single LWW document (SyncDomain.advisorState / 'default'),
+  // mirroring userProfile — so history + profile follow the user across devices
+  // and survive sign-out (flush-before-wipe).
 
   static const int _maxAdvisorHistory = 100;
 
@@ -1039,6 +1040,7 @@ class LocalStorageService extends StorageService {
         : settled.toList();
     final encoded = jsonEncode(capped.map((m) => m.toJson()).toList());
     await prefs.setString(_k(StorageService.keyAdvisorHistory), encoded);
+    _markDirty(SyncDomain.advisorState, 'default');
   }
 
   @override
@@ -1063,6 +1065,7 @@ class LocalStorageService extends StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(
         _k(StorageService.keyAdvisorProfile), jsonEncode(profile.toJson()));
+    _markDirty(SyncDomain.advisorState, 'default');
   }
 
   @override
@@ -1082,6 +1085,7 @@ class LocalStorageService extends StorageService {
   Future<void> clearAdvisorHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_k(StorageService.keyAdvisorHistory));
+    _markDirty(SyncDomain.advisorState, 'default');
   }
 
   // ── Finance ──────────────────────────────────────────────────────────────────
