@@ -305,8 +305,13 @@ class _LogComposerSheetState extends State<_LogComposerSheet> {
   }
 
   void _openPhotoSheet() {
-    Navigator.of(context).pop();
-    showFoodPhotoSheet(context, widget.presenter);
+    // Pop the composer first, then open the photo sheet. Use the Navigator's own
+    // context (which outlives this sheet) rather than the composer's context —
+    // after the pop the composer element is deactivated, so its context.mounted
+    // is false and showFoodPhotoSheet would bail out before ever picking.
+    final navigator = Navigator.of(context);
+    navigator.pop();
+    showFoodPhotoSheet(navigator.context, widget.presenter);
   }
 
   void _showTemplates() {
