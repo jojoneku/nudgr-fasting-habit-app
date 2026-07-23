@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -15,6 +17,7 @@ import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../services/ai_coach_service.dart';
+import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
@@ -40,6 +43,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   /// Persists advisor chat history + the learned profile (local-only for now).
   final StorageService? _storage;
+
+  /// Resizes attached photos before upload (same codec the food photo flow
+  /// uses). Injected so tests can substitute a fake that skips the platform
+  /// channel.
+  final ImageCompressor _imageCompressor;
 
   /// The user-curated advisor memory, injected into every advisor turn.
   AdvisorProfile _advisorProfile = AdvisorProfile.empty();
@@ -71,6 +79,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     LedgerPresenter? ledger,
     StorageService? storage,
     AiCoachService? cloudFallback,
+    ImageCompressor? imageCompressor,
   })  : _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
@@ -80,6 +89,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _ledger = ledger,
         _storage = storage,
         _cloudFallback = cloudFallback,
+        _imageCompressor = imageCompressor ?? const ImageCompressor(),
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
     // the internal init. Only auto-init when no service is provided.
@@ -139,15 +149,17 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Send ──────────────────────────────────────────────────────────────────
 
-  Future<void> send(String text) async {
+  Future<void> send(String text, {Uint8List? image}) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isResponding) return;
+    if ((trimmed.isEmpty && image == null) || _isResponding) return;
 
     // Advisor logging: a clear expense-log intent — or any reply while the
     // ledger is mid-clarify — goes through the ledger's confirm-before-commit
     // pipeline instead of the advice model. The sheet renders the confirm card.
+    // An attached image is always advice, never an expense log — skip routing.
     final ledger = _ledger;
-    if (_entryPoint == AiCoachEntryPoint.financeAdvisor &&
+    if (image == null &&
+        _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         (ledger.chatState.phase == ChatPhase.clarifying ||
             looksLikeExpenseLog(trimmed))) {
@@ -165,7 +177,21 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       return;
     }
 
-    final userMsg = AiChatMessage.user(trimmed);
+    // Compress an attached photo off the UI thread before building the turn.
+    Uint8List? compressed;
+    if (image != null) {
+      try {
+        compressed = await _imageCompressor.compressForUpload(image);
+      } catch (e) {
+        compressed = image; // fall back to the original bytes
+        debugPrint('AiCoachPresenter.send image compress failed: $e');
+      }
+      if (isDisposed) return;
+    }
+
+    // With an image but no caption, give the model a natural prompt to react to.
+    final display = trimmed.isEmpty ? 'What do you make of this?' : trimmed;
+    final userMsg = AiChatMessage.user(display, imageBytes: compressed);
     _messages.add(userMsg);
     _errorMessage = null;
     _isResponding = true;
@@ -177,7 +203,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     try {
-      final context = _buildContext();
+      final context = _buildContext(image: compressed);
       final buffer = StringBuffer();
 
       final Stream<String> stream;
@@ -387,7 +413,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  AiCoachContext _buildContext() {
+  AiCoachContext _buildContext({Uint8List? image}) {
     final stats = _stats.stats;
     final n = _nutrition;
     final t = _treasury;
@@ -570,6 +596,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
     return AiCoachContext(
       entryPoint: _entryPoint,
+      imageBytes: isAdvisor ? image : null,
+      imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
       isFasting: _fasting.isFasting,
       elapsedFastMinutes:
           _fasting.isFasting ? _fasting.elapsedSeconds ~/ 60 : null,

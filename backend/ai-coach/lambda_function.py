@@ -877,6 +877,27 @@ def _advise_finance(payload):
     if not bedrock_messages:
         return _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
 
+    # Optional attached photo (a bill, receipt, credit offer …). Attach it to the
+    # LAST user turn as a vision block so the advisor reads it in context — the
+    # same Bedrock image path the food vision op uses. The image is sent only on
+    # the turn it's attached (the client never replays it in history).
+    image_b64 = (payload.get("image_base64") or "").strip()
+    has_image = bool(image_b64)
+    if has_image:
+        if len(image_b64) > _MAX_IMAGE_B64_LEN:
+            return _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+        mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
+        if mime not in _ALLOWED_IMAGE_MIME:
+            mime = "image/jpeg"
+        for m in reversed(bedrock_messages):
+            if m["role"] == "user":
+                text_content = m["content"] if isinstance(m["content"], str) else ""
+                m["content"] = [
+                    {"type": "image", "source": {"type": "base64", "media_type": mime, "data": image_b64}},
+                    {"type": "text", "text": text_content or "Please review this image."},
+                ]
+                break
+
     try:
         raw = _bedrock.invoke_model(
             modelId=_ADVISOR_MODEL_ID,
@@ -891,7 +912,7 @@ def _advise_finance(payload):
         )
         result = json.loads(raw["body"].read())
         response_text = result["content"][0]["text"].strip()
-        print(f"cost_line op=adviseFinance msgs={len(bedrock_messages)} snapshot={'y' if summary else 'n'}")
+        print(f"cost_line op=adviseFinance msgs={len(bedrock_messages)} snapshot={'y' if summary else 'n'} image={'y' if has_image else 'n'}")
         return _resp(200, {"response": response_text})
     except Exception as e:
         print(f"Bedrock error (adviseFinance): {e}")

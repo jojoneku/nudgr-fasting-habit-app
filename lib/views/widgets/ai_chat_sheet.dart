@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
@@ -86,6 +89,10 @@ class _AiChatSheetState extends State<AiChatSheet> {
 
   String? _lastLoggedSummary;
 
+  /// A photo the user has attached but not yet sent (shown as a preview chip
+  /// above the input). Advisor mode only.
+  Uint8List? _pendingImage;
+
   @override
   void initState() {
     super.initState();
@@ -124,14 +131,40 @@ class _AiChatSheetState extends State<AiChatSheet> {
 
   void _send() {
     final text = _controller.text.trim();
-    if (text.isEmpty) return;
+    final image = _pendingImage;
+    if (text.isEmpty && image == null) return;
     _controller.clear();
+    setState(() => _pendingImage = null);
     // Dismiss keyboard first so its animation starts before the rebuild.
     FocusScope.of(context).unfocus();
     Future.delayed(Duration.zero, () {
-      _presenter.send(text);
+      _presenter.send(text, image: image);
       _scrollToBottom();
     });
+  }
+
+  /// Pick a bill / receipt / statement photo (camera or gallery) to attach.
+  Future<void> _attachPhoto() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => const _PhotoSourceSheet(),
+    );
+    if (source == null || !mounted) return;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        maxWidth: 2048,
+        maxHeight: 2048,
+        imageQuality: 90,
+      );
+      if (picked == null || !mounted) return;
+      final bytes = await picked.readAsBytes();
+      if (!mounted) return;
+      setState(() => _pendingImage = bytes);
+    } catch (_) {
+      // Permission denied / no camera — no-op.
+    }
   }
 
   void _scrollToBottom() {
@@ -221,16 +254,29 @@ class _AiChatSheetState extends State<AiChatSheet> {
               ),
             Padding(
               padding: EdgeInsets.only(bottom: bottomInset),
-              child: ListenableBuilder(
-                listenable: _presenter,
-                builder: (_, __) => _InputBar(
-                  controller: _controller,
-                  focusNode: _focusNode,
-                  enabled: _presenter.isModelAvailable &&
-                      !_presenter.isResponding &&
-                      !_presenter.isInitializing,
-                  onSend: _send,
-                ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_pendingImage != null)
+                    _StagedImagePreview(
+                      bytes: _pendingImage!,
+                      onRemove: () => setState(() => _pendingImage = null),
+                    ),
+                  ListenableBuilder(
+                    listenable: _presenter,
+                    builder: (_, __) => _InputBar(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      enabled: _presenter.isModelAvailable &&
+                          !_presenter.isResponding &&
+                          !_presenter.isInitializing,
+                      onSend: _send,
+                      // Photo upload is an advisor-only capability (its op is
+                      // the only one wired for vision).
+                      onAttach: _advisorMode ? _attachPhoto : null,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -456,58 +502,101 @@ class _MessageBubble extends StatelessWidget {
                   ],
           ),
           child: message.isStreaming && message.text.isEmpty
-              ? const _TypingIndicator()
-              : isUser
-                  // The user typed plain text — render verbatim (no Markdown).
-                  ? Text(
-                      message.text,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontSize: 14,
-                        height: 1.45,
+              ? const _ThinkingLabel()
+              : Column(
+                  crossAxisAlignment: isUser
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (message.imageBytes != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxHeight: 220),
+                          child: Image.memory(
+                            message.imageBytes!,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
                       ),
-                    )
-                  // Coach replies carry light Markdown — render it properly so
-                  // '##', '**', and '-' don't leak into the bubble as text.
-                  : ChatMarkdown(
-                      message.text,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
+                      if (message.text.isNotEmpty) const SizedBox(height: 8),
+                    ],
+                    if (message.text.isNotEmpty)
+                      isUser
+                          // The user typed plain text — render verbatim.
+                          ? Text(
+                              message.text,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontSize: 14,
+                                height: 1.45,
+                              ),
+                            )
+                          // Coach replies carry light Markdown — render it so
+                          // '##', '**', and '-' don't leak into the bubble.
+                          : ChatMarkdown(
+                              message.text,
+                              color: Theme.of(context).colorScheme.onSurface,
+                            ),
+                  ],
+                ),
         ),
       ),
     );
   }
 }
 
-class _TypingIndicator extends StatefulWidget {
-  const _TypingIndicator();
+/// A "thinking" status that cycles through playful words while the coach works
+/// (the advisor replies in one shot, so a word cycler reads better than dots).
+/// A small dot pulses beside the word; both settle to a static state when the
+/// platform requests reduced motion.
+class _ThinkingLabel extends StatefulWidget {
+  const _ThinkingLabel();
 
   @override
-  State<_TypingIndicator> createState() => _TypingIndicatorState();
+  State<_ThinkingLabel> createState() => _ThinkingLabelState();
 }
 
-class _TypingIndicatorState extends State<_TypingIndicator>
+class _ThinkingLabelState extends State<_ThinkingLabel>
     with SingleTickerProviderStateMixin {
+  static const _words = [
+    'Thinking…',
+    'Pondering…',
+    'Crunching the numbers…',
+    'Reading your finances…',
+    'Weighing the options…',
+    'Doing the math…',
+  ];
+
   late final AnimationController _ctrl;
+  int _wordIndex = 0;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
     super.initState();
     _ctrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
+      duration: const Duration(milliseconds: 1600),
+    )..addStatusListener((status) {
+        // Advance the word each time the pulse completes a cycle.
+        if (status == AnimationStatus.completed) {
+          if (!mounted) return;
+          setState(() => _wordIndex = (_wordIndex + 1) % _words.length);
+          _ctrl.forward(from: 0);
+        }
+      });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (MediaQuery.of(context).disableAnimations) {
-      _ctrl
-        ..stop()
-        ..value = 0.5;
+    _reduceMotion = MediaQuery.of(context).disableAnimations;
+    if (_reduceMotion) {
+      _ctrl.stop();
     } else if (!_ctrl.isAnimating) {
-      _ctrl.repeat();
+      _ctrl.forward(from: 0);
     }
   }
 
@@ -518,30 +607,41 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   }
 
   @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: List.generate(3, (i) {
-          return AnimatedBuilder(
-            animation: _ctrl,
-            builder: (_, __) {
-              final offset = ((_ctrl.value - i * 0.15) % 1.0);
-              final opacity = offset < 0.5 ? offset * 2 : (1 - offset) * 2;
-              return Container(
-                width: 6,
-                height: 6,
-                margin: const EdgeInsets.symmetric(horizontal: 2),
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withValues(alpha: opacity.clamp(0.2, 1.0)),
-                  shape: BoxShape.circle,
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final label = _reduceMotion ? 'Thinking…' : _words[_wordIndex];
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        FadeTransition(
+          opacity: _reduceMotion
+              ? const AlwaysStoppedAnimation(0.6)
+              : Tween(begin: 0.35, end: 1.0).animate(
+                  CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut),
                 ),
-              );
-            },
-          );
-        }),
-      );
+          child: Container(
+            width: 6,
+            height: 6,
+            margin: const EdgeInsets.only(right: 8),
+            decoration:
+                BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+          ),
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 250),
+          child: Text(
+            label,
+            key: ValueKey(label),
+            style: TextStyle(
+              color: cs.onSurfaceVariant,
+              fontSize: 13,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _InputBar extends StatelessWidget {
@@ -550,11 +650,15 @@ class _InputBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onSend;
 
+  /// When non-null, shows a camera button that attaches a photo (advisor only).
+  final VoidCallback? onAttach;
+
   const _InputBar({
     required this.controller,
     required this.focusNode,
     required this.enabled,
     required this.onSend,
+    this.onAttach,
   });
 
   @override
@@ -571,6 +675,10 @@ class _InputBar extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
+          if (onAttach != null) ...[
+            _AttachButton(enabled: enabled, onTap: onAttach!),
+            const SizedBox(width: 8),
+          ],
           Expanded(
             child: TextField(
               controller: controller,
@@ -619,6 +727,171 @@ class _InputBar extends StatelessWidget {
           const SizedBox(width: 10),
           _SendButton(enabled: enabled, onSend: onSend),
         ],
+      ),
+    );
+  }
+}
+
+class _AttachButton extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback onTap;
+  const _AttachButton({required this.enabled, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: enabled ? onTap : null,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: cs.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: cs.outlineVariant, width: 1),
+        ),
+        child: Icon(
+          Icons.add_a_photo_outlined,
+          size: 20,
+          color: enabled
+              ? cs.onSurfaceVariant
+              : cs.onSurfaceVariant.withValues(alpha: 0.4),
+        ),
+      ),
+    );
+  }
+}
+
+/// The staged (not-yet-sent) photo shown just above the input bar, with a
+/// remove button.
+class _StagedImagePreview extends StatelessWidget {
+  final Uint8List bytes;
+  final VoidCallback onRemove;
+  const _StagedImagePreview({required this.bytes, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child:
+                Image.memory(bytes, width: 64, height: 64, fit: BoxFit.cover),
+          ),
+          Positioned(
+            top: -6,
+            right: -6,
+            child: GestureDetector(
+              onTap: onRemove,
+              child: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  color: cs.surface,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Icon(Icons.close, size: 14, color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Camera-or-gallery chooser for attaching a photo to the advisor chat.
+class _PhotoSourceSheet extends StatelessWidget {
+  const _PhotoSourceSheet();
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 4, 18, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Attach a photo',
+              style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'A bill, receipt, statement, or credit offer',
+              style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+            ),
+            const SizedBox(height: 16),
+            _PhotoSourceTile(
+              icon: Icons.photo_camera_outlined,
+              label: 'Take photo',
+              onTap: () => Navigator.of(context).pop(ImageSource.camera),
+            ),
+            const SizedBox(height: 9),
+            _PhotoSourceTile(
+              icon: Icons.image_outlined,
+              label: 'Choose from gallery',
+              onTap: () => Navigator.of(context).pop(ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PhotoSourceTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _PhotoSourceTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Material(
+      color: cs.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 56),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: cs.primary, size: 22),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

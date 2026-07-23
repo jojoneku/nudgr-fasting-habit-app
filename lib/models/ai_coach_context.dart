@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 enum AiCoachEntryPoint {
   nutrition,
   fasting,
@@ -274,6 +276,14 @@ class AdvisorInstallmentLine {
 class AiCoachContext {
   final AiCoachEntryPoint entryPoint;
 
+  // ── Attached image (advisor photo upload) ───────────────────────────────────
+  /// Compressed JPEG bytes the user attached this turn (a bill, receipt, credit
+  /// offer…), sent to the vision model once. Transient — never serialized.
+  final Uint8List? imageBytes;
+
+  /// MIME type of [imageBytes] (e.g. 'image/jpeg').
+  final String? imageMimeType;
+
   // ── Nutrition ──────────────────────────────────────────────────────────────
   final int? todayCalories;
   final int? calorieGoal;
@@ -400,6 +410,8 @@ class AiCoachContext {
 
   const AiCoachContext({
     required this.entryPoint,
+    this.imageBytes,
+    this.imageMimeType,
     this.todayCalories,
     this.calorieGoal,
     this.todayProtein,
