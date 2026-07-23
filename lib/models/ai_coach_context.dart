@@ -97,6 +97,51 @@ class AdvisorMonthFlow {
   });
 }
 
+/// One savings-goal pocket for the advisor snapshot (progress toward a target).
+class AdvisorGoalLine {
+  final String name;
+  final double saved;
+
+  /// The target to reach, or null when the goal has no target set.
+  final double? target;
+
+  const AdvisorGoalLine({required this.name, required this.saved, this.target});
+}
+
+/// One liquid account's balance — lets the advisor answer "which account holds
+/// what" instead of only a single cash total.
+class AdvisorAccountLine {
+  final String name;
+  final double balance;
+  const AdvisorAccountLine({required this.name, required this.balance});
+}
+
+/// One budget group's allocated-vs-spent line (Needs / Wants / Savings, etc.).
+class AdvisorBudgetGroupLine {
+  final String name;
+  final double allocated;
+  final double spent;
+  const AdvisorBudgetGroupLine({
+    required this.name,
+    required this.allocated,
+    required this.spent,
+  });
+}
+
+/// One active installment / BNPL plan for the advisor snapshot.
+class AdvisorInstallmentLine {
+  final String name;
+  final double monthlyAmount;
+  final int remainingMonths;
+  final double remainingAmount;
+  const AdvisorInstallmentLine({
+    required this.name,
+    required this.monthlyAmount,
+    required this.remainingMonths,
+    required this.remainingAmount,
+  });
+}
+
 /// Snapshot of app state passed to the AI model as context.
 /// All fields are optional — populate only what's relevant for the entry point.
 class AiCoachContext {
@@ -166,6 +211,26 @@ class AiCoachContext {
   final List<AdvisorNetWorthPoint> netWorthTrend;
   final List<AdvisorMonthFlow> incomeExpenseTrend;
 
+  // ── Finance advisor (breakdowns: goals, accounts, budget, installments) ─────
+  /// Per-goal progress (name, saved, target).
+  final List<AdvisorGoalLine> goals;
+
+  /// Per-account liquid cash balances.
+  final List<AdvisorAccountLine> liquidAccounts;
+
+  /// Money held for someone else (custodian) — excluded from "your" cash.
+  final double? heldForOthers;
+
+  /// Budget allocated vs spent per group.
+  final List<AdvisorBudgetGroupLine> budgetGroups;
+
+  /// Sinking-fund / set-aside money still to be funded this month.
+  final double? setAsidesRemaining;
+
+  /// Active installment / BNPL plans and this month's total load.
+  final List<AdvisorInstallmentLine> installments;
+  final double? installmentsMonthlyLoad;
+
   const AiCoachContext({
     required this.entryPoint,
     this.todayCalories,
@@ -202,6 +267,13 @@ class AiCoachContext {
     this.nextMonthReceivablesTotal,
     this.netWorthTrend = const [],
     this.incomeExpenseTrend = const [],
+    this.goals = const [],
+    this.liquidAccounts = const [],
+    this.heldForOthers,
+    this.budgetGroups = const [],
+    this.setAsidesRemaining,
+    this.installments = const [],
+    this.installmentsMonthlyLoad,
   });
 
   /// Human-readable summary injected into the RPG coach system prompt.
@@ -247,6 +319,16 @@ class AiCoachContext {
     if (totalLiquidCash != null) {
       buf.writeln('Total liquid cash: ${_peso(totalLiquidCash!)}');
     }
+    if (liquidAccounts.isNotEmpty) {
+      buf.writeln('  Cash by account:');
+      for (final a in liquidAccounts) {
+        buf.writeln('    - ${a.name}: ${_peso(a.balance)}');
+      }
+    }
+    if (heldForOthers != null && heldForOthers! > 0) {
+      buf.writeln('  Of which held for someone else (not yours to spend): '
+          '${_peso(heldForOthers!)}');
+    }
     if (forecastedNetBalance != null) {
       buf.writeln('Forecasted ending cash this month (after bills & budgets): '
           '${_peso(forecastedNetBalance!)}');
@@ -264,11 +346,33 @@ class AiCoachContext {
       buf.writeln('Budget this month: ${_peso(monthSpent!)} spent of '
           '${_peso(monthBudget!)} target (${_peso(remaining)} remaining)');
     }
+    if (budgetGroups.isNotEmpty) {
+      buf.writeln('Budget by group (spent vs allocated):');
+      for (final g in budgetGroups) {
+        buf.writeln('  - ${g.name}: ${_peso(g.spent)} of ${_peso(g.allocated)}');
+      }
+    }
+    if (setAsidesRemaining != null && setAsidesRemaining! > 0) {
+      buf.writeln('Set-asides still to fund this month (sinking funds): '
+          '${_peso(setAsidesRemaining!)}');
+    }
     if (monthIncome != null) {
       buf.writeln('Income received this month: ${_peso(monthIncome!)}');
     }
     if (totalSavingsAndGoals != null) {
       buf.writeln('Savings & goals set aside: ${_peso(totalSavingsAndGoals!)}');
+    }
+    if (goals.isNotEmpty) {
+      buf.writeln('Savings goals (saved vs target):');
+      for (final g in goals) {
+        if (g.target != null && g.target! > 0) {
+          final pct = (g.saved / g.target! * 100).clamp(0, 999).round();
+          buf.writeln('  - ${g.name}: ${_peso(g.saved)} of '
+              '${_peso(g.target!)} ($pct%)');
+        } else {
+          buf.writeln('  - ${g.name}: ${_peso(g.saved)} saved (no target set)');
+        }
+      }
     }
     // Credit: prefer the per-card breakdown; fall back to totals when the
     // caller only supplied aggregates.
@@ -292,6 +396,17 @@ class AiCoachContext {
     } else if (totalCreditOwed != null || totalCreditAvailable != null) {
       buf.writeln('Credit cards: ${_peso(totalCreditOwed ?? 0)} owed, '
           '${_peso(totalCreditAvailable ?? 0)} available (unused capacity)');
+    }
+    if (installments.isNotEmpty) {
+      buf.writeln('Installment / BNPL plans (fixed monthly commitments):');
+      for (final i in installments) {
+        buf.writeln('  - ${i.name}: ${_peso(i.monthlyAmount)}/mo, '
+            '${i.remainingMonths} mo left (${_peso(i.remainingAmount)} remaining)');
+      }
+      if (installmentsMonthlyLoad != null) {
+        buf.writeln('  Total installment load this month: '
+            '${_peso(installmentsMonthlyLoad!)}');
+      }
     }
     if (daysLeftInMonth != null) {
       buf.writeln('Days left in month: $daysLeftInMonth');

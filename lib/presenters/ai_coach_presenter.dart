@@ -9,6 +9,7 @@ import '../models/food_db_entry.dart';
 import '../models/food_parse_result.dart';
 import '../presenters/budget_presenter.dart';
 import '../presenters/fasting_presenter.dart';
+import '../presenters/installment_presenter.dart';
 import '../presenters/ledger_presenter.dart';
 import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
@@ -27,6 +28,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final NutritionPresenter? _nutrition;
   final TreasuryDashboardPresenter? _treasury;
   final BudgetPresenter? _budget;
+
+  /// Active installment / BNPL plans — a fixed monthly commitment the advisor
+  /// must account for when judging affordability. Null when finance isn't wired.
+  final InstallmentPresenter? _installments;
 
   /// Ledger used by the financial-advisor mode to log expenses in-conversation
   /// through the existing confirm-before-commit pipeline. Null when finance
@@ -62,6 +67,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     AiCoachService? service,
     TreasuryDashboardPresenter? treasury,
     BudgetPresenter? budget,
+    InstallmentPresenter? installments,
     LedgerPresenter? ledger,
     StorageService? storage,
     AiCoachService? cloudFallback,
@@ -70,6 +76,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _nutrition = nutrition,
         _treasury = treasury,
         _budget = budget,
+        _installments = installments,
         _ledger = ledger,
         _storage = storage,
         _cloudFallback = cloudFallback,
@@ -395,6 +402,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var creditLines = const <AdvisorCreditLine>[];
     var netWorthTrend = const <AdvisorNetWorthPoint>[];
     var incomeExpenseTrend = const <AdvisorMonthFlow>[];
+    var goals = const <AdvisorGoalLine>[];
+    var liquidAccounts = const <AdvisorAccountLine>[];
+    var budgetGroups = const <AdvisorBudgetGroupLine>[];
+    var installmentLines = const <AdvisorInstallmentLine>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -441,6 +452,37 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 expense: m.expense,
               ))
           .toList();
+      goals = t.goalAccounts
+          .map((a) => AdvisorGoalLine(
+                name: a.name,
+                saved: a.balance,
+                target: a.goalTarget,
+              ))
+          .toList();
+      liquidAccounts = t.liquidAccounts
+          .map((a) => AdvisorAccountLine(name: a.name, balance: a.balance))
+          .toList();
+      budgetGroups = b == null
+          ? const []
+          : b.groupBars
+              .map((g) => AdvisorBudgetGroupLine(
+                    name: g.label,
+                    allocated: g.allocated,
+                    spent: g.spent,
+                  ))
+              .toList();
+      final inst = _installments;
+      if (inst != null) {
+        installmentLines = inst.installments
+            .where((i) => inst.remainingMonths(i.id) > 0)
+            .map((i) => AdvisorInstallmentLine(
+                  name: i.name,
+                  monthlyAmount: i.monthlyAmount,
+                  remainingMonths: inst.remainingMonths(i.id),
+                  remainingAmount: inst.remainingAmount(i.id),
+                ))
+            .toList();
+      }
     }
     final savingsRate = t?.savingsRate;
 
@@ -489,6 +531,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               : null,
       netWorthTrend: netWorthTrend,
       incomeExpenseTrend: incomeExpenseTrend,
+      goals: goals,
+      liquidAccounts: liquidAccounts,
+      heldForOthers: isAdvisor ? t?.totalHeldForOthers : null,
+      budgetGroups: budgetGroups,
+      setAsidesRemaining: isAdvisor ? t?.budgetedExpensesRemaining : null,
+      installments: installmentLines,
+      installmentsMonthlyLoad: isAdvisor && installmentLines.isNotEmpty
+          ? _installments?.totalDueThisMonth
+          : null,
     );
   }
 

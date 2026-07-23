@@ -115,6 +115,56 @@ void main() {
           contains('Electricity: ₱2,501 (Due tomorrow)'));
     });
 
+    test('breaks down goals, accounts, budget groups and installments', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        totalLiquidCash: 9978,
+        liquidAccounts: [
+          AdvisorAccountLine(name: 'Maya', balance: 3500),
+          AdvisorAccountLine(name: 'BPI', balance: 6478),
+        ],
+        heldForOthers: 1200,
+        totalSavingsAndGoals: 25000,
+        goals: [
+          AdvisorGoalLine(name: 'Travel Fund', saved: 3500, target: 25000),
+          AdvisorGoalLine(name: 'Emergency', saved: 8000),
+        ],
+        budgetGroups: [
+          AdvisorBudgetGroupLine(
+              name: 'Non-negotiables', allocated: 12000, spent: 9000),
+          AdvisorBudgetGroupLine(name: 'Guilt-Free', allocated: 5000, spent: 2200),
+        ],
+        setAsidesRemaining: 1500,
+        installments: [
+          AdvisorInstallmentLine(
+            name: 'MacBook',
+            monthlyAmount: 4200,
+            remainingMonths: 8,
+            remainingAmount: 33600,
+          ),
+        ],
+        installmentsMonthlyLoad: 4200,
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // Per-account cash answers "which account holds what".
+      expect(s, contains('Cash by account:'));
+      expect(s, contains('Maya: ₱3,500'));
+      expect(s, contains('BPI: ₱6,478'));
+      expect(s, contains('held for someone else'));
+      expect(s, contains('₱1,200'));
+      // Per-goal progress with percentage.
+      expect(s, contains('Travel Fund: ₱3,500 of ₱25,000 (14%)'));
+      expect(s, contains('Emergency: ₱8,000 saved (no target set)'));
+      // Budget by group.
+      expect(s, contains('Non-negotiables: ₱9,000 of ₱12,000'));
+      expect(s, contains('Guilt-Free: ₱2,200 of ₱5,000'));
+      expect(s, contains('Set-asides still to fund'));
+      // Installments as fixed monthly commitments.
+      expect(s, contains('MacBook: ₱4,200/mo, 8 mo left (₱33,600 remaining)'));
+      expect(s, contains('Total installment load this month: ₱4,200'));
+    });
+
     test('historical summary is separate from the live snapshot', () {
       const ctx = AiCoachContext(
         entryPoint: AiCoachEntryPoint.financeAdvisor,
