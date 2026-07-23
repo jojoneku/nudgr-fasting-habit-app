@@ -278,6 +278,70 @@ void main() {
       expect(s, contains('Insurance renewal: ₱5,000 out (Sep 3)'));
     });
 
+    test('present: paid bills, received receivables and itemized set-asides',
+        () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        paidBillsThisMonth: [AdvisorBillLine(name: 'Rent', amount: 8000)],
+        receivedThisMonth: [
+          AdvisorReceivableLine(name: 'Payroll', amount: 32000),
+        ],
+        setAsides: [
+          AdvisorSetAsideLine(
+            name: 'Emergency',
+            allocated: 3000,
+            funded: 1000,
+            remaining: 2000,
+            isFunded: false,
+          ),
+          AdvisorSetAsideLine(
+            name: 'Gadget',
+            allocated: 1500,
+            funded: 1500,
+            remaining: 0,
+            isFunded: true,
+          ),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Bills already paid this month:'));
+      expect(s, contains('Rent: ₱8,000'));
+      expect(s, contains('Receivables already received this month:'));
+      expect(s, contains('Payroll: ₱32,000'));
+      expect(s, contains('Set-asides this month'));
+      expect(s, contains('Emergency: ₱1,000 of ₱3,000, ₱2,000 to go'));
+      expect(s, contains('Gadget: funded'));
+    });
+
+    test('past: bills & receivables totals per closed month', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        monthlyLedger: [
+          AdvisorMonthLedger(
+            label: 'Jun',
+            billed: 9000,
+            billsPaid: 9000,
+            receivablesExpected: 32000,
+            received: 32000,
+            netSavings: 11000,
+          ),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('Bills & receivables by closed month'));
+      expect(
+        h,
+        contains(
+          'Jun: bills ₱9,000 (paid ₱9,000), receivables ₱32,000 '
+          '(received ₱32,000), saved ₱11,000',
+        ),
+      );
+      // Past detail must NOT leak into the live snapshot.
+      expect(ctx.financeSnapshotSummary(), '(no financial data available)');
+    });
+
     test('historical summary is separate from the live snapshot', () {
       const ctx = AiCoachContext(
         entryPoint: AiCoachEntryPoint.financeAdvisor,

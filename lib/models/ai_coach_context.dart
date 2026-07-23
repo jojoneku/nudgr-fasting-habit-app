@@ -168,6 +168,42 @@ class AdvisorMaturityLine {
   });
 }
 
+/// One set-aside / sinking fund for the current month (present picture).
+class AdvisorSetAsideLine {
+  final String name;
+  final double allocated;
+  final double funded;
+  final double remaining;
+  final bool isFunded;
+
+  const AdvisorSetAsideLine({
+    required this.name,
+    required this.allocated,
+    required this.funded,
+    required this.remaining,
+    required this.isFunded,
+  });
+}
+
+/// One closed month's bills/receivables/savings totals (past picture).
+class AdvisorMonthLedger {
+  final String label;
+  final double billed;
+  final double billsPaid;
+  final double receivablesExpected;
+  final double received;
+  final double netSavings;
+
+  const AdvisorMonthLedger({
+    required this.label,
+    required this.billed,
+    required this.billsPaid,
+    required this.receivablesExpected,
+    required this.received,
+    required this.netSavings,
+  });
+}
+
 /// One recurring monthly commitment (a bill or receivable that repeats) for the
 /// advisor snapshot — the backbone of future planning.
 class AdvisorRecurringLine {
@@ -281,6 +317,15 @@ class AiCoachContext {
   /// Individual receivables expected this month.
   final List<AdvisorReceivableLine> pendingReceivables;
 
+  /// Bills already paid this month (settled present picture).
+  final List<AdvisorBillLine> paidBillsThisMonth;
+
+  /// Receivables already received this month.
+  final List<AdvisorReceivableLine> receivedThisMonth;
+
+  /// This month's set-asides / sinking funds, itemized.
+  final List<AdvisorSetAsideLine> setAsides;
+
   // ── Finance advisor (future: next month's known obligations) ────────────────
   /// Recurring bills already scheduled for next month, if any.
   final double? nextMonthBillsTotal;
@@ -297,6 +342,9 @@ class AiCoachContext {
   // ── Finance advisor (past: historical benchmark, year-over-year context) ────
   final List<AdvisorNetWorthPoint> netWorthTrend;
   final List<AdvisorMonthFlow> incomeExpenseTrend;
+
+  /// Per-closed-month bills/receivables/savings totals (past picture).
+  final List<AdvisorMonthLedger> monthlyLedger;
 
   // ── Finance advisor (breakdowns: goals, accounts, budget, installments) ─────
   /// Per-goal progress (name, saved, target).
@@ -372,12 +420,16 @@ class AiCoachContext {
     this.totalSavingsAndGoals,
     this.creditLines = const [],
     this.pendingReceivables = const [],
+    this.paidBillsThisMonth = const [],
+    this.receivedThisMonth = const [],
+    this.setAsides = const [],
     this.nextMonthBillsTotal,
     this.nextMonthReceivablesTotal,
     this.recurringCommitments = const [],
     this.scheduledFuture = const [],
     this.netWorthTrend = const [],
     this.incomeExpenseTrend = const [],
+    this.monthlyLedger = const [],
     this.goals = const [],
     this.liquidAccounts = const [],
     this.heldForOthers,
@@ -484,6 +536,16 @@ class AiCoachContext {
       buf.writeln('Set-asides still to fund this month (sinking funds): '
           '${_peso(setAsidesRemaining!)}');
     }
+    if (setAsides.isNotEmpty) {
+      buf.writeln('Set-asides this month (funded vs allocated):');
+      for (final s in setAsides) {
+        final status = s.isFunded
+            ? 'funded'
+            : '${_peso(s.funded)} of ${_peso(s.allocated)}, '
+                '${_peso(s.remaining)} to go';
+        buf.writeln('  - ${s.name}: $status');
+      }
+    }
     if (monthIncome != null) {
       buf.writeln('Income received this month: ${_peso(monthIncome!)}');
     }
@@ -555,6 +617,12 @@ class AiCoachContext {
         buf.writeln('  Total outstanding: ${_peso(outstandingBillsTotal!)}');
       }
     }
+    if (paidBillsThisMonth.isNotEmpty) {
+      buf.writeln('Bills already paid this month:');
+      for (final b in paidBillsThisMonth) {
+        buf.writeln('  - ${b.name}: ${_peso(b.amount)}');
+      }
+    }
     if (pendingReceivables.isNotEmpty || pendingReceivablesTotal != null) {
       buf.writeln('Receivables this month (money coming IN, owed to you):');
       for (final r in pendingReceivables) {
@@ -563,6 +631,12 @@ class AiCoachContext {
       }
       if (pendingReceivablesTotal != null) {
         buf.writeln('  Total incoming: ${_peso(pendingReceivablesTotal!)}');
+      }
+    }
+    if (receivedThisMonth.isNotEmpty) {
+      buf.writeln('Receivables already received this month:');
+      for (final r in receivedThisMonth) {
+        buf.writeln('  - ${r.name}: ${_peso(r.amount)}');
       }
     }
     if (nextMonthBillsTotal != null || nextMonthReceivablesTotal != null) {
@@ -654,6 +728,16 @@ class AiCoachContext {
       for (final m in incomeExpenseTrend) {
         buf.writeln('  - ${m.label}: ${_peso(m.income)} in / '
             '${_peso(m.expense)} out (net ${_peso(m.income - m.expense)})');
+      }
+    }
+    if (monthlyLedger.isNotEmpty) {
+      buf.writeln('Bills & receivables by closed month (totals; line items '
+          'are not retained per past month):');
+      for (final m in monthlyLedger) {
+        buf.writeln('  - ${m.label}: bills ${_peso(m.billed)} '
+            '(paid ${_peso(m.billsPaid)}), receivables '
+            '${_peso(m.receivablesExpected)} (received ${_peso(m.received)}), '
+            'saved ${_peso(m.netSavings)}');
       }
     }
     return buf.toString().trim();

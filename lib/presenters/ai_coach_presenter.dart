@@ -410,6 +410,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var recentTransactions = const <AdvisorTxnLine>[];
     var recurringCommitments = const <AdvisorRecurringLine>[];
     var scheduledFuture = const <AdvisorScheduledLine>[];
+    var paidBills = const <AdvisorBillLine>[];
+    var receivedThisMonth = const <AdvisorReceivableLine>[];
+    var setAsides = const <AdvisorSetAsideLine>[];
+    var monthlyLedger = const <AdvisorMonthLedger>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -529,6 +533,32 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           isInflow: s.isInflow,
         );
       }).toList();
+      paidBills = t.paidBillsThisMonth
+          .map((b) => AdvisorBillLine(name: b.name, amount: b.amount))
+          .toList();
+      receivedThisMonth = t.receivedThisMonth
+          .map((r) => AdvisorReceivableLine(name: r.name, amount: r.amount))
+          .toList();
+      setAsides = t.setAsidesThisMonth
+          .map((s) => AdvisorSetAsideLine(
+                name: s.name,
+                allocated: s.allocated,
+                funded: s.funded,
+                remaining: s.remaining,
+                isFunded: s.isPaid || s.remaining <= 0,
+              ))
+          .toList();
+      monthlyLedger = t
+          .historicalLedger(months: 6)
+          .map((m) => AdvisorMonthLedger(
+                label: m.label,
+                billed: m.billed,
+                billsPaid: m.billsPaid,
+                receivablesExpected: m.receivablesExpected,
+                received: m.received,
+                netSavings: m.netSavings,
+              ))
+          .toList();
     }
     final savingsRate = t?.savingsRate;
     final peakDay = t?.peakSpendDay;
@@ -577,6 +607,10 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
               : null,
       recurringCommitments: recurringCommitments,
       scheduledFuture: scheduledFuture,
+      paidBillsThisMonth: paidBills,
+      receivedThisMonth: receivedThisMonth,
+      setAsides: setAsides,
+      monthlyLedger: monthlyLedger,
       netWorthTrend: netWorthTrend,
       incomeExpenseTrend: incomeExpenseTrend,
       goals: goals,

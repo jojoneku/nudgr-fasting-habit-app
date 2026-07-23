@@ -433,6 +433,71 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         .fold(0.0, (sum, r) => sum + r.amount);
   }
 
+  /// Bills already PAID this month — the settled half of the present picture
+  /// (the unpaid half is [upcomingBills]). Name + amount actually paid.
+  List<({String name, double amount})> get paidBillsThisMonth => _bills
+      .where((b) => b.month == _currentMonth && b.isPaid)
+      .map((b) => (name: b.name, amount: b.paidAmount ?? b.amount))
+      .toList();
+
+  /// Receivables already RECEIVED this month (money that has landed). Name +
+  /// amount actually received.
+  List<({String name, double amount})> get receivedThisMonth => _receivables
+      .where((r) => r.month == _currentMonth && r.isReceived)
+      .map((r) => (name: r.name, amount: r.receivedAmount ?? r.amount))
+      .toList();
+
+  /// Set-asides / sinking funds for THIS month, itemized: name, allocated,
+  /// amount funded so far, remaining to fund, and whether it's fully funded.
+  List<({String name, double allocated, double funded, double remaining, bool isPaid})>
+      get setAsidesThisMonth => _budgetedExpenses
+          .where((e) => e.month == _currentMonth)
+          .map((e) => (
+                name: e.name,
+                allocated: e.allocatedAmount,
+                funded: e.spentAmount,
+                remaining: (e.allocatedAmount - e.spentAmount)
+                    .clamp(0.0, double.infinity),
+                isPaid: e.isPaid,
+              ))
+          .toList();
+
+  /// Per-closed-month bills & receivables + savings, oldest → newest, from the
+  /// stored month-end summaries (line items aren't retained per closed month,
+  /// so these are the month totals). Excludes the in-progress current month.
+  List<
+      ({
+        String label,
+        double billed,
+        double billsPaid,
+        double receivablesExpected,
+        double received,
+        double netSavings
+      })> historicalLedger({int months = 6}) {
+    final out = <({
+      String label,
+      double billed,
+      double billsPaid,
+      double receivablesExpected,
+      double received,
+      double netSavings
+    })>[];
+    for (final key in _lastNMonthKeys(months)) {
+      if (key == _currentMonth) continue;
+      final s = _summaryFor(key);
+      if (s == null) continue;
+      out.add((
+        label: monthShortLabel(key),
+        billed: s.totalBills,
+        billsPaid: s.totalBillsPaid,
+        receivablesExpected: s.totalReceivables,
+        received: s.totalReceived,
+        netSavings: s.netSavings,
+      ));
+    }
+    return out;
+  }
+
   /// Recurring monthly commitments — one entry per distinct recurring bill /
   /// receivable (deduped by name, preferring the current month's instance).
   /// Amount is the forward-looking one (`nextMonthAmount` when the user staged
