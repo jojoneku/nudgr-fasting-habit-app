@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../models/advisor_conversation.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
