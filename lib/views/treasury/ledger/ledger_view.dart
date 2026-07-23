@@ -7,12 +7,14 @@ import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
+import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/add_transaction_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/manage_categories_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/spending_calendar.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/transaction_list_tile.dart';
+import 'package:intermittent_fasting/views/treasury/shared/photo_log_sheet.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 final _dateHeaderFmt = DateFormat('EEEE, MMMM d');
@@ -21,7 +23,10 @@ final _filterChipFmt = DateFormat('MMM d');
 class LedgerView extends StatefulWidget {
   final LedgerPresenter presenter;
 
-  const LedgerView({super.key, required this.presenter});
+  /// When present, the quick-log photo button also offers meal logging.
+  final NutritionPresenter? nutrition;
+
+  const LedgerView({super.key, required this.presenter, this.nutrition});
 
   @override
   State<LedgerView> createState() => _LedgerViewState();
@@ -131,6 +136,7 @@ class _LedgerViewState extends State<LedgerView> {
                 _LedgerChatDrawer(presenter: presenter),
                 _LedgerChatInputBar(
                   presenter: presenter,
+                  nutrition: widget.nutrition,
                   onOpenForm: _showAddTransactionSheet,
                   onOpenCategories: _showManageCategoriesSheet,
                 ),
@@ -339,6 +345,7 @@ class _ChatHardErrorChip extends StatelessWidget {
 
 class _LedgerChatInputBar extends StatefulWidget {
   final LedgerPresenter presenter;
+  final NutritionPresenter? nutrition;
   final void Function({ParsedTransaction? prefill}) onOpenForm;
   final VoidCallback onOpenCategories;
 
@@ -346,6 +353,7 @@ class _LedgerChatInputBar extends StatefulWidget {
     required this.presenter,
     required this.onOpenForm,
     required this.onOpenCategories,
+    this.nutrition,
   });
 
   @override
@@ -410,6 +418,20 @@ class _LedgerChatInputBarState extends State<_LedgerChatInputBar> {
             // past-dated transaction can be logged without clearing the filter.
             onPressed: () => widget.onOpenForm(),
             tooltip: 'Open form',
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+          IconButton(
+            icon: Icon(Icons.photo_camera_outlined, color: cs.onSurfaceVariant),
+            // Receipt scanning stamps today, like the typed quick-log, so it's
+            // gated to the current day too.
+            onPressed: canSend
+                ? () => showPhotoLogSheet(
+                      context,
+                      ledger: widget.presenter,
+                      nutrition: widget.nutrition,
+                    )
+                : null,
+            tooltip: 'Scan a receipt',
             constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           ),
           // Reference-style input pill: a sparkle glyph hinting at AI parsing +

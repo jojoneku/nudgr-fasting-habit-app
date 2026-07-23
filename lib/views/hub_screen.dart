@@ -35,6 +35,7 @@ import 'settings_screen.dart';
 import 'stats_view.dart';
 import 'tabs/timer_tab.dart';
 import 'treasury/ledger/add_transaction_sheet.dart';
+import 'treasury/shared/photo_log_sheet.dart';
 import 'treasury/treasury_module_view.dart';
 import 'widgets/ai_chat_sheet.dart';
 import 'widgets/finance/ledger_chat_panel.dart';
@@ -516,6 +517,7 @@ class _HubScreenState extends State<HubScreen> {
           historyPresenter: history,
           installmentPresenter: installments,
           groceryCartPresenter: groceryCart,
+          nutritionPresenter: widget.nutritionPresenter,
         ),
       ),
     );
@@ -619,6 +621,12 @@ class _QuickLogBarState extends State<_QuickLogBar> {
   LedgerPresenter get _ledger => widget.ledger;
   NutritionPresenter get _nutrition => widget.nutrition;
   AiCoachPresenter? get _aiCoach => widget.aiCoach;
+
+  /// Snap a photo to log — a receipt (→ ledger expense) or a meal (→ nutrition).
+  void _openPhotoLog() {
+    _focus.unfocus();
+    showPhotoLogSheet(context, ledger: _ledger, nutrition: _nutrition);
+  }
 
   /// Expand the bar into the conversational financial advisor (opens over the
   /// Hub as a draggable sheet; dismissing it returns to the pinned bar).
@@ -776,6 +784,17 @@ class _QuickLogBarState extends State<_QuickLogBar> {
                     _buildResponseArea(cs),
                     Row(
                       children: [
+                        SizedBox(
+                          width: 44,
+                          height: 44,
+                          child: IconButton(
+                            icon: const Icon(Icons.photo_camera_outlined),
+                            color: cs.primary,
+                            tooltip: 'Snap a receipt or meal',
+                            onPressed: busy ? null : _openPhotoLog,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.xs),
                         if (_aiCoach != null) ...[
                           SizedBox(
                             width: 44,

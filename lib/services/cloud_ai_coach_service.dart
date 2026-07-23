@@ -11,6 +11,7 @@ import '../models/extracted_food_item.dart';
 import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
+import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../utils/finance_classifier_parser.dart';
@@ -451,6 +452,72 @@ class CloudAiCoachService implements AiCoachService {
       ));
     }
     return parsed;
+  }
+
+  // ── Parse receipt from image ──────────────────────────────────────────────
+
+  @override
+  Future<ReceiptParseResult> parseReceiptFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? note,
+  ) async {
+    // Receipt scanning is a logging feature (like the finance classifier), so
+    // it gates on transport only — no Cloud AI opt-in required. It still needs
+    // the endpoint compiled in and a signed-in user.
+    if (!_hasTransport) {
+      return const ReceiptParseResult(ReceiptParseStatus.unavailable);
+    }
+
+    final payload = <String, dynamic>{
+      'image_base64': base64Encode(imageBytes),
+      'mime_type': mimeType,
+      if (note != null && note.trim().isNotEmpty) 'note': note.trim(),
+    };
+
+    http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse(_endpoint),
+            headers: _headers,
+            body:
+                jsonEncode({'op': 'parseReceiptFromImage', 'payload': payload}),
+          )
+          .timeout(const Duration(seconds: _timeoutSeconds));
+    } catch (e) {
+      // Transport-level failure: no connection, DNS, or timeout before any
+      // response. The genuine "check your connection" case.
+      debugPrint(
+          'CloudAiCoachService[parseReceiptFromImage] network error: $e');
+      return ReceiptParseResult(ReceiptParseStatus.networkError, detail: '$e');
+    }
+
+    // The server enforces the per-user daily cap and returns 429 when reached.
+    if (response.statusCode == 429) {
+      return const ReceiptParseResult(ReceiptParseStatus.rateLimited);
+    }
+    if (response.statusCode != 200) {
+      final bodySnippet = response.body.length > 300
+          ? '${response.body.substring(0, 300)}…'
+          : response.body;
+      debugPrint('CloudAiCoachService[parseReceiptFromImage] '
+          'server error HTTP ${response.statusCode}: $bodySnippet');
+      return ReceiptParseResult(
+        ReceiptParseStatus.serverError,
+        httpStatus: response.statusCode,
+        detail: bodySnippet,
+      );
+    }
+
+    try {
+      final result = jsonDecode(response.body) as Map<String, dynamic>;
+      return ReceiptParseResult.fromJson(result);
+    } catch (e) {
+      // 200 OK but the body wasn't the shape we expected.
+      debugPrint('CloudAiCoachService.parseReceiptFromImage parse error: $e');
+      return ReceiptParseResult(ReceiptParseStatus.failed, detail: '$e');
+    }
   }
 
   // ── Estimate macros ───────────────────────────────────────────────────────

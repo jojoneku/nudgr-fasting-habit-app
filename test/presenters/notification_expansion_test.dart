@@ -29,6 +29,7 @@ import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/budget_group_def.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/food_entry.dart';
 import 'package:intermittent_fasting/models/food_parse_result.dart';
@@ -108,6 +109,14 @@ class _NoOpAiCoach implements AiCoachService {
     String? caption,
   ) async =>
       const PhotoParseResult(PhotoParseStatus.unavailable);
+
+  @override
+  Future<ReceiptParseResult> parseReceiptFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? note,
+  ) async =>
+      const ReceiptParseResult(ReceiptParseStatus.unavailable);
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;
