@@ -168,6 +168,47 @@ class AdvisorMaturityLine {
   });
 }
 
+/// One recurring monthly commitment (a bill or receivable that repeats) for the
+/// advisor snapshot — the backbone of future planning.
+class AdvisorRecurringLine {
+  final String name;
+  final double amount;
+
+  /// Day of month it's due/expected (1–31).
+  final int dueDay;
+
+  /// True for money coming IN (recurring receivables like salary).
+  final bool isInflow;
+
+  const AdvisorRecurringLine({
+    required this.name,
+    required this.amount,
+    required this.dueDay,
+    required this.isInflow,
+  });
+}
+
+/// One non-recurring obligation already scheduled for a future month.
+class AdvisorScheduledLine {
+  final String name;
+  final double amount;
+
+  /// Human month label ("Sep 2026").
+  final String monthLabel;
+
+  /// Specific due/expected date ("Sep 3"), or null when undated.
+  final String? dateLabel;
+  final bool isInflow;
+
+  const AdvisorScheduledLine({
+    required this.name,
+    required this.amount,
+    required this.monthLabel,
+    this.dateLabel,
+    required this.isInflow,
+  });
+}
+
 /// One active installment / BNPL plan for the advisor snapshot.
 class AdvisorInstallmentLine {
   final String name;
@@ -246,6 +287,12 @@ class AiCoachContext {
 
   /// Receivables expected next month, if any.
   final double? nextMonthReceivablesTotal;
+
+  /// Recurring monthly bills & receivables (line items for future planning).
+  final List<AdvisorRecurringLine> recurringCommitments;
+
+  /// Non-recurring obligations already scheduled for a future month.
+  final List<AdvisorScheduledLine> scheduledFuture;
 
   // ── Finance advisor (past: historical benchmark, year-over-year context) ────
   final List<AdvisorNetWorthPoint> netWorthTrend;
@@ -327,6 +374,8 @@ class AiCoachContext {
     this.pendingReceivables = const [],
     this.nextMonthBillsTotal,
     this.nextMonthReceivablesTotal,
+    this.recurringCommitments = const [],
+    this.scheduledFuture = const [],
     this.netWorthTrend = const [],
     this.incomeExpenseTrend = const [],
     this.goals = const [],
@@ -525,6 +574,23 @@ class AiCoachContext {
         parts.add('${_peso(nextMonthReceivablesTotal!)} expected receivables');
       }
       buf.writeln('Next month so far: ${parts.join('; ')}');
+    }
+    if (recurringCommitments.isNotEmpty) {
+      buf.writeln('Recurring monthly commitments (repeat every month — use '
+          'these to plan any upcoming month):');
+      for (final c in recurringCommitments) {
+        final dir = c.isInflow ? 'in' : 'out';
+        buf.writeln('  - ${c.name}: ${_peso(c.amount)} $dir, '
+            'around day ${c.dueDay} each month');
+      }
+    }
+    if (scheduledFuture.isNotEmpty) {
+      buf.writeln('Other obligations already scheduled ahead (one-off):');
+      for (final s in scheduledFuture) {
+        final dir = s.isInflow ? 'in' : 'out';
+        final when = s.dateLabel ?? s.monthLabel;
+        buf.writeln('  - ${s.name}: ${_peso(s.amount)} $dir ($when)');
+      }
     }
     if (maturities.isNotEmpty) {
       buf.writeln('Time deposits maturing (cash that unlocks later):');

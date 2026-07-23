@@ -247,6 +247,37 @@ void main() {
           contains('Net worth change vs last month: -₱3,200 (-1.5%)'));
     });
 
+    test('itemises recurring commitments and scheduled future obligations', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        nextMonthBillsTotal: 999,
+        recurringCommitments: [
+          AdvisorRecurringLine(
+              name: 'Internet', amount: 999, dueDay: 15, isInflow: false),
+          AdvisorRecurringLine(
+              name: 'Salary', amount: 32000, dueDay: 30, isInflow: true),
+        ],
+        scheduledFuture: [
+          AdvisorScheduledLine(
+            name: 'Insurance renewal',
+            amount: 5000,
+            monthLabel: 'Sep 2026',
+            dateLabel: 'Sep 3',
+            isInflow: false,
+          ),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // The exact thing the user wanted: line item + amount + when it's due.
+      expect(s, contains('Recurring monthly commitments'));
+      expect(s, contains('Internet: ₱999 out, around day 15 each month'));
+      expect(s, contains('Salary: ₱32,000 in, around day 30 each month'));
+      // One-off future obligations carry their month + date.
+      expect(s, contains('Other obligations already scheduled ahead'));
+      expect(s, contains('Insurance renewal: ₱5,000 out (Sep 3)'));
+    });
+
     test('historical summary is separate from the live snapshot', () {
       const ctx = AiCoachContext(
         entryPoint: AiCoachEntryPoint.financeAdvisor,

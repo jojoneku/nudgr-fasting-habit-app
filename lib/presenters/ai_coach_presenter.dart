@@ -408,6 +408,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var installmentLines = const <AdvisorInstallmentLine>[];
     var maturities = const <AdvisorMaturityLine>[];
     var recentTransactions = const <AdvisorTxnLine>[];
+    var recurringCommitments = const <AdvisorRecurringLine>[];
+    var scheduledFuture = const <AdvisorScheduledLine>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -505,6 +507,28 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 category: r.category,
               ))
           .toList();
+      recurringCommitments = t.recurringCommitments
+          .map((c) => AdvisorRecurringLine(
+                name: c.name,
+                amount: c.amount,
+                dueDay: c.dueDay,
+                isInflow: c.isInflow,
+              ))
+          .toList();
+      scheduledFuture = t.scheduledFutureObligations.map((s) {
+        final p = s.month.split('-');
+        final y = int.tryParse(p.isNotEmpty ? p[0] : '') ?? 0;
+        final mo = int.tryParse(p.length > 1 ? p[1] : '') ?? 1;
+        return AdvisorScheduledLine(
+          name: s.name,
+          amount: s.amount,
+          monthLabel: DateFormat('MMM yyyy').format(DateTime(y, mo)),
+          dateLabel: s.day == null
+              ? null
+              : DateFormat('MMM d').format(DateTime(y, mo, s.day!)),
+          isInflow: s.isInflow,
+        );
+      }).toList();
     }
     final savingsRate = t?.savingsRate;
     final peakDay = t?.peakSpendDay;
@@ -551,6 +575,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           isAdvisor && (t?.nextMonthPendingReceivables ?? 0) > 0
               ? t?.nextMonthPendingReceivables
               : null,
+      recurringCommitments: recurringCommitments,
+      scheduledFuture: scheduledFuture,
       netWorthTrend: netWorthTrend,
       incomeExpenseTrend: incomeExpenseTrend,
       goals: goals,
