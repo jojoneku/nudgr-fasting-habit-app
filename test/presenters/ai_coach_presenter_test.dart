@@ -118,6 +118,57 @@ void main() {
     p.dispose();
   });
 
+  test('new chat starts empty; reopening a chat restores its messages',
+      () async {
+    when(service.adviseFinance(
+      messages: anyNamed('messages'),
+      context: anyNamed('context'),
+      profile: anyNamed('profile'),
+      historical: anyNamed('historical'),
+    )).thenAnswer((_) => Stream.fromIterable(['reply']));
+
+    final p =
+        AiCoachPresenter(stats: stats, fasting: fasting, service: service);
+    p.openSession(AiCoachEntryPoint.financeAdvisor);
+    await p.send('first chat message');
+    final firstId = p.currentConversationId;
+    expect(firstId, isNotNull);
+
+    p.startNewConversation();
+    expect(p.messages, isEmpty);
+    expect(p.currentConversationId, isNot(firstId));
+
+    await p.send('second chat message');
+    // Reopen the first chat — its messages come back.
+    p.openConversation(firstId!);
+    expect(p.currentConversationId, firstId);
+    expect(p.messages.any((m) => m.text == 'first chat message'), isTrue);
+    expect(p.messages.any((m) => m.text == 'second chat message'), isFalse);
+    p.dispose();
+  });
+
+  test('conversations cap at 10; older chats fold into an archive', () async {
+    when(service.adviseFinance(
+      messages: anyNamed('messages'),
+      context: anyNamed('context'),
+      profile: anyNamed('profile'),
+      historical: anyNamed('historical'),
+    )).thenAnswer((_) => Stream.fromIterable(['ok']));
+
+    final p =
+        AiCoachPresenter(stats: stats, fasting: fasting, service: service);
+    p.openSession(AiCoachEntryPoint.financeAdvisor);
+    for (var i = 0; i < 12; i++) {
+      await p.send('chat $i');
+      if (i < 11) p.startNewConversation();
+    }
+
+    final active = p.conversations.where((c) => !c.isArchive).toList();
+    expect(active.length, 10);
+    expect(p.conversations.any((c) => c.isArchive), isTrue);
+    p.dispose();
+  });
+
   test('send with only a photo (no caption) still asks the model', () async {
     when(service.adviseFinance(
       messages: anyNamed('messages'),

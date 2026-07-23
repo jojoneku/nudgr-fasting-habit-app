@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../models/advisor_conversation.dart';
 import '../../models/ai_chat_message.dart';
 import '../../models/ai_coach_context.dart';
 import '../../presenters/ai_coach_presenter.dart';
@@ -331,6 +332,13 @@ class _SheetHeader extends StatelessWidget {
           ),
           const Spacer(),
           if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
+            IconButton(
+              icon: Icon(Icons.forum_outlined,
+                  color: cs.onSurfaceVariant, size: 20),
+              tooltip: 'Conversations',
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+              onPressed: () => _ConversationsSheet.show(context, presenter),
+            ),
             IconButton(
               icon: Icon(Icons.bookmark_border,
                   color: cs.onSurfaceVariant, size: 20),
@@ -727,6 +735,213 @@ class _InputBar extends StatelessWidget {
           const SizedBox(width: 10),
           _SendButton(enabled: enabled, onSend: onSend),
         ],
+      ),
+    );
+  }
+}
+
+/// ChatGPT-style history browser: lists saved conversations with a "New chat"
+/// action; tap to reopen, trash to delete.
+class _ConversationsSheet extends StatelessWidget {
+  final AiCoachPresenter presenter;
+  const _ConversationsSheet({required this.presenter});
+
+  static Future<void> show(BuildContext context, AiCoachPresenter presenter) {
+    return showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      builder: (_) => _ConversationsSheet(presenter: presenter),
+    );
+  }
+
+  static String _relativeTime(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    if (d.inDays < 7) return '${d.inDays}d ago';
+    return '${t.month}/${t.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: ListenableBuilder(
+          listenable: presenter,
+          builder: (context, _) {
+            final convos = presenter.conversations;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(18, 0, 12, 6),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Conversations',
+                        style: TextStyle(
+                          color: cs.onSurface,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const Spacer(),
+                      TextButton.icon(
+                        onPressed: () {
+                          presenter.startNewConversation();
+                          Navigator.of(context).pop();
+                        },
+                        icon: const Icon(Icons.add, size: 18),
+                        label: const Text('New chat'),
+                      ),
+                    ],
+                  ),
+                ),
+                if (convos.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      'No saved conversations yet.',
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 13),
+                    ),
+                  ),
+                Flexible(
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                    itemCount: convos.length,
+                    itemBuilder: (_, i) {
+                      final c = convos[i];
+                      final isCurrent = c.id == presenter.currentConversationId;
+                      final preview = c.messages.isNotEmpty
+                          ? c.messages.last.text
+                          : 'Empty';
+                      return _ConversationTile(
+                        title: c.title,
+                        subtitle:
+                            '${_relativeTime(c.updatedAt)} · ${c.messages.length} msgs',
+                        preview: preview,
+                        isCurrent: isCurrent,
+                        isArchive: c.isArchive,
+                        onTap: () {
+                          presenter.openConversation(c.id);
+                          Navigator.of(context).pop();
+                        },
+                        onDelete: () => presenter.deleteConversation(c.id),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _ConversationTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String preview;
+  final bool isCurrent;
+  final bool isArchive;
+  final VoidCallback onTap;
+  final VoidCallback onDelete;
+
+  const _ConversationTile({
+    required this.title,
+    required this.subtitle,
+    required this.preview,
+    required this.isCurrent,
+    required this.isArchive,
+    required this.onTap,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: isCurrent
+            ? cs.primary.withValues(alpha: 0.10)
+            : cs.surfaceContainerHigh,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color:
+              isCurrent ? cs.primary.withValues(alpha: 0.4) : cs.outlineVariant,
+          width: 0.5,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+          child: Row(
+            children: [
+              Icon(
+                isArchive
+                    ? Icons.inventory_2_outlined
+                    : Icons.chat_bubble_outline,
+                size: 16,
+                color: cs.onSurfaceVariant,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      preview,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          TextStyle(color: cs.onSurfaceVariant, fontSize: 11),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_outline,
+                    size: 18, color: cs.onSurfaceVariant),
+                tooltip: 'Delete',
+                constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
@@ -24,6 +25,13 @@ import '../services/storage_service.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
+
+/// How many named advisor conversations stay browsable. Older ones fold into a
+/// single archive thread ("Earlier messages") once this is exceeded.
+const int _maxConversations = 10;
+
+/// Cap on the archive thread so folded-away history stays bounded.
+const int _maxArchiveMessages = 100;
 
 class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _stats;
@@ -63,6 +71,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   AiCoachEntryPoint _entryPoint = AiCoachEntryPoint.general;
   final List<AiChatMessage> _messages = [];
+
+  /// Saved advisor conversations (ChatGPT-style). `_messages` is the live copy
+  /// of whichever one is [_currentConversationId]; the two are reconciled on
+  /// every persist.
+  final List<AdvisorConversation> _conversations = [];
+  String? _currentConversationId;
   bool _isResponding = false;
   bool _isThinkingEnabled = false;
   bool _isInitializing = true;
@@ -136,13 +150,44 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> _loadAdvisorState() async {
     final storage = _storage;
-    if (storage == null) return;
-    final history = await storage.loadAdvisorHistory();
+    if (storage == null) {
+      // No persistence (e.g. unit tests): still give the advisor a live
+      // conversation to write into.
+      _ensureCurrentConversation();
+      return;
+    }
+    final saved = await storage.loadAdvisorConversations();
     final profile = await storage.loadAdvisorProfile();
     if (isDisposed) return;
+
+    _conversations
+      ..clear()
+      ..addAll(saved);
+
+    // Migration: older installs only have the flat history list. Wrap it into
+    // a single conversation the first time so nothing is lost.
+    if (_conversations.isEmpty) {
+      final history = await storage.loadAdvisorHistory();
+      if (isDisposed) return;
+      if (history.isNotEmpty) {
+        final now = DateTime.now();
+        _conversations.add(AdvisorConversation(
+          id: _newConversationId(),
+          title: AdvisorConversation.titleFrom(history),
+          createdAt: now,
+          updatedAt: now,
+          messages: history,
+        ));
+      }
+    }
+
+    // Open the most recently updated non-archive chat, else create a fresh one.
+    final active = _activeConversations();
+    _currentConversationId = active.isNotEmpty ? active.first.id : null;
+    _ensureCurrentConversation();
     _messages
       ..clear()
-      ..addAll(history);
+      ..addAll(_currentConversation?.messages ?? const []);
     _advisorProfile = profile ?? AdvisorProfile.empty();
     safeNotify();
   }
@@ -171,7 +216,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         await ledger.sendChatInput(trimmed);
       } finally {
         _isResponding = false;
-        _storage?.saveAdvisorHistory(_messages);
+        _persistAdvisor();
         safeNotify();
       }
       return;
@@ -260,7 +305,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       _isResponding = false;
       _trimHistory();
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-        _storage?.saveAdvisorHistory(_messages);
+        _persistAdvisor();
       }
       safeNotify();
     }
@@ -314,11 +359,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Clear ─────────────────────────────────────────────────────────────────
 
+  /// Clears the CURRENT conversation's messages (the visible thread), leaving
+  /// other saved chats and the archive intact.
   void clearHistory() {
     _messages.clear();
     _errorMessage = null;
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-      _storage?.clearAdvisorHistory();
+      _persistAdvisor();
     }
     safeNotify();
   }
@@ -332,10 +379,163 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     );
     _trimHistory();
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-      _storage?.saveAdvisorHistory(_messages);
+      _persistAdvisor();
     }
     safeNotify();
   }
+
+  // ── Conversations (ChatGPT-style history) ────────────────────────────────
+
+  /// Saved conversations for the history browser: active chats newest-first,
+  /// with the archive thread (if any) pinned last.
+  List<AdvisorConversation> get conversations {
+    final active = _activeConversations();
+    final archive =
+        _conversations.where((c) => c.isArchive && c.messages.isNotEmpty);
+    return [...active, ...archive];
+  }
+
+  String? get currentConversationId => _currentConversationId;
+
+  /// Start a fresh chat, saving the current one first.
+  void startNewConversation() {
+    _persistAdvisor();
+    final now = DateTime.now();
+    final convo = AdvisorConversation(
+      id: _newConversationId(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+    );
+    _conversations.add(convo);
+    _currentConversationId = convo.id;
+    _messages.clear();
+    _errorMessage = null;
+    _enforceConversationCap();
+    _storage?.saveAdvisorConversations(_conversations);
+    safeNotify();
+  }
+
+  /// Reopen a saved conversation as the live thread.
+  void openConversation(String id) {
+    if (id == _currentConversationId) return;
+    _persistAdvisor();
+    final convo = _conversations.where((c) => c.id == id).firstOrNull;
+    if (convo == null) return;
+    _currentConversationId = id;
+    _messages
+      ..clear()
+      ..addAll(convo.messages);
+    _errorMessage = null;
+    safeNotify();
+  }
+
+  /// Delete a saved conversation. If it was the current one, fall back to the
+  /// newest remaining chat (or a fresh empty one).
+  void deleteConversation(String id) {
+    _conversations.removeWhere((c) => c.id == id);
+    if (id == _currentConversationId) {
+      _currentConversationId = null;
+      _messages.clear();
+      final active = _activeConversations();
+      if (active.isNotEmpty) {
+        _currentConversationId = active.first.id;
+        _messages.addAll(active.first.messages);
+      } else {
+        _ensureCurrentConversation();
+      }
+    }
+    _storage?.saveAdvisorConversations(_conversations);
+    safeNotify();
+  }
+
+  // ── Conversation internals ────────────────────────────────────────────────
+
+  AdvisorConversation? get _currentConversation =>
+      _conversations.where((c) => c.id == _currentConversationId).firstOrNull;
+
+  /// Active (non-archive) conversations, most-recently-updated first.
+  List<AdvisorConversation> _activeConversations() {
+    final active = _conversations.where((c) => !c.isArchive).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return active;
+  }
+
+  void _ensureCurrentConversation() {
+    if (_currentConversation != null) return;
+    final now = DateTime.now();
+    final convo = AdvisorConversation(
+      id: _newConversationId(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+    );
+    _conversations.add(convo);
+    _currentConversationId = convo.id;
+  }
+
+  /// Fold the live [_messages] into the current conversation and persist the
+  /// whole set (plus the legacy flat history, which mirrors the current chat so
+  /// older clients and the sync empty-check keep working).
+  void _persistAdvisor() {
+    if (_entryPoint != AiCoachEntryPoint.financeAdvisor) return;
+    _ensureCurrentConversation();
+    final settled =
+        _messages.where((m) => !m.isStreaming && m.text.isNotEmpty).toList();
+    final idx =
+        _conversations.indexWhere((c) => c.id == _currentConversationId);
+    if (idx != -1) {
+      final cur = _conversations[idx];
+      _conversations[idx] = cur.copyWith(
+        messages: settled,
+        updatedAt: DateTime.now(),
+        title:
+            cur.isArchive ? cur.title : AdvisorConversation.titleFrom(settled),
+      );
+    }
+    _enforceConversationCap();
+    _storage?.saveAdvisorConversations(_conversations);
+    _storage?.saveAdvisorHistory(_messages);
+  }
+
+  /// Keep at most [_maxConversations] active chats; fold the oldest overflow
+  /// into a single archive thread ("Earlier messages"), capped in size.
+  void _enforceConversationCap() {
+    var active = _conversations.where((c) => !c.isArchive).toList()
+      ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt)); // oldest first
+    while (active.length > _maxConversations) {
+      final evicted = active.removeAt(0);
+      _conversations.remove(evicted);
+      if (evicted.messages.isEmpty) continue;
+      final archiveIdx = _conversations
+          .indexWhere((c) => c.id == AdvisorConversation.archiveId);
+      if (archiveIdx == -1) {
+        _conversations.add(AdvisorConversation(
+          id: AdvisorConversation.archiveId,
+          title: 'Earlier messages',
+          createdAt: evicted.createdAt,
+          updatedAt: DateTime.now(),
+          messages: _capArchive(evicted.messages),
+        ));
+      } else {
+        final archive = _conversations[archiveIdx];
+        _conversations[archiveIdx] = archive.copyWith(
+          messages: _capArchive([...archive.messages, ...evicted.messages]),
+          updatedAt: DateTime.now(),
+        );
+      }
+    }
+  }
+
+  List<AiChatMessage> _capArchive(List<AiChatMessage> msgs) =>
+      msgs.length > _maxArchiveMessages
+          ? msgs.sublist(msgs.length - _maxArchiveMessages)
+          : msgs;
+
+  String _newConversationId() =>
+      'c_${DateTime.now().microsecondsSinceEpoch}_${_conversations.length}';
 
   // ── Advisor profile (user-curated memory) ───────────────────────────────────
 
