@@ -13,6 +13,15 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.54] - 2026-07-23
+
+### Added
+- scan receipts to log expenses from a photo
+
+### Fixed
+- stop routing bare numbers into the expense-log pipeline
+- stop action sheet grey-screen when opening month picker
+
 ## [1.1.53] - 2026-07-23
 
 ### Added
@@ -549,7 +558,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.53...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.54...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -604,3 +613,4 @@ distributed via `manifest.json`.
 [1.1.51]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.51
 [1.1.52]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.52
 [1.1.53]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.53
+[1.1.54]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.54
