@@ -158,6 +158,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((a) => a.isActive && a.category == AccountCategory.savings)
       .toList();
 
+  /// Active time-deposit accounts, earliest maturity first — money that unlocks
+  /// on a future date. Powers the advisor's forward liquidity view.
+  List<FinancialAccount> get timeDepositAccounts => _accounts
+      .where((a) => a.isActive && a.category == AccountCategory.timeDeposit)
+      .toList()
+    ..sort((a, b) {
+      final ad = a.maturityDate, bd = b.maturityDate;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
 
@@ -209,6 +222,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   double get pendingReceivables => _receivables
       .where((r) => r.month == _currentMonth && !r.isReceived)
       .fold(0.0, (sum, r) => sum + r.amount);
+
+  /// Still-outstanding receivables this month, soonest-expected first — lets the
+  /// advisor itemise money coming in, not just a total.
+  List<Receivable> get outstandingReceivables => _receivables
+      .where((r) => r.month == _currentMonth && !r.isReceived)
+      .toList()
+    ..sort((a, b) {
+      final ad = a.expectedDate, bd = b.expectedDate;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
 
   double get monthUnpaidBills => _bills
       .where((b) => b.month == _currentMonth && !b.isPaid)
@@ -388,6 +414,24 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         ..sort((a, b) => a.dueDay.compareTo(b.dueDay));
 
   bool get hasBills => upcomingBills.isNotEmpty;
+
+  /// Bills already scheduled for NEXT month (recurring copies, credit-card
+  /// statements filed forward). Powers the advisor's forward look — "what's
+  /// coming after this month". Unpaid only.
+  double get nextMonthUnpaidBills {
+    final nm = nextMonth(_currentMonth);
+    return _bills
+        .where((b) => b.month == nm && !b.isPaid)
+        .fold(0.0, (sum, b) => sum + b.amount);
+  }
+
+  /// Receivables expected NEXT month (money owed to you), still outstanding.
+  double get nextMonthPendingReceivables {
+    final nm = nextMonth(_currentMonth);
+    return _receivables
+        .where((r) => r.month == nm && !r.isReceived)
+        .fold(0.0, (sum, r) => sum + r.amount);
+  }
 
   bool get hasBillImminent => imminentBill != null;
 
@@ -629,6 +673,29 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
   }
 
   // --- Spending analytics ---
+
+  /// Most recent spending outflows (real expenses — transfers, reimbursables,
+  /// and excluded categories filtered out), newest first, capped at [limit].
+  /// Display-ready with the category name resolved so a caller (e.g. the AI
+  /// advisor) can see where money actually went, not just monthly totals.
+  List<({DateTime date, String description, double amount, String category})>
+      recentSpending({int limit = 8}) {
+    final excluded = _excludedCategoryIds;
+    final txns = _transactions
+        .where((t) => isSpendingOutflow(t, excluded))
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final nameById = {for (final c in _categories) c.id: c.name};
+    return [
+      for (final t in txns.take(limit))
+        (
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          category: nameById[t.categoryId] ?? 'Uncategorized',
+        ),
+    ];
+  }
 
   List<DailySpend> get last7DaysSpending => _lastNDaysSpending(7);
 

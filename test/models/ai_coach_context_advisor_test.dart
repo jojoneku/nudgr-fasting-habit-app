@@ -50,6 +50,223 @@ void main() {
       const ctx = AiCoachContext(entryPoint: AiCoachEntryPoint.financeAdvisor);
       expect(ctx.financeSnapshotSummary(), '(no financial data available)');
     });
+
+    test('surfaces receivables, income, savings and next-month look-ahead', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        monthIncome: 32000,
+        totalSavingsAndGoals: 88000,
+        pendingReceivablesTotal: 5000,
+        pendingReceivables: [
+          AdvisorReceivableLine(
+              name: 'Freelance invoice', amount: 5000, expectedLabel: 'Aug 5'),
+        ],
+        nextMonthBillsTotal: 4200,
+        nextMonthReceivablesTotal: 32000,
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Income received this month: ₱32,000'));
+      expect(s, contains('Savings & goals set aside: ₱88,000'));
+      // Receivables are money coming IN and must be itemised + labelled.
+      expect(s, contains('money coming IN'));
+      expect(s, contains('Freelance invoice: ₱5,000 (Aug 5)'));
+      expect(s, contains('Total incoming: ₱5,000'));
+      // Forward look into next month.
+      expect(s, contains('Next month so far:'));
+      expect(s, contains('₱4,200 in scheduled bills'));
+      expect(s, contains('₱32,000 expected receivables'));
+    });
+
+    test('itemises credit cards per-card with due + minimum', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        totalCreditOwed: 12000,
+        totalCreditAvailable: 38000,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'UnionBank',
+            owed: 12000,
+            available: 38000,
+            dueLabel: 'Due in 5 days',
+            minimumDue: 850,
+          ),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Credit cards / lines'));
+      expect(
+          s,
+          contains(
+              'UnionBank: ₱12,000 owed, ₱38,000 available, min due ₱850, Due in 5 days'));
+      expect(s, contains('Total owed: ₱12,000'));
+    });
+
+    test('credit line shows utilization and monthly interest', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'RCBC',
+            owed: 12000,
+            available: 8000,
+            utilization: 0.6,
+            aprMonthly: 0.0357,
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('60% utilized'));
+      expect(s, contains('3.6%/mo interest'));
+    });
+
+    test('lists recent spending so the coach sees where money went', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        recentTransactions: [
+          AdvisorTxnLine(
+            dateLabel: 'Jul 21',
+            description: 'Grab to office',
+            amount: 180,
+            category: 'Transport',
+          ),
+          AdvisorTxnLine(
+            dateLabel: 'Jul 20',
+            description: '',
+            amount: 1200,
+            category: 'Groceries',
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Recent spending (most recent first):'));
+      expect(s, contains('Jul 21: Grab to office — ₱180 (Transport)'));
+      // A blank description falls back to the category name.
+      expect(s, contains('Jul 20: Groceries — ₱1,200 (Groceries)'));
+    });
+
+    test('bills carry their due labels', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        outstandingBills: [
+          AdvisorBillLine(
+              name: 'Electricity', amount: 2501, dueLabel: 'Due tomorrow'),
+        ],
+      );
+      expect(ctx.financeSnapshotSummary(),
+          contains('Electricity: ₱2,501 (Due tomorrow)'));
+    });
+
+    test('breaks down goals, accounts, budget groups and installments', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        totalLiquidCash: 9978,
+        liquidAccounts: [
+          AdvisorAccountLine(name: 'Maya', balance: 3500),
+          AdvisorAccountLine(name: 'BPI', balance: 6478),
+        ],
+        heldForOthers: 1200,
+        totalSavingsAndGoals: 25000,
+        goals: [
+          AdvisorGoalLine(name: 'Travel Fund', saved: 3500, target: 25000),
+          AdvisorGoalLine(name: 'Emergency', saved: 8000),
+        ],
+        budgetGroups: [
+          AdvisorBudgetGroupLine(
+              name: 'Non-negotiables', allocated: 12000, spent: 9000),
+          AdvisorBudgetGroupLine(
+              name: 'Guilt-Free', allocated: 5000, spent: 2200),
+        ],
+        setAsidesRemaining: 1500,
+        installments: [
+          AdvisorInstallmentLine(
+            name: 'MacBook',
+            monthlyAmount: 4200,
+            remainingMonths: 8,
+            remainingAmount: 33600,
+          ),
+        ],
+        installmentsMonthlyLoad: 4200,
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // Per-account cash answers "which account holds what".
+      expect(s, contains('Cash by account:'));
+      expect(s, contains('Maya: ₱3,500'));
+      expect(s, contains('BPI: ₱6,478'));
+      expect(s, contains('held for someone else'));
+      expect(s, contains('₱1,200'));
+      // Per-goal progress with percentage.
+      expect(s, contains('Travel Fund: ₱3,500 of ₱25,000 (14%)'));
+      expect(s, contains('Emergency: ₱8,000 saved (no target set)'));
+      // Budget by group.
+      expect(s, contains('Non-negotiables: ₱9,000 of ₱12,000'));
+      expect(s, contains('Guilt-Free: ₱2,200 of ₱5,000'));
+      expect(s, contains('Set-asides still to fund'));
+      // Installments as fixed monthly commitments.
+      expect(s, contains('MacBook: ₱4,200/mo, 8 mo left (₱33,600 remaining)'));
+      expect(s, contains('Total installment load this month: ₱4,200'));
+    });
+
+    test('surfaces spending pace, net-worth momentum and maturities', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        netWorth: 200000,
+        netWorthMonthDelta: 5400,
+        netWorthMonthDeltaPct: 0.0277,
+        avgDailySpend: 780,
+        peakDaySpend: 2100,
+        peakDayLabel: 'Jul 18',
+        todaySpend: 340,
+        maturities: [
+          AdvisorMaturityLine(
+              name: 'BPI TD', amount: 50000, dateLabel: 'Sep 1, 2026'),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // Momentum reads with sign and percent.
+      expect(s, contains('Net worth change vs last month: +₱5,400 (+2.8%)'));
+      // Pace line combines the three figures.
+      expect(s, contains('Spending pace:'));
+      expect(s, contains('₱780/day average (last 7 days)'));
+      expect(s, contains('peak ₱2,100 on Jul 18'));
+      expect(s, contains('₱340 spent today'));
+      // Maturity as a future liquidity event.
+      expect(s, contains('BPI TD: ₱50,000 on Sep 1, 2026'));
+    });
+
+    test('negative net-worth momentum reads with a minus sign', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        netWorthMonthDelta: -3200,
+        netWorthMonthDeltaPct: -0.015,
+      );
+      expect(ctx.financeSnapshotSummary(),
+          contains('Net worth change vs last month: -₱3,200 (-1.5%)'));
+    });
+
+    test('historical summary is separate from the live snapshot', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        netWorthTrend: [
+          AdvisorNetWorthPoint(label: 'May', value: 100000),
+          AdvisorNetWorthPoint(label: 'Jun', value: 120000),
+        ],
+        incomeExpenseTrend: [
+          AdvisorMonthFlow(label: 'Jun', income: 32000, expense: 21000),
+        ],
+      );
+
+      final h = ctx.financeHistoricalSummary();
+      expect(h, contains('Net worth by month'));
+      expect(h, contains('May ₱100,000'));
+      expect(h, contains('Jun ₱120,000'));
+      expect(h, contains('Jun: ₱32,000 in / ₱21,000 out (net ₱11,000)'));
+      // The trends must NOT bleed into the live liquidity snapshot.
+      expect(ctx.financeSnapshotSummary(), '(no financial data available)');
+    });
   });
 
   group('AiCoachPresenter.looksLikeExpenseLog', () {
