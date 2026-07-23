@@ -175,7 +175,8 @@ void main() {
         budgetGroups: [
           AdvisorBudgetGroupLine(
               name: 'Non-negotiables', allocated: 12000, spent: 9000),
-          AdvisorBudgetGroupLine(name: 'Guilt-Free', allocated: 5000, spent: 2200),
+          AdvisorBudgetGroupLine(
+              name: 'Guilt-Free', allocated: 5000, spent: 2200),
         ],
         setAsidesRemaining: 1500,
         installments: [

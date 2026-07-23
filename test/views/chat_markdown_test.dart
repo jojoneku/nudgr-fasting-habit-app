@@ -63,7 +63,8 @@ void main() {
 
     testWidgets('plain text passes through unchanged', (tester) async {
       await _pump(tester, 'Just a normal sentence.');
-      expect(_renderedStrings(tester).join(), contains('Just a normal sentence.'));
+      expect(
+          _renderedStrings(tester).join(), contains('Just a normal sentence.'));
     });
   });
 }

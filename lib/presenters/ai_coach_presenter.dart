@@ -544,10 +544,9 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       totalSavingsAndGoals: isAdvisor ? t?.totalSavingsAndGoals : null,
       creditLines: creditLines,
       pendingReceivables: pendingReceivables,
-      nextMonthBillsTotal:
-          isAdvisor && (t?.nextMonthUnpaidBills ?? 0) > 0
-              ? t?.nextMonthUnpaidBills
-              : null,
+      nextMonthBillsTotal: isAdvisor && (t?.nextMonthUnpaidBills ?? 0) > 0
+          ? t?.nextMonthUnpaidBills
+          : null,
       nextMonthReceivablesTotal:
           isAdvisor && (t?.nextMonthPendingReceivables ?? 0) > 0
               ? t?.nextMonthPendingReceivables

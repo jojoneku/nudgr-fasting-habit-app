@@ -34,7 +34,8 @@ class AdvisorBillLine {
   /// when the bill has no meaningful due date to surface.
   final String? dueLabel;
 
-  const AdvisorBillLine({required this.name, required this.amount, this.dueLabel});
+  const AdvisorBillLine(
+      {required this.name, required this.amount, this.dueLabel});
 }
 
 /// One expected receivable (money owed TO the user) for the advisor snapshot.
@@ -426,7 +427,8 @@ class AiCoachContext {
     if (budgetGroups.isNotEmpty) {
       buf.writeln('Budget by group (spent vs allocated):');
       for (final g in budgetGroups) {
-        buf.writeln('  - ${g.name}: ${_peso(g.spent)} of ${_peso(g.allocated)}');
+        buf.writeln(
+            '  - ${g.name}: ${_peso(g.spent)} of ${_peso(g.allocated)}');
       }
     }
     if (setAsidesRemaining != null && setAsidesRemaining! > 0) {
@@ -560,7 +562,8 @@ class AiCoachContext {
     if (recentTransactions.isNotEmpty) {
       buf.writeln('Recent spending (most recent first):');
       for (final tx in recentTransactions) {
-        final desc = tx.description.trim().isEmpty ? tx.category : tx.description;
+        final desc =
+            tx.description.trim().isEmpty ? tx.category : tx.description;
         buf.writeln('  - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
             '(${tx.category})');
       }

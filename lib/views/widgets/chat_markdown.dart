@@ -82,10 +82,12 @@ class ChatMarkdown extends StatelessWidget {
         blocks.add(Padding(
           padding: const EdgeInsets.only(top: 2, bottom: 2),
           child: Text.rich(
-            _inline(content, base.copyWith(
-              fontSize: size.toDouble(),
-              fontWeight: FontWeight.w700,
-            )),
+            _inline(
+                content,
+                base.copyWith(
+                  fontSize: size.toDouble(),
+                  fontWeight: FontWeight.w700,
+                )),
           ),
         ));
         continue;
@@ -99,14 +101,17 @@ class ChatMarkdown extends StatelessWidget {
           padding: const EdgeInsets.only(left: 10),
           decoration: BoxDecoration(
             border: Border(
-              left: BorderSide(color: cs.primary.withValues(alpha: 0.5), width: 3),
+              left: BorderSide(
+                  color: cs.primary.withValues(alpha: 0.5), width: 3),
             ),
           ),
           child: Text.rich(
-            _inline(quote.group(1)!, base.copyWith(
-              color: cs.onSurfaceVariant,
-              fontStyle: FontStyle.italic,
-            )),
+            _inline(
+                quote.group(1)!,
+                base.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontStyle: FontStyle.italic,
+                )),
           ),
         ));
         continue;
@@ -122,7 +127,8 @@ class ChatMarkdown extends StatelessWidget {
       // Ordered item: 1. / 2) .
       final ordered = RegExp(r'^(\d+)[.)]\s+(.*)$').firstMatch(trimmed);
       if (ordered != null) {
-        blocks.add(_marker('${ordered.group(1)}.  ', ordered.group(2)!, base, cs));
+        blocks.add(
+            _marker('${ordered.group(1)}.  ', ordered.group(2)!, base, cs));
         continue;
       }
 
@@ -139,7 +145,8 @@ class ChatMarkdown extends StatelessWidget {
   }
 
   /// A list row: fixed marker + hanging-indented inline content.
-  Widget _marker(String marker, String content, TextStyle base, ColorScheme cs) {
+  Widget _marker(
+      String marker, String content, TextStyle base, ColorScheme cs) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 2),
       child: Row(
@@ -157,9 +164,9 @@ class ChatMarkdown extends StatelessWidget {
   /// `**a *b* c**` keeps its inner italic.
   static TextSpan _inline(String text, TextStyle style) {
     final pattern = RegExp(
-      r'(\*\*|__)(.+?)\1'   // bold
+      r'(\*\*|__)(.+?)\1' // bold
       r'|(?<!\w)([*_])(.+?)\3(?!\w)' // italic (avoid mid-word underscores)
-      r'|`([^`]+)`',        // inline code
+      r'|`([^`]+)`', // inline code
     );
 
     final spans = <InlineSpan>[];
