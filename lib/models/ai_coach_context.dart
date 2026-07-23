@@ -547,7 +547,8 @@ class AiCoachContext {
           '${_peso(setAsidesRemaining!)}');
     }
     if (setAsides.isNotEmpty) {
-      buf.writeln('Set-asides this month (funded vs allocated):');
+      buf.writeln('Set-asides this month — money earmarked for a purpose '
+          '(spoken for, not free-to-spend cash; funded vs allocated):');
       for (final s in setAsides) {
         final status = s.isFunded
             ? 'funded'
