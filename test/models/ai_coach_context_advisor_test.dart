@@ -103,6 +103,49 @@ void main() {
       expect(s, contains('Total owed: ₱12,000'));
     });
 
+    test('credit line shows utilization and monthly interest', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        creditLines: [
+          AdvisorCreditLine(
+            name: 'RCBC',
+            owed: 12000,
+            available: 8000,
+            utilization: 0.6,
+            aprMonthly: 0.0357,
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('60% utilized'));
+      expect(s, contains('3.6%/mo interest'));
+    });
+
+    test('lists recent spending so the coach sees where money went', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        recentTransactions: [
+          AdvisorTxnLine(
+            dateLabel: 'Jul 21',
+            description: 'Grab to office',
+            amount: 180,
+            category: 'Transport',
+          ),
+          AdvisorTxnLine(
+            dateLabel: 'Jul 20',
+            description: '',
+            amount: 1200,
+            category: 'Groceries',
+          ),
+        ],
+      );
+      final s = ctx.financeSnapshotSummary();
+      expect(s, contains('Recent spending (most recent first):'));
+      expect(s, contains('Jul 21: Grab to office — ₱180 (Transport)'));
+      // A blank description falls back to the category name.
+      expect(s, contains('Jul 20: Groceries — ₱1,200 (Groceries)'));
+    });
+
     test('bills carry their due labels', () {
       const ctx = AiCoachContext(
         entryPoint: AiCoachEntryPoint.financeAdvisor,

@@ -69,12 +69,35 @@ class AdvisorCreditLine {
   /// Estimated minimum due this cycle, or null when nothing is owed.
   final double? minimumDue;
 
+  /// Monthly nominal finance-charge rate (0.03 → 3%/mo), or null when unset.
+  final double? aprMonthly;
+
+  /// Owed / limit as a 0..1 ratio, or null when no limit is set.
+  final double? utilization;
+
   const AdvisorCreditLine({
     required this.name,
     required this.owed,
     this.available,
     this.dueLabel,
     this.minimumDue,
+    this.aprMonthly,
+    this.utilization,
+  });
+}
+
+/// One recent ledger transaction for the advisor snapshot — lets the coach see
+/// where money actually went, not just category totals.
+class AdvisorTxnLine {
+  final String dateLabel;
+  final String description;
+  final double amount;
+  final String category;
+  const AdvisorTxnLine({
+    required this.dateLabel,
+    required this.description,
+    required this.amount,
+    required this.category,
   });
 }
 
@@ -266,6 +289,9 @@ class AiCoachContext {
   /// Time deposits maturing (future liquidity events).
   final List<AdvisorMaturityLine> maturities;
 
+  /// Most recent spending transactions (where the money actually went).
+  final List<AdvisorTxnLine> recentTransactions;
+
   const AiCoachContext({
     required this.entryPoint,
     this.todayCalories,
@@ -316,6 +342,7 @@ class AiCoachContext {
     this.netWorthMonthDelta,
     this.netWorthMonthDeltaPct,
     this.maturities = const [],
+    this.recentTransactions = const [],
   });
 
   /// Human-readable summary injected into the RPG coach system prompt.
@@ -436,6 +463,12 @@ class AiCoachContext {
         if (c.minimumDue != null) {
           parts.add('min due ${_peso(c.minimumDue!)}');
         }
+        if (c.utilization != null) {
+          parts.add('${(c.utilization! * 100).round()}% utilized');
+        }
+        if (c.aprMonthly != null && c.aprMonthly! > 0) {
+          parts.add('${(c.aprMonthly! * 100).toStringAsFixed(1)}%/mo interest');
+        }
         if (c.dueLabel != null) parts.add(c.dueLabel!);
         buf.writeln('  - ${c.name}: ${parts.join(', ')}');
       }
@@ -522,6 +555,14 @@ class AiCoachContext {
       }
       if (parts.isNotEmpty) {
         buf.writeln('Spending pace: ${parts.join('; ')}');
+      }
+    }
+    if (recentTransactions.isNotEmpty) {
+      buf.writeln('Recent spending (most recent first):');
+      for (final tx in recentTransactions) {
+        final desc = tx.description.trim().isEmpty ? tx.category : tx.description;
+        buf.writeln('  - ${tx.dateLabel}: $desc — ${_peso(tx.amount)} '
+            '(${tx.category})');
       }
     }
 

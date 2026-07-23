@@ -674,6 +674,29 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   // --- Spending analytics ---
 
+  /// Most recent spending outflows (real expenses — transfers, reimbursables,
+  /// and excluded categories filtered out), newest first, capped at [limit].
+  /// Display-ready with the category name resolved so a caller (e.g. the AI
+  /// advisor) can see where money actually went, not just monthly totals.
+  List<({DateTime date, String description, double amount, String category})>
+      recentSpending({int limit = 8}) {
+    final excluded = _excludedCategoryIds;
+    final txns = _transactions
+        .where((t) => isSpendingOutflow(t, excluded))
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final nameById = {for (final c in _categories) c.id: c.name};
+    return [
+      for (final t in txns.take(limit))
+        (
+          date: t.date,
+          description: t.description,
+          amount: t.amount,
+          category: nameById[t.categoryId] ?? 'Uncategorized',
+        ),
+    ];
+  }
+
   List<DailySpend> get last7DaysSpending => _lastNDaysSpending(7);
 
   /// Flexible — used by the full spending history sheet.

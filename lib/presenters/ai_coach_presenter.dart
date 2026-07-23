@@ -407,6 +407,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var budgetGroups = const <AdvisorBudgetGroupLine>[];
     var installmentLines = const <AdvisorInstallmentLine>[];
     var maturities = const <AdvisorMaturityLine>[];
+    var recentTransactions = const <AdvisorTxnLine>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -439,6 +440,8 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           available: a.availableCredit,
           dueLabel: due?.label,
           minimumDue: t.creditMinimumDue(a),
+          aprMonthly: a.financeChargeRate,
+          utilization: a.utilization,
         );
       }).toList();
       netWorthTrend = t
@@ -491,6 +494,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 dateLabel: a.maturityDate == null
                     ? null
                     : DateFormat('MMM d, yyyy').format(a.maturityDate!),
+              ))
+          .toList();
+      recentTransactions = t
+          .recentSpending(limit: 8)
+          .map((r) => AdvisorTxnLine(
+                dateLabel: DateFormat('MMM d').format(r.date),
+                description: r.description,
+                amount: r.amount,
+                category: r.category,
               ))
           .toList();
     }
@@ -560,6 +572,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       netWorthMonthDelta: isAdvisor ? t?.netWorthMonthDelta : null,
       netWorthMonthDeltaPct: isAdvisor ? t?.netWorthMonthDeltaPct : null,
       maturities: maturities,
+      recentTransactions: recentTransactions,
     );
   }
 
