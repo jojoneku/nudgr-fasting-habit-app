@@ -41,6 +41,8 @@ import 'package:intermittent_fasting/models/finance/financial_account.dart'
 import 'package:intermittent_fasting/models/finance/installment.dart' as _i28;
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart'
     as _i29;
+import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart'
+    as _i68;
 import 'package:intermittent_fasting/models/finance/receivable.dart' as _i27;
 import 'package:intermittent_fasting/models/finance/transaction_record.dart'
     as _i21;
@@ -2636,6 +2638,27 @@ class MockAiCoachService extends _i1.Mock implements _i43.AiCoachService {
           ),
         )),
       ) as _i13.Future<_i9.PhotoParseResult>);
+
+  @override
+  _i13.Future<_i68.ReceiptParseResult> parseReceiptFromImage(
+    _i48.Uint8List? imageBytes,
+    String? mimeType,
+    String? note,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #parseReceiptFromImage,
+          [
+            imageBytes,
+            mimeType,
+            note,
+          ],
+        ),
+        returnValue: _i13.Future<_i68.ReceiptParseResult>.value(
+            const _i68.ReceiptParseResult(_i68.ReceiptParseStatus.unavailable)),
+        returnValueForMissingStub: _i13.Future<_i68.ReceiptParseResult>.value(
+            const _i68.ReceiptParseResult(_i68.ReceiptParseStatus.unavailable)),
+      ) as _i13.Future<_i68.ReceiptParseResult>);
 
   @override
   _i13.Future<_i49.AiMealEstimate?> estimateMacros(String? description) =>

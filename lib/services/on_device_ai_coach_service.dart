@@ -13,6 +13,7 @@ import '../models/extracted_food_item.dart';
 import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
+import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 import '../utils/finance_classifier_parser.dart';
@@ -452,6 +453,14 @@ class OnDeviceAiCoachService implements AiCoachService {
     String? caption,
   ) async =>
       const PhotoParseResult(PhotoParseStatus.unavailable);
+
+  @override
+  Future<ReceiptParseResult> parseReceiptFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? note,
+  ) async =>
+      const ReceiptParseResult(ReceiptParseStatus.unavailable);
 
   // ── Estimate macros ───────────────────────────────────────────────────────
 

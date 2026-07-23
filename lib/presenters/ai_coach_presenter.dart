@@ -910,10 +910,70 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     final hasLogVerb = RegExp(
       r'\b(log|spent|spend|paid|pay|bought|buy|add|record|got|grabbed|bill)\b',
     ).hasMatch(t);
-    // Short "coffee 120"-style entries (2–4 tokens with an amount) are logs too.
-    final tokens = t.split(RegExp(r'\s+'));
-    final terse = tokens.length <= 4;
-    return hasLogVerb || terse;
+    if (hasLogVerb) return true;
+    // Short "coffee 120"-style entries are logs too — but only when a describing
+    // token (the *what*) sits beside the amount. A bare number the user typed in
+    // conversation ("12k", "₱5,000", "i have 12k") has nothing to log and is
+    // almost always advice input, so it must stay with the model rather than
+    // getting hijacked into the ledger's confirm-before-commit pipeline.
+    final tokens = t.split(RegExp(r'\s+')).where((s) => s.isNotEmpty).toList();
+    if (tokens.length > 4) return false;
+    // A standalone amount token, incl. currency prefix and k/m shorthand.
+    final amountToken = RegExp(r'^(₱|php|p)?\d[\d,]*(\.\d+)?(k|m)?$');
+    // Conversational filler carries no logging intent; ignore it when deciding
+    // whether a describing word is actually present.
+    const filler = {
+      'i',
+      'im',
+      "i'm",
+      'my',
+      'me',
+      'we',
+      'us',
+      'you',
+      'have',
+      'has',
+      'had',
+      'a',
+      'an',
+      'the',
+      'is',
+      'am',
+      'are',
+      'was',
+      'about',
+      'around',
+      'roughly',
+      'only',
+      'just',
+      'some',
+      'and',
+      'or',
+      'to',
+      'of',
+      'in',
+      'on',
+      'at',
+      'so',
+      'ok',
+      'okay',
+      'yes',
+      'no',
+      'yeah',
+      'nah',
+      'maybe',
+      'left',
+      'total',
+      'saved',
+      'save',
+      'php',
+      'peso',
+      'pesos',
+    };
+    final hasDescriptor = tokens.any(
+      (tok) => !amountToken.hasMatch(tok) && !filler.contains(tok),
+    );
+    return hasDescriptor;
   }
 
   List<AiChatMessage> _userVisibleMessages() =>

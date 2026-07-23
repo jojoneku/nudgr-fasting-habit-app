@@ -1,9 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/presenters/stats_presenter.dart';
 import 'package:intermittent_fasting/services/ai_coach_service.dart';
@@ -17,6 +19,20 @@ import 'package:intermittent_fasting/utils/safe_notifier.dart';
 
 /// Field the ledger list is ordered by (reference "Filter & sort" sheet).
 enum LedgerSortField { date, amount }
+
+/// Result of [LedgerPresenter.logReceiptPhoto]. `seeded` means a receipt was
+/// read and the confirm-before-commit chat pipeline now holds the draft — the
+/// caller closes its sheet and the inline chat panel drives confirm/clarify.
+/// Every other value is a failure the caller explains to the user in place.
+enum ReceiptScanOutcome {
+  seeded,
+  notReceipt,
+  rateLimited,
+  networkError,
+  serverError,
+  unavailable,
+  failed,
+}
 
 class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   LedgerPresenter(
@@ -979,6 +995,99 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   /// Quick Add box): a confident `resolved` step is committed immediately and
   /// anything ambiguous opens the prefilled form, all in one shot — no chat
   /// drawer. Mobile leaves it false and drives the clarify conversation.
+  /// Scan a receipt photo into a pending expense.
+  ///
+  /// Vision is cloud-only, so this uses the cloud tier directly. On a
+  /// successful read it seeds the SAME confirm-before-commit chat pipeline the
+  /// typed quick-log uses — the merchant becomes the description, the grand
+  /// total the amount, and the classifier resolves the category (from the
+  /// receipt's hint) and asks for the account if it can't be inferred. The
+  /// transaction is stamped today, like the typed quick-log; edit the date in
+  /// the form if the receipt is for another day.
+  ///
+  /// Returns [ReceiptScanOutcome.seeded] when the confirm card is ready (caller
+  /// dismisses its sheet); any other value is a failure to surface in place.
+  Future<ReceiptScanOutcome> logReceiptPhoto(
+    Uint8List bytes,
+    String mimeType, {
+    String? note,
+  }) async {
+    // Prefer whichever tier can actually do vision (cloud). The on-device tier
+    // returns `unavailable`, so trying it too costs nothing and future-proofs.
+    final service = _cloudAi ?? _ai;
+    if (service == null) return ReceiptScanOutcome.unavailable;
+
+    final result = await service.parseReceiptFromImage(bytes, mimeType, note);
+    switch (result.status) {
+      case ReceiptParseStatus.rateLimited:
+        return ReceiptScanOutcome.rateLimited;
+      case ReceiptParseStatus.networkError:
+        return ReceiptScanOutcome.networkError;
+      case ReceiptParseStatus.serverError:
+        return ReceiptScanOutcome.serverError;
+      case ReceiptParseStatus.unavailable:
+        return ReceiptScanOutcome.unavailable;
+      case ReceiptParseStatus.failed:
+        return ReceiptScanOutcome.failed;
+      case ReceiptParseStatus.notReceipt:
+        return ReceiptScanOutcome.notReceipt;
+      case ReceiptParseStatus.ok:
+        break;
+    }
+
+    final total = result.total;
+    if (total == null || total <= 0) return ReceiptScanOutcome.notReceipt;
+
+    // Auto-fill the account only when there's exactly one loggable one (same
+    // filter the classifier uses); otherwise let it ask.
+    final loggable = _accounts
+        .where((a) => a.isActive && !a.isSubAccount && !a.isCustodian)
+        .toList();
+    final soleAccountId = loggable.length == 1 ? loggable.first.id : null;
+
+    final merchant = result.merchant?.trim() ?? '';
+    final draft = ParsedTransaction(
+      amount: total,
+      type: TransactionType.outflow,
+      accountId: soleAccountId,
+      description: merchant,
+      descriptionIsClean: merchant.isNotEmpty,
+    );
+
+    // A human-readable seed turn so the classifier can categorise from the
+    // merchant + hint. The amount/type are passed authoritatively via preparse,
+    // so digits in a merchant name ("7-Eleven") never confuse extraction.
+    final seedParts = <String>[
+      if (merchant.isNotEmpty) merchant,
+      total.toStringAsFixed(2),
+      if (result.categoryHint != null) result.categoryHint!,
+    ];
+    _chatHardError = null;
+    _chatState = LedgerChatState(
+      phase: ChatPhase.classifying,
+      turns: [
+        LedgerChatTurn(
+          text: 'Receipt — ${seedParts.join(' · ')}',
+          isUser: true,
+          at: DateTime.now(),
+        ),
+      ],
+      draft: draft,
+      turnCount: 0,
+    );
+    safeNotify();
+
+    final preparse = PreparseResult(
+      rawInput: merchant.isEmpty ? seedParts.join(' ') : merchant,
+      amount: draft.amount,
+      type: draft.type,
+      accountId: draft.accountId,
+      categoryId: draft.categoryId,
+    );
+    await _runClassifier(preparse);
+    return ReceiptScanOutcome.seeded;
+  }
+
   Future<void> sendChatInput(String text, {bool autoResolve = false}) async {
     final isReply = _chatState.phase == ChatPhase.clarifying;
     final viewingPast = !isSelectedDateToday;
