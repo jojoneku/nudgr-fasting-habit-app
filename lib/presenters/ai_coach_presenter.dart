@@ -462,13 +462,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 expense: m.expense,
               ))
           .toList();
-      goals = t.goalAccounts
-          .map((a) => AdvisorGoalLine(
-                name: a.name,
-                saved: a.balance,
-                target: a.goalTarget,
-              ))
-          .toList();
+      goals = t.goalAccounts.map((a) {
+        // A savings budget on the goal account IS its recurring monthly plan
+        // (e.g. ₱2,500/mo into "Braces") — lets the advisor project a timeline.
+        final plan =
+            b?.savingsBudgets.where((e) => e.account.id == a.id).firstOrNull;
+        return AdvisorGoalLine(
+          name: a.name,
+          saved: a.balance,
+          target: a.goalTarget,
+          monthlyContribution: plan?.budget.allocatedAmount,
+        );
+      }).toList();
       liquidAccounts = t.liquidAccounts
           .map((a) => AdvisorAccountLine(name: a.name, balance: a.balance))
           .toList();

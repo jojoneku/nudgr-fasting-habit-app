@@ -278,6 +278,33 @@ void main() {
       expect(s, contains('Insurance renewal: ₱5,000 out (Sep 3)'));
     });
 
+    test('goal with a monthly plan projects a timeline to target', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        goals: [
+          AdvisorGoalLine(
+            name: 'Braces',
+            saved: 3000,
+            target: 50000,
+            monthlyContribution: 2500,
+          ),
+          AdvisorGoalLine(name: 'Vacation', saved: 1000, target: 20000),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // (50000 - 3000) / 2500 = 18.8 → 19 months.
+      expect(
+        s,
+        contains(
+          'Braces: ₱3,000 of ₱50,000 (6%), +₱2,500/mo planned '
+          '(~19 mo to target at this pace)',
+        ),
+      );
+      expect(s, contains('Vacation: ₱1,000 of ₱20,000 (5%)'));
+      expect(s, isNot(contains('Vacation: ₱1,000 of ₱20,000 (5%), +')));
+    });
+
     test('present: paid bills, received receivables and itemized set-asides',
         () {
       const ctx = AiCoachContext(

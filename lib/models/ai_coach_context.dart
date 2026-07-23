@@ -129,7 +129,17 @@ class AdvisorGoalLine {
   /// The target to reach, or null when the goal has no target set.
   final double? target;
 
-  const AdvisorGoalLine({required this.name, required this.saved, this.target});
+  /// Planned recurring monthly contribution (its savings budget), or null when
+  /// no monthly plan is set — lets the advisor project the future, not just the
+  /// present balance.
+  final double? monthlyContribution;
+
+  const AdvisorGoalLine({
+    required this.name,
+    required this.saved,
+    this.target,
+    this.monthlyContribution,
+  });
 }
 
 /// One liquid account's balance — lets the advisor answer "which account holds
@@ -553,15 +563,24 @@ class AiCoachContext {
       buf.writeln('Savings & goals set aside: ${_peso(totalSavingsAndGoals!)}');
     }
     if (goals.isNotEmpty) {
-      buf.writeln('Savings goals (saved vs target):');
+      buf.writeln('Savings goals (progress, and monthly plan for projecting):');
       for (final g in goals) {
+        final line = StringBuffer('  - ${g.name}: ');
         if (g.target != null && g.target! > 0) {
           final pct = (g.saved / g.target! * 100).clamp(0, 999).round();
-          buf.writeln('  - ${g.name}: ${_peso(g.saved)} of '
-              '${_peso(g.target!)} ($pct%)');
+          line.write('${_peso(g.saved)} of ${_peso(g.target!)} ($pct%)');
         } else {
-          buf.writeln('  - ${g.name}: ${_peso(g.saved)} saved (no target set)');
+          line.write('${_peso(g.saved)} saved (no target set)');
         }
+        final mc = g.monthlyContribution;
+        if (mc != null && mc > 0) {
+          line.write(', +${_peso(mc)}/mo planned');
+          if (g.target != null && g.target! > g.saved) {
+            final monthsToGo = ((g.target! - g.saved) / mc).ceil();
+            line.write(' (~$monthsToGo mo to target at this pace)');
+          }
+        }
+        buf.writeln(line.toString());
       }
     }
     // Credit: prefer the per-card breakdown; fall back to totals when the
