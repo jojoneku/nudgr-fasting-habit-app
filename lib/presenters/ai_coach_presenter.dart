@@ -1,6 +1,9 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/ai_coach_context.dart';
@@ -15,12 +18,20 @@ import '../presenters/nutrition_presenter.dart';
 import '../presenters/stats_presenter.dart';
 import '../presenters/treasury_dashboard_presenter.dart';
 import '../services/ai_coach_service.dart';
+import '../services/image_compressor.dart';
 import '../services/null_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/storage_service.dart';
 import '../utils/safe_notifier.dart';
 
 const int _maxHistoryMessages = 50;
+
+/// How many named advisor conversations stay browsable. Older ones fold into a
+/// single archive thread ("Earlier messages") once this is exceeded.
+const int _maxConversations = 10;
+
+/// Cap on the archive thread so folded-away history stays bounded.
+const int _maxArchiveMessages = 100;
 
 class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _stats;
@@ -41,6 +52,11 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   /// Persists advisor chat history + the learned profile (local-only for now).
   final StorageService? _storage;
 
+  /// Resizes attached photos before upload (same codec the food photo flow
+  /// uses). Injected so tests can substitute a fake that skips the platform
+  /// channel.
+  final ImageCompressor _imageCompressor;
+
   /// The user-curated advisor memory, injected into every advisor turn.
   AdvisorProfile _advisorProfile = AdvisorProfile.empty();
 
@@ -55,6 +71,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   AiCoachEntryPoint _entryPoint = AiCoachEntryPoint.general;
   final List<AiChatMessage> _messages = [];
+
+  /// Saved advisor conversations (ChatGPT-style). `_messages` is the live copy
+  /// of whichever one is [_currentConversationId]; the two are reconciled on
+  /// every persist.
+  final List<AdvisorConversation> _conversations = [];
+  String? _currentConversationId;
   bool _isResponding = false;
   bool _isThinkingEnabled = false;
   bool _isInitializing = true;
@@ -71,6 +93,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     LedgerPresenter? ledger,
     StorageService? storage,
     AiCoachService? cloudFallback,
+    ImageCompressor? imageCompressor,
   })  : _stats = stats,
         _fasting = fasting,
         _nutrition = nutrition,
@@ -80,6 +103,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         _ledger = ledger,
         _storage = storage,
         _cloudFallback = cloudFallback,
+        _imageCompressor = imageCompressor ?? const ImageCompressor(),
         _service = service ?? NullAiCoachService() {
     // If a real service was injected (already initialised externally), skip
     // the internal init. Only auto-init when no service is provided.
@@ -126,28 +150,61 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   Future<void> _loadAdvisorState() async {
     final storage = _storage;
-    if (storage == null) return;
-    final history = await storage.loadAdvisorHistory();
+    if (storage == null) {
+      // No persistence (e.g. unit tests): still give the advisor a live
+      // conversation to write into.
+      _ensureCurrentConversation();
+      return;
+    }
+    final saved = await storage.loadAdvisorConversations();
     final profile = await storage.loadAdvisorProfile();
     if (isDisposed) return;
+
+    _conversations
+      ..clear()
+      ..addAll(saved);
+
+    // Migration: older installs only have the flat history list. Wrap it into
+    // a single conversation the first time so nothing is lost.
+    if (_conversations.isEmpty) {
+      final history = await storage.loadAdvisorHistory();
+      if (isDisposed) return;
+      if (history.isNotEmpty) {
+        final now = DateTime.now();
+        _conversations.add(AdvisorConversation(
+          id: _newConversationId(),
+          title: AdvisorConversation.titleFrom(history),
+          createdAt: now,
+          updatedAt: now,
+          messages: history,
+        ));
+      }
+    }
+
+    // Open the most recently updated non-archive chat, else create a fresh one.
+    final active = _activeConversations();
+    _currentConversationId = active.isNotEmpty ? active.first.id : null;
+    _ensureCurrentConversation();
     _messages
       ..clear()
-      ..addAll(history);
+      ..addAll(_currentConversation?.messages ?? const []);
     _advisorProfile = profile ?? AdvisorProfile.empty();
     safeNotify();
   }
 
   // ── Send ──────────────────────────────────────────────────────────────────
 
-  Future<void> send(String text) async {
+  Future<void> send(String text, {Uint8List? image}) async {
     final trimmed = text.trim();
-    if (trimmed.isEmpty || _isResponding) return;
+    if ((trimmed.isEmpty && image == null) || _isResponding) return;
 
     // Advisor logging: a clear expense-log intent — or any reply while the
     // ledger is mid-clarify — goes through the ledger's confirm-before-commit
     // pipeline instead of the advice model. The sheet renders the confirm card.
+    // An attached image is always advice, never an expense log — skip routing.
     final ledger = _ledger;
-    if (_entryPoint == AiCoachEntryPoint.financeAdvisor &&
+    if (image == null &&
+        _entryPoint == AiCoachEntryPoint.financeAdvisor &&
         ledger != null &&
         (ledger.chatState.phase == ChatPhase.clarifying ||
             looksLikeExpenseLog(trimmed))) {
@@ -159,13 +216,27 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
         await ledger.sendChatInput(trimmed);
       } finally {
         _isResponding = false;
-        _storage?.saveAdvisorHistory(_messages);
+        _persistAdvisor();
         safeNotify();
       }
       return;
     }
 
-    final userMsg = AiChatMessage.user(trimmed);
+    // Compress an attached photo off the UI thread before building the turn.
+    Uint8List? compressed;
+    if (image != null) {
+      try {
+        compressed = await _imageCompressor.compressForUpload(image);
+      } catch (e) {
+        compressed = image; // fall back to the original bytes
+        debugPrint('AiCoachPresenter.send image compress failed: $e');
+      }
+      if (isDisposed) return;
+    }
+
+    // With an image but no caption, give the model a natural prompt to react to.
+    final display = trimmed.isEmpty ? 'What do you make of this?' : trimmed;
+    final userMsg = AiChatMessage.user(display, imageBytes: compressed);
     _messages.add(userMsg);
     _errorMessage = null;
     _isResponding = true;
@@ -177,7 +248,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
 
     try {
-      final context = _buildContext();
+      final context = _buildContext(image: compressed);
       final buffer = StringBuffer();
 
       final Stream<String> stream;
@@ -234,7 +305,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       _isResponding = false;
       _trimHistory();
       if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-        _storage?.saveAdvisorHistory(_messages);
+        _persistAdvisor();
       }
       safeNotify();
     }
@@ -288,11 +359,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   // ── Clear ─────────────────────────────────────────────────────────────────
 
+  /// Clears the CURRENT conversation's messages (the visible thread), leaving
+  /// other saved chats and the archive intact.
   void clearHistory() {
     _messages.clear();
     _errorMessage = null;
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-      _storage?.clearAdvisorHistory();
+      _persistAdvisor();
     }
     safeNotify();
   }
@@ -306,10 +379,163 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     );
     _trimHistory();
     if (_entryPoint == AiCoachEntryPoint.financeAdvisor) {
-      _storage?.saveAdvisorHistory(_messages);
+      _persistAdvisor();
     }
     safeNotify();
   }
+
+  // ── Conversations (ChatGPT-style history) ────────────────────────────────
+
+  /// Saved conversations for the history browser: active chats newest-first,
+  /// with the archive thread (if any) pinned last.
+  List<AdvisorConversation> get conversations {
+    final active = _activeConversations();
+    final archive =
+        _conversations.where((c) => c.isArchive && c.messages.isNotEmpty);
+    return [...active, ...archive];
+  }
+
+  String? get currentConversationId => _currentConversationId;
+
+  /// Start a fresh chat, saving the current one first.
+  void startNewConversation() {
+    _persistAdvisor();
+    final now = DateTime.now();
+    final convo = AdvisorConversation(
+      id: _newConversationId(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+    );
+    _conversations.add(convo);
+    _currentConversationId = convo.id;
+    _messages.clear();
+    _errorMessage = null;
+    _enforceConversationCap();
+    _storage?.saveAdvisorConversations(_conversations);
+    safeNotify();
+  }
+
+  /// Reopen a saved conversation as the live thread.
+  void openConversation(String id) {
+    if (id == _currentConversationId) return;
+    _persistAdvisor();
+    final convo = _conversations.where((c) => c.id == id).firstOrNull;
+    if (convo == null) return;
+    _currentConversationId = id;
+    _messages
+      ..clear()
+      ..addAll(convo.messages);
+    _errorMessage = null;
+    safeNotify();
+  }
+
+  /// Delete a saved conversation. If it was the current one, fall back to the
+  /// newest remaining chat (or a fresh empty one).
+  void deleteConversation(String id) {
+    _conversations.removeWhere((c) => c.id == id);
+    if (id == _currentConversationId) {
+      _currentConversationId = null;
+      _messages.clear();
+      final active = _activeConversations();
+      if (active.isNotEmpty) {
+        _currentConversationId = active.first.id;
+        _messages.addAll(active.first.messages);
+      } else {
+        _ensureCurrentConversation();
+      }
+    }
+    _storage?.saveAdvisorConversations(_conversations);
+    safeNotify();
+  }
+
+  // ── Conversation internals ────────────────────────────────────────────────
+
+  AdvisorConversation? get _currentConversation =>
+      _conversations.where((c) => c.id == _currentConversationId).firstOrNull;
+
+  /// Active (non-archive) conversations, most-recently-updated first.
+  List<AdvisorConversation> _activeConversations() {
+    final active = _conversations.where((c) => !c.isArchive).toList()
+      ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+    return active;
+  }
+
+  void _ensureCurrentConversation() {
+    if (_currentConversation != null) return;
+    final now = DateTime.now();
+    final convo = AdvisorConversation(
+      id: _newConversationId(),
+      title: 'New chat',
+      createdAt: now,
+      updatedAt: now,
+      messages: const [],
+    );
+    _conversations.add(convo);
+    _currentConversationId = convo.id;
+  }
+
+  /// Fold the live [_messages] into the current conversation and persist the
+  /// whole set (plus the legacy flat history, which mirrors the current chat so
+  /// older clients and the sync empty-check keep working).
+  void _persistAdvisor() {
+    if (_entryPoint != AiCoachEntryPoint.financeAdvisor) return;
+    _ensureCurrentConversation();
+    final settled =
+        _messages.where((m) => !m.isStreaming && m.text.isNotEmpty).toList();
+    final idx =
+        _conversations.indexWhere((c) => c.id == _currentConversationId);
+    if (idx != -1) {
+      final cur = _conversations[idx];
+      _conversations[idx] = cur.copyWith(
+        messages: settled,
+        updatedAt: DateTime.now(),
+        title:
+            cur.isArchive ? cur.title : AdvisorConversation.titleFrom(settled),
+      );
+    }
+    _enforceConversationCap();
+    _storage?.saveAdvisorConversations(_conversations);
+    _storage?.saveAdvisorHistory(_messages);
+  }
+
+  /// Keep at most [_maxConversations] active chats; fold the oldest overflow
+  /// into a single archive thread ("Earlier messages"), capped in size.
+  void _enforceConversationCap() {
+    var active = _conversations.where((c) => !c.isArchive).toList()
+      ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt)); // oldest first
+    while (active.length > _maxConversations) {
+      final evicted = active.removeAt(0);
+      _conversations.remove(evicted);
+      if (evicted.messages.isEmpty) continue;
+      final archiveIdx = _conversations
+          .indexWhere((c) => c.id == AdvisorConversation.archiveId);
+      if (archiveIdx == -1) {
+        _conversations.add(AdvisorConversation(
+          id: AdvisorConversation.archiveId,
+          title: 'Earlier messages',
+          createdAt: evicted.createdAt,
+          updatedAt: DateTime.now(),
+          messages: _capArchive(evicted.messages),
+        ));
+      } else {
+        final archive = _conversations[archiveIdx];
+        _conversations[archiveIdx] = archive.copyWith(
+          messages: _capArchive([...archive.messages, ...evicted.messages]),
+          updatedAt: DateTime.now(),
+        );
+      }
+    }
+  }
+
+  List<AiChatMessage> _capArchive(List<AiChatMessage> msgs) =>
+      msgs.length > _maxArchiveMessages
+          ? msgs.sublist(msgs.length - _maxArchiveMessages)
+          : msgs;
+
+  String _newConversationId() =>
+      'c_${DateTime.now().microsecondsSinceEpoch}_${_conversations.length}';
 
   // ── Advisor profile (user-curated memory) ───────────────────────────────────
 
@@ -387,7 +613,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
-  AiCoachContext _buildContext() {
+  AiCoachContext _buildContext({Uint8List? image}) {
     final stats = _stats.stats;
     final n = _nutrition;
     final t = _treasury;
@@ -408,6 +634,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var installmentLines = const <AdvisorInstallmentLine>[];
     var maturities = const <AdvisorMaturityLine>[];
     var recentTransactions = const <AdvisorTxnLine>[];
+    var recurringCommitments = const <AdvisorRecurringLine>[];
+    var scheduledFuture = const <AdvisorScheduledLine>[];
+    var paidBills = const <AdvisorBillLine>[];
+    var receivedThisMonth = const <AdvisorReceivableLine>[];
+    var setAsides = const <AdvisorSetAsideLine>[];
+    var monthlyLedger = const <AdvisorMonthLedger>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -456,13 +688,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 expense: m.expense,
               ))
           .toList();
-      goals = t.goalAccounts
-          .map((a) => AdvisorGoalLine(
-                name: a.name,
-                saved: a.balance,
-                target: a.goalTarget,
-              ))
-          .toList();
+      goals = t.goalAccounts.map((a) {
+        // A savings budget on the goal account IS its recurring monthly plan
+        // (e.g. ₱2,500/mo into "Braces") — lets the advisor project a timeline.
+        final plan =
+            b?.savingsBudgets.where((e) => e.account.id == a.id).firstOrNull;
+        return AdvisorGoalLine(
+          name: a.name,
+          saved: a.balance,
+          target: a.goalTarget,
+          monthlyContribution: plan?.budget.allocatedAmount,
+        );
+      }).toList();
       liquidAccounts = t.liquidAccounts
           .map((a) => AdvisorAccountLine(name: a.name, balance: a.balance))
           .toList();
@@ -505,12 +742,62 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 category: r.category,
               ))
           .toList();
+      recurringCommitments = t.recurringCommitments
+          .map((c) => AdvisorRecurringLine(
+                name: c.name,
+                amount: c.amount,
+                dueDay: c.dueDay,
+                isInflow: c.isInflow,
+              ))
+          .toList();
+      scheduledFuture = t.scheduledFutureObligations.map((s) {
+        final p = s.month.split('-');
+        final y = int.tryParse(p.isNotEmpty ? p[0] : '') ?? 0;
+        final mo = int.tryParse(p.length > 1 ? p[1] : '') ?? 1;
+        return AdvisorScheduledLine(
+          name: s.name,
+          amount: s.amount,
+          monthLabel: DateFormat('MMM yyyy').format(DateTime(y, mo)),
+          dateLabel: s.day == null
+              ? null
+              : DateFormat('MMM d').format(DateTime(y, mo, s.day!)),
+          isInflow: s.isInflow,
+        );
+      }).toList();
+      paidBills = t.paidBillsThisMonth
+          .map((b) => AdvisorBillLine(name: b.name, amount: b.amount))
+          .toList();
+      receivedThisMonth = t.receivedThisMonth
+          .map((r) => AdvisorReceivableLine(name: r.name, amount: r.amount))
+          .toList();
+      setAsides = t.setAsidesThisMonth
+          .map((s) => AdvisorSetAsideLine(
+                name: s.name,
+                allocated: s.allocated,
+                funded: s.funded,
+                remaining: s.remaining,
+                isFunded: s.isPaid || s.remaining <= 0,
+              ))
+          .toList();
+      monthlyLedger = t
+          .historicalLedger(months: 6)
+          .map((m) => AdvisorMonthLedger(
+                label: m.label,
+                billed: m.billed,
+                billsPaid: m.billsPaid,
+                receivablesExpected: m.receivablesExpected,
+                received: m.received,
+                netSavings: m.netSavings,
+              ))
+          .toList();
     }
     final savingsRate = t?.savingsRate;
     final peakDay = t?.peakSpendDay;
 
     return AiCoachContext(
       entryPoint: _entryPoint,
+      imageBytes: isAdvisor ? image : null,
+      imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
       isFasting: _fasting.isFasting,
       elapsedFastMinutes:
           _fasting.isFasting ? _fasting.elapsedSeconds ~/ 60 : null,
@@ -551,6 +838,12 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
           isAdvisor && (t?.nextMonthPendingReceivables ?? 0) > 0
               ? t?.nextMonthPendingReceivables
               : null,
+      recurringCommitments: recurringCommitments,
+      scheduledFuture: scheduledFuture,
+      paidBillsThisMonth: paidBills,
+      receivedThisMonth: receivedThisMonth,
+      setAsides: setAsides,
+      monthlyLedger: monthlyLedger,
       netWorthTrend: netWorthTrend,
       incomeExpenseTrend: incomeExpenseTrend,
       goals: goals,

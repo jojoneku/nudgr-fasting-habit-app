@@ -1,5 +1,6 @@
 import '../models/activity_goals.dart';
 import '../models/activity_log.dart';
+import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/daily_nutrition_log.dart';
@@ -75,6 +76,7 @@ abstract class StorageService {
   static const String keyPreferredStepsSource = 'preferredStepsSourceId';
   static const String keyChatMessages = 'nutritionChatMessages';
   static const String keyAdvisorHistory = 'advisorChatHistory';
+  static const String keyAdvisorConversations = 'advisorConversations';
   static const String keyAdvisorProfile = 'advisorProfile';
   static const String keyFinancialAccounts = 'finance_accounts';
   static const String keyTransactions = 'finance_transactions';
@@ -209,6 +211,14 @@ abstract class StorageService {
   Future<void> saveAdvisorProfile(AdvisorProfile profile);
   Future<AdvisorProfile?> loadAdvisorProfile();
   Future<void> clearAdvisorHistory();
+
+  /// Saved Money Mentor conversations (ChatGPT-style history browser). Stored
+  /// alongside — and synced with — the advisor state. Default no-op/empty so
+  /// alternative [StorageService] impls need not implement them.
+  Future<void> saveAdvisorConversations(
+      List<AdvisorConversation> conversations) async {}
+  Future<List<AdvisorConversation>> loadAdvisorConversations() async =>
+      const [];
 
   //  Finance ─
   Future<void> saveAccounts(List<FinancialAccount> accounts);

@@ -2535,6 +2535,28 @@ class MockAiCoachService extends _i1.Mock implements _i43.AiCoachService {
       ) as _i13.Stream<String>);
 
   @override
+  _i13.Stream<String> adviseFinance({
+    required List<_i44.AiChatMessage>? messages,
+    required _i45.AiCoachContext? context,
+    String? profile,
+    String? historical,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #adviseFinance,
+          [],
+          {
+            #messages: messages,
+            #context: context,
+            #profile: profile,
+            #historical: historical,
+          },
+        ),
+        returnValue: _i13.Stream<String>.empty(),
+        returnValueForMissingStub: _i13.Stream<String>.empty(),
+      ) as _i13.Stream<String>);
+
+  @override
   _i13.Future<_i46.FoodParseResult?> parseFood(String? description) =>
       (super.noSuchMethod(
         Invocation.method(

@@ -208,6 +208,7 @@ class CloudAiCoachService implements AiCoachService {
           'The financial advisor needs Cloud AI. Sign in and enable it in Settings.');
     }
 
+    final img = context.imageBytes;
     final body = jsonEncode({
       'op': 'adviseFinance',
       'payload': {
@@ -218,6 +219,8 @@ class CloudAiCoachService implements AiCoachService {
           if (historical != null && historical.trim().isNotEmpty)
             'historical': historical.trim(),
         },
+        if (img != null) 'image_base64': base64Encode(img),
+        if (img != null) 'mime_type': context.imageMimeType ?? 'image/jpeg',
         'messages': messages
             .where((m) => m.role != AiChatRole.assistant || m.text.isNotEmpty)
             .map((m) => {

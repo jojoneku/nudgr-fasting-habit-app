@@ -16,6 +16,7 @@ import '../models/notification_preferences.dart';
 import '../models/nutrition_goals.dart';
 import '../models/quest.dart';
 import '../models/quest_achievement.dart';
+import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/tdee_profile.dart';
@@ -514,19 +515,27 @@ class SyncService {
   /// True when an advisor_state `data` blob carries no history and no profile.
   static bool _advisorStateEmpty(Map<String, dynamic> d) {
     final history = d['history'];
+    final conversations = d['conversations'];
     final profile = d['profile'] as Map<String, dynamic>?;
     final historyEmpty = history is! List || history.isEmpty;
+    // Saved conversations count as content too, so a device with chats but an
+    // empty *current* thread isn't mistaken for empty (which would skip sync).
+    final convosEmpty = conversations is! List || conversations.isEmpty;
     final profileEmpty =
         profile == null || AdvisorProfile.fromJson(profile).isEmpty;
-    return historyEmpty && profileEmpty;
+    return historyEmpty && convosEmpty && profileEmpty;
   }
 
   Future<void> _pushAdvisorState() async {
     final history = await _storage.loadAdvisorHistory();
     final profile = await _storage.loadAdvisorProfile();
+    final conversations = await _storage.loadAdvisorConversations();
     final data = <String, dynamic>{
       'history': history.map((m) => m.toJson()).toList(),
       'profile': (profile ?? AdvisorProfile.empty()).toJson(),
+      // Additive: older clients ignore this; newer ones restore the full
+      // conversation list. `history` stays the source for the empty-check.
+      'conversations': conversations.map((c) => c.toJson()).toList(),
     };
     // Don't let a freshly-signed-in empty device wipe a populated cloud copy.
     if (await _wouldClobberRemote(
@@ -936,7 +945,10 @@ class SyncService {
     if (_advisorStateEmpty(data)) {
       final localHistory = await _storage.loadAdvisorHistory();
       final localProfile = await _storage.loadAdvisorProfile();
-      if (localHistory.isNotEmpty || (localProfile?.isEmpty == false)) {
+      final localConvos = await _storage.loadAdvisorConversations();
+      if (localHistory.isNotEmpty ||
+          localConvos.isNotEmpty ||
+          (localProfile?.isEmpty == false)) {
         debugPrint(
             'SyncService: advisorState — remote empty but local populated; skipping');
         return;
@@ -951,6 +963,17 @@ class SyncService {
       final profileJson = data['profile'] as Map<String, dynamic>?;
       if (profileJson != null) {
         await _storage.saveAdvisorProfile(AdvisorProfile.fromJson(profileJson));
+      }
+      // Restore the saved conversation list when the remote carries it (newer
+      // clients); older remotes omit it and the history above stands alone.
+      final convos = data['conversations'];
+      if (convos is List) {
+        await _storage.saveAdvisorConversations(
+          convos
+              .cast<Map<String, dynamic>>()
+              .map(AdvisorConversation.fromJson)
+              .toList(),
+        );
       }
     });
     _queue.setTimestamp(SyncDomain.advisorState, 'default', time: remoteTime);
