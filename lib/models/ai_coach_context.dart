@@ -128,6 +128,22 @@ class AdvisorBudgetGroupLine {
   });
 }
 
+/// One maturing time deposit for the advisor snapshot (a future liquidity
+/// event — money that unlocks on a date).
+class AdvisorMaturityLine {
+  final String name;
+  final double amount;
+
+  /// When it matures ("Sep 1, 2026"), or null when no date is set.
+  final String? dateLabel;
+
+  const AdvisorMaturityLine({
+    required this.name,
+    required this.amount,
+    this.dateLabel,
+  });
+}
+
 /// One active installment / BNPL plan for the advisor snapshot.
 class AdvisorInstallmentLine {
   final String name;
@@ -231,6 +247,25 @@ class AiCoachContext {
   final List<AdvisorInstallmentLine> installments;
   final double? installmentsMonthlyLoad;
 
+  // ── Finance advisor (analytics: spending pace, momentum, maturities) ────────
+  /// Average daily spend over the last 7 days.
+  final double? avgDailySpend;
+
+  /// Highest single-day spend in the last 7 days, and the day it fell on.
+  final double? peakDaySpend;
+  final String? peakDayLabel;
+
+  /// Money spent so far today.
+  final double? todaySpend;
+
+  /// Net-worth change vs last month-end (absolute and as a fraction, 0.027 →
+  /// +2.7%). Null when there's no prior month to compare.
+  final double? netWorthMonthDelta;
+  final double? netWorthMonthDeltaPct;
+
+  /// Time deposits maturing (future liquidity events).
+  final List<AdvisorMaturityLine> maturities;
+
   const AiCoachContext({
     required this.entryPoint,
     this.todayCalories,
@@ -274,6 +309,13 @@ class AiCoachContext {
     this.setAsidesRemaining,
     this.installments = const [],
     this.installmentsMonthlyLoad,
+    this.avgDailySpend,
+    this.peakDaySpend,
+    this.peakDayLabel,
+    this.todaySpend,
+    this.netWorthMonthDelta,
+    this.netWorthMonthDeltaPct,
+    this.maturities = const [],
   });
 
   /// Human-readable summary injected into the RPG coach system prompt.
@@ -334,6 +376,14 @@ class AiCoachContext {
           '${_peso(forecastedNetBalance!)}');
     }
     if (netWorth != null) buf.writeln('Net worth: ${_peso(netWorth!)}');
+    if (netWorthMonthDelta != null) {
+      final sign = netWorthMonthDelta! >= 0 ? '+' : '-';
+      final pct = netWorthMonthDeltaPct == null
+          ? ''
+          : ' ($sign${(netWorthMonthDeltaPct!.abs() * 100).toStringAsFixed(1)}%)';
+      buf.writeln('Net worth change vs last month: $sign'
+          '${_peso(netWorthMonthDelta!.abs())}$pct');
+    }
     if (monthNetCashFlow != null) {
       buf.writeln('Net cash flow this month: ${_peso(monthNetCashFlow!)}');
     }
@@ -441,6 +491,13 @@ class AiCoachContext {
       }
       buf.writeln('Next month so far: ${parts.join('; ')}');
     }
+    if (maturities.isNotEmpty) {
+      buf.writeln('Time deposits maturing (cash that unlocks later):');
+      for (final m in maturities) {
+        final on = m.dateLabel != null ? ' on ${m.dateLabel}' : '';
+        buf.writeln('  - ${m.name}: ${_peso(m.amount)}$on');
+      }
+    }
     if (topCategories.isNotEmpty) {
       buf.writeln('Top spending categories (actual vs target this month):');
       for (final c in topCategories) {
@@ -448,6 +505,23 @@ class AiCoachContext {
             ? '${_peso(c.actual)} spent (no budget set)'
             : '${_peso(c.actual)} of ${_peso(c.target!)} target';
         buf.writeln('  - ${c.name}: $line');
+      }
+    }
+    // Spending pace — helps the advisor project the rest of the month.
+    if (avgDailySpend != null || todaySpend != null) {
+      final parts = <String>[];
+      if (avgDailySpend != null) {
+        parts.add('${_peso(avgDailySpend!)}/day average (last 7 days)');
+      }
+      if (peakDaySpend != null && peakDaySpend! > 0) {
+        final on = peakDayLabel != null ? ' on $peakDayLabel' : '';
+        parts.add('peak ${_peso(peakDaySpend!)}$on');
+      }
+      if (todaySpend != null) {
+        parts.add('${_peso(todaySpend!)} spent today');
+      }
+      if (parts.isNotEmpty) {
+        buf.writeln('Spending pace: ${parts.join('; ')}');
       }
     }
 

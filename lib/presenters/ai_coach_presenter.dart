@@ -406,6 +406,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
     var liquidAccounts = const <AdvisorAccountLine>[];
     var budgetGroups = const <AdvisorBudgetGroupLine>[];
     var installmentLines = const <AdvisorInstallmentLine>[];
+    var maturities = const <AdvisorMaturityLine>[];
     if (isAdvisor && t != null) {
       topCategories = t.categorySpendThisMonth
           .map((e) => AdvisorCategoryLine(
@@ -483,8 +484,18 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
                 ))
             .toList();
       }
+      maturities = t.timeDepositAccounts
+          .map((a) => AdvisorMaturityLine(
+                name: a.name,
+                amount: a.balance,
+                dateLabel: a.maturityDate == null
+                    ? null
+                    : DateFormat('MMM d, yyyy').format(a.maturityDate!),
+              ))
+          .toList();
     }
     final savingsRate = t?.savingsRate;
+    final peakDay = t?.peakSpendDay;
 
     return AiCoachContext(
       entryPoint: _entryPoint,
@@ -540,6 +551,15 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       installmentsMonthlyLoad: isAdvisor && installmentLines.isNotEmpty
           ? _installments?.totalDueThisMonth
           : null,
+      avgDailySpend: isAdvisor ? t?.avgDailySpend7 : null,
+      peakDaySpend: isAdvisor ? t?.peakDaySpend7 : null,
+      peakDayLabel: isAdvisor && peakDay != null
+          ? DateFormat('MMM d').format(peakDay)
+          : null,
+      todaySpend: isAdvisor ? t?.todayOutflow : null,
+      netWorthMonthDelta: isAdvisor ? t?.netWorthMonthDelta : null,
+      netWorthMonthDeltaPct: isAdvisor ? t?.netWorthMonthDeltaPct : null,
+      maturities: maturities,
     );
   }
 

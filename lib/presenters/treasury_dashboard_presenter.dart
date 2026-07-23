@@ -158,6 +158,19 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
       .where((a) => a.isActive && a.category == AccountCategory.savings)
       .toList();
 
+  /// Active time-deposit accounts, earliest maturity first — money that unlocks
+  /// on a future date. Powers the advisor's forward liquidity view.
+  List<FinancialAccount> get timeDepositAccounts => _accounts
+      .where((a) => a.isActive && a.category == AccountCategory.timeDeposit)
+      .toList()
+    ..sort((a, b) {
+      final ad = a.maturityDate, bd = b.maturityDate;
+      if (ad == null && bd == null) return 0;
+      if (ad == null) return 1;
+      if (bd == null) return -1;
+      return ad.compareTo(bd);
+    });
+
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
 

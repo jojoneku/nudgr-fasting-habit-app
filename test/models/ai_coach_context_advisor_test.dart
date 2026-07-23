@@ -165,6 +165,44 @@ void main() {
       expect(s, contains('Total installment load this month: ₱4,200'));
     });
 
+    test('surfaces spending pace, net-worth momentum and maturities', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        netWorth: 200000,
+        netWorthMonthDelta: 5400,
+        netWorthMonthDeltaPct: 0.0277,
+        avgDailySpend: 780,
+        peakDaySpend: 2100,
+        peakDayLabel: 'Jul 18',
+        todaySpend: 340,
+        maturities: [
+          AdvisorMaturityLine(
+              name: 'BPI TD', amount: 50000, dateLabel: 'Sep 1, 2026'),
+        ],
+      );
+
+      final s = ctx.financeSnapshotSummary();
+      // Momentum reads with sign and percent.
+      expect(s, contains('Net worth change vs last month: +₱5,400 (+2.8%)'));
+      // Pace line combines the three figures.
+      expect(s, contains('Spending pace:'));
+      expect(s, contains('₱780/day average (last 7 days)'));
+      expect(s, contains('peak ₱2,100 on Jul 18'));
+      expect(s, contains('₱340 spent today'));
+      // Maturity as a future liquidity event.
+      expect(s, contains('BPI TD: ₱50,000 on Sep 1, 2026'));
+    });
+
+    test('negative net-worth momentum reads with a minus sign', () {
+      const ctx = AiCoachContext(
+        entryPoint: AiCoachEntryPoint.financeAdvisor,
+        netWorthMonthDelta: -3200,
+        netWorthMonthDeltaPct: -0.015,
+      );
+      expect(ctx.financeSnapshotSummary(),
+          contains('Net worth change vs last month: -₱3,200 (-1.5%)'));
+    });
+
     test('historical summary is separate from the live snapshot', () {
       const ctx = AiCoachContext(
         entryPoint: AiCoachEntryPoint.financeAdvisor,
