@@ -789,14 +789,22 @@ _ADVISOR_SYSTEM_PREFIX = (
     "USING THE SNAPSHOT: it already carries past, present, and future figures — read the whole "
     "thing before saying you lack data. Present: liquid cash (with a per-account breakdown and any "
     "amount held for someone else), income received, savings & goals (with per-goal progress "
-    "toward each target), budget by group, set-asides still to fund, and spending. Future: "
+    "toward each target, plus any planned monthly contribution so you can project when a goal — "
+    "e.g. braces — will be funded), budget by group, set-asides (money the user earmarked in Bills for a specific purpose — "
+    "spoken for, NOT free cash; itemized funded vs allocated, and separate from custodian money "
+    "held for someone else), bills "
+    "already paid and receivables already received this month, and spending. Future: "
     "outstanding bills (money out) with due labels, receivables (money IN, owed to you) with "
     "expected dates, credit cards per-card (owed / available / minimum due / utilization / monthly "
     "interest / due date), installment / BNPL plans (fixed monthly commitments with months "
-    "remaining), next-month scheduled bills & receivables, and time deposits maturing (cash that "
-    "unlocks later). Analytics: recent spending transactions (where money actually went), spending "
+    "remaining), next-month scheduled bills & receivables (both a total and — under 'Recurring "
+    "monthly commitments' and 'Other obligations already scheduled ahead' — the individual line "
+    "items with names, amounts, and due days, so you can say e.g. 'Internet ₱999 is due around the "
+    "15th next month'), and time deposits maturing (cash that unlocks later). Analytics: recent "
+    "spending transactions (where money actually went), spending "
     "pace (₱/day average, peak day, spent today), and net-worth change vs last month. A HISTORICAL "
-    "BENCHMARK section, when present, gives month-by-month net worth and income vs. expenses. Only "
+    "BENCHMARK section, when present, gives month-by-month net worth, income vs. expenses, and "
+    "bills/receivables/savings totals per closed month (past line items aren't retained). Only "
     "invoke rule 3 for a figure that is genuinely absent — not one you skimmed past.\n\n"
     "WHEN THE USER ASKS FOR THEIR 'FINANCIAL POSITION' OR A 'FINANCIAL ANALYSIS', cover, in order: "
     "(1) Liquidity — liquid cash vs. forecasted ending cash after bills; (2) Money in vs. out — "
@@ -869,6 +877,27 @@ def _advise_finance(payload):
     if not bedrock_messages:
         return _resp(400, {"error": "missing_messages", "message": "No valid user messages after filtering"})
 
+    # Optional attached photo (a bill, receipt, credit offer …). Attach it to the
+    # LAST user turn as a vision block so the advisor reads it in context — the
+    # same Bedrock image path the food vision op uses. The image is sent only on
+    # the turn it's attached (the client never replays it in history).
+    image_b64 = (payload.get("image_base64") or "").strip()
+    has_image = bool(image_b64)
+    if has_image:
+        if len(image_b64) > _MAX_IMAGE_B64_LEN:
+            return _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+        mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
+        if mime not in _ALLOWED_IMAGE_MIME:
+            mime = "image/jpeg"
+        for m in reversed(bedrock_messages):
+            if m["role"] == "user":
+                text_content = m["content"] if isinstance(m["content"], str) else ""
+                m["content"] = [
+                    {"type": "image", "source": {"type": "base64", "media_type": mime, "data": image_b64}},
+                    {"type": "text", "text": text_content or "Please review this image."},
+                ]
+                break
+
     try:
         raw = _bedrock.invoke_model(
             modelId=_ADVISOR_MODEL_ID,
@@ -883,7 +912,7 @@ def _advise_finance(payload):
         )
         result = json.loads(raw["body"].read())
         response_text = result["content"][0]["text"].strip()
-        print(f"cost_line op=adviseFinance msgs={len(bedrock_messages)} snapshot={'y' if summary else 'n'}")
+        print(f"cost_line op=adviseFinance msgs={len(bedrock_messages)} snapshot={'y' if summary else 'n'} image={'y' if has_image else 'n'}")
         return _resp(200, {"response": response_text})
     except Exception as e:
         print(f"Bedrock error (adviseFinance): {e}")

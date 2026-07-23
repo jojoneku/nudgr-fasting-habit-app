@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/activity_goals.dart';
 import '../models/activity_log.dart';
+import '../models/advisor_conversation.dart';
 import '../models/advisor_profile.dart';
 import '../models/ai_chat_message.dart';
 import '../models/daily_nutrition_log.dart';
@@ -1085,7 +1086,35 @@ class LocalStorageService extends StorageService {
   Future<void> clearAdvisorHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_k(StorageService.keyAdvisorHistory));
+    await prefs.remove(_k(StorageService.keyAdvisorConversations));
     _markDirty(SyncDomain.advisorState, 'default');
+  }
+
+  @override
+  Future<void> saveAdvisorConversations(
+      List<AdvisorConversation> conversations) async {
+    final prefs = await SharedPreferences.getInstance();
+    final encoded = jsonEncode(conversations.map((c) => c.toJson()).toList());
+    await prefs.setString(_k(StorageService.keyAdvisorConversations), encoded);
+    _markDirty(SyncDomain.advisorState, 'default');
+  }
+
+  @override
+  Future<List<AdvisorConversation>> loadAdvisorConversations() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_k(StorageService.keyAdvisorConversations));
+    if (raw == null) return const [];
+    try {
+      final list = jsonDecode(raw) as List;
+      return list
+          .cast<Map<String, dynamic>>()
+          .map(AdvisorConversation.fromJson)
+          .toList();
+    } catch (e) {
+      debugPrint(
+          'LocalStorageService: Error loading advisor conversations: $e');
+      return const [];
+    }
   }
 
   // ── Finance ──────────────────────────────────────────────────────────────────

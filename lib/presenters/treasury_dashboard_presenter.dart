@@ -433,6 +433,164 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
         .fold(0.0, (sum, r) => sum + r.amount);
   }
 
+  /// Bills already PAID this month — the settled half of the present picture
+  /// (the unpaid half is [upcomingBills]). Name + amount actually paid.
+  List<({String name, double amount})> get paidBillsThisMonth => _bills
+      .where((b) => b.month == _currentMonth && b.isPaid)
+      .map((b) => (name: b.name, amount: b.paidAmount ?? b.amount))
+      .toList();
+
+  /// Receivables already RECEIVED this month (money that has landed). Name +
+  /// amount actually received.
+  List<({String name, double amount})> get receivedThisMonth => _receivables
+      .where((r) => r.month == _currentMonth && r.isReceived)
+      .map((r) => (name: r.name, amount: r.receivedAmount ?? r.amount))
+      .toList();
+
+  /// Set-asides / sinking funds for THIS month, itemized: name, allocated,
+  /// amount funded so far, remaining to fund, and whether it's fully funded.
+  List<({String name, double allocated, double funded, double remaining, bool isPaid})>
+      get setAsidesThisMonth => _budgetedExpenses
+          .where((e) => e.month == _currentMonth)
+          .map((e) => (
+                name: e.name,
+                allocated: e.allocatedAmount,
+                funded: e.spentAmount,
+                remaining: (e.allocatedAmount - e.spentAmount)
+                    .clamp(0.0, double.infinity),
+                isPaid: e.isPaid,
+              ))
+          .toList();
+
+  /// Per-closed-month bills & receivables + savings, oldest → newest, from the
+  /// stored month-end summaries (line items aren't retained per closed month,
+  /// so these are the month totals). Excludes the in-progress current month.
+  List<
+      ({
+        String label,
+        double billed,
+        double billsPaid,
+        double receivablesExpected,
+        double received,
+        double netSavings
+      })> historicalLedger({int months = 6}) {
+    final out = <({
+      String label,
+      double billed,
+      double billsPaid,
+      double receivablesExpected,
+      double received,
+      double netSavings
+    })>[];
+    for (final key in _lastNMonthKeys(months)) {
+      if (key == _currentMonth) continue;
+      final s = _summaryFor(key);
+      if (s == null) continue;
+      out.add((
+        label: monthShortLabel(key),
+        billed: s.totalBills,
+        billsPaid: s.totalBillsPaid,
+        receivablesExpected: s.totalReceivables,
+        received: s.totalReceived,
+        netSavings: s.netSavings,
+      ));
+    }
+    return out;
+  }
+
+  /// Recurring monthly commitments — one entry per distinct recurring bill /
+  /// receivable (deduped by name, preferring the current month's instance).
+  /// Amount is the forward-looking one (`nextMonthAmount` when the user staged
+  /// one). Lets the advisor plan any future month — e.g. "Internet ₱999 due the
+  /// 15th" — even when that month hasn't been materialized in storage yet.
+  /// `isInflow` marks money coming in (receivables) vs out (bills).
+  List<({String name, double amount, int dueDay, bool isInflow})>
+      get recurringCommitments {
+    final bills = <String, Bill>{};
+    for (final b in _bills.where((b) => b.isRecurring)) {
+      final e = bills[b.name];
+      if (e == null ||
+          b.month == _currentMonth ||
+          (e.month != _currentMonth && b.month.compareTo(e.month) > 0)) {
+        bills[b.name] = b;
+      }
+    }
+    final recs = <String, Receivable>{};
+    for (final r in _receivables.where((r) => r.isRecurring)) {
+      final e = recs[r.name];
+      if (e == null ||
+          r.month == _currentMonth ||
+          (e.month != _currentMonth && r.month.compareTo(e.month) > 0)) {
+        recs[r.name] = r;
+      }
+    }
+    final out = <({String name, double amount, int dueDay, bool isInflow})>[
+      for (final b in bills.values)
+        (
+          name: b.name,
+          amount: b.nextMonthAmount ?? b.amount,
+          dueDay: b.dueDay,
+          isInflow: false,
+        ),
+      for (final r in recs.values)
+        (
+          name: r.name,
+          amount: r.nextMonthAmount ?? r.amount,
+          dueDay: r.expectedDate?.day ?? 1,
+          isInflow: true,
+        ),
+    ];
+    out.sort((a, b) => a.dueDay.compareTo(b.dueDay));
+    return out.take(20).toList();
+  }
+
+  /// One-off obligations already scheduled for a FUTURE month — non-recurring,
+  /// still-open bills and receivables the user planned ahead (recurring ones are
+  /// covered by [recurringCommitments]; auto credit-card statements excluded).
+  /// Sorted soonest month, then day. `day` is null when a receivable has no
+  /// expected date.
+  List<({String name, double amount, String month, int? day, bool isInflow})>
+      get scheduledFutureObligations {
+    final out = <({
+      String name,
+      double amount,
+      String month,
+      int? day,
+      bool isInflow
+    })>[];
+    for (final b in _bills.where((b) =>
+        !b.isPaid &&
+        !b.isRecurring &&
+        !b.isAutoStatement &&
+        b.month.compareTo(_currentMonth) > 0)) {
+      out.add((
+        name: b.name,
+        amount: b.amount,
+        month: b.month,
+        day: b.dueDay,
+        isInflow: false,
+      ));
+    }
+    for (final r in _receivables.where((r) =>
+        !r.isReceived &&
+        !r.isRecurring &&
+        r.month.compareTo(_currentMonth) > 0)) {
+      out.add((
+        name: r.name,
+        amount: r.amount,
+        month: r.month,
+        day: r.expectedDate?.day,
+        isInflow: true,
+      ));
+    }
+    out.sort((a, b) {
+      final m = a.month.compareTo(b.month);
+      if (m != 0) return m;
+      return (a.day ?? 99).compareTo(b.day ?? 99);
+    });
+    return out.take(12).toList();
+  }
+
   bool get hasBillImminent => imminentBill != null;
 
   /// First unpaid current-month bill due today or tomorrow. `tomorrow` is

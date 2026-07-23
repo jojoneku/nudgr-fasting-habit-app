@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:typed_data';
 
 enum AiChatRole { user, assistant }
 
@@ -11,22 +12,31 @@ class AiChatMessage {
   /// True while the assistant is still streaming tokens into this message.
   final bool isStreaming;
 
+  /// Optional attached image, shown in the user's bubble. In-memory only —
+  /// deliberately NOT persisted (raw bytes would bloat storage) and never
+  /// re-sent to the model on later turns; the image is sent once, on the turn
+  /// it's attached.
+  final Uint8List? imageBytes;
+
   const AiChatMessage({
     required this.id,
     required this.role,
     required this.text,
     required this.timestamp,
     this.isStreaming = false,
+    this.imageBytes,
   });
 
   static String _generateId() =>
       '${DateTime.now().microsecondsSinceEpoch}_${Random().nextInt(9999)}';
 
-  factory AiChatMessage.user(String text) => AiChatMessage(
+  factory AiChatMessage.user(String text, {Uint8List? imageBytes}) =>
+      AiChatMessage(
         id: _generateId(),
         role: AiChatRole.user,
         text: text,
         timestamp: DateTime.now(),
+        imageBytes: imageBytes,
       );
 
   factory AiChatMessage.assistantStreaming() => AiChatMessage(
@@ -57,6 +67,7 @@ class AiChatMessage {
         text: text ?? this.text,
         timestamp: timestamp,
         isStreaming: isStreaming ?? this.isStreaming,
+        imageBytes: imageBytes,
       );
 
   @override
