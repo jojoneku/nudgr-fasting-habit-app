@@ -3,6 +3,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
+import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
@@ -22,6 +23,11 @@ class TreasuryModuleView extends StatefulWidget {
   final InstallmentPresenter installmentPresenter;
   final GroceryCartPresenter groceryCartPresenter;
 
+  /// Nutrition presenter, when available — lets the ledger's photo-log button
+  /// offer meal logging alongside receipt scanning. Null on finance-only
+  /// surfaces (e.g. the web treasury app).
+  final NutritionPresenter? nutritionPresenter;
+
   const TreasuryModuleView({
     super.key,
     required this.dashPresenter,
@@ -31,6 +37,7 @@ class TreasuryModuleView extends StatefulWidget {
     required this.historyPresenter,
     required this.installmentPresenter,
     required this.groceryCartPresenter,
+    this.nutritionPresenter,
   });
 
   @override
@@ -166,7 +173,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             presenter: widget.dashPresenter,
             billsPresenter: widget.billsPresenter,
           ),
-          LedgerView(presenter: widget.ledgerPresenter),
+          LedgerView(
+            presenter: widget.ledgerPresenter,
+            nutrition: widget.nutritionPresenter,
+          ),
           BillsReceivablesView(
             presenter: widget.billsPresenter,
             installmentPresenter: widget.installmentPresenter,

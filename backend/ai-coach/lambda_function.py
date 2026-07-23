@@ -157,6 +157,8 @@ def lambda_handler(event, context):
         return _parse_food_with_candidates(payload)
     if op == "parseFoodFromImage":
         return _parse_food_from_image(payload)
+    if op == "parseReceiptFromImage":
+        return _parse_receipt_from_image(payload)
     if op == "respond":
         return _respond(payload)
     if op == "classifyFinance":
@@ -475,6 +477,132 @@ def _parse_food_from_image(payload):
         f"caption={'y' if caption else 'n'}"
     )
     return _resp(200, normalized)
+
+
+def _parse_receipt_from_image(payload):
+    """Vision parse: a receipt photo + optional note → one expense summary.
+
+    The client logs a single transaction for the grand total (per product
+    decision), so this returns the merchant, total, date, and a category hint
+    the client's finance classifier resolves against the user's own category
+    list. `intent` is "not_receipt" when the photo clearly isn't a receipt/
+    invoice (so the client can say so rather than logging a bogus amount).
+    """
+    image_b64 = (payload.get("image_base64") or "").strip()
+    if not image_b64:
+        return _resp(400, {"error": "missing_image", "message": "payload.image_base64 is required"})
+    if len(image_b64) > _MAX_IMAGE_B64_LEN:
+        return _resp(413, {"error": "image_too_large", "message": "Image exceeds the size limit"})
+
+    mime = (payload.get("mime_type") or "image/jpeg").strip().lower()
+    if mime not in _ALLOWED_IMAGE_MIME:
+        mime = "image/jpeg"
+
+    note = (payload.get("note") or "").strip()[:_MAX_TEXT_LEN]
+    note_block = (
+        f'\nThe user added this note — treat it as authoritative, overriding '
+        f'what you see when they conflict:\n"{note}"\n'
+        if note else ""
+    )
+
+    prompt = (
+        "You are a receipt-scanning assistant for a personal expense tracker. "
+        "Read this photo of a receipt or invoice and extract the single expense "
+        "it represents.\n"
+        f"{note_block}"
+        "\nOutput these fields:\n"
+        '  "merchant": the store/vendor name as printed, cleaned up (e.g. '
+        '"SM Supermarket"). Null if you cannot read it.\n'
+        '  "total": the GRAND TOTAL actually paid, as a plain number — the '
+        "amount-due/total line, NOT the subtotal, and after discounts. Include "
+        "tax. No currency symbol, no thousands separators.\n"
+        '  "currency": ISO code if visible (e.g. "PHP", "USD"), else null.\n'
+        '  "date": the transaction date as "YYYY-MM-DD" if printed, else null.\n'
+        '  "category_hint": one or two plain words describing what was bought, '
+        'for expense categorisation (e.g. "groceries", "dining", "fuel", '
+        '"pharmacy", "transport"). Base it on the merchant and line items.\n'
+        '  "confidence": 0.0 to 1.0 — how sure you are of the total.\n'
+        "\n"
+        'Set "intent" to one of:\n'
+        '  "receipt" — a receipt/invoice/bill you could read a total from.\n'
+        '  "not_receipt" — a photo with no purchase total (a person, food, a '
+        "blurry or blank image, a document that isn't a receipt). Set the other "
+        "fields to null.\n"
+        "\n"
+        "Rules:\n"
+        "1. Prefer the line labelled TOTAL / AMOUNT DUE / GRAND TOTAL. If several "
+        "totals appear, choose the final amount charged.\n"
+        "2. If the total is genuinely unreadable, use \"not_receipt\".\n"
+        "3. Numbers only for \"total\" — 1699.5 not \"₱1,699.50\".\n"
+        "\n"
+        "Reply with ONLY valid JSON, no markdown, no commentary:\n"
+        '{"intent": "receipt" | "not_receipt", "merchant": ..., "total": ..., '
+        '"currency": ..., "date": ..., "category_hint": ..., "confidence": ...}\n'
+    )
+
+    try:
+        raw = _bedrock.invoke_model(
+            modelId=_MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 512,
+                "messages": [{
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": mime,
+                                "data": image_b64,
+                            },
+                        },
+                        {"type": "text", "text": prompt},
+                    ],
+                }],
+            }),
+        )
+        result = json.loads(raw["body"].read())
+        text = result["content"][0]["text"].strip()
+        text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+        text = re.sub(r"\n?```$", "", text).strip()
+        parsed = json.loads(text)
+    except json.JSONDecodeError as e:
+        print(f"Receipt vision response not valid JSON: {e}")
+        return _resp(200, {"intent": "not_receipt", "reason": "unparseable response"})
+    except Exception as e:
+        print(f"Bedrock error (parseReceiptFromImage): {e}")
+        return _resp(502, {"error": "bedrock_error", "message": str(e)})
+
+    if parsed.get("intent") != "receipt":
+        print("cost_line op=parseReceiptFromImage intent=not_receipt")
+        return _resp(200, {"intent": "not_receipt"})
+
+    try:
+        total = float(parsed.get("total"))
+    except (TypeError, ValueError):
+        total = None
+    if total is None or total <= 0:
+        print("cost_line op=parseReceiptFromImage intent=receipt total=invalid")
+        return _resp(200, {"intent": "not_receipt", "reason": "no readable total"})
+
+    out = {
+        "intent": "receipt",
+        "merchant": (parsed.get("merchant") or None),
+        "total": round(total, 2),
+        "currency": (parsed.get("currency") or None),
+        "date": (parsed.get("date") or None),
+        "category_hint": (parsed.get("category_hint") or None),
+        "confidence": parsed.get("confidence"),
+    }
+    print(
+        f"cost_line op=parseReceiptFromImage intent=receipt "
+        f"has_merchant={'y' if out['merchant'] else 'n'} "
+        f"note={'y' if note else 'n'}"
+    )
+    return _resp(200, out)
 
 
 def _emit_parse_food_response(parsed, original_text=""):

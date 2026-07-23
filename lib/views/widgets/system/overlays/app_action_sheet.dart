@@ -107,15 +107,12 @@ class _AppActionSheetContent<T> extends StatelessWidget {
         Divider(
             height: AppSpacing.md,
             color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-        _ActionTile<T>(
-          item: cancel ??
-              AppActionSheetItem<T>(
-                label: 'Cancel',
-                value: null as T,
-                enabled: true,
-              ),
-          isCancel: true,
-        ),
+        // When no explicit cancel is supplied, `item` is null and the tile
+        // renders a default "Cancel" that dismisses with a null result. We must
+        // NOT synthesize an AppActionSheetItem<T> with `null as T` here — for a
+        // non-nullable T (e.g. show<String>) that cast throws at build time and
+        // blanks the sheet to a grey screen.
+        _ActionTile<T>(item: cancel, isCancel: true),
         const SizedBox(height: AppSpacing.sm),
       ],
     );
@@ -123,14 +120,30 @@ class _AppActionSheetContent<T> extends StatelessWidget {
 }
 
 class _ActionTile<T> extends StatelessWidget {
-  const _ActionTile({required this.item, this.isCancel = false});
+  const _ActionTile({this.item, this.isCancel = false});
 
-  final AppActionSheetItem<T> item;
+  /// The action this tile represents. When null (only valid for the cancel
+  /// row), the tile renders a plain "Cancel" that dismisses with a null result.
+  final AppActionSheetItem<T>? item;
   final bool isCancel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final item = this.item;
+
+    // Default cancel row: no backing value, just pops the sheet with null.
+    if (item == null) {
+      return ListTile(
+        title: Text(
+          'Cancel',
+          style: AppTextStyles.bodyLarge
+              .copyWith(color: theme.colorScheme.onSurfaceVariant),
+        ),
+        onTap: () => Navigator.of(context).pop(),
+      );
+    }
+
     final color = item.isDestructive
         ? theme.colorScheme.error
         : isCancel

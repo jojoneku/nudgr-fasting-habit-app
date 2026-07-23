@@ -8,6 +8,7 @@ import '../models/extracted_food_item.dart';
 import '../models/finance/finance_category.dart';
 import '../models/finance/finance_parse_result.dart';
 import '../models/finance/financial_account.dart';
+import '../models/finance/receipt_parse_result.dart';
 import '../models/food_parse_result.dart';
 import '../models/food_search_candidate.dart';
 
@@ -113,6 +114,22 @@ abstract class AiCoachService {
     Uint8List imageBytes,
     String mimeType,
     String? caption,
+  );
+
+  /// Scan a receipt photo (+ optional note) into a single expense.
+  ///
+  /// Vision-only: the model reads the merchant, grand total, date, and a
+  /// category hint the caller resolves against the user's own categories. The
+  /// returned [ReceiptParseResult.status] distinguishes a successful scan from
+  /// "not a receipt", the daily cap, an unreachable/erroring backend, and an
+  /// unavailable service — the caller surfaces each differently.
+  ///
+  /// Only the cloud tier implements this; on-device and null tiers return
+  /// [ReceiptParseStatus.unavailable].
+  Future<ReceiptParseResult> parseReceiptFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? note,
   );
 
   /// Estimate calories and macros for a natural-language food description.

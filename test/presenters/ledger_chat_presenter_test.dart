@@ -15,6 +15,7 @@ import 'package:intermittent_fasting/models/extracted_food_item.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/finance_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/receipt_parse_result.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/food_parse_result.dart';
 import 'package:intermittent_fasting/models/food_search_candidate.dart';
@@ -91,6 +92,18 @@ class FakeAiCoachService implements AiCoachService {
     String? caption,
   ) async =>
       const PhotoParseResult(PhotoParseStatus.unavailable);
+
+  /// Scripted receipt-scan outcome for [parseReceiptFromImage].
+  ReceiptParseResult receiptResult =
+      const ReceiptParseResult(ReceiptParseStatus.unavailable);
+
+  @override
+  Future<ReceiptParseResult> parseReceiptFromImage(
+    Uint8List imageBytes,
+    String mimeType,
+    String? note,
+  ) async =>
+      receiptResult;
 
   @override
   Future<AiMealEstimate?> estimateMacros(String description) async => null;
@@ -419,6 +432,108 @@ void main() {
       await presenter.deleteCategory(food.id);
 
       verify(storage.saveFinanceDictionary(any)).called(greaterThan(0));
+    });
+  });
+
+  group('receipt photo', () {
+    test('a scanned receipt seeds the confirm card (StepResolved)', () async {
+      final ai = FakeAiCoachService([
+        StepResolved(
+          transaction: ParsedTransaction(
+            amount: 1699,
+            type: TransactionType.outflow,
+            accountId: gcash.id,
+            categoryId: food.id,
+            description: 'SM Supermarket',
+            descriptionIsClean: true,
+          ),
+          summaryText: 'Log ₱1,699 → Food (GCash)?',
+        ),
+      ])
+        ..receiptResult = const ReceiptParseResult(
+          ReceiptParseStatus.ok,
+          total: 1699,
+          merchant: 'SM Supermarket',
+          categoryHint: 'groceries',
+        );
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      final outcome = await presenter.logReceiptPhoto(
+        Uint8List.fromList([1, 2, 3]),
+        'image/jpeg',
+      );
+
+      expect(outcome, ReceiptScanOutcome.seeded);
+      // The classifier ran once against the seeded draft.
+      expect(ai.callCount, 1);
+      expect(presenter.chatState.phase, ChatPhase.clarifying);
+      expect(presenter.chatState.lastStep, isA<StepResolved>());
+      expect(presenter.chatState.draft.amount, 1699);
+      // Nothing is committed until the user confirms the card.
+      expect(presenter.allTransactions, isEmpty);
+    });
+
+    test('confirming a scanned receipt commits the expense', () async {
+      final ai = FakeAiCoachService([
+        StepResolved(
+          transaction: ParsedTransaction(
+            amount: 1699,
+            type: TransactionType.outflow,
+            accountId: gcash.id,
+            categoryId: food.id,
+            description: 'SM Supermarket',
+            descriptionIsClean: true,
+          ),
+          summaryText: 'Log ₱1,699 → Food (GCash)?',
+        ),
+      ])
+        ..receiptResult = const ReceiptParseResult(
+          ReceiptParseStatus.ok,
+          total: 1699,
+          merchant: 'SM Supermarket',
+          categoryHint: 'groceries',
+        );
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      await presenter.logReceiptPhoto(Uint8List.fromList([1]), 'image/jpeg');
+      await presenter.confirmResolved();
+
+      expect(presenter.allTransactions, hasLength(1));
+      expect(presenter.allTransactions.first.amount, 1699);
+      expect(presenter.allTransactions.first.type, TransactionType.outflow);
+      expect(presenter.chatState.phase, ChatPhase.idle);
+    });
+
+    test('a non-receipt photo leaves the chat pipeline untouched', () async {
+      final ai = FakeAiCoachService([])
+        ..receiptResult =
+            const ReceiptParseResult(ReceiptParseStatus.notReceipt);
+      final presenter = LedgerPresenter(storage, stats, ai: ai);
+      await _waitForLoad(presenter);
+
+      final outcome = await presenter.logReceiptPhoto(
+        Uint8List.fromList([9]),
+        'image/jpeg',
+      );
+
+      expect(outcome, ReceiptScanOutcome.notReceipt);
+      expect(ai.callCount, 0);
+      expect(presenter.chatState.phase, ChatPhase.idle);
+      expect(presenter.allTransactions, isEmpty);
+    });
+
+    test('no AI service reports unavailable', () async {
+      final presenter = LedgerPresenter(storage, stats);
+      await _waitForLoad(presenter);
+
+      final outcome = await presenter.logReceiptPhoto(
+        Uint8List.fromList([1]),
+        'image/jpeg',
+      );
+
+      expect(outcome, ReceiptScanOutcome.unavailable);
     });
   });
 }

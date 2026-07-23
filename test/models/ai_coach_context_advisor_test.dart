@@ -412,5 +412,15 @@ void main() {
       expect(AiCoachPresenter.looksLikeExpenseLog('should I start investing'),
           isFalse);
     });
+
+    test('a bare number the user types in conversation is not a log', () {
+      // Regression: these used to be hijacked into the ledger's log pipeline,
+      // which rejected them with an "amount" error mid-conversation.
+      expect(AiCoachPresenter.looksLikeExpenseLog('12k'), isFalse);
+      expect(AiCoachPresenter.looksLikeExpenseLog('5000'), isFalse);
+      expect(AiCoachPresenter.looksLikeExpenseLog('₱3,000'), isFalse);
+      expect(AiCoachPresenter.looksLikeExpenseLog('i have 12k'), isFalse);
+      expect(AiCoachPresenter.looksLikeExpenseLog('about 5000'), isFalse);
+    });
   });
 }
