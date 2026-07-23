@@ -13,6 +13,18 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.53] - 2026-07-23
+
+### Added
+- browsable saved conversations (ChatGPT-style history)
+- photo upload + word-cycling "thinking" status
+- project goals forward via their monthly savings plan
+- itemize bills/receivables/set-asides for present + past too
+- give Money Mentor itemized future obligations for planning
+
+### Fixed
+- add missing adviseFinance override to generated advisor mock
+
 ## [1.1.52] - 2026-07-23
 
 ### Added
@@ -537,7 +549,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.52...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.53...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -591,3 +603,4 @@ distributed via `manifest.json`.
 [1.1.50]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.50
 [1.1.51]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.51
 [1.1.52]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.52
+[1.1.53]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.53
