@@ -452,6 +452,16 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         debugPrint('AppShell._reloadAll: presenter load failed: $e');
       }
     }));
+    // Steps/distance: loadState above only rehydrates the cached log, which is
+    // why the Hub's Activity card sat at stale/zero steps until the Activity
+    // screen was opened. Now that availability/permission are resolved, pull
+    // today's live figures from Health Connect (no-op when unavailable/denied)
+    // so the Hub — and the home-screen widget snapshot below — are current.
+    try {
+      await _activityPresenter.syncFromHealthConnect();
+    } catch (e) {
+      debugPrint('AppShell._reloadAll: activity sync failed: $e');
+    }
     // Refresh the home-screen widgets after a (re)load — e.g. once cloud data
     // has been pulled in.
     _widgetBridge?.pushSnapshot();
@@ -466,6 +476,11 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _ledgerPresenter.notifyAppResumed();
       _fastingPresenter.loadState();
+      // Pull today's steps/distance from Health Connect on every resume so the
+      // Hub's Activity card stays current after the user walks — previously it
+      // only refreshed when the Activity screen itself was opened. recheck-
+      // Permissions re-verifies the grant, then syncs today (no-op if denied).
+      _activityPresenter.recheckPermissions();
       _syncService?.pushPending();
       _syncService?.pullIfStale();
       // Re-scan the Insight Engine on resume: refresh is hash-gated (near-zero
