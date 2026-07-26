@@ -8,6 +8,7 @@ import '../../models/meal_slot.dart';
 import '../../models/personal_food_entry.dart';
 import '../../presenters/nutrition_presenter.dart';
 import '../widgets/system/system.dart';
+import 'add_custom_food_sheet.dart';
 
 /// Shared "Nudgr redesign" row/card surface — top-right→bottom-left gradient,
 /// hairline [outlineVariant] border, generous corner radius.
@@ -89,11 +90,12 @@ class FoodLibraryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           AppSection(
-            title: 'Learned by AI',
+            title: 'My Foods',
+            trailing: _AddCustomFoodButton(presenter: presenter),
             child: presenter.learnedFoods.isEmpty
                 ? const _EmptyLabel(
                     text:
-                        'No learned foods yet — confident Cloud AI logs land here')
+                        'No saved foods yet — tap Add for your own foods, or let confident AI logs land here')
                 : Column(
                     children: presenter.learnedFoods
                         .map((e) => _LearnedFoodRow(
@@ -155,6 +157,34 @@ class _EmptyLabel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Add custom food (My Foods section action) ───────────────────────────────────
+
+class _AddCustomFoodButton extends StatelessWidget {
+  final NutritionPresenter presenter;
+  const _AddCustomFoodButton({required this.presenter});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return TextButton.icon(
+      onPressed: () => AppBottomSheet.show(
+        context: context,
+        title: 'Create custom food',
+        body: AddCustomFoodSheet(presenter: presenter),
+      ),
+      icon: Icon(Icons.add, size: 18, color: cs.primary),
+      label: Text(
+        'Add',
+        style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
+      ),
+      style: TextButton.styleFrom(
+        minimumSize: const Size(44, 44),
+        padding: const EdgeInsets.symmetric(horizontal: 10),
       ),
     );
   }
