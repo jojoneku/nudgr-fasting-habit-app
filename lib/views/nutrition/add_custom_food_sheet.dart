@@ -98,9 +98,10 @@ class _AddCustomFoodSheetState extends State<AddCustomFoodSheet> {
       return;
     }
     if (kcal == null) {
-      setState(() => _error = _basis == _Basis.perServing
+      final message = _basis == _Basis.perServing
           ? 'Enter a serving size and calories greater than 0'
-          : 'Enter calories greater than 0');
+          : 'Enter calories greater than 0';
+      setState(() => _error = message);
       return;
     }
 
@@ -298,7 +299,9 @@ class _AddCustomFoodSheetState extends State<AddCustomFoodSheet> {
             child: Text(
               label,
               style: TextStyle(
-                color: kcal == null ? cs.onSurfaceVariant : context.appColors.gold,
+                color: kcal == null
+                    ? cs.onSurfaceVariant
+                    : context.appColors.gold,
                 fontSize: 12.5,
                 fontWeight: kcal == null ? FontWeight.w400 : FontWeight.w800,
               ),
