@@ -9,6 +9,7 @@ import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
 import 'package:intermittent_fasting/views/treasury/bills/bills_receivables_view.dart';
 import 'package:intermittent_fasting/views/treasury/budget/budget_view.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/goals_savings_screen.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/treasury_dashboard_view.dart';
 import 'package:intermittent_fasting/views/treasury/grocery/grocery_cart_view.dart';
 import 'package:intermittent_fasting/views/treasury/history/treasury_history_view.dart';
@@ -44,7 +45,7 @@ class TreasuryModuleView extends StatefulWidget {
   State<TreasuryModuleView> createState() => _TreasuryModuleViewState();
 
   // Tab count — keep in sync with the TabBar/TabBarView below.
-  static const int tabCount = 6;
+  static const int tabCount = 7;
 }
 
 class _TreasuryModuleViewState extends State<TreasuryModuleView>
@@ -57,6 +58,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   static const int _billsTabIndex = 2;
   static const int _budgetTabIndex = 3;
   static const int _historyTabIndex = 4;
+  // Goals & Savings supplies its own in-page header (AppBar "Goals & Savings").
+  static const int _goalsTabIndex = 6;
 
   // The redesigned Ledger, Bills and Budget tabs render their own in-page
   // headers (Ledger's "Ledger" title; Bills' header + month·year picker;
@@ -88,7 +91,8 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     final hide = index == _ledgerTabIndex ||
         index == _billsTabIndex ||
         index == _budgetTabIndex ||
-        index == _historyTabIndex;
+        index == _historyTabIndex ||
+        index == _goalsTabIndex;
     if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
 
     if (_tabController.indexIsChanging) return;
@@ -113,6 +117,10 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         break;
       case 5:
         widget.groceryCartPresenter.load();
+        break;
+      case 6:
+        // Goals & Savings figures come from the dashboard presenter.
+        widget.dashPresenter.load();
         break;
     }
   }
@@ -162,6 +170,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
             Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
             Tab(icon: Icon(Icons.history_outlined), text: 'History'),
             Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Cart'),
+            Tab(icon: Icon(Icons.savings_outlined), text: 'Goals'),
           ],
         ),
       ),
@@ -184,6 +193,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
           BudgetView(presenter: widget.budgetPresenter),
           TreasuryHistoryView(presenter: widget.historyPresenter),
           GroceryCartView(presenter: widget.groceryCartPresenter),
+          GoalsSavingsScreen(presenter: widget.dashPresenter),
         ],
       ),
     );

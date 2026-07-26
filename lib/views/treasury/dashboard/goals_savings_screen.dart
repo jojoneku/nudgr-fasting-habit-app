@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/views/treasury/shared/account_badge_widget.dart';
+import 'package:intermittent_fasting/views/treasury/shared/account_setup_view.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/goal_progress_card.dart';
@@ -10,19 +11,35 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// Dedicated Goals & Savings screen (`Nutrition Focus Treasury.dc.html`,
 /// Frame 12): a TOTAL SAVED hero, the active goals (progress cards) and plain
-/// savings accounts, with an add-goal FAB. Pushed from the Dashboard's goals
-/// section. All figures come from [TreasuryDashboardPresenter].
+/// savings accounts, with an add-goal FAB. Reachable both as its own Treasury
+/// tab and from the Dashboard's goals section. All figures come from
+/// [TreasuryDashboardPresenter]; it owns its own add/edit sheets.
 class GoalsSavingsScreen extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
-  final ValueChanged<FinancialAccount> onEdit;
-  final VoidCallback onAdd;
 
   const GoalsSavingsScreen({
     super.key,
     required this.presenter,
-    required this.onEdit,
-    required this.onAdd,
   });
+
+  void _showAddSheet(BuildContext context) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Add Goal or Savings',
+      body: AccountSetupView(
+        presenter: presenter,
+        initialCategory: AccountCategory.savings,
+      ),
+    );
+  }
+
+  void _showEditSheet(BuildContext context, FinancialAccount account) {
+    AppBottomSheet.show(
+      context: context,
+      title: 'Edit Account',
+      body: AccountSetupView(presenter: presenter, existing: account),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +64,7 @@ class GoalsSavingsScreen extends StatelessWidget {
             title: const Text('Goals & Savings'),
           ),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: onAdd,
+            onPressed: () => _showAddSheet(context),
             backgroundColor: context.appColors.success,
             foregroundColor: Colors.white,
             icon: const Icon(Icons.add),
@@ -81,7 +98,7 @@ class GoalsSavingsScreen extends StatelessWidget {
                             account: activeGoals[i],
                             onTap: () {
                               HapticFeedback.selectionClick();
-                              onEdit(activeGoals[i]);
+                              _showEditSheet(context, activeGoals[i]);
                             },
                           ),
                           if (i < activeGoals.length - 1)
@@ -110,7 +127,7 @@ class GoalsSavingsScreen extends StatelessWidget {
                             account: a,
                             onTap: () {
                               HapticFeedback.selectionClick();
-                              onEdit(a);
+                              _showEditSheet(context, a);
                             },
                           ),
                         ),

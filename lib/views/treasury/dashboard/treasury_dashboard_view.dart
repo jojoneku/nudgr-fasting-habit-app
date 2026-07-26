@@ -309,11 +309,7 @@ class _GoalSection extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => GoalsSavingsScreen(
-                    presenter: presenter,
-                    onEdit: onEdit,
-                    onAdd: onAdd,
-                  ),
+                  builder: (_) => GoalsSavingsScreen(presenter: presenter),
                 ),
               );
             },
