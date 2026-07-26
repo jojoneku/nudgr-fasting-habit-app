@@ -299,9 +299,8 @@ class _AddCustomFoodSheetState extends State<AddCustomFoodSheet> {
             child: Text(
               label,
               style: TextStyle(
-                color: kcal == null
-                    ? cs.onSurfaceVariant
-                    : context.appColors.gold,
+                color:
+                    kcal == null ? cs.onSurfaceVariant : context.appColors.gold,
                 fontSize: 12.5,
                 fontWeight: kcal == null ? FontWeight.w400 : FontWeight.w800,
               ),
