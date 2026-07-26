@@ -1752,8 +1752,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
             );
         entries.add(entry);
         // Plan 027 §2.1 — local hybrid resolve no longer auto-promotes to the
-        // personal dict (too risky for false positives). Cloud-confirmed
-        // picks still do, and the user can save manually via the chat row.
+        // personal dict on a single log (too risky for false positives).
+        // Cloud-confirmed picks still do, the user can save manually via the
+        // chat row, and repeat-learning caches it once the same food is logged
+        // [_kLearnAfterLogs] times (repetition is the trust signal).
+        _maybeRepeatLearn(item.name, entry);
         // Stash up to 2 alternatives when the auto-pick was uncertain so
         // the chat row can render swap chips (ChatFoodItem.needsConfirmation
         // gates the rendering at the < 0.6 threshold).
@@ -1930,6 +1933,9 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
 
         entries.add(entry);
         altsList.add(alts);
+        // Repeat-learning: cache foods logged 3+ times so the dict fills even
+        // without Cloud AI (on-device resolves don't auto-promote otherwise).
+        _maybeRepeatLearn(item.name, entry);
       }
 
       // Plan 027 — collapse into one entry when AI flagged the input as a
@@ -2813,6 +2819,29 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
   /// the user has logged the same food name this many times, repetition is a
   /// strong enough signal to cache the latest estimate into the personal dict.
   static const int _kLearnAfterLogs = 3;
+
+  /// Sources whose entries are trustworthy enough to repeat-learn. A DB or
+  /// on-device-AI resolution points at a real food row; a keyword-density or
+  /// cloud-fallback figure is a rough guess and must never be cached, even
+  /// after repetition.
+  static const Set<EstimationSource> _repeatLearnableSources = {
+    EstimationSource.db,
+    EstimationSource.localAi,
+  };
+
+  /// Repeat-learning for the **non-Cloud** paths (on-device AI + rule-based
+  /// hybrid). Local resolves don't auto-promote on a single log — too risky
+  /// for false positives (Plan 027 §2.1) — but once the user has logged the
+  /// same food [_kLearnAfterLogs] times, repetition is a tier-independent trust
+  /// signal, so we cache it just like the Cloud fallback path does. Skips rough
+  /// guesses via [_repeatLearnableSources] and no-gram entries via
+  /// [_learnFromEntry].
+  void _maybeRepeatLearn(String queryName, FoodEntry entry) {
+    if (!_repeatLearnableSources.contains(entry.estimationSource)) return;
+    if (_priorLogCount(entry.name) + 1 < _kLearnAfterLogs) return;
+    // ignore: unawaited_futures
+    _learnFromEntry(queryName, entry, allowLowConfidence: true);
+  }
 
   /// Count of prior logged entries (across history) whose name matches [name],
   /// case-insensitively. Drives [_kLearnAfterLogs] repeat-learning.
