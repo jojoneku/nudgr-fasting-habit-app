@@ -547,6 +547,30 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  /// User-authored custom food (Phase 1 of the "add a food" feature). Writes
+  /// straight into the personal dictionary as a per-100g density, so it
+  /// resolves *before* the bundled food DB on every future log and surfaces in
+  /// typeahead. Callers pass already-normalized per-100g values — the
+  /// AddCustomFoodSheet converts a per-serving entry (e.g. 90 kcal / 15 g) to
+  /// per-100g before calling. Reuses the same upsert as [updateLearnedFood], so
+  /// adding a name that already exists overwrites it with the user's values.
+  Future<void> addCustomFood({
+    required String name,
+    required double kcalPer100g,
+    double? proteinPer100g,
+    double? carbsPer100g,
+    double? fatPer100g,
+  }) async {
+    await _personalDict.upsert(
+      name: name,
+      kcalPer100g: kcalPer100g,
+      proteinPer100g: proteinPer100g,
+      carbsPer100g: carbsPer100g,
+      fatPer100g: fatPer100g,
+    );
+    safeNotify();
+  }
+
   int get aiDownloadProgress => _ai.downloadProgress ?? 0;
   String get aiSizeLabel => '~586 MB';
   AiMealEstimate? get lastEstimate => _lastEstimate;
