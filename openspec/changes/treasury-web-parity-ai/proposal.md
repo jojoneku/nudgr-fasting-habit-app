@@ -66,10 +66,11 @@ the *skin*, not a phone layout stretched wide.
   `AdvisorProfile` memory — into a presenter depending only on treasury/budget/installments/ledger/
   storage plus an injected `AiCoachService`. Mobile's Money Mentor delegates to the same presenter,
   so there is one implementation, not a web fork.
-- **Add a Money Mentor surface on web.** A docked right-hand `WebAdvisorPanel` (desktop-appropriate
-  where a draggable bottom sheet is not) with conversation history, the advisor-memory editor, and
-  the confirm-before-commit log cards — the same behaviors `AiChatSheet` exposes on mobile. New
-  sidebar destination in `treasury_web_app.dart`.
+- **Add a Money Mentor surface on web.** A `WebAdvisorPanel` docked persistently in the shell —
+  available on every destination, so you can ask about a bill while looking at the Bills table —
+  with conversation history, the advisor-memory editor, and the confirm-before-commit log cards, the
+  same behaviors `AiChatSheet` exposes on mobile. `WebShell` gains an additive right region; the
+  dock defaults to collapsed and overlays rather than reflowing page content.
 - **Add receipt scanning on web.** `LedgerPresenter.logReceiptPhoto()` is already cloud-only and
   web-clean. `photo_log_sheet.dart` cannot be reused (it imports `NutritionPresenter` for the meal
   branch), so add a receipt-only web variant with drag-and-drop plus a file picker, feeding the
@@ -102,8 +103,8 @@ the *skin*, not a phone layout stretched wide.
 
 - **UI (web)**: new `lib/views/web/widgets/web_number.dart`, `web_net_worth_hero.dart`,
   `web_advisor_panel.dart`, `web_receipt_drop.dart`; modified `web_card.dart`, `web_stat_tile.dart`,
-  `web_data_table.dart`, `web_charts.dart`, `web_dashboard_page.dart`, `treasury_web_app.dart`
-  (new destination + advisor wiring).
+  `web_data_table.dart`, `web_charts.dart`, `web_dashboard_page.dart`, `web_shell.dart` (additive
+  right dock region), `treasury_web_app.dart` (advisor wiring, owned above the page level).
 - **UI (mobile)**: `lib/views/treasury/dashboard/metric_cards_grid.dart` (tile set + labels);
   `lib/views/widgets/ai_chat_sheet.dart` (accepts the narrower presenter).
 - **Presenters**: new `lib/presenters/finance_advisor_presenter.dart`;

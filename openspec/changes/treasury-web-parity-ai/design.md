@@ -81,11 +81,32 @@ reusable. But a draggable bottom sheet is the wrong container on a 1440px deskto
 
 Decision: extract the chat body into a `FinanceAdvisorChat` widget parameterized by
 `FinanceAdvisorPresenter`. Mobile keeps `AiChatSheet` as the bottom-sheet container around it; web
-adds `WebAdvisorPanel`, a docked right-hand column (~380px, collapsible) around the same body. One
-chat implementation, two containers appropriate to their platform.
+adds `WebAdvisorPanel`, a docked right-hand column around the same body. One chat implementation,
+two containers appropriate to their platform.
 
 The mobile `AiChatSheet` continues to accept the other entry points via `AiCoachPresenter`
 unchanged — only the `financeAdvisor` case routes through the new body.
+
+**The web panel is a persistent dock, not a page.** `WebShell` gains a third region — a collapsed
+rail on the right that expands to a ~380px advisor column, mounted across every destination rather
+than replacing the body on its own. This is the point of the advisor on desktop: asking "can I
+afford this?" while actually looking at the Bills table beats navigating away from the data to ask
+about it. Mobile's bottom sheet already works this way — it opens *over* the screen you were on.
+
+Consequences, accepted:
+
+- It is the one exception to D4's "don't touch `WebShell`". The change is additive — a new optional
+  right region alongside the existing sidebar and topbar — and the sidebar, topbar, and body
+  contracts are unchanged.
+- It costs horizontal room on the wide data-table pages (Ledger, Bills), so the dock **defaults to
+  collapsed** and its expanded state persists per session. Content stays constrained by
+  `WebBreakpoints.content`; the dock overlays rather than reflows below the two-column breakpoint,
+  so `_ContentColumns` never collapses to one column just because the advisor is open.
+- Below `WebBreakpoints.rail` the web falls back to `TreasuryModuleView`, which has no dock — mobile
+  web keeps the mobile bottom sheet, as it should.
+
+The advisor presenter is therefore owned by `_TreasuryWebHome`, not by a page, so conversation state
+survives navigation between destinations.
 
 ### D3 — Receipt scanning: a web-only sheet over the existing presenter method
 
@@ -119,7 +140,8 @@ The sparkline painter is the one piece of genuine duplication. `_SparklinePainte
 
 **Explicitly not changed:** `WebShell`'s sidebar, `WebDataTable`'s structure, the two-column content
 grid, and the web-specific breakpoint logic. Web should look like the same *product*, not like a
-phone.
+phone. (D2's advisor dock adds a new optional right region to `WebShell` — the one sanctioned
+exception, additive and leaving the sidebar/topbar/body contracts intact.)
 
 ### D5 — Fix the projection at the label layer, and only there
 
@@ -134,16 +156,38 @@ The defect is that mobile's grid leads with `endingCash` under the label **ENDIN
 that legitimately does not deduct budget — while the tile that does deduct it is named FORECAST and
 is hidden entirely when `hasBudget` is false. Two adjacent figures, neither named what it is.
 
+**Confirmed requirement:** every forward-looking month-end figure the mobile dashboard shows must
+deduct the remaining monthly budget. That is the outcome this decision delivers.
+
 Decision: change `MetricCardsGrid`'s tile set to web's decomposition (Upcoming Bills · To Receive ·
 Budget & Savings Due · Proj. Month-End Cash), render the projection unconditionally, and give every
 tile sub-copy naming what it deducts. `MONTH IN` / `MONTH OUT` move into the cashflow strip's
 existing bars, which already show exactly those two figures — removing a genuine duplication rather
 than growing the grid.
 
-**Rejected:** changing `endingCash` to subtract remaining budget. It would make `endingCash` and
-`forecastedNetBalance` the same getter, break `_unpaidBillBudgetOverlap`'s stated contract ("an
-unpaid bill is already subtracted via `endingCash`"), and invalidate
-`treasury_dashboard_parity_test.dart`. The getter is correct; only its billing on screen was wrong.
+After this change, **no mobile surface presents a forward-looking month-end figure that skips the
+remaining budget.** The two that remain — the grid's Proj. Month-End Cash and the cashflow strip's
+"Projected spare" — are both `forecastedNetBalance`, and the Hub card
+(`treasury_hub_card.dart:94`) already used it.
+
+**Rejected — changing the `endingCash` getter itself to subtract remaining budget.** It reaches the
+same on-screen outcome by a worse route:
+
+- It would make `endingCash` and `forecastedNetBalance` numerically identical, leaving two names for
+  one concept — the exact confusion this change exists to remove.
+- It would break `_unpaidBillBudgetOverlap`, whose correctness depends on the two being distinct:
+  the overlap credit-back is documented as "an unpaid bill is already subtracted via `endingCash`",
+  and folding budget into `endingCash` would double-deduct any bill whose category also carries a
+  budget.
+- `endingCash` is a *historical* quantity as well as a current one — `MonthlySummary.endingCash`
+  freezes it per month and drives History's "Ending Cash Trend"
+  (`web_history_page.dart:321`). Deducting a current-month budget from a settled month's closing
+  balance is simply wrong.
+- It would invalidate `treasury_dashboard_parity_test.dart` and `finance_audit_fixes_test.dart`,
+  which assert the current definitions.
+
+`endingCash` therefore survives as an input to `forecastedNetBalance` and as History's per-month
+closing balance — but stops being shown as a headline, which is where it misled.
 
 ### D6 — Sequencing: projection → skin → AI
 
@@ -183,12 +227,19 @@ No data migration. All three phases are view-layer or refactor-in-place:
   a failure there indicates the change exceeded its scope.
 - Each phase is independently shippable and independently revertible.
 
+## Resolved Questions
+
+- **Advisor placement — persistent dock (decided).** `WebAdvisorPanel` mounts across every web
+  destination rather than living on its own page, so the advisor is available while looking at the
+  data it is being asked about. `WebShell` gains an additive right region; the dock defaults to
+  collapsed and overlays rather than reflowing the content columns. See D2.
+- **Mobile month-end figures deduct remaining budget (decided).** Confirmed as a requirement. Met
+  by promoting `forecastedNetBalance` to the grid's headline rather than by redefining `endingCash`
+  — the getter change would double-deduct via `_unpaidBillBudgetOverlap` and corrupt History's
+  per-month closing balances for the same on-screen result. See D5.
+
 ## Open Questions
 
-- Should `WebAdvisorPanel` be reachable from every web page (a persistent dock, so you can ask about
-  a bill while looking at the Bills table) or only from its own sidebar destination? A persistent
-  dock is the stronger desktop experience but costs a layout change in `WebShell`, which D4
-  otherwise leaves alone. Defaulting to the sidebar destination for this change.
 - Does the mobile cashflow strip need `MONTH IN`/`MONTH OUT` numeric labels added when the grid
   drops those tiles, or are the existing bar amount labels sufficient? Leaning sufficient — they
   already print both figures — but worth a look on device.

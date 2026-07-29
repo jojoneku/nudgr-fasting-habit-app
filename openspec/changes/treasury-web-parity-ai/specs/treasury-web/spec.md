@@ -73,13 +73,33 @@ cashflow strip.
 ### Requirement: Conversational financial advice on web
 
 The web companion SHALL provide the Money Mentor financial advisor, with the behaviors defined by
-the `ai-financial-advisor` capability, in a desktop-appropriate docked panel rather than a draggable
-bottom sheet.
+the `ai-financial-advisor` capability, as a panel docked persistently within the desktop shell
+rather than a draggable bottom sheet or a standalone page.
 
-#### Scenario: Advisor is reachable
-- **WHEN** a signed-in user opens the web companion at desktop width
-- **THEN** a Money Mentor destination is available in the shell sidebar
-- **AND** selecting it opens a docked advisor panel
+#### Scenario: Advisor is reachable from every page
+- **WHEN** a signed-in user is on any web destination at desktop width
+- **THEN** the advisor can be opened without navigating away from that destination
+- **AND** the page's own content remains visible alongside it
+
+#### Scenario: Dock defaults to collapsed and remembers its state
+- **WHEN** the web companion is first opened in a session
+- **THEN** the advisor dock is collapsed, leaving full width to the page
+- **AND** once expanded it stays expanded across navigation for the rest of the session
+
+#### Scenario: Conversation survives navigation
+- **WHEN** the user moves between destinations with a conversation in progress
+- **THEN** the conversation and its scroll position are preserved, because the advisor's state is
+  owned above the page level
+
+#### Scenario: Dock does not reflow page content
+- **WHEN** the advisor dock is expanded on a page with a multi-column layout or a wide data table
+- **THEN** the page does not collapse to a narrower column arrangement solely because the dock is
+  open
+
+#### Scenario: Mobile web keeps the sheet
+- **WHEN** the browser viewport is below the desktop rail breakpoint and the mobile module layout is
+  served
+- **THEN** the advisor is presented as the mobile bottom sheet, not as a dock
 
 #### Scenario: Same advisor behavior as mobile
 - **WHEN** the user converses with the advisor on web

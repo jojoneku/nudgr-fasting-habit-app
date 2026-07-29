@@ -63,16 +63,22 @@
 
 - [ ] 4.1 Construct `FinanceAdvisorPresenter` in `lib/views/web/treasury_web_app.dart` with the
   existing `CloudAiCoachService`; add its dispose to the shell teardown.
-- [ ] 4.2 Add `lib/views/web/widgets/web_advisor_panel.dart` — a docked ~380px column wrapping
-  `FinanceAdvisorChat`, styled to the web design system. Add the Money Mentor sidebar destination
-  and route it in `_page()` / `_onSelect()`.
-- [ ] 4.3 Add `lib/views/web/widgets/web_receipt_drop.dart` — drag-and-drop plus file-picker,
+- [ ] 4.2 Extend `WebShell` with an optional right dock region — collapsed rail that expands to a
+  ~380px column — leaving the sidebar, topbar, and body contracts unchanged. The dock overlays the
+  content area rather than reflowing it, so `_ContentColumns` and `WebDataTable` keep their
+  arrangement when it is open.
+- [ ] 4.3 Add `lib/views/web/widgets/web_advisor_panel.dart` wrapping `FinanceAdvisorChat`, styled
+  to the web design system, mounted by `_TreasuryWebHome` (not by a page) so the conversation
+  survives navigation. Default collapsed; persist the expanded state for the session.
+- [ ] 4.4 Add `lib/views/web/widgets/web_receipt_drop.dart` — drag-and-drop plus file-picker,
   compressing via `ImageCompressor` and calling `LedgerPresenter.logReceiptPhoto()`. Surface each
   `ReceiptScanOutcome` failure in place. Expose it from the Ledger page alongside Quick Add.
-- [ ] 4.4 Verify `flutter build web -t lib/main_web.dart` succeeds after each of 4.1–4.3, not only
+- [ ] 4.5 Verify `flutter build web -t lib/main_web.dart` succeeds after each of 4.1–4.4, not only
   at the end — an accidental mobile-only import fails the build outright.
-- [ ] 4.5 Confirm advisor conversations and memory started on one platform appear on the other
+- [ ] 4.6 Confirm advisor conversations and memory started on one platform appear on the other
   (existing sync domains, no new keys).
+- [ ] 4.7 Verify the dock at the two-column breakpoint and on the widest tables (Ledger, Bills):
+  expanding it must not collapse `_ContentColumns` or trigger horizontal scroll on the page body.
 
 ## 5. Verification
 
