@@ -108,20 +108,42 @@
 
 ## 5. Verification
 
-- [x] 5.1 `dart format` + `flutter analyze` clean; `flutter test` green. → 1037 tests pass; the only
-  analyzer warnings are pre-existing unused imports in untouched test files.
-- [x] 5.2 `flutter build web --release -t lib/main_web.dart` succeeds. → Green. Note the earlier
-  import-set check is retired: reading `dart2js.d` showed notification / food-db / fasting /
-  nutrition are already in the bundle via `treasury_module_view`, so the real guarantee is that none
-  of them is *constructed* on web (4.1), not that none is compiled.
-- [ ] 5.3 Side-by-side check of mobile and web dashboards in both theme modes — figures, badges,
-  card weight, and hero read as one design system. → Needs a live run; not verifiable from tests.
-- [ ] 5.4 Confirm the projection figure is identical on both platforms for the same data, and
-  identically labelled. → Same getter and same label strings by construction; worth one live
-  confirmation.
-- [ ] 5.5 Manual smoke: advisor conversation on web (needs `AI_COACH_ENDPOINT` + a signed-in user),
-  receipt drag-and-drop in a real browser (`desktop_drop`'s web path is untested here — widget tests
-  cannot generate a browser drop event), and a mobile Money Mentor regression pass after the
-  `AiChatSheet` split.
-- [ ] 5.6 Decide whether `desktop_drop` (+6 transitive deps, added in 4.4) is worth keeping for one
+- [x] 5.1 `dart format` + `flutter analyze` clean; `flutter test` green. → 1037 tests pass; `lib/` has
+  no errors or warnings.
+- [x] 5.2 `flutter build web --release -t lib/main_web.dart` succeeds. → Green. The earlier
+  import-set check is retired: `dart2js.d` shows notification / food-db / fasting / nutrition are
+  already in the bundle via `treasury_module_view`, so the real guarantee is that none of them is
+  *constructed* on web (4.1), not that none is compiled.
+- [x] 5.3 Live side-by-side in a real browser, both theme modes. → Ran a debug web build with
+  `PREVIEW_SEED=true` under Chromium/Playwright and captured desktop dark, desktop light, the
+  expanded dock, and the mobile fallback layout. Skin reads as one system; no overflow in any state.
+  Found and fixed three real defects (5.7).
+- [x] 5.4 Projection identical and identically labelled on both platforms. → Confirmed against the
+  same seeded data: **₱-2,881.31** under "PROJ. MONTH-END CASH" in the web tile, the mobile tile, and
+  the mobile cashflow strip, in the same danger accent.
+- [x] 5.5 Advisor dock smoke on web. → Expands/collapses, mounts across destinations, and correctly
+  shows the terminal "Money Mentor is unavailable" state with a disabled composer, since this build
+  has no `AI_COACH_ENDPOINT`. A conversational round-trip still needs a build with the endpoint and a
+  signed-in user.
+- [x] 5.6 Harness caveat worth recording: Chromium could not fetch Google Fonts through the sandbox
+  proxy, and the fallback metrics produced three phantom overflow reports plus blank text. Serving
+  the fonts through the harness cleared all three — they were never real defects.
+- [x] 5.7 Defects found only by rendering, all fixed:
+  - Chart left-axis labels wrapped ("₱107." / "1k"). Tabular figures widened every digit past the
+    48px reserve; now 60px plus a `FittedBox` backstop, in all three chart widgets.
+  - The advisor dock title ellipsised to "Mone…" at 380px against four trailing controls. `AiChatBody`
+    gained `showEntryLabel`; the dock prints the name in its own strip, where there is room.
+  - The mobile cashflow strip wrapped `₱46,500.00` to two lines in a fixed 74px slot — pre-existing,
+    but this change makes the strip the only home for the month in/out figures, so it now matters.
+    The slot is a minimum width rather than a fixed one.
+- [ ] 5.8 Still needs a device/endpoint this environment cannot provide: a real advisor conversation,
+  a real browser drag-and-drop onto the receipt target (no test here exercises `desktop_drop`'s web
+  path), and a mobile Money Mentor regression pass after the `AiChatSheet` split.
+- [ ] 5.9 Decide whether `desktop_drop` (+6 transitive deps, added in 4.4) earns its place for one
   dialog, or whether the file-picker path alone suffices.
+
+## 6. Open questions closed
+
+- [x] 6.1 Does the cashflow strip need explicit month-in/month-out labels now the grid drops those
+  tiles? → No. Rendered at phone width the arrow-marked bars with their amounts read unambiguously,
+  and the strip already carries the projection line beneath them. The amount slot did need widening.

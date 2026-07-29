@@ -91,10 +91,12 @@ rather than a draggable bottom sheet or a standalone page.
 - **THEN** the conversation and its scroll position are preserved, because the advisor's state is
   owned above the page level
 
-#### Scenario: Dock does not reflow page content
+#### Scenario: Dock takes shell space, never page space
 - **WHEN** the advisor dock is expanded on a page with a multi-column layout or a wide data table
-- **THEN** the page does not collapse to a narrower column arrangement solely because the dock is
-  open
+- **THEN** the page keeps its full remaining width, with no horizontal scrolling, no clipped columns,
+  and no content hidden behind the dock
+- **AND** the page's responsive grids may reflow to fewer columns, because the content genuinely has
+  less room — that is correct behaviour, not a regression
 
 #### Scenario: Mobile web keeps the sheet
 - **WHEN** the browser viewport is below the desktop rail breakpoint and the mobile module layout is

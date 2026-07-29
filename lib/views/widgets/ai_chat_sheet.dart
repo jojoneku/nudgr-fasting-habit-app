@@ -107,6 +107,12 @@ class AiChatBody extends StatefulWidget {
   /// draggable.
   final bool showDragHandle;
 
+  /// Whether the header prints the entry-point label. Off in the web dock,
+  /// which is narrow enough that the label competes with the four trailing
+  /// controls and ellipsises to "Mone…"; the dock prints the name itself in the
+  /// strip above, where there is room.
+  final bool showEntryLabel;
+
   /// Whether an unavailable model should offer the on-device download flow.
   /// False on web, which has no on-device tier: there the unavailable state is
   /// terminal (sign in / configure the endpoint), and offering a download the
@@ -118,6 +124,7 @@ class AiChatBody extends StatefulWidget {
     required this.presenter,
     required this.entryPoint,
     this.showDragHandle = false,
+    this.showEntryLabel = true,
     this.allowModelDownload = true,
   });
 
@@ -237,7 +244,11 @@ class _AiChatBodyState extends State<AiChatBody> {
     return Column(
       children: [
         if (widget.showDragHandle) _DragHandle(),
-        _SheetHeader(meta: meta, presenter: _presenter),
+        _SheetHeader(
+          meta: meta,
+          presenter: _presenter,
+          showLabel: widget.showEntryLabel,
+        ),
         Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
         Expanded(
           child: ListenableBuilder(
@@ -347,7 +358,12 @@ class _DragHandle extends StatelessWidget {
 class _SheetHeader extends StatelessWidget {
   final ({String label, IconData icon}) meta;
   final AiCoachPresenter presenter;
-  const _SheetHeader({required this.meta, required this.presenter});
+  final bool showLabel;
+  const _SheetHeader({
+    required this.meta,
+    required this.presenter,
+    this.showLabel = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -357,23 +373,24 @@ class _SheetHeader extends StatelessWidget {
       child: Row(
         children: [
           Icon(meta.icon, color: cs.onSurfaceVariant, size: 18),
-          const SizedBox(width: 10),
-          // Flexible, not fixed: the header also renders inside the web
-          // advisor dock (380px), where the title plus three trailing actions
-          // exceed a phone sheet's width budget. The title gives way first.
-          Flexible(
-            child: Text(
-              meta.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
+          if (showLabel) ...[
+            const SizedBox(width: 10),
+            // Flexible so the title yields before the trailing controls in any
+            // container narrower than a phone sheet.
+            Flexible(
+              child: Text(
+                meta.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-          ),
+          ],
           const Spacer(),
           if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
             IconButton(

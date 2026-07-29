@@ -144,11 +144,16 @@ class _FlowBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 10),
-        SizedBox(
-          width: 74,
+        // A minimum, not a fixed width: at 74px a six-figure amount like
+        // ₱46,500.00 wrapped onto a second line. The bar is Expanded, so
+        // letting the amount take what it needs costs only track length.
+        ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 74),
           child: Text(
             amount,
             textAlign: TextAlign.right,
+            maxLines: 1,
+            softWrap: false,
             style: theme.textTheme.labelMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: color,

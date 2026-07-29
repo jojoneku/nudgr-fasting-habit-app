@@ -87,26 +87,42 @@ class _WebAdvisorPanelState extends State<WebAdvisorPanel> {
     final cs = Theme.of(context).colorScheme;
     return Column(
       children: [
-        // Collapse affordance only. The chat body's own header already supplies
-        // the "Money Mentor" identity plus the conversations / memory /
-        // thinking actions — titling this strip too would print the name twice.
-        Align(
-          alignment: Alignment.centerRight,
-          child: Padding(
-            padding: const EdgeInsets.only(right: WebInsets.xs),
-            child: IconButton(
-              tooltip: 'Collapse Money Mentor',
-              visualDensity: VisualDensity.compact,
-              onPressed: _toggle,
-              icon: Icon(Icons.chevron_right,
-                  size: 20, color: cs.onSurfaceVariant),
-            ),
+        // Title + collapse. The chat body below keeps the entry icon and the
+        // conversations / memory / thinking controls but drops its own label
+        // (`showEntryLabel: false`) — at 380px that label competes with four
+        // trailing controls and ellipsises to "Mone…". Printing it here instead
+        // keeps one title, in the place that has room for it.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+              WebInsets.lg, WebInsets.sm, WebInsets.xs, 0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Money Mentor',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Collapse Money Mentor',
+                visualDensity: VisualDensity.compact,
+                onPressed: _toggle,
+                icon: Icon(Icons.chevron_right,
+                    size: 20, color: cs.onSurfaceVariant),
+              ),
+            ],
           ),
         ),
         Expanded(
           child: AiChatBody(
             presenter: widget.presenter,
             entryPoint: AiCoachEntryPoint.financeAdvisor,
+            showEntryLabel: false,
             // No on-device tier on web — an unavailable model is terminal here,
             // so don't offer a download the platform can't perform.
             allowModelDownload: false,

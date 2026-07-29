@@ -3,7 +3,7 @@
 The Treasury redesign (July 2026: `redesign-treasury-dashboard`, `-ledger`, `-bills`, `-budget`,
 `-history`, `-cart`) reskinned the mobile module onto the Nudgr design system and gave it a set of
 signature moves — the NET WORTH gradient hero with its sparkline, the cashflow strip, tinted
-domain icon badges, and monospaced tabular figures. The web companion (`lib/views/web/`, Plans
+domain icon badges, and tabular figures. The web companion (`lib/views/web/`, Plans
 050–052) predates all of it. Its *palette* is already unified — `web_theme.dart` builds from the
 same `NudgrDark`/`NudgrLight` tokens and the same Plus Jakarta Sans — but none of the redesign's
 visual signatures reached it, so the two surfaces read as cousins rather than one product.
@@ -15,8 +15,8 @@ the **Money Mentor** conversational advisor (shipped on mobile via `ai-financial
 **receipt-photo logging** (shipped via `receipt-total-scan`). Both are the AI features users
 actually reach for when sitting at a desk with a month of statements open.
 
-Neither gap is a data problem. Web and mobile share every presenter, so this is view-layer work
-plus one presenter decomposition.
+Neither gap is a data problem. Web and mobile share every presenter, so this is view-layer work plus
+a small loosening of the coach presenter's dependencies.
 
 Finally, an honest-numbers defect surfaced while scoping this. Both platforms compute the month-end
 projection from the *same* getter — `TreasuryDashboardPresenter.forecastedNetBalance`, which already
@@ -41,8 +41,9 @@ things. This change aligns the surfacing, not the arithmetic.
 Port the redesign's signature moves to the web design system. Desktop layout is preserved — this is
 the *skin*, not a phone layout stretched wide.
 
-- **Monospaced tabular figures.** Introduce a web numeric text treatment matching
-  `AppTextStyles.numeric` (JetBrains Mono, tabular figures) and route every currency/percentage
+- **Tabular figures.** Introduce a web numeric text treatment matching `AppTextStyles.numeric`
+  (Plus Jakarta Sans with `FontFeature.tabularFigures` — the same family as body text, not a mono
+  face) and route every currency/percentage
   figure in `WebStatTile`, `_MiniStat`, `WebDataTable`, and the chart axis labels through it.
   Today's plain `headlineSmall`/`bodySmall` figures jitter as digits change and read as a different
   type family from mobile.
@@ -59,18 +60,19 @@ the *skin*, not a phone layout stretched wide.
 
 ### B. AI pipeline on web
 
-- **Extract `FinanceAdvisorPresenter`.** `AiCoachPresenter` cannot compile for web: it *requires* a
-  `FastingPresenter` (→ `notification_service`) and imports `NutritionPresenter`
-  (→ `food_db_service` → `dart:io` + `sqflite`) and `OnDeviceAiCoachService` (→ `flutter_gemma`).
-  Extract the `financeAdvisor` path — the advisor context builder, conversation store, and
-  `AdvisorProfile` memory — into a presenter depending only on treasury/budget/installments/ledger/
-  storage plus an injected `AiCoachService`. Mobile's Money Mentor delegates to the same presenter,
-  so there is one implementation, not a web fork.
+- **Make the advisor platform-agnostic.** `AiCoachPresenter` *requires* a `FastingPresenter`, whose
+  `_init()` starts `NotificationService`, and needs a `NutritionPresenter` backed by a sqflite food
+  database — neither of which web can provide. Both dependencies become optional and the advisor
+  context degrades honestly without them, so mobile and web run one advisor rather than a fork.
+  (An earlier draft planned to extract a separate `FinanceAdvisorPresenter` on the belief that those
+  dependencies broke the web *compile*; measurement disproved that — see `design.md` D1 — and the
+  cheaper route reaches the same behaviour without relocating ~400 lines of shipped logic.)
 - **Add a Money Mentor surface on web.** A `WebAdvisorPanel` docked persistently in the shell —
   available on every destination, so you can ask about a bill while looking at the Bills table —
   with conversation history, the advisor-memory editor, and the confirm-before-commit log cards, the
   same behaviors `AiChatSheet` exposes on mobile. `WebShell` gains an additive right region; the
-  dock defaults to collapsed and overlays rather than reflowing page content.
+  dock defaults to collapsed and takes its width from the shell, so nothing is clipped or hidden
+  behind it.
 - **Add receipt scanning on web.** `LedgerPresenter.logReceiptPhoto()` is already cloud-only and
   web-clean. `photo_log_sheet.dart` cannot be reused (it imports `NutritionPresenter` for the meal
   branch), so add a receipt-only web variant with drag-and-drop plus a file picker, feeding the
@@ -79,7 +81,7 @@ the *skin*, not a phone layout stretched wide.
 ### C. Month-end projection surfacing
 
 - **Rework mobile's Month Outlook** (`metric_cards_grid.dart`) to mirror web's decomposition:
-  Upcoming Bills · To Receive · Budget & Savings Due · **Proj. Month-End Cash**. The projection
+  Upcoming Bills · To Receive · Budget / Savings Due · **Proj. Month-End Cash**. The projection
   tile renders unconditionally (not gated on `hasBudget`), and raw `endingCash` stops being the
   headline figure.
 - **Align labels and sub-copy across both platforms** so the same number carries the same name, and
@@ -106,15 +108,17 @@ the *skin*, not a phone layout stretched wide.
   `web_data_table.dart`, `web_charts.dart`, `web_dashboard_page.dart`, `web_shell.dart` (additive
   right dock region), `treasury_web_app.dart` (advisor wiring, owned above the page level).
 - **UI (mobile)**: `lib/views/treasury/dashboard/metric_cards_grid.dart` (tile set + labels);
-  `lib/views/widgets/ai_chat_sheet.dart` (accepts the narrower presenter).
-- **Presenters**: new `lib/presenters/finance_advisor_presenter.dart`;
-  `lib/presenters/ai_coach_presenter.dart` delegates its `financeAdvisor` path to it.
-  `TreasuryDashboardPresenter` is **untouched**.
+  `lib/views/widgets/ai_chat_sheet.dart` (split into `AiChatSheet` + a reusable `AiChatBody`);
+  `cashflow_strip.dart` (projection label/accent, and its amount slot widened).
+- **Presenters**: `lib/presenters/ai_coach_presenter.dart` — `fasting` becomes optional and its
+  context reads are guarded. `TreasuryDashboardPresenter` is **untouched**.
 - **Composition roots**: `lib/views/home_screen.dart` and `lib/views/web/treasury_web_app.dart`.
-- **Tests**: web widget tests for the new surfaces; a mobile widget test asserting the Month Outlook
-  tile set; a presenter test asserting the extracted advisor builds the same context as today.
+- **Dependencies**: adds `desktop_drop` for the receipt drop target (web-supported; +6 transitive).
+- **Tests**: web widget tests for the new surfaces; mobile widget tests asserting the Month-End
+  Outlook tile set and that the projection deducts remaining budget; presenter tests asserting the
+  advisor builds and sends with no fasting presenter.
 - **Non-breaking**: every existing presenter getter, storage key, sync domain, and Lambda `op` is
-  unchanged. Mobile advisor behavior is a delegation refactor, not a rewrite.
+  unchanged. `AiChatSheet`'s public API and call sites are unchanged.
 
 ## Non-goals
 

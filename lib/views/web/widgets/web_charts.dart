@@ -443,14 +443,27 @@ class WebLineChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: leftLabelFormat != null,
-                reservedSize: 48,
+                // 60, not 48: tabular figures give every digit the widest
+                // advance, so a label like "₱107.1k" no longer fits the old
+                // reserve and was wrapping onto a second line. FittedBox is the
+                // backstop for anything longer still.
+                reservedSize: 60,
                 getTitlesWidget: (value, meta) {
                   if (value != meta.min && value != meta.max) {
                     return const SizedBox.shrink();
                   }
                   return Padding(
                     padding: const EdgeInsets.only(right: WebInsets.sm),
-                    child: Text(leftLabelFormat!(value), style: labelStyle),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        leftLabelFormat!(value),
+                        style: labelStyle,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -637,14 +650,27 @@ class WebMultiLineChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: leftLabelFormat != null,
-                    reservedSize: 48,
+                    // 60, not 48: tabular figures give every digit the widest
+                    // advance, so a label like "₱107.1k" no longer fits the old
+                    // reserve and was wrapping onto a second line. FittedBox is
+                    // the backstop for anything longer still.
+                    reservedSize: 60,
                     getTitlesWidget: (value, meta) {
                       if (value != meta.min && value != meta.max) {
                         return const SizedBox.shrink();
                       }
                       return Padding(
                         padding: const EdgeInsets.only(right: WebInsets.sm),
-                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            leftLabelFormat!(value),
+                            style: labelStyle,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -843,14 +869,27 @@ class WebBarPairChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: leftLabelFormat != null,
-                    reservedSize: 48,
+                    // 60, not 48: tabular figures give every digit the widest
+                    // advance, so a label like "₱107.1k" no longer fits the old
+                    // reserve and was wrapping onto a second line. FittedBox is
+                    // the backstop for anything longer still.
+                    reservedSize: 60,
                     getTitlesWidget: (value, meta) {
                       if (value != meta.min && value != meta.max) {
                         return const SizedBox.shrink();
                       }
                       return Padding(
                         padding: const EdgeInsets.only(right: WebInsets.sm),
-                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            leftLabelFormat!(value),
+                            style: labelStyle,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
+                        ),
                       );
                     },
                   ),

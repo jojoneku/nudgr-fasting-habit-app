@@ -9,11 +9,12 @@ decisions live.
 
 Three constraints shape everything below:
 
-1. **The web bundle is defined by transitive imports.** `flutter build web -t lib/main_web.dart`
-   compiles only what that entrypoint reaches. Mobile-only plugins (`flutter_local_notifications`,
-   `sqflite`, `path_provider`, `health`, `home_widget`, `flutter_gemma`) stay out today *because
-   nothing on the web path imports them*. Any new web wiring must preserve that property — an
-   accidental `dart:io` import fails the build outright, not gracefully.
+1. **Web-unsafe platform services must never be *constructed* on web.** An earlier draft of this
+   said the web bundle excludes mobile-only plugins because nothing imports them; that is false —
+   see D1. `fasting_presenter`, `nutrition_presenter`, `notification_service`, and `food_db_service`
+   are all already compiled into the web bundle and the build is green. The real rule is narrower and
+   about runtime: never *instantiate* a notification service, a sqflite database, or the on-device
+   model on web.
 2. **MVP architecture** (CLAUDE.md): no calculations or conditionals in `build()`; RPG/finance math
    lives only in presenters; constructor injection only.
 3. **Theme-aware colors only.** Widgets read `Theme.of(context)` / `context.appColors`. Direct
@@ -35,7 +36,7 @@ Three constraints shape everything below:
 
 ## Decisions
 
-### D1 — Extract `FinanceAdvisorPresenter` rather than making `AiCoachPresenter` web-safe
+### D1 — Make the coach's non-finance dependencies optional (not a separate presenter)
 
 `AiCoachPresenter` is a multi-domain coach: it serves six `AiCoachEntryPoint`s and its constructor
 takes `stats`, `fasting` (**required**), `nutrition`, `treasury`, `budget`, `installments`, `ledger`,
@@ -67,12 +68,17 @@ The real constraints are runtime and architectural:
 | `NutritionPresenter` construction | Requires a `FoodDbService` (sqflite + `path_provider`), which cannot open a database on web. |
 | Layering | A finance-only surface should not need the fasting and nutrition presenters to answer a question about money. |
 
-This weakens the case for a full extraction: a materially cheaper option — making `fasting` and
-`nutrition` nullable and guarding the context builder — now clears the same runtime constraints.
-**Phase 3 should re-decide between the two before any code is written**, since the earlier choice
-rested on a premise that turned out to be false.
+This collapsed the case for a full extraction: making `fasting` and `nutrition` optional and
+guarding the context builder clears the same runtime constraints for a fraction of the work.
 
-The options originally considered, retained for the record:
+**Decision (Phase 3): optional dependencies.** `fasting` becomes nullable — `nutrition` already was —
+and the three fasting reads in the context builder degrade honestly: absent fasting reports "not
+fasting", omits the elapsed figure, and omits the goal rather than letting the formatter's `?? 16`
+default invent a 16-hour target that the user never set. Web constructs the coach with neither
+presenter, an explicit `NullAiCoachService()` primary so the on-device init path is never entered,
+and the cloud service as fallback.
+
+The options considered:
 
 - **Conditional imports / stub files.** Rejected: it would spread `kIsWeb` branching and
   `_stub.dart` shadow files across the presenter layer to serve one entry point, and every future
@@ -81,34 +87,28 @@ The options originally considered, retained for the record:
   reasoning that nullability fixes the constructor but not the imports "which are what break the
   compile". That reasoning does not survive the measurement above — nothing breaks the compile — so
   this option is **live again** and is now the cheaper of the two.
-- **Extract the finance-advisor path into its own presenter. → provisionally chosen, to be
-  re-confirmed at the start of Phase 3.** Still the better layering; no longer the only option.
+- **Extract the finance-advisor path into its own presenter. → rejected once its premise failed.**
+  It is still the tidier layering, and worth revisiting if the coach grows further. But it would have
+  relocated ~400 lines of shipped advisor logic — conversation store, memory, context assembly, the
+  confirm-before-commit hand-off — to reach behaviour the optional-dependency route reaches in a
+  handful of lines. On a live mobile feature that trade is not worth the regression risk.
 
-`FinanceAdvisorPresenter` owns exactly what the `financeAdvisor` entry point needs: the advisor
-context builder (the `isAdvisor` branch of `_buildContext()`, ~`ai_coach_presenter.dart:801-889`),
-the conversation store and its cap/archive logic, `AdvisorProfile` memory, and the
-confirm-before-commit hand-off to `LedgerPresenter.sendChatInput`. Its dependencies are
-`TreasuryDashboardPresenter`, `BudgetPresenter`, `InstallmentPresenter`, `LedgerPresenter`,
-`StorageService`, and an injected `AiCoachService` — all already on the web path.
-
-`AiCoachPresenter` keeps its other five entry points and **delegates** `financeAdvisor` to the new
-presenter, so mobile and web run the same advisor code. This is a move-and-delegate refactor: the
-storage keys, sync domains, Lambda `op`, and `AdvisorProfile` model are untouched, so existing
-advisor conversations and memory survive with no migration.
-
-**Risk:** the extraction touches a presenter with substantial behavior. Mitigation — a
-characterization test asserting the extracted presenter produces a byte-identical advisor context
-for a fixed fixture, run before and after the move.
+Storage keys, sync domains, the Lambda `op`, and the `AdvisorProfile` model are untouched either way,
+so existing conversations and memory load with no migration.
 
 ### D2 — `AiChatSheet` narrows to an interface, and web gets its own container
 
 `AiChatSheet` itself is web-safe (`image_picker` has a web implementation), so the *chat body* is
 reusable. But a draggable bottom sheet is the wrong container on a 1440px desktop.
 
-Decision: extract the chat body into a `FinanceAdvisorChat` widget parameterized by
-`FinanceAdvisorPresenter`. Mobile keeps `AiChatSheet` as the bottom-sheet container around it; web
-adds `WebAdvisorPanel`, a docked right-hand column around the same body. One chat implementation,
-two containers appropriate to their platform.
+Decision: extract the chat body into a public `AiChatBody` widget. Mobile keeps `AiChatSheet` as the
+bottom-sheet container around it; web adds `WebAdvisorPanel`, a docked right-hand column around the
+same body. One chat implementation, two containers appropriate to their platform.
+
+`AiChatBody` takes three container-driven flags: `showDragHandle` (a bottom-sheet affordance),
+`allowModelDownload` (false on web, which has no on-device tier to download), and `showEntryLabel`
+(false in the dock, where the label competes with four trailing controls and ellipsises to "Mone…" —
+the dock prints the name in its own strip instead).
 
 The mobile `AiChatSheet` continues to accept the other entry points via `AiCoachPresenter`
 unchanged — only the `financeAdvisor` case routes through the new body.
@@ -125,9 +125,10 @@ Consequences, accepted:
   right region alongside the existing sidebar and topbar — and the sidebar, topbar, and body
   contracts are unchanged.
 - It costs horizontal room on the wide data-table pages (Ledger, Bills), so the dock **defaults to
-  collapsed** and its expanded state persists per session. Content stays constrained by
-  `WebBreakpoints.content`; the dock overlays rather than reflows below the two-column breakpoint,
-  so `_ContentColumns` never collapses to one column just because the advisor is open.
+  collapsed** and its expanded state persists per session. The dock takes its width from the shell,
+  never from the page's internal layout, so nothing is clipped or hidden behind it and the page never
+  scrolls horizontally. Page-level responsive grids *do* reflow to fewer columns while it is open —
+  verified live, and correct: the content genuinely has less room.
 - Below `WebBreakpoints.rail` the web falls back to `TreasuryModuleView`, which has no dock — mobile
   web keeps the mobile bottom sheet, as it should.
 
@@ -258,14 +259,21 @@ No data migration. All three phases are view-layer or refactor-in-place:
 - **Advisor placement — persistent dock (decided).** `WebAdvisorPanel` mounts across every web
   destination rather than living on its own page, so the advisor is available while looking at the
   data it is being asked about. `WebShell` gains an additive right region; the dock defaults to
-  collapsed and overlays rather than reflowing the content columns. See D2.
+  collapsed. See D2. (Verified live: the dock takes its width from the shell, so the page never
+  scrolls horizontally or hides content behind it — though the page's own responsive grids do reflow
+  to fewer columns, which is correct, not a regression.)
 - **Mobile month-end figures deduct remaining budget (decided).** Confirmed as a requirement. Met
   by promoting `forecastedNetBalance` to the grid's headline rather than by redefining `endingCash`
   — the getter change would double-deduct via `_unpaidBillBudgetOverlap` and corrupt History's
   per-month closing balances for the same on-screen result. See D5.
 
+- **Cashflow strip labels (decided).** No extra `MONTH IN`/`MONTH OUT` labels. Rendered at phone
+  width, the arrow-marked bars with their amounts read unambiguously and the strip already carries
+  the projection line beneath them. The amount slot did need widening, though — a six-figure inflow
+  wrapped inside the old fixed 74px box.
+
 ## Open Questions
 
-- Does the mobile cashflow strip need `MONTH IN`/`MONTH OUT` numeric labels added when the grid
-  drops those tiles, or are the existing bar amount labels sufficient? Leaning sufficient — they
-  already print both figures — but worth a look on device.
+- Is `desktop_drop` (+6 transitive dependencies) worth keeping for a single receipt dialog? The
+  file-picker path works without it, and drag-and-drop is the nicer desktop interaction — but its web
+  path is also the one piece of this change that no test in the repo can exercise.
