@@ -14,6 +14,7 @@ import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+import '../../widgets/web_receipt_drop.dart';
 import '../../widgets/web_widgets.dart';
 
 /// Hoisted so the per-row date cells don't allocate a new [DateFormat] on
@@ -546,11 +547,26 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
           ],
         ),
         // Natural-language Quick Add — a floating button anchored to the
-        // bottom-right that pops open a compact chat box on tap.
+        // bottom-right that pops open a compact chat box on tap, with receipt
+        // scanning stacked above it. Both feed the same
+        // confirm-before-commit pipeline.
         Positioned(
           right: 0,
           bottom: 0,
-          child: _QuickAddFab(presenter: _p, onNeedsForm: _openAddDialog),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              FloatingActionButton.small(
+                heroTag: 'ledgerReceiptScan',
+                tooltip: 'Scan a receipt',
+                onPressed: () => showWebReceiptDialog(context, ledger: _p),
+                child: const Icon(Icons.document_scanner_outlined),
+              ),
+              const SizedBox(height: WebInsets.md),
+              _QuickAddFab(presenter: _p, onNeedsForm: _openAddDialog),
+            ],
+          ),
         ),
       ],
     );

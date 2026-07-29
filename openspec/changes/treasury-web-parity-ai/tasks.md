@@ -65,53 +65,63 @@
   green `move` token, so the shared token was needed for the identical figure to read identically.
 - [x] 2.10 Verify `flutter build web --release -t lib/main_web.dart` still succeeds. → Green.
 
-## 3. Advisor extraction (shared)
+## 3. Advisor made platform-agnostic (shared)
 
-- [ ] 3.1 Write a characterization test capturing the advisor context `AiCoachPresenter` builds for
-  a fixed Treasury fixture, so the extraction can be proven behavior-preserving.
-- [ ] 3.2 Add `lib/presenters/finance_advisor_presenter.dart` — move the `isAdvisor` context builder,
-  conversation store (including cap/archive), `AdvisorProfile` memory, and the
-  `LedgerPresenter.sendChatInput` hand-off. Dependencies limited to treasury/budget/installments/
-  ledger/storage plus an injected `AiCoachService`. Same storage keys, same sync domains, same
-  Lambda op.
-- [ ] 3.3 Delegate `AiCoachPresenter`'s `financeAdvisor` entry point to the new presenter; remove
-  the now-unreachable advisor code. Confirm the other five entry points are untouched.
-- [ ] 3.4 Re-run 3.1 against the extracted presenter — contexts must match.
-- [ ] 3.5 Extract the chat body from `lib/views/widgets/ai_chat_sheet.dart` into a
-  `FinanceAdvisorChat` widget parameterized by `FinanceAdvisorPresenter`; keep `AiChatSheet` as
-  mobile's bottom-sheet container around it. Verify the Hub's Money Mentor entry point still opens
-  and behaves identically.
-- [ ] 3.6 Update `lib/views/home_screen.dart` to construct and inject the new presenter.
+- [x] 3.1 **Re-decided per design.md D1.** The extraction's three claimed compile blockers were
+  disproved during Phase 2, leaving only a runtime constraint. Chose the optional-dependency route
+  over extracting `FinanceAdvisorPresenter`: same behaviour, ~400 fewer lines of shipped advisor
+  logic moved, materially lower regression risk on a live mobile feature. Spec delta rewritten to
+  match.
+- [x] 3.2 Make `fasting` optional in `AiCoachPresenter` and guard its three reads in the context
+  builder — absent fasting reports "not fasting" and omits the elapsed figure and the goal, rather
+  than defaulting the goal to 16h. `nutrition` was already optional and already guarded.
+- [x] 3.3 Split `ai_chat_sheet.dart` into `AiChatSheet` (bottom-sheet container, unchanged public
+  API and call sites) and a new public `AiChatBody` (the chat surface itself). Added
+  `showDragHandle` and `allowModelDownload` flags for the container to set.
+- [x] 3.4 Add a terminal `_CloudUnavailable` state for platforms with no on-device tier, so web
+  never offers a model download it cannot perform.
+- [x] 3.5 Fix `_SheetHeader` overflow at dock width — the title is now `Flexible` + ellipsised so it
+  yields before the three trailing actions. It was sized for a full-width phone sheet.
 
 ## 4. AI surfaces on web
 
-- [ ] 4.1 Construct `FinanceAdvisorPresenter` in `lib/views/web/treasury_web_app.dart` with the
-  existing `CloudAiCoachService`; add its dispose to the shell teardown.
-- [ ] 4.2 Extend `WebShell` with an optional right dock region — collapsed rail that expands to a
-  ~380px column — leaving the sidebar, topbar, and body contracts unchanged. The dock overlays the
-  content area rather than reflowing it, so `_ContentColumns` and `WebDataTable` keep their
-  arrangement when it is open.
-- [ ] 4.3 Add `lib/views/web/widgets/web_advisor_panel.dart` wrapping `FinanceAdvisorChat`, styled
-  to the web design system, mounted by `_TreasuryWebHome` (not by a page) so the conversation
-  survives navigation. Default collapsed; persist the expanded state for the session.
-- [ ] 4.4 Add `lib/views/web/widgets/web_receipt_drop.dart` — drag-and-drop plus file-picker,
-  compressing via `ImageCompressor` and calling `LedgerPresenter.logReceiptPhoto()`. Surface each
-  `ReceiptScanOutcome` failure in place. Expose it from the Ledger page alongside Quick Add.
-- [ ] 4.5 Verify `flutter build web -t lib/main_web.dart` succeeds after each of 4.1–4.4, not only
-  at the end — an accidental mobile-only import fails the build outright.
-- [ ] 4.6 Confirm advisor conversations and memory started on one platform appear on the other
-  (existing sync domains, no new keys).
-- [ ] 4.7 Verify the dock at the two-column breakpoint and on the widest tables (Ledger, Bills):
-  expanding it must not collapse `_ContentColumns` or trigger horizontal scroll on the page body.
+- [x] 4.1 Construct the advisor in `treasury_web_app.dart` with no fasting/nutrition presenter, an
+  explicit `NullAiCoachService()` primary (so the on-device init path is never entered), and the
+  existing `CloudAiCoachService` as fallback — now shared with the ledger rather than constructed
+  twice. Disposed with the other presenters.
+- [x] 4.2 Extend `WebShell` with an optional right dock region, placed outside the content
+  `Expanded` so the page's own column/table layout keeps its width budget.
+- [x] 4.3 Add `web_advisor_panel.dart` — collapsed 56px rail expanding to a 380px column, mounted by
+  `_TreasuryWebHome` so the conversation survives navigation. The advisor session opens lazily on
+  first expand. Contents are laid out at their final width inside a `ClipRect`/`OverflowBox` so the
+  expand animation reveals rather than squeezes. Carries only a collapse control — the chat body's
+  own header already supplies the Money Mentor identity and actions.
+- [x] 4.4 Add `web_receipt_drop.dart` — drag-and-drop (via `desktop_drop`, which supports web) plus
+  a file-picker fallback, compressing through `ImageCompressor` and calling
+  `LedgerPresenter.logReceiptPhoto()`. Every `ReceiptScanOutcome` failure is surfaced in the dialog
+  using the same wording as the mobile sheet. Reachable from a FAB above Quick Add on the Ledger.
+- [x] 4.5 Verify `flutter build web --release -t lib/main_web.dart` after each step. → Green
+  throughout.
+- [x] 4.6 Tests → `test/views/web/web_advisor_panel_test.dart`, 9 tests: advisor builds/opens/sends
+  with no fasting presenter (asserting the degraded context fields), dock collapse/expand/re-collapse
+  and its widths, the no-download state, and the shell mounting the dock alongside the body.
 
 ## 5. Verification
 
-- [ ] 5.1 `dart format` + `flutter analyze` clean; `flutter test` green.
-- [ ] 5.2 `flutter build web -t lib/main_web.dart` succeeds; inspect the transitive import set for
-  notification / sqflite / gemma / health / home_widget / `dart:io`.
+- [x] 5.1 `dart format` + `flutter analyze` clean; `flutter test` green. → 1037 tests pass; the only
+  analyzer warnings are pre-existing unused imports in untouched test files.
+- [x] 5.2 `flutter build web --release -t lib/main_web.dart` succeeds. → Green. Note the earlier
+  import-set check is retired: reading `dart2js.d` showed notification / food-db / fasting /
+  nutrition are already in the bundle via `treasury_module_view`, so the real guarantee is that none
+  of them is *constructed* on web (4.1), not that none is compiled.
 - [ ] 5.3 Side-by-side check of mobile and web dashboards in both theme modes — figures, badges,
-  card weight, and hero read as one design system.
+  card weight, and hero read as one design system. → Needs a live run; not verifiable from tests.
 - [ ] 5.4 Confirm the projection figure is identical on both platforms for the same data, and
-  identically labelled.
-- [ ] 5.5 Manual smoke: advisor conversation on web, receipt drop on web, mobile Money Mentor
-  regression after the extraction.
+  identically labelled. → Same getter and same label strings by construction; worth one live
+  confirmation.
+- [ ] 5.5 Manual smoke: advisor conversation on web (needs `AI_COACH_ENDPOINT` + a signed-in user),
+  receipt drag-and-drop in a real browser (`desktop_drop`'s web path is untested here — widget tests
+  cannot generate a browser drop event), and a mobile Money Mentor regression pass after the
+  `AiChatSheet` split.
+- [ ] 5.6 Decide whether `desktop_drop` (+6 transitive deps, added in 4.4) is worth keeping for one
+  dialog, or whether the file-picker path alone suffices.

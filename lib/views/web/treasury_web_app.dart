@@ -5,6 +5,7 @@ import '../../utils/app_scroll_behavior.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
+import '../../presenters/ai_coach_presenter.dart';
 import '../../presenters/auth_presenter.dart';
 import '../../presenters/bills_receivables_presenter.dart';
 import '../../presenters/budget_presenter.dart';
@@ -18,6 +19,7 @@ import '../../presenters/treasury_history_presenter.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
+import '../../services/null_ai_coach_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
@@ -31,6 +33,7 @@ import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
 import 'pages/setup/web_setup_page.dart';
 import 'web_login_view.dart';
+import 'widgets/web_advisor_panel.dart';
 import 'widgets/web_widgets.dart';
 
 /// App-level theme mode for the web companion. Lifted out of the widget tree so
@@ -87,6 +90,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final InstallmentPresenter _installmentPresenter;
   late final GroceryCartPresenter _groceryCartPresenter;
   late final AuthPresenter _authPresenter;
+  late final AiCoachPresenter _advisorPresenter;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   SnapshotService? _snapshots;
@@ -109,12 +113,13 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // the rule-based parser first, then Bedrock (Claude Haiku) via the cloud
     // service for anything ambiguous — on by default (no Cloud AI toggle), it
     // just needs the user signed in + AI_COACH_ENDPOINT compiled into the build.
+    final cloudAi = CloudAiCoachService(
+      tokenProvider: () => _authService.currentAccessToken,
+    );
     _ledgerPresenter = LedgerPresenter(
       _storage,
       _statsPresenter,
-      cloudAi: CloudAiCoachService(
-        tokenProvider: () => _authService.currentAccessToken,
-      ),
+      cloudAi: cloudAi,
     );
     _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
     _budgetPresenter =
@@ -131,6 +136,25 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
         InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
     _groceryCartPresenter =
         GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
+    // Money Mentor. `fasting` and `nutrition` are omitted: both are optional,
+    // and constructing them here would init NotificationService / the sqflite
+    // food DB — neither of which has a web implementation. The advisor entry
+    // point reads neither.
+    //
+    // `service:` is an explicit NullAiCoachService so the presenter does NOT
+    // fall into its on-device init path (which would construct the Gemma
+    // service); the cloud tier is supplied as the fallback and is the only tier
+    // web ever uses.
+    _advisorPresenter = AiCoachPresenter(
+      stats: _statsPresenter,
+      service: NullAiCoachService(),
+      cloudFallback: cloudAi,
+      treasury: _treasuryPresenter,
+      budget: _budgetPresenter,
+      installments: _installmentPresenter,
+      ledger: _ledgerPresenter,
+      storage: _storage,
+    );
     _authPresenter = AuthPresenter(
       _authService,
       onFirstSignIn: (userId) => _initSync(userId),
@@ -175,6 +199,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     _historyPresenter.dispose();
     _installmentPresenter.dispose();
     _groceryCartPresenter.dispose();
+    _advisorPresenter.dispose();
     _authPresenter.dispose();
     _syncService?.dispose();
     _syncPresenter?.dispose();
@@ -344,6 +369,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
           installmentPresenter: _installmentPresenter,
           groceryCartPresenter: _groceryCartPresenter,
           authPresenter: _authPresenter,
+          advisorPresenter: _advisorPresenter,
         );
       },
     );
@@ -362,6 +388,7 @@ class _TreasuryWebHome extends StatefulWidget {
   final InstallmentPresenter installmentPresenter;
   final GroceryCartPresenter groceryCartPresenter;
   final AuthPresenter authPresenter;
+  final AiCoachPresenter advisorPresenter;
 
   const _TreasuryWebHome({
     required this.dashPresenter,
@@ -372,6 +399,7 @@ class _TreasuryWebHome extends StatefulWidget {
     required this.installmentPresenter,
     required this.groceryCartPresenter,
     required this.authPresenter,
+    required this.advisorPresenter,
   });
 
   @override
@@ -480,6 +508,9 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
             ],
           ),
           body: _page(_index),
+          // Persistent across every destination, so a question about a bill can
+          // be asked while the Bills table is still on screen.
+          dock: WebAdvisorPanel(presenter: widget.advisorPresenter),
         );
       },
     );
