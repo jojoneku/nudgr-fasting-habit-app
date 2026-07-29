@@ -203,45 +203,56 @@ class _DropTarget extends StatelessWidget {
         if (file == null) return;
         onDropped(await file.readAsBytes());
       },
-      child: InkWell(
-        onTap: onBrowse,
-        borderRadius: BorderRadius.circular(AppRadii.md),
-        child: Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: dragging
-                ? cs.primary.withValues(alpha: 0.08)
-                : cs.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(AppRadii.md),
-            border: Border.all(
+      // Self-heal the highlight. desktop_drop's web handler does
+      // `item.webkitGetAsEntry()!` and only logs on failure, so dragging
+      // anything that is not a file entry — a text selection, a link — throws
+      // inside the plugin: no drop, and no `onDragExited` either, which would
+      // otherwise strand this target in its highlighted state. Leaving the
+      // pointer clears it.
+      child: MouseRegion(
+        onExit: (_) {
+          if (dragging) onDraggingChanged(false);
+        },
+        child: InkWell(
+          onTap: onBrowse,
+          borderRadius: BorderRadius.circular(AppRadii.md),
+          child: Container(
+            height: 180,
+            decoration: BoxDecoration(
               color: dragging
-                  ? cs.primary
-                  : cs.outlineVariant.withValues(alpha: 0.8),
+                  ? cs.primary.withValues(alpha: 0.08)
+                  : cs.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(AppRadii.md),
+              border: Border.all(
+                color: dragging
+                    ? cs.primary
+                    : cs.outlineVariant.withValues(alpha: 0.8),
+              ),
             ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: bytes != null
-              ? Image.memory(bytes!, fit: BoxFit.contain)
-              : Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.receipt_long_outlined,
-                          size: 32, color: cs.onSurfaceVariant),
-                      const SizedBox(height: WebInsets.sm),
-                      Text(
-                        'Drop a receipt image here',
-                        style: theme.textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: WebInsets.xs),
-                      Text(
-                        'or click to browse',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant),
-                      ),
-                    ],
+            clipBehavior: Clip.antiAlias,
+            child: bytes != null
+                ? Image.memory(bytes!, fit: BoxFit.contain)
+                : Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            size: 32, color: cs.onSurfaceVariant),
+                        const SizedBox(height: WebInsets.sm),
+                        Text(
+                          'Drop a receipt image here',
+                          style: theme.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: WebInsets.xs),
+                        Text(
+                          'or click to browse',
+                          style: theme.textTheme.bodySmall
+                              ?.copyWith(color: cs.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+          ),
         ),
       ),
     );

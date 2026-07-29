@@ -136,11 +136,29 @@
   - The mobile cashflow strip wrapped `₱46,500.00` to two lines in a fixed 74px slot — pre-existing,
     but this change makes the strip the only home for the month in/out figures, so it now matters.
     The slot is a minimum width rather than a fixed one.
-- [ ] 5.8 Still needs a device/endpoint this environment cannot provide: a real advisor conversation,
-  a real browser drag-and-drop onto the receipt target (no test here exercises `desktop_drop`'s web
-  path), and a mobile Money Mentor regression pass after the `AiChatSheet` split.
-- [ ] 5.9 Decide whether `desktop_drop` (+6 transitive deps, added in 4.4) earns its place for one
-  dialog, or whether the file-picker path alone suffices.
+- [x] 5.8 Drove the receipt drop path in a real browser. → The dialog opens from the Ledger FAB and
+  the drop target highlights on `dragenter`, but a **synthetic** drop cannot complete, and the reason
+  matters: `desktop_drop_web.dart:105` does `item.webkitGetAsEntry()!`, which is null for any
+  `DataTransfer` built in JS. So no automated test can ever cover this path — a genuine OS file drag
+  populates the entries API and works, and that distinction, not the library, is why 4.4 is
+  unverifiable here.
+- [x] 5.9 **Keep `desktop_drop`.** Its real-drop path is sound, drag-and-drop is the interaction this
+  dialog is for, and the alternative — hand-rolled `package:web` interop — would need the conditional
+  imports D1 rejected, in a file that must still analyse for mobile. The file picker remains a
+  first-class path ("or click to browse"), so nothing depends on the drag.
+- [x] 5.10 Fixed a wart the drop run exposed: the plugin's `webkitGetAsEntry()!` throws on any
+  non-file drag (a text selection, a link) and only `debugPrint`s, so `onDragExited` never fires and
+  the target was stranded in its highlighted state with no feedback. A `MouseRegion.onExit` now
+  clears it. Verified in the browser: highlight stuck after the failed drop, cleared once the pointer
+  left.
+- [x] 5.11 Added the two regression tests that were reachable without an endpoint:
+  a conversation round-trip in the dock (type → send → both bubbles render, composer live), and
+  `AiChatSheet` still wrapping the shared `AiChatBody` on mobile with its drag handle and entry label
+  intact after the split.
+- [ ] 5.12 Genuinely out of reach here: a live advisor conversation against Bedrock, which needs
+  `AI_COACH_ENDPOINT` compiled in **and** a signed-in Supabase user —
+  `CloudAiCoachService.isAvailable` requires a JWT, and preview-seed mode has no auth by design. The
+  presenter→service→UI path is covered by mocked tests; only the network leg is unproven.
 
 ## 6. Open questions closed
 

@@ -154,6 +154,72 @@ void main() {
     });
   });
 
+  group('conversation round-trip in the dock', () {
+    testWidgets('typing and sending renders the assistant reply',
+        (tester) async {
+      when(cloud.adviseFinance(
+        messages: anyNamed('messages'),
+        context: anyNamed('context'),
+        profile: anyNamed('profile'),
+        historical: anyNamed('historical'),
+      )).thenAnswer(
+          (_) => Stream.fromIterable(['You are ', 'running a deficit.']));
+
+      final p = buildWebAdvisor();
+      await tester.pumpWidget(wrap(WebAdvisorPanel(presenter: p)));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.savings_outlined));
+      await tester.pumpAndSettle();
+
+      // Composer is live once a tier is available.
+      final field = find.byType(TextField);
+      expect(field, findsOneWidget);
+      expect(find.text('Coach not ready…'), findsNothing);
+
+      await tester.enterText(field, 'how am I doing?');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(Icon).last);
+      await tester.pumpAndSettle();
+
+      // Both sides of the exchange render in the dock.
+      expect(find.textContaining('how am I doing?'), findsOneWidget);
+      expect(find.textContaining('running a deficit.'), findsOneWidget);
+      expect(p.errorMessage, isNull);
+      p.dispose();
+    });
+  });
+
+  group('AiChatSheet still wraps the shared body on mobile', () {
+    testWidgets('shows the drag handle and keeps the entry label',
+        (tester) async {
+      final p = buildWebAdvisor();
+      await tester.pumpWidget(MaterialApp(
+        theme: buildWebDarkTheme(),
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () => AiChatSheet.show(
+                context,
+                presenter: p,
+                entryPoint: AiCoachEntryPoint.financeAdvisor,
+              ),
+              child: const Text('open'),
+            ),
+          ),
+        ),
+      ));
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      // The sheet is a container around the same body the web dock uses...
+      expect(find.byType(AiChatBody), findsOneWidget);
+      // ...and unlike the dock it keeps the sheet affordances and the label.
+      expect(find.text('Money Mentor'), findsOneWidget);
+      expect(find.byType(DraggableScrollableSheet), findsOneWidget);
+      p.dispose();
+    });
+  });
+
   group('WebShell dock', () {
     testWidgets('mounts the dock alongside the body', (tester) async {
       await tester.pumpWidget(MaterialApp(

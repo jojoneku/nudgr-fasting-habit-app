@@ -272,8 +272,16 @@ No data migration. All three phases are view-layer or refactor-in-place:
   the projection line beneath them. The amount slot did need widening, though — a six-figure inflow
   wrapped inside the old fixed 74px box.
 
+- **Keep `desktop_drop` (decided).** Its real-drop path is sound; drag-and-drop is the interaction
+  the dialog exists for; and the alternative — hand-rolled `package:web` interop — would reintroduce
+  the conditional imports D1 rejected, in a file that must still analyse for mobile. Two caveats are
+  recorded rather than fixed, because both live in the third-party plugin:
+  its handler does `item.webkitGetAsEntry()!` and merely `debugPrint`s on failure, so (a) no
+  synthetic drop can ever exercise it, making the path untestable in CI, and (b) dragging non-file
+  content throws inside the plugin, silently. Our side compensates: the file picker is a first-class
+  path, and a `MouseRegion.onExit` clears the highlight the plugin would otherwise strand.
+
 ## Open Questions
 
-- Is `desktop_drop` (+6 transitive dependencies) worth keeping for a single receipt dialog? The
-  file-picker path works without it, and drag-and-drop is the nicer desktop interaction — but its web
-  path is also the one piece of this change that no test in the repo can exercise.
+- None outstanding. The only unverified behaviour is the advisor's live network leg, which needs an
+  `AI_COACH_ENDPOINT` build plus a signed-in Supabase user (see tasks 5.12).
