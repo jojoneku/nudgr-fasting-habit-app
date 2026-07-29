@@ -1,23 +1,33 @@
 ## 1. Month-end projection surfacing (mobile)
 
-- [ ] 1.1 Rework `lib/views/treasury/dashboard/metric_cards_grid.dart` to web's four-tile
+- [x] 1.1 Rework `lib/views/treasury/dashboard/metric_cards_grid.dart` to web's four-tile
   decomposition: Upcoming Bills (`monthUnpaidBills`), To Receive (`pendingReceivables`),
-  Budget & Savings Due (`budgetedExpensesRemaining`), Proj. Month-End Cash
+  Budget / Savings Due (`budgetedExpensesRemaining`), Proj. Month-End Cash
   (`forecastedNetBalance`). Drop the `hasBudget` gate so the projection always renders; drop the
   `MONTH IN` / `MONTH OUT` tiles (both already appear in the cashflow strip's bars). Keep the
-  tinted icon-badge tile treatment. No presenter changes.
-- [ ] 1.2 Add sub-copy to each tile naming what it deducts, matching web's wording
+  tinted icon-badge tile treatment. No presenter changes. → Rows now wrap in `IntrinsicHeight` so a
+  pair stays level when a label or sub-line wraps.
+- [x] 1.2 Add sub-copy to each tile naming what it deducts, matching web's wording
   ("Unpaid this month", "Money owed to you", "Set-asides still to fund",
   "After bills, budget & savings"). Rename the section from "Month Outlook" to "Month-End Outlook"
-  to match web.
-- [ ] 1.3 Colour the projection by sign (danger when negative), matching web's
-  `valueColor` behaviour.
-- [ ] 1.4 Update `test/views/treasury/dashboard/treasury_dashboard_redesign_test.dart` (and any
-  other test asserting `ENDING CASH` / `FORECAST`) for the new tile set; add a case asserting the
-  projection tile renders when the presenter reports no budgets.
-- [ ] 1.5 Verify `test/presenters/treasury_dashboard_parity_test.dart` and
+  to match web. → Used web's exact label strings, including "Budget / Savings Due".
+- [x] 1.3 Colour the projection by sign (danger when negative), matching web's
+  `valueColor` behaviour. → Positive uses `appColors.success`, not `colorScheme.tertiary`: mobile's
+  `tertiary` is `AppColors.accent` (teal), whereas web's is the green `move` token. `appColors.success`
+  is the same green on both platforms.
+- [x] 1.4 Rename the cashflow strip's "Projected spare" to "Proj. month-end cash" and switch its
+  positive accent from blue to the same success green. It renders the identical
+  `forecastedNetBalance` figure, so leaving it under a second name and a third colour next to the
+  new grid would have reproduced the exact confusion this phase removes. Recorded as a MODIFIED
+  requirement in the `treasury-dashboard` delta.
+- [x] 1.5 Update `test/views/treasury/dashboard/treasury_dashboard_redesign_test.dart` for the new
+  tile set; add cases asserting the projection renders with no budgets, and that the grid shows the
+  budget-deducted figure rather than raw ending cash. → 3 new tests. The deduction assertion is
+  scoped to `MetricCardsGrid` because the fixture's net worth coincidentally equals its ending cash,
+  which the hero legitimately shows.
+- [x] 1.6 Verify `test/presenters/treasury_dashboard_parity_test.dart` and
   `test/presenters/finance_audit_fixes_test.dart` are untouched and green — a failure here means the
-  change leaked into presenter math.
+  change leaked into presenter math. → Both unmodified; full suite green (1019 tests).
 
 ## 2. Web skin primitives
 

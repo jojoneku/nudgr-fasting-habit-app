@@ -42,3 +42,26 @@ projection it is not.
 - **WHEN** the month outlook no longer carries month-in and month-out tiles
 - **THEN** those two figures remain visible in the cashflow strip's income and expense bars, which
   already label both amounts
+
+### Requirement: Cashflow strip
+
+The Dashboard SHALL show a cashflow strip for the current month with income and expense bars and the
+projected month-end cash total.
+
+The strip's projection SHALL carry the same label and the same accent as the Month-End Outlook tile
+and the web dashboard, because all three render the identical `forecastedNetBalance` figure.
+Previously the strip labelled it "Projected spare" in the blue domain accent while the grid labelled
+the same number "Forecast" in the primary accent — one number reading as two.
+
+#### Scenario: Income and expense bars
+- **WHEN** the current month has income and/or expenses
+- **THEN** the strip shows an income bar (success accent) and an expense bar (danger accent) sized
+  relative to the larger of the two, each labeled with its amount
+
+#### Scenario: Projection matches the outlook tile
+- **WHEN** the strip and the Month-End Outlook grid are both on screen
+- **THEN** they show the same figure under the same name, in the same accent
+
+#### Scenario: Negative projection is signalled
+- **WHEN** the projected month-end cash is below zero
+- **THEN** the strip's total renders in the danger accent

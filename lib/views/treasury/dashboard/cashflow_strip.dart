@@ -7,9 +7,12 @@ import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// The cashflow strip below the NET WORTH hero (`Nutrition Focus Treasury.dc.html`,
-/// Frame 1): the current month's income vs expense bars and a "Projected spare"
-/// total. Bars are sized against the larger of the two flows so the dominant
-/// flow fills the track and the other reads proportionally.
+/// Frame 1): the current month's income vs expense bars and the projected
+/// month-end cash total. Bars are sized against the larger of the two flows so
+/// the dominant flow fills the track and the other reads proportionally.
+///
+/// The two bar amounts are the only place month inflow/outflow are shown on the
+/// dashboard — the Month-End Outlook grid no longer repeats them.
 class CashflowStrip extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
@@ -73,7 +76,12 @@ class CashflowStrip extends StatelessWidget {
           Row(
             children: [
               Text(
-                'Projected spare',
+                // Same wording and same accent as the Month-End Outlook tile
+                // and the web dashboard — this is `forecastedNetBalance` on all
+                // three surfaces, so it must not read as three different
+                // figures. Previously "Projected spare", in the blue domain
+                // accent.
+                'Proj. month-end cash',
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: appColors.textTertiary,
                 ),
@@ -83,7 +91,7 @@ class CashflowStrip extends StatelessWidget {
                 formatPeso(spare),
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
-                  color: spare >= 0 ? appColors.fast : cs.error,
+                  color: spare >= 0 ? appColors.success : cs.error,
                 ),
               ),
             ],
