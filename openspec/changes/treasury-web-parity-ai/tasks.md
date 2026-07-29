@@ -31,25 +31,39 @@
 
 ## 2. Web skin primitives
 
-- [ ] 2.1 Add `lib/views/web/widgets/web_number.dart` — a numeric text widget matching
-  `AppTextStyles.numeric` (JetBrains Mono, tabular figures), with size variants covering the tile
-  value, mini-stat, and table-cell cases.
-- [ ] 2.2 Route figures through it: `web_stat_tile.dart` (value), the `_MiniStat` / `_StatGrid`
-  helpers in `web_dashboard_page.dart`, `web_data_table.dart` amount columns, and `web_charts.dart`
-  axis labels.
-- [ ] 2.3 Retint `WebStatTile`'s icon badge from the neutral `onSurface@5%` square to the redesign's
-  domain-tinted badge (`color@12–14%`, `AppRadii.sm`), matching `AppIconBadge`.
-- [ ] 2.4 Match `web_card.dart` to `AppCard.elevated`: 0.5px hairline at `outlineVariant@40%` plus
-  the subtle elevation shadow. Verify no page regresses visually at the two-column breakpoint.
-- [ ] 2.5 Promote `_SparklinePainter` out of `lib/views/treasury/dashboard/net_worth_hero.dart` into
-  a shared widget, leaving mobile's hero rendering identically.
-- [ ] 2.6 Add `lib/views/web/widgets/web_net_worth_hero.dart` — gradient card, momentum pill,
-  "±₱X this month" line, shared sparkline; desktop proportions. Replace the
-  `WebStatTile(accent: true)` "Net Position" tile in `_PositionRow`.
-- [ ] 2.7 Extend `_CashFlowCard` in `web_dashboard_page.dart` with paired income/expense bars sized
-  to the larger flow, keeping the existing mini-stats and spent-percentage bar.
-- [ ] 2.8 Web widget tests: hero renders with and without trend history; stat tile renders tabular
-  figures. Verify both theme modes.
+- [x] 2.1 Add `lib/views/web/widgets/web_number.dart` — a numeric text widget with size variants for
+  the hero, tile, mini-stat, and table-cell cases, plus a `webNumericStyle()` helper for adding
+  tabular figures to an existing theme style. → **Correction:** `AppTextStyles.numeric` is **Plus
+  Jakarta Sans with `FontFeature.tabularFigures`**, not JetBrains Mono (that is
+  `AppTextStyles.mono`, which figures never use). Web already loads Plus Jakarta Sans, so parity was
+  a missing font *feature*, not a missing font — and the "JetBrains Mono web font cost" risk in
+  design.md does not apply.
+- [x] 2.2 Route figures through it: `web_stat_tile.dart` value, `_MiniStat` in
+  `web_dashboard_page.dart`, `web_data_table.dart` numeric columns, and `web_charts.dart` axis
+  labels (3 sites). → The table applies it once in `_BodyRow` for `numeric` columns, so every
+  existing table inherits it with no call-site changes.
+- [x] 2.3 Retint `WebStatTile`'s icon badge from the neutral `onSurface@5%` square to the
+  domain-tinted badge (`color@14%`, `AppRadii.sm`, 32px), matching `AppIconBadge`. Added an
+  `iconColor` param so a tile can carry a domain accent on the badge without recolouring its figure;
+  falls back to `valueColor`, then `primary`, mirroring `AppIconBadge`'s chain.
+- [x] 2.4 Match `web_card.dart` to `AppCard.elevated`: 0.5px hairline at `outlineVariant@40%` plus
+  the subtle elevation shadow.
+- [x] 2.5 Promote `_SparklinePainter` out of `net_worth_hero.dart` into
+  `lib/views/widgets/system/indicators/app_sparkline.dart`, exported from the design-system barrel.
+  Mobile's hero now uses the shared `AppSparkline` and renders identically.
+- [x] 2.6 Add `lib/views/web/widgets/web_net_worth_hero.dart` — gradient card, momentum pill,
+  "±₱X this month" line, shared sparkline. Figure and sparkline sit side by side above 560px and
+  stack below it. Mounted above `_PositionRow`; the old `WebStatTile(accent: true)` "Net Position"
+  tile is replaced by a Net Cash Flow tile so the row keeps four and no figure is lost.
+- [x] 2.7 Extend `_CashFlowCard` with paired income/expense bars sized to the larger flow, keeping
+  the existing mini-stats and spent-percentage bar.
+- [x] 2.8 Web widget tests → `test/views/web/web_design_system_test.dart`, 9 tests: tabular figures
+  in both theme modes, `webNumericStyle` preserving its base, tinted badge, hero with/without trend
+  history in both modes, and the narrow-width stacking path.
+- [x] 2.9 Align the web Month-End Outlook projection accent with mobile — `appColors.success`
+  instead of `cs.tertiary`. Mobile's `tertiary` is the teal `AppColors.accent` while web's is the
+  green `move` token, so the shared token was needed for the identical figure to read identically.
+- [x] 2.10 Verify `flutter build web --release -t lib/main_web.dart` still succeeds. → Green.
 
 ## 3. Advisor extraction (shared)
 

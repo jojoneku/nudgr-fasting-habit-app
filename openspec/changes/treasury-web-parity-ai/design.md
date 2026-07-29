@@ -40,23 +40,49 @@ Three constraints shape everything below:
 `AiCoachPresenter` is a multi-domain coach: it serves six `AiCoachEntryPoint`s and its constructor
 takes `stats`, `fasting` (**required**), `nutrition`, `treasury`, `budget`, `installments`, `ledger`,
 `storage`, and two services. Its `_buildContext()` reads fasting and nutrition state for the
-non-finance entry points. Three hard web blockers follow:
+non-finance entry points.
 
-| Dependency | Reached via | Why it fails on web |
-|---|---|---|
-| `FastingPresenter` (required ctor arg) | `notification_service.dart` | `flutter_local_notifications` has no web impl |
-| `NutritionPresenter` (unconditional import) | `food_db_service.dart` | `dart:io` + `sqflite` — compile error, not a runtime stub |
-| `OnDeviceAiCoachService` (unconditional import) | `flutter_gemma` | pulls the on-device model stack into a static web bundle |
+> **Corrected during Phase 2 (2026-07-29).** An earlier draft of this decision claimed three *hard
+> compile* blockers — `FastingPresenter` → `flutter_local_notifications`, `NutritionPresenter` →
+> `food_db_service` (`dart:io` + `sqflite`), and `OnDeviceAiCoachService` → `flutter_gemma`. That was
+> wrong, and measurement disproved it:
+>
+> - Reading `.dart_tool/flutter_build/*/dart2js.d` after a successful `flutter build web` shows
+>   `fasting_presenter.dart`, `nutrition_presenter.dart`, `notification_service.dart`, and
+>   `food_db_service.dart` are **already in the web bundle today** — reached via
+>   `treasury_web_app.dart` → `treasury_module_view.dart`, which imports `NutritionPresenter` for its
+>   optional mobile-web parameter. The build is green regardless.
+> - Temporarily importing `AiCoachPresenter` and `AiChatSheet` from `lib/main_web.dart` and running
+>   `flutter build web --release` **succeeds**. `flutter_gemma` also ships a web implementation and is
+>   already an auto-registered web plugin.
+>
+> Compiling is therefore not the constraint, and the bundle-bloat argument is moot because those
+> libraries are already shipped.
 
-Three options were considered:
+The real constraints are runtime and architectural:
+
+| Constraint | Detail |
+|---|---|
+| `FastingPresenter` construction | Required ctor arg, and `_init()` calls `NotificationService().init()` + `requestPermissions()` — platform channels with no web implementation. Constructing the coach on web means constructing this. |
+| `NutritionPresenter` construction | Requires a `FoodDbService` (sqflite + `path_provider`), which cannot open a database on web. |
+| Layering | A finance-only surface should not need the fasting and nutrition presenters to answer a question about money. |
+
+This weakens the case for a full extraction: a materially cheaper option — making `fasting` and
+`nutrition` nullable and guarding the context builder — now clears the same runtime constraints.
+**Phase 3 should re-decide between the two before any code is written**, since the earlier choice
+rested on a premise that turned out to be false.
+
+The options originally considered, retained for the record:
 
 - **Conditional imports / stub files.** Rejected: it would spread `kIsWeb` branching and
   `_stub.dart` shadow files across the presenter layer to serve one entry point, and every future
   nutrition or fasting field added to `_buildContext()` becomes a new web landmine.
-- **Make `fasting`/`nutrition` nullable in place.** Rejected as insufficient — nullability fixes the
-  constructor but not the *imports*, which are what break the compile. Removing the imports means
-  removing the code that uses them, which is the extraction anyway, done less cleanly.
-- **Extract the finance-advisor path into its own presenter. → CHOSEN.**
+- **Make `fasting`/`nutrition` nullable in place.** Originally rejected as insufficient, on the
+  reasoning that nullability fixes the constructor but not the imports "which are what break the
+  compile". That reasoning does not survive the measurement above — nothing breaks the compile — so
+  this option is **live again** and is now the cheaper of the two.
+- **Extract the finance-advisor path into its own presenter. → provisionally chosen, to be
+  re-confirmed at the start of Phase 3.** Still the better layering; no longer the only option.
 
 `FinanceAdvisorPresenter` owns exactly what the `financeAdvisor` entry point needs: the advisor
 context builder (the `isAdvisor` branch of `_buildContext()`, ~`ai_coach_presenter.dart:801-889`),
@@ -129,7 +155,7 @@ page layout:
 
 | Primitive | Change | Reaches |
 |---|---|---|
-| `web_number.dart` (new) | JetBrains Mono tabular figures, matching `AppTextStyles.numeric` | every figure on every page |
+| `web_number.dart` (new) | Plus Jakarta Sans tabular figures, matching `AppTextStyles.numeric` | every figure on every page |
 | `web_stat_tile.dart` | domain-tinted icon badge; figures via `WebNumber` | dashboard, budget, bills, history |
 | `web_card.dart` | 0.5px hairline @40% + `AppCard.elevated` shadow | every card |
 | `web_net_worth_hero.dart` (new) | gradient + momentum pill + sparkline | dashboard |
@@ -207,9 +233,9 @@ Ordered smallest-blast-radius first, so each lands and verifies independently:
 - **Web bundle bloat from an accidental import.** A stray `NutritionPresenter` or `dart:io` import
   fails `flutter build web`. Mitigated by adding the web build to the verification step for every
   AI-phase task, not just at the end.
-- **JetBrains Mono web font cost.** Adds a font fetch to first paint. Accepted: `google_fonts`
-  already ships Plus Jakarta Sans on web, so this is one more request on an already-warm path, and
-  tabular figures are the single largest contributor to "these look like different apps".
+- ~~**JetBrains Mono web font cost.**~~ Does not apply. `AppTextStyles.numeric` is Plus Jakarta Sans
+  with `FontFeature.tabularFigures`, not a mono face, and web already loads that family for its whole
+  text theme — parity costs no additional font fetch.
 - **`flutter_image_compress` web reliability.** Unverified on this project's web target; D3 states
   the fallback.
 - **Users notice `ENDING CASH` disappearing.** It is a real figure some people read. The projection

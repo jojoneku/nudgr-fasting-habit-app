@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../utils/app_radii.dart';
 import 'web_card.dart';
+import 'web_number.dart';
 import '../design/web_breakpoints.dart';
 
 /// A single KPI tile — an UPPERCASE label, a large value, and optional
@@ -19,6 +20,12 @@ class WebStatTile extends StatelessWidget {
   /// Optional tone for the value text (e.g. obligations in error color).
   /// Ignored when [accent] is true (hero uses `onPrimary`).
   final Color? valueColor;
+
+  /// Optional tone for the icon badge alone, when a tile wants a domain accent
+  /// on the badge without recolouring the figure. Defaults to [valueColor], then
+  /// to `primary` — the same fallback chain as the mobile `AppIconBadge`.
+  final Color? iconColor;
+
   final bool emphasize;
 
   /// Filled hero variant: `primary` background, `onPrimary` text, trailing
@@ -32,6 +39,7 @@ class WebStatTile extends StatelessWidget {
     this.sub,
     this.icon,
     this.valueColor,
+    this.iconColor,
     this.emphasize = false,
     this.accent = false,
   });
@@ -45,13 +53,10 @@ class WebStatTile extends StatelessWidget {
     final mutedFg =
         accent ? cs.onPrimary.withValues(alpha: 0.78) : cs.onSurfaceVariant;
 
-    final valueStyle = (emphasize
-            ? theme.textTheme.headlineMedium
-            : theme.textTheme.headlineSmall)
-        ?.copyWith(
-      fontWeight: FontWeight.w700,
-      color: accent ? fg : (valueColor ?? fg),
-    );
+    // Domain-tinted badge, matching the mobile redesign's AppIconBadge: an
+    // explicit iconColor wins, else the value's accent, else primary.
+    final badgeAccent =
+        accent ? cs.onPrimary : (iconColor ?? valueColor ?? cs.primary);
 
     final labelStyle = theme.textTheme.labelMedium?.copyWith(
       color: mutedFg,
@@ -72,26 +77,28 @@ class WebStatTile extends StatelessWidget {
             ),
             if (icon != null) ...[
               const SizedBox(width: WebInsets.sm),
-              // Reference StatTile seats the icon in a 28px tinted rounded
-              // square (`bg-hover-subtle`), not as a bare glyph.
+              // Domain-tinted rounded square, matching the mobile redesign's
+              // AppIconBadge (color @ ~14%) rather than the flat neutral wash
+              // this tile used before.
               Container(
-                width: 28,
-                height: 28,
+                width: 32,
+                height: 32,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: accent
-                      ? cs.onPrimary.withValues(alpha: 0.15)
-                      : cs.onSurface.withValues(alpha: 0.05),
+                  color: badgeAccent.withValues(alpha: accent ? 0.18 : 0.14),
                   borderRadius: BorderRadius.circular(AppRadii.sm),
                 ),
-                child: Icon(icon, size: 16, color: mutedFg),
+                child: Icon(icon, size: 17, color: badgeAccent),
               ),
             ],
           ],
         ),
         const SizedBox(height: WebInsets.sm),
-        Text(value,
-            style: valueStyle, maxLines: 1, overflow: TextOverflow.ellipsis),
+        WebNumber(
+          value,
+          size: emphasize ? WebNumberSize.tileLarge : WebNumberSize.tile,
+          color: accent ? fg : (valueColor ?? fg),
+        ),
         if (sub != null) ...[
           const SizedBox(height: WebInsets.xs),
           Text(sub!,

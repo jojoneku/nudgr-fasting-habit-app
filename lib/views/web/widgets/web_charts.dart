@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../design/web_breakpoints.dart';
+import 'web_number.dart';
 
 /// One slice of a [WebDonutChart] / one legend entry.
 class WebChartSlice {
@@ -395,8 +396,12 @@ class WebLineChart extends StatelessWidget {
     final spots = <FlSpot>[
       for (int i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
     ];
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
 
     // Show at most ~7 x-axis labels: with few points (6-month trend, 7-day
     // spending) every point is labelled; a long series (e.g. a 30-day sheet)
@@ -586,8 +591,12 @@ class WebMultiLineChart extends StatelessWidget {
       );
     }
 
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
     final labelCount = bottomLabels?.length ?? 0;
     final labelStep =
         labelCount == 0 ? 1 : (labelCount / 7).ceil().clamp(1, labelCount);
@@ -770,8 +779,12 @@ class WebBarPairChart extends StatelessWidget {
       0,
       (m, g) => math.max(m, math.max(g.a, g.b)),
     );
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,

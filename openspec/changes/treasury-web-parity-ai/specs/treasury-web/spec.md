@@ -146,16 +146,28 @@ confirm-before-commit pipeline the typed Quick Add uses.
 - **THEN** it offers only the expense path and does not depend on the nutrition presenter or the
   meal-logging branch
 
-### Requirement: Web bundle excludes mobile-only platform dependencies
+### Requirement: The web target keeps building
 
-Adding the advisor and receipt surfaces SHALL NOT introduce any dependency that cannot compile for
-the web target.
+Adding the advisor and receipt surfaces SHALL NOT break the web build, and SHALL NOT construct
+platform services that have no web implementation.
+
+Note: the web bundle already contains `fasting_presenter`, `nutrition_presenter`,
+`notification_service`, and `food_db_service` — pulled in by `treasury_module_view.dart`, which the
+web shell reuses for its mobile-width fallback — and the build is green with them. The constraint is
+therefore not "these libraries must not be compiled" but "these services must never be
+*instantiated* on web", where they would fail on a missing platform channel or an unopenable
+database.
 
 #### Scenario: Web build succeeds
 - **WHEN** `flutter build web -t lib/main_web.dart` is run after these surfaces are wired
 - **THEN** the build succeeds
 
-#### Scenario: No mobile-only transitive imports
-- **WHEN** the transitive imports of `lib/main_web.dart` are inspected
-- **THEN** they include no notification, on-device-model, local food-database, health, or
-  home-widget dependency, and no `dart:io` import
+#### Scenario: No platform services are constructed on web
+- **WHEN** the web composition root builds the advisor and receipt surfaces
+- **THEN** it constructs no notification service, no local food database, no health integration, and
+  no on-device model service
+
+#### Scenario: Advisor works without the non-finance presenters
+- **WHEN** the advisor is built on web
+- **THEN** it functions with no fasting presenter and no nutrition presenter available, rather than
+  requiring stubs of them

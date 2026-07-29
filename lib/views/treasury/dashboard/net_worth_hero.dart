@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// The NET WORTH hero — the redesigned Treasury dashboard's lead card
 /// (`Nutrition Focus Treasury.dc.html`, Frame 1). A blue-tinted gradient card
@@ -81,15 +82,9 @@ class NetWorthHero extends StatelessWidget {
           _ThisMonthLine(delta: delta),
           if (trend.length >= 2) ...[
             const SizedBox(height: 8),
-            SizedBox(
-              height: 52,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _SparklinePainter(
-                  values: trend.map((p) => p.value).toList(),
-                  color: blue,
-                ),
-              ),
+            AppSparkline(
+              values: trend.map((p) => p.value).toList(),
+              color: blue,
             ),
           ],
         ],
@@ -172,79 +167,4 @@ class _ThisMonthLine extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Lightweight net-worth sparkline: a smoothed-enough polyline with a fading
-/// area fill. Normalizes [values] to the paint box; a flat series is drawn as a
-/// centered horizontal line rather than dividing by a zero range.
-class _SparklinePainter extends CustomPainter {
-  final List<double> values;
-  final Color color;
-
-  _SparklinePainter({required this.values, required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-
-    final minV = values.reduce((a, b) => a < b ? a : b);
-    final maxV = values.reduce((a, b) => a > b ? a : b);
-    final range = maxV - minV;
-    final dx = size.width / (values.length - 1);
-
-    double yFor(double v) {
-      if (range == 0) return size.height / 2;
-      // Leave a little top/bottom padding so the peaks aren't clipped.
-      const pad = 6.0;
-      final t = (v - minV) / range;
-      return size.height - pad - t * (size.height - pad * 2);
-    }
-
-    final linePath = Path();
-    for (var i = 0; i < values.length; i++) {
-      final x = dx * i;
-      final y = yFor(values[i]);
-      if (i == 0) {
-        linePath.moveTo(x, y);
-      } else {
-        linePath.lineTo(x, y);
-      }
-    }
-
-    final fillPath = Path.from(linePath)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-
-    canvas.drawPath(
-      fillPath,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [color.withValues(alpha: 0.32), color.withValues(alpha: 0.0)],
-        ).createShader(Offset.zero & size),
-    );
-
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color = color
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    // End dot on the latest point.
-    canvas.drawCircle(
-      Offset(size.width, yFor(values.last)),
-      3.0,
-      Paint()..color = color,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_SparklinePainter old) =>
-      old.values != values || old.color != color;
 }
