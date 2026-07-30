@@ -7,6 +7,19 @@ on:
     branches: [main, dev, hotfix]
   workflow_dispatch:
 
+# One CI run per branch. When two PRs merge into dev seconds apart, the first
+# push's run is superseded by the second — whose tip already contains both
+# commits — so cancelling it drops a redundant Analyze+Test and, with it, the
+# second `Promote dev → main` job that used to race the first.
+#
+# main is deliberately excluded (run_id makes every main run its own group).
+# Grouping main would let GitHub cancel a *pending* run when a newer one
+# arrives, and every release/deploy job below filters on `HEAD~1..HEAD` — a
+# dropped run's commit would then never ship.
+concurrency:
+  group: ci-${{ github.ref }}-${{ github.ref == 'refs/heads/main' && github.run_id || 'shared' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   analyze_format:
     name: Analyze & Format
@@ -101,6 +114,15 @@ jobs:
     runs-on: ubuntu-latest
     needs: [analyze_format, test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/hotfix'
+    # Only one hotfix promotion at a time. Queue rather than cancel the running
+    # one — a half-finished promotion would leave the hotfix on neither branch.
+    # A *pending* promotion being dropped by a newer one is harmless: the job
+    # always promotes hotfix's tip, which already contains the older commit.
+    # Kept separate from promote-dev-to-main so a busy dev promotion queue can
+    # never starve a hotfix.
+    concurrency:
+      group: promote-hotfix
+      cancel-in-progress: false
     permissions:
       contents: write
       pull-requests: write
@@ -112,99 +134,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          existing=$(gh pr list --base main --head hotfix \
-            --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          if [ -z "$existing" ]; then
-            gh pr create \
-              --base main --head hotfix \
-              --title "hotfix: promote hotfix → main" \
-              --body "Automated hotfix promotion — CI passed on \`hotfix\`." \
-              --repo "$GITHUB_REPOSITORY" || true
-            existing=$(gh pr list --base main --head hotfix \
-              --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          fi
-
-          # Merge once the required checks pass, polling mergeStateStatus.
-          #
-          # Do NOT gate on "no checks with a null conclusion": right after the
-          # PR is opened its own pull_request-triggered checks haven't
-          # registered yet, so the rollup shows only the already-finished push
-          # checks. That reads as "all done" and fires an immediate merge while
-          # the required checks are still queued, which GitHub rejects
-          # ("Repository rule violations found / required status checks are
-          # queued") — and because the mutation fails, the PR is left open with
-          # no auto-merge armed to retry once the checks pass.
-          #
-          # mergeStateStatus is BLOCKED while required checks are pending and
-          # CLEAN once they pass. The initial sleep lets the PR's own checks
-          # register so the state isn't transiently CLEAN before they appear.
-          if [ -n "$existing" ]; then
-            sleep 20
-            for i in {1..90}; do
-              state=$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" \
-                --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "")
-              case "$state" in
-                CLEAN|UNSTABLE|HAS_HOOKS)
-                  gh pr merge "$existing" --merge --repo "$GITHUB_REPOSITORY"
-                  break
-                  ;;
-                DIRTY)
-                  echo "::error::PR #$existing has merge conflicts; not merging."
-                  exit 1
-                  ;;
-              esac
-              sleep 10
-            done
-          fi
+          scripts/promote_when_green.sh \
+            --base main --head hotfix \
+            --title "hotfix: promote hotfix → main" \
+            --body "Automated hotfix promotion — CI passed on \`hotfix\`."
 
       - name: Open hotfix→dev PR and merge when green
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          existing=$(gh pr list --base dev --head hotfix \
-            --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          if [ -z "$existing" ]; then
-            gh pr create \
-              --base dev --head hotfix \
-              --title "hotfix: back-merge hotfix → dev" \
-              --body "Keeping dev in sync with the hotfix." \
-              --repo "$GITHUB_REPOSITORY" || true
-            existing=$(gh pr list --base dev --head hotfix \
-              --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          fi
-
-          # Merge once the required checks pass, polling mergeStateStatus.
-          #
-          # Do NOT gate on "no checks with a null conclusion": right after the
-          # PR is opened its own pull_request-triggered checks haven't
-          # registered yet, so the rollup shows only the already-finished push
-          # checks. That reads as "all done" and fires an immediate merge while
-          # the required checks are still queued, which GitHub rejects
-          # ("Repository rule violations found / required status checks are
-          # queued") — and because the mutation fails, the PR is left open with
-          # no auto-merge armed to retry once the checks pass.
-          #
-          # mergeStateStatus is BLOCKED while required checks are pending and
-          # CLEAN once they pass. The initial sleep lets the PR's own checks
-          # register so the state isn't transiently CLEAN before they appear.
-          if [ -n "$existing" ]; then
-            sleep 20
-            for i in {1..90}; do
-              state=$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" \
-                --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "")
-              case "$state" in
-                CLEAN|UNSTABLE|HAS_HOOKS)
-                  gh pr merge "$existing" --merge --repo "$GITHUB_REPOSITORY"
-                  break
-                  ;;
-                DIRTY)
-                  echo "::error::PR #$existing has merge conflicts; not merging."
-                  exit 1
-                  ;;
-              esac
-              sleep 10
-            done
-          fi
+          scripts/promote_when_green.sh \
+            --base dev --head hotfix \
+            --title "hotfix: back-merge hotfix → dev" \
+            --body "Keeping dev in sync with the hotfix."
 
   promote_to_main:
     name: Promote dev → main
@@ -212,6 +154,19 @@ jobs:
     needs: [analyze_format, test]
     # Only run when CI passes on a direct push to dev (not on PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    # A hard mutex around the dev→main merge. The workflow-level group above
+    # already supersedes an older dev run, but cancellation is asynchronous:
+    # two merges landing seconds apart (as #521 and #522 did) could both reach
+    # `gh pr merge` on the same PR, and GitHub answers the second with
+    # "Merge already in progress" — which used to fail the job and paint dev
+    # red even though main got the code.
+    #
+    # cancel-in-progress: false — never abandon a merge midway. If GitHub drops
+    # a *pending* promotion in favour of a newer one that is fine: this job
+    # promotes dev's tip, so the newer run carries the older commits too.
+    concurrency:
+      group: promote-dev-to-main
+      cancel-in-progress: false
     permissions:
       contents: write
       pull-requests: write
@@ -223,52 +178,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
-          # Create the PR if it doesn't already exist
-          existing=$(gh pr list --base main --head dev \
-            --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-
-          if [ -z "$existing" ]; then
-            gh pr create \
-              --base main --head dev \
-              --title "chore: promote dev → main" \
-              --body "Automated promotion — CI passed on \`dev\`." \
-              --repo "$GITHUB_REPOSITORY" || true
-            existing=$(gh pr list --base main --head dev \
-              --repo "$GITHUB_REPOSITORY" --json number --jq '.[0].number')
-          fi
-
-          # Merge once the required checks pass, polling mergeStateStatus.
-          #
-          # Do NOT gate on "no checks with a null conclusion": right after the
-          # PR is opened its own pull_request-triggered checks haven't
-          # registered yet, so the rollup shows only the already-finished push
-          # checks. That reads as "all done" and fires an immediate merge while
-          # the required checks are still queued, which GitHub rejects
-          # ("Repository rule violations found / required status checks are
-          # queued") — and because the mutation fails, the PR is left open with
-          # no auto-merge armed to retry once the checks pass.
-          #
-          # mergeStateStatus is BLOCKED while required checks are pending and
-          # CLEAN once they pass. The initial sleep lets the PR's own checks
-          # register so the state isn't transiently CLEAN before they appear.
-          if [ -n "$existing" ]; then
-            sleep 20
-            for i in {1..90}; do
-              state=$(gh pr view "$existing" --repo "$GITHUB_REPOSITORY" \
-                --json mergeStateStatus --jq '.mergeStateStatus' 2>/dev/null || echo "")
-              case "$state" in
-                CLEAN|UNSTABLE|HAS_HOOKS)
-                  gh pr merge "$existing" --merge --repo "$GITHUB_REPOSITORY"
-                  break
-                  ;;
-                DIRTY)
-                  echo "::error::PR #$existing has merge conflicts; not merging."
-                  exit 1
-                  ;;
-              esac
-              sleep 10
-            done
-          fi
+          scripts/promote_when_green.sh \
+            --base main --head dev \
+            --title "chore: promote dev → main" \
+            --body "Automated promotion — CI passed on \`dev\`."
 
   release:
     name: Release — Build & Deploy APK
@@ -621,10 +534,14 @@ jobs:
           WEB_REDIRECT_URL=
           EOF
 
+      # Via the script, not a bare `flutter build web`: it drops the service
+      # worker and installs the retirement script that un-sticks browsers
+      # already holding one. See scripts/build_web.sh for why both halves are
+      # needed.
       - name: Build web (Treasury companion)
         if: steps.changes.outputs.changed == 'true'
         run: |
-          flutter build web --release -t lib/main_web.dart \
+          scripts/build_web.sh \
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - uses: google-github-actions/auth@v2

@@ -68,6 +68,72 @@ class SyncService {
   /// could not be parsed. Each entry is `'<table>/<recordId>: <error>'`.
   List<String> get lastSkippedRecords => List.unmodifiable(_lastSkippedRecords);
 
+  /// Rows requested per page by [_selectAllPages].
+  ///
+  /// Hosted Supabase enforces a hard `db-max-rows` ceiling (1000 by default) on
+  /// every response, and PostgREST applies it **silently** — no error, no
+  /// truncation flag. So an unpaginated `.select()` over a table that has
+  /// outgrown the ceiling returns a partial answer indistinguishable from a
+  /// complete one. That is exactly how 1,120 `finance_records` came back as
+  /// 1,000: 8 accounts and 112 other rows never reached the client, and a
+  /// browser with empty local storage (or a phone reinstall) restored a
+  /// treasury that looked whole but wasn't.
+  static const int pullPageSize = 500;
+
+  /// Walks [fetchPage] until it reports no more rows, and returns everything.
+  ///
+  /// Offsets advance by the number of rows actually received rather than by
+  /// [pageSize], so this stays correct even if the server caps a page below
+  /// what we asked for — the failure mode being fixed here is precisely a
+  /// server returning fewer rows than requested without saying so.
+  ///
+  /// Extracted from the Supabase call so the paging arithmetic is testable
+  /// without a PostgREST fake; the original bug was invisible because the
+  /// truncation happened inside an untestable one-shot select.
+  @visibleForTesting
+  static Future<List<Map<String, dynamic>>> collectPages(
+    Future<List<Map<String, dynamic>>> Function(int from, int to) fetchPage, {
+    int pageSize = pullPageSize,
+    int maxPages = 400,
+  }) async {
+    final rows = <Map<String, dynamic>>[];
+    for (var page = 0; page < maxPages; page++) {
+      final batch = await fetchPage(rows.length, rows.length + pageSize - 1);
+      if (batch.isEmpty) return rows;
+      rows.addAll(batch);
+    }
+    // maxPages is a runaway guard, not an expected limit — 400 × 500 = 200k
+    // rows. Hitting it means something pathological (a non-unique sort order
+    // re-serving the same page); say so rather than returning a silent partial.
+    debugPrint('SyncService: collectPages hit the $maxPages-page guard after '
+        '${rows.length} rows — returning a partial result.');
+    return rows;
+  }
+
+  /// Fetches **every** row of [table] for the current user, page by page.
+  ///
+  /// [orderBy] must be unique per user so pages neither overlap nor skip:
+  /// PostgREST evaluates `range` per request against a freshly sorted result,
+  /// not against a snapshot, so an ambiguous sort can shuffle rows between
+  /// pages.
+  Future<List<Map<String, dynamic>>> _selectAllPages(
+    String table,
+    String columns, {
+    required List<String> orderBy,
+  }) =>
+      collectPages((from, to) async {
+        var query = _supabase
+            .from(table)
+            .select(columns)
+            .eq('user_id', _userId)
+            .order(orderBy.first, ascending: true);
+        for (final column in orderBy.skip(1)) {
+          query = query.order(column, ascending: true);
+        }
+        final page = await query.range(from, to);
+        return (page as List).cast<Map<String, dynamic>>();
+      });
+
   void _recordSkipped(String id, Object e) {
     _lastSkippedRecords.add('$id: $e');
     debugPrint('SyncService: skipping unparseable record $id: $e');
@@ -1139,11 +1205,14 @@ class SyncService {
   }
 
   Future<void> _pullNutritionLogs() async {
-    final rows = await _supabase
-        .from('nutrition_logs')
-        .select('date, data, updated_at')
-        .eq('user_id', _userId);
-    for (final row in rows as List) {
+    // Paged like finance_records: one row per day, so this crosses the 1000-row
+    // ceiling after ~2.7 years of logging and would then silently drop days.
+    final rows = await _selectAllPages(
+      'nutrition_logs',
+      'date, data, updated_at',
+      orderBy: const ['date'],
+    );
+    for (final row in rows) {
       final dateKey = row['date'] as String? ?? '';
       try {
         final remoteTime = DateTime.parse(row['updated_at'] as String);
@@ -1191,11 +1260,13 @@ class SyncService {
   }
 
   Future<void> _pullActivityLogs() async {
-    final rows = await _supabase
-        .from('activity_logs')
-        .select('date, data, updated_at')
-        .eq('user_id', _userId);
-    for (final row in rows as List) {
+    // Paged for the same reason as nutrition_logs — one row per day.
+    final rows = await _selectAllPages(
+      'activity_logs',
+      'date, data, updated_at',
+      orderBy: const ['date'],
+    );
+    for (final row in rows) {
       final dateKey = row['date'] as String? ?? '';
       try {
         final remoteTime = DateTime.parse(row['updated_at'] as String);
@@ -1213,15 +1284,19 @@ class SyncService {
   }
 
   Future<void> _pullFinanceRecords() async {
-    final rows = await _supabase
-        .from('finance_records')
-        .select('table_name, record_id, data, updated_at')
-        .eq('user_id', _userId);
+    // Paged: this is the table that outgrew the 1000-row response ceiling (see
+    // [pullPageSize]). (table_name, record_id) is unique per user, so it is a
+    // safe page order.
+    final rows = await _selectAllPages(
+      'finance_records',
+      'table_name, record_id, data, updated_at',
+      orderBy: const ['table_name', 'record_id'],
+    );
 
     final byTable = <String, List<Map<String, dynamic>>>{};
-    for (final row in rows as List) {
+    for (final row in rows) {
       final t = row['table_name'] as String;
-      byTable.putIfAbsent(t, () => []).add(row as Map<String, dynamic>);
+      byTable.putIfAbsent(t, () => []).add(row);
     }
 
     await _pullFinanceTable<FinancialAccount>(
