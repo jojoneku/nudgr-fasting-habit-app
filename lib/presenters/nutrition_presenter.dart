@@ -35,6 +35,7 @@ import '../utils/body_composition_calculator.dart';
 import '../utils/calorie_density_estimator.dart' as cde;
 import '../utils/exercise_nlp_parser.dart';
 import '../utils/food_match_scorer.dart';
+import '../utils/food_gram_reconciler.dart';
 import '../utils/food_nlp_parser.dart';
 import 'fasting_presenter.dart';
 import 'stats_presenter.dart';
@@ -1843,11 +1844,16 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
           .timeout(const Duration(seconds: 30));
       if (extracted == null || extracted.items.isEmpty) return null;
 
+      // Same weight enforcement the cloud path gets. The on-device tier had
+      // none at all — not even for a single item — so a stated weight was
+      // silently discarded whichever model answered.
+      final items = reconcileExplicitGrams(text, extracted.items);
+
       final entries = <FoodEntry>[];
       final altsList = <List<ChatFoodAlternative>>[];
       final rawTexts = <String>[];
 
-      for (final item in extracted.items) {
+      for (final item in items) {
         rawTexts.add(item.rawText);
         FoodEntry? entry;
 
@@ -2002,39 +2008,11 @@ class NutritionPresenter extends ChangeNotifier with SafeNotifier {
         ];
       }
 
-      // Single-item explicit-gram reconciliation: user wrote "12g chocolate crinkle"
-      // but cloud returned 40g. Trust the user's gram count and scale macros.
-      if (items.length == 1) {
-        final userGrams = _cloudSingleItemExplicitGrams(text);
-        if (userGrams != null && userGrams > 0) {
-          final i = items.first;
-          if ((i.grams - userGrams).abs() / userGrams > 0.05) {
-            final ratio = userGrams / i.grams;
-            EstimatedMacros? scaledMacros;
-            if (i.estimatedMacros != null) {
-              final m = i.estimatedMacros!;
-              scaledMacros = EstimatedMacros(
-                calories: m.calories * ratio,
-                proteinG: m.proteinG * ratio,
-                carbsG: m.carbsG * ratio,
-                fatG: m.fatG * ratio,
-              );
-            }
-            items = [
-              ExtractedFoodItem(
-                name: i.name,
-                grams: userGrams,
-                hydeDescription: i.hydeDescription,
-                rawText: i.rawText,
-                resolvedFoodId: i.resolvedFoodId,
-                resolverConfidence: i.resolverConfidence,
-                estimatedMacros: scaledMacros,
-                macroFallback: i.macroFallback,
-              ),
-            ];
-          }
-        }
-      }
+      // Explicit-gram reconciliation. The user's stated weights win over the
+      // model's guesses — for multi-item logs too, which previously had no
+      // enforcement at all and so under-counted whenever the model
+      // under-portioned. See food_gram_reconciler.dart.
+      items = reconcileExplicitGrams(text, items);
 
       // IF-Sync gate runs at commit time, not here.
       final entries = <FoodEntry>[];
