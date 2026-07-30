@@ -47,7 +47,7 @@ const _entryMeta = {
 /// AiChatSheet.show(context, presenter: aiCoachPresenter,
 ///     entryPoint: AiCoachEntryPoint.nutrition);
 /// ```
-class AiChatSheet extends StatefulWidget {
+class AiChatSheet extends StatelessWidget {
   final AiCoachPresenter presenter;
   final AiCoachEntryPoint entryPoint;
 
@@ -72,10 +72,67 @@ class AiChatSheet extends StatefulWidget {
   }
 
   @override
-  State<AiChatSheet> createState() => _AiChatSheetState();
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (_, __) => Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: AiChatBody(
+          presenter: presenter,
+          entryPoint: entryPoint,
+          showDragHandle: true,
+        ),
+      ),
+    );
+  }
 }
 
-class _AiChatSheetState extends State<AiChatSheet> {
+/// The chat surface itself — header, message list, advisor log card, and input
+/// bar — with no opinion about its container.
+///
+/// Mobile wraps it in [AiChatSheet]'s draggable bottom sheet; the web companion
+/// wraps it in a docked side panel. Extracted so the two platforms share one
+/// chat implementation rather than one per form factor.
+class AiChatBody extends StatefulWidget {
+  final AiCoachPresenter presenter;
+  final AiCoachEntryPoint entryPoint;
+
+  /// Bottom-sheet affordance — off in a docked container, which is not
+  /// draggable.
+  final bool showDragHandle;
+
+  /// Whether the header prints the entry-point label. Off in the web dock,
+  /// which is narrow enough that the label competes with the four trailing
+  /// controls and ellipsises to "Mone…"; the dock prints the name itself in the
+  /// strip above, where there is room.
+  final bool showEntryLabel;
+
+  /// Whether an unavailable model should offer the on-device download flow.
+  /// False on web, which has no on-device tier: there the unavailable state is
+  /// terminal (sign in / configure the endpoint), and offering a download the
+  /// platform cannot perform would be a dead end.
+  final bool allowModelDownload;
+
+  const AiChatBody({
+    super.key,
+    required this.presenter,
+    required this.entryPoint,
+    this.showDragHandle = false,
+    this.showEntryLabel = true,
+    this.allowModelDownload = true,
+  });
+
+  @override
+  State<AiChatBody> createState() => _AiChatBodyState();
+}
+
+class _AiChatBodyState extends State<AiChatBody> {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
@@ -184,104 +241,96 @@ class _AiChatSheetState extends State<AiChatSheet> {
     final meta = _entryMeta[widget.entryPoint]!;
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    return DraggableScrollableSheet(
-      initialChildSize: 0.75,
-      minChildSize: 0.4,
-      maxChildSize: 0.95,
-      expand: false,
-      builder: (_, scrollController) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surfaceContainerLow,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+    return Column(
+      children: [
+        if (widget.showDragHandle) _DragHandle(),
+        _SheetHeader(
+          meta: meta,
+          presenter: _presenter,
+          showLabel: widget.showEntryLabel,
         ),
-        child: Column(
-          children: [
-            _DragHandle(),
-            _SheetHeader(meta: meta, presenter: _presenter),
-            Divider(
-                height: 1, color: Theme.of(context).colorScheme.outlineVariant),
-            Expanded(
-              child: ListenableBuilder(
-                listenable: _presenter,
-                builder: (_, __) {
-                  if (_presenter.isInitializing) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(
-                            color: Theme.of(context).colorScheme.primary,
-                            strokeWidth: 2,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Loading AI Coach…',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
+        Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
+        Expanded(
+          child: ListenableBuilder(
+            listenable: _presenter,
+            builder: (_, __) {
+              if (_presenter.isInitializing) {
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.primary,
+                        strokeWidth: 2,
                       ),
-                    );
-                  }
-                  if (!_presenter.isModelAvailable &&
-                      !_presenter.isDownloading) {
-                    return _DownloadPrompt(presenter: _presenter);
-                  }
-                  if (_presenter.isDownloading) {
-                    return _DownloadProgress(presenter: _presenter);
-                  }
-                  WidgetsBinding.instance
-                      .addPostFrameCallback((_) => _scrollToBottom());
-                  return _MessageList(
-                    messages: _presenter.messages,
-                    scrollController: _scrollController,
-                    isResponding: _presenter.isResponding,
-                  );
-                },
-              ),
-            ),
-            if (_presenter.errorMessage != null)
-              _ErrorChip(
-                message: _presenter.errorMessage!,
-                onDismiss: _presenter.clearError,
-              ),
-            if (_advisorMode)
-              ListenableBuilder(
-                listenable: _ledger!,
-                builder: (_, __) => AdvisorLogCard(ledger: _ledger!),
-              ),
-            Padding(
-              padding: EdgeInsets.only(bottom: bottomInset),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (_pendingImage != null)
-                    _StagedImagePreview(
-                      bytes: _pendingImage!,
-                      onRemove: () => setState(() => _pendingImage = null),
-                    ),
-                  ListenableBuilder(
-                    listenable: _presenter,
-                    builder: (_, __) => _InputBar(
-                      controller: _controller,
-                      focusNode: _focusNode,
-                      enabled: _presenter.isModelAvailable &&
-                          !_presenter.isResponding &&
-                          !_presenter.isInitializing,
-                      onSend: _send,
-                      // Photo upload is an advisor-only capability (its op is
-                      // the only one wired for vision).
-                      onAttach: _advisorMode ? _attachPhoto : null,
-                    ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Loading AI Coach…',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ],
+                );
+              }
+              if (!_presenter.isModelAvailable && !_presenter.isDownloading) {
+                return widget.allowModelDownload
+                    ? _DownloadPrompt(presenter: _presenter)
+                    : const _CloudUnavailable();
+              }
+              if (_presenter.isDownloading) {
+                return _DownloadProgress(presenter: _presenter);
+              }
+              WidgetsBinding.instance
+                  .addPostFrameCallback((_) => _scrollToBottom());
+              return _MessageList(
+                messages: _presenter.messages,
+                scrollController: _scrollController,
+                isResponding: _presenter.isResponding,
+              );
+            },
+          ),
         ),
-      ),
+        if (_presenter.errorMessage != null)
+          _ErrorChip(
+            message: _presenter.errorMessage!,
+            onDismiss: _presenter.clearError,
+          ),
+        if (_advisorMode)
+          ListenableBuilder(
+            listenable: _ledger!,
+            builder: (_, __) => AdvisorLogCard(ledger: _ledger!),
+          ),
+        Padding(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_pendingImage != null)
+                _StagedImagePreview(
+                  bytes: _pendingImage!,
+                  onRemove: () => setState(() => _pendingImage = null),
+                ),
+              ListenableBuilder(
+                listenable: _presenter,
+                builder: (_, __) => _InputBar(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  enabled: _presenter.isModelAvailable &&
+                      !_presenter.isResponding &&
+                      !_presenter.isInitializing,
+                  onSend: _send,
+                  // Photo upload is an advisor-only capability (its op is
+                  // the only one wired for vision).
+                  onAttach: _advisorMode ? _attachPhoto : null,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -309,26 +358,39 @@ class _DragHandle extends StatelessWidget {
 class _SheetHeader extends StatelessWidget {
   final ({String label, IconData icon}) meta;
   final AiCoachPresenter presenter;
-  const _SheetHeader({required this.meta, required this.presenter});
+  final bool showLabel;
+  const _SheetHeader({
+    required this.meta,
+    required this.presenter,
+    this.showLabel = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+      padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
       child: Row(
         children: [
           Icon(meta.icon, color: cs.onSurfaceVariant, size: 18),
-          const SizedBox(width: 10),
-          Text(
-            meta.label,
-            style: TextStyle(
-              color: cs.onSurface,
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
+          if (showLabel) ...[
+            const SizedBox(width: 10),
+            // Flexible so the title yields before the trailing controls in any
+            // container narrower than a phone sheet.
+            Flexible(
+              child: Text(
+                meta.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.5,
+                ),
+              ),
             ),
-          ),
+          ],
           const Spacer(),
           if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
             IconButton(
@@ -1324,6 +1386,46 @@ class _ErrorChip extends StatelessWidget {
             child: Icon(Icons.close, color: errorColor, size: 16),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Terminal unavailable state for platforms with no on-device tier (web).
+/// Offering the download flow there would be a dead end, so this names the two
+/// things that actually gate the cloud tier instead.
+class _CloudUnavailable extends StatelessWidget {
+  const _CloudUnavailable();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined,
+                size: 40, color: cs.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Text(
+              'Money Mentor is unavailable',
+              style: theme.textTheme.titleSmall
+                  ?.copyWith(fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'The advisor runs in the cloud. Make sure you are signed in and '
+              'that this build has an AI endpoint configured.',
+              style: theme.textTheme.bodySmall
+                  ?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

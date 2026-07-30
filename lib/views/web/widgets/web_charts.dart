@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 
 import '../design/web_breakpoints.dart';
+import 'web_number.dart';
 
 /// One slice of a [WebDonutChart] / one legend entry.
 class WebChartSlice {
@@ -395,8 +396,12 @@ class WebLineChart extends StatelessWidget {
     final spots = <FlSpot>[
       for (int i = 0; i < values.length; i++) FlSpot(i.toDouble(), values[i]),
     ];
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
 
     // Show at most ~7 x-axis labels: with few points (6-month trend, 7-day
     // spending) every point is labelled; a long series (e.g. a 30-day sheet)
@@ -438,14 +443,27 @@ class WebLineChart extends StatelessWidget {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: leftLabelFormat != null,
-                reservedSize: 48,
+                // 60, not 48: tabular figures give every digit the widest
+                // advance, so a label like "₱107.1k" no longer fits the old
+                // reserve and was wrapping onto a second line. FittedBox is the
+                // backstop for anything longer still.
+                reservedSize: 60,
                 getTitlesWidget: (value, meta) {
                   if (value != meta.min && value != meta.max) {
                     return const SizedBox.shrink();
                   }
                   return Padding(
                     padding: const EdgeInsets.only(right: WebInsets.sm),
-                    child: Text(leftLabelFormat!(value), style: labelStyle),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        leftLabelFormat!(value),
+                        style: labelStyle,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
                   );
                 },
               ),
@@ -586,8 +604,12 @@ class WebMultiLineChart extends StatelessWidget {
       );
     }
 
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
     final labelCount = bottomLabels?.length ?? 0;
     final labelStep =
         labelCount == 0 ? 1 : (labelCount / 7).ceil().clamp(1, labelCount);
@@ -628,14 +650,27 @@ class WebMultiLineChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: leftLabelFormat != null,
-                    reservedSize: 48,
+                    // 60, not 48: tabular figures give every digit the widest
+                    // advance, so a label like "₱107.1k" no longer fits the old
+                    // reserve and was wrapping onto a second line. FittedBox is
+                    // the backstop for anything longer still.
+                    reservedSize: 60,
                     getTitlesWidget: (value, meta) {
                       if (value != meta.min && value != meta.max) {
                         return const SizedBox.shrink();
                       }
                       return Padding(
                         padding: const EdgeInsets.only(right: WebInsets.sm),
-                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            leftLabelFormat!(value),
+                            style: labelStyle,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
+                        ),
                       );
                     },
                   ),
@@ -770,8 +805,12 @@ class WebBarPairChart extends StatelessWidget {
       0,
       (m, g) => math.max(m, math.max(g.a, g.b)),
     );
-    final labelStyle =
-        theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant);
+    // Tabular figures on axis ticks so gridline labels stay column-aligned as
+    // the series rescales (see web_number.dart).
+    final labelStyle = webNumericStyle(
+      theme.textTheme.labelSmall,
+      color: cs.onSurfaceVariant,
+    );
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -830,14 +869,27 @@ class WebBarPairChart extends StatelessWidget {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: leftLabelFormat != null,
-                    reservedSize: 48,
+                    // 60, not 48: tabular figures give every digit the widest
+                    // advance, so a label like "₱107.1k" no longer fits the old
+                    // reserve and was wrapping onto a second line. FittedBox is
+                    // the backstop for anything longer still.
+                    reservedSize: 60,
                     getTitlesWidget: (value, meta) {
                       if (value != meta.min && value != meta.max) {
                         return const SizedBox.shrink();
                       }
                       return Padding(
                         padding: const EdgeInsets.only(right: WebInsets.sm),
-                        child: Text(leftLabelFormat!(value), style: labelStyle),
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerRight,
+                          child: Text(
+                            leftLabelFormat!(value),
+                            style: labelStyle,
+                            maxLines: 1,
+                            softWrap: false,
+                          ),
+                        ),
                       );
                     },
                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../design/web_breakpoints.dart';
+import 'web_number.dart';
 
 /// Column definition for [WebDataTable].
 class WebColumn<T> {
@@ -216,7 +217,13 @@ class _BodyRowState<T> extends State<_BodyRow<T>> {
                         ? Alignment.centerRight
                         : Alignment.centerLeft,
                     child: DefaultTextStyle.merge(
-                      style: theme.textTheme.bodyMedium,
+                      // Numeric columns get tabular figures so amounts align
+                      // down the column and don't shift as digits change —
+                      // applied here rather than at each call site so every
+                      // table inherits it.
+                      style: c.numeric
+                          ? webNumericStyle(theme.textTheme.bodyMedium)
+                          : theme.textTheme.bodyMedium,
                       child: c.cell(context, widget.row),
                     ),
                   ),

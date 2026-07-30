@@ -35,7 +35,12 @@ const int _maxArchiveMessages = 100;
 
 class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
   final StatsPresenter _stats;
-  final FastingPresenter _fasting;
+
+  /// Fasting state for the fasting/nutrition/stats coaches. **Nullable**: the
+  /// web companion is finance-only and has no `FastingPresenter` — constructing
+  /// one there would init `NotificationService`, a platform channel with no web
+  /// implementation. The advisor entry point never reads it.
+  final FastingPresenter? _fasting;
   final NutritionPresenter? _nutrition;
   final TreasuryDashboardPresenter? _treasury;
   final BudgetPresenter? _budget;
@@ -84,7 +89,7 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
 
   AiCoachPresenter({
     required StatsPresenter stats,
-    required FastingPresenter fasting,
+    FastingPresenter? fasting,
     NutritionPresenter? nutrition,
     AiCoachService? service,
     TreasuryDashboardPresenter? treasury,
@@ -798,10 +803,13 @@ class AiCoachPresenter extends ChangeNotifier with SafeNotifier {
       entryPoint: _entryPoint,
       imageBytes: isAdvisor ? image : null,
       imageMimeType: isAdvisor && image != null ? 'image/jpeg' : null,
-      isFasting: _fasting.isFasting,
-      elapsedFastMinutes:
-          _fasting.isFasting ? _fasting.elapsedSeconds ~/ 60 : null,
-      fastingGoalHours: _fasting.fastingGoalHours,
+      // Absent on finance-only surfaces (web): report "not fasting" rather than
+      // inventing a fast, and omit the goal entirely.
+      isFasting: _fasting?.isFasting ?? false,
+      elapsedFastMinutes: (_fasting?.isFasting ?? false)
+          ? _fasting!.elapsedSeconds ~/ 60
+          : null,
+      fastingGoalHours: _fasting?.fastingGoalHours,
       fastingStreak: stats.streak,
       playerLevel: stats.level,
       playerXp: stats.currentXp,
