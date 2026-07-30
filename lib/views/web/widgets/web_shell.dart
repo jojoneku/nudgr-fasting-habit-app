@@ -28,6 +28,12 @@ class WebShell extends StatelessWidget {
   /// Optional global topbar pinned above the content area (e.g. theme toggle).
   final Widget? topBar;
 
+  /// Optional right-hand dock, mounted alongside every destination rather than
+  /// replacing the body (the advisor panel). It owns its own width — collapsed
+  /// to a narrow rail or expanded to a column — so the shell simply gives it
+  /// whatever it asks for.
+  final Widget? dock;
+
   const WebShell({
     super.key,
     required this.destinations,
@@ -37,6 +43,7 @@ class WebShell extends StatelessWidget {
     this.header,
     this.footer,
     this.topBar,
+    this.dock,
   });
 
   @override
@@ -117,6 +124,20 @@ class WebShell extends StatelessWidget {
               ),
             ),
           ),
+          // Optional right dock — the advisor. Outside the content Expanded so
+          // the page keeps its own width budget: the dock takes space from the
+          // shell, never from the page's internal column/table layout.
+          if (dock != null)
+            Container(
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                border: Border(
+                  left: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.5)),
+                ),
+              ),
+              child: SafeArea(child: dock!),
+            ),
         ],
       ),
     );

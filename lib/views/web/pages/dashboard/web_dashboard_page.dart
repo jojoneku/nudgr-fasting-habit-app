@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:intermittent_fasting/app_colors.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/utils/account_badge.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -45,6 +48,8 @@ class WebDashboardPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              WebNetWorthHero(presenter: presenter),
+              const SizedBox(height: WebInsets.xl),
               _PositionRow(presenter: presenter),
               const SizedBox(height: WebInsets.xl),
               _MonthEndOutlookRow(presenter: presenter),
@@ -77,30 +82,33 @@ class _PositionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = presenter;
-    final net = p.netWorth;
     final delta = p.monthNetCashFlow;
     final deltaSign = delta >= 0 ? '↑ ' : '↓ ';
 
+    // Net worth itself moved up into WebNetWorthHero, which shows the same
+    // figure with the redesign's gradient, momentum pill, and sparkline. This
+    // row keeps the month-flow delta that used to be the hero tile's subtitle.
     final tiles = <Widget>[
       WebStatTile(
-        label: 'Net Position',
-        value: formatPeso(net),
-        sub: '$deltaSign${formatPeso(delta.abs())} this month',
-        icon: Icons.attach_money_rounded,
-        emphasize: true,
-        accent: true,
+        label: 'Net Cash Flow',
+        value: '$deltaSign${formatPeso(delta.abs())}',
+        sub: 'Income less spending this month',
+        icon: Icons.swap_vert_rounded,
+        iconColor: context.appColors.fast,
       ),
       WebStatTile(
         label: 'Liquid Cash',
         value: formatPeso(p.totalLiquidCash),
         sub: 'Spendable across accounts',
         icon: Icons.account_balance_wallet_outlined,
+        iconColor: context.appColors.fast,
       ),
       WebStatTile(
         label: 'Total Assets',
         value: formatPeso(p.totalAssets),
         sub: 'Cash, savings & goals',
         icon: Icons.savings_outlined,
+        iconColor: context.appColors.treasury,
       ),
       // Budget Left — how much of this month's plan is still unspent. Shown
       // instead of total allocated so it reconciles with the Month-End Outlook:
@@ -111,6 +119,7 @@ class _PositionRow extends StatelessWidget {
         value: formatPeso(p.totalBudgetRemaining),
         sub: 'Left to spend this month',
         icon: Icons.pie_chart_outline_rounded,
+        iconColor: context.appColors.treasury,
       ),
     ];
 
@@ -139,6 +148,7 @@ class _MonthEndOutlookRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final appColors = context.appColors;
     final p = presenter;
 
     final tiles = <Widget>[
@@ -147,25 +157,30 @@ class _MonthEndOutlookRow extends StatelessWidget {
         value: formatPeso(p.monthUnpaidBills),
         sub: 'Unpaid this month',
         icon: Icons.receipt_long_outlined,
+        iconColor: appColors.bills,
       ),
       WebStatTile(
         label: 'To Receive',
         value: formatPeso(p.pendingReceivables),
         sub: 'Money owed to you',
         icon: Icons.south_rounded,
+        iconColor: appColors.success,
       ),
       WebStatTile(
         label: 'Budget / Savings Due',
         value: formatPeso(p.budgetedExpensesRemaining),
         sub: 'Set-asides still to fund',
         icon: Icons.savings_outlined,
+        iconColor: appColors.treasury,
       ),
       WebStatTile(
         label: 'Proj. Month-End Cash',
         value: formatPeso(p.forecastedNetBalance),
         sub: 'After bills, budget & savings',
         icon: Icons.flag_outlined,
-        valueColor: p.forecastedNetBalance >= 0 ? cs.tertiary : cs.error,
+        // appColors.success, not cs.tertiary: the mobile grid uses the same
+        // token so the identical figure reads identically on both platforms.
+        valueColor: p.forecastedNetBalance >= 0 ? appColors.success : cs.error,
       ),
     ];
 
@@ -937,6 +952,7 @@ class _CashFlowCard extends StatelessWidget {
     final expenses = p.monthTotalOutflow;
     final net = p.monthNetCashFlow;
     final rate = p.savingsRate;
+    final peak = math.max(income, expenses);
     final spentPct = income > 0 ? (expenses / income).clamp(0.0, 1.0) : 0.0;
     final spentPctLabel =
         income > 0 ? '${(expenses / income * 100).round()}%' : '—';
@@ -971,6 +987,23 @@ class _CashFlowCard extends StatelessWidget {
               icon: Icons.percent_rounded,
             ),
           ]),
+          const SizedBox(height: WebInsets.lg),
+          // Paired flow bars, mirroring the mobile cashflow strip: each bar is
+          // sized against the larger of the two flows, so the dominant one
+          // fills the track and the other reads in proportion to it.
+          _FlowBar(
+            icon: Icons.south_rounded,
+            color: context.appColors.success,
+            fraction: peak > 0 ? income / peak : 0.0,
+            amount: formatPeso(income),
+          ),
+          const SizedBox(height: WebInsets.sm),
+          _FlowBar(
+            icon: Icons.north_rounded,
+            color: cs.error,
+            fraction: peak > 0 ? expenses / peak : 0.0,
+            amount: formatPeso(expenses),
+          ),
           const SizedBox(height: WebInsets.lg),
           Row(
             children: [
@@ -1234,13 +1267,66 @@ class _MiniStat extends StatelessWidget {
           ],
         ),
         const SizedBox(height: WebInsets.xs),
-        Text(value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w700,
-              color: valueColor ?? cs.onSurface,
-            )),
+        WebNumber(
+          value,
+          size: WebNumberSize.body,
+          color: valueColor ?? cs.onSurface,
+        ),
+      ],
+    );
+  }
+}
+
+/// One flow bar in the Cash Flow card — a tinted track with the amount at the
+/// right. The web twin of the mobile cashflow strip's `_FlowBar`.
+class _FlowBar extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final double fraction;
+  final String amount;
+
+  const _FlowBar({
+    required this.icon,
+    required this.color,
+    required this.fraction,
+    required this.amount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: color),
+        const SizedBox(width: WebInsets.sm),
+        Expanded(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: Stack(
+              children: [
+                Container(height: 8, color: cs.surfaceContainerHighest),
+                FractionallySizedBox(
+                  widthFactor: fraction.clamp(0.0, 1.0),
+                  child: Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: WebInsets.md),
+        Text(
+          amount,
+          textAlign: TextAlign.right,
+          style: webNumericStyle(theme.textTheme.labelLarge, color: color)
+              ?.copyWith(fontWeight: FontWeight.w800),
+        ),
       ],
     );
   }

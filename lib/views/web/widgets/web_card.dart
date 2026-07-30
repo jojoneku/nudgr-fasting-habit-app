@@ -82,7 +82,22 @@ class WebCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: onSurface ? cs.surfaceContainerHigh : cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppRadii.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+        // Matches the mobile AppCard.elevated treatment: a 0.5px hairline at
+        // 40% rather than a full 1px at 50%, plus a barely-there lift. The
+        // heavier border read as a wireframe next to the phone's cards.
+        border: Border.all(
+          color: cs.outlineVariant.withValues(alpha: 0.4),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(
+              alpha: theme.brightness == Brightness.dark ? 0.10 : 0.05,
+            ),
+            blurRadius: 3,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       // Clip so the accent stripe follows the card's rounded corners.
       clipBehavior: accentColor != null ? Clip.antiAlias : Clip.none,

@@ -24,6 +24,7 @@ export 'indicators/app_number_display.dart';
 export 'indicators/app_linear_progress.dart';
 export 'indicators/app_circular_progress.dart';
 export 'indicators/app_ring_progress.dart';
+export 'indicators/app_sparkline.dart';
 export 'indicators/app_stat_pill.dart';
 export 'indicators/app_badge.dart';
 export 'indicators/app_icon_badge.dart';

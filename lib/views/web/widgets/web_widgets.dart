@@ -8,6 +8,8 @@ export 'web_card.dart';
 export 'web_charts.dart';
 export 'web_data_table.dart';
 export 'web_month_stepper.dart';
+export 'web_net_worth_hero.dart';
+export 'web_number.dart';
 export 'web_progress.dart';
 export 'web_searchable_dropdown.dart';
 export 'web_section.dart';

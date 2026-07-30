@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:intermittent_fasting/models/finance/budget.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/models/finance/monthly_summary.dart';
 import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/dashboard/metric_cards_grid.dart';
 import 'package:intermittent_fasting/views/treasury/dashboard/treasury_dashboard_view.dart';
 
 import '../../../mocks.mocks.dart';
@@ -97,10 +99,75 @@ void main() {
 
     expect(find.text('NET WORTH'), findsOneWidget);
     expect(find.textContaining('cashflow'), findsOneWidget);
-    expect(find.text('Projected spare'), findsOneWidget);
+    expect(find.text('Proj. month-end cash'), findsOneWidget);
     expect(find.text('Accounts'), findsOneWidget);
     expect(find.text('BPI Personal'), findsWidgets);
     expect(find.text('Synced'), findsOneWidget);
+  });
+
+  testWidgets('Month-End Outlook shows the four forecast tiles',
+      (tester) async {
+    await pumpDashboard(tester);
+
+    expect(find.text('Month-End Outlook'), findsOneWidget);
+    expect(find.text('UPCOMING BILLS'), findsOneWidget);
+    expect(find.text('TO RECEIVE'), findsOneWidget);
+    expect(find.text('BUDGET / SAVINGS DUE'), findsOneWidget);
+    expect(find.text('PROJ. MONTH-END CASH'), findsOneWidget);
+
+    // Raw ending cash is no longer a headline tile — it does not reserve the
+    // remaining budget, so it read as a projection it isn't.
+    expect(find.text('ENDING CASH'), findsNothing);
+    // Month in/out live on the cashflow strip's bars, not in this grid.
+    expect(find.text('MONTH IN'), findsNothing);
+    expect(find.text('MONTH OUT'), findsNothing);
+  });
+
+  testWidgets('projection tile renders even with no budgets set',
+      (tester) async {
+    // buildStorage() seeds no budgets and no budgeted expenses, so
+    // presenter.hasBudget is false. The tile used to be swapped for Liabilities
+    // in this case, hiding the forecast from exactly the users who never set a
+    // budget.
+    await pumpDashboard(tester);
+
+    expect(find.text('PROJ. MONTH-END CASH'), findsOneWidget);
+    expect(find.text('LIABILITIES'), findsNothing);
+  });
+
+  testWidgets('projected cash deducts the remaining budget', (tester) async {
+    final storage = buildStorage();
+    when(storage.loadBudgets()).thenAnswer((_) async => [
+          Budget(
+            id: 'b1',
+            categoryId: 'groceries',
+            month: month,
+            allocatedAmount: 8000,
+            group: 'needs',
+            budgetType: BudgetType.monthly,
+          ),
+        ]);
+    when(storage.loadBudgetGroups()).thenAnswer((_) async => []);
+    final presenter = TreasuryDashboardPresenter(storage);
+    await tester.pumpWidget(
+      MaterialApp(home: TreasuryDashboardView(presenter: presenter)),
+    );
+    await tester.pumpAndSettle();
+
+    // 60,500 liquid, no bills or receivables, nothing spent against the 8,000
+    // budget → ending cash 60,500 but only 52,500 genuinely uncommitted.
+    expect(presenter.endingCash, 60500);
+    expect(presenter.forecastedNetBalance, 52500);
+
+    // The grid's tile shows the budget-deducted figure, and the un-deducted one
+    // appears nowhere in the grid. Scoped to the grid deliberately: 60,500 is
+    // also this fixture's net worth, which the hero legitimately shows.
+    Finder inGrid(String text) => find.descendant(
+          of: find.byType(MetricCardsGrid),
+          matching: find.text(text),
+        );
+    expect(inGrid(formatPeso(52500)), findsOneWidget);
+    expect(inGrid(formatPeso(60500)), findsNothing);
   });
 
   testWidgets('shows the account overflow expander beyond three accounts',
