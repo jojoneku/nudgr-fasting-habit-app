@@ -13,6 +13,19 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.56] - 2026-07-30
+
+### Added
+- Money Mentor dock and receipt scanning on the Treasury web app
+- port the mobile Nudgr skin to the Treasury web companion
+
+### Fixed
+- size un-quantified dishes as servings, not as pieces
+- honour stated weights in multi-item food logs
+- stop the receipt drop target stranding its highlight
+- defects found by rendering the app, not just testing it
+- mobile month-end outlook mirrors the web decomposition
+
 ## [1.1.55] - 2026-07-26
 
 ### Added
@@ -568,7 +581,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.55...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.56...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -625,3 +638,4 @@ distributed via `manifest.json`.
 [1.1.53]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.53
 [1.1.54]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.54
 [1.1.55]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.55
+[1.1.56]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.56
