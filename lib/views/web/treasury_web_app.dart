@@ -116,6 +116,16 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     final cloudAi = CloudAiCoachService(
       tokenProvider: () => _authService.currentAccessToken,
     );
+    // Opt the cloud tier in explicitly. `enabled` gates
+    // `CloudAiCoachService.isAvailable` and defaults to false, and on mobile it
+    // is driven by the Settings "Cloud AI" switch (home_screen.dart) — a screen
+    // web does not have. Left unset, a signed-in web user with a working
+    // endpoint still saw "Money Mentor is unavailable", because the advisor
+    // gates on `isAvailable` while Quick Add gates on transport readiness alone
+    // (hence the ledger parser worked and hid the problem). Web has no
+    // on-device tier and no toggle to honour, so the cloud tier is the only
+    // tier and is on by definition.
+    cloudAi.enabled = true;
     _ledgerPresenter = LedgerPresenter(
       _storage,
       _statsPresenter,

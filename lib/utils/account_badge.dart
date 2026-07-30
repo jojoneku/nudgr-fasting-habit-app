@@ -124,6 +124,12 @@ const List<AccountIconGroup> kAccountIconGroups = [
 // Canonical category → icon (replaces four divergent per-site switches).
 // ---------------------------------------------------------------------------
 
+/// The icon for [account]: its explicitly chosen catalog icon, else the
+/// canonical icon for its category. Shared so every surface that draws an
+/// account resolves it the same way.
+IconData accountIconFor(FinancialAccount account) =>
+    kAccountIconCatalog[account.icon] ?? accountCategoryIcon(account.category);
+
 IconData accountCategoryIcon(AccountCategory category) => switch (category) {
       AccountCategory.bank => Icons.account_balance_rounded,
       AccountCategory.ewallet => Icons.account_balance_wallet_rounded,
