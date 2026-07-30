@@ -13,6 +13,15 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.57] - 2026-07-30
+
+### Added
+- add an "All accounts" dialog to the dashboard
+
+### Fixed
+- drop the service worker and retire the ones already registered
+- page finance pulls; enable the cloud tier on web
+
 ## [1.1.56] - 2026-07-30
 
 ### Added
@@ -581,7 +590,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.56...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.57...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -639,3 +648,4 @@ distributed via `manifest.json`.
 [1.1.54]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.54
 [1.1.55]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.55
 [1.1.56]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.56
+[1.1.57]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.57
