@@ -22,6 +22,33 @@ class DailySpend {
   const DailySpend(this.date, this.amount);
 }
 
+/// One bucket of [TreasuryDashboardPresenter.accountInventory]: a set of
+/// accounts plus a plain statement of where the dashboard surfaces them.
+@immutable
+class AccountInventoryGroup {
+  /// Bucket name, e.g. `'Cash & banks'`.
+  final String title;
+
+  /// Where these accounts show up, phrased for the user rather than the code.
+  final String surfacedIn;
+
+  /// True when the dashboard's Accounts section renders these as tiles.
+  final bool onDashboard;
+
+  final List<FinancialAccount> accounts;
+
+  const AccountInventoryGroup({
+    required this.title,
+    required this.surfacedIn,
+    required this.onDashboard,
+    required this.accounts,
+  });
+
+  /// Summed balance of the bucket. For `Credit & BNPL` this is money **owed**,
+  /// not money held — the dialog labels it accordingly.
+  double get total => accounts.fold(0.0, (sum, a) => sum + a.balance);
+}
+
 /// A flattened account-balance row for the web dashboard accounts table.
 /// Liquid rows show [balance] and the [held]-for-others slice; credit rows
 /// show the current payable as [balance] and the available limit as [yours].
@@ -173,6 +200,97 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
 
   List<FinancialAccount> subAccountsOf(String parentId) =>
       _accounts.where((a) => a.parentAccountId == parentId).toList();
+
+  /// Every account the treasury knows about, bucketed by where the dashboard
+  /// surfaces it — the data behind the "All accounts" dialog.
+  ///
+  /// The Accounts section deliberately shows only top-level liquid and credit
+  /// accounts, so savings pockets, goals, investments, sub-accounts, custodian
+  /// money and archived accounts are all absent from it by design. There was no
+  /// way to tell a *deliberately filtered* account from a *missing* one, which
+  /// is exactly the doubt to remove.
+  ///
+  /// Buckets are assigned in order and each account lands in exactly one, so
+  /// the dialog's counts add up to the real total with nothing double-listed.
+  /// Empty buckets are dropped.
+  List<AccountInventoryGroup> get accountInventory {
+    final claimed = <String>{};
+    final groups = <AccountInventoryGroup>[];
+
+    void add(
+      String title,
+      String surfacedIn,
+      bool onDashboard,
+      Iterable<FinancialAccount> candidates,
+    ) {
+      final take = [
+        for (final a in candidates)
+          if (claimed.add(a.id)) a,
+      ];
+      if (take.isEmpty) return;
+      groups.add(AccountInventoryGroup(
+        title: title,
+        surfacedIn: surfacedIn,
+        onDashboard: onDashboard,
+        accounts: take,
+      ));
+    }
+
+    // The two buckets the Accounts section renders, in the order it renders
+    // them, so the dialog reads as a superset of what's on screen.
+    add('Cash & banks', 'Accounts tiles · Liquid Cash · Total Assets', true,
+        liquidAccounts);
+    add('Credit & BNPL', 'Accounts tiles · Credit section', true,
+        creditAccounts);
+
+    final topLevel =
+        _accounts.where((a) => a.isActive && a.parentAccountId == null);
+    add(
+      'Savings, goals & time deposits',
+      'Total Assets · Savings Goals card — no Accounts tile',
+      false,
+      topLevel.where((a) =>
+          a.category == AccountCategory.savings ||
+          a.category == AccountCategory.goal ||
+          a.category == AccountCategory.timeDeposit),
+    );
+    add(
+      'Investments',
+      'Total Assets — no Accounts tile',
+      false,
+      topLevel.where((a) => a.category == AccountCategory.investment),
+    );
+    add(
+      'Pockets inside another account',
+      'Balance already counted inside the parent account',
+      false,
+      _accounts.where((a) => a.isActive && a.parentAccountId != null),
+    );
+    add(
+      'Held for others',
+      'Excluded from net worth — not your money',
+      false,
+      _accounts.where((a) => a.isActive && a.isCustodian),
+    );
+    add(
+      'Archived',
+      'Hidden everywhere until reactivated',
+      false,
+      _accounts.where((a) => !a.isActive),
+    );
+
+    return groups;
+  }
+
+  /// Total accounts across [accountInventory] — the figure the "All accounts"
+  /// trigger shows. Kept here so the view never counts in `build()`.
+  int get accountInventoryCount =>
+      accountInventory.fold(0, (n, g) => n + g.accounts.length);
+
+  /// How many of those the Accounts section actually renders as tiles.
+  int get accountInventoryShownCount => accountInventory
+      .where((g) => g.onDashboard)
+      .fold(0, (n, g) => n + g.accounts.length);
 
   /// Total set aside in savings + goal pockets — powers the Setup
   /// "Savings & Goals" KPI. Matches the set of accounts the Setup page groups

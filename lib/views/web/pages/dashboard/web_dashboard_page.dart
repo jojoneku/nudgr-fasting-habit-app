@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/utils/category_colors.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
+import 'web_account_inventory_dialog.dart';
 
 /// Web Dashboard page (Plan 050-A) — desktop redesign mirroring the Claude
 /// Design "Treasury Dashboard" reference. All numbers come from
@@ -805,9 +806,6 @@ class _BudgetHealthCard extends StatelessWidget {
 
 // This tile is icon-only, so a chosen custom icon shows through; monogram
 // defaults fall back to the category icon here.
-IconData _accountIcon(FinancialAccount a) =>
-    kAccountIconCatalog[a.icon] ?? accountCategoryIcon(a.category);
-
 String _accountCategoryLabel(FinancialAccount a) => switch (a.category) {
       AccountCategory.bank => 'Bank',
       AccountCategory.ewallet => 'E-wallet',
@@ -856,6 +854,17 @@ class _AccountBalancesRow extends StatelessWidget {
               Text('${formatPeso(presenter.totalLiquidCash)} liquid cash',
                   style: theme.textTheme.bodySmall
                       ?.copyWith(color: cs.onSurfaceVariant)),
+              const SizedBox(width: WebInsets.sm),
+              // These tiles are only the top-level liquid + credit accounts.
+              // Without a way to see the rest, a filtered-out account is
+              // indistinguishable from a missing one.
+              TextButton(
+                onPressed: () => WebAccountInventoryDialog.show(
+                  context,
+                  presenter: presenter,
+                ),
+                child: Text('All ${presenter.accountInventoryCount}'),
+              ),
             ],
           ),
         ),
@@ -890,7 +899,7 @@ class _AccountBalancesRow extends StatelessWidget {
       label: a.name,
       value: formatPeso(value),
       sub: sub,
-      icon: _accountIcon(a),
+      icon: accountIconFor(a),
       valueColor: isCredit ? cs.primary : null,
     );
   }
