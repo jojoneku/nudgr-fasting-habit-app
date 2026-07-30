@@ -534,10 +534,14 @@ jobs:
           WEB_REDIRECT_URL=
           EOF
 
+      # Via the script, not a bare `flutter build web`: it drops the service
+      # worker and installs the retirement script that un-sticks browsers
+      # already holding one. See scripts/build_web.sh for why both halves are
+      # needed.
       - name: Build web (Treasury companion)
         if: steps.changes.outputs.changed == 'true'
         run: |
-          flutter build web --release -t lib/main_web.dart \
+          scripts/build_web.sh \
             --dart-define=AI_COACH_ENDPOINT=${{ secrets.AI_COACH_ENDPOINT }}
 
       - uses: google-github-actions/auth@v2
