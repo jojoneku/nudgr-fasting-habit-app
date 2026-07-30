@@ -467,4 +467,89 @@ void main() {
       expect(SyncService.isTombstone({}), false);
     });
   });
+
+  // ── paged pulls (row-ceiling truncation) ───────────────────────────────────
+
+  group('collectPages', () {
+    /// A server that holds [total] rows and — like hosted Supabase — refuses to
+    /// return more than [maxRows] in one response, silently.
+    Future<List<Map<String, dynamic>>> Function(int, int) server({
+      required int total,
+      int maxRows = 1000,
+    }) =>
+        (from, to) async {
+          if (from >= total) return const [];
+          final requested = to - from + 1;
+          final end = [from + requested, from + maxRows, total]
+              .reduce((a, b) => a < b ? a : b);
+          return [
+            for (var i = from; i < end; i++) {'i': i},
+          ];
+        };
+
+    test('returns every row when the total exceeds the response ceiling',
+        () async {
+      // The exact shape of the reported bug: 1,120 rows behind a 1,000-row
+      // ceiling. A single select saw 1,000 and could not tell it was short.
+      final rows = await SyncService.collectPages(server(total: 1120));
+
+      expect(rows, hasLength(1120));
+      expect(rows.first['i'], 0);
+      expect(rows.last['i'], 1119);
+      // No row fetched twice and none skipped.
+      expect(rows.map((r) => r['i']).toSet(), hasLength(1120));
+    });
+
+    test('a total below one page costs a single extra empty probe', () async {
+      var calls = 0;
+      final rows = await SyncService.collectPages((from, to) async {
+        calls++;
+        return server(total: 19)(from, to);
+      });
+
+      expect(rows, hasLength(19));
+      expect(calls, 2, reason: 'one full-ish page, then the terminating probe');
+    });
+
+    test('an exact multiple of the page size still terminates', () async {
+      final rows = await SyncService.collectPages(
+        server(total: 1000),
+        pageSize: 500,
+      );
+      expect(rows, hasLength(1000));
+    });
+
+    test('an empty table yields nothing', () async {
+      expect(await SyncService.collectPages(server(total: 0)), isEmpty);
+    });
+
+    test('stays correct when the server caps pages below what we asked for',
+        () async {
+      // Offsets advance by rows actually received, so a server handing back
+      // 200 rows for a 500-row request does not truncate the walk.
+      final rows = await SyncService.collectPages(
+        server(total: 1120, maxRows: 200),
+        pageSize: 500,
+      );
+      expect(rows, hasLength(1120));
+      expect(rows.map((r) => r['i']).toSet(), hasLength(1120));
+    });
+
+    test('the runaway guard bounds a page source that never drains', () async {
+      // A non-unique sort order re-serving the same page would otherwise spin
+      // forever. Returns a partial result rather than hanging.
+      final rows = await SyncService.collectPages(
+        (from, to) async => [
+          for (var i = 0; i < 10; i++) {'i': i},
+        ],
+        pageSize: 10,
+        maxPages: 3,
+      );
+      expect(rows, hasLength(30));
+    });
+
+    test('the default page size sits below the hosted row ceiling', () {
+      expect(SyncService.pullPageSize, lessThan(1000));
+    });
+  });
 }
