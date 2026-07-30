@@ -439,6 +439,103 @@ void main() {
       expect(entries.first.calories, _calApprox(48));
     });
 
+    test('multi-item explicit grams — user states 166g rice + 81g adobo',
+        () async {
+      // Reproduces the reported under-count. The user weighed each component
+      // and typed both; the model came back with smaller portions. The
+      // single-item guard cannot fire here (two items, two gram mentions), so
+      // nothing reconciles the model's guess against what the user stated.
+      final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.itemsList,
+          items: [
+            // Model under-portions both against the user's stated weights.
+            _extracted(
+                name: 'rice', grams: 120, macros: _macros(156, 3, 34, 0.4)),
+            _extracted(
+                name: 'chicken adobo',
+                grams: 60,
+                macros: _macros(112, 11, 1, 7)),
+          ],
+        ),
+      );
+
+      await p.parseChat('166g rice, 81g chicken adobo');
+
+      final entries = p.todayLog.allEntries;
+      expect(entries, hasLength(2));
+      // Each item must honour the weight the user stated for it.
+      expect(entries[0].grams, closeTo(166, 1));
+      expect(entries[1].grams, closeTo(81, 1));
+      // ...and its macros must scale with it, not stay at the model's portion.
+      expect(entries[0].calories, _calApprox(216));
+      expect(entries[1].calories, _calApprox(151));
+    });
+
+    test('leading total — composite dish keeps the whole stated weight',
+        () async {
+      // "247g rice and chicken adobo" states a TOTAL for the plate, and the
+      // model flags it as one composite dish. Its split summed to 180g, losing
+      // 27% of the meal — and the single-dish merge would have reported that
+      // shortfall as the entire dish.
+      final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.singleDish,
+          items: [
+            _extracted(
+                name: 'rice', grams: 120, macros: _macros(156, 3, 34, 0.4)),
+            _extracted(
+                name: 'chicken adobo',
+                grams: 60,
+                macros: _macros(112, 11, 1, 7)),
+          ],
+        ),
+      );
+
+      await p.parseChat('247g rice and chicken adobo');
+
+      // singleDish intent collapses the parts into one logged entry.
+      final entries = p.todayLog.allEntries;
+      expect(entries, hasLength(1));
+      expect(entries.first.grams, closeTo(247, 2));
+      // 268 kcal × (247/180) ≈ 368 — the mass that went missing comes back.
+      expect(entries.first.calories, _calApprox(368));
+    });
+
+    test('weight attached to one ingredient does not rescale the others',
+        () async {
+      // "eggs with 100g sardines" weighs the sardines only. Treating it as a
+      // total would shrink the eggs to make room, which is the opposite error.
+      final p = await _makePresenter(cloudAi: cloudAi, foodDb: db);
+      _baseCloudStubs();
+      when(cloudAi.parseFoodWithCandidates(any, any)).thenAnswer(
+        (_) async => ParseFoodResult(
+          intent: ParseIntent.itemsList,
+          items: [
+            _extracted(
+                name: 'eggs', grams: 120, macros: _macros(172, 15, 1, 12)),
+            _extracted(
+                name: 'sardines', grams: 60, macros: _macros(125, 12, 0, 8)),
+          ],
+        ),
+      );
+
+      await p.parseChat('eggs with 100g sardines');
+
+      final entries = p.todayLog.allEntries;
+      expect(entries, hasLength(2));
+      // Eggs untouched at the model's estimate...
+      expect(entries[0].grams, closeTo(120, 1));
+      expect(entries[0].calories, _calApprox(172));
+      // ...sardines corrected to the stated 100g (125 × 100/60 ≈ 208).
+      expect(entries[1].grams, closeTo(100, 1));
+      expect(entries[1].calories, _calApprox(208));
+    });
+
     test('canonical USDA name not split — "Egg, Whole, Cooked, Scrambled 100g"',
         () async {
       // The Dart canonical-USDA guard collapses the response to one item
