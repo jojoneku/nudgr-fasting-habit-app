@@ -137,6 +137,15 @@ class _AiChatBodyState extends State<AiChatBody> {
   final _scrollController = ScrollController();
   final _focusNode = FocusNode();
 
+  /// Within this many pixels of the end counts as "reading the newest message",
+  /// so the list keeps following incoming content. Past it the user is reading
+  /// history and is left alone.
+  static const _followThreshold = 72.0;
+
+  /// The jump button only appears once the newest message is comfortably
+  /// offscreen, so it doesn't flicker in at the tail of a normal scroll.
+  static const _jumpButtonThreshold = 220.0;
+
   AiCoachPresenter get _presenter => widget.presenter;
 
   bool get _advisorMode =>
@@ -150,10 +159,30 @@ class _AiChatBodyState extends State<AiChatBody> {
   /// above the input). Advisor mode only.
   Uint8List? _pendingImage;
 
+  /// Whether the list should stay pinned to the newest message. Turned off the
+  /// moment the user scrolls up to read history, back on when they return to
+  /// the bottom, send a turn, or tap the jump button.
+  bool _followTail = true;
+  bool _showJumpButton = false;
+
+  /// Last rendered conversation shape — message count plus the length of the
+  /// tail message, which is what grows while a reply streams. Auto-scroll is
+  /// driven by changes to *these*, never by a rebuild: rebuilds also happen for
+  /// reasons that have nothing to do with new content (keyboard, theme, a
+  /// screenshot's metrics change), and scrolling on those yanked the user out
+  /// of the history they were reading.
+  int _lastMessageCount = 0;
+  int _lastTailLength = 0;
+
   @override
   void initState() {
     super.initState();
     if (_advisorMode) _ledger!.addListener(_onLedgerSideEffects);
+    _lastMessageCount = _presenter.messages.length;
+    _lastTailLength =
+        _presenter.messages.isEmpty ? 0 : _presenter.messages.last.text.length;
+    _presenter.addListener(_onPresenterContentChanged);
+    _scrollController.addListener(_onScroll);
   }
 
   /// Bridge ledger commits back into the conversation: post a "✓ Logged …"
@@ -167,6 +196,8 @@ class _AiChatBodyState extends State<AiChatBody> {
       _lastLoggedSummary = summary;
       _presenter.appendAssistantNote('✓ $summary');
       ledger.clearLastCommittedSummary();
+      // A commit the user just confirmed — show them the receipt.
+      _followTail = true;
       _scrollToBottom();
     }
     if (ledger.pendingFormPrefill != null) {
@@ -180,6 +211,8 @@ class _AiChatBodyState extends State<AiChatBody> {
   @override
   void dispose() {
     if (_advisorMode) _ledger!.removeListener(_onLedgerSideEffects);
+    _presenter.removeListener(_onPresenterContentChanged);
+    _scrollController.removeListener(_onScroll);
     _controller.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -194,6 +227,9 @@ class _AiChatBodyState extends State<AiChatBody> {
     setState(() => _pendingImage = null);
     // Dismiss keyboard first so its animation starts before the rebuild.
     FocusScope.of(context).unfocus();
+    // Sending a turn is an explicit request to follow the conversation again,
+    // even if the user was reading back through history.
+    _followTail = true;
     Future.delayed(Duration.zero, () {
       _presenter.send(text, image: image);
       _scrollToBottom();
@@ -224,14 +260,71 @@ class _AiChatBodyState extends State<AiChatBody> {
     }
   }
 
-  void _scrollToBottom() {
+  /// Re-evaluate whether the conversation grew, and follow it if the user is
+  /// still reading the tail. Fires on every presenter notification, so it must
+  /// stay cheap and must no-op when the content is unchanged.
+  void _onPresenterContentChanged() {
+    if (!mounted) return;
+    final messages = _presenter.messages;
+    final count = messages.length;
+    final tailLength = messages.isEmpty ? 0 : messages.last.text.length;
+    if (count == _lastMessageCount && tailLength == _lastTailLength) return;
+
+    // A conversation swap replaces the list rather than appending to it — the
+    // reopened thread should always land on its newest message.
+    final swapped = count < _lastMessageCount || count > _lastMessageCount + 1;
+    final newBubble = count != _lastMessageCount;
+    _lastMessageCount = count;
+    _lastTailLength = tailLength;
+    if (swapped) _followTail = true;
+
+    if (_followTail) {
+      // A new bubble animates in. Streaming only extends the tail by a few
+      // pixels per token, so jump for those — restarting a 200ms animation on
+      // every token stutters.
+      _scrollToBottom(animate: newBubble);
+    } else {
+      // The list grew out of view — make sure the jump affordance is offered.
+      WidgetsBinding.instance.addPostFrameCallback((_) => _updateJumpButton());
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    _followTail =
+        position.maxScrollExtent - position.pixels <= _followThreshold;
+    _updateJumpButton();
+  }
+
+  void _updateJumpButton() {
+    if (!mounted || !_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (!position.hasContentDimensions) return;
+    final show =
+        position.maxScrollExtent - position.pixels > _jumpButtonThreshold;
+    if (show != _showJumpButton) setState(() => _showJumpButton = show);
+  }
+
+  /// Jump button tap: resume following and ride down to the newest message.
+  void _jumpToBottom() {
+    _followTail = true;
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom({bool animate = true}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
+      if (!mounted || !_scrollController.hasClients) return;
+      final target = _scrollController.position.maxScrollExtent;
+      if (animate) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          target,
           duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
+      } else {
+        _scrollController.jumpTo(target);
       }
     });
   }
@@ -239,7 +332,10 @@ class _AiChatBodyState extends State<AiChatBody> {
   @override
   Widget build(BuildContext context) {
     final meta = _entryMeta[widget.entryPoint]!;
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    // viewInsetsOf, not MediaQuery.of: this pads for the keyboard only, and a
+    // full MediaQuery dependency rebuilt the whole chat on unrelated metrics
+    // changes (screenshot overlays, system bars, orientation).
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
 
     return Column(
       children: [
@@ -251,53 +347,39 @@ class _AiChatBodyState extends State<AiChatBody> {
         ),
         Divider(height: 1, color: Theme.of(context).colorScheme.outlineVariant),
         Expanded(
-          child: ListenableBuilder(
-            listenable: _presenter,
-            builder: (_, __) {
-              if (_presenter.isInitializing) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.primary,
-                        strokeWidth: 2,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Loading AI Coach…',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
-              if (!_presenter.isModelAvailable && !_presenter.isDownloading) {
-                return widget.allowModelDownload
-                    ? _DownloadPrompt(presenter: _presenter)
-                    : const _CloudUnavailable();
-              }
-              if (_presenter.isDownloading) {
-                return _DownloadProgress(presenter: _presenter);
-              }
-              WidgetsBinding.instance
-                  .addPostFrameCallback((_) => _scrollToBottom());
-              return _MessageList(
-                messages: _presenter.messages,
-                scrollController: _scrollController,
-                isResponding: _presenter.isResponding,
-              );
-            },
+          child: Stack(
+            // expand so the chat area keeps the tight full-height constraints
+            // it had before the Stack was introduced.
+            fit: StackFit.expand,
+            children: [
+              _chatArea(context),
+              // Floating "back to newest" affordance, over the list and clear
+              // of the input bar below it.
+              Positioned(
+                right: 14,
+                bottom: 12,
+                child: _JumpToBottomButton(
+                  visible: _showJumpButton,
+                  onTap: _jumpToBottom,
+                ),
+              ),
+            ],
           ),
         ),
-        if (_presenter.errorMessage != null)
-          _ErrorChip(
-            message: _presenter.errorMessage!,
-            onDismiss: _presenter.clearError,
-          ),
+        // Listened to rather than read straight out of build(): this Column no
+        // longer rebuilds on incidental metrics changes, so the chip needs its
+        // own subscription to appear the moment an error lands.
+        ListenableBuilder(
+          listenable: _presenter,
+          builder: (_, __) {
+            final error = _presenter.errorMessage;
+            if (error == null) return const SizedBox.shrink();
+            return _ErrorChip(
+              message: error,
+              onDismiss: _presenter.clearError,
+            );
+          },
+        ),
         if (_advisorMode)
           ListenableBuilder(
             listenable: _ledger!,
@@ -331,6 +413,50 @@ class _AiChatBodyState extends State<AiChatBody> {
           ),
         ),
       ],
+    );
+  }
+
+  /// The model-state machine: loading, unavailable, downloading, or the
+  /// conversation itself.
+  Widget _chatArea(BuildContext context) {
+    return ListenableBuilder(
+      listenable: _presenter,
+      builder: (_, __) {
+        if (_presenter.isInitializing) {
+          return Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
+                  strokeWidth: 2,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Loading AI Coach…',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        if (!_presenter.isModelAvailable && !_presenter.isDownloading) {
+          return widget.allowModelDownload
+              ? _DownloadPrompt(presenter: _presenter)
+              : const _CloudUnavailable();
+        }
+        if (_presenter.isDownloading) {
+          return _DownloadProgress(presenter: _presenter);
+        }
+        return _MessageList(
+          messages: _presenter.messages,
+          scrollController: _scrollController,
+          isResponding: _presenter.isResponding,
+        );
+      },
     );
   }
 }
@@ -369,15 +495,19 @@ class _SheetHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 4, 12, 12),
+      padding: const EdgeInsets.fromLTRB(20, 4, 8, 12),
       child: Row(
         children: [
           Icon(meta.icon, color: cs.onSurfaceVariant, size: 18),
           if (showLabel) ...[
             const SizedBox(width: 10),
-            // Flexible so the title yields before the trailing controls in any
-            // container narrower than a phone sheet.
-            Flexible(
+            // Expanded, not Flexible + Spacer: both are flex-1, so a Spacer
+            // claimed half the free width and the title ellipsised to
+            // "Money Men…" with room to spare beside it. Expanded hands the
+            // title every pixel the trailing controls don't need, and pins
+            // them right on its own. The ellipsis stays as a floor for
+            // containers genuinely too narrow (the web dock hides the label).
+            Expanded(
               child: Text(
                 meta.label,
                 maxLines: 1,
@@ -386,12 +516,15 @@ class _SheetHeader extends StatelessWidget {
                   color: cs.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
-                  letterSpacing: 0.5,
+                  letterSpacing: 0.3,
                 ),
               ),
             ),
+            const SizedBox(width: 6),
           ],
-          const Spacer(),
+          // With no title to push against, take the slack instead so the
+          // trailing controls stay right-aligned.
+          if (!showLabel) const Spacer(),
           if (presenter.entryPoint == AiCoachEntryPoint.financeAdvisor) ...[
             IconButton(
               icon: Icon(Icons.forum_outlined,
@@ -407,7 +540,6 @@ class _SheetHeader extends StatelessWidget {
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               onPressed: () => AdvisorMemorySheet.show(context, presenter),
             ),
-            const SizedBox(width: 4),
           ],
           ListenableBuilder(
             listenable: presenter,
@@ -458,34 +590,40 @@ class _SheetHeader extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: cs.primary.withValues(alpha: 0.3),
-                width: 0.5,
+          // The "AI" badge only earns its ~40px when the persona label isn't
+          // printed (the web dock prints the title above instead). Beside
+          // "Money Mentor" + a Think/Fast toggle it says nothing new, and it
+          // was part of what squeezed the title into an ellipsis.
+          if (!showLabel) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: cs.primary.withValues(alpha: 0.3),
+                  width: 0.5,
+                ),
+              ),
+              child: Text(
+                'AI',
+                style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1,
+                ),
               ),
             ),
-            child: Text(
-              'AI',
-              style: TextStyle(
-                color: cs.primary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1,
-              ),
-            ),
-          ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _MessageList extends StatelessWidget {
+class _MessageList extends StatefulWidget {
   final List<AiChatMessage> messages;
   final ScrollController scrollController;
   final bool isResponding;
@@ -497,8 +635,26 @@ class _MessageList extends StatelessWidget {
   });
 
   @override
+  State<_MessageList> createState() => _MessageListState();
+}
+
+class _MessageListState extends State<_MessageList> {
+  @override
+  void initState() {
+    super.initState();
+    // Open a restored conversation at its newest message. Once, when the list
+    // first mounts — every later scroll is driven by content changes in
+    // _AiChatBodyState, never by a rebuild.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final controller = widget.scrollController;
+      if (!mounted || !controller.hasClients) return;
+      controller.jumpTo(controller.position.maxScrollExtent);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (messages.isEmpty) {
+    if (widget.messages.isEmpty) {
       return Center(
         child: Text(
           'Ask me anything.',
@@ -509,11 +665,75 @@ class _MessageList extends StatelessWidget {
       );
     }
 
-    return ListView.builder(
-      controller: scrollController,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      itemCount: messages.length,
-      itemBuilder: (_, i) => _MessageBubble(message: messages[i]),
+    // SelectionArea, so a reply can be selected and copied. The bubbles are
+    // Text/Text.rich widgets, which are inert on their own — the coach's
+    // numbers and plans were trapped in the sheet with no way to get them out.
+    // It spans the list rather than each bubble so a selection can also run
+    // across a whole exchange.
+    return SelectionArea(
+      child: ListView.builder(
+        controller: widget.scrollController,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        itemCount: widget.messages.length,
+        itemBuilder: (_, i) => _MessageBubble(message: widget.messages[i]),
+      ),
+    );
+  }
+}
+
+/// Floating "back to the newest message" button. Fades and drops out of the
+/// way whenever the tail is already on screen, so it costs nothing while the
+/// user is reading the live conversation.
+class _JumpToBottomButton extends StatelessWidget {
+  final bool visible;
+  final VoidCallback onTap;
+
+  const _JumpToBottomButton({required this.visible, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return IgnorePointer(
+      ignoring: !visible,
+      child: AnimatedSlide(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        offset: visible ? Offset.zero : const Offset(0, 0.35),
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          opacity: visible ? 1 : 0,
+          child: Material(
+            color: cs.surfaceContainerHigh,
+            shape: CircleBorder(
+              side: BorderSide(
+                color: cs.primary.withValues(alpha: 0.35),
+                width: 0.5,
+              ),
+            ),
+            elevation: 3,
+            shadowColor: Colors.black.withValues(alpha: 0.3),
+            child: Tooltip(
+              message: 'Jump to newest',
+              child: InkWell(
+                onTap: onTap,
+                customBorder: const CircleBorder(),
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Center(
+                    child: Icon(
+                      Icons.arrow_downward_rounded,
+                      size: 20,
+                      color: cs.primary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
