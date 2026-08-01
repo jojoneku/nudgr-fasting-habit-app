@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-// RenderParagraph: not re-exported by material.dart, and the title check reads
-// didExceedMaxLines straight off the laid-out paragraph.
-import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
@@ -83,19 +80,44 @@ void main() {
   }
 
   group('header', () {
-    testWidgets('prints the whole entry label at phone width', (tester) async {
+    testWidgets('the title keeps every pixel the controls do not need',
+        (tester) async {
       final presenter = openAdvisor();
       await pumpChat(tester, presenter);
 
-      // Regression: the title was a Flexible beside a Spacer — both flex 1, so
-      // it was handed half the free width and ellipsised to "Money Men…" with
-      // room to spare next to it.
+      // The regression: the title was a Flexible beside a Spacer. Both are
+      // flex 1, so they split the free width — the title was handed half of it
+      // and ellipsised to "Money Men…" with an empty gap sitting next to it.
+      //
+      // Asserted as "no gap between the title and the first trailing control"
+      // rather than "the text is not ellipsised", because widget tests render
+      // in Ahem, whose every glyph is a full em wide — about 1.7x the real
+      // Plus Jakarta Sans advance. Any width-vs-content assertion measures the
+      // test font, not the layout. The gap does measure the layout, and it is
+      // what a Spacer stealing half the row actually looks like.
       final title = find.text('Money Mentor');
       expect(title, findsOneWidget);
-      expect(
-        tester.renderObject<RenderParagraph>(title).didExceedMaxLines,
-        isFalse,
-      );
+
+      final titleRight = tester.getRect(title).right;
+      final firstControlLeft =
+          tester.getRect(find.byType(IconButton).first).left;
+      expect(firstControlLeft - titleRight, lessThan(12),
+          reason: 'only the 6px spacer belongs between them; the old Spacer '
+              'left roughly half the row empty');
+
+      presenter.dispose();
+    });
+
+    testWidgets('drops the redundant AI badge beside the persona label',
+        (tester) async {
+      // "Money Mentor" + a Think/Fast toggle already says this is the AI; the
+      // badge was ~40px of the squeeze on the title. It stays in the web dock,
+      // which prints no label.
+      final presenter = openAdvisor();
+      await pumpChat(tester, presenter);
+
+      expect(find.text('Money Mentor'), findsOneWidget);
+      expect(find.text('AI'), findsNothing);
 
       presenter.dispose();
     });
