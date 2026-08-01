@@ -516,8 +516,8 @@ void main() {
       final presenter = await buildWith(
           [_statement(id: 'auto', accountId: 'sp', month: month)]);
 
-      final manual = _statement(
-          id: 'manual', accountId: 'sp', month: month, auto: false);
+      final manual =
+          _statement(id: 'manual', accountId: 'sp', month: month, auto: false);
       expect(presenter.redundantAutoStatementFor(manual)?.id, 'auto');
     });
 
@@ -534,12 +534,11 @@ void main() {
     test('never offers a paid or transacted statement', () async {
       final month = _monthKey(0);
       final presenter = await buildWith([
-        _statement(
-            id: 'auto', accountId: 'sp', month: month, isPaid: true),
+        _statement(id: 'auto', accountId: 'sp', month: month, isPaid: true),
       ]);
 
-      final manual = _statement(
-          id: 'manual', accountId: 'sp', month: month, auto: false);
+      final manual =
+          _statement(id: 'manual', accountId: 'sp', month: month, auto: false);
       expect(presenter.redundantAutoStatementFor(manual), isNull,
           reason: 'a settled statement is a record the user acted on');
     });
