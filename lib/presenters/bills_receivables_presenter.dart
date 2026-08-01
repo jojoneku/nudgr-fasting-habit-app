@@ -617,6 +617,35 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _notifyDependents();
   }
 
+  /// The generated statement that [bill] looks like a hand-keyed copy of: same
+  /// card, same month, still unpaid and un-transacted. Null when there is
+  /// nothing to reconcile — including when [bill] is itself that statement, or
+  /// is not a credit-card bill at all (a bill merely payable FROM the card is
+  /// not a copy of its statement).
+  ///
+  /// Surfaced so the View can offer the swap as a choice at save time. The
+  /// auto-generation pass deliberately no longer removes anything the user made
+  /// a bill for: it runs on app open, where a deleted row for money still owed
+  /// can be neither noticed nor undone. A paid or transacted statement is
+  /// authoritative and never offered.
+  Bill? redundantAutoStatementFor(Bill bill) {
+    final accountId = bill.accountId;
+    if (accountId == null ||
+        bill.billType != BillType.creditCard ||
+        bill.isAutoStatement) {
+      return null;
+    }
+    return _allBills
+        .where((b) =>
+            b.id != bill.id &&
+            _isAutoStatement(b) &&
+            !b.isPaid &&
+            b.transactionId == null &&
+            b.accountId == accountId &&
+            b.month == bill.month)
+        .firstOrNull;
+  }
+
   Future<void> deleteBill(String id) async {
     _allBills = _allBills.where((b) => b.id != id).toList();
     safeNotify();
@@ -1054,7 +1083,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (categoryId == null) return;
     var changed = false;
 
-    // ── De-duplicate GENERATED statement bills. A card should carry at most one
+    // ── De-duplicate GENERATED statement bills. A card carries at most one
     // auto-statement per month; a stray second one is an internal duplicate, so
     // dropping it loses nothing and needs no telling.
     //
@@ -1180,12 +1209,24 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           if (legacyCovers) continue;
         }
 
-        // A non-auto bill already tracks this card for the due month (a manual
-        // statement, or a recurring credit-card bill). Generating an
-        // auto-statement on top would duplicate it — and keep coming back after
-        // the user deletes the auto copy — so skip. (dupe-statement bug)
+        // The user already tracks this card's statement for the due month (a
+        // hand-keyed statement, or a recurring credit-card bill). Generating on
+        // top would duplicate it — and keep coming back after they delete the
+        // auto copy — so skip. (dupe-statement bug)
+        //
+        // Only a CREDIT-CARD-type bill counts. [Bill.accountId] is the
+        // "preferred payment account", so this used to read any bill payable
+        // FROM the card as that card's statement: setting an ordinary utility
+        // bill to be paid from a card silently stopped that card being billed
+        // for the month. Bill type is the one signal that separates "this IS
+        // the card's statement" from "I pay this USING the card"; a bill filed
+        // under another type falls through to generation, leaving a visible
+        // duplicate to resolve rather than a missing statement.
         final userBillCoversCard = _allBills.any((b) =>
-            !_isAutoStatement(b) && b.accountId == a.id && b.month == dueMonth);
+            !_isAutoStatement(b) &&
+            b.billType == BillType.creditCard &&
+            b.accountId == a.id &&
+            b.month == dueMonth);
         if (userBillCoversCard) continue;
 
         // For current month: statement day must have passed.

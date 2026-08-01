@@ -451,6 +451,121 @@ void main() {
     });
   });
 
+  group('a user bill only blocks generation when it IS a statement', () {
+    Future<BillsReceivablesPresenter> buildWithCard(List<Bill> bills) async {
+      stubStorage(bills);
+      when(storage.loadAccounts()).thenAnswer((_) async => [_card('sp', 500)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      final presenter = BillsReceivablesPresenter(storage, ledger, stats);
+      await presenter.load();
+      return presenter;
+    }
+
+    test('a bill merely payable FROM the card no longer suppresses it',
+        () async {
+      // Bill.accountId is the preferred PAYMENT account, so this is an ordinary
+      // utility bill the user pays using the card — not the card's statement.
+      // Reading it as one silently left the card unbilled for the month.
+      final presenter = await buildWithCard([
+        _bill(id: 'internet', month: _monthKey(0), billType: BillType.utility)
+            .copyWith(accountId: 'sp'),
+      ]);
+
+      expect(
+        presenter.allBillsForTest
+            .where((b) => b.accountId == 'sp' && b.isAutoStatement),
+        hasLength(1),
+        reason: 'paying a utility bill from a card says nothing about whether '
+            'that card has been billed',
+      );
+    });
+
+    test('a hand-keyed credit-card bill still suppresses generation', () async {
+      final presenter = await buildWithCard([
+        _statement(
+            id: 'manual', accountId: 'sp', month: _monthKey(0), auto: false),
+      ]);
+
+      expect(
+        presenter.allBillsForTest
+            .where((b) => b.accountId == 'sp' && b.isAutoStatement),
+        isEmpty,
+        reason: 'the user already tracks this statement — generating on top '
+            'would duplicate it',
+      );
+    });
+  });
+
+  group('redundantAutoStatementFor', () {
+    Future<BillsReceivablesPresenter> buildWith(List<Bill> bills) async {
+      stubStorage(bills);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      final presenter = build();
+      await presenter.load();
+      return presenter;
+    }
+
+    test('finds the generated statement a hand-keyed one duplicates', () async {
+      final month = _monthKey(0);
+      final presenter = await buildWith(
+          [_statement(id: 'auto', accountId: 'sp', month: month)]);
+
+      final manual = _statement(
+          id: 'manual', accountId: 'sp', month: month, auto: false);
+      expect(presenter.redundantAutoStatementFor(manual)?.id, 'auto');
+    });
+
+    test('ignores a bill that is only payable from the card', () async {
+      final month = _monthKey(0);
+      final presenter = await buildWith(
+          [_statement(id: 'auto', accountId: 'sp', month: month)]);
+
+      final utility = _bill(id: 'internet', month: month)
+          .copyWith(accountId: 'sp'); // BillType.utility
+      expect(presenter.redundantAutoStatementFor(utility), isNull);
+    });
+
+    test('never offers a paid or transacted statement', () async {
+      final month = _monthKey(0);
+      final presenter = await buildWith([
+        _statement(
+            id: 'auto', accountId: 'sp', month: month, isPaid: true),
+      ]);
+
+      final manual = _statement(
+          id: 'manual', accountId: 'sp', month: month, auto: false);
+      expect(presenter.redundantAutoStatementFor(manual), isNull,
+          reason: 'a settled statement is a record the user acted on');
+    });
+
+    test('does not match a statement against itself', () async {
+      final month = _monthKey(0);
+      final auto = _statement(id: 'auto', accountId: 'sp', month: month);
+      final presenter = await buildWith([auto]);
+
+      expect(presenter.redundantAutoStatementFor(auto), isNull);
+    });
+
+    test('does not reach across months or cards', () async {
+      final presenter = await buildWith([
+        _statement(id: 'auto', accountId: 'sp', month: _monthKey(0)),
+      ]);
+
+      final otherMonth = _statement(
+          id: 'm1', accountId: 'sp', month: _monthKey(1), auto: false);
+      final otherCard = _statement(
+          id: 'm2', accountId: 'bpi', month: _monthKey(0), auto: false);
+      expect(presenter.redundantAutoStatementFor(otherMonth), isNull);
+      expect(presenter.redundantAutoStatementFor(otherCard), isNull);
+    });
+  });
+
   group('statement amount is the closing balance', () {
     /// A charge on card 'sp' dated [on].
     TransactionRecord charge(String id, double amount, DateTime on) =>
