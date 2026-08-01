@@ -404,6 +404,7 @@ class _CreditSection extends StatelessWidget {
               account: accounts[i],
               dueInfo: presenter.creditDueInfo(accounts[i]),
               minimumDue: presenter.creditMinimumDue(accounts[i]),
+              cycleNote: presenter.creditCycleNote(accounts[i]),
               onTap: () {
                 HapticFeedback.selectionClick();
                 onEdit(accounts[i]);
@@ -422,6 +423,11 @@ class _CreditAccountCard extends StatelessWidget {
   final FinancialAccount account;
   final ({String label, bool imminent})? dueInfo;
   final double? minimumDue;
+
+  /// Where this card sits in its statement cycle — "Statement closes Aug 5", or
+  /// a warning that it has no statement day and so is never billed. Null once
+  /// the cycle has closed and the statement is a bill.
+  final ({String label, bool warning})? cycleNote;
   final VoidCallback onTap;
   final ValueChanged<FinancialAccount>? onPay;
 
@@ -429,6 +435,7 @@ class _CreditAccountCard extends StatelessWidget {
     required this.account,
     required this.dueInfo,
     required this.minimumDue,
+    required this.cycleNote,
     required this.onTap,
     this.onPay,
   });
@@ -512,6 +519,33 @@ class _CreditAccountCard extends StatelessWidget {
                     color: dueInfo!.imminent ? cs.error : cs.onSurfaceVariant,
                     fontWeight:
                         dueInfo!.imminent ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+            ),
+          ],
+          if (cycleNote != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Icon(
+                  cycleNote!.warning
+                      ? Icons.warning_amber_rounded
+                      : Icons.hourglass_bottom,
+                  size: 14,
+                  color: cycleNote!.warning
+                      ? context.appColors.orange
+                      : cs.onSurfaceVariant,
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    cycleNote!.label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: cycleNote!.warning
+                          ? context.appColors.orange
+                          : cs.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],

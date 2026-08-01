@@ -164,6 +164,34 @@ class TreasuryDashboardPresenter extends ChangeNotifier {
     return (label: label, imminent: diff <= 3);
   }
 
+  /// Where a credit account sits in its statement cycle, as a line under the
+  /// due date. Null once the cycle has closed — the statement is a bill by then,
+  /// so the Bills tab speaks for itself.
+  ///
+  /// Closes two gaps where the card looked fully configured but the Bills tab
+  /// stayed empty:
+  ///   - No statement day (or no due day) means the generator skips the account
+  ///     entirely and it is never billed — silently, until now.
+  ///   - A cycle that has not closed yet has no bill to find. The balance and
+  ///     due date are both real, so the absence read as a missing statement.
+  ({String label, bool warning})? creditCycleNote(FinancialAccount a) {
+    if (!a.isLiability) return null;
+    final stmtDay = a.statementDay;
+    if (stmtDay == null || a.paymentDueDay == null) {
+      return (
+        label: 'Needs a statement day and due day to bill automatically',
+        warning: true,
+      );
+    }
+    final now = DateTime.now();
+    if (now.day >= stmtDay.clamp(1, 28)) return null; // closed → it's a bill
+    final closesOn = DateTime(now.year, now.month, stmtDay.clamp(1, 28));
+    return (
+      label: 'Statement closes ${monthDayLabel(closesOn)}',
+      warning: false,
+    );
+  }
+
   /// Estimated minimum amount due for a credit account, using its brand preset
   /// (or BSP-default rates). Null when nothing is owed. Display-only — finance
   /// charges are not auto-posted to the balance.

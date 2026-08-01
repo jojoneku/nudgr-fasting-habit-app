@@ -1054,24 +1054,32 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (categoryId == null) return;
     var changed = false;
 
-    // ── De-duplicate statement bills. A card should carry at most one bill per
-    // month. Duplicates arose (seen on BNPL cards like ShopeePay) when an
-    // auto-statement coexisted with another bill for the same card+month — a
-    // manual bill the user added, or a stray second auto-statement. Because the
-    // generator below only recognises *auto-statements* when deciding whether
-    // one already exists, deleting the redundant auto copy just brought it back
-    // on the next load. Drop the unpaid, un-transacted auto-statement whenever
-    // another bill already covers that card+month; paid or transacted
-    // statements are authoritative and never removed.
+    // ── De-duplicate GENERATED statement bills. A card should carry at most one
+    // auto-statement per month; a stray second one is an internal duplicate, so
+    // dropping it loses nothing and needs no telling.
+    //
+    // A bill the USER made never evicts one, even for the same card+month.
+    // [Bill.accountId] means "preferred payment account", so an ordinary bill
+    // merely payable FROM a card was indistinguishable from that card's own
+    // statement — and the eviction ran here, in a background pass on app open,
+    // where nothing could tell you a row had just disappeared. A statement for
+    // money you still owe is not something to delete on a guess. Both bills now
+    // stand, and you decide which to keep: deleting the auto copy sticks,
+    // because the generator below already declines to recreate a statement your
+    // own bill covers.
+    //
+    // Paid or transacted auto-statements are authoritative and never removed.
     final covered =
-        <String>{}; // 'accountId|month' held by a non-removable bill
+        <String>{}; // 'accountId|month' held by an authoritative statement
     String? billKey(Bill b) =>
         b.accountId == null ? null : '${b.accountId}|${b.month}';
     bool isRemovableAuto(Bill b) =>
         _isAutoStatement(b) && !b.isPaid && b.transactionId == null;
     for (final b in _allBills) {
       final key = billKey(b);
-      if (key != null && !isRemovableAuto(b)) covered.add(key);
+      if (key != null && _isAutoStatement(b) && !isRemovableAuto(b)) {
+        covered.add(key);
+      }
     }
     final duplicateIds = <String>{};
     for (final b in _allBills) {
@@ -1187,8 +1195,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // used in that cycle).
         if (a.currentPayable <= 0) continue;
 
-        // For past months: amount is 0 (historical balance unknown).
-        final amount = isCurrentMonth ? a.currentPayable : 0.0;
+        // Bill the balance as of the cycle's CLOSE date, not today's. This runs
+        // whenever the app is next opened, so reading the live balance billed
+        // anything charged after the close into the cycle that had already
+        // closed — and the amount was never corrected afterwards.
+        //
+        // Past months stay at 0: a placeholder that asks to be reviewed is
+        // safer than a reconstructed figure, since the transaction log may not
+        // reach back that far and a wrong number would read as authoritative.
+        final amount = isCurrentMonth
+            ? _ledger.payableAsOf(a.id, DateTime(now.year, now.month, stmtDay))
+            : 0.0;
+
+        // Nothing had closed yet: every peso on the card was charged after the
+        // close date, so it belongs to the next cycle, not this statement.
+        if (isCurrentMonth && amount <= 0) continue;
 
         _allBills = [
           ..._allBills,

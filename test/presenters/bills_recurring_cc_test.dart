@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intermittent_fasting/models/finance/bill.dart';
 import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
+import 'package:intermittent_fasting/models/finance/transaction_record.dart';
 import 'package:intermittent_fasting/models/notification_preferences.dart';
 import 'package:intermittent_fasting/models/user_stats.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
@@ -238,18 +239,19 @@ void main() {
 
   group('duplicate credit statement dedup', () {
     test(
-        'drops the redundant unpaid auto-statement when another bill covers '
-        'the same card+month', () async {
+        'keeps both when a user-created bill covers the same card+month, '
+        'rather than deleting the statement in the background', () async {
       final month = _monthKey(0);
       stubStorage([
-        // A user-created bill for the card (the "upper" one that stays deleted).
+        // A bill the user made. Bill.accountId means "preferred payment
+        // account", so this is indistinguishable from the card's own statement
+        // — it may just be a bill payable FROM the card.
         _statement(
             id: 'manual',
             accountId: 'sp',
             month: month,
             auto: false,
             billType: BillType.other),
-        // The auto-statement duplicate that used to regenerate on delete.
         _statement(id: 'auto', accountId: 'sp', month: month),
       ]);
       // A category must exist so statement generation/dedup runs at all.
@@ -260,10 +262,32 @@ void main() {
       await presenter.load();
 
       final ids = presenter.bills.map((b) => b.id).toSet();
-      expect(ids, contains('manual'),
-          reason: 'the user-created bill must be kept');
-      expect(ids.contains('auto'), isFalse,
-          reason: 'the redundant unpaid auto-statement should be removed');
+      expect(ids, containsAll(<String>['manual', 'auto']),
+          reason: 'this pass runs on app open, where a silently removed '
+              'statement for money still owed cannot be noticed or undone');
+    });
+
+    test('still drops a stray second auto-statement for the same card+month',
+        () async {
+      // Two GENERATED statements is an internal duplicate: both are app-made,
+      // so collapsing them loses nothing and needs no telling. This is the only
+      // removal the pass still performs.
+      final month = _monthKey(0);
+      stubStorage([
+        _statement(id: 'auto-a', accountId: 'sp', month: month, isPaid: true),
+        _statement(id: 'auto-b', accountId: 'sp', month: month),
+      ]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+
+      final presenter = build();
+      await presenter.load();
+
+      final ids = presenter.bills.map((b) => b.id).toSet();
+      expect(ids, contains('auto-a'),
+          reason: 'the paid statement is authoritative');
+      expect(ids.contains('auto-b'), isFalse,
+          reason: 'the redundant generated copy should be collapsed');
     });
 
     test('never removes a paid auto-statement even if another bill covers it',
@@ -424,6 +448,81 @@ void main() {
       expect(spStatements, hasLength(1));
       expect(spStatements.single.month, _monthKey(0));
       expect(spStatements.single.amount, 1011.31);
+    });
+  });
+
+  group('statement amount is the closing balance', () {
+    /// A charge on card 'sp' dated [on].
+    TransactionRecord charge(String id, double amount, DateTime on) =>
+        TransactionRecord(
+          id: id,
+          date: on,
+          accountId: 'sp',
+          categoryId: 'c1',
+          amount: amount,
+          type: TransactionType.outflow,
+          description: id,
+          month: toMonthKey(on),
+        );
+
+    test('excludes charges made after the cycle closed', () async {
+      // statementDay 1, so the close has always passed whatever day this runs.
+      // 1011.31 was on the card at the close; 500 was charged afterwards and
+      // belongs to the next cycle. The generator used to read today's live
+      // balance, billing all 1511.31 into the closed cycle — and never
+      // correcting it.
+      final now = DateTime.now();
+      final atClose = DateTime(now.year, now.month, 1);
+      final afterClose = now.add(const Duration(days: 1));
+
+      stubStorage([]);
+      when(storage.loadAccounts())
+          .thenAnswer((_) async => [_card('sp', 1511.31)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.loadTransactions()).thenAnswer((_) async => [
+            charge('at-close', 1011.31, atClose),
+            charge('after-close', 500, afterClose),
+          ]);
+
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      final presenter = BillsReceivablesPresenter(storage, ledger, stats);
+      await presenter.load();
+
+      final stmt = presenter.allBillsForTest
+          .firstWhere((b) => b.accountId == 'sp' && b.isAutoStatement);
+      expect(stmt.amount, closeTo(1011.31, 0.001),
+          reason: 'a charge made after the close date belongs to the next '
+              'cycle, not the statement that already closed');
+    });
+
+    test('skips the statement when everything was charged after the close',
+        () async {
+      // Nothing had closed, so there is no statement to bill yet.
+      final afterClose = DateTime.now().add(const Duration(days: 1));
+
+      stubStorage([]);
+      when(storage.loadAccounts()).thenAnswer((_) async => [_card('sp', 800)]);
+      when(storage.loadFinanceCategories())
+          .thenAnswer((_) async => [_expenseCat('c1')]);
+      when(storage.saveAccounts(any)).thenAnswer((_) async {});
+      when(storage.saveTransactions(any)).thenAnswer((_) async {});
+      when(storage.loadTransactions())
+          .thenAnswer((_) async => [charge('after-close', 800, afterClose)]);
+
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      final presenter = BillsReceivablesPresenter(storage, ledger, stats);
+      await presenter.load();
+
+      expect(
+        presenter.allBillsForTest
+            .where((b) => b.accountId == 'sp' && b.isAutoStatement),
+        isEmpty,
+      );
     });
   });
 
