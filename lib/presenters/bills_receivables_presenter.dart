@@ -1099,9 +1099,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // existing auto-statement, or the current month when there are none).
     final existingMonths =
         _allBills.where(_isAutoStatement).map((b) => b.month).toList()..sort();
-    final startMonth = existingMonths.isEmpty
+    var startMonth = existingMonths.isEmpty
         ? currentMonthKey
         : nextMonth(existingMonths.first);
+
+    // Never let the window close past today. The oldest auto-statement can sit
+    // in the current month (the first card to close this month) or even a
+    // future one (a shifted card files under its next-month due date), and
+    // nextMonth() then pushed startMonth beyond currentMonthKey — which made
+    // the loop below evaluate NO months and silently skip *every* card. A
+    // second card whose statement day fell after the first card's then never
+    // got billed for that month, and never would: the window stayed shut on
+    // each later run too.
+    if (startMonth.compareTo(currentMonthKey) > 0) {
+      startMonth = currentMonthKey;
+    }
 
     // Build the list of months to evaluate (startMonth … currentMonth).
     final monthsToCheck = <String>[];

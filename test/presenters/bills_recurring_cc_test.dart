@@ -379,6 +379,52 @@ void main() {
           b.accountId == 'cc' && b.month == _monthKey(1) && b.isAutoStatement);
       expect(current.amount, 500);
     });
+
+    // The backfill window used to start at nextMonth(oldest statement). Once
+    // the oldest auto-statement sat in the current month — or a future one —
+    // that start ran past today, the month list came out empty, and NO card got
+    // a statement. Whichever card closed first won; the rest were never billed.
+    test(
+        'a statement already filed for this month still leaves the window '
+        'open for another card', () async {
+      final month = _monthKey(0);
+      final presenter = await buildWithAccounts(
+        [_card('bpi', 6393.46), _card('sp', 1011.31)],
+        [_statement(id: 'bpi-auto', accountId: 'bpi', month: month)],
+      );
+
+      final spStatements = presenter.allBillsForTest
+          .where((b) => b.accountId == 'sp' && b.isAutoStatement)
+          .toList();
+      expect(spStatements, hasLength(1),
+          reason: "the first card's statement must not suppress the second's");
+      expect(spStatements.single.month, month);
+      expect(spStatements.single.amount, 1011.31);
+
+      // And the card that already had one is left exactly as it was.
+      expect(
+        presenter.allBillsForTest
+            .where((b) => b.accountId == 'bpi' && b.isAutoStatement),
+        hasLength(1),
+      );
+    });
+
+    test('a statement filed under a future due month leaves the window open',
+        () async {
+      // A shifted card files under next month, so the oldest — and only —
+      // auto-statement can legitimately live in the future.
+      final presenter = await buildWithAccounts(
+        [_shiftedCard('bpi', 500), _card('sp', 1011.31)],
+        [_statement(id: 'bpi-auto', accountId: 'bpi', month: _monthKey(1))],
+      );
+
+      final spStatements = presenter.allBillsForTest
+          .where((b) => b.accountId == 'sp' && b.isAutoStatement)
+          .toList();
+      expect(spStatements, hasLength(1));
+      expect(spStatements.single.month, _monthKey(0));
+      expect(spStatements.single.amount, 1011.31);
+    });
   });
 
   group('quickPayCard statement reconciliation', () {
