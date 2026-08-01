@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+// RenderParagraph: not re-exported by material.dart, and the title check reads
+// didExceedMaxLines straight off the laid-out paragraph.
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 
