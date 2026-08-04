@@ -243,5 +243,146 @@ void main() {
       final paid = _card(id: 'cc3', balance: 0, creditLimit: 10000);
       expect(presenter.creditMinimumDue(paid), isNull);
     });
+
+    test('creditCycleNote warns when a card can never be billed', () async {
+      // The generator needs both days. Without them the card still shows a
+      // balance (and a due date, if that one is set), so nothing revealed that
+      // it would never produce a statement.
+      expect(
+        presenter.creditCycleNote(_card(id: 'x', paymentDueDay: 15))?.warning,
+        isTrue,
+      );
+      expect(
+        presenter.creditCycleNote(_card(id: 'y', statementDay: 5))?.warning,
+        isTrue,
+      );
+    });
+
+    test('creditCycleNote names the close date while the cycle is open',
+        () async {
+      // A close day that cannot have passed yet, whatever day it runs on.
+      final openCycle = _card(
+        id: 'z',
+        statementDay: 28,
+        paymentDueDay: 15,
+        balance: 1011.31,
+      );
+      final note = presenter.creditCycleNote(openCycle);
+      if (DateTime.now().day < 28) {
+        expect(note, isNotNull);
+        expect(note!.warning, isFalse);
+        expect(note.label, startsWith('Statement closes '));
+      } else {
+        // Run on the 28th or later, that cycle has closed.
+        expect(note, isNull);
+      }
+    });
+
+    test('creditCycleNote is silent once the cycle has closed', () async {
+      // statementDay 1 has always closed — the statement is a bill by now, so
+      // the card has nothing left to explain.
+      final closed = _card(id: 'w', statementDay: 1, paymentDueDay: 15);
+      expect(presenter.creditCycleNote(closed), isNull);
+    });
+
+    test('creditCycleNote ignores non-liability accounts', () async {
+      expect(presenter.creditCycleNote(_bank('bpi', 8000)), isNull);
+    });
+  });
+
+  group('LedgerPresenter.payableAsOf', () {
+    /// A card owing [balance] today, with [txns] already recorded against it.
+    Future<LedgerPresenter> ledgerWith(
+      double balance,
+      List<TransactionRecord> txns,
+    ) async {
+      final storage = MockStorageService();
+      final stats = MockStatsPresenter();
+      when(storage.loadNotificationPreferences())
+          .thenAnswer((_) async => NotificationPreferences.defaults());
+      when(storage.loadAccounts()).thenAnswer((_) async => [
+            _card(id: 'sp', balance: balance, creditLimit: 75000),
+            _bank('gcash', 5000),
+          ]);
+      when(storage.loadFinanceCategories()).thenAnswer((_) async => []);
+      when(storage.loadTransactions()).thenAnswer((_) async => txns);
+      when(storage.loadFinanceDictionary()).thenAnswer((_) async => []);
+      when(stats.stats).thenReturn(UserStats.initial());
+      final ledger = LedgerPresenter(storage, stats);
+      await _waitForLoad(ledger);
+      return ledger;
+    }
+
+    /// Peso comparisons tolerate float dust.
+    Matcher owes(double amount) => closeTo(amount, 0.001);
+
+    TransactionRecord charge(String id, double amount, DateTime on) =>
+        TransactionRecord(
+          id: id,
+          date: on,
+          accountId: 'sp',
+          categoryId: '',
+          amount: amount,
+          type: TransactionType.outflow,
+          description: id,
+          month: '2026-08',
+        );
+
+    test('excludes charges made after the close date', () async {
+      // Closed Aug 5 owing 1011.31; 500 more charged Aug 6; the app is not
+      // opened (so the statement is not generated) until Aug 8.
+      final ledger = await ledgerWith(1511.31, [
+        charge('c1', 1011.31, DateTime(2026, 8, 3)),
+        charge('c2', 500, DateTime(2026, 8, 6)),
+      ]);
+
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 5)), owes(1011.31));
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 8)), owes(1511.31));
+    });
+
+    test('counts a charge dated ON the close date', () async {
+      // The closing day belongs to the cycle that closes.
+      final ledger = await ledgerWith(600, [
+        charge('c1', 100, DateTime(2026, 8, 4)),
+        charge('c2', 500, DateTime(2026, 8, 5, 21, 30)),
+      ]);
+
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 5)), owes(600));
+    });
+
+    test('a payment after the close date does not shrink the statement',
+        () async {
+      // Owed 1011.31 at close, paid in full on Aug 10 → balance 0 today, but
+      // the closed cycle still billed 1011.31.
+      final ledger = await ledgerWith(0, [
+        charge('c1', 1011.31, DateTime(2026, 8, 3)),
+        TransactionRecord(
+          id: 'pay',
+          date: DateTime(2026, 8, 10),
+          accountId: 'sp',
+          categoryId: '',
+          amount: 1011.31,
+          type: TransactionType.inflow,
+          description: 'Pay card',
+          month: '2026-08',
+        ),
+      ]);
+
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 5)), owes(1011.31));
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 31)), 0);
+    });
+
+    test('floors at zero for an overpaid card, and ignores other accounts',
+        () async {
+      final ledger = await ledgerWith(-250, [
+        charge('c1', 250, DateTime(2026, 8, 20)),
+      ]);
+
+      // Unwinding the post-close charge leaves −500 owed (a credit balance).
+      expect(ledger.payableAsOf('sp', DateTime(2026, 8, 5)), 0);
+      // A non-liability account has no payable.
+      expect(ledger.payableAsOf('gcash', DateTime(2026, 8, 5)), 0);
+      expect(ledger.payableAsOf('nope', DateTime(2026, 8, 5)), 0);
+    });
   });
 }

@@ -401,6 +401,37 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
         .fold(0.0, (sum, r) => sum + r.txn.amount);
   }
 
+  /// What was owed on liability [accountId] at the END of [asOf] (that day
+  /// included), floored at zero like [FinancialAccount.currentPayable]. Zero for
+  /// a missing or non-liability account.
+  ///
+  /// A credit statement bills the balance as of its close date, but the
+  /// generator only runs when the app is next opened — which can be days later,
+  /// with fresh charges already on the card. Reading the live balance then
+  /// billed those charges into a cycle that had already closed.
+  ///
+  /// Derived by unwinding the account's CURRENT balance back across every
+  /// transaction dated after [asOf] — the same technique as
+  /// [_accountBalanceByTxnId], under the same sign rule as
+  /// [_applyBalanceDelta], so spending on a card raises what is owed. Both legs
+  /// of a card payment are separate records carrying the card's own
+  /// `accountId`, so filtering on it captures payments as well as charges.
+  double payableAsOf(String accountId, DateTime asOf) {
+    final account = _accounts.where((a) => a.id == accountId).firstOrNull;
+    if (account == null || !account.isLiability) return 0;
+    // Start of the day after [asOf]: a transaction dated ON the close date is
+    // part of the cycle that closed, not the next one.
+    final cutoff = DateTime(asOf.year, asOf.month, asOf.day + 1);
+    var owed = account.balance;
+    for (final t in _allTransactions) {
+      if (t.accountId != accountId || t.date.isBefore(cutoff)) continue;
+      final base = t.type == TransactionType.inflow ? t.amount : -t.amount;
+      final delta = -base; // liability: spending raises what is owed
+      owed -= delta; // unwind → the balance before this transaction
+    }
+    return owed > 0 ? owed : 0;
+  }
+
   /// Per-transaction account balance: the involved account's balance
   /// immediately *after* that transaction. Reconstructed by unwinding each
   /// account's CURRENT [FinancialAccount.balance] backward (newest → oldest)

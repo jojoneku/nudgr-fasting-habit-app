@@ -710,6 +710,35 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     await _notifyDependents();
   }
 
+  /// The generated statement that [bill] looks like a hand-keyed copy of: same
+  /// card, same month, still unpaid and un-transacted. Null when there is
+  /// nothing to reconcile — including when [bill] is itself that statement, or
+  /// is not a credit-card bill at all (a bill merely payable FROM the card is
+  /// not a copy of its statement).
+  ///
+  /// Surfaced so the View can offer the swap as a choice at save time. The
+  /// auto-generation pass deliberately no longer removes anything the user made
+  /// a bill for: it runs on app open, where a deleted row for money still owed
+  /// can be neither noticed nor undone. A paid or transacted statement is
+  /// authoritative and never offered.
+  Bill? redundantAutoStatementFor(Bill bill) {
+    final accountId = bill.accountId;
+    if (accountId == null ||
+        bill.billType != BillType.creditCard ||
+        bill.isAutoStatement) {
+      return null;
+    }
+    return _allBills
+        .where((b) =>
+            b.id != bill.id &&
+            _isAutoStatement(b) &&
+            !b.isPaid &&
+            b.transactionId == null &&
+            b.accountId == accountId &&
+            b.month == bill.month)
+        .firstOrNull;
+  }
+
   Future<void> deleteBill(String id) async {
     _allBills = _allBills.where((b) => b.id != id).toList();
     safeNotify();
@@ -1147,24 +1176,32 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     if (categoryId == null) return;
     var changed = false;
 
-    // ── De-duplicate statement bills. A card should carry at most one bill per
-    // month. Duplicates arose (seen on BNPL cards like ShopeePay) when an
-    // auto-statement coexisted with another bill for the same card+month — a
-    // manual bill the user added, or a stray second auto-statement. Because the
-    // generator below only recognises *auto-statements* when deciding whether
-    // one already exists, deleting the redundant auto copy just brought it back
-    // on the next load. Drop the unpaid, un-transacted auto-statement whenever
-    // another bill already covers that card+month; paid or transacted
-    // statements are authoritative and never removed.
+    // ── De-duplicate GENERATED statement bills. A card carries at most one
+    // auto-statement per month; a stray second one is an internal duplicate, so
+    // dropping it loses nothing and needs no telling.
+    //
+    // A bill the USER made never evicts one, even for the same card+month.
+    // [Bill.accountId] means "preferred payment account", so an ordinary bill
+    // merely payable FROM a card was indistinguishable from that card's own
+    // statement — and the eviction ran here, in a background pass on app open,
+    // where nothing could tell you a row had just disappeared. A statement for
+    // money you still owe is not something to delete on a guess. Both bills now
+    // stand, and you decide which to keep: deleting the auto copy sticks,
+    // because the generator below already declines to recreate a statement your
+    // own bill covers.
+    //
+    // Paid or transacted auto-statements are authoritative and never removed.
     final covered =
-        <String>{}; // 'accountId|month' held by a non-removable bill
+        <String>{}; // 'accountId|month' held by an authoritative statement
     String? billKey(Bill b) =>
         b.accountId == null ? null : '${b.accountId}|${b.month}';
     bool isRemovableAuto(Bill b) =>
         _isAutoStatement(b) && !b.isPaid && b.transactionId == null;
     for (final b in _allBills) {
       final key = billKey(b);
-      if (key != null && !isRemovableAuto(b)) covered.add(key);
+      if (key != null && _isAutoStatement(b) && !isRemovableAuto(b)) {
+        covered.add(key);
+      }
     }
     final duplicateIds = <String>{};
     for (final b in _allBills) {
@@ -1192,9 +1229,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // existing auto-statement, or the current month when there are none).
     final existingMonths =
         _allBills.where(_isAutoStatement).map((b) => b.month).toList()..sort();
-    final startMonth = existingMonths.isEmpty
+    var startMonth = existingMonths.isEmpty
         ? currentMonthKey
         : nextMonth(existingMonths.first);
+
+    // Never let the window close past today. The oldest auto-statement can sit
+    // in the current month (the first card to close this month) or even a
+    // future one (a shifted card files under its next-month due date), and
+    // nextMonth() then pushed startMonth beyond currentMonthKey — which made
+    // the loop below evaluate NO months and silently skip *every* card. A
+    // second card whose statement day fell after the first card's then never
+    // got billed for that month, and never would: the window stayed shut on
+    // each later run too.
+    if (startMonth.compareTo(currentMonthKey) > 0) {
+      startMonth = currentMonthKey;
+    }
 
     // Build the list of months to evaluate (startMonth … currentMonth).
     final monthsToCheck = <String>[];
@@ -1253,12 +1302,24 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           if (legacyCovers) continue;
         }
 
-        // A non-auto bill already tracks this card for the due month (a manual
-        // statement, or a recurring credit-card bill). Generating an
-        // auto-statement on top would duplicate it — and keep coming back after
-        // the user deletes the auto copy — so skip. (dupe-statement bug)
+        // The user already tracks this card's statement for the due month (a
+        // hand-keyed statement, or a recurring credit-card bill). Generating on
+        // top would duplicate it — and keep coming back after they delete the
+        // auto copy — so skip. (dupe-statement bug)
+        //
+        // Only a CREDIT-CARD-type bill counts. [Bill.accountId] is the
+        // "preferred payment account", so this used to read any bill payable
+        // FROM the card as that card's statement: setting an ordinary utility
+        // bill to be paid from a card silently stopped that card being billed
+        // for the month. Bill type is the one signal that separates "this IS
+        // the card's statement" from "I pay this USING the card"; a bill filed
+        // under another type falls through to generation, leaving a visible
+        // duplicate to resolve rather than a missing statement.
         final userBillCoversCard = _allBills.any((b) =>
-            !_isAutoStatement(b) && b.accountId == a.id && b.month == dueMonth);
+            !_isAutoStatement(b) &&
+            b.billType == BillType.creditCard &&
+            b.accountId == a.id &&
+            b.month == dueMonth);
         if (userBillCoversCard) continue;
 
         // For current month: statement day must have passed.
@@ -1268,8 +1329,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
         // used in that cycle).
         if (a.currentPayable <= 0) continue;
 
-        // For past months: amount is 0 (historical balance unknown).
-        final amount = isCurrentMonth ? a.currentPayable : 0.0;
+        // Bill the balance as of the cycle's CLOSE date, not today's. This runs
+        // whenever the app is next opened, so reading the live balance billed
+        // anything charged after the close into the cycle that had already
+        // closed — and the amount was never corrected afterwards.
+        //
+        // Past months stay at 0: a placeholder that asks to be reviewed is
+        // safer than a reconstructed figure, since the transaction log may not
+        // reach back that far and a wrong number would read as authoritative.
+        final amount = isCurrentMonth
+            ? _ledger.payableAsOf(a.id, DateTime(now.year, now.month, stmtDay))
+            : 0.0;
+
+        // Nothing had closed yet: every peso on the card was charged after the
+        // close date, so it belongs to the next cycle, not this statement.
+        if (isCurrentMonth && amount <= 0) continue;
 
         _allBills = [
           ..._allBills,
