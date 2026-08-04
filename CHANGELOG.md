@@ -13,6 +13,17 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.58] - 2026-08-04
+
+### Added
+- drag-to-rearrange receivables, stable category colors
+- jump-to-newest button; fix stolen scroll, copy, and title
+
+### Fixed
+- a bill payable FROM a card no longer blocks its statement
+- bill the closing balance, stop silent statement deletes, surface the cycle
+- stop a filed statement from shutting the auto-statement window
+
 ## [1.1.57] - 2026-07-30
 
 ### Added
@@ -590,7 +601,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.57...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.58...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -649,3 +660,4 @@ distributed via `manifest.json`.
 [1.1.55]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.55
 [1.1.56]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.56
 [1.1.57]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.57
+[1.1.58]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.58
