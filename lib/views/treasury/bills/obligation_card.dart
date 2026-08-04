@@ -54,6 +54,11 @@ class ObligationCard extends StatelessWidget {
   /// Long-press "Delete".
   final VoidCallback? onDelete;
 
+  /// Drag affordance shown at the far right, in place of the action button, while
+  /// the section is in reorder mode. The caller supplies the listener (the card
+  /// knows nothing about the list it sits in); null means "not reorderable".
+  final Widget? dragHandle;
+
   const ObligationCard({
     super.key,
     required this.icon,
@@ -71,6 +76,7 @@ class ObligationCard extends StatelessWidget {
     this.onAction,
     this.onEdit,
     this.onDelete,
+    this.dragHandle,
   });
 
   @override
@@ -179,7 +185,9 @@ class ObligationCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            if (done)
+            if (dragHandle != null)
+              dragHandle!
+            else if (done)
               Icon(Icons.check_circle,
                   color: context.appColors.success, size: 22)
             else if (onAction != null)

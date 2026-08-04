@@ -45,6 +45,10 @@ class BillsReceivablesView extends StatefulWidget {
 }
 
 class _BillsReceivablesViewState extends State<BillsReceivablesView> {
+  /// Receivables section is in drag-to-rearrange mode. Off by default so the
+  /// cards keep their Receive button and their tap-to-edit.
+  bool _reorderingReceivables = false;
+
   @override
   void initState() {
     super.initState();
@@ -187,16 +191,23 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
   /// Resolves the category icon + theme-aware color for [categoryId]. Falls back
   /// to a type-appropriate icon and [fallback] color when the item has no linked
   /// category. Mirrors the ledger tiles' in-widget icon/color resolution.
+  ///
+  /// The palette slot comes from the category (via the presenter), not from the
+  /// card's position: cards used to pass their row index, so two entries sharing
+  /// a category could draw different colors and every color moved when the list
+  /// re-sorted.
   ({IconData icon, Color color}) _catVisual(
-    String categoryId,
-    int index, {
+    String categoryId, {
     required Color fallback,
   }) {
     final cat = widget.presenter.categoryById(categoryId);
     final icon = categoryIcon(cat?.name, cat?.type ?? CategoryType.expense);
     final color = cat != null
-        ? resolveSliceColor(cat.colorHex, index,
-            brightness: Theme.of(context).brightness)
+        ? resolveSliceColor(
+            cat.colorHex,
+            widget.presenter.categoryPaletteSlot(categoryId),
+            brightness: Theme.of(context).brightness,
+          )
         : fallback;
     return (icon: icon, color: color);
   }
@@ -282,14 +293,12 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       title: 'Bills',
       count: bills.length,
       emptyMessage: 'No bills this month',
-      children: [
-        for (int i = 0; i < bills.length; i++) _cardPad(_billCard(bills[i], i)),
-      ],
+      children: [for (final b in bills) _cardPad(_billCard(b))],
     );
   }
 
-  Widget _billCard(Bill b, int i) {
-    final v = _catVisual(b.categoryId, i, fallback: context.appColors.bills);
+  Widget _billCard(Bill b) {
+    final v = _catVisual(b.categoryId, fallback: context.appColors.bills);
     final String? note = b.isPaid
         ? 'Paid ${formatPeso(b.paidAmount ?? b.amount)}'
             '${b.paidDate != null ? ' · ${DateFormat('MMM d').format(b.paidDate!)}' : ''}'
@@ -324,21 +333,54 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
+  /// Receivables, with a Reorder toggle in the section header once there are two
+  /// or more still-owed entries to arrange. In reorder mode the still-owed rows
+  /// become a [ReorderableListView] with an explicit drag handle — the cards'
+  /// own tap/long-press (edit, delete) is suppressed so a drag can't fire them,
+  /// and the default long-press drag is off for the same reason.
   Widget _receivablesSection() {
-    final receivables = widget.presenter.receivables;
+    final pending = widget.presenter.pendingReceivables;
+    final received = widget.presenter.receivedReceivables;
+    final canReorder = pending.length > 1;
+    final reordering = _reorderingReceivables && canReorder;
     return _Section(
       title: 'Receivables',
-      count: receivables.length,
+      count: pending.length + received.length,
       emptyMessage: 'No receivables this month',
+      trailing: canReorder
+          ? _ReorderToggle(
+              active: reordering,
+              onToggle: () => setState(
+                  () => _reorderingReceivables = !_reorderingReceivables),
+              onReset: reordering && widget.presenter.hasManualReceivableOrder
+                  ? widget.presenter.resetReceivableOrder
+                  : null,
+            )
+          : null,
       children: [
-        for (int i = 0; i < receivables.length; i++)
-          _cardPad(_receivableCard(receivables[i], i)),
+        if (reordering)
+          ReorderableListView(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            buildDefaultDragHandles: false,
+            onReorderItem: widget.presenter.reorderPendingReceivables,
+            children: [
+              for (int i = 0; i < pending.length; i++)
+                _cardPad(
+                  key: ValueKey('reorder_${pending[i].id}'),
+                  _receivableCard(pending[i], dragIndex: i),
+                ),
+            ],
+          )
+        else
+          for (final r in pending) _cardPad(_receivableCard(r)),
+        for (final r in received) _cardPad(_receivableCard(r)),
       ],
     );
   }
 
-  Widget _receivableCard(Receivable r, int i) {
-    final v = _catVisual(r.categoryId, i, fallback: context.appColors.success);
+  Widget _receivableCard(Receivable r, {int? dragIndex}) {
+    final v = _catVisual(r.categoryId, fallback: context.appColors.success);
     final date = r.expectedDate;
     final dateLabel =
         date == null ? 'ASAP' : 'exp ${DateFormat('MMM d').format(date)}';
@@ -361,13 +403,34 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       isInflow: true,
       actionLabel: 'Receive',
       done: r.isReceived,
-      onAction: r.isReceived ? null : () => _showMarkReceivedSheet(r),
-      onEdit: () => _showAddReceivableSheet(r),
-      onDelete: () => _confirmDelete(
-        title: 'Delete Receivable',
-        body: 'Delete "${r.name}"?',
-        onConfirm: () => widget.presenter.deleteReceivable(r.id),
-      ),
+      onAction: r.isReceived || dragIndex != null
+          ? null
+          : () => _showMarkReceivedSheet(r),
+      onEdit: dragIndex != null ? null : () => _showAddReceivableSheet(r),
+      onDelete: dragIndex != null
+          ? null
+          : () => _confirmDelete(
+                title: 'Delete Receivable',
+                body: 'Delete "${r.name}"?',
+                onConfirm: () => widget.presenter.deleteReceivable(r.id),
+              ),
+      dragHandle: dragIndex == null
+          ? null
+          : ReorderableDragStartListener(
+              index: dragIndex,
+              child: Tooltip(
+                message: 'Drag to reorder',
+                child: SizedBox(
+                  width: 44,
+                  height: 44,
+                  child: Icon(
+                    Icons.drag_indicator_rounded,
+                    size: 22,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 
@@ -377,15 +440,12 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       title: 'Budgeted',
       count: expenses.length,
       emptyMessage: 'No budgeted expenses this month',
-      children: [
-        for (int i = 0; i < expenses.length; i++)
-          _cardPad(_budgetedCard(expenses[i], i)),
-      ],
+      children: [for (final e in expenses) _cardPad(_budgetedCard(e))],
     );
   }
 
-  Widget _budgetedCard(BudgetedExpense e, int i) {
-    final v = _catVisual(e.categoryId, i, fallback: context.appColors.gold);
+  Widget _budgetedCard(BudgetedExpense e) {
+    final v = _catVisual(e.categoryId, fallback: context.appColors.gold);
     final accountName = widget.presenter.accountName(e.accountId);
     final String? note = e.isPaid
         ? 'Funded ${formatPeso(e.spentAmount)}'
@@ -423,8 +483,7 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       count: installments.length,
       emptyMessage: 'No installments due this month',
       children: [
-        for (int i = 0; i < installments.length; i++)
-          _cardPad(_installmentCard(installments[i])),
+        for (final inst in installments) _cardPad(_installmentCard(inst)),
       ],
     );
   }
@@ -461,8 +520,13 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     );
   }
 
-  Widget _cardPad(Widget child) =>
-      Padding(padding: const EdgeInsets.only(bottom: 8), child: child);
+  /// [key] belongs on the padding, not the card: `ReorderableListView` keys its
+  /// direct children, which are these wrappers.
+  Widget _cardPad(Widget child, {Key? key}) => Padding(
+        key: key,
+        padding: const EdgeInsets.only(bottom: 8),
+        child: child,
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -591,11 +655,16 @@ class _Section extends StatelessWidget {
   final String emptyMessage;
   final List<Widget> children;
 
+  /// Optional control pinned to the right of the header row (e.g. the
+  /// receivables Reorder toggle).
+  final Widget? trailing;
+
   const _Section({
     required this.title,
     required this.count,
     required this.emptyMessage,
     required this.children,
+    this.trailing,
   });
 
   @override
@@ -620,6 +689,7 @@ class _Section extends StatelessWidget {
                   ),
                 ),
               ],
+              if (trailing != null) ...[const Spacer(), trailing!],
             ],
           ),
         ),
@@ -633,6 +703,55 @@ class _Section extends StatelessWidget {
           )
         else
           ...children,
+      ],
+    );
+  }
+}
+
+/// Header control that puts the Receivables list into drag-to-rearrange mode.
+/// While active it also offers "Auto", which throws the hand-set arrangement away
+/// and returns the list to its expected-date order — shown only when there is an
+/// arrangement to throw away.
+class _ReorderToggle extends StatelessWidget {
+  final bool active;
+  final VoidCallback onToggle;
+  final VoidCallback? onReset;
+
+  const _ReorderToggle({
+    required this.active,
+    required this.onToggle,
+    this.onReset,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final style = TextButton.styleFrom(
+      minimumSize: const Size(0, 44),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      visualDensity: VisualDensity.compact,
+      textStyle: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+    );
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (active && onReset != null)
+          TextButton(
+            onPressed: onReset,
+            style: style.copyWith(
+              foregroundColor: WidgetStatePropertyAll(cs.onSurfaceVariant),
+            ),
+            child: const Text('Auto'),
+          ),
+        TextButton.icon(
+          onPressed: onToggle,
+          style: style.copyWith(
+            foregroundColor: WidgetStatePropertyAll(cs.primary),
+          ),
+          icon: Icon(active ? Icons.check_rounded : Icons.swap_vert_rounded,
+              size: 17),
+          label: Text(active ? 'Done' : 'Reorder'),
+        ),
       ],
     );
   }

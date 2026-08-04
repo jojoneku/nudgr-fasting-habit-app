@@ -7,6 +7,7 @@ import 'package:intermittent_fasting/models/finance/finance_category.dart';
 import 'package:intermittent_fasting/models/finance/financial_account.dart';
 import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart';
 import 'package:intermittent_fasting/utils/amount_input_formatter.dart';
+import 'package:intermittent_fasting/utils/finance_format.dart';
 import 'package:intermittent_fasting/views/treasury/shared/category_chips.dart';
 import 'package:intermittent_fasting/views/treasury/shared/sheet_fields.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
@@ -173,10 +174,33 @@ class _AddBillSheetState extends State<AddBillSheet> {
       } else {
         await widget.presenter.addBill(bill);
       }
+      if (mounted) await _offerToReplaceAutoStatement(bill);
       if (mounted) Navigator.pop(context);
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  /// The bill is saved either way — this only decides the fate of a generated
+  /// statement it appears to duplicate, and dismissing keeps both. Asked here,
+  /// at the moment the collision is created, because the alternative (resolving
+  /// it in the auto-generation pass) happens on app open where a removed row
+  /// cannot be seen or undone.
+  Future<void> _offerToReplaceAutoStatement(Bill bill) async {
+    final auto = widget.presenter.redundantAutoStatementFor(bill);
+    if (auto == null) return;
+    final removeIt = await AppConfirmDialog.confirm(
+      context: context,
+      title: 'Replace the auto statement?',
+      body: '${monthLabel(auto.month)} already has an auto-generated '
+          '"${auto.name}" for ${formatPeso(auto.amount)}. Remove it and track '
+          'this bill instead, or keep both?',
+      confirmLabel: 'Remove it',
+      cancelLabel: 'Keep both',
+      isDestructive: true,
+    );
+    if (!removeIt || !mounted) return;
+    await widget.presenter.deleteBill(auto.id);
   }
 
   String _recurrenceLabel(RecurrenceType r) => switch (r) {

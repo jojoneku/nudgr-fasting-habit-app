@@ -112,18 +112,25 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
         name: _nameController.text.trim(),
         receivableType: _receivableType,
         amount: amount,
-        expectedDate: _expectedDate,
+        // Day only. A stored time of day is invisible on the card ("exp Aug 4")
+        // yet used to be what ordered same-day entries, so the list looked
+        // shuffled for no reason the user could see.
+        expectedDate: DateUtils.dateOnly(_expectedDate),
         month: e?.month ?? widget.presenter.selectedMonth,
         categoryId: _selectedCategoryId ?? '',
         accountId: _selectedAccountId,
         isRecurring: _isRecurring,
         recurrenceType: _isRecurring ? _recurrenceType : null,
-        // Preserve settled state + links when editing.
+        // Preserve settled state, links, next-month override, and the hand-set
+        // list rank when editing — this builds a fresh Receivable rather than
+        // copyWith, so anything not restated here is dropped.
         isReceived: e?.isReceived ?? false,
         receivedDate: e?.receivedDate,
         receivedAmount: e?.receivedAmount,
         transactionId: e?.transactionId,
         reimbursementForTxnId: e?.reimbursementForTxnId,
+        nextMonthAmount: e?.nextMonthAmount,
+        sortIndex: e?.sortIndex,
       );
       if (e != null) {
         await widget.presenter.updateReceivable(receivable);

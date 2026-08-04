@@ -47,6 +47,12 @@ class Receivable {
   /// Back-link to the TransactionRecord whose reimbursable outflow spawned this
   /// receivable. Null for receivables created directly (salary, business, etc.).
   final String? reimbursementForTxnId;
+
+  /// Manual rank inside its [month], set when the user drags the receivable
+  /// somewhere. Null means "never arranged by hand" — the list falls back to its
+  /// automatic order (expected date, then name) for that entry. Only meaningful
+  /// relative to other receivables of the same month.
+  final int? sortIndex;
   final DateTime updatedAt;
 
   Receivable({
@@ -66,6 +72,7 @@ class Receivable {
     this.transactionId,
     this.accountId,
     this.reimbursementForTxnId,
+    this.sortIndex,
     DateTime? updatedAt,
   }) : updatedAt = updatedAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
@@ -92,6 +99,7 @@ class Receivable {
       transactionId: json['transactionId'] as String?,
       accountId: json['accountId'] as String?,
       reimbursementForTxnId: json['reimbursementForTxnId'] as String?,
+      sortIndex: (json['sortIndex'] as num?)?.toInt(),
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
     );
@@ -114,6 +122,7 @@ class Receivable {
         'transactionId': transactionId,
         'accountId': accountId,
         'reimbursementForTxnId': reimbursementForTxnId,
+        'sortIndex': sortIndex,
         'updatedAt': updatedAt.toIso8601String(),
       };
 
@@ -133,6 +142,7 @@ class Receivable {
     String? transactionId,
     Object? accountId = _kUnset,
     String? reimbursementForTxnId,
+    Object? sortIndex = _kUnset,
     DateTime? updatedAt,
   }) {
     return Receivable(
@@ -156,6 +166,10 @@ class Receivable {
           identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       reimbursementForTxnId:
           reimbursementForTxnId ?? this.reimbursementForTxnId,
+      // Sentinel-guarded so an explicit null drops the entry back to automatic
+      // ordering ("Reset order"), while omitting it keeps the current rank.
+      sortIndex:
+          identical(sortIndex, _kUnset) ? this.sortIndex : sortIndex as int?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

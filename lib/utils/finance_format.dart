@@ -55,6 +55,9 @@ String monthShortLabel(String monthKey) {
   return DateFormat('MMM').format(date);
 }
 
+/// Short month-and-day label for a date. e.g. 2026-08-05 → 'Aug 5'
+String monthDayLabel(DateTime date) => DateFormat('MMM d').format(date);
+
 /// Compact label for a month chip/dropdown: the month name alone within the
 /// current year (e.g. 'June'), or month + year across years (e.g. "Dec 2025")
 /// so the control stays short but never ambiguous.
