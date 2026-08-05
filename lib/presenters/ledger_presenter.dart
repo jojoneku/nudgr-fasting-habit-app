@@ -817,6 +817,10 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
   DateTime? reimbursementReceivableExpectedDate(String receivableId) =>
       reimbursementReceivableExpectedDateResolver?.call(receivableId);
 
+  /// Books a transfer as two linked legs. [billId] stamps both legs with the
+  /// bill they settle — a liability statement is paid via transfer, so without
+  /// the back-link the payment was untraceable from the bill and undoing one
+  /// could not find the ledger entries to unwind.
   Future<void> addTransfer({
     required String fromAccountId,
     required String toAccountId,
@@ -824,6 +828,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
     required String description,
     required DateTime date,
     String? note,
+    String? billId,
   }) async {
     final groupId = _generateId();
     final monthKey = toMonthKey(date);
@@ -843,6 +848,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       month: monthKey,
       transferToAccountId: toAccountId,
       transferGroupId: groupId,
+      billId: billId,
     );
     final inflow = TransactionRecord(
       id: _generateId(),
@@ -856,6 +862,7 @@ class LedgerPresenter extends ChangeNotifier with SafeNotifier {
       month: monthKey,
       transferToAccountId: fromAccountId,
       transferGroupId: groupId,
+      billId: billId,
     );
 
     _allTransactions = [..._allTransactions, outflow, inflow];

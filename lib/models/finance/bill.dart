@@ -156,9 +156,12 @@ class Bill {
     bool? isRecurring,
     RecurrenceType? recurrenceType,
     bool? isPaid,
-    DateTime? paidDate,
-    double? paidAmount,
-    String? transactionId,
+    // Sentinel-guarded so undoing a payment can clear the settlement fields back
+    // out; `field ?? this.field` never could, which left an un-paid bill still
+    // carrying its old paid date/amount and ledger link.
+    Object? paidDate = _kUnset,
+    Object? paidAmount = _kUnset,
+    Object? transactionId = _kUnset,
     Object? reminderDaysBefore = _kUnset,
     DateTime? updatedAt,
   }) {
@@ -177,9 +180,18 @@ class Bill {
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
       isPaid: isPaid ?? this.isPaid,
-      paidDate: paidDate ?? this.paidDate,
-      paidAmount: paidAmount ?? this.paidAmount,
-      transactionId: transactionId ?? this.transactionId,
+      paidDate:
+          identical(paidDate, _kUnset) ? this.paidDate : paidDate as DateTime?,
+      // Through num, not a straight `as double?`: the sentinel makes this
+      // parameter Object?, which switches off the int→double coercion a
+      // `double` slot would have applied — so an integer argument
+      // (`paidAmount: 500`) arrives still an int and a double cast throws.
+      paidAmount: identical(paidAmount, _kUnset)
+          ? this.paidAmount
+          : (paidAmount as num?)?.toDouble(),
+      transactionId: identical(transactionId, _kUnset)
+          ? this.transactionId
+          : transactionId as String?,
       reminderDaysBefore: identical(reminderDaysBefore, _kUnset)
           ? this.reminderDaysBefore
           : reminderDaysBefore as int?,

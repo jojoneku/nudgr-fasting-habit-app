@@ -121,7 +121,10 @@ class BudgetedExpense {
     bool? isPaid,
     bool? isRecurring,
     RecurrenceType? recurrenceType,
-    String? transactionId,
+    // Sentinel-guarded so undoing a funding can clear the ledger link back out;
+    // `field ?? this.field` never could, which left an unfunded set-aside still
+    // pointing at a transaction that no longer exists.
+    Object? transactionId = _kUnset,
     DateTime? updatedAt,
   }) {
     return BudgetedExpense(
@@ -139,7 +142,9 @@ class BudgetedExpense {
       isPaid: isPaid ?? this.isPaid,
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
-      transactionId: transactionId ?? this.transactionId,
+      transactionId: identical(transactionId, _kUnset)
+          ? this.transactionId
+          : transactionId as String?,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

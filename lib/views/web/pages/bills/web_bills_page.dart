@@ -11,6 +11,7 @@ import 'package:intermittent_fasting/presenters/bills_receivables_presenter.dart
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/utils/app_radii.dart';
 import 'package:intermittent_fasting/utils/finance_format.dart';
+import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 import '../../widgets/web_widgets.dart';
 
@@ -1022,7 +1023,8 @@ class _BillRow extends StatelessWidget {
         children: [
           _PaidCheckbox(
             checked: paid,
-            onTap: paid ? null : () => _markPaid(context),
+            tooltip: paid ? 'Mark unpaid' : 'Mark paid',
+            onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
           ),
           const SizedBox(width: WebInsets.md),
           Expanded(
@@ -1057,10 +1059,34 @@ class _BillRow extends StatelessWidget {
           _RowActions(
             onEdit: () => _edit(context),
             onDelete: () => _delete(context),
+            onUndo: paid ? () => _undoPaid(context) : null,
+            undoLabel: 'Mark unpaid',
           ),
         ],
       ),
     );
+  }
+
+  /// Reverses a payment recorded by mistake — the bill returns to Pending and,
+  /// unless the user keeps it, the transaction goes with it so the funding
+  /// account's balance is restored.
+  Future<void> _undoPaid(BuildContext context) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo payment?',
+      name: bill.name,
+      entryLabel: 'bill',
+      hasLedgerEntry: presenter.billHasLedgerEntry(bill),
+      ledgerEffect: '${formatPeso(bill.paidAmount ?? bill.amount)} goes back '
+          'into ${_accountName(bill.accountId) ?? 'your account'}.',
+    );
+    if (choice == null) return;
+    await presenter.markBillUnpaid(
+      bill.id,
+      removeTransaction: choice.removeTransaction,
+    );
+    if (!context.mounted) return;
+    AppToast.show(context, 'Marked "${bill.name}" unpaid.');
   }
 
   void _edit(BuildContext context) {
@@ -1313,7 +1339,10 @@ class _ReceivableRow extends StatelessWidget {
         children: [
           _PaidCheckbox(
             checked: received,
-            onTap: received ? null : () => _markReceived(context),
+            tooltip: received ? 'Mark not received' : 'Mark received',
+            onTap: received
+                ? () => _undoReceived(context)
+                : () => _markReceived(context),
           ),
           const SizedBox(width: WebInsets.md),
           Expanded(
@@ -1350,10 +1379,35 @@ class _ReceivableRow extends StatelessWidget {
           _RowActions(
             onEdit: () => _edit(context),
             onDelete: () => _delete(context),
+            onUndo: received ? () => _undoReceived(context) : null,
+            undoLabel: 'Mark not received',
           ),
         ],
       ),
     );
+  }
+
+  /// Reverses a receipt recorded by mistake — the entry returns to still-owed
+  /// and, unless the user keeps it, the deposit is taken back out of the ledger
+  /// so the account balance is restored.
+  Future<void> _undoReceived(BuildContext context) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo receipt?',
+      name: receivable.name,
+      entryLabel: 'receivable',
+      hasLedgerEntry: presenter.receivableHasLedgerEntry(receivable),
+      ledgerEffect:
+          '${formatPeso(receivable.receivedAmount ?? receivable.amount)} is '
+          'taken back out of the account it was deposited into.',
+    );
+    if (choice == null) return;
+    await presenter.markReceivableUnreceived(
+      receivable.id,
+      removeTransaction: choice.removeTransaction,
+    );
+    if (!context.mounted) return;
+    AppToast.show(context, 'Marked "${receivable.name}" not received.');
   }
 
   void _edit(BuildContext context) {
@@ -1724,7 +1778,10 @@ class _BudgetedExpenseRow extends StatelessWidget {
         children: [
           _PaidCheckbox(
             checked: funded,
-            onTap: funded ? null : () => _markFunded(context),
+            tooltip: funded ? 'Mark unfunded' : 'Mark funded',
+            onTap: funded
+                ? () => _undoFunded(context)
+                : () => _markFunded(context),
           ),
           const SizedBox(width: WebInsets.md),
           Expanded(
@@ -1761,10 +1818,34 @@ class _BudgetedExpenseRow extends StatelessWidget {
           _RowActions(
             onEdit: () => _edit(context),
             onDelete: () => _delete(context),
+            onUndo: funded ? () => _undoFunded(context) : null,
+            undoLabel: 'Mark unfunded',
           ),
         ],
       ),
     );
+  }
+
+  /// Reverses a funding recorded by mistake — the set-aside returns to unfunded
+  /// and, unless the user keeps it, the outflow (or both legs of the transfer)
+  /// is removed so the accounts it moved money between are restored.
+  Future<void> _undoFunded(BuildContext context) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo funding?',
+      name: expense.name,
+      entryLabel: 'set-aside',
+      hasLedgerEntry: presenter.expenseHasLedgerEntry(expense),
+      ledgerEffect: '${formatPeso(expense.spentAmount)} is moved back to the '
+          'account it was funded from.',
+    );
+    if (choice == null) return;
+    await presenter.markExpenseUnpaid(
+      expense.id,
+      removeTransaction: choice.removeTransaction,
+    );
+    if (!context.mounted) return;
+    AppToast.show(context, 'Marked "${expense.name}" unfunded.');
   }
 
   void _edit(BuildContext context) {
@@ -2279,9 +2360,8 @@ class _InstallmentRow extends StatelessWidget {
         children: [
           _PaidCheckbox(
             checked: paid,
-            onTap: paid
-                ? () => presenter.markUnpaid(installment.id)
-                : () => _markPaid(context),
+            tooltip: paid ? 'Mark unpaid this month' : 'Mark paid',
+            onTap: paid ? () => _undoPaid(context) : () => _markPaid(context),
           ),
           const SizedBox(width: WebInsets.md),
           Expanded(
@@ -2339,10 +2419,33 @@ class _InstallmentRow extends StatelessWidget {
           _RowActions(
             onEdit: () => _edit(context),
             onDelete: () => _delete(context),
+            onUndo: paid ? () => _undoPaid(context) : null,
+            undoLabel: 'Mark unpaid this month',
           ),
         ],
       ),
     );
+  }
+
+  /// Reverses this month's payment. An installment has no paid flag of its own
+  /// — the transaction IS the record — so undoing always removes it; the dialog
+  /// confirms rather than offering a keep-the-transaction choice. It used to
+  /// fire straight off the checkbox with no confirmation at all.
+  Future<void> _undoPaid(BuildContext context) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo payment?',
+      name: installment.name,
+      entryLabel: 'installment payment',
+      hasLedgerEntry: false,
+      ledgerEffect: "This month's payment transaction is removed and "
+          '${presenter.accountName(installment.accountId) ?? 'the account'} '
+          'is credited back.',
+    );
+    if (choice == null) return;
+    await presenter.markUnpaid(installment.id);
+    if (!context.mounted) return;
+    AppToast.show(context, 'Marked "${installment.name}" unpaid this month.');
   }
 
   void _edit(BuildContext context) {
@@ -3021,16 +3124,21 @@ class _WebQuickPayDialogState extends State<_WebQuickPayDialog> {
 
 // ─── Shared bits ──────────────────────────────────────────────────────────────
 
+/// The settle toggle. Ticking it settles the row; un-ticking a settled one
+/// reverses it, so a mis-click is undone the same way it was made instead of
+/// being permanent. [tooltip] names whichever direction the next click goes.
 class _PaidCheckbox extends StatelessWidget {
   final bool checked;
   final VoidCallback? onTap;
+  final String? tooltip;
 
-  const _PaidCheckbox({required this.checked, required this.onTap});
+  const _PaidCheckbox(
+      {required this.checked, required this.onTap, this.tooltip});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return InkWell(
+    final box = InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadii.sm),
       child: Container(
@@ -3048,16 +3156,27 @@ class _PaidCheckbox extends StatelessWidget {
             checked ? Icon(Icons.check, size: 14, color: cs.onTertiary) : null,
       ),
     );
+    if (tooltip == null || onTap == null) return box;
+    return Tooltip(message: tooltip!, child: box);
   }
 }
 
 /// Trailing overflow menu shared by bill + receivable rows. Keeps edit/delete
-/// out of the way until hovered/tapped so the row stays scannable.
+/// out of the way until hovered/tapped so the row stays scannable. [onUndo] is
+/// added for settled rows so reversing a settlement is discoverable from the
+/// same menu as every other row action, not just the checkbox.
 class _RowActions extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onUndo;
+  final String? undoLabel;
 
-  const _RowActions({required this.onEdit, required this.onDelete});
+  const _RowActions({
+    required this.onEdit,
+    required this.onDelete,
+    this.onUndo,
+    this.undoLabel,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -3068,10 +3187,13 @@ class _RowActions extends StatelessWidget {
       padding: EdgeInsets.zero,
       splashRadius: 20,
       onSelected: (v) {
+        if (v == 'undo') onUndo?.call();
         if (v == 'edit') onEdit();
         if (v == 'delete') onDelete();
       },
       itemBuilder: (_) => [
+        if (onUndo != null)
+          PopupMenuItem(value: 'undo', child: Text(undoLabel ?? 'Undo')),
         const PopupMenuItem(value: 'edit', child: Text('Edit')),
         PopupMenuItem(
           value: 'delete',
