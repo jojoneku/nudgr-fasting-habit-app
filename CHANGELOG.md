@@ -13,6 +13,14 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.59] - 2026-08-05
+
+### Added
+- let a paid, received, or funded entry be undone
+
+### Fixed
+- accept an int amount when clearing a settlement field
+
 ## [1.1.58] - 2026-08-04
 
 ### Added
@@ -601,7 +609,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.58...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.59...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -661,3 +669,4 @@ distributed via `manifest.json`.
 [1.1.56]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.56
 [1.1.57]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.57
 [1.1.58]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.58
+[1.1.59]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.59
