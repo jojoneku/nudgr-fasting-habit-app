@@ -108,9 +108,7 @@ void main() {
     when(mockStorage.loadAccounts()).thenAnswer((_) async => [
           _account(id: 'gcash', balance: 5000),
           _account(
-              id: 'savings',
-              category: AccountCategory.savings,
-              balance: 10000),
+              id: 'savings', category: AccountCategory.savings, balance: 10000),
         ]);
     when(mockStorage.loadTransactions()).thenAnswer((_) async => []);
     when(mockStorage.loadFinanceCategories()).thenAnswer((_) async => []);
@@ -347,9 +345,7 @@ void main() {
 
       // No destination → a plain outflow ("spend it").
       await presenter.markExpensePaid('e1',
-          paidAmount: 300,
-          accountId: 'gcash',
-          paidDate: DateTime(2026, 3, 15));
+          paidAmount: 300, accountId: 'gcash', paidDate: DateTime(2026, 3, 15));
       expect(balanceOf(ledger, 'gcash'), 4700);
 
       await presenter.markExpenseUnpaid('e1');

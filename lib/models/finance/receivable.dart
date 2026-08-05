@@ -165,9 +165,13 @@ class Receivable {
       receivedDate: identical(receivedDate, _kUnset)
           ? this.receivedDate
           : receivedDate as DateTime?,
+      // Through num, not a straight `as double?`: the sentinel makes this
+      // parameter Object?, which switches off the int→double coercion a
+      // `double` slot would have applied — so an integer argument
+      // (`receivedAmount: 400`) arrives still an int and a double cast throws.
       receivedAmount: identical(receivedAmount, _kUnset)
           ? this.receivedAmount
-          : receivedAmount as double?,
+          : (receivedAmount as num?)?.toDouble(),
       transactionId: identical(transactionId, _kUnset)
           ? this.transactionId
           : transactionId as String?,

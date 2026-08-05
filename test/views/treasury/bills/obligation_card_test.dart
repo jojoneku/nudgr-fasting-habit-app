@@ -40,7 +40,8 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
-  testWidgets('done state offers Undo in place of the check when it can be '
+  testWidgets(
+      'done state offers Undo in place of the check when it can be '
       'reversed', (tester) async {
     var undone = 0;
     await tester.pumpWidget(host(ObligationCard(

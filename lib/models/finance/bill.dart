@@ -182,9 +182,13 @@ class Bill {
       isPaid: isPaid ?? this.isPaid,
       paidDate:
           identical(paidDate, _kUnset) ? this.paidDate : paidDate as DateTime?,
+      // Through num, not a straight `as double?`: the sentinel makes this
+      // parameter Object?, which switches off the int→double coercion a
+      // `double` slot would have applied — so an integer argument
+      // (`paidAmount: 500`) arrives still an int and a double cast throws.
       paidAmount: identical(paidAmount, _kUnset)
           ? this.paidAmount
-          : paidAmount as double?,
+          : (paidAmount as num?)?.toDouble(),
       transactionId: identical(transactionId, _kUnset)
           ? this.transactionId
           : transactionId as String?,
