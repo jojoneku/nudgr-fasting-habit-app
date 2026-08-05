@@ -54,6 +54,16 @@ class ObligationCard extends StatelessWidget {
   /// Long-press "Delete".
   final VoidCallback? onDelete;
 
+  /// Reverses the settlement (un-pay / un-receive / un-fund). Offered only when
+  /// [done]: the check is replaced by an Undo button and the long-press menu
+  /// gains a matching entry, so a mis-tapped "Paid" is recoverable from the row
+  /// it happened on. Null leaves the plain check, for rows that can't be undone.
+  final VoidCallback? onUndo;
+
+  /// Label for the undo entry in the long-press menu, e.g. "Mark unpaid".
+  /// Defaults to a generic "Undo".
+  final String? undoLabel;
+
   /// Drag affordance shown at the far right, in place of the action button, while
   /// the section is in reorder mode. The caller supplies the listener (the card
   /// knows nothing about the list it sits in); null means "not reorderable".
@@ -76,6 +86,8 @@ class ObligationCard extends StatelessWidget {
     this.onAction,
     this.onEdit,
     this.onDelete,
+    this.onUndo,
+    this.undoLabel,
     this.dragHandle,
   });
 
@@ -96,7 +108,7 @@ class ObligationCard extends StatelessWidget {
         variant: AppCardVariant.outlined,
         padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
         onTap: onEdit,
-        onLongPress: (onEdit != null || onDelete != null)
+        onLongPress: (onEdit != null || onDelete != null || onUndo != null)
             ? () => _showMenu(context)
             : null,
         child: Row(
@@ -188,8 +200,13 @@ class ObligationCard extends StatelessWidget {
             if (dragHandle != null)
               dragHandle!
             else if (done)
-              Icon(Icons.check_circle,
-                  color: context.appColors.success, size: 22)
+              // Settled rows keep the check only when there is nothing to
+              // reverse; where undo is possible it takes the slot, so a
+              // mis-tapped settlement is recoverable without hunting a menu.
+              onUndo == null
+                  ? Icon(Icons.check_circle,
+                      color: context.appColors.success, size: 22)
+                  : _UndoButton(onTap: onUndo!)
             else if (onAction != null)
               _ActionButton(
                 label: actionLabel,
@@ -213,6 +230,15 @@ class ObligationCard extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (onUndo != null)
+              ListTile(
+                leading: Icon(Icons.undo_rounded, color: cs.onSurfaceVariant),
+                title: Text(undoLabel ?? 'Undo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  onUndo?.call();
+                },
+              ),
             if (onEdit != null)
               ListTile(
                 leading: Icon(Icons.edit_outlined, color: cs.primary),
@@ -233,6 +259,38 @@ class ObligationCard extends StatelessWidget {
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// The settled row's reverse action — deliberately quiet (outlined, muted) so it
+/// never competes with the Pay/Receive buttons on the open rows above it, while
+/// still clearing the 44×44 touch target.
+class _UndoButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _UndoButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Tooltip(
+      message: 'Undo — put this back to unsettled',
+      child: OutlinedButton.icon(
+        onPressed: onTap,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: cs.onSurfaceVariant,
+          side: BorderSide(color: cs.outlineVariant),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          minimumSize: const Size(0, 44),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle:
+              const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+        ),
+        icon: const Icon(Icons.undo_rounded, size: 16),
+        label: const Text('Undo'),
       ),
     );
   }

@@ -204,11 +204,16 @@ class InstallmentPresenter extends ChangeNotifier with SafeNotifier {
     safeNotify();
   }
 
+  /// Reverses this month's payment by deleting the transaction that records it
+  /// — an installment has no separate paid flag, the transaction IS the record.
+  /// A no-op when the month is already unpaid, so a double-tap (or an undo
+  /// racing a reload) can't throw.
   Future<void> markUnpaid(String installmentId) async {
-    final txn = _ledger.allTransactions.firstWhere(
-      (t) => t.installmentId == installmentId && t.month == _selectedMonth,
-      orElse: () => throw StateError('no_txn'),
-    );
+    final txn = _ledger.allTransactions
+        .where((t) =>
+            t.installmentId == installmentId && t.month == _selectedMonth)
+        .firstOrNull;
+    if (txn == null) return;
     await _ledger.deleteTransaction(txn.id);
     safeNotify();
   }

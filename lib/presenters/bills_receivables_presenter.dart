@@ -813,6 +813,9 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           amount: paidAmount,
           description: bill.name,
           date: date,
+          // Stamp the legs with the bill so undoing the payment can find and
+          // unwind them — a transfer leaves no id on the bill itself.
+          billId: bill.id,
         );
       } else {
         final txn = _buildOutflowTxn(
@@ -839,6 +842,203 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     // A paid bill needs no reminder.
     await _notifications.cancelBillReminder(bill.id);
     await _checkAllBillsPaidXp();
+    await _notifyDependents();
+  }
+
+  // ─── Undo a settlement ───────────────────────────────────────────────────────
+  //
+  // Marking something paid/received/funded used to be one-way: a mis-tap left a
+  // wrong settlement (and often a wrong account balance) with no way back except
+  // deleting the entry and re-creating it. These three methods reverse it.
+  //
+  // Each is idempotent (a no-op on an already-open entry) and each takes the
+  // linked ledger entry back out by default, so the account balance returns to
+  // what it was. Pass `removeTransaction: false` to keep the transaction — for
+  // when the money really did move and only the bill's flag was wrong.
+  //
+  // XP is deliberately not rescinded: the all-bills-paid award is guarded by a
+  // persisted one-per-month key, so undo/re-pay can't farm it, and taking a
+  // level back over a correction would be worse than letting it stand.
+
+  /// The ledger entries created when [bill] was marked paid, or empty when the
+  /// payment was flagged without touching the ledger.
+  ///
+  /// Prefers the id stored on the bill, then the `billId` back-link on the
+  /// transaction (which liability-statement transfers carry), and finally — for
+  /// payments booked before that back-link existed — the transfer pair matching
+  /// this settlement's target account, amount and day.
+  List<String> _billSettlementTxnIds(Bill bill) {
+    final direct = bill.transactionId;
+    if (direct != null) return [direct];
+
+    final linked =
+        _ledger.allTransactions.where((t) => t.billId == bill.id).toList();
+    if (linked.isNotEmpty) return [for (final t in linked) t.id];
+
+    // Legacy transfer (no billId): match on what the payment must have looked
+    // like. Scoped tightly — same destination account, same amount, same day —
+    // so an unrelated transfer is never unwound.
+    final paidOn = bill.paidDate;
+    final target = bill.accountId;
+    if (paidOn == null || target == null) return const [];
+    final amount = bill.paidAmount ?? bill.amount;
+    final match = _ledger.allTransactions
+        .where((t) =>
+            t.transferGroupId != null &&
+            t.type == TransactionType.inflow &&
+            t.accountId == target &&
+            (t.amount - amount).abs() < 0.005 &&
+            _dayOnly(t.date) == _dayOnly(paidOn) &&
+            t.description == bill.name)
+        .firstOrNull;
+    return match == null ? const [] : [match.id];
+  }
+
+  /// True when undoing [bill]'s payment has a ledger entry to take back out, so
+  /// the view can offer (and explain) the choice instead of guessing.
+  bool billHasLedgerEntry(Bill bill) =>
+      bill.isPaid && _billSettlementTxnIds(bill).isNotEmpty;
+
+  /// Reverses [billId]'s payment: the bill returns to unpaid with its paid
+  /// date/amount and ledger link cleared, and (unless [removeTransaction] is
+  /// false) the transaction it created is deleted so the funding account's
+  /// balance is restored. Transfer pairs unwind both legs.
+  ///
+  /// Note for credit-card statements: keeping the transaction leaves the card
+  /// reading as fully paid, and the statement reconciliation on next load will
+  /// mark the statement paid again. Removing it — the default — is what makes
+  /// the undo stick.
+  Future<void> markBillUnpaid(
+    String billId, {
+    bool removeTransaction = true,
+  }) async {
+    final bill = _allBills.where((b) => b.id == billId).firstOrNull;
+    if (bill == null || !bill.isPaid) return;
+
+    if (removeTransaction) {
+      for (final id in _billSettlementTxnIds(bill)) {
+        await _ledger.deleteTransactionOrGroup(id);
+      }
+    }
+
+    final reopened = bill.copyWith(
+      isPaid: false,
+      paidDate: null,
+      paidAmount: null,
+      transactionId: null,
+    );
+    _updateBill(reopened);
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    // An open bill wants its reminder back.
+    await _syncBillReminder(reopened);
+    await _notifyDependents();
+  }
+
+  /// The ledger entry created when [receivable] was marked received. Receipts
+  /// are always plain inflows, so the id on the receivable is authoritative;
+  /// the `receivableId` back-link covers entries saved before it was stored.
+  List<String> _receivableSettlementTxnIds(Receivable receivable) {
+    final direct = receivable.transactionId;
+    if (direct != null) return [direct];
+    return [
+      for (final t in _ledger.allTransactions)
+        if (t.receivableId == receivable.id) t.id,
+    ];
+  }
+
+  /// True when un-receiving [receivable] has a ledger entry to take back out.
+  bool receivableHasLedgerEntry(Receivable receivable) =>
+      receivable.isReceived &&
+      _receivableSettlementTxnIds(receivable).isNotEmpty;
+
+  /// Reverses [receivableId]'s receipt: it returns to still-owed with its
+  /// received date/amount and ledger link cleared, and (unless
+  /// [removeTransaction] is false) the inflow it created is deleted so the
+  /// destination account's balance is restored.
+  ///
+  /// A reimbursement receivable re-enters the ledger's "owed to you" total,
+  /// which [_notifyDependents] re-syncs from the still-outstanding set.
+  Future<void> markReceivableUnreceived(
+    String receivableId, {
+    bool removeTransaction = true,
+  }) async {
+    final rec = _allReceivables.where((r) => r.id == receivableId).firstOrNull;
+    if (rec == null || !rec.isReceived) return;
+
+    if (removeTransaction) {
+      for (final id in _receivableSettlementTxnIds(rec)) {
+        await _ledger.deleteTransactionOrGroup(id);
+      }
+    }
+
+    _updateReceivable(rec.copyWith(
+      isReceived: false,
+      receivedDate: null,
+      receivedAmount: null,
+      transactionId: null,
+    ));
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+  }
+
+  /// The ledger entries created when [expense] was funded. A set-aside moved
+  /// into a savings/goal account is a transfer and stores no id, so fall back to
+  /// matching the transfer pair on its description, amount and destination.
+  List<String> _expenseSettlementTxnIds(BudgetedExpense expense) {
+    final direct = expense.transactionId;
+    if (direct != null) return [direct];
+
+    final amount = expense.spentAmount;
+    if (amount <= 0) return const [];
+    final candidates = _ledger.allTransactions
+        .where((t) =>
+            t.transferGroupId != null &&
+            t.type == TransactionType.inflow &&
+            t.description == expense.name &&
+            (t.amount - amount).abs() < 0.005)
+        .toList();
+    if (candidates.isEmpty) return const [];
+    // A recurring set-aside funds the same name and amount every month, so the
+    // month is what tells them apart. Only when there is a single candidate in
+    // the whole ledger is it safe to unwind one funded in another month (a
+    // set-aside funded late, after the month rolled over).
+    final match = candidates
+            .where((t) => toMonthKey(t.date) == expense.month)
+            .firstOrNull ??
+        (candidates.length == 1 ? candidates.first : null);
+    return match == null ? const [] : [match.id];
+  }
+
+  /// True when un-funding [expense] has a ledger entry to take back out.
+  bool expenseHasLedgerEntry(BudgetedExpense expense) =>
+      expense.isPaid && _expenseSettlementTxnIds(expense).isNotEmpty;
+
+  /// Reverses [expenseId]'s funding: the set-aside returns to unfunded with its
+  /// spent amount zeroed and its ledger link cleared, and (unless
+  /// [removeTransaction] is false) the outflow — or both legs of the transfer —
+  /// is deleted so the accounts it moved money between are restored.
+  Future<void> markExpenseUnpaid(
+    String expenseId, {
+    bool removeTransaction = true,
+  }) async {
+    final expense = _allExpenses.where((e) => e.id == expenseId).firstOrNull;
+    if (expense == null || !expense.isPaid) return;
+
+    if (removeTransaction) {
+      for (final id in _expenseSettlementTxnIds(expense)) {
+        await _ledger.deleteTransactionOrGroup(id);
+      }
+    }
+
+    _updateExpense(expense.copyWith(
+      isPaid: false,
+      spentAmount: 0,
+      transactionId: null,
+    ));
+    safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
   }
 

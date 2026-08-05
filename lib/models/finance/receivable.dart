@@ -137,9 +137,12 @@ class Receivable {
     bool? isRecurring,
     RecurrenceType? recurrenceType,
     bool? isReceived,
-    DateTime? receivedDate,
-    double? receivedAmount,
-    String? transactionId,
+    // Sentinel-guarded so undoing a receipt can clear the settlement fields back
+    // out; `field ?? this.field` never could, which left an un-received entry
+    // still carrying its old received date/amount and ledger link.
+    Object? receivedDate = _kUnset,
+    Object? receivedAmount = _kUnset,
+    Object? transactionId = _kUnset,
     Object? accountId = _kUnset,
     String? reimbursementForTxnId,
     Object? sortIndex = _kUnset,
@@ -159,9 +162,19 @@ class Receivable {
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
       isReceived: isReceived ?? this.isReceived,
-      receivedDate: receivedDate ?? this.receivedDate,
-      receivedAmount: receivedAmount ?? this.receivedAmount,
-      transactionId: transactionId ?? this.transactionId,
+      receivedDate: identical(receivedDate, _kUnset)
+          ? this.receivedDate
+          : receivedDate as DateTime?,
+      // Through num, not a straight `as double?`: the sentinel makes this
+      // parameter Object?, which switches off the int→double coercion a
+      // `double` slot would have applied — so an integer argument
+      // (`receivedAmount: 400`) arrives still an int and a double cast throws.
+      receivedAmount: identical(receivedAmount, _kUnset)
+          ? this.receivedAmount
+          : (receivedAmount as num?)?.toDouble(),
+      transactionId: identical(transactionId, _kUnset)
+          ? this.transactionId
+          : transactionId as String?,
       accountId:
           identical(accountId, _kUnset) ? this.accountId : accountId as String?,
       reimbursementForTxnId:
