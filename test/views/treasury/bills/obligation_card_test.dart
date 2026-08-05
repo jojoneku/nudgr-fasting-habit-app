@@ -40,6 +40,55 @@ void main() {
     expect(find.byIcon(Icons.check_circle), findsOneWidget);
   });
 
+  testWidgets('done state offers Undo in place of the check when it can be '
+      'reversed', (tester) async {
+    var undone = 0;
+    await tester.pumpWidget(host(ObligationCard(
+      icon: Icons.bolt_outlined,
+      iconColor: Colors.orange,
+      name: 'Meralco',
+      amount: 3200,
+      dateLabel: 'due Jun 28',
+      actionLabel: 'Pay',
+      done: true,
+      onUndo: () => undone++,
+    )));
+
+    // A mis-tapped "Paid" is recoverable from the row it happened on.
+    expect(find.text('Pay'), findsNothing);
+    expect(find.byIcon(Icons.check_circle), findsNothing);
+    expect(find.text('Undo'), findsOneWidget);
+
+    await tester.tap(find.text('Undo'));
+    await tester.pump();
+    expect(undone, 1);
+  });
+
+  testWidgets('long-press menu carries the undo entry under its own label',
+      (tester) async {
+    var undone = 0;
+    await tester.pumpWidget(host(ObligationCard(
+      icon: Icons.bolt_outlined,
+      iconColor: Colors.orange,
+      name: 'Meralco',
+      amount: 3200,
+      dateLabel: 'due Jun 28',
+      actionLabel: 'Pay',
+      done: true,
+      onUndo: () => undone++,
+      undoLabel: 'Mark unpaid',
+      onEdit: () {},
+    )));
+
+    await tester.longPress(find.text('Meralco'));
+    await tester.pumpAndSettle();
+    expect(find.text('Mark unpaid'), findsOneWidget);
+
+    await tester.tap(find.text('Mark unpaid'));
+    await tester.pumpAndSettle();
+    expect(undone, 1);
+  });
+
   testWidgets('renders the type badge, note, and progress bar', (tester) async {
     await tester.pumpWidget(host(ObligationCard(
       icon: Icons.credit_score_outlined,

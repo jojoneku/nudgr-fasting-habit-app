@@ -156,9 +156,12 @@ class Bill {
     bool? isRecurring,
     RecurrenceType? recurrenceType,
     bool? isPaid,
-    DateTime? paidDate,
-    double? paidAmount,
-    String? transactionId,
+    // Sentinel-guarded so undoing a payment can clear the settlement fields back
+    // out; `field ?? this.field` never could, which left an un-paid bill still
+    // carrying its old paid date/amount and ledger link.
+    Object? paidDate = _kUnset,
+    Object? paidAmount = _kUnset,
+    Object? transactionId = _kUnset,
     Object? reminderDaysBefore = _kUnset,
     DateTime? updatedAt,
   }) {
@@ -177,9 +180,14 @@ class Bill {
       isRecurring: isRecurring ?? this.isRecurring,
       recurrenceType: recurrenceType ?? this.recurrenceType,
       isPaid: isPaid ?? this.isPaid,
-      paidDate: paidDate ?? this.paidDate,
-      paidAmount: paidAmount ?? this.paidAmount,
-      transactionId: transactionId ?? this.transactionId,
+      paidDate:
+          identical(paidDate, _kUnset) ? this.paidDate : paidDate as DateTime?,
+      paidAmount: identical(paidAmount, _kUnset)
+          ? this.paidAmount
+          : paidAmount as double?,
+      transactionId: identical(transactionId, _kUnset)
+          ? this.transactionId
+          : transactionId as String?,
       reminderDaysBefore: identical(reminderDaysBefore, _kUnset)
           ? this.reminderDaysBefore
           : reminderDaysBefore as int?,

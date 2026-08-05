@@ -22,6 +22,7 @@ import 'package:intermittent_fasting/views/treasury/bills/coming_up_timeline.dar
 import 'package:intermittent_fasting/views/treasury/bills/due_soon_stack.dart';
 import 'package:intermittent_fasting/views/treasury/bills/new_entry_sheet.dart';
 import 'package:intermittent_fasting/views/treasury/bills/obligation_card.dart';
+import 'package:intermittent_fasting/views/treasury/bills/undo_settlement_dialog.dart';
 import 'package:intermittent_fasting/views/widgets/system/system.dart';
 
 /// The redesigned Bills tab: a swipeable due-soon stack, Pending/Paid/
@@ -227,6 +228,90 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
     }
   }
 
+  // ─── Undo a settlement ───────────────────────────────────────────────────
+  //
+  // Every settled row can be put back. Each handler asks first — reversing a
+  // payment usually has to take the ledger entry with it, and only the user
+  // knows whether the money actually moved — then reports the result, since the
+  // row itself only changes from dimmed back to active.
+
+  Future<void> _undoBillPayment(Bill bill) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo payment?',
+      name: bill.name,
+      entryLabel: 'bill',
+      hasLedgerEntry: widget.presenter.billHasLedgerEntry(bill),
+      ledgerEffect:
+          '${formatPeso(bill.paidAmount ?? bill.amount)} goes back into '
+          '${widget.presenter.accountName(bill.accountId) ?? 'your account'}.',
+    );
+    if (choice == null) return;
+    await widget.presenter
+        .markBillUnpaid(bill.id, removeTransaction: choice.removeTransaction);
+    if (!mounted) return;
+    AppToast.show(context, 'Marked "${bill.name}" unpaid.');
+  }
+
+  Future<void> _undoReceivableReceipt(Receivable receivable) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo receipt?',
+      name: receivable.name,
+      entryLabel: 'receivable',
+      hasLedgerEntry: widget.presenter.receivableHasLedgerEntry(receivable),
+      ledgerEffect:
+          '${formatPeso(receivable.receivedAmount ?? receivable.amount)} is '
+          'taken back out of the account it was deposited into.',
+    );
+    if (choice == null) return;
+    await widget.presenter.markReceivableUnreceived(
+      receivable.id,
+      removeTransaction: choice.removeTransaction,
+    );
+    if (!mounted) return;
+    AppToast.show(context, 'Marked "${receivable.name}" not received.');
+  }
+
+  Future<void> _undoExpenseFunding(BudgetedExpense expense) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo funding?',
+      name: expense.name,
+      entryLabel: 'set-aside',
+      hasLedgerEntry: widget.presenter.expenseHasLedgerEntry(expense),
+      ledgerEffect: '${formatPeso(expense.spentAmount)} is moved back to the '
+          'account it was funded from.',
+    );
+    if (choice == null) return;
+    await widget.presenter.markExpenseUnpaid(
+      expense.id,
+      removeTransaction: choice.removeTransaction,
+    );
+    if (!mounted) return;
+    AppToast.show(context, 'Marked "${expense.name}" unfunded.');
+  }
+
+  Future<void> _undoInstallmentPayment(Installment installment) async {
+    final choice = await showUndoSettlementDialog(
+      context: context,
+      title: 'Undo payment?',
+      name: installment.name,
+      entryLabel: 'installment payment',
+      // An installment payment IS its ledger transaction — there is no separate
+      // paid flag — so undoing always removes it. No keep-the-transaction
+      // choice to offer, just a note saying what happens.
+      hasLedgerEntry: false,
+      ledgerEffect:
+          'This month\'s payment transaction is removed and the account it '
+          'was paid from is credited back.',
+    );
+    if (choice == null) return;
+    await widget.installmentPresenter.markUnpaid(installment.id);
+    if (!mounted) return;
+    AppToast.show(context, 'Marked "${installment.name}" unpaid this month.');
+  }
+
   Future<void> _confirmDelete({
     required String title,
     required String body,
@@ -324,6 +409,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       actionLabel: 'Pay',
       done: b.isPaid,
       onAction: b.isPaid ? null : () => _showMarkBillPaidSheet(b),
+      onUndo: b.isPaid ? () => _undoBillPayment(b) : null,
+      undoLabel: 'Mark unpaid',
       onEdit: () => _showAddBillSheet(b),
       onDelete: () => _confirmDelete(
         title: 'Delete Bill',
@@ -406,6 +493,11 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       onAction: r.isReceived || dragIndex != null
           ? null
           : () => _showMarkReceivedSheet(r),
+      // Reorder mode suppresses every row action so a drag can't fire one.
+      onUndo: r.isReceived && dragIndex == null
+          ? () => _undoReceivableReceipt(r)
+          : null,
+      undoLabel: 'Mark not received',
       onEdit: dragIndex != null ? null : () => _showAddReceivableSheet(r),
       onDelete: dragIndex != null
           ? null
@@ -467,6 +559,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       actionLabel: 'Fund',
       done: e.isPaid,
       onAction: e.isPaid ? null : () => _showMarkExpensePaidSheet(e),
+      onUndo: e.isPaid ? () => _undoExpenseFunding(e) : null,
+      undoLabel: 'Mark unfunded',
       onEdit: () => _showAddBudgetedExpenseSheet(e),
       onDelete: () => _confirmDelete(
         title: 'Delete Budgeted Expense',
@@ -510,6 +604,8 @@ class _BillsReceivablesViewState extends State<BillsReceivablesView> {
       done: paidThisMonth,
       onAction:
           paidThisMonth ? null : () => _showMarkInstallmentPaidSheet(inst),
+      onUndo: paidThisMonth ? () => _undoInstallmentPayment(inst) : null,
+      undoLabel: 'Mark unpaid this month',
       onEdit: () => _showAddInstallmentSheet(inst),
       onDelete: () => _confirmDelete(
         title: 'Delete Installment',
