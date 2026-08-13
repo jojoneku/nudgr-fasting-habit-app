@@ -571,6 +571,33 @@ void main() {
     });
   });
 
+  group('pushPending re-arms when it lands mid-cycle', () {
+    test('a debounced push blocked by an in-flight sync is not dropped',
+        () async {
+      // pullAll holds _isSyncing for the whole cycle. A schedulePush firing in
+      // that window used to be discarded outright, stranding the edit until the
+      // next resume; it must re-arm instead.
+      queue.markDirty(SyncDomain.fastingState, 'default');
+      final pull = service.pullAll(); // sets _isSyncing
+
+      fakeAsync((async) {
+        service.pushPending(); // bails — a cycle is running
+        async.elapse(const Duration(seconds: 4));
+        // The re-armed debounce fired; the entry is still queued for it.
+        expect(service.pendingCount, 1);
+      });
+
+      await pull.catchError((_) {});
+    });
+
+    test('an empty queue does not re-arm the debounce', () async {
+      final pull = service.pullAll();
+      await service.pushPending(); // nothing queued → no re-arm
+      expect(service.pendingCount, 0);
+      await pull.catchError((_) {});
+    });
+  });
+
   group('syncCycle', () {
     test('still pushes when the pull fails, instead of stranding the outbox',
         () async {

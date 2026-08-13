@@ -76,6 +76,41 @@ whenever it is set. On web the UI stays interactive during a pull, so a user
 save landing between those awaits never enters the sync queue at all — and the
 next pull overwrites it.
 
+### RC-6 — Finance edits never scheduled a push at all `[Critical]`
+
+`onDirty` — wired to `SyncService.schedulePush`, the 3-second debounced upload
+(`home_screen.dart:328`, `treasury_web_app.dart:254`) — was called from exactly
+one place, `_markDirty` (`local_storage_service.dart:290-295`).
+
+All nine finance tables mark dirty through `_diffMarkFinance` instead, which
+enqueues directly via `_syncQueue?.markDirty` and **never** calls `onDirty`.
+`saveActivityLogs` does the same. So no ledger edit — account, transaction,
+category, budget, budgeted expense, bill, receivable, installment, monthly
+summary — ever scheduled its own upload. Those edits reached the cloud only on
+app resume, boot, manual "Sync now", or a connectivity change.
+
+This predates the diff-marking refactor (`f7a62a6`); the whole-object save path
+it replaced had the same gap. On web it is worst: a tab that stays focused
+never fires `AppLifecycleState.resumed`, so an entry can sit in the queue
+indefinitely while the user believes it synced.
+
+### RC-7 — A debounced push landing mid-cycle was discarded `[Medium]`
+
+`pushPending` returns early when `_isSyncing`, and nothing re-armed the timer.
+An edit made while a pull was running had its one scheduled upload swallowed and
+waited for the next resume. Phase 1 widens the window, since a cycle now holds
+the flag across both the pull and the push.
+
+### RC-8 — The finance pull banked watermarks before the save succeeded `[High]`
+
+`_pullFinanceTable` advanced each record's watermark inside the merge loop, but
+persisted the merged list only afterwards. A failing `saveAll` — a web
+`localStorage` quota trip is the realistic case — left every row marked as seen
+while none of the data reached local storage. The next pull then skipped those
+rows as already-applied, and the device stayed permanently short of data it had
+never written. Phase 3's `discardEntry` would have compounded it by also
+dropping the pending local edit.
+
 ### RC-5 — Client clocks arbitrate `[High, deferred to Phase 5]`
 
 `updated_at` is always the writer's `DateTime.now().toUtc()`; the watermark it is
@@ -236,6 +271,16 @@ belong to, which is exactly what a zone tracks. It also fixes the finance diff
 baseline for the same reason: a concurrent local save now diffs against the
 baseline instead of silently reseeding it.
 
+### Phase 6 — Edits actually schedule their own upload `[fixes RC-6, RC-7, RC-8]`
+
+- `_diffMarkFinance` calls `onDirty` once per save when anything was marked
+  (once, not per record — a bulk save can touch hundreds and the callback drives
+  a debounce). `saveActivityLogs` likewise.
+- `pushPending` re-arms the debounce when it bails on an in-flight cycle with
+  work still queued, so a blocked upload is deferred rather than dropped.
+- `_pullFinanceTable` collects watermarks during the merge and commits them only
+  after `saveAll` returns, so a failed save leaves the rows retryable.
+
 ### Phase 5 — Server-authoritative time `[fixes RC-5, NOT in this change]`
 
 Requires a migration, so it ships separately and is applied by hand:
@@ -354,10 +399,24 @@ harness is tracked as follow-up work below.
 - [x] `[inspect]` Conflict-abandoned entries clear rather than increment their
       backoff state.
 - [x] `[inspect]` `lastConflictsLost` names every record whose local edit lost.
+- [x] `[test]` A finance edit notifies `onDirty` exactly once per save; an
+      unchanged save and a remote apply do not; a delete does.
+- [x] `[test]` A debounced push blocked by an in-flight cycle re-arms rather
+      than being dropped, and an empty queue does not re-arm.
+- [x] `[inspect]` `_pullFinanceTable` commits watermarks only after `saveAll`
+      succeeds.
 - [x] `flutter analyze` clean (no new errors or warnings); `flutter test` green.
 
 ### Follow-up
 
+- **Web never pulls while the tab stays focused.** Pulls happen on boot, resume,
+  and manual sync only. `AppLifecycleState.resumed` fires on web via tab
+  visibility, so a user who never switches tabs sees no cross-device updates for
+  the whole session — the "my web is showing outdated data" half of the original
+  report, which RC-6 only fixes in the upload direction. A foreground poll
+  (`syncCycle` on a 60–120s timer, cheap now that pulls are throttled and
+  re-entrant-safe) would close it. Not done here: it changes API and battery
+  characteristics and deserves an explicit decision.
 - A responding Supabase/PostgREST fake, so the `[inspect]` rows above become
   `[test]` — in particular the end-to-end regression: web queues an edit at T1,
   mobile writes the cloud at T2 > T1, web resumes, mobile's value survives on

@@ -263,6 +263,11 @@ class SyncService {
     if (_isSyncing || _queue.pendingCount == 0) {
       debugPrint(
           'SyncService: pushPending skipped — isSyncing=$_isSyncing, pending=${_queue.pendingCount}');
+      // A debounced push that lands mid-cycle used to be dropped outright, so
+      // an edit made while a pull was running waited for the *next* resume to
+      // upload. Re-arm the debounce instead; the entry is already durable in
+      // the queue, this just stops it sitting there unnoticed.
+      if (_isSyncing && _queue.pendingCount > 0) schedulePush();
       return;
     }
     debugPrint(
@@ -1561,6 +1566,12 @@ class SyncService {
     final localList = await loadAll();
     final localMap = {for (final item in localList) getId(item): item};
     bool changed = false;
+    // Watermarks are collected here and only committed once the save below
+    // succeeds. Advancing them inside the loop meant a failed save (a web
+    // localStorage quota trip, a bad encode) still marked every row as seen —
+    // the next pull would skip them as already-applied and the device would
+    // stay permanently missing data it never actually wrote.
+    final adopted = <String, DateTime>{};
     for (final row in rows) {
       final recordId = row['record_id'] as String? ?? '';
       try {
@@ -1576,8 +1587,7 @@ class SyncService {
           localMap[recordId] = fromJson(data);
           changed = true;
         }
-        _adoptRemote(
-            SyncDomain.financeRecord, '$tableName/$recordId', remoteTime);
+        adopted['$tableName/$recordId'] = remoteTime;
       } catch (e) {
         // Skip a poison record (unparseable enum / null field / bad date)
         // rather than aborting the whole table — one corrupt row used to throw
@@ -1588,8 +1598,12 @@ class SyncService {
       }
     }
     if (changed) {
+      // Throws propagate to pullAll's per-domain handler, leaving every
+      // watermark below uncommitted so the next pull retries these rows.
       await _storage.applyRemote(() async => saveAll(localMap.values.toList()));
     }
+    adopted.forEach(
+        (key, time) => _adoptRemote(SyncDomain.financeRecord, key, time));
   }
 
   /// One ordered, non-overlapping sync cycle: reconcile DOWN, then write UP.

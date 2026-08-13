@@ -313,18 +313,30 @@ class LocalStorageService extends StorageService {
     }
     final baseline =
         _financeSyncCache[group] ?? await _loadFinanceJsonById(storageKey);
+    var marked = false;
     for (final id in baseline.keys) {
       if (!nowById.containsKey(id)) {
         _syncQueue?.markDirty(SyncDomain.financeRecord, '$keyPrefix/$id',
             op: SyncOp.delete);
+        marked = true;
       }
     }
     nowById.forEach((id, encoded) {
       if (baseline[id] != encoded) {
         _syncQueue?.markDirty(SyncDomain.financeRecord, '$keyPrefix/$id');
+        marked = true;
       }
     });
     _financeSyncCache[group] = nowById;
+    // Notify ONCE per save, not per record: onDirty drives the debounced
+    // auto-push, and a bulk save can touch hundreds of records.
+    //
+    // This call was missing entirely, so no finance edit — account, txn,
+    // category, budget, bill, receivable, installment, monthly summary — ever
+    // scheduled a push. Edits reached the cloud only on app resume, boot,
+    // manual "Sync now", or a connectivity change; a web tab that stayed
+    // focused could hold a ledger entry indefinitely without uploading it.
+    if (marked) onDirty?.call();
   }
 
   /// Reads the stored finance array at [storageKey] and returns record id →
@@ -926,6 +938,9 @@ class LocalStorageService extends StorageService {
       for (final log in logs) {
         _syncQueue?.markDirty(SyncDomain.activityLog, log.date);
       }
+      // Once for the batch — same reason as _diffMarkFinance, and likewise
+      // missing before, so a bulk activity-log save never scheduled a push.
+      if (logs.isNotEmpty) onDirty?.call();
     }
   }
 
