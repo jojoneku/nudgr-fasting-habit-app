@@ -468,6 +468,134 @@ void main() {
     });
   });
 
+  // ── conflict resolution (docs/sync_conflict_resolution_spec.md) ────────────
+  // Last-write-wins used to be enforced only on pull: every push was an
+  // unconditional upsert stamped "now", so a queued edit from hours ago won on
+  // the server and was then pulled down over the newer copy on every other
+  // device. These cover the rule that stops it and the queue bookkeeping that
+  // keeps the loser from being stranded on data it gave up.
+
+  group('cloudCopyWins', () {
+    final earlier = DateTime.utc(2026, 8, 13, 10);
+    final later = DateTime.utc(2026, 8, 13, 11);
+
+    test('the cloud wins when its copy is newer than the local edit', () {
+      expect(SyncService.cloudCopyWins(later, earlier), true);
+    });
+
+    test('the local edit wins when it is newer than the cloud copy', () {
+      expect(SyncService.cloudCopyWins(earlier, later), false);
+    });
+
+    test('an equal stamp is not a conflict — a device may re-push its own row',
+        () {
+      expect(SyncService.cloudCopyWins(later, later), false);
+    });
+
+    test('no cloud row yet means no conflict', () {
+      expect(SyncService.cloudCopyWins(null, earlier), false);
+    });
+
+    test('a seeding push (no edit time) is never gated', () {
+      expect(SyncService.cloudCopyWins(later, null), false);
+    });
+
+    test('compares absolute instants across a local/UTC mix', () {
+      // Cloud stamps parse as UTC; the local edit time is the device's wall
+      // clock. Ordering must not depend on which zone each side carries.
+      final localEdit = later.toLocal();
+      expect(
+          SyncService.cloudCopyWins(
+              later.add(const Duration(minutes: 1)), localEdit),
+          true);
+      expect(
+          SyncService.cloudCopyWins(
+              later.subtract(const Duration(minutes: 1)), localEdit),
+          false);
+    });
+  });
+
+  group('queue bookkeeping for a lost conflict', () {
+    test('discardEntry drops the superseded pending entry', () {
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_1');
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_2');
+
+      queue.discardEntry(SyncDomain.financeRecord, 'finance_accounts/acc_1');
+
+      expect(queue.pendingCount, 1);
+      expect(queue.entries.single.key, 'finance_accounts/acc_2');
+    });
+
+    test('discardEntry is a no-op for a key that is not queued', () {
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_1');
+
+      queue.discardEntry(SyncDomain.financeRecord, 'finance_accounts/nope');
+
+      expect(queue.pendingCount, 1);
+    });
+
+    test(
+        'invalidateTimestamp resets the watermark so the next pull adopts the '
+        'cloud copy', () {
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_1');
+      expect(
+          queue
+              .getTimestamp(SyncDomain.financeRecord, 'finance_accounts/acc_1')
+              .millisecondsSinceEpoch,
+          greaterThan(0),
+          reason: 'markDirty stamps the local edit time');
+
+      queue.invalidateTimestamp(
+          SyncDomain.financeRecord, 'finance_accounts/acc_1');
+
+      // Epoch 0 → any cloud stamp is `isAfter` it, so the pull cannot skip the
+      // row as "local is newer" and strand this device on the copy it lost.
+      expect(
+          queue.getTimestamp(
+              SyncDomain.financeRecord, 'finance_accounts/acc_1'),
+          DateTime.fromMillisecondsSinceEpoch(0));
+    });
+
+    test('invalidating one record leaves other watermarks alone', () {
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_1');
+      queue.markDirty(SyncDomain.financeRecord, 'finance_accounts/acc_2');
+
+      queue.invalidateTimestamp(
+          SyncDomain.financeRecord, 'finance_accounts/acc_1');
+
+      expect(
+          queue
+              .getTimestamp(SyncDomain.financeRecord, 'finance_accounts/acc_2')
+              .millisecondsSinceEpoch,
+          greaterThan(0));
+    });
+  });
+
+  group('syncCycle', () {
+    test('still pushes when the pull fails, instead of stranding the outbox',
+        () async {
+      // The fake client throws for every call, so the pull fails outright.
+      queue.markDirty(SyncDomain.fastingState, 'default');
+
+      await service.syncCycle();
+
+      // The push was attempted despite the failed pull — proven by the failure
+      // it recorded for the entry. Safe because each push checks the cloud
+      // stamp itself before writing.
+      expect(service.failureCountFor(SyncDomain.fastingState, 'default'), 1);
+      expect(service.pendingCount, 1, reason: 'entry stays queued to retry');
+    });
+
+    test('a pull failure is swallowed rather than thrown to the caller',
+        () async {
+      await expectLater(service.syncCycle(), completes);
+    });
+
+    test('forceSync surfaces a pull failure — the user is watching', () async {
+      await expectLater(service.forceSync(), throwsA(isA<Exception>()));
+    });
+  });
+
   // ── paged pulls (row-ceiling truncation) ───────────────────────────────────
 
   group('collectPages', () {

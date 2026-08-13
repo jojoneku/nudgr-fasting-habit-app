@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -43,7 +44,19 @@ import 'sync_queue.dart';
 
 class LocalStorageService extends StorageService {
   SyncQueue? _syncQueue;
-  bool _applyingRemote = false;
+
+  /// Zone marker identifying writes that originate from [applyRemote].
+  ///
+  /// This used to be a plain `bool` field, which could not tell "this save IS
+  /// the remote apply" apart from "a user edit happened to land mid-pull".
+  /// Since [applyRemote] awaits, a save the user triggered during a pull saw
+  /// the flag set and was silently never marked dirty — the edit reached local
+  /// storage, never reached the cloud, and was overwritten by the next pull.
+  /// A zone value follows the remote-apply call chain through its awaits and
+  /// nothing else, so a concurrent user save is correctly treated as local.
+  static const Object _remoteApplyZoneKey = #nudgrApplyingRemoteData;
+
+  bool get _applyingRemote => Zone.current[_remoteApplyZoneKey] == true;
 
   /// The signed-in user ID. All user-data prefs keys are prefixed with
   /// `u/$_userId/` to prevent cross-user data leakage on shared devices.
@@ -260,12 +273,13 @@ class LocalStorageService extends StorageService {
   VoidCallback? onDirty;
 
   /// Runs [block] while suppressing dirty-marking to avoid re-queuing remote data.
+  ///
+  /// Suppression is scoped to [block]'s own zone, so a local save the user makes
+  /// while a pull is in flight still marks itself dirty and syncs.
   Future<void> applyRemote(Future<void> Function() block) async {
-    _applyingRemote = true;
     try {
-      await block();
+      await runZoned(block, zoneValues: {_remoteApplyZoneKey: true});
     } finally {
-      _applyingRemote = false;
       // Remote writes changed the on-disk finance blobs without diffing, so the
       // cached baseline is stale — drop it so the next local save re-seeds from
       // the post-pull state instead of re-queuing the pulled records.

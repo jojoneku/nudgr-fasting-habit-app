@@ -89,6 +89,28 @@ class SyncQueue {
     _scheduleFlush();
   }
 
+  /// Drops a pending entry whose local edit has been superseded by a newer
+  /// cloud copy (see `docs/sync_conflict_resolution_spec.md`).
+  ///
+  /// Unlike [removeEntries] this is unconditional: the caller has already
+  /// established that the cloud wins, so a re-dirty that happened in the
+  /// meantime is irrelevant — that newer edit re-enqueues itself anyway.
+  void discardEntry(SyncDomain domain, String key) {
+    if (_entryByKey.remove(_entryKey(domain, key)) != null) _scheduleFlush();
+  }
+
+  /// Resets a record's watermark to the epoch so the next pull unconditionally
+  /// applies the cloud copy.
+  ///
+  /// Used when a push is abandoned on conflict: the local copy is known-stale,
+  /// and leaving its watermark at the local edit time would make the pull skip
+  /// the very row that just beat us ("local is newer"), stranding the device on
+  /// data it already agreed to give up.
+  void invalidateTimestamp(SyncDomain domain, String key) {
+    _timestamps.remove('${domain.name}::$key');
+    _scheduleFlush();
+  }
+
   void removeEntries(List<SyncQueueEntry> processed) {
     for (final e in processed) {
       final k = _entryKey(e.domain, e.key);

@@ -222,12 +222,18 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // path so a tab refocus pulls any edits made on the phone meanwhile and
     // flushes anything queued locally.
     if (state == AppLifecycleState.resumed) {
-      _syncService?.pushPending();
+      // One ordered cycle: pull THEN push. This used to fire both unawaited,
+      // push first, so refocusing a tab that had an edit queued uploaded that
+      // stale copy over whatever the phone had written since — and every device
+      // then pulled the stale value back down.
+      //
       // Tighten the staleness window on web (Plan 053 Phase 3.3): the 5-minute
       // default meant refocusing the tab within 5 min of the last pull showed
       // stale data (e.g. an edit just made on the phone). 30s makes a refocus
       // reliably reflect recent cross-device changes without hammering the API.
-      _syncService?.pullIfStale(staleness: const Duration(seconds: 30));
+      unawaited(
+          _syncService?.syncCycle(staleness: const Duration(seconds: 30)) ??
+              Future.value());
     }
   }
 

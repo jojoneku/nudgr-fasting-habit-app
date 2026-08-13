@@ -481,8 +481,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // only refreshed when the Activity screen itself was opened. recheck-
       // Permissions re-verifies the grant, then syncs today (no-op if denied).
       _activityPresenter.recheckPermissions();
-      _syncService?.pushPending();
-      _syncService?.pullIfStale();
+      // One ordered cycle: pull THEN push, so a stale queued edit can never
+      // overwrite a newer record written on another device (see
+      // docs/sync_conflict_resolution_spec.md).
+      unawaited(
+          _syncService?.syncCycle(staleness: const Duration(minutes: 5)) ??
+              Future.value());
       // Re-scan the Insight Engine on resume: refresh is hash-gated (near-zero
       // cost when nothing changed) and the brief is once-per-day. Both fire and
       // forget — neither throws.

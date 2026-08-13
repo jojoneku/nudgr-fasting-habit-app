@@ -39,6 +39,27 @@ import '../models/sync_queue_entry.dart';
 import 'local_storage_service.dart';
 import 'sync_queue.dart';
 
+/// How a single push entry resolved.
+enum _PushOutcome {
+  /// Written to the cloud.
+  pushed,
+
+  /// Nothing to write (record gone, unroutable key), or an emptiness guard
+  /// refused to overwrite a populated cloud row with empty local data.
+  skipped,
+
+  /// The cloud held a write newer than this edit, so the local copy was
+  /// abandoned rather than pushed over it.
+  conflictLost,
+}
+
+/// A cloud row's payload and stamp, read together in one round trip.
+class _RemoteRow {
+  final Map<String, dynamic>? data;
+  final DateTime? updatedAt;
+  const _RemoteRow(this.data, this.updatedAt);
+}
+
 class SyncService {
   final SupabaseClient _supabase;
   final LocalStorageService _storage;
@@ -59,6 +80,7 @@ class SyncService {
   // collapsing into an opaque "Sync failed".
   List<String> _lastPullErrors = const [];
   final List<String> _lastSkippedRecords = [];
+  final List<String> _lastConflictsLost = [];
 
   /// Domain-level pull failures from the most recent [pullAll] (empty on a
   /// clean pull). Each entry is `'<domain>: <error>'`.
@@ -67,6 +89,11 @@ class SyncService {
   /// Individual records skipped during the most recent [pullAll] because they
   /// could not be parsed. Each entry is `'<table>/<recordId>: <error>'`.
   List<String> get lastSkippedRecords => List.unmodifiable(_lastSkippedRecords);
+
+  /// Records whose local edit lost a conflict during the most recent
+  /// [pushPending] — the cloud held a newer write, so the local copy was
+  /// abandoned rather than pushed over it. Each entry is `'<domain>/<key>'`.
+  List<String> get lastConflictsLost => List.unmodifiable(_lastConflictsLost);
 
   /// Rows requested per page by [_selectAllPages].
   ///
@@ -181,6 +208,53 @@ class SyncService {
 
   String _entryId(SyncQueueEntry e) => '${e.domain.name}/${e.key}';
 
+  /// True when the cloud copy was written *after* the local edit now being
+  /// pushed — pushing would destroy a newer write from another device.
+  ///
+  /// This is the check the push side was missing entirely. Last-write-wins used
+  /// to be enforced only on pull, while every push was an unconditional upsert
+  /// stamped "now": a queued edit from hours ago always won on the server, and,
+  /// looking freshest, was then pulled down over the newer copy on every other
+  /// device. That is how a balance edited on the phone silently reverted to the
+  /// value a long-open web tab still had queued.
+  ///
+  /// [entry] is null for [pushAll], the once-per-device seeding push. It runs
+  /// immediately after a pull and makes no edit-time claim of its own, so it is
+  /// not gated here — the emptiness guards still apply to it.
+  bool _remoteWins(DateTime? remoteUpdatedAt, SyncQueueEntry? entry) =>
+      cloudCopyWins(remoteUpdatedAt, entry?.queuedAt);
+
+  /// The conflict rule itself, as a pure function: the cloud wins only when it
+  /// holds a stamp strictly newer than the local edit.
+  ///
+  /// A missing cloud stamp (no row yet) or a missing local edit time (a seeding
+  /// push) means no conflict — the push proceeds. Equal stamps also proceed, so
+  /// re-pushing a record this device itself just wrote is not mistaken for a
+  /// conflict.
+  @visibleForTesting
+  static bool cloudCopyWins(
+          DateTime? remoteUpdatedAt, DateTime? localEditedAt) =>
+      remoteUpdatedAt != null &&
+      localEditedAt != null &&
+      remoteUpdatedAt.isAfter(localEditedAt);
+
+  /// Abandons [entry]'s push: the cloud copy is newer, so the local edit loses.
+  ///
+  /// The watermark is invalidated so the next pull *adopts* the cloud copy —
+  /// without that, the pull would compare against the local edit time, decide
+  /// "local is newer", and strand this device on data it just agreed to give up.
+  void _noteConflictLost(SyncQueueEntry entry) {
+    final id = _entryId(entry);
+    _lastConflictsLost.add(id);
+    _queue.invalidateTimestamp(entry.domain, entry.key);
+    // Losing a conflict is a resolved outcome, not a failure — it must not
+    // accrue backoff.
+    _failureCounts.remove(id);
+    _retryAfter.remove(id);
+    debugPrint(
+        'SyncService: $id — cloud copy is newer than this edit; abandoning push');
+  }
+
   @visibleForTesting
   int failureCountFor(SyncDomain domain, String key) =>
       _failureCounts['${domain.name}/$key'] ?? 0;
@@ -195,6 +269,7 @@ class SyncService {
         'SyncService: pushPending starting — ${_queue.pendingCount} entries');
     _isSyncing = true;
     _onStateChange?.call();
+    _lastConflictsLost.clear();
     try {
       final entries = List<SyncQueueEntry>.from(_queue.entries);
       final processed = <SyncQueueEntry>[];
@@ -232,10 +307,16 @@ class SyncService {
         }
         try {
           debugPrint('SyncService: pushing $id');
-          await _pushEntry(entry);
+          final outcome = await _pushEntry(entry);
+          // Dequeued either way: a conflict-lost edit has been superseded by
+          // the cloud, so retrying it would only clobber the winner.
           processed.add(entry);
-          _failureCounts.remove(id);
-          _retryAfter.remove(id);
+          if (outcome == _PushOutcome.conflictLost) {
+            _noteConflictLost(entry);
+          } else {
+            _failureCounts.remove(id);
+            _retryAfter.remove(id);
+          }
         } catch (e) {
           // Isolate the failure: record it, back off, and CONTINUE so later
           // entries still get a turn (no `break`).
@@ -284,9 +365,36 @@ class SyncService {
         if (!present.contains(e)) e,
     ];
 
-    for (var i = 0; i < pairs.length; i += _financeBatchSize) {
-      final end = (i + _financeBatchSize).clamp(0, pairs.length);
-      final chunk = pairs.sublist(i, end);
+    // Conflict guard: read the cloud stamps for exactly these records (one
+    // request per finance table, not per record) and drop any row whose cloud
+    // copy was written after the edit we are about to send.
+    Map<String, DateTime> stamps;
+    try {
+      stamps = await financeRemoteStamps(pairs.map((p) => p.key.key));
+    } catch (e) {
+      // Without the stamps we cannot tell a safe write from a clobbering one.
+      // Defer rather than guess: the entries stay queued and back off.
+      for (final pair in pairs) {
+        _recordFailure(_entryId(pair.key), now, e);
+      }
+      debugPrint('SyncService: finance stamp lookup failed, deferring '
+          '${pairs.length} row(s): $e');
+      return processed;
+    }
+
+    final winners = <MapEntry<SyncQueueEntry, Map<String, dynamic>>>[];
+    for (final pair in pairs) {
+      if (_remoteWins(stamps[pair.key.key], pair.key)) {
+        _noteConflictLost(pair.key);
+        processed.add(pair.key);
+      } else {
+        winners.add(pair);
+      }
+    }
+
+    for (var i = 0; i < winners.length; i += _financeBatchSize) {
+      final end = (i + _financeBatchSize).clamp(0, winners.length);
+      final chunk = winners.sublist(i, end);
       try {
         await _supabase
             .from('finance_records')
@@ -306,6 +414,44 @@ class SyncService {
       }
     }
     return processed;
+  }
+
+  /// Max record ids per stamp-lookup request. Keeps the `in.(…)` filter — which
+  /// travels in the query string — comfortably inside URL length limits.
+  static const int _stampLookupChunk = 100;
+
+  /// Cloud `updated_at` for the given `'<table>/<recordId>'` [keys], as a map
+  /// keyed the same way. Absent keys have no cloud row yet.
+  ///
+  /// Grouped by finance table and chunked, so a push reads only the records it
+  /// is about to write instead of scanning the whole table.
+  @visibleForTesting
+  Future<Map<String, DateTime>> financeRemoteStamps(
+      Iterable<String> keys) async {
+    final byTable = <String, List<String>>{};
+    for (final key in keys) {
+      final parts = key.split('/');
+      if (parts.length != 2) continue;
+      byTable.putIfAbsent(parts[0], () => []).add(parts[1]);
+    }
+    final stamps = <String, DateTime>{};
+    for (final table in byTable.keys) {
+      final ids = byTable[table]!;
+      for (var i = 0; i < ids.length; i += _stampLookupChunk) {
+        final end = (i + _stampLookupChunk).clamp(0, ids.length);
+        final rows = await _supabase
+            .from('finance_records')
+            .select('record_id, updated_at')
+            .eq('user_id', _userId)
+            .eq('table_name', table)
+            .inFilter('record_id', ids.sublist(i, end));
+        for (final row in (rows as List).cast<Map<String, dynamic>>()) {
+          final stamp = DateTime.tryParse(row['updated_at'] as String? ?? '');
+          if (stamp != null) stamps['$table/${row['record_id']}'] = stamp;
+        }
+      }
+    }
+    return stamps;
   }
 
   /// Builds bulk-upsert (entry → row) pairs for finance upsert entries, reading
@@ -386,29 +532,18 @@ class SyncService {
     }
   }
 
-  Future<void> _pushEntry(SyncQueueEntry entry) async {
-    if (entry.op == SyncOp.delete) {
-      await _pushDelete(entry);
-      return;
-    }
-    switch (entry.domain) {
-      case SyncDomain.userProfile:
-        await _pushUserProfile();
-      case SyncDomain.userCollections:
-        await _pushUserCollections();
-      case SyncDomain.fastingState:
-        await _pushFastingState();
-      case SyncDomain.userQuests:
-        await _pushUserQuests();
-      case SyncDomain.nutritionLog:
-        await _pushNutritionLog(entry.key);
-      case SyncDomain.activityLog:
-        await _pushActivityLog(entry.key);
-      case SyncDomain.financeRecord:
-        await _pushFinanceRecord(entry.key);
-      case SyncDomain.advisorState:
-        await _pushAdvisorState();
-    }
+  Future<_PushOutcome> _pushEntry(SyncQueueEntry entry) async {
+    if (entry.op == SyncOp.delete) return _pushDelete(entry);
+    return switch (entry.domain) {
+      SyncDomain.userProfile => await _pushUserProfile(entry),
+      SyncDomain.userCollections => await _pushUserCollections(entry),
+      SyncDomain.fastingState => await _pushFastingState(entry),
+      SyncDomain.userQuests => await _pushUserQuests(entry),
+      SyncDomain.nutritionLog => await _pushNutritionLog(entry.key, entry),
+      SyncDomain.activityLog => await _pushActivityLog(entry.key, entry),
+      SyncDomain.financeRecord => await _pushFinanceRecord(entry.key, entry),
+      SyncDomain.advisorState => await _pushAdvisorState(entry),
+    };
   }
 
   /// Marker stored in a finance_records row's `data` to denote a deletion.
@@ -419,10 +554,17 @@ class SyncService {
   static bool isTombstone(Map<String, dynamic> data) =>
       data[_tombstoneKey] == true;
 
-  Future<void> _pushDelete(SyncQueueEntry entry) async {
-    if (entry.domain != SyncDomain.financeRecord) return;
+  Future<_PushOutcome> _pushDelete(SyncQueueEntry entry) async {
+    if (entry.domain != SyncDomain.financeRecord) return _PushOutcome.skipped;
     final parts = entry.key.split('/');
-    if (parts.length != 2) return;
+    if (parts.length != 2) return _PushOutcome.skipped;
+    // A delete queued before a newer remote edit must not resurrect as a
+    // tombstone and destroy that edit — deleting wins only when it is the later
+    // action.
+    if (_remoteWins(
+        (await financeRemoteStamps([entry.key]))[entry.key], entry)) {
+      return _PushOutcome.conflictLost;
+    }
     // Write a TOMBSTONE rather than hard-deleting the row. A hard delete just
     // made the row vanish, which pull couldn't distinguish from "never synced"
     // — so a record deleted on one device resurrected on others. Keeping a
@@ -435,6 +577,7 @@ class SyncService {
       'data': {_tombstoneKey: true},
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    return _PushOutcome.pushed;
   }
 
   // ── Empty-overwrite guards (Plan 053 Phase 1) ──────────────────────────────
@@ -489,22 +632,40 @@ class SyncService {
       _listEmpty(d['groceryPriceMemory']) &&
       _listEmpty(d['groceryTripHistory']);
 
-  /// True when a push would clobber a populated cloud row: the local payload is
-  /// empty AND a non-empty remote row already exists → the push must be skipped.
-  Future<bool> _wouldClobberRemote(
+  /// Reads a singleton cloud row's payload and stamp in one round trip, so the
+  /// recency guard costs nothing on top of the emptiness guard.
+  Future<_RemoteRow> _readSingleton(String table) async {
+    final row = await _supabase
+        .from(table)
+        .select('data, updated_at')
+        .eq('user_id', _userId)
+        .maybeSingle();
+    if (row == null) return const _RemoteRow(null, null);
+    return _RemoteRow(
+      row['data'] as Map<String, dynamic>?,
+      DateTime.tryParse(row['updated_at'] as String? ?? ''),
+    );
+  }
+
+  /// Decides whether a singleton push may proceed, applying both guards:
+  /// the cloud copy must not be newer than this edit, and an empty local
+  /// payload must not overwrite a populated cloud row.
+  ///
+  /// Returns null when the push may go ahead.
+  Future<_PushOutcome?> _blockedSingletonPush(
     String table,
+    SyncQueueEntry? entry,
     bool localEmpty,
     bool Function(Map<String, dynamic>) remoteEmpty,
   ) async {
-    if (!localEmpty) return false;
-    final row = await _supabase
-        .from(table)
-        .select('data')
-        .eq('user_id', _userId)
-        .maybeSingle();
-    final data = row?['data'] as Map<String, dynamic>?;
-    if (data == null) return false;
-    return !remoteEmpty(data);
+    final remote = await _readSingleton(table);
+    if (_remoteWins(remote.updatedAt, entry)) return _PushOutcome.conflictLost;
+    if (!localEmpty) return null;
+    final data = remote.data;
+    if (data == null || remoteEmpty(data)) return null;
+    debugPrint(
+        'SyncService: $table — local empty but cloud populated; skipping to avoid clobber');
+    return _PushOutcome.skipped;
   }
 
   Future<bool> _localQuestsEmpty() async =>
@@ -534,7 +695,7 @@ class SyncService {
       (await _storage.loadGroceryPriceMemory()).isEmpty &&
       (await _storage.loadGroceryTripHistory()).isEmpty;
 
-  Future<void> _pushUserProfile() async {
+  Future<_PushOutcome> _pushUserProfile(SyncQueueEntry? entry) async {
     debugPrint('SyncService: _pushUserProfile — pushing profile data');
     final data = {
       'userStats': (await _storage.loadUserStats()).toJson(),
@@ -564,18 +725,16 @@ class SyncService {
       'notificationPreferences':
           (await _storage.loadNotificationPreferences()).toJson(),
     };
-    if (await _wouldClobberRemote(
-        'user_profile', profileDataEmpty(data), profileDataEmpty)) {
-      debugPrint(
-          'SyncService: _pushUserProfile — local empty but cloud populated; skipping to avoid clobber');
-      return;
-    }
+    final blocked = await _blockedSingletonPush(
+        'user_profile', entry, profileDataEmpty(data), profileDataEmpty);
+    if (blocked != null) return blocked;
     await _supabase.from('user_profile').upsert({
       'user_id': _userId,
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: userProfile upserted ✓');
+    return _PushOutcome.pushed;
   }
 
   /// True when an advisor_state `data` blob carries no history and no profile.
@@ -592,7 +751,7 @@ class SyncService {
     return historyEmpty && convosEmpty && profileEmpty;
   }
 
-  Future<void> _pushAdvisorState() async {
+  Future<_PushOutcome> _pushAdvisorState(SyncQueueEntry? entry) async {
     final history = await _storage.loadAdvisorHistory();
     final profile = await _storage.loadAdvisorProfile();
     final conversations = await _storage.loadAdvisorConversations();
@@ -604,21 +763,19 @@ class SyncService {
       'conversations': conversations.map((c) => c.toJson()).toList(),
     };
     // Don't let a freshly-signed-in empty device wipe a populated cloud copy.
-    if (await _wouldClobberRemote(
-        'advisor_state', _advisorStateEmpty(data), _advisorStateEmpty)) {
-      debugPrint(
-          'SyncService: _pushAdvisorState — local empty but cloud populated; skipping to avoid clobber');
-      return;
-    }
+    final blocked = await _blockedSingletonPush(
+        'advisor_state', entry, _advisorStateEmpty(data), _advisorStateEmpty);
+    if (blocked != null) return blocked;
     await _supabase.from('advisor_state').upsert({
       'user_id': _userId,
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: advisorState upserted ✓');
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushFastingState() async {
+  Future<_PushOutcome> _pushFastingState(SyncQueueEntry? entry) async {
     final state = await _storage.loadState();
     final history = state['history'] as List<FastingLog>;
     debugPrint(
@@ -634,21 +791,19 @@ class SyncService {
       'lastPenaltyCheckDate':
           (state['lastPenaltyCheckDate'] as DateTime?)?.toIso8601String(),
     };
-    if (await _wouldClobberRemote(
-        'fasting_state', fastingDataEmpty(data), fastingDataEmpty)) {
-      debugPrint(
-          'SyncService: _pushFastingState — local empty but cloud populated; skipping to avoid clobber');
-      return;
-    }
+    final blocked = await _blockedSingletonPush(
+        'fasting_state', entry, fastingDataEmpty(data), fastingDataEmpty);
+    if (blocked != null) return blocked;
     await _supabase.from('fasting_state').upsert({
       'user_id': _userId,
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: fastingState upserted ✓');
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushUserQuests() async {
+  Future<_PushOutcome> _pushUserQuests(SyncQueueEntry? entry) async {
     final quests = await _storage.loadQuests();
     final achievements = await _storage.loadAchievements();
     debugPrint(
@@ -659,21 +814,19 @@ class SyncService {
       'questPenaltyCheckDate':
           (await _storage.loadQuestPenaltyCheckDate())?.toIso8601String(),
     };
-    if (await _wouldClobberRemote(
-        'user_quests', questsDataEmpty(data), questsDataEmpty)) {
-      debugPrint(
-          'SyncService: _pushUserQuests — local empty but cloud populated; skipping to avoid clobber');
-      return;
-    }
+    final blocked = await _blockedSingletonPush(
+        'user_quests', entry, questsDataEmpty(data), questsDataEmpty);
+    if (blocked != null) return blocked;
     await _supabase.from('user_quests').upsert({
       'user_id': _userId,
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: userQuests upserted ✓');
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushUserCollections() async {
+  Future<_PushOutcome> _pushUserCollections(SyncQueueEntry? entry) async {
     debugPrint(
         'SyncService: _pushUserCollections — pushing routines, food library, personal dict');
     final data = {
@@ -695,43 +848,54 @@ class SyncService {
           .map((e) => e.toJson())
           .toList(),
     };
-    if (await _wouldClobberRemote(
-        'user_collections', collectionsDataEmpty(data), collectionsDataEmpty)) {
-      debugPrint(
-          'SyncService: _pushUserCollections — local empty but cloud populated; skipping to avoid clobber');
-      return;
-    }
+    final blocked = await _blockedSingletonPush('user_collections', entry,
+        collectionsDataEmpty(data), collectionsDataEmpty);
+    if (blocked != null) return blocked;
     await _supabase.from('user_collections').upsert({
       'user_id': _userId,
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
     debugPrint('SyncService: userCollections upserted ✓');
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushNutritionLog(String dateKey) async {
+  /// Reads a per-date row's payload and stamp (`nutrition_logs` /
+  /// `activity_logs`) in one round trip.
+  Future<_RemoteRow> _readDatedRow(String table, String dateKey) async {
+    final row = await _supabase
+        .from(table)
+        .select('data, updated_at')
+        .eq('user_id', _userId)
+        .eq('date', dateKey)
+        .maybeSingle();
+    if (row == null) return const _RemoteRow(null, null);
+    return _RemoteRow(
+      row['data'] as Map<String, dynamic>?,
+      DateTime.tryParse(row['updated_at'] as String? ?? ''),
+    );
+  }
+
+  Future<_PushOutcome> _pushNutritionLog(
+      String dateKey, SyncQueueEntry? entry) async {
     final log = await _storage.loadNutritionLogForDate(dateKey);
     final messages = await _storage.loadChatMessagesRaw(dateKey);
+
+    final remote = await _readDatedRow('nutrition_logs', dateKey);
+    if (_remoteWins(remote.updatedAt, entry)) return _PushOutcome.conflictLost;
 
     // Don't let a session whose local feed is empty (the classic case: right
     // after a re-login, before the day's feed has reloaded into storage)
     // overwrite a populated cloud feed and blank the list while the calorie
-    // totals survive. Mirrors the singleton push guards (_wouldClobberRemote)
-    // but keyed per date, since nutrition rows are per-day. A genuinely empty
-    // cloud feed is fine to overwrite — only a populated one is protected.
-    if (messages.isEmpty) {
-      final row = await _supabase
-          .from('nutrition_logs')
-          .select('data')
-          .eq('user_id', _userId)
-          .eq('date', dateKey)
-          .maybeSingle();
-      final remote = row?['data'] as Map<String, dynamic>?;
-      if (remote != null && !nutritionFeedEmpty(remote)) {
-        debugPrint('SyncService: _pushNutritionLog($dateKey) — local feed '
-            'empty but cloud populated; skipping to avoid clobber');
-        return;
-      }
+    // totals survive. Mirrors the singleton push guards but keyed per date,
+    // since nutrition rows are per-day. A genuinely empty cloud feed is fine to
+    // overwrite — only a populated one is protected.
+    if (messages.isEmpty &&
+        remote.data != null &&
+        !nutritionFeedEmpty(remote.data!)) {
+      debugPrint('SyncService: _pushNutritionLog($dateKey) — local feed '
+          'empty but cloud populated; skipping to avoid clobber');
+      return _PushOutcome.skipped;
     }
 
     await _supabase.from('nutrition_logs').upsert({
@@ -740,9 +904,14 @@ class SyncService {
       'data': {'log': log.toJson(), 'messages': messages},
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushActivityLog(String dateKey) async {
+  Future<_PushOutcome> _pushActivityLog(
+      String dateKey, SyncQueueEntry? entry) async {
+    final remote = await _readDatedRow('activity_logs', dateKey);
+    if (_remoteWins(remote.updatedAt, entry)) return _PushOutcome.conflictLost;
+
     final todayLog = await _storage.loadTodayActivityLog();
     ActivityLog log;
     if (todayLog.date == dateKey) {
@@ -758,15 +927,20 @@ class SyncService {
       'data': log.toJson(),
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    return _PushOutcome.pushed;
   }
 
-  Future<void> _pushFinanceRecord(String key) async {
+  Future<_PushOutcome> _pushFinanceRecord(
+      String key, SyncQueueEntry? entry) async {
     final parts = key.split('/');
-    if (parts.length != 2) return;
+    if (parts.length != 2) return _PushOutcome.skipped;
     final tableName = parts[0];
     final recordId = parts[1];
     final data = await _loadFinanceRecord(tableName, recordId);
-    if (data == null) return;
+    if (data == null) return _PushOutcome.skipped;
+    if (_remoteWins((await financeRemoteStamps([key]))[key], entry)) {
+      return _PushOutcome.conflictLost;
+    }
     await _supabase.from('finance_records').upsert({
       'user_id': _userId,
       'table_name': tableName,
@@ -774,6 +948,7 @@ class SyncService {
       'data': data,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     });
+    return _PushOutcome.pushed;
   }
 
   Future<Map<String, dynamic>?> _loadFinanceRecord(
@@ -832,6 +1007,16 @@ class SyncService {
   // ── Pull ─────────────────────────────────────────────────────────────────────
 
   Future<void> pullAll() async {
+    // Re-entrancy guard. pullAll used to only *set* _isSyncing, never check it,
+    // so a resume-triggered pull could interleave with an in-flight push — and
+    // its `finally` would clear the flag while that push was still running,
+    // letting a third cycle in. Pulls and pushes must never overlap: a push
+    // reads local storage that an interleaved pull is concurrently rewriting.
+    if (_isSyncing) {
+      debugPrint(
+          'SyncService: pullAll skipped — a sync cycle is already running');
+      return;
+    }
     debugPrint('SyncService: pullAll starting for user $_userId');
     _isSyncing = true;
     _onStateChange?.call();
@@ -887,6 +1072,17 @@ class SyncService {
       _isSyncing = false;
       _onStateChange?.call();
     }
+  }
+
+  /// Records that the cloud copy of [key] has replaced the local one.
+  ///
+  /// Advancing the watermark alone left the pending queue entry in place, so
+  /// the next push re-uploaded the just-pulled value with a fresh stamp and
+  /// every *other* device re-pulled data it already had. The local edit lost
+  /// the moment the pull applied over it — drop its entry too.
+  void _adoptRemote(SyncDomain domain, String key, DateTime remoteTime) {
+    _queue.setTimestamp(domain, key, time: remoteTime);
+    _queue.discardEntry(domain, key);
   }
 
   Future<void> _pullUserProfile() async {
@@ -987,7 +1183,7 @@ class SyncService {
                 data['notificationPreferences'] as Map<String, dynamic>));
       }
     });
-    _queue.setTimestamp(SyncDomain.userProfile, 'default', time: remoteTime);
+    _adoptRemote(SyncDomain.userProfile, 'default', remoteTime);
   }
 
   Future<void> _pullAdvisorState() async {
@@ -1042,7 +1238,7 @@ class SyncService {
         );
       }
     });
-    _queue.setTimestamp(SyncDomain.advisorState, 'default', time: remoteTime);
+    _adoptRemote(SyncDomain.advisorState, 'default', remoteTime);
     debugPrint(
         'SyncService: advisorState — applied remote (remote=$remoteTime)');
   }
@@ -1091,7 +1287,7 @@ class SyncService {
             : null,
       );
     });
-    _queue.setTimestamp(SyncDomain.fastingState, 'default', time: remoteTime);
+    _adoptRemote(SyncDomain.fastingState, 'default', remoteTime);
   }
 
   Future<void> _pullUserQuests() async {
@@ -1134,7 +1330,7 @@ class SyncService {
             DateTime.parse(data['questPenaltyCheckDate'] as String));
       }
     });
-    _queue.setTimestamp(SyncDomain.userQuests, 'default', time: remoteTime);
+    _adoptRemote(SyncDomain.userQuests, 'default', remoteTime);
   }
 
   Future<void> _pullUserCollections() async {
@@ -1200,8 +1396,7 @@ class SyncService {
                 .toList());
       }
     });
-    _queue.setTimestamp(SyncDomain.userCollections, 'default',
-        time: remoteTime);
+    _adoptRemote(SyncDomain.userCollections, 'default', remoteTime);
   }
 
   Future<void> _pullNutritionLogs() async {
@@ -1250,8 +1445,7 @@ class SyncService {
           // back to remoteTime here or the heal-push would look stale.
           _queue.markDirty(SyncDomain.nutritionLog, dateKey);
         } else {
-          _queue.setTimestamp(SyncDomain.nutritionLog, dateKey,
-              time: remoteTime);
+          _adoptRemote(SyncDomain.nutritionLog, dateKey, remoteTime);
         }
       } catch (e) {
         _recordSkipped('nutrition_logs/$dateKey', e);
@@ -1276,7 +1470,7 @@ class SyncService {
           await _storage.saveActivityLog(
               ActivityLog.fromJson(row['data'] as Map<String, dynamic>));
         });
-        _queue.setTimestamp(SyncDomain.activityLog, dateKey, time: remoteTime);
+        _adoptRemote(SyncDomain.activityLog, dateKey, remoteTime);
       } catch (e) {
         _recordSkipped('activity_logs/$dateKey', e);
       }
@@ -1382,8 +1576,8 @@ class SyncService {
           localMap[recordId] = fromJson(data);
           changed = true;
         }
-        _queue.setTimestamp(SyncDomain.financeRecord, '$tableName/$recordId',
-            time: remoteTime);
+        _adoptRemote(
+            SyncDomain.financeRecord, '$tableName/$recordId', remoteTime);
       } catch (e) {
         // Skip a poison record (unparseable enum / null field / bad date)
         // rather than aborting the whole table — one corrupt row used to throw
@@ -1398,9 +1592,39 @@ class SyncService {
     }
   }
 
-  Future<void> forceSync() async {
+  /// One ordered, non-overlapping sync cycle: reconcile DOWN, then write UP.
+  ///
+  /// The ordering is the whole point. Pushing first sends local state that has
+  /// not been reconciled yet, so a device left open with a queued edit would
+  /// overwrite a newer record another device wrote in the meantime. Every entry
+  /// point — boot, resume, manual — funnels through here so the mobile and web
+  /// shells cannot drift apart on ordering again.
+  ///
+  /// [staleness] throttles the pull ([pullIfStale]); pass null to always pull.
+  Future<void> syncCycle({Duration? staleness}) async {
+    try {
+      if (staleness == null) {
+        await pullAll();
+      } else {
+        await pullIfStale(staleness: staleness);
+      }
+    } catch (e) {
+      // A failed pull (offline, auth blip) must not strand the outbox. Pushing
+      // without a fresh pull is safe because pushPending checks each record
+      // against the cloud stamp independently and refuses to overwrite a newer
+      // copy — the pull is an optimisation here, not the safety mechanism.
+      debugPrint('SyncService: syncCycle pull failed, pushing anyway: $e');
+    }
     await pushPending();
+  }
+
+  /// Manual "Sync now": pull then push, same ordering as every other cycle.
+  ///
+  /// Unlike [syncCycle] a pull failure propagates, because the user is watching
+  /// and expects to be told the sync did not work.
+  Future<void> forceSync() async {
     await pullAll();
+    await pushPending();
   }
 
   /// Pulls from remote only if last pull was more than [staleness] ago.
@@ -1440,16 +1664,19 @@ class SyncService {
     _isSyncing = true;
     _onStateChange?.call();
     try {
+      // Passing a null entry opts out of the recency guard: this is the
+      // once-per-device seeding push, it runs straight after a pull, and it
+      // makes no edit-time claim of its own. The emptiness guards still apply.
       debugPrint('SyncService: pushAll — uploading userProfile...');
-      await _pushUserProfile();
+      await _pushUserProfile(null);
       debugPrint('SyncService: pushAll — uploading fastingState...');
-      await _pushFastingState();
+      await _pushFastingState(null);
       debugPrint('SyncService: pushAll — uploading userQuests...');
-      await _pushUserQuests();
+      await _pushUserQuests(null);
       debugPrint('SyncService: pushAll — uploading userCollections...');
-      await _pushUserCollections();
+      await _pushUserCollections(null);
       debugPrint('SyncService: pushAll — uploading advisorState...');
-      await _pushAdvisorState();
+      await _pushAdvisorState(null);
       await _markInitialPushDone();
       _lastSyncedAt = DateTime.now();
       debugPrint('SyncService: pushAll complete ✓');
