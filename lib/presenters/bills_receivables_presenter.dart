@@ -1586,6 +1586,39 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     return _ledger.accounts.where((a) => !a.isLiability).toList();
   }
 
+  /// Accounts eligible to receive [receivable]'s money: active and
+  /// non-liability. The inflow-direction mirror of [payerAccountsFor].
+  ///
+  /// Liabilities are excluded because [markReceivableReceived] posts a plain
+  /// **inflow** — crediting a credit card would record income against the card
+  /// instead of paying it down. (Paying a card down from a receipt is
+  /// [quickPayCard], a transfer.) Everything else you can deposit into stays
+  /// eligible, savings and goal pockets included: web previously restricted the
+  /// destination to `isLiquid`, which is bank/ewallet/cash only, so a salary
+  /// landing in savings could not be recorded there at all.
+  ///
+  /// [receivable] is accepted for symmetry with [payerAccountsFor] and for
+  /// future per-record rules; the current rule does not depend on it.
+  List<FinancialAccount> depositAccountsFor(Receivable? receivable) =>
+      _ledger.accounts.where((a) => a.isActive && !a.isLiability).toList();
+
+  /// The destination account to preselect for [receivable]: its saved default
+  /// when still eligible, else the first liquid account, else the first
+  /// eligible one, else null.
+  ///
+  /// Single source of truth for the rule so mobile and web cannot drift — they
+  /// already had, offering different account sets for the same action.
+  String? preferredDepositAccountId(Receivable? receivable) {
+    final eligible = depositAccountsFor(receivable);
+    if (eligible.isEmpty) return null;
+    final saved = receivable?.accountId;
+    if (saved != null && eligible.any((a) => a.id == saved)) return saved;
+    // Falling back to liquid first keeps the default users see today; the wider
+    // eligible set only widens what they can *choose*.
+    final liquid = eligible.where((a) => a.isLiquid).toList();
+    return liquid.isNotEmpty ? liquid.first.id : eligible.first.id;
+  }
+
   /// Pays down a credit card balance directly without requiring a statement
   /// bill. Cash leaves [fromAccountId] and the card's owed balance decreases
   /// via [LedgerPresenter.addTransfer] (same path as paying a CC bill).
