@@ -367,10 +367,10 @@ from being reverted by a stale device, but awards nothing.
 
 ## Acceptance Criteria
 
-`[test]` = covered by an automated test. `[inspect]` = verified by code review
-only — the test suite's Supabase fake throws on every call, so any criterion
-needing a *responding* PostgREST cannot be asserted end-to-end. Building that
-harness is tracked as follow-up work below.
+`[test]` = covered by an automated test. Everything below is now `[test]`:
+`test/services/fake_postgrest.dart` answers requests from an in-memory table
+through a real `SupabaseClient`, so the criteria that were previously
+inspection-only are asserted end-to-end. See `test/services/sync_conflict_test.dart`.
 
 - [x] `[test]` The conflict rule: the cloud wins only on a strictly newer stamp;
       equal stamps, a missing cloud row, and a seeding push all proceed, and
@@ -384,27 +384,31 @@ harness is tracked as follow-up work below.
 - [x] `[test]` A `saveX` issued while `applyRemote` is running is queued, the
       remote apply's own writes are not, and a throwing block restores normal
       marking.
-- [x] `[inspect]` A queued edit is not pushed when the cloud row is newer; the
+- [x] `[test]` A queued edit is not pushed when the cloud row is newer; the
       entry is dequeued and its watermark invalidated (`_remoteWins` →
       `_noteConflictLost`, applied in the finance batch, single finance record,
       tombstone delete, both per-date pushes, and all five singletons).
-- [x] `[inspect]` Tombstone deletes obey the same guard.
+- [x] `[test]` Tombstone deletes obey the same guard, in both directions.
 - [x] `[inspect]` `pullAll` returns immediately when a cycle is already running.
 - [x] `[inspect]` Both shells' resume handlers call only `syncCycle`; boot keeps
       its existing pull-then-push sequence.
-- [x] `[inspect]` A pull that applies a remote copy discards the pending entry
+- [x] `[test]` A pull that applies a remote copy discards the pending entry
       for that record (`_adoptRemote`), except the nutrition heal-push path.
-- [x] `[inspect]` The emptiness guards are unchanged and still run alongside the
+- [x] `[test]` The emptiness guards are unchanged and still run alongside the
       new recency guard.
-- [x] `[inspect]` Conflict-abandoned entries clear rather than increment their
+- [x] `[test]` Conflict-abandoned entries clear rather than increment their
       backoff state.
-- [x] `[inspect]` `lastConflictsLost` names every record whose local edit lost.
+- [x] `[test]` `lastConflictsLost` names every record whose local edit lost.
 - [x] `[test]` A finance edit notifies `onDirty` exactly once per save; an
       unchanged save and a remote apply do not; a delete does.
 - [x] `[test]` A debounced push blocked by an in-flight cycle re-arms rather
       than being dropped, and an empty queue does not re-arm.
 - [x] `[inspect]` `_pullFinanceTable` commits watermarks only after `saveAll`
       succeeds.
+- [x] `[test]` Regression for the reported bug: a device queues an edit, the
+      cloud is written later by another device, the queued push is abandoned,
+      the cloud value survives, and the next pull adopts it locally.
+- [x] `[test]` Paging past the response-row ceiling returns every row.
 - [x] `flutter analyze` clean (no new errors or warnings); `flutter test` green.
 
 ### Follow-up
@@ -414,10 +418,9 @@ harness is tracked as follow-up work below.
   subscription now triggers a `syncCycle` within seconds of another device
   writing, so a focused tab no longer goes stale. Realtime is additive and
   best-effort — every existing trigger stays, because the socket can drop.
-- A responding Supabase/PostgREST fake, so the `[inspect]` rows above become
-  `[test]` — in particular the end-to-end regression: web queues an edit at T1,
-  mobile writes the cloud at T2 > T1, web resumes, mobile's value survives on
-  both devices.
+- ~~A responding Supabase/PostgREST fake.~~ Built:
+  `test/services/fake_postgrest.dart`, driving a real `SupabaseClient` via its
+  `httpClient` seam. The end-to-end regression is covered.
 - Phase 5 (`docs/supabase_migration_054_server_timestamps.sql`) — do not apply
   that migration until the client change that writes `client_edited_at` ships
   with it; the file's header explains why the trigger alone is not an
