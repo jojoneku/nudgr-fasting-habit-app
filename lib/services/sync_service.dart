@@ -238,6 +238,20 @@ class SyncService {
       localEditedAt != null &&
       remoteUpdatedAt.isAfter(localEditedAt);
 
+  /// Records the stamp this device just wrote for [entry] as its watermark.
+  ///
+  /// Without this the pushing device's own row looks newer than its watermark
+  /// (which markDirty set at *edit* time, before the push), so the next pull
+  /// re-applies data it already has. Harmless when pulls are rare; not harmless
+  /// once a realtime event echoes every write straight back, since each echo
+  /// would re-apply and reload all twelve presenters mid-edit.
+  ///
+  /// [entry] is null for [pushAll], which has no queue entry to stamp.
+  void _noteWritten(SyncQueueEntry? entry, DateTime writtenAt) {
+    if (entry == null) return;
+    _queue.setTimestamp(entry.domain, entry.key, time: writtenAt);
+  }
+
   /// Abandons [entry]'s push: the cloud copy is newer, so the local edit loses.
   ///
   /// The watermark is invalidated so the next pull *adopts* the cloud copy —
@@ -409,6 +423,8 @@ class SyncService {
           processed.add(p.key);
           _failureCounts.remove(id);
           _retryAfter.remove(id);
+          final written = DateTime.tryParse(p.value['updated_at'] as String);
+          if (written != null) _noteWritten(p.key, written);
         }
       } catch (e) {
         for (final p in chunk) {
@@ -575,13 +591,15 @@ class SyncService {
     // — so a record deleted on one device resurrected on others. Keeping a
     // `{__deleted: true}` row with a fresh timestamp lets every other device
     // learn of the deletion on pull and drop its local copy via last-write-wins.
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('finance_records').upsert({
       'user_id': _userId,
       'table_name': parts[0],
       'record_id': parts[1],
       'data': {_tombstoneKey: true},
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
 
@@ -733,11 +751,13 @@ class SyncService {
     final blocked = await _blockedSingletonPush(
         'user_profile', entry, profileDataEmpty(data), profileDataEmpty);
     if (blocked != null) return blocked;
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('user_profile').upsert({
       'user_id': _userId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userProfile upserted ✓');
     return _PushOutcome.pushed;
   }
@@ -771,11 +791,13 @@ class SyncService {
     final blocked = await _blockedSingletonPush(
         'advisor_state', entry, _advisorStateEmpty(data), _advisorStateEmpty);
     if (blocked != null) return blocked;
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('advisor_state').upsert({
       'user_id': _userId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     debugPrint('SyncService: advisorState upserted ✓');
     return _PushOutcome.pushed;
   }
@@ -799,11 +821,13 @@ class SyncService {
     final blocked = await _blockedSingletonPush(
         'fasting_state', entry, fastingDataEmpty(data), fastingDataEmpty);
     if (blocked != null) return blocked;
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('fasting_state').upsert({
       'user_id': _userId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     debugPrint('SyncService: fastingState upserted ✓');
     return _PushOutcome.pushed;
   }
@@ -822,11 +846,13 @@ class SyncService {
     final blocked = await _blockedSingletonPush(
         'user_quests', entry, questsDataEmpty(data), questsDataEmpty);
     if (blocked != null) return blocked;
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('user_quests').upsert({
       'user_id': _userId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userQuests upserted ✓');
     return _PushOutcome.pushed;
   }
@@ -856,11 +882,13 @@ class SyncService {
     final blocked = await _blockedSingletonPush('user_collections', entry,
         collectionsDataEmpty(data), collectionsDataEmpty);
     if (blocked != null) return blocked;
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('user_collections').upsert({
       'user_id': _userId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userCollections upserted ✓');
     return _PushOutcome.pushed;
   }
@@ -903,12 +931,14 @@ class SyncService {
       return _PushOutcome.skipped;
     }
 
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('nutrition_logs').upsert({
       'user_id': _userId,
       'date': dateKey,
       'data': {'log': log.toJson(), 'messages': messages},
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
 
@@ -926,12 +956,14 @@ class SyncService {
       log = history.firstWhere((l) => l.date == dateKey,
           orElse: () => ActivityLog.empty(dateKey));
     }
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('activity_logs').upsert({
       'user_id': _userId,
       'date': dateKey,
       'data': log.toJson(),
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
 
@@ -946,13 +978,15 @@ class SyncService {
     if (_remoteWins((await financeRemoteStamps([key]))[key], entry)) {
       return _PushOutcome.conflictLost;
     }
+    final writtenAt = DateTime.now().toUtc();
     await _supabase.from('finance_records').upsert({
       'user_id': _userId,
       'table_name': tableName,
       'record_id': recordId,
       'data': data,
-      'updated_at': DateTime.now().toUtc().toIso8601String(),
+      'updated_at': writtenAt.toIso8601String(),
     });
+    _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
 
@@ -1026,6 +1060,7 @@ class SyncService {
     _isSyncing = true;
     _onStateChange?.call();
     _lastSkippedRecords.clear();
+    _appliedRemoteThisPull = false;
     final errors = <String>[];
     var attempted = 0;
 
@@ -1072,7 +1107,10 @@ class SyncService {
       _lastSyncedAt = DateTime.now();
       _lastPulledAt = _lastSyncedAt;
       debugPrint('SyncService: pullAll complete ✓');
-      _storage.onRemoteDataApplied?.call();
+      // Only reload presenters when something actually landed. A pull that
+      // adopted nothing — the common case for a realtime echo of this device's
+      // own write — must not churn the UI.
+      if (_appliedRemoteThisPull) _storage.onRemoteDataApplied?.call();
     } finally {
       _isSyncing = false;
       _onStateChange?.call();
@@ -1088,7 +1126,15 @@ class SyncService {
   void _adoptRemote(SyncDomain domain, String key, DateTime remoteTime) {
     _queue.setTimestamp(domain, key, time: remoteTime);
     _queue.discardEntry(domain, key);
+    _appliedRemoteThisPull = true;
   }
+
+  /// Whether the in-flight [pullAll] has applied any cloud data locally.
+  ///
+  /// Gates `onRemoteDataApplied`, which reloads every presenter. That used to
+  /// fire on every pull, changed or not — cheap when pulls were rare, wasteful
+  /// once a realtime event can trigger one per write.
+  bool _appliedRemoteThisPull = false;
 
   Future<void> _pullUserProfile() async {
     final row = await _supabase
@@ -1449,6 +1495,9 @@ class SyncService {
           // markDirty stamps the queue at "now", so don't roll the timestamp
           // back to remoteTime here or the heal-push would look stale.
           _queue.markDirty(SyncDomain.nutritionLog, dateKey);
+          // The log half was still applied above, so the presenters do need a
+          // reload — _adoptRemote (which normally sets this) is skipped here.
+          _appliedRemoteThisPull = true;
         } else {
           _adoptRemote(SyncDomain.nutritionLog, dateKey, remoteTime);
         }

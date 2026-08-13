@@ -571,6 +571,37 @@ void main() {
     });
   });
 
+  // ── echo suppression (docs/realtime_sync_spec.md) ─────────────────────────
+  // A realtime event echoes this device's own write straight back. Without
+  // these two, every edit would trigger a self-inflicted pull that re-applies
+  // the device's own data and reloads all twelve presenters mid-edit.
+
+  group('echo suppression', () {
+    test('a pull that adopts nothing does not fire onRemoteDataApplied',
+        () async {
+      var reloads = 0;
+      storage.onRemoteDataApplied = () => reloads++;
+
+      // Every domain fails against the throwing fake, so nothing is adopted.
+      await expectLater(service.pullAll(), throwsA(isA<Exception>()));
+
+      expect(reloads, 0,
+          reason: 'a pull that changed nothing must not churn the UI');
+    });
+
+    test('a failed push leaves the watermark at the local edit time', () async {
+      // The complement of the pushed case: _noteWritten only runs on success,
+      // so a failed push must not advance the watermark past the edit — that
+      // would make the next pull skip the record the retry still needs.
+      queue.markDirty(SyncDomain.fastingState, 'default');
+      final atEdit = queue.getTimestamp(SyncDomain.fastingState, 'default');
+
+      await service.pushPending(); // fake client throws
+
+      expect(queue.getTimestamp(SyncDomain.fastingState, 'default'), atEdit);
+    });
+  });
+
   group('pushPending re-arms when it lands mid-cycle', () {
     test('a debounced push blocked by an in-flight sync is not dropped',
         () async {

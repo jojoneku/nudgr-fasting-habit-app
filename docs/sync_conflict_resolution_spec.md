@@ -409,14 +409,11 @@ harness is tracked as follow-up work below.
 
 ### Follow-up
 
-- **Web never pulls while the tab stays focused.** Pulls happen on boot, resume,
-  and manual sync only. `AppLifecycleState.resumed` fires on web via tab
-  visibility, so a user who never switches tabs sees no cross-device updates for
-  the whole session — the "my web is showing outdated data" half of the original
-  report, which RC-6 only fixes in the upload direction. A foreground poll
-  (`syncCycle` on a 60–120s timer, cheap now that pulls are throttled and
-  re-entrant-safe) would close it. Not done here: it changes API and battery
-  characteristics and deserves an explicit decision.
+- ~~**Web never pulls while the tab stays focused.**~~ Closed by
+  [realtime_sync_spec.md](realtime_sync_spec.md): a Supabase Realtime
+  subscription now triggers a `syncCycle` within seconds of another device
+  writing, so a focused tab no longer goes stale. Realtime is additive and
+  best-effort — every existing trigger stays, because the socket can drop.
 - A responding Supabase/PostgREST fake, so the `[inspect]` rows above become
   `[test]` — in particular the end-to-end regression: web queues an edit at T1,
   mobile writes the cloud at T2 > T1, web resumes, mobile's value survives on
