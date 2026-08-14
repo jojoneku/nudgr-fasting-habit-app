@@ -13,6 +13,18 @@ distributed via `manifest.json`.
 
 ## [Unreleased]
 
+## [1.1.60] - 2026-08-14
+
+### Added
+- pick the destination account when marking received
+- push cross-device changes over Supabase Realtime
+
+### Fixed
+- give R8 enough heap to minify the release build
+- order edits on a common clock, cancelling device skew
+- schedule a push on finance edits, and three related sync gaps
+- stop a stale local edit from overwriting a newer cloud record
+
 ## [1.1.59] - 2026-08-05
 
 ### Added
@@ -609,7 +621,7 @@ distributed via `manifest.json`.
 - narrow on-device step SPN match to documented phone prefix
 - merge on-device step labels so Health Connect relabels don't drop data
 
-[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.59...HEAD
+[Unreleased]: https://github.com/jojoneku/nudgr-fasting-habit-app/compare/v1.1.60...HEAD
 [1.1.0]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.0
 [1.1.1]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.1
 [1.1.2]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.2
@@ -670,3 +682,4 @@ distributed via `manifest.json`.
 [1.1.57]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.57
 [1.1.58]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.58
 [1.1.59]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.59
+[1.1.60]: https://github.com/jojoneku/nudgr-fasting-habit-app/releases/tag/v1.1.60
