@@ -37,13 +37,20 @@ ALTER TABLE advisor_state     ADD COLUMN IF NOT EXISTS client_edited_at TIMESTAM
 -- ── 2. Server-authoritative updated_at ───────────────────────────────────────
 -- Overrides whatever the client sent, so the column becomes a single monotonic
 -- reference clock rather than a mix of eight devices' wall clocks.
+-- search_path is pinned so an unqualified name can't be resolved through a
+-- caller-controlled schema (Supabase's linter flags a mutable search_path).
+-- now() is schema-qualified because an empty search_path leaves nothing
+-- implicit.
 CREATE OR REPLACE FUNCTION set_updated_at()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
 BEGIN
-  NEW.updated_at := now();
+  NEW.updated_at := pg_catalog.now();
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 DROP TRIGGER IF EXISTS set_updated_at ON user_profile;
 CREATE TRIGGER set_updated_at BEFORE INSERT OR UPDATE ON user_profile
