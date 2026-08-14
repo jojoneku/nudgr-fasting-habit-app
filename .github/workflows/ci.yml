@@ -406,7 +406,13 @@ jobs:
     # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      # fetch-depth 2: the change-detection step below needs HEAD~1. The
+      # default shallow depth-1 clone has no HEAD~1, so `git rev-parse HEAD~1`
+      # failed and the fallback marked everything changed — this job redeployed
+      # on every push to main regardless of what it touched.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Detect changes under supabase/functions
         id: changes
@@ -441,7 +447,13 @@ jobs:
     # gated by the dev→main promotion PR); depending on them would skip deploy.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
+      # fetch-depth 2: the change-detection step below needs HEAD~1. The
+      # default shallow depth-1 clone has no HEAD~1, so `git rev-parse HEAD~1`
+      # failed and the fallback marked everything changed — this job redeployed
+      # on every push to main regardless of what it touched.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Detect changes to backend/ai-coach/
         id: changes
@@ -494,7 +506,13 @@ jobs:
     permissions:
       contents: read
     steps:
+      # fetch-depth 2: the change-detection step below needs HEAD~1. The
+      # default shallow depth-1 clone has no HEAD~1, so `git rev-parse HEAD~1`
+      # failed and the fallback marked everything changed — this job redeployed
+      # on every push to main regardless of what it touched.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       # Only rebuild/deploy when something that affects the web bundle changed.
       - name: Detect web-relevant changes
