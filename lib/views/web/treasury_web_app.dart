@@ -20,6 +20,7 @@ import '../../services/auth_service.dart';
 import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
 import '../../services/null_ai_coach_service.dart';
+import '../../services/realtime_sync_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
@@ -93,6 +94,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final AiCoachPresenter _advisorPresenter;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
+  RealtimeSyncService? _realtime;
   SnapshotService? _snapshots;
   String? _currentUserId;
   bool _booting = true;
@@ -211,6 +213,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     _groceryCartPresenter.dispose();
     _advisorPresenter.dispose();
     _authPresenter.dispose();
+    unawaited(_realtime?.dispose() ?? Future.value());
     _syncService?.dispose();
     _syncPresenter?.dispose();
     super.dispose();
@@ -222,12 +225,18 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // path so a tab refocus pulls any edits made on the phone meanwhile and
     // flushes anything queued locally.
     if (state == AppLifecycleState.resumed) {
-      _syncService?.pushPending();
+      // One ordered cycle: pull THEN push. This used to fire both unawaited,
+      // push first, so refocusing a tab that had an edit queued uploaded that
+      // stale copy over whatever the phone had written since — and every device
+      // then pulled the stale value back down.
+      //
       // Tighten the staleness window on web (Plan 053 Phase 3.3): the 5-minute
       // default meant refocusing the tab within 5 min of the last pull showed
       // stale data (e.g. an edit just made on the phone). 30s makes a refocus
       // reliably reflect recent cross-device changes without hammering the API.
-      _syncService?.pullIfStale(staleness: const Duration(seconds: 30));
+      unawaited(
+          _syncService?.syncCycle(staleness: const Duration(seconds: 30)) ??
+              Future.value());
     }
   }
 
@@ -272,11 +281,22 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
         userId: userId,
       );
       unawaited(_snapshots!.writeSnapshotIfDue());
+      // Realtime: sync within seconds of another device writing, instead of
+      // waiting for the next resume. Best-effort — if the publication migration
+      // isn't applied or the socket can't open, no events arrive and the
+      // existing boot/resume/manual triggers carry on unchanged.
+      _realtime = RealtimeSyncService(
+        supabase: Supabase.instance.client,
+        userId: userId,
+        onRemoteChange: () => _syncService?.syncCycle() ?? Future.value(),
+      )..connect();
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('TreasuryWebShell: _initSync failed for $userId: $e');
       _storage.onDirty = null;
       _storage.onRemoteDataApplied = null;
+      unawaited(_realtime?.dispose() ?? Future.value());
+      _realtime = null;
       _syncService?.dispose();
       _syncPresenter?.dispose();
       _syncService = null;
@@ -311,6 +331,10 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
 
     _storage.onDirty = null;
     _storage.onRemoteDataApplied = null;
+    // Close the channel before the namespace detaches, so no realtime event can
+    // fire a cycle for the user who just signed out.
+    await _realtime?.dispose();
+    _realtime = null;
     svc?.dispose();
     _syncPresenter?.dispose();
     _syncService = null;

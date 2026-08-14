@@ -25,6 +25,7 @@ import '../services/cloud_ai_coach_service.dart';
 import '../services/on_device_ai_coach_service.dart';
 import '../services/local_storage_service.dart';
 import '../services/notification_service.dart';
+import '../services/realtime_sync_service.dart';
 import '../services/snapshot_service.dart';
 import '../services/remote_secrets_service.dart';
 import '../services/sync_service.dart';
@@ -83,6 +84,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   SyncQueue? _syncQueue;
+  RealtimeSyncService? _realtime;
   SnapshotService? _snapshots;
   NutritionPresenter? _nutritionPresenter;
   String? _currentUserId;
@@ -270,6 +272,7 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
     _authPresenter.dispose();
     _onboardingPresenter.dispose();
     _hubPresenter.dispose();
+    unawaited(_realtime?.dispose() ?? Future.value());
     _syncService?.dispose();
     _syncPresenter?.dispose();
     _widgetBridge?.detach();
@@ -341,12 +344,23 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
         userId: userId,
       );
       unawaited(_snapshots!.writeSnapshotIfDue());
+      // Realtime: sync within seconds of another device writing, instead of
+      // waiting for the next resume. Best-effort — if the publication migration
+      // isn't applied or the socket can't open, no events arrive and the
+      // existing boot/resume/manual triggers carry on unchanged.
+      _realtime = RealtimeSyncService(
+        supabase: Supabase.instance.client,
+        userId: userId,
+        onRemoteChange: () => _syncService?.syncCycle() ?? Future.value(),
+      )..connect();
       if (mounted) setState(() {});
     } catch (e) {
       debugPrint('AppShell: _initSync failed for $userId: $e');
       // Null out so a retry attempt can re-enter (skip the early-return guard).
       _storage.onDirty = null;
       _storage.onRemoteDataApplied = null;
+      unawaited(_realtime?.dispose() ?? Future.value());
+      _realtime = null;
       _syncService?.dispose();
       _syncPresenter?.dispose();
       _syncService = null;
@@ -381,6 +395,10 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
 
     _storage.onDirty = null;
     _storage.onRemoteDataApplied = null;
+    // Close the channel before the namespace detaches, so no realtime event can
+    // fire a cycle for the user who just signed out.
+    await _realtime?.dispose();
+    _realtime = null;
     svc?.dispose();
     _syncPresenter?.dispose();
     _syncService = null;
@@ -481,8 +499,12 @@ class _AppShellState extends State<AppShell> with WidgetsBindingObserver {
       // only refreshed when the Activity screen itself was opened. recheck-
       // Permissions re-verifies the grant, then syncs today (no-op if denied).
       _activityPresenter.recheckPermissions();
-      _syncService?.pushPending();
-      _syncService?.pullIfStale();
+      // One ordered cycle: pull THEN push, so a stale queued edit can never
+      // overwrite a newer record written on another device (see
+      // docs/sync_conflict_resolution_spec.md).
+      unawaited(
+          _syncService?.syncCycle(staleness: const Duration(minutes: 5)) ??
+              Future.value());
       // Re-scan the Insight Engine on resume: refresh is hash-gated (near-zero
       // cost when nothing changed) and the brief is once-per-day. Both fire and
       // forget — neither throws.

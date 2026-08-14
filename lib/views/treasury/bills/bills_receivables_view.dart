@@ -1112,15 +1112,12 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   void initState() {
     super.initState();
     _amountController.text = widget.receivable.amount.toStringAsFixed(2);
-    // Prefer the receivable's saved destination account; fall back to first
-    // account when none was set at creation time.
-    final preferred = widget.receivable.accountId;
-    final accounts = widget.presenter.accounts;
-    if (preferred != null && accounts.any((a) => a.id == preferred)) {
-      _selectedAccountId = preferred;
-    } else if (accounts.isNotEmpty) {
-      _selectedAccountId = accounts.first.id;
-    }
+    // Prefer the receivable's saved destination account, then a liquid one,
+    // then anything eligible. The rule lives in the presenter so web and mobile
+    // can't drift — this used to offer every account, archived and credit cards
+    // included, while web offered only bank/ewallet/cash.
+    _selectedAccountId =
+        widget.presenter.preferredDepositAccountId(widget.receivable);
   }
 
   @override
@@ -1149,7 +1146,7 @@ class _MarkReceivedSheetState extends State<_MarkReceivedSheet> {
   Future<void> _pickAccount() async {
     final choice = await showAccountPicker(
       context,
-      accounts: widget.presenter.accounts,
+      accounts: widget.presenter.depositAccountsFor(widget.receivable),
       selectedId: _selectedAccountId,
     );
     if (choice != null) setState(() => _selectedAccountId = choice.id);
