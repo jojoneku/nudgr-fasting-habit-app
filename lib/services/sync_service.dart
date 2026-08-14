@@ -37,6 +37,7 @@ import '../models/finance/transaction_record.dart';
 import '../models/personal_food_entry.dart';
 import '../models/sync_queue_entry.dart';
 import 'local_storage_service.dart';
+import 'sync_clock.dart';
 import 'sync_queue.dart';
 
 /// How a single push entry resolved.
@@ -166,6 +167,19 @@ class SyncService {
     debugPrint('SyncService: skipping unparseable record $id: $e');
   }
 
+  /// Device↔server clock offset, so edit times from different devices compare
+  /// on a common scale (Phase 5).
+  late final SyncClock _clock = SyncClock(_userId);
+
+  @visibleForTesting
+  SyncClock get clock => _clock;
+
+  /// Whether the cloud schema has the `client_edited_at` column. Probed once
+  /// per session: writing a column PostgREST doesn't know about rejects the
+  /// whole request, so assuming it exists would break sync outright for anyone
+  /// who hasn't run migration 054.
+  bool? _supportsEditTime;
+
   SyncService({
     required SupabaseClient supabase,
     required LocalStorageService storage,
@@ -189,6 +203,7 @@ class SyncService {
   }
 
   Future<void> init() async {
+    await _clock.load();
     final results = await Connectivity().checkConnectivity();
     _isOnline = results.any((r) => r != ConnectivityResult.none);
     _connectivitySub = Connectivity().onConnectivityChanged.listen((results) {
@@ -237,6 +252,88 @@ class SyncService {
       remoteUpdatedAt != null &&
       localEditedAt != null &&
       remoteUpdatedAt.isAfter(localEditedAt);
+
+  /// Column carrying the originating device's edit time, corrected into the
+  /// server's frame. Added by migration 054; absent on older schemas.
+  static const String _editedAtColumn = 'client_edited_at';
+
+  /// Whether the cloud schema carries [_editedAtColumn], probed once and cached.
+  ///
+  /// Cheaper than it looks: one `limit(1)` select per session, and only for the
+  /// first push. A failure is treated as "absent", so an unreachable backend
+  /// degrades to Phase 1–4 behaviour rather than blocking the push.
+  Future<bool> _hasEditTimeColumn() async {
+    if (_supportsEditTime != null) return _supportsEditTime!;
+    try {
+      await _supabase
+          .from('finance_records')
+          .select(_editedAtColumn)
+          .eq('user_id', _userId)
+          .limit(1);
+      _supportsEditTime = true;
+    } catch (e) {
+      debugPrint('SyncService: $_editedAtColumn unavailable, falling back to '
+          'updated_at ordering (migration 054 not applied?): $e');
+      _supportsEditTime = false;
+    }
+    return _supportsEditTime!;
+  }
+
+  /// Adds the edit-time column to [row] when the schema supports it.
+  ///
+  /// [editedAt] is the device-frame edit time; it is written in *server* frame
+  /// so that every device's edit times are directly comparable regardless of
+  /// how far each device's clock has drifted.
+  Future<Map<String, dynamic>> _withEditTime(
+      Map<String, dynamic> row, DateTime editedAt) async {
+    if (!await _hasEditTimeColumn()) return row;
+    return {
+      ...row,
+      _editedAtColumn: _clock.toServerFrame(editedAt).toIso8601String(),
+    };
+  }
+
+  /// Appends the edit-time column to a pull's column list when available.
+  Future<String> _pullColumns(String base) async =>
+      await _hasEditTimeColumn() ? '$base, $_editedAtColumn' : base;
+
+  /// The edit time of a cloud [row], in this device's frame.
+  ///
+  /// Prefers [_editedAtColumn] — the originating device's edit time, which is
+  /// what last-write-wins is supposed to order by. Falls back to `updated_at`
+  /// for rows written before migration 054, which is the pre-Phase-5 behaviour
+  /// (push time, not edit time) and the best available for a legacy row.
+  DateTime? _remoteEditTime(Map<String, dynamic> row) {
+    final edited = row[_editedAtColumn];
+    if (edited is String) {
+      final parsed = DateTime.tryParse(edited);
+      if (parsed != null) return _clock.toDeviceFrame(parsed);
+    }
+    final updated = row['updated_at'];
+    if (updated is String) {
+      final parsed = DateTime.tryParse(updated);
+      if (parsed != null) return _clock.toDeviceFrame(parsed);
+    }
+    return null;
+  }
+
+  /// Learns the device↔server clock offset from a row the server just stamped.
+  ///
+  /// [sentAt] is this device's clock at request time. When the trigger from
+  /// migration 054 is absent the server echoes back what we sent, so the
+  /// observed offset is ~0 and this is a harmless no-op — the client stays
+  /// correct either way.
+  Future<void> _observeServerClock(Object? response, DateTime sentAt) async {
+    final rows = response is List ? response : const [];
+    for (final row in rows) {
+      if (row is! Map) continue;
+      final stamp = DateTime.tryParse('${row['updated_at']}');
+      if (stamp != null) {
+        await _clock.observeServerTime(stamp, sentAt);
+        return;
+      }
+    }
+  }
 
   /// Records the stamp this device just wrote for [entry] as its watermark.
   ///
@@ -415,9 +512,15 @@ class SyncService {
       final end = (i + _financeBatchSize).clamp(0, winners.length);
       final chunk = winners.sublist(i, end);
       try {
-        await _supabase
+        final sentAt = DateTime.now();
+        final written = <Map<String, dynamic>>[
+          for (final p in chunk) await _withEditTime(p.value, p.key.queuedAt),
+        ];
+        final echoed = await _supabase
             .from('finance_records')
-            .upsert([for (final p in chunk) p.value]);
+            .upsert(written)
+            .select('updated_at');
+        await _observeServerClock(echoed, sentAt);
         for (final p in chunk) {
           final id = _entryId(p.key);
           processed.add(p.key);
@@ -460,14 +563,17 @@ class SyncService {
       final ids = byTable[table]!;
       for (var i = 0; i < ids.length; i += _stampLookupChunk) {
         final end = (i + _stampLookupChunk).clamp(0, ids.length);
+        final columns = await _hasEditTimeColumn()
+            ? 'record_id, updated_at, $_editedAtColumn'
+            : 'record_id, updated_at';
         final rows = await _supabase
             .from('finance_records')
-            .select('record_id, updated_at')
+            .select(columns)
             .eq('user_id', _userId)
             .eq('table_name', table)
             .inFilter('record_id', ids.sublist(i, end));
         for (final row in (rows as List).cast<Map<String, dynamic>>()) {
-          final stamp = DateTime.tryParse(row['updated_at'] as String? ?? '');
+          final stamp = _remoteEditTime(row);
           if (stamp != null) stamps['$table/${row['record_id']}'] = stamp;
         }
       }
@@ -592,13 +698,17 @@ class SyncService {
     // `{__deleted: true}` row with a fresh timestamp lets every other device
     // learn of the deletion on pull and drop its local copy via last-write-wins.
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('finance_records').upsert({
-      'user_id': _userId,
-      'table_name': parts[0],
-      'record_id': parts[1],
-      'data': {_tombstoneKey: true},
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('finance_records')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'table_name': parts[0],
+          'record_id': parts[1],
+          'data': {_tombstoneKey: true},
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry.queuedAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
@@ -658,16 +768,17 @@ class SyncService {
   /// Reads a singleton cloud row's payload and stamp in one round trip, so the
   /// recency guard costs nothing on top of the emptiness guard.
   Future<_RemoteRow> _readSingleton(String table) async {
+    final columns = await _hasEditTimeColumn()
+        ? 'data, updated_at, $_editedAtColumn'
+        : 'data, updated_at';
     final row = await _supabase
         .from(table)
-        .select('data, updated_at')
+        .select(columns)
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) return const _RemoteRow(null, null);
     return _RemoteRow(
-      row['data'] as Map<String, dynamic>?,
-      DateTime.tryParse(row['updated_at'] as String? ?? ''),
-    );
+        row['data'] as Map<String, dynamic>?, _remoteEditTime(row));
   }
 
   /// Decides whether a singleton push may proceed, applying both guards:
@@ -752,11 +863,15 @@ class SyncService {
         'user_profile', entry, profileDataEmpty(data), profileDataEmpty);
     if (blocked != null) return blocked;
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('user_profile').upsert({
-      'user_id': _userId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('user_profile')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userProfile upserted ✓');
     return _PushOutcome.pushed;
@@ -792,11 +907,15 @@ class SyncService {
         'advisor_state', entry, _advisorStateEmpty(data), _advisorStateEmpty);
     if (blocked != null) return blocked;
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('advisor_state').upsert({
-      'user_id': _userId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('advisor_state')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     debugPrint('SyncService: advisorState upserted ✓');
     return _PushOutcome.pushed;
@@ -822,11 +941,15 @@ class SyncService {
         'fasting_state', entry, fastingDataEmpty(data), fastingDataEmpty);
     if (blocked != null) return blocked;
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('fasting_state').upsert({
-      'user_id': _userId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('fasting_state')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     debugPrint('SyncService: fastingState upserted ✓');
     return _PushOutcome.pushed;
@@ -847,11 +970,15 @@ class SyncService {
         'user_quests', entry, questsDataEmpty(data), questsDataEmpty);
     if (blocked != null) return blocked;
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('user_quests').upsert({
-      'user_id': _userId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('user_quests')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userQuests upserted ✓');
     return _PushOutcome.pushed;
@@ -883,11 +1010,15 @@ class SyncService {
         collectionsDataEmpty(data), collectionsDataEmpty);
     if (blocked != null) return blocked;
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('user_collections').upsert({
-      'user_id': _userId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('user_collections')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     debugPrint('SyncService: userCollections upserted ✓');
     return _PushOutcome.pushed;
@@ -896,17 +1027,18 @@ class SyncService {
   /// Reads a per-date row's payload and stamp (`nutrition_logs` /
   /// `activity_logs`) in one round trip.
   Future<_RemoteRow> _readDatedRow(String table, String dateKey) async {
+    final columns = await _hasEditTimeColumn()
+        ? 'data, updated_at, $_editedAtColumn'
+        : 'data, updated_at';
     final row = await _supabase
         .from(table)
-        .select('data, updated_at')
+        .select(columns)
         .eq('user_id', _userId)
         .eq('date', dateKey)
         .maybeSingle();
     if (row == null) return const _RemoteRow(null, null);
     return _RemoteRow(
-      row['data'] as Map<String, dynamic>?,
-      DateTime.tryParse(row['updated_at'] as String? ?? ''),
-    );
+        row['data'] as Map<String, dynamic>?, _remoteEditTime(row));
   }
 
   Future<_PushOutcome> _pushNutritionLog(
@@ -932,12 +1064,16 @@ class SyncService {
     }
 
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('nutrition_logs').upsert({
-      'user_id': _userId,
-      'date': dateKey,
-      'data': {'log': log.toJson(), 'messages': messages},
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('nutrition_logs')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'date': dateKey,
+          'data': {'log': log.toJson(), 'messages': messages},
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
@@ -957,12 +1093,16 @@ class SyncService {
           orElse: () => ActivityLog.empty(dateKey));
     }
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('activity_logs').upsert({
-      'user_id': _userId,
-      'date': dateKey,
-      'data': log.toJson(),
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('activity_logs')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'date': dateKey,
+          'data': log.toJson(),
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
@@ -979,13 +1119,17 @@ class SyncService {
       return _PushOutcome.conflictLost;
     }
     final writtenAt = DateTime.now().toUtc();
-    await _supabase.from('finance_records').upsert({
-      'user_id': _userId,
-      'table_name': tableName,
-      'record_id': recordId,
-      'data': data,
-      'updated_at': writtenAt.toIso8601String(),
-    });
+    final echoed = await _supabase
+        .from('finance_records')
+        .upsert(await _withEditTime({
+          'user_id': _userId,
+          'table_name': tableName,
+          'record_id': recordId,
+          'data': data,
+          'updated_at': writtenAt.toIso8601String(),
+        }, entry?.queuedAt ?? writtenAt))
+        .select('updated_at');
+    await _observeServerClock(echoed, writtenAt);
     _noteWritten(entry, writtenAt);
     return _PushOutcome.pushed;
   }
@@ -1139,14 +1283,14 @@ class SyncService {
   Future<void> _pullUserProfile() async {
     final row = await _supabase
         .from('user_profile')
-        .select('data, updated_at')
+        .select(await _pullColumns('data, updated_at'))
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) {
       debugPrint('SyncService: userProfile — no remote row found');
       return;
     }
-    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final remoteTime = _remoteEditTime(row)!;
     final localTime = _queue.getTimestamp(SyncDomain.userProfile, 'default');
     if (!remoteTime.isAfter(localTime)) {
       debugPrint('SyncService: userProfile — local is newer, skipping');
@@ -1240,14 +1384,14 @@ class SyncService {
   Future<void> _pullAdvisorState() async {
     final row = await _supabase
         .from('advisor_state')
-        .select('data, updated_at')
+        .select(await _pullColumns('data, updated_at'))
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) {
       debugPrint('SyncService: advisorState — no remote row found');
       return;
     }
-    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final remoteTime = _remoteEditTime(row)!;
     final localTime = _queue.getTimestamp(SyncDomain.advisorState, 'default');
     if (!remoteTime.isAfter(localTime)) {
       debugPrint('SyncService: advisorState — local is newer, skipping');
@@ -1297,14 +1441,14 @@ class SyncService {
   Future<void> _pullFastingState() async {
     final row = await _supabase
         .from('fasting_state')
-        .select('data, updated_at')
+        .select(await _pullColumns('data, updated_at'))
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) {
       debugPrint('SyncService: fastingState — no remote row found');
       return;
     }
-    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final remoteTime = _remoteEditTime(row)!;
     final localTime = _queue.getTimestamp(SyncDomain.fastingState, 'default');
     if (!remoteTime.isAfter(localTime)) {
       debugPrint('SyncService: fastingState — local is newer, skipping');
@@ -1344,14 +1488,14 @@ class SyncService {
   Future<void> _pullUserQuests() async {
     final row = await _supabase
         .from('user_quests')
-        .select('data, updated_at')
+        .select(await _pullColumns('data, updated_at'))
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) {
       debugPrint('SyncService: userQuests — no remote row found');
       return;
     }
-    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final remoteTime = _remoteEditTime(row)!;
     final localTime = _queue.getTimestamp(SyncDomain.userQuests, 'default');
     if (!remoteTime.isAfter(localTime)) {
       debugPrint('SyncService: userQuests — local is newer, skipping');
@@ -1387,14 +1531,14 @@ class SyncService {
   Future<void> _pullUserCollections() async {
     final row = await _supabase
         .from('user_collections')
-        .select('data, updated_at')
+        .select(await _pullColumns('data, updated_at'))
         .eq('user_id', _userId)
         .maybeSingle();
     if (row == null) {
       debugPrint('SyncService: userCollections — no remote row found');
       return;
     }
-    final remoteTime = DateTime.parse(row['updated_at'] as String);
+    final remoteTime = _remoteEditTime(row)!;
     final localTime =
         _queue.getTimestamp(SyncDomain.userCollections, 'default');
     if (!remoteTime.isAfter(localTime)) {
@@ -1455,13 +1599,13 @@ class SyncService {
     // ceiling after ~2.7 years of logging and would then silently drop days.
     final rows = await _selectAllPages(
       'nutrition_logs',
-      'date, data, updated_at',
+      await _pullColumns('date, data, updated_at'),
       orderBy: const ['date'],
     );
     for (final row in rows) {
       final dateKey = row['date'] as String? ?? '';
       try {
-        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final remoteTime = _remoteEditTime(row)!;
         final localTime = _queue.getTimestamp(SyncDomain.nutritionLog, dateKey);
         if (!remoteTime.isAfter(localTime)) continue;
         final data = row['data'] as Map<String, dynamic>;
@@ -1511,13 +1655,13 @@ class SyncService {
     // Paged for the same reason as nutrition_logs — one row per day.
     final rows = await _selectAllPages(
       'activity_logs',
-      'date, data, updated_at',
+      await _pullColumns('date, data, updated_at'),
       orderBy: const ['date'],
     );
     for (final row in rows) {
       final dateKey = row['date'] as String? ?? '';
       try {
-        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final remoteTime = _remoteEditTime(row)!;
         final localTime = _queue.getTimestamp(SyncDomain.activityLog, dateKey);
         if (!remoteTime.isAfter(localTime)) continue;
         await _storage.applyRemote(() async {
@@ -1537,7 +1681,7 @@ class SyncService {
     // safe page order.
     final rows = await _selectAllPages(
       'finance_records',
-      'table_name, record_id, data, updated_at',
+      await _pullColumns('table_name, record_id, data, updated_at'),
       orderBy: const ['table_name', 'record_id'],
     );
 
@@ -1624,7 +1768,7 @@ class SyncService {
     for (final row in rows) {
       final recordId = row['record_id'] as String? ?? '';
       try {
-        final remoteTime = DateTime.parse(row['updated_at'] as String);
+        final remoteTime = _remoteEditTime(row)!;
         final localTime = _queue.getTimestamp(
             SyncDomain.financeRecord, '$tableName/$recordId');
         if (!remoteTime.isAfter(localTime)) continue;

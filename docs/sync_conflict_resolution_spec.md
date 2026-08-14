@@ -1,6 +1,6 @@
 # Sync Conflict Resolution Spec
 
-> Status: **Phases 1–4 implemented**, Phase 5 pending a migration · Owner:
+> Status: **Phases 1–6 implemented** · Owner:
 > System Architect · Supersedes the sync-ordering assumptions in Plan 053
 > Phase 3.3.
 
@@ -281,20 +281,45 @@ baseline instead of silently reseeding it.
 - `_pullFinanceTable` collects watermarks during the merge and commits them only
   after `saveAll` returns, so a failed save leaves the rows retryable.
 
-### Phase 5 — Server-authoritative time `[fixes RC-5, NOT in this change]`
+### Phase 5 — Edit time in a common frame `[fixes RC-5]`
 
-Requires a migration, so it ships separately and is applied by hand:
+**Correction to an earlier claim in this spec.** A server-side `updated_at`
+trigger does *not*, on its own, "remove clock skew from the equation". Edit time
+is measured on the device that made the edit, necessarily — the edit may happen
+offline, hours before any server sees it. No trigger can normalise it. What the
+trigger provides is a *reference clock*; the client has to do the normalising.
 
-- `docs/supabase_migration_054_server_timestamps.sql` — a `set_updated_at()`
-  trigger function plus `BEFORE INSERT OR UPDATE` triggers on the seven synced
-  tables, so `updated_at` is always the database's `now()`.
-- A nullable `client_edited_at TIMESTAMPTZ` column carrying the originating
-  device's edit time, so LWW can order by edit time while change detection uses
-  the server clock. Null on legacy rows → fall back to `updated_at`.
+Three pieces, and all three are needed:
 
-The Phase 1–4 client is forward-compatible with the trigger (it only ever
-*reads* `updated_at`), so the migration can be applied at any time after this
-change ships without a client update.
+1. **`client_edited_at`** (nullable `TIMESTAMPTZ`) carries the originating
+   device's edit time, so conflicts compare edit-to-edit instead of today's
+   edit-to-*push*-time. Legacy rows are null → fall back to `updated_at`.
+2. **`updated_at` becomes server-authoritative** via the trigger, giving every
+   client one monotonic reference clock to measure itself against.
+3. **Each device measures its own offset** against that clock and writes
+   `client_edited_at` already corrected into server frame. Only this step
+   actually cancels skew: a browser running four minutes fast writes edit times
+   four minutes earlier than its own wall clock says, so its edits stop
+   out-ranking a phone's newer ones.
+
+The offset is learned for free: a push asks for `updated_at` back
+(`Prefer: return=representation`), and the difference between the server's stamp
+and the device's clock at request time is the offset. No extra round trip, and
+no reliance on the device being right about anything.
+
+Locally the queue's timestamps stay in **device frame**; anything read from the
+cloud is converted by subtracting the offset before it is compared. Keeping one
+frame per side is what stops the mixed-frame comparisons this whole spec is
+about.
+
+#### Deployment safety
+
+Writing an unknown column makes PostgREST reject the whole request, so a client
+that assumed `client_edited_at` exists would break sync outright for anyone who
+had not run the migration. The client therefore **probes once per session** and
+omits the column when the schema lacks it, degrading to Phase 1–4 behaviour.
+That makes the migration and the client deployable in either order, which
+matters because this repo auto-promotes `dev` → `main` → production.
 
 ## UI Requirements
 
@@ -409,6 +434,19 @@ inspection-only are asserted end-to-end. See `test/services/sync_conflict_test.d
       cloud is written later by another device, the queued push is abandoned,
       the cloud value survives, and the next pull adopts it locally.
 - [x] `[test]` Paging past the response-row ceiling returns every row.
+- [x] `[test]` Phase 5: `SyncClock` converts between device and server frames,
+      learns the offset from an observed server stamp, and rejects an
+      implausible one instead of reordering every future edit.
+- [x] `[test]` Phase 5: a push writes `client_edited_at` as the *edit* time, and
+      the device learns the server offset from its own push.
+- [x] `[test]` Phase 5: a device whose clock runs fast no longer out-ranks a
+      genuinely newer edit from a correct one — and still wins when its own edit
+      really is newest.
+- [x] `[test]` Phase 5: a legacy row with no `client_edited_at` still orders by
+      `updated_at`.
+- [x] `[test]` Phase 5: with the migration unapplied, sync still works, rows
+      carry no edit-time column, conflicts resolve as before, and the capability
+      probe runs once rather than per record.
 - [x] `flutter analyze` clean (no new errors or warnings); `flutter test` green.
 
 ### Follow-up

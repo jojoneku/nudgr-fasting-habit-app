@@ -40,6 +40,22 @@ class FakePostgrest extends http.BaseClient {
   /// served. Cleared once it fires.
   String? failNextPostTo;
 
+  /// Whether the schema has migration 054's `client_edited_at` column. When
+  /// false, any request naming it is rejected the way PostgREST rejects an
+  /// unknown column — which is what makes the client's capability probe
+  /// meaningful rather than decorative.
+  bool hasEditTimeColumn = true;
+
+  /// Whether migration 054's trigger is in place, stamping `updated_at` with
+  /// the server's clock and ignoring whatever the client sent.
+  bool applyUpdatedAtTrigger = true;
+
+  /// How far this fake server's clock sits from the test process's clock.
+  /// Non-zero simulates the skew Phase 5 exists to cancel.
+  Duration serverClockSkew = Duration.zero;
+
+  DateTime get serverNow => DateTime.now().toUtc().add(serverClockSkew);
+
   int postCountFor(String table) =>
       requests.where((r) => r.method == 'POST' && r.table == table).length;
 
@@ -48,6 +64,8 @@ class FakePostgrest extends http.BaseClient {
   /// Goes through the same primary-key merge as a real upsert: appending blindly
   /// would let a test build a duplicate-PK state the database forbids, and then
   /// assert against whichever copy it happened to read first.
+  /// Seeded rows keep the `updated_at` the test supplied — seeding stands in
+  /// for "another device wrote this at time X", not for a live write.
   void seed(String table, Map<String, dynamic> row) => _upsert(table, row);
 
   List<Map<String, dynamic>> rowsOf(String table) =>
@@ -74,6 +92,18 @@ class FakePostgrest extends http.BaseClient {
     }
     requests.add((method: method, table: table, body: body));
 
+    if (!hasEditTimeColumn && _mentionsEditTime(request.url, body)) {
+      return _json(
+        {
+          'message':
+              'column "client_edited_at" of relation "$table" does not exist',
+          'code': '42703',
+        },
+        status: 400,
+        request: request,
+      );
+    }
+
     if (method == 'POST' && failNextPostTo == table) {
       failNextPostTo = null;
       return _json(
@@ -85,9 +115,18 @@ class FakePostgrest extends http.BaseClient {
 
     return switch (method) {
       'GET' => _json(_select(table, request.url), request: request),
-      'POST' => _json(_upsert(table, body), request: request),
+      'POST' =>
+        _json(_upsert(table, body, stampServerTime: true), request: request),
       _ => _json(const [], status: 405, request: request),
     };
+  }
+
+  bool _mentionsEditTime(Uri url, Object? body) {
+    if ((url.queryParameters['select'] ?? '').contains('client_edited_at')) {
+      return true;
+    }
+    final rows = body is List ? body : [if (body != null) body];
+    return rows.any((r) => r is Map && r.containsKey('client_edited_at'));
   }
 
   // ── select ────────────────────────────────────────────────────────────────
@@ -157,13 +196,23 @@ class FakePostgrest extends http.BaseClient {
 
   // ── upsert ────────────────────────────────────────────────────────────────
 
-  List<Map<String, dynamic>> _upsert(String table, Object? body) {
+  /// [stampServerTime] mirrors migration 054's `BEFORE INSERT OR UPDATE`
+  /// trigger: the server overwrites `updated_at` with its own clock, whatever
+  /// the client sent. Returns the stored rows, which is what
+  /// `.select('updated_at')` on an upsert reads back.
+  List<Map<String, dynamic>> _upsert(String table, Object? body,
+      {bool stampServerTime = false}) {
     final incoming = <Map<String, dynamic>>[
       if (body is List)
         for (final r in body) Map<String, dynamic>.of(r as Map<String, dynamic>)
       else if (body is Map<String, dynamic>)
         Map<String, dynamic>.of(body),
     ];
+    if (stampServerTime && applyUpdatedAtTrigger) {
+      for (final row in incoming) {
+        row['updated_at'] = serverNow.toIso8601String();
+      }
+    }
     final rows = tables.putIfAbsent(table, () => []);
     final keyCols = primaryKeys[table];
     for (final row in incoming) {

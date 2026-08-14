@@ -1,27 +1,28 @@
 -- Migration 054 — server-authoritative sync timestamps (Phase 5)
 --
--- ⚠️  DO NOT APPLY YET. This migration belongs to Phase 5 of
---     docs/sync_conflict_resolution_spec.md and must ship TOGETHER with the
---     client change that reads/writes `client_edited_at`. Phases 1–4 (the
---     conflict guard, ordered sync cycles, zone-scoped dirty marking) need no
---     migration and are already live without it.
+-- Safe to apply, in either order relative to the client release:
+--   * Applied without the client → the client probes for `client_edited_at`,
+--     finds it, and starts using it. Nothing to coordinate.
+--   * Client without this applied → the probe finds no column, the client omits
+--     it, and conflict ordering falls back to `updated_at` exactly as before.
+-- Writing a column PostgREST doesn't know about rejects the whole request, which
+-- is why the client probes rather than assuming. See docs/sync_conflict_resolution_spec.md.
 --
--- Why it must not be applied alone
--- --------------------------------
--- Today every client supplies `updated_at` itself, so last-write-wins is
--- arbitrated by whichever device's wall clock wrote last. The trigger below
--- moves that stamp to the database clock — an improvement only once the client
--- also has a column carrying the *edit* time to order by. Applied on its own it
--- merely swaps one mixed-clock comparison for another: a device whose clock runs
--- fast would still win conflicts it should lose, and one running slow would
--- abandon its own fresh edits.
+-- What this gives you
+-- -------------------
+--   `updated_at`       — server clock, via the trigger below. One monotonic
+--                        reference every device can measure itself against.
+--   `client_edited_at` — the originating device's edit time, written already
+--                        corrected into server frame. Nullable: rows written
+--                        before this migration stay null and fall back to
+--                        `updated_at`.
 --
--- What Phase 5 changes
--- --------------------
---   `updated_at`       — server clock. Change detection / pull watermarks.
---                        Monotonic across devices, so it can be compared safely.
---   `client_edited_at` — originating device's edit time. The LWW ordering key.
---                        Nullable: legacy rows fall back to `updated_at`.
+-- Why both are needed. Last-write-wins has to order *edits*, and an edit time
+-- can only be measured on the device that made it — the edit may happen offline,
+-- hours before any server sees it. So the trigger alone does not remove clock
+-- skew; it supplies the reference clock, and the client cancels its own drift
+-- against it before writing `client_edited_at`. Applying this without the
+-- Phase 5 client is harmless but buys nothing on its own.
 
 -- ── 1. Edit-time column (additive, backward compatible) ──────────────────────
 ALTER TABLE user_profile      ADD COLUMN IF NOT EXISTS client_edited_at TIMESTAMPTZ;
