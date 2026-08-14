@@ -81,7 +81,9 @@ class _AddReceivableSheetState extends State<AddReceivableSheet> {
   Future<void> _pickAccount() async {
     final choice = await showAccountPicker(
       context,
-      accounts: widget.presenter.accounts,
+      // Same eligible set as the settle step, so a saved default can never be
+      // an account mark-received would reject.
+      accounts: widget.presenter.depositAccountsFor(widget.existing),
       selectedId: _selectedAccountId,
       allowNone: true,
       noneLabel: 'Ask me when received',

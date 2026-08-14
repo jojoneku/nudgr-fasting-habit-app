@@ -601,8 +601,9 @@ class _ReceivableDialogState extends State<_ReceivableDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final accounts =
-        widget.presenter.accounts.where((a) => a.isActive).toList();
+    // Same eligible set as the settle step, so a saved default can never be an
+    // account mark-received would reject.
+    final accounts = widget.presenter.depositAccountsFor(widget.existing);
     final categories = _incomeCategories;
     final isEdit = widget.existing != null;
 
@@ -1444,69 +1445,98 @@ class _ReceivableRow extends StatelessWidget {
   }
 
   Future<void> _markReceived(BuildContext context) async {
-    // Mirror the bill mark-paid flow but as an inflow: money lands in the
-    // receivable's preferred account, falling back to the first active liquid
-    // (asset) account.
-    final fallback =
-        presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
-    final accountId = receivable.accountId ??
-        (fallback.isNotEmpty ? fallback.first.id : null);
-    final accountName = presenter.accountName(accountId) ?? 'your account';
+    // Mirrors the bill mark-paid flow as an inflow, including letting the user
+    // redirect the money at settle time — the destination used to be computed
+    // silently and shown as read-only prose, so a deposit that didn't go to the
+    // default account could not be recorded where it actually went.
+    final destinations = presenter.depositAccountsFor(receivable);
+    var selectedAccountId = presenter.preferredDepositAccountId(receivable);
 
     var alreadyInLedger = false;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setLocalState) => AlertDialog(
-          title: const Text('Mark as received?'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(alreadyInLedger
-                  ? 'Mark "${receivable.name}" (${formatPeso(receivable.amount)}) '
-                      'as received without recording a transaction.'
-                  : 'Deposit ${formatPeso(receivable.amount)} from '
-                      '"${receivable.name}" into $accountName? This credits the '
-                      'account balance.'),
-              const SizedBox(height: 4),
-              CheckboxListTile(
-                value: alreadyInLedger,
-                onChanged: (v) =>
-                    setLocalState(() => alreadyInLedger = v ?? false),
-                controlAffinity: ListTileControlAffinity.leading,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                title: const Text('Already added to ledger'),
-              ),
+        builder: (ctx, setLocalState) {
+          // Recomputed inside the builder so the sentence and the dropdown can
+          // never disagree about where the money is going.
+          final accountName =
+              presenter.accountName(selectedAccountId) ?? 'your account';
+          return AlertDialog(
+            title: const Text('Mark as received?'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(alreadyInLedger
+                    ? 'Mark "${receivable.name}" (${formatPeso(receivable.amount)}) '
+                        'as received without recording a transaction.'
+                    : 'Deposit ${formatPeso(receivable.amount)} from '
+                        '"${receivable.name}" into $accountName? This credits the '
+                        'account balance.'),
+                if (!alreadyInLedger && destinations.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedAccountId,
+                    decoration: const InputDecoration(labelText: 'Deposit to'),
+                    items: [
+                      for (final a in destinations)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
+                    onChanged: (v) =>
+                        setLocalState(() => selectedAccountId = v),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                CheckboxListTile(
+                  value: alreadyInLedger,
+                  onChanged: (v) =>
+                      setLocalState(() => alreadyInLedger = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  title: const Text('Already added to ledger'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Cancel')),
+              FilledButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: const Text('Mark received')),
             ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
-            FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Mark received')),
-          ],
-        ),
+          );
+        },
       ),
     );
     if (confirmed != true) return;
     if (!context.mounted) return;
 
     // An account is only required when we're actually recording the receipt.
-    if (!alreadyInLedger && accountId == null) {
+    if (!alreadyInLedger && selectedAccountId == null) {
       AppToast.error(context, 'Add an account before marking received.');
       return;
     }
 
-    await presenter.markReceivableReceived(
-      receivable.id,
-      receivedAmount: receivable.amount,
-      accountId: alreadyInLedger ? null : accountId,
-      recordInLedger: !alreadyInLedger,
-    );
+    final accountName =
+        presenter.accountName(selectedAccountId) ?? 'your account';
+    try {
+      await presenter.markReceivableReceived(
+        receivable.id,
+        receivedAmount: receivable.amount,
+        accountId: alreadyInLedger ? null : selectedAccountId,
+        recordInLedger: !alreadyInLedger,
+      );
+    } catch (e) {
+      // Match the bill flow: surface the failure instead of discarding the
+      // Future, which would leave the receivable silently unreceived.
+      if (context.mounted) {
+        AppToast.error(
+            context, 'Could not mark "${receivable.name}" received: $e');
+      }
+      return;
+    }
     if (!context.mounted) return;
     AppToast.success(
       context,
