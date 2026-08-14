@@ -23,6 +23,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// so the view never computes due-date conditionals in `build` (Rule 1).
 enum BillStatus { paid, overdue, dueSoon, unpaid }
 
+/// Outcome of a batch action: how many rows it changed, and how many it had to
+/// leave alone (already settled, or a payment the ledger refuses). Views report
+/// both, so a partly-applied batch never reads as a clean success.
+typedef BatchResult = ({int applied, int skipped});
+
 /// The obligation type behind one "Coming up" timeline row — drives the row's
 /// accent dot and the sheet the view routes its action to.
 enum ComingUpKind { bill, receivable, budgeted, installment }
@@ -779,6 +784,33 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     bool recordInLedger = true,
   }) async {
     final bill = _allBills.firstWhere((b) => b.id == billId);
+    await _applyBillPayment(
+      bill,
+      paidAmount: paidAmount,
+      accountId: accountId,
+      paidDate: paidDate,
+      recordInLedger: recordInLedger,
+    );
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    // A paid bill needs no reminder.
+    await _notifications.cancelBillReminder(bill.id);
+    await _checkAllBillsPaidXp();
+    await _notifyDependents();
+  }
+
+  /// Settles one bill in memory: writes the ledger entry (when asked) and flips
+  /// the bill to paid. Deliberately does NOT save, notify, or fan out — the
+  /// caller does that once, so settling ten bills in a batch costs one write
+  /// instead of ten. Throws [ArgumentError] when the payment is impossible (a
+  /// liability statement paid from itself).
+  Future<void> _applyBillPayment(
+    Bill bill, {
+    required double paidAmount,
+    String? accountId,
+    DateTime? paidDate,
+    bool recordInLedger = true,
+  }) async {
     final date = paidDate ?? DateTime.now();
 
     String? txnId;
@@ -837,12 +869,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       paidAmount: paidAmount,
       transactionId: txnId,
     ));
-    safeNotify();
-    await _storage.saveBills(_allBills);
-    // A paid bill needs no reminder.
-    await _notifications.cancelBillReminder(bill.id);
-    await _checkAllBillsPaidXp();
-    await _notifyDependents();
   }
 
   // ─── Undo a settlement ───────────────────────────────────────────────────────
@@ -915,6 +941,21 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final bill = _allBills.where((b) => b.id == billId).firstOrNull;
     if (bill == null || !bill.isPaid) return;
 
+    final reopened =
+        await _applyBillReversal(bill, removeTransaction: removeTransaction);
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    // An open bill wants its reminder back.
+    await _syncBillReminder(reopened);
+    await _notifyDependents();
+  }
+
+  /// Reopens one paid bill in memory and returns the reopened row. Like
+  /// [_applyBillPayment], it leaves saving and fan-out to the caller.
+  Future<Bill> _applyBillReversal(
+    Bill bill, {
+    required bool removeTransaction,
+  }) async {
     if (removeTransaction) {
       for (final id in _billSettlementTxnIds(bill)) {
         await _ledger.deleteTransactionOrGroup(id);
@@ -928,11 +969,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       transactionId: null,
     );
     _updateBill(reopened);
-    safeNotify();
-    await _storage.saveBills(_allBills);
-    // An open bill wants its reminder back.
-    await _syncBillReminder(reopened);
-    await _notifyDependents();
+    return reopened;
   }
 
   /// The ledger entry created when [receivable] was marked received. Receipts
@@ -966,6 +1003,18 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final rec = _allReceivables.where((r) => r.id == receivableId).firstOrNull;
     if (rec == null || !rec.isReceived) return;
 
+    await _applyReceivableReversal(rec, removeTransaction: removeTransaction);
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+  }
+
+  /// Reopens one received receivable in memory, leaving saving and fan-out to
+  /// the caller so a batch pays for them once.
+  Future<void> _applyReceivableReversal(
+    Receivable rec, {
+    required bool removeTransaction,
+  }) async {
     if (removeTransaction) {
       for (final id in _receivableSettlementTxnIds(rec)) {
         await _ledger.deleteTransactionOrGroup(id);
@@ -978,9 +1027,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       receivedAmount: null,
       transactionId: null,
     ));
-    safeNotify();
-    await _storage.saveReceivables(_allReceivables);
-    await _notifyDependents();
   }
 
   /// The ledger entries created when [expense] was funded. A set-aside moved
@@ -1026,6 +1072,18 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     final expense = _allExpenses.where((e) => e.id == expenseId).firstOrNull;
     if (expense == null || !expense.isPaid) return;
 
+    await _applyExpenseReversal(expense, removeTransaction: removeTransaction);
+    safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
+    await _notifyDependents();
+  }
+
+  /// Unfunds one set-aside in memory, leaving saving and fan-out to the caller
+  /// so a batch pays for them once.
+  Future<void> _applyExpenseReversal(
+    BudgetedExpense expense, {
+    required bool removeTransaction,
+  }) async {
     if (removeTransaction) {
       for (final id in _expenseSettlementTxnIds(expense)) {
         await _ledger.deleteTransactionOrGroup(id);
@@ -1037,9 +1095,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       spentAmount: 0,
       transactionId: null,
     ));
-    safeNotify();
-    await _storage.saveBudgetedExpenses(_allExpenses);
-    await _notifyDependents();
   }
 
   // ─── Receivable CRUD ─────────────────────────────────────────────────────────
@@ -1162,6 +1217,27 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     bool recordInLedger = true,
   }) async {
     final rec = _allReceivables.firstWhere((r) => r.id == receivableId);
+    await _applyReceivableReceipt(
+      rec,
+      receivedAmount: receivedAmount,
+      accountId: accountId,
+      receivedDate: receivedDate,
+      recordInLedger: recordInLedger,
+    );
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+  }
+
+  /// Settles one receivable in memory, leaving saving and fan-out to the caller
+  /// so a batch pays for them once.
+  Future<void> _applyReceivableReceipt(
+    Receivable rec, {
+    required double receivedAmount,
+    String? accountId,
+    DateTime? receivedDate,
+    bool recordInLedger = true,
+  }) async {
     final date = receivedDate ?? DateTime.now();
     String? txnId;
     if (recordInLedger) {
@@ -1185,9 +1261,6 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       receivedAmount: receivedAmount,
       transactionId: txnId,
     ));
-    safeNotify();
-    await _storage.saveReceivables(_allReceivables);
-    await _notifyDependents();
   }
 
   // ─── Budgeted Expense CRUD ────────────────────────────────────────────────────
@@ -1229,6 +1302,27 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
     DateTime? paidDate,
   }) async {
     final expense = _allExpenses.firstWhere((e) => e.id == expenseId);
+    await _applyExpenseFunding(
+      expense,
+      paidAmount: paidAmount,
+      accountId: accountId,
+      toAccountId: toAccountId,
+      paidDate: paidDate,
+    );
+    safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
+    await _notifyDependents();
+  }
+
+  /// Funds one set-aside in memory, leaving saving and fan-out to the caller so
+  /// a batch pays for them once.
+  Future<void> _applyExpenseFunding(
+    BudgetedExpense expense, {
+    required double paidAmount,
+    required String accountId,
+    String? toAccountId,
+    DateTime? paidDate,
+  }) async {
     final date = paidDate ?? DateTime.now();
 
     String? txnId;
@@ -1260,9 +1354,299 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
       spentAmount: paidAmount,
       transactionId: txnId,
     ));
+  }
+
+  // ─── Batch actions ───────────────────────────────────────────────────────────
+  //
+  // The Bills tab lets you long-press a row to select several at once and act on
+  // the lot. Each method below settles / reverses / deletes every id it is given,
+  // then saves and fans out ONCE — a per-item loop over the single-entry methods
+  // would rewrite storage and reload the dashboard and budget presenters for
+  // every row, which is what made a ten-row selection crawl.
+  //
+  // Every one is tolerant: unknown ids and rows already in the target state are
+  // skipped, and a row the ledger refuses (a liability statement paid from
+  // itself) is counted in [BatchResult.skipped] rather than aborting the rest.
+  // Partial success is reported honestly instead of failing silently.
+
+  /// Accounts eligible to pay *every* bill in [bills] — the intersection of each
+  /// bill's [payerAccountsFor]. A batch payment has one funding account, so the
+  /// picker must only offer accounts that work for the whole selection;
+  /// intersecting is also what keeps a credit-card statement from being paid
+  /// from itself.
+  List<FinancialAccount> payerAccountsForAll(Iterable<Bill> bills) {
+    if (bills.isEmpty) return accounts;
+    var eligible = accounts;
+    for (final bill in bills) {
+      final allowed = payerAccountsFor(bill).map((a) => a.id).toSet();
+      eligible = eligible.where((a) => allowed.contains(a.id)).toList();
+      if (eligible.isEmpty) break;
+    }
+    return eligible;
+  }
+
+  /// The funding account to pre-fill when paying [bills] as one batch: the one
+  /// they all already name, when it can pay all of them, else the first eligible
+  /// account. Null when no single account can pay the whole selection.
+  String? preferredBatchPayerAccountId(Iterable<Bill> bills) {
+    final eligible = payerAccountsForAll(bills);
+    if (eligible.isEmpty) return null;
+    final named = bills.map((b) => b.accountId).toSet();
+    final shared = named.length == 1 ? named.first : null;
+    if (shared != null && eligible.any((a) => a.id == shared)) return shared;
+    return eligible.first.id;
+  }
+
+  /// Marks every still-unpaid bill in [billIds] paid for its own full amount.
+  /// [accountId] funds all of them (ignored, and not required, when
+  /// [recordInLedger] is false).
+  Future<BatchResult> markBillsPaid(
+    Iterable<String> billIds, {
+    String? accountId,
+    DateTime? paidDate,
+    bool recordInLedger = true,
+  }) async {
+    final ids = billIds.toSet();
+    final targets = _allBills.where((b) => ids.contains(b.id) && !b.isPaid);
+    var applied = 0;
+    var skipped = 0;
+    for (final bill in targets.toList()) {
+      try {
+        await _applyBillPayment(
+          bill,
+          paidAmount: bill.amount,
+          accountId: accountId,
+          paidDate: paidDate,
+          recordInLedger: recordInLedger,
+        );
+        await _notifications.cancelBillReminder(bill.id);
+        applied++;
+      } catch (e) {
+        // e.g. a liability statement whose only eligible payer is itself.
+        debugPrint('markBillsPaid: skipped "${bill.name}": $e');
+        skipped++;
+      }
+    }
+    if (applied == 0) return (applied: 0, skipped: skipped);
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    await _checkAllBillsPaidXp();
+    await _notifyDependents();
+    return (applied: applied, skipped: skipped);
+  }
+
+  /// Reopens every paid bill in [billIds]. See [markBillUnpaid] for what
+  /// [removeTransaction] means.
+  Future<BatchResult> markBillsUnpaid(
+    Iterable<String> billIds, {
+    bool removeTransaction = true,
+  }) async {
+    final ids = billIds.toSet();
+    final targets =
+        _allBills.where((b) => ids.contains(b.id) && b.isPaid).toList();
+    if (targets.isEmpty) return (applied: 0, skipped: 0);
+    final reopened = <Bill>[];
+    for (final bill in targets) {
+      reopened.add(
+        await _applyBillReversal(bill, removeTransaction: removeTransaction),
+      );
+    }
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    for (final bill in reopened) {
+      await _syncBillReminder(bill);
+    }
+    await _notifyDependents();
+    return (applied: reopened.length, skipped: 0);
+  }
+
+  /// Deletes every bill in [billIds], returning how many existed.
+  Future<int> deleteBills(Iterable<String> billIds) async {
+    final ids = billIds.toSet();
+    final doomed = _allBills.where((b) => ids.contains(b.id)).toList();
+    if (doomed.isEmpty) return 0;
+    _allBills = _allBills.where((b) => !ids.contains(b.id)).toList();
+    safeNotify();
+    await _storage.saveBills(_allBills);
+    for (final bill in doomed) {
+      await _notifications.cancelBillReminder(bill.id);
+    }
+    await _notifyDependents();
+    return doomed.length;
+  }
+
+  /// Marks every still-owed receivable in [receivableIds] received for its own
+  /// full amount, depositing all of them into [accountId].
+  Future<BatchResult> markReceivablesReceived(
+    Iterable<String> receivableIds, {
+    String? accountId,
+    DateTime? receivedDate,
+    bool recordInLedger = true,
+  }) async {
+    final ids = receivableIds.toSet();
+    final targets = _allReceivables
+        .where((r) => ids.contains(r.id) && !r.isReceived)
+        .toList();
+    if (targets.isEmpty) return (applied: 0, skipped: 0);
+    for (final rec in targets) {
+      await _applyReceivableReceipt(
+        rec,
+        receivedAmount: rec.amount,
+        accountId: accountId,
+        receivedDate: receivedDate,
+        recordInLedger: recordInLedger,
+      );
+    }
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+    return (applied: targets.length, skipped: 0);
+  }
+
+  /// Puts every received receivable in [receivableIds] back to still-owed.
+  Future<BatchResult> markReceivablesUnreceived(
+    Iterable<String> receivableIds, {
+    bool removeTransaction = true,
+  }) async {
+    final ids = receivableIds.toSet();
+    final targets = _allReceivables
+        .where((r) => ids.contains(r.id) && r.isReceived)
+        .toList();
+    if (targets.isEmpty) return (applied: 0, skipped: 0);
+    for (final rec in targets) {
+      await _applyReceivableReversal(rec, removeTransaction: removeTransaction);
+    }
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+    return (applied: targets.length, skipped: 0);
+  }
+
+  /// Deletes every receivable in [receivableIds], returning how many existed.
+  Future<int> deleteReceivables(Iterable<String> receivableIds) async {
+    final ids = receivableIds.toSet();
+    final count = _allReceivables.where((r) => ids.contains(r.id)).length;
+    if (count == 0) return 0;
+    _allReceivables =
+        _allReceivables.where((r) => !ids.contains(r.id)).toList();
+    safeNotify();
+    await _storage.saveReceivables(_allReceivables);
+    await _notifyDependents();
+    return count;
+  }
+
+  /// Funds every still-unfunded set-aside in [expenseIds] for its own allocated
+  /// amount, all out of [accountId].
+  ///
+  /// Destination per row: its own saved [BudgetedExpense.destinationAccountId]
+  /// when it has one and [preferSavedDestination] is set, else [toAccountId] —
+  /// so a batch can honour "this one goes to Maya, that one to the goal jar"
+  /// while still asking once for the rows that never named a destination. A row
+  /// left with no destination (or one equal to the source) is funded as a plain
+  /// outflow, exactly like the single-row flow.
+  Future<BatchResult> markExpensesPaid(
+    Iterable<String> expenseIds, {
+    required String accountId,
+    String? toAccountId,
+    bool preferSavedDestination = true,
+    DateTime? paidDate,
+  }) async {
+    final ids = expenseIds.toSet();
+    final targets =
+        _allExpenses.where((e) => ids.contains(e.id) && !e.isPaid).toList();
+    if (targets.isEmpty) return (applied: 0, skipped: 0);
+    for (final expense in targets) {
+      final saved = preferSavedDestination
+          ? preferredSetAsideDestinationId(expense, fromAccountId: accountId)
+          : null;
+      await _applyExpenseFunding(
+        expense,
+        paidAmount: expense.allocatedAmount,
+        accountId: accountId,
+        toAccountId: saved ?? toAccountId,
+        paidDate: paidDate,
+      );
+    }
     safeNotify();
     await _storage.saveBudgetedExpenses(_allExpenses);
     await _notifyDependents();
+    return (applied: targets.length, skipped: 0);
+  }
+
+  /// Unfunds every funded set-aside in [expenseIds].
+  Future<BatchResult> markExpensesUnpaid(
+    Iterable<String> expenseIds, {
+    bool removeTransaction = true,
+  }) async {
+    final ids = expenseIds.toSet();
+    final targets =
+        _allExpenses.where((e) => ids.contains(e.id) && e.isPaid).toList();
+    if (targets.isEmpty) return (applied: 0, skipped: 0);
+    for (final expense in targets) {
+      await _applyExpenseReversal(expense,
+          removeTransaction: removeTransaction);
+    }
+    safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
+    await _notifyDependents();
+    return (applied: targets.length, skipped: 0);
+  }
+
+  /// Deletes every set-aside in [expenseIds], returning how many existed.
+  Future<int> deleteBudgetedExpenses(Iterable<String> expenseIds) async {
+    final ids = expenseIds.toSet();
+    final count = _allExpenses.where((e) => ids.contains(e.id)).length;
+    if (count == 0) return 0;
+    _allExpenses = _allExpenses.where((e) => !ids.contains(e.id)).toList();
+    safeNotify();
+    await _storage.saveBudgetedExpenses(_allExpenses);
+    await _notifyDependents();
+    return count;
+  }
+
+  // ─── Set-aside destinations ──────────────────────────────────────────────────
+
+  /// Accounts a set-aside can be funded *from* — active and spendable, since
+  /// funding debits one.
+  List<FinancialAccount> get setAsideFundingAccounts =>
+      _ledger.accounts.where((a) => a.isActive && a.isLiquid).toList();
+
+  /// Accounts a set-aside can be parked *into*, savings/goal pockets first —
+  /// the "BPI → Maya" destination. Liabilities are excluded: money set aside is
+  /// still yours, so parking it can never mean paying down a card.
+  ///
+  /// Lives here (rather than in each sheet) so mobile, web, and the batch flow
+  /// offer the same list; they had already drifted once over the same question
+  /// for receivables.
+  List<FinancialAccount> get setAsideDestinationAccounts {
+    final list =
+        _ledger.accounts.where((a) => a.isActive && !a.isLiability).toList()
+          ..sort((a, b) {
+            int rank(FinancialAccount x) => switch (x.category) {
+                  AccountCategory.savings => 0,
+                  AccountCategory.goal => 1,
+                  AccountCategory.timeDeposit => 2,
+                  AccountCategory.investment => 3,
+                  _ => 4,
+                };
+            return rank(a).compareTo(rank(b));
+          });
+    return list;
+  }
+
+  /// The destination to pre-fill when funding [expense]: the one saved on it,
+  /// when that account is still eligible and isn't the funding source.
+  ///
+  /// Null means "no decision on file" — the funding sheet asks rather than
+  /// guessing. It used to auto-pick the first savings account, which silently
+  /// moved money somewhere the user never named.
+  String? preferredSetAsideDestinationId(
+    BudgetedExpense expense, {
+    String? fromAccountId,
+  }) {
+    final saved = expense.destinationAccountId;
+    if (saved == null || saved == fromAccountId) return null;
+    return setAsideDestinationAccounts.any((a) => a.id == saved) ? saved : null;
   }
 
   // ─── Private helpers ──────────────────────────────────────────────────────────
@@ -1807,6 +2191,7 @@ class BillsReceivablesPresenter extends ChangeNotifier with SafeNotifier {
           categoryId: e.categoryId,
           note: e.note,
           accountId: e.accountId,
+          destinationAccountId: e.destinationAccountId,
           isRecurring: e.isRecurring,
           recurrenceType: e.recurrenceType,
         ));

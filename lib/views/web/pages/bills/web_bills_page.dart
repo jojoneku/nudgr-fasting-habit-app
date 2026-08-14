@@ -1916,35 +1916,29 @@ class _BudgetedExpenseRow extends StatelessWidget {
     // funding source and lands in a savings/goal destination. The dialog lets you
     // pick both (plus a "spend instead" option for one-off plans), mirroring the
     // mobile flow.
-    final payers =
-        presenter.accounts.where((a) => a.isActive && a.isLiquid).toList();
+    final payers = presenter.setAsideFundingAccounts;
     if (payers.isEmpty) {
       AppToast.error(context, 'Add an account before funding.');
       return;
     }
 
     // Destinations you can park money in — asset accounts, savings/goals first.
-    final destinations =
-        presenter.accounts.where((a) => a.isActive && !a.isLiability).toList()
-          ..sort((a, b) {
-            int rank(FinancialAccount x) => switch (x.category) {
-                  AccountCategory.savings => 0,
-                  AccountCategory.goal => 1,
-                  AccountCategory.timeDeposit => 2,
-                  AccountCategory.investment => 3,
-                  _ => 4,
-                };
-            return rank(a).compareTo(rank(b));
-          });
+    final destinations = presenter.setAsideDestinationAccounts;
 
     // Source defaults to the assigned account (if still valid), else first liquid.
     String? fromId = payers.any((a) => a.id == expense.accountId)
         ? expense.accountId
         : payers.first.id;
-    // Destination defaults to the first savings/goal account that isn't the
-    // source; null means "spend it" (a plain outflow, no transfer).
-    String? toId =
-        destinations.where((a) => a.id != fromId).map((a) => a.id).firstOrNull;
+    // Destination comes from the set-aside itself ("₱5k from BPI to Maya").
+    // With none on file the field starts empty and Fund waits for an answer,
+    // rather than auto-picking a savings account the user never named.
+    String? toId = presenter.preferredSetAsideDestinationId(expense,
+        fromAccountId: fromId);
+    // Null is a real answer here ("spend it"), so the decision is tracked apart
+    // from the value. Sentinel rather than null in the dropdown, for the same
+    // reason.
+    const spendIt = '__spend__';
+    var destinationChosen = toId != null;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1973,16 +1967,22 @@ class _BudgetedExpenseRow extends StatelessWidget {
               ),
               const SizedBox(height: WebInsets.md),
               DropdownButtonFormField<String>(
-                initialValue: toId,
-                decoration: const InputDecoration(labelText: 'Set aside into'),
+                initialValue: destinationChosen ? (toId ?? spendIt) : null,
+                decoration: const InputDecoration(
+                  labelText: 'Set aside into',
+                  hintText: 'Choose where it goes',
+                ),
                 items: [
                   const DropdownMenuItem<String>(
-                      value: null, child: Text('Spend it (no transfer)')),
+                      value: spendIt, child: Text('Spend it (no transfer)')),
                   for (final a in destinations)
                     if (a.id != fromId)
                       DropdownMenuItem(value: a.id, child: Text(a.name)),
                 ],
-                onChanged: (v) => setLocalState(() => toId = v),
+                onChanged: (v) => setLocalState(() {
+                  toId = v == spendIt ? null : v;
+                  destinationChosen = true;
+                }),
               ),
             ],
           ),
@@ -1991,7 +1991,9 @@ class _BudgetedExpenseRow extends StatelessWidget {
                 onPressed: () => Navigator.pop(ctx, false),
                 child: const Text('Cancel')),
             FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
+                // Where the money is going has to be settled before it moves.
+                onPressed:
+                    destinationChosen ? () => Navigator.pop(ctx, true) : null,
                 child: const Text('Fund')),
           ],
         ),
@@ -2040,6 +2042,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
   late SetAsideType _type;
   String? _selectedCategoryId;
   String? _selectedAccountId;
+  String? _selectedDestinationId;
   bool _isRecurring = false;
   RecurrenceType _recurrenceType = RecurrenceType.monthly;
   bool _isSubmitting = false;
@@ -2058,6 +2061,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
       _noteController.text = e.note ?? '';
       _selectedCategoryId = e.categoryId.isEmpty ? null : e.categoryId;
       _selectedAccountId = e.accountId;
+      _selectedDestinationId = e.destinationAccountId;
       _isRecurring = e.isRecurring;
       _recurrenceType = e.recurrenceType ?? RecurrenceType.monthly;
     }
@@ -2099,6 +2103,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
           accountId: _selectedAccountId,
+          destinationAccountId: _selectedDestinationId,
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
@@ -2110,6 +2115,7 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
           categoryId: _selectedCategoryId ?? '',
           note: note.isEmpty ? null : note,
           accountId: _selectedAccountId,
+          destinationAccountId: _selectedDestinationId,
           isRecurring: _isRecurring,
           recurrenceType: _isRecurring ? _recurrenceType : null,
         ));
@@ -2129,8 +2135,9 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
     final categories = _expenseCategories;
     // Set-asides are funded out of spendable cash, so only offer liquid
     // accounts — funding debits one of these (mirrors the mark-funded flow).
-    final liquidAccounts = widget.presenter.accounts
-        .where((a) => a.isActive && a.isLiquid)
+    final liquidAccounts = widget.presenter.setAsideFundingAccounts;
+    final destinationAccounts = widget.presenter.setAsideDestinationAccounts
+        .where((a) => a.id != _selectedAccountId)
         .toList();
     final isEdit = widget.existing != null;
 
@@ -2201,7 +2208,34 @@ class _BudgetedExpenseDialogState extends State<_BudgetedExpenseDialog> {
                       for (final a in liquidAccounts)
                         DropdownMenuItem(value: a.id, child: Text(a.name)),
                     ],
-                    onChanged: (v) => setState(() => _selectedAccountId = v),
+                    onChanged: (v) => setState(() {
+                      _selectedAccountId = v;
+                      // The source can't also be the destination.
+                      if (_selectedDestinationId == v) {
+                        _selectedDestinationId = null;
+                      }
+                    }),
+                  ),
+                ],
+                if (destinationAccounts.isNotEmpty) ...[
+                  const SizedBox(height: WebInsets.md),
+                  DropdownButtonFormField<String>(
+                    initialValue: destinationAccounts
+                            .any((a) => a.id == _selectedDestinationId)
+                        ? _selectedDestinationId
+                        : null,
+                    decoration: const InputDecoration(
+                        labelText: 'Set aside into (optional)'),
+                    items: [
+                      // Naming it here decides "₱5,000 from BPI to Maya" once;
+                      // leaving it blank means the funding dialog asks.
+                      const DropdownMenuItem<String>(
+                          value: null, child: Text('Decide when funding')),
+                      for (final a in destinationAccounts)
+                        DropdownMenuItem(value: a.id, child: Text(a.name)),
+                    ],
+                    onChanged: (v) =>
+                        setState(() => _selectedDestinationId = v),
                   ),
                 ],
                 if (categories.isNotEmpty) ...[
