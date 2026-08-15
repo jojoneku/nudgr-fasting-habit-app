@@ -30,10 +30,120 @@ final DateFormat _kMonthDayFmt = DateFormat('MMM d');
 /// reference is the visual target, the palette is ours.
 class WebLedgerPage extends StatefulWidget {
   final LedgerPresenter presenter;
-  const WebLedgerPage({super.key, required this.presenter});
+
+  /// Filter/sort state, owned above the page so leaving the Ledger destination
+  /// and coming back doesn't silently drop the filters the user set. Optional:
+  /// without one the page keeps a private set, as it always did.
+  final WebLedgerFilters? filters;
+
+  const WebLedgerPage({super.key, required this.presenter, this.filters});
 
   @override
   State<WebLedgerPage> createState() => _WebLedgerPageState();
+}
+
+/// Ledger table filters + sort + search.
+///
+/// Lives outside the page widget for two reasons: it survives navigation (page
+/// state did not), and accounts/categories are multi-select here just as they
+/// are on mobile — the web table used to allow exactly one of each, so the same
+/// filter could not be expressed on both platforms.
+class WebLedgerFilters extends ChangeNotifier {
+  final Set<String> accountIds = <String>{};
+  final Set<String> categoryIds = <String>{};
+  WebLedgerType type = WebLedgerType.all;
+  DateTime? fromDate;
+  DateTime? toDate;
+  WebLedgerSortKey? sortKey; // null = presenter default (newest first)
+  int sortDir = -1;
+  String query = '';
+
+  /// A search term or a date range asks a question about the whole ledger, not
+  /// about one month — the grid widens its scope to all history when either is
+  /// set, and says so.
+  bool get spansAllMonths =>
+      query.isNotEmpty || fromDate != null || toDate != null;
+
+  int get activeCount => [
+        accountIds.isNotEmpty,
+        categoryIds.isNotEmpty,
+        type != WebLedgerType.all,
+        fromDate != null || toDate != null,
+        sortKey != null,
+      ].where((b) => b).length;
+
+  /// True when anything at all is narrowing the grid — used to tell "you have
+  /// no transactions" apart from "your filters hid them".
+  bool get isNarrowed => activeCount > 0 || query.isNotEmpty;
+
+  void toggleAccount(String? id) {
+    if (id == null) {
+      accountIds.clear();
+    } else if (!accountIds.remove(id)) {
+      accountIds.add(id);
+    }
+    notifyListeners();
+  }
+
+  void toggleCategory(String? id) {
+    if (id == null) {
+      categoryIds.clear();
+    } else if (!categoryIds.remove(id)) {
+      categoryIds.add(id);
+    }
+    notifyListeners();
+  }
+
+  void setType(WebLedgerType v) {
+    type = v;
+    notifyListeners();
+  }
+
+  void setFromDate(DateTime? v) {
+    fromDate = v;
+    // Keep the range coherent rather than silently returning nothing.
+    if (v != null && toDate != null && toDate!.isBefore(v)) toDate = v;
+    notifyListeners();
+  }
+
+  void setToDate(DateTime? v) {
+    toDate = v;
+    if (v != null && fromDate != null && fromDate!.isAfter(v)) fromDate = v;
+    notifyListeners();
+  }
+
+  void setSort(WebLedgerSortOption? opt) {
+    sortKey = opt?.key;
+    sortDir = opt?.dir ?? -1;
+    notifyListeners();
+  }
+
+  void toggleHeaderSort(WebLedgerSortKey key) {
+    if (sortKey == key) {
+      sortDir = -sortDir;
+    } else {
+      sortKey = key;
+      sortDir = 1;
+    }
+    notifyListeners();
+  }
+
+  void setQuery(String v) {
+    if (v == query) return;
+    query = v;
+    notifyListeners();
+  }
+
+  void clear() {
+    accountIds.clear();
+    categoryIds.clear();
+    type = WebLedgerType.all;
+    fromDate = null;
+    toDate = null;
+    sortKey = null;
+    sortDir = -1;
+    notifyListeners();
+  }
 }
 
 /// One enriched, display-ready ledger row.
@@ -43,24 +153,32 @@ typedef _Row = ({
   double accountBalance,
 });
 
-enum _LedgerType { all, inflow, outflow }
+enum WebLedgerType { all, inflow, outflow }
 
-enum _SortKey { date, account, description, category, inflow, outflow, amount }
-
-/// Preset sort options shown in the Filters & Sort popover.
-class _SortOption {
-  final String label;
-  final _SortKey key;
-  final int dir; // 1 asc, -1 desc
-  const _SortOption(this.label, this.key, this.dir);
+enum WebLedgerSortKey {
+  date,
+  account,
+  description,
+  category,
+  inflow,
+  outflow,
+  amount
 }
 
-const _kSortOptions = <_SortOption>[
-  _SortOption('Newest first', _SortKey.date, -1),
-  _SortOption('Oldest first', _SortKey.date, 1),
-  _SortOption('Highest outflow', _SortKey.outflow, -1),
-  _SortOption('Highest inflow', _SortKey.inflow, -1),
-  _SortOption('Largest amount', _SortKey.amount, -1),
+/// Preset sort options shown in the Filters & Sort popover.
+class WebLedgerSortOption {
+  final String label;
+  final WebLedgerSortKey key;
+  final int dir; // 1 asc, -1 desc
+  const WebLedgerSortOption(this.label, this.key, this.dir);
+}
+
+const _kSortOptions = <WebLedgerSortOption>[
+  WebLedgerSortOption('Newest first', WebLedgerSortKey.date, -1),
+  WebLedgerSortOption('Oldest first', WebLedgerSortKey.date, 1),
+  WebLedgerSortOption('Highest outflow', WebLedgerSortKey.outflow, -1),
+  WebLedgerSortOption('Highest inflow', WebLedgerSortKey.inflow, -1),
+  WebLedgerSortOption('Largest amount', WebLedgerSortKey.amount, -1),
 ];
 
 // Fixed, non-resizable column widths (px). The selection checkbox and the
@@ -125,16 +243,13 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   final _gridVScroll =
       ScrollController(); // vertical rows scroll (sticky header)
   final _col = _ColWidths(); // drag-resizable column widths
-  String _query = '';
 
-  // Filters & sort (all transient, View-side — never mutate presenter state).
-  String? _fAccountId; // null = all
-  String? _fCategoryId; // null = all
-  _LedgerType _fType = _LedgerType.all;
-  DateTime? _fromDate;
-  DateTime? _toDate;
-  _SortKey? _sortKey; // null = presenter default (newest first)
-  int _sortDir = -1;
+  /// Filters & sort — View-side (never mutates presenter state), but owned
+  /// above the page when the shell supplies one so they survive navigation.
+  late final WebLedgerFilters _f = widget.filters ?? WebLedgerFilters();
+  bool get _ownsFilters => widget.filters == null;
+
+  String get _query => _f.query;
 
   // Selection for bulk delete.
   final Set<String> _selected = <String>{};
@@ -155,7 +270,10 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   void initState() {
     super.initState();
     _draftDate = DateTime.now();
+    // Restore a query carried over from a previous visit to this destination.
+    _searchController.text = _f.query;
     _searchController.addListener(_onSearchChanged);
+    _f.addListener(_onFiltersChanged);
   }
 
   @override
@@ -164,7 +282,13 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     _searchController.dispose();
     _gridHScroll.dispose();
     _gridVScroll.dispose();
+    _f.removeListener(_onFiltersChanged);
+    if (_ownsFilters) _f.dispose();
     super.dispose();
+  }
+
+  void _onFiltersChanged() {
+    if (mounted) setState(() {});
   }
 
   Timer? _searchDebounce;
@@ -174,9 +298,8 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     // the filter only re-runs once typing pauses (~220ms). (Plan 052 B2/P2)
     _searchDebounce?.cancel();
     _searchDebounce = Timer(const Duration(milliseconds: 220), () {
-      final next = _searchController.text.trim().toLowerCase();
-      if (next == _query || !mounted) return;
-      setState(() => _query = next);
+      if (!mounted) return;
+      _f.setQuery(_searchController.text.trim().toLowerCase());
     });
   }
 
@@ -214,20 +337,24 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
 
   bool _matches(_Row r) {
     final t = r.txn;
-    if (_fAccountId != null && t.accountId != _fAccountId) return false;
-    if (_fCategoryId != null && t.categoryId != _fCategoryId) return false;
-    switch (_fType) {
-      case _LedgerType.inflow:
-        if (t.type != TransactionType.inflow) return false;
-      case _LedgerType.outflow:
-        if (t.type != TransactionType.outflow) return false;
-      case _LedgerType.all:
-        break;
-    }
-    if (_fromDate != null && t.date.isBefore(_dayStart(_fromDate!))) {
+    if (_f.accountIds.isNotEmpty && !_f.accountIds.contains(t.accountId)) {
       return false;
     }
-    if (_toDate != null && t.date.isAfter(_dayEnd(_toDate!))) return false;
+    if (_f.categoryIds.isNotEmpty && !_f.categoryIds.contains(t.categoryId)) {
+      return false;
+    }
+    switch (_f.type) {
+      case WebLedgerType.inflow:
+        if (t.type != TransactionType.inflow) return false;
+      case WebLedgerType.outflow:
+        if (t.type != TransactionType.outflow) return false;
+      case WebLedgerType.all:
+        break;
+    }
+    if (_f.fromDate != null && t.date.isBefore(_dayStart(_f.fromDate!))) {
+      return false;
+    }
+    if (_f.toDate != null && t.date.isAfter(_dayEnd(_f.toDate!))) return false;
     if (_query.isNotEmpty) {
       final cat = _categoryOf(t.categoryId)?.name.toLowerCase() ?? '';
       final acct = _accountName(t.accountId).toLowerCase();
@@ -262,25 +389,25 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   List<_Row> _sorted(List<_Row> rows) {
     // Default ordering is newest-first — the most recent entry sits at the top,
     // right below the draft add-row. Explicit sort presets still override via
-    // [_sortKey]/[_sortDir]. (Ledger UX overhaul PR2)
-    final key = _sortKey ?? _SortKey.date;
-    final dir = _sortKey == null ? -1 : _sortDir;
+    // the filter model's sortKey/sortDir. (Ledger UX overhaul PR2)
+    final key = _f.sortKey ?? WebLedgerSortKey.date;
+    final dir = _f.sortKey == null ? -1 : _f.sortDir;
     Comparable keyOf(_Row r) {
       final t = r.txn;
       switch (key) {
-        case _SortKey.date:
+        case WebLedgerSortKey.date:
           return t.date.millisecondsSinceEpoch;
-        case _SortKey.account:
+        case WebLedgerSortKey.account:
           return _accountName(t.accountId).toLowerCase();
-        case _SortKey.description:
+        case WebLedgerSortKey.description:
           return t.description.toLowerCase();
-        case _SortKey.category:
+        case WebLedgerSortKey.category:
           return (_categoryOf(t.categoryId)?.name ?? '').toLowerCase();
-        case _SortKey.inflow:
+        case WebLedgerSortKey.inflow:
           return t.type == TransactionType.inflow ? t.amount : 0.0;
-        case _SortKey.outflow:
+        case WebLedgerSortKey.outflow:
           return t.type == TransactionType.outflow ? t.amount : 0.0;
-        case _SortKey.amount:
+        case WebLedgerSortKey.amount:
           return t.amount;
       }
     }
@@ -290,34 +417,16 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     return out;
   }
 
-  void _toggleHeaderSort(_SortKey key) {
-    setState(() {
-      if (_sortKey == key) {
-        _sortDir = -_sortDir;
-      } else {
-        _sortKey = key;
-        _sortDir = 1;
-      }
-    });
+  void _toggleHeaderSort(WebLedgerSortKey key) => _f.toggleHeaderSort(key);
+
+  int get _activeFilterCount => _f.activeCount;
+
+  void _clearFilters() {
+    _searchController.clear();
+    _f
+      ..clear()
+      ..setQuery('');
   }
-
-  int get _activeFilterCount => [
-        _fAccountId != null,
-        _fCategoryId != null,
-        _fType != _LedgerType.all,
-        _fromDate != null || _toDate != null,
-        _sortKey != null,
-      ].where((b) => b).length;
-
-  void _clearFilters() => setState(() {
-        _fAccountId = null;
-        _fCategoryId = null;
-        _fType = _LedgerType.all;
-        _fromDate = null;
-        _toDate = null;
-        _sortKey = null;
-        _sortDir = -1;
-      });
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -359,13 +468,24 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     ));
   }
 
+  /// Deleting one row goes straight through, with an Undo — the same contract
+  /// as the phone's swipe-to-delete. It previously showed a modal claiming the
+  /// delete "cannot be undone", which was both a different contract from mobile
+  /// and untrue: the presenter can restore the exact records it removed.
   Future<void> _deleteRow(TransactionRecord t) async {
-    final ok = await _confirmDelete(1);
-    if (!ok || !mounted) return;
     setState(() => _selected.remove(t.id));
-    _p.deleteTransactionOrGroup(t.id);
+    final removed = await _p.deleteTransactionOrGroup(t.id);
+    if (removed.isEmpty || !mounted) return;
+    _offerUndo(
+      removed.length > 1
+          ? 'Deleted transfer "${t.description}"'
+          : 'Deleted "${t.description}"',
+      removed,
+    );
   }
 
+  /// Bulk delete still confirms first — one keystroke wiping many rows deserves
+  /// a beat — but the copy no longer overstates it, and Undo is offered after.
   Future<void> _deleteSelected() async {
     final ids = _selected.toSet();
     if (ids.isEmpty) return;
@@ -373,19 +493,37 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     if (!ok || !mounted) return;
     setState(_selected.clear);
     // One batched mutation + persist instead of N fire-and-forget writes. (C8)
-    _p.deleteTransactions(ids);
+    final removed = await _p.deleteTransactions(ids);
+    if (removed.isEmpty || !mounted) return;
+    _offerUndo('Deleted ${removed.length} transactions', removed);
   }
 
-  /// Confirms a destructive delete of [count] transaction(s). (Plan 052 U2)
+  void _offerUndo(String message, List<TransactionRecord> removed) {
+    final cs = Theme.of(context).colorScheme;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        behavior: SnackBarBehavior.floating,
+        width: 420,
+        duration: const Duration(seconds: 6),
+        content: Text(message),
+        action: SnackBarAction(
+          label: 'Undo',
+          textColor: cs.inversePrimary,
+          onPressed: () => _p.restoreTransactions(removed),
+        ),
+      ));
+  }
+
+  /// Confirms a destructive bulk delete of [count] transactions. (Plan 052 U2)
   Future<bool> _confirmDelete(int count) async {
-    final noun = count == 1 ? 'this transaction' : '$count transactions';
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete transactions?'),
         content: Text(
-          'Permanently delete $noun? This also reverses the affected '
-          'account balances and cannot be undone.',
+          'Delete $count transactions? This also reverses the affected '
+          'account balances. You can undo it straight afterwards.',
         ),
         actions: [
           TextButton(
@@ -495,7 +633,12 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    final all = _p.ledgerSpreadsheetRows;
+    // A search term or a date range is a question about the whole ledger. Kept
+    // month-scoped, both silently returned nothing whenever the answer lived in
+    // another month — and the empty grid read as "you have no such rows".
+    final spansAll = _f.spansAllMonths;
+    final all =
+        spansAll ? _p.ledgerSpreadsheetRowsAllMonths : _p.ledgerSpreadsheetRows;
     final rows = _sorted(all.where(_matches).toList());
 
     // The page is now focused purely on the ledger grid — the inflow/outflow/
@@ -508,42 +651,38 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
           children: [
             _Toolbar(
               monthLabel: monthLabel(_p.selectedMonth),
+              spansAllMonths: spansAll,
+              matchCount: rows.length,
               onPrevMonth: () => _p.setMonth(previousMonth(_p.selectedMonth)),
               onNextMonth: () => _p.setMonth(nextMonth(_p.selectedMonth)),
               searchController: _searchController,
               accounts: _liquidAccounts,
               categories: _p.categories,
-              accountId: _fAccountId,
-              categoryId: _fCategoryId,
-              type: _fType,
-              fromDate: _fromDate,
-              toDate: _toDate,
-              sortKey: _sortKey,
-              sortDir: _sortDir,
+              accountIds: _f.accountIds,
+              categoryIds: _f.categoryIds,
+              type: _f.type,
+              fromDate: _f.fromDate,
+              toDate: _f.toDate,
+              sortKey: _f.sortKey,
+              sortDir: _f.sortDir,
               activeCount: _activeFilterCount,
               accountName: _accountName,
               categoryName: (id) => _categoryOf(id)?.name ?? '—',
-              onAccount: (v) => setState(() => _fAccountId = v),
-              onCategory: (v) => setState(() => _fCategoryId = v),
-              onType: (v) => setState(() => _fType = v),
-              onFromDate: (v) => setState(() => _fromDate = v),
-              onToDate: (v) => setState(() => _toDate = v),
-              onSort: (opt) => setState(() {
-                if (opt == null) {
-                  _sortKey = null;
-                  _sortDir = -1;
-                } else {
-                  _sortKey = opt.key;
-                  _sortDir = opt.dir;
-                }
-              }),
+              onAccount: _f.toggleAccount,
+              onCategory: _f.toggleCategory,
+              onType: _f.setType,
+              onFromDate: _f.setFromDate,
+              onToDate: _f.setToDate,
+              onSort: _f.setSort,
               onClear: _clearFilters,
               onAdd: () => _openAddDialog(),
             ),
             const SizedBox(height: WebInsets.xl),
             // The table fills the remaining viewport height and owns its own
             // scrolling, so the toolbar above stays pinned.
-            Expanded(child: _buildTableCard(context, rows)),
+            Expanded(
+              child: _buildTableCard(context, rows, narrowed: _f.isNarrowed),
+            ),
           ],
         ),
         // Natural-language Quick Add — a floating button anchored to the
@@ -572,7 +711,11 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
     );
   }
 
-  Widget _buildTableCard(BuildContext context, List<_Row> rows) {
+  Widget _buildTableCard(
+    BuildContext context,
+    List<_Row> rows, {
+    required bool narrowed,
+  }) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -653,8 +796,8 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                               _GridHeader(
                                 descWidth: descW,
                                 widths: _col,
-                                sortKey: _sortKey,
-                                sortDir: _sortDir,
+                                sortKey: _f.sortKey,
+                                sortDir: _f.sortDir,
                                 allSelected: rows.isNotEmpty &&
                                     rows.every(
                                       (r) => _selected.contains(r.txn.id),
@@ -722,6 +865,8 @@ class _WebLedgerPageState extends State<WebLedgerPage> {
                                         _EmptyGridHint(
                                           hasAccounts:
                                               _liquidAccounts.isNotEmpty,
+                                          narrowed: narrowed,
+                                          onClearFilters: _clearFilters,
                                         ),
                                       for (var i = 0; i < rows.length; i++)
                                         _EditableRow(
@@ -814,39 +959,47 @@ DateTime _dayEnd(DateTime d) => DateTime(d.year, d.month, d.day, 23, 59, 59);
 
 class _Toolbar extends StatelessWidget {
   final String monthLabel;
+
+  /// True while a search term or date range widens the grid past the selected
+  /// month — the month stepper is then not what's bounding the results, and the
+  /// toolbar says so rather than leaving the month label looking authoritative.
+  final bool spansAllMonths;
+  final int matchCount;
   final VoidCallback onPrevMonth;
   final VoidCallback onNextMonth;
   final TextEditingController searchController;
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
-  final String? accountId;
-  final String? categoryId;
-  final _LedgerType type;
+  final Set<String> accountIds;
+  final Set<String> categoryIds;
+  final WebLedgerType type;
   final DateTime? fromDate;
   final DateTime? toDate;
-  final _SortKey? sortKey;
+  final WebLedgerSortKey? sortKey;
   final int sortDir;
   final int activeCount;
   final String Function(String?) accountName;
   final String Function(String?) categoryName;
   final ValueChanged<String?> onAccount;
   final ValueChanged<String?> onCategory;
-  final ValueChanged<_LedgerType> onType;
+  final ValueChanged<WebLedgerType> onType;
   final ValueChanged<DateTime?> onFromDate;
   final ValueChanged<DateTime?> onToDate;
-  final ValueChanged<_SortOption?> onSort;
+  final ValueChanged<WebLedgerSortOption?> onSort;
   final VoidCallback onClear;
   final VoidCallback onAdd;
 
   const _Toolbar({
     required this.monthLabel,
+    required this.spansAllMonths,
+    required this.matchCount,
     required this.onPrevMonth,
     required this.onNextMonth,
     required this.searchController,
     required this.accounts,
     required this.categories,
-    required this.accountId,
-    required this.categoryId,
+    required this.accountIds,
+    required this.categoryIds,
     required this.type,
     required this.fromDate,
     required this.toDate,
@@ -865,7 +1018,7 @@ class _Toolbar extends StatelessWidget {
     required this.onAdd,
   });
 
-  _SortOption? get _activeSortOption {
+  WebLedgerSortOption? get _activeSortOption {
     for (final o in _kSortOptions) {
       if (o.key == sortKey && o.dir == sortDir) return o;
     }
@@ -886,20 +1039,22 @@ class _Toolbar extends StatelessWidget {
         _activeSortOption?.label ?? (sortKey != null ? 'Custom sort' : null);
 
     final chips = <Widget>[
-      if (accountId != null)
+      // One chip per selected account/category — picking a second no longer
+      // replaces the first, matching mobile's multi-select filters.
+      for (final id in accountIds)
         _ActiveChip(
-          label: accountName(accountId),
-          onClear: () => onAccount(null),
+          label: accountName(id),
+          onClear: () => onAccount(id),
         ),
-      if (categoryId != null)
+      for (final id in categoryIds)
         _ActiveChip(
-          label: categoryName(categoryId),
-          onClear: () => onCategory(null),
+          label: categoryName(id),
+          onClear: () => onCategory(id),
         ),
-      if (type != _LedgerType.all)
+      if (type != WebLedgerType.all)
         _ActiveChip(
-          label: type == _LedgerType.inflow ? 'Inflow only' : 'Outflow only',
-          onClear: () => onType(_LedgerType.all),
+          label: type == WebLedgerType.inflow ? 'Inflow only' : 'Outflow only',
+          onClear: () => onType(WebLedgerType.all),
         ),
       if (dateLabel != null)
         _ActiveChip(
@@ -923,25 +1078,36 @@ class _Toolbar extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Month stepper — page back/forward through months.
+        // Month stepper — page back/forward through months. Dimmed while a
+        // search or date range is spanning all months: it isn't what bounds the
+        // results then, and leaving it looking authoritative was the whole
+        // reason a cross-month search read as "no such transactions".
         IconButton(
-          onPressed: onPrevMonth,
+          onPressed: spansAllMonths ? null : onPrevMonth,
           icon: const Icon(Icons.chevron_left_rounded),
           tooltip: 'Previous month',
           visualDensity: VisualDensity.compact,
         ),
         Text(
-          monthLabel,
+          spansAllMonths ? 'All months' : monthLabel,
           style: Theme.of(
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
         ),
         IconButton(
-          onPressed: onNextMonth,
+          onPressed: spansAllMonths ? null : onNextMonth,
           icon: const Icon(Icons.chevron_right_rounded),
           tooltip: 'Next month',
           visualDensity: VisualDensity.compact,
         ),
+        if (spansAllMonths) ...[
+          const SizedBox(width: WebInsets.sm),
+          _ScopeNote(
+            label: matchCount == 1
+                ? '1 match across all months'
+                : '$matchCount matches across all months',
+          ),
+        ],
         const SizedBox(width: WebInsets.md),
         Expanded(
           child: Wrap(
@@ -955,8 +1121,8 @@ class _Toolbar extends StatelessWidget {
         _FiltersAndSort(
           accounts: accounts,
           categories: categories,
-          accountId: accountId,
-          categoryId: categoryId,
+          accountIds: accountIds,
+          categoryIds: categoryIds,
           type: type,
           fromDate: fromDate,
           toDate: toDate,
@@ -976,6 +1142,38 @@ class _Toolbar extends StatelessWidget {
         const SizedBox(width: WebInsets.sm),
         _AddButton(onPressed: onAdd),
       ],
+    );
+  }
+}
+
+/// Quiet pill telling the user the grid has widened past the selected month.
+class _ScopeNote extends StatelessWidget {
+  final String label;
+  const _ScopeNote({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: WebInsets.md, vertical: WebInsets.xs),
+      decoration: BoxDecoration(
+        color: cs.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.travel_explore_rounded, size: 14, color: cs.primary),
+          const SizedBox(width: WebInsets.xs),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall
+                ?.copyWith(color: cs.primary, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1038,27 +1236,29 @@ class _AddButton extends StatelessWidget {
 class _FiltersAndSort extends StatefulWidget {
   final List<FinancialAccount> accounts;
   final List<FinanceCategory> categories;
-  final String? accountId;
-  final String? categoryId;
-  final _LedgerType type;
+  final Set<String> accountIds;
+  final Set<String> categoryIds;
+  final WebLedgerType type;
   final DateTime? fromDate;
   final DateTime? toDate;
-  final _SortKey? sortKey;
+  final WebLedgerSortKey? sortKey;
   final int sortDir;
   final int activeCount;
+
+  /// Toggles one account/category in the multi-select; null clears that filter.
   final ValueChanged<String?> onAccount;
   final ValueChanged<String?> onCategory;
-  final ValueChanged<_LedgerType> onType;
+  final ValueChanged<WebLedgerType> onType;
   final ValueChanged<DateTime?> onFromDate;
   final ValueChanged<DateTime?> onToDate;
-  final ValueChanged<_SortOption?> onSort;
+  final ValueChanged<WebLedgerSortOption?> onSort;
   final VoidCallback onClear;
 
   const _FiltersAndSort({
     required this.accounts,
     required this.categories,
-    required this.accountId,
-    required this.categoryId,
+    required this.accountIds,
+    required this.categoryIds,
     required this.type,
     required this.fromDate,
     required this.toDate,
@@ -1082,7 +1282,7 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
   final _controller = OverlayPortalController();
   final _link = LayerLink();
 
-  _SortOption? get _activeSortOption {
+  WebLedgerSortOption? get _activeSortOption {
     for (final o in _kSortOptions) {
       if (o.key == widget.sortKey && o.dir == widget.sortDir) return o;
     }
@@ -1204,11 +1404,17 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Multi-select: picking an entry toggles it rather than
+                    // replacing the previous pick, so several accounts (or
+                    // categories) can be filtered at once as on mobile. The
+                    // selection reads back as removable chips in the toolbar.
                     _FilterRow(
-                      label: 'Account',
+                      label: 'Accounts',
                       child: WebSearchableDropdown<String?>(
-                        value: widget.accountId,
-                        hintText: 'All accounts',
+                        value: null,
+                        hintText: widget.accountIds.isEmpty
+                            ? 'All accounts'
+                            : '${widget.accountIds.length} selected — add another',
                         entries: [
                           const WebDropdownEntry<String?>(
                             value: null,
@@ -1217,7 +1423,9 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                           ...widget.accounts.map(
                             (a) => WebDropdownEntry<String?>(
                               value: a.id,
-                              label: a.name,
+                              label: widget.accountIds.contains(a.id)
+                                  ? '✓ ${a.name}'
+                                  : a.name,
                             ),
                           ),
                         ],
@@ -1226,10 +1434,12 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                     ),
                     const SizedBox(height: WebInsets.md),
                     _FilterRow(
-                      label: 'Category',
+                      label: 'Categories',
                       child: WebSearchableDropdown<String?>(
-                        value: widget.categoryId,
-                        hintText: 'All categories',
+                        value: null,
+                        hintText: widget.categoryIds.isEmpty
+                            ? 'All categories'
+                            : '${widget.categoryIds.length} selected — add another',
                         entries: [
                           const WebDropdownEntry<String?>(
                             value: null,
@@ -1238,7 +1448,9 @@ class _FiltersAndSortState extends State<_FiltersAndSort> {
                           ...widget.categories.map(
                             (c) => WebDropdownEntry<String?>(
                               value: c.id,
-                              label: c.name,
+                              label: widget.categoryIds.contains(c.id)
+                                  ? '✓ ${c.name}'
+                                  : c.name,
                             ),
                           ),
                         ],
@@ -1408,8 +1620,8 @@ class _PanelDropdown<T> extends StatelessWidget {
 }
 
 class _TypeSegmented extends StatelessWidget {
-  final _LedgerType value;
-  final ValueChanged<_LedgerType> onChanged;
+  final WebLedgerType value;
+  final ValueChanged<WebLedgerType> onChanged;
   const _TypeSegmented({required this.value, required this.onChanged});
 
   @override
@@ -1425,15 +1637,15 @@ class _TypeSegmented extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _seg(context, _LedgerType.all, 'All'),
-          _seg(context, _LedgerType.inflow, 'Inflow'),
-          _seg(context, _LedgerType.outflow, 'Outflow'),
+          _seg(context, WebLedgerType.all, 'All'),
+          _seg(context, WebLedgerType.inflow, 'Inflow'),
+          _seg(context, WebLedgerType.outflow, 'Outflow'),
         ],
       ),
     );
   }
 
-  Widget _seg(BuildContext context, _LedgerType v, String label) {
+  Widget _seg(BuildContext context, WebLedgerType v, String label) {
     final cs = Theme.of(context).colorScheme;
     final sel = v == value;
     return Expanded(
@@ -1609,9 +1821,17 @@ class _QuickAddFabState extends State<_QuickAddFab> {
     final messenger = ScaffoldMessenger.of(context);
     if (p.lastCommittedSummary != null) {
       final summary = p.lastCommittedSummary!;
+      // Quick Add always dates "today", so logging while reading an older month
+      // moves the table to the current one. Say so — silently relocating the
+      // user reads as the grid glitching.
+      final snappedFrom = p.lastCommitSnappedFromMonth;
+      final message = snappedFrom == null
+          ? summary
+          : '$summary — dated today, so the table moved from '
+              '${monthLabel(snappedFrom)} to ${monthLabel(p.selectedMonth)}.';
       p.clearLastCommittedSummary();
       _controller.clear();
-      _toast(messenger, summary, ok: true);
+      _toast(messenger, message, ok: true);
       // Keep the box open + focused so the next transaction can be typed
       // straight away — desktop users log several in a row.
       _focus.requestFocus();
@@ -1851,11 +2071,11 @@ class _SelectionBar extends StatelessWidget {
 class _GridHeader extends StatelessWidget {
   final double descWidth;
   final _ColWidths widths;
-  final _SortKey? sortKey;
+  final WebLedgerSortKey? sortKey;
   final int sortDir;
   final bool allSelected;
   final VoidCallback onToggleAll;
-  final ValueChanged<_SortKey> onSort;
+  final ValueChanged<WebLedgerSortKey> onSort;
   final void Function(_ResizableCol, double) onResize;
   const _GridHeader({
     required this.descWidth,
@@ -1891,33 +2111,33 @@ class _GridHeader extends StatelessWidget {
           _hCell(
             'Date',
             widths.date,
-            _SortKey.date,
+            WebLedgerSortKey.date,
             resize: _ResizableCol.date,
           ),
           _hCell(
             'Account',
             widths.account,
-            _SortKey.account,
+            WebLedgerSortKey.account,
             resize: _ResizableCol.account,
           ),
-          _hCell('Description', descWidth, _SortKey.description),
+          _hCell('Description', descWidth, WebLedgerSortKey.description),
           _hCell(
             'Category',
             widths.category,
-            _SortKey.category,
+            WebLedgerSortKey.category,
             resize: _ResizableCol.category,
           ),
           _hCell(
             'Inflow',
             widths.inflow,
-            _SortKey.inflow,
+            WebLedgerSortKey.inflow,
             right: true,
             resize: _ResizableCol.inflow,
           ),
           _hCell(
             'Outflow',
             widths.outflow,
-            _SortKey.outflow,
+            WebLedgerSortKey.outflow,
             right: true,
             resize: _ResizableCol.outflow,
           ),
@@ -1937,7 +2157,7 @@ class _GridHeader extends StatelessWidget {
   Widget _hCell(
     String label,
     double width,
-    _SortKey? key, {
+    WebLedgerSortKey? key, {
     bool right = false,
     _ResizableCol? resize,
   }) {
@@ -1966,7 +2186,7 @@ Color _outflowTint(BuildContext context) =>
 class _HeaderCell extends StatelessWidget {
   final String label;
   final double width;
-  final _SortKey? sortKey;
+  final WebLedgerSortKey? sortKey;
   final bool active;
   final int dir;
   final bool right;
@@ -2099,21 +2319,54 @@ class _Check extends StatelessWidget {
 
 class _EmptyGridHint extends StatelessWidget {
   final bool hasAccounts;
-  const _EmptyGridHint({required this.hasAccounts});
+
+  /// True when a filter or search term is active. Without this the grid told
+  /// every user "No transactions yet" — including the one whose filter had just
+  /// hidden a full month of rows, which reads as data loss.
+  final bool narrowed;
+  final VoidCallback onClearFilters;
+
+  const _EmptyGridHint({
+    required this.hasAccounts,
+    required this.narrowed,
+    required this.onClearFilters,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final style = theme.textTheme.bodyMedium?.copyWith(
+      color: cs.onSurfaceVariant,
+    );
+
+    if (narrowed) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: WebInsets.xl),
+        alignment: Alignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('No transactions match your filters.', style: style),
+            const SizedBox(height: WebInsets.sm),
+            TextButton.icon(
+              onPressed: onClearFilters,
+              icon: const Icon(Icons.filter_alt_off_outlined, size: 16),
+              label: const Text('Clear filters'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: WebInsets.xl),
       alignment: Alignment.center,
       child: Text(
         hasAccounts
-            ? 'No transactions yet — add one in the row above.'
+            ? 'No transactions this month — add one in the row above.'
             : 'Add an account in Setup before logging transactions.',
-        style: Theme.of(
-          context,
-        ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+        style: style,
       ),
     );
   }

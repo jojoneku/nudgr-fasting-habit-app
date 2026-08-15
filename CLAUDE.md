@@ -30,6 +30,8 @@ Claude acts as the **System Architect** for this Flutter project. Full philosoph
 5. Animations: 150–300ms micro-interactions, ≤ 400ms max
 6. Constructor injection only — no `GetIt` or global locators
 7. **Theme-aware colors only.** In widgets, read from `Theme.of(context)` — `colorScheme.*`, `scaffoldBackgroundColor`, `textTheme.*`. Do **not** hardcode `AppColors.X` (dark-only) or `AppColorsLight.X` (light-only) inside widgets — that breaks the other mode. Direct token use is allowed only inside `fasting_app.dart` (theme construction) and inside semantically dark-only or light-only assets.
+8. **One owner per slice of state, and readers subscribe to the owner.** A presenter that shows data another presenter owns must mirror it off a listener (see `TreasuryDashboardPresenter._syncFromLedger` / `_syncFromBudget`) — never keep a private copy refreshed only by its own `load()`. A copy that only `load()` refreshes goes stale the moment another page edits it, and the surfaces that never reload (the Hub cards) stay wrong indefinitely.
+9. **Cross-presenter wiring lives in the graph, not the shells.** Treasury's presenters are assembled by `TreasuryPresenters` (`lib/presenters/treasury_presenters.dart`); `home_screen.dart` and `treasury_web_app.dart` ask for the graph rather than building it. Add a new dependency there once — assembling by hand in a shell is how mobile and web drift apart.
 
 ## Skills
 | Skill | Description |

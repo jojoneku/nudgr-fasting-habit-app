@@ -16,6 +16,7 @@ import '../../presenters/stats_presenter.dart';
 import '../../presenters/sync_presenter.dart';
 import '../../presenters/treasury_dashboard_presenter.dart';
 import '../../presenters/treasury_history_presenter.dart';
+import '../../presenters/treasury_presenters.dart';
 import '../../services/auth_service.dart';
 import '../../services/cloud_ai_coach_service.dart';
 import '../../services/local_storage_service.dart';
@@ -24,6 +25,8 @@ import '../../services/realtime_sync_service.dart';
 import '../../services/snapshot_service.dart';
 import '../../services/sync_queue.dart';
 import '../../services/sync_service.dart';
+import '../treasury/dashboard/goals_savings_screen.dart';
+import '../treasury/grocery/grocery_cart_view.dart';
 import '../treasury/treasury_module_view.dart';
 import 'design/web_theme.dart';
 import 'dev/preview_seed.dart';
@@ -32,6 +35,7 @@ import 'pages/budget/web_budget_page.dart';
 import 'pages/dashboard/web_dashboard_page.dart';
 import 'pages/history/web_history_page.dart';
 import 'pages/ledger/web_ledger_page.dart';
+import 'pages/more/web_more_page.dart';
 import 'pages/setup/web_setup_page.dart';
 import 'web_login_view.dart';
 import 'widgets/web_advisor_panel.dart';
@@ -92,6 +96,10 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   late final GroceryCartPresenter _groceryCartPresenter;
   late final AuthPresenter _authPresenter;
   late final AiCoachPresenter _advisorPresenter;
+
+  /// The Treasury presenter graph. The individual fields above are views onto
+  /// it, kept because the widget tree threads them around individually.
+  late final TreasuryPresenters _treasury;
   SyncService? _syncService;
   SyncPresenter? _syncPresenter;
   RealtimeSyncService? _realtime;
@@ -128,26 +136,23 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
     // on-device tier and no toggle to honour, so the cloud tier is the only
     // tier and is on by definition.
     cloudAi.enabled = true;
-    _ledgerPresenter = LedgerPresenter(
-      _storage,
-      _statsPresenter,
+    // The whole Treasury graph, wired in one place (see TreasuryPresenters) —
+    // the same assembly the mobile shell uses, so a dependency added there
+    // reaches web automatically instead of having to be remembered twice.
+    // No `ai:`: there is no on-device model in a browser, so the cloud tier is
+    // the only tier.
+    _treasury = TreasuryPresenters(
+      storage: _storage,
+      stats: _statsPresenter,
       cloudAi: cloudAi,
     );
-    _treasuryPresenter = TreasuryDashboardPresenter(_storage, _ledgerPresenter);
-    _budgetPresenter =
-        BudgetPresenter(_storage, _statsPresenter, _ledgerPresenter);
-    _billsPresenter = BillsReceivablesPresenter(
-      _storage,
-      _ledgerPresenter,
-      _statsPresenter,
-      dashboard: _treasuryPresenter,
-      budget: _budgetPresenter,
-    );
-    _historyPresenter = TreasuryHistoryPresenter(_storage);
-    _installmentPresenter =
-        InstallmentPresenter(_storage, _ledgerPresenter, _statsPresenter);
-    _groceryCartPresenter =
-        GroceryCartPresenter(_storage, ledger: _ledgerPresenter);
+    _ledgerPresenter = _treasury.ledger;
+    _treasuryPresenter = _treasury.dashboard;
+    _budgetPresenter = _treasury.budget;
+    _billsPresenter = _treasury.bills;
+    _historyPresenter = _treasury.history;
+    _installmentPresenter = _treasury.installments;
+    _groceryCartPresenter = _treasury.groceryCart;
     // Money Mentor. `fasting` and `nutrition` are omitted: both are optional,
     // and constructing them here would init NotificationService / the sqflite
     // food DB — neither of which has a web implementation. The advisor entry
@@ -204,13 +209,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _statsPresenter.dispose();
-    _ledgerPresenter.dispose();
-    _treasuryPresenter.dispose();
-    _budgetPresenter.dispose();
-    _billsPresenter.dispose();
-    _historyPresenter.dispose();
-    _installmentPresenter.dispose();
-    _groceryCartPresenter.dispose();
+    _treasury.dispose(); // every Treasury presenter + the shared month scope
     _advisorPresenter.dispose();
     _authPresenter.dispose();
     unawaited(_realtime?.dispose() ?? Future.value());
@@ -352,13 +351,9 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
   Future<void> _reloadAll() async {
     final loads = <Future<void>>[
       _statsPresenter.loadStats(),
-      _ledgerPresenter.load(),
-      _treasuryPresenter.load(),
-      _budgetPresenter.load(),
-      _billsPresenter.load(),
-      _historyPresenter.load(),
-      _installmentPresenter.load(),
-      _groceryCartPresenter.load(),
+      // One list, owned by the graph — a presenter added there is reloaded here
+      // without this call site having to be updated too.
+      ..._treasury.loadAll(),
     ];
     await Future.wait(loads.map((f) async {
       try {
@@ -395,6 +390,7 @@ class _TreasuryWebShellState extends State<TreasuryWebShell>
           return WebLoginView(presenter: _authPresenter);
         }
         return _TreasuryWebHome(
+          syncPresenter: _syncPresenter,
           dashPresenter: _treasuryPresenter,
           ledgerPresenter: _ledgerPresenter,
           billsPresenter: _billsPresenter,
@@ -424,7 +420,12 @@ class _TreasuryWebHome extends StatefulWidget {
   final AuthPresenter authPresenter;
   final AiCoachPresenter advisorPresenter;
 
+  /// Null until the sync stack is up (or when it failed) — the dashboard's
+  /// status pill reports that instead of claiming everything is synced.
+  final SyncPresenter? syncPresenter;
+
   const _TreasuryWebHome({
+    required this.syncPresenter,
     required this.dashPresenter,
     required this.ledgerPresenter,
     required this.billsPresenter,
@@ -443,19 +444,42 @@ class _TreasuryWebHome extends StatefulWidget {
 class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
   int _index = 0;
 
+  /// Ledger table filters live here rather than inside the page, so leaving the
+  /// Ledger destination and coming back doesn't quietly drop them.
+  final WebLedgerFilters _ledgerFilters = WebLedgerFilters();
+
+  @override
+  void dispose() {
+    _ledgerFilters.dispose();
+    super.dispose();
+  }
+
+  // Destination order is deliberately IDENTICAL to the mobile module's tab
+  // order (Dashboard · Ledger · Bills · Budget · History · Cart · Goals, then
+  // the trailing settings-ish destination). That makes the index itself the
+  // shared position, so crossing the desktop breakpoint mid-session keeps the
+  // user on the page they were reading instead of resetting to Dashboard.
   static const _destinations = [
     WebDestination(icon: Icons.dashboard_outlined, label: 'Dashboard'),
     WebDestination(icon: Icons.list_alt_outlined, label: 'Ledger'),
     WebDestination(icon: Icons.receipt_long_outlined, label: 'Bills'),
     WebDestination(icon: Icons.pie_chart_outline, label: 'Budget'),
     WebDestination(icon: Icons.history_outlined, label: 'History'),
+    WebDestination(icon: Icons.shopping_cart_outlined, label: 'Cart'),
+    WebDestination(icon: Icons.savings_outlined, label: 'Goals'),
     WebDestination(icon: Icons.settings_outlined, label: 'Setup & Accounts'),
   ];
+
+  static const int _setupIndex = 7;
 
   /// Reload the focused page's presenter so cross-page mutations show up
   /// without a refresh (mirrors TreasuryModuleView._onTabChanged).
   void _onSelect(int i) {
     setState(() => _index = i);
+    _reloadFor(i);
+  }
+
+  void _reloadFor(int i) {
     switch (i) {
       case 0:
         widget.dashPresenter.load();
@@ -468,6 +492,11 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       case 4:
         widget.historyPresenter.load();
       case 5:
+        widget.groceryCartPresenter.load();
+      case 6:
+        // Goals & Savings figures come from the dashboard presenter.
+        widget.dashPresenter.load();
+      case _setupIndex:
         widget.dashPresenter.load();
         widget.ledgerPresenter
             .load(); // categories live on the ledger presenter
@@ -477,7 +506,10 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
   Widget _page(int i) {
     switch (i) {
       case 1:
-        return WebLedgerPage(presenter: widget.ledgerPresenter);
+        return WebLedgerPage(
+          presenter: widget.ledgerPresenter,
+          filters: _ledgerFilters,
+        );
       case 2:
         return WebBillsPage(
           presenter: widget.billsPresenter,
@@ -488,6 +520,18 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       case 4:
         return WebHistoryPage(presenter: widget.historyPresenter);
       case 5:
+        // The mobile cart view, mounted in the desktop shell. The web spec
+        // lists Cart as an in-scope tab; it was reachable only below the
+        // breakpoint, so maximizing the window made a whole feature — and the
+        // trips behind ledger rows it had already written — disappear.
+        return GroceryCartView(presenter: widget.groceryCartPresenter);
+      case 6:
+        return GoalsSavingsScreen(
+          presenter: widget.dashPresenter,
+          // The shell topbar already names the destination.
+          showAppBar: false,
+        );
+      case _setupIndex:
         return WebSetupPage(
           presenter: widget.dashPresenter,
           ledgerPresenter: widget.ledgerPresenter,
@@ -497,6 +541,7 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
         return WebDashboardPage(
           presenter: widget.dashPresenter,
           billsPresenter: widget.billsPresenter,
+          onManageAccounts: () => _onSelect(_setupIndex),
         );
     }
   }
@@ -507,6 +552,12 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
       builder: (context, constraints) {
         if (constraints.maxWidth < WebBreakpoints.rail) {
           return TreasuryModuleView(
+            syncPresenter: widget.syncPresenter,
+            // Same index space as the rail — hand over the current position.
+            initialTabIndex: _index,
+            onTabChanged: (i) {
+              if (i != _index) setState(() => _index = i);
+            },
             dashPresenter: widget.dashPresenter,
             ledgerPresenter: widget.ledgerPresenter,
             billsPresenter: widget.billsPresenter,
@@ -514,6 +565,28 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
             historyPresenter: widget.historyPresenter,
             installmentPresenter: widget.installmentPresenter,
             groceryCartPresenter: widget.groceryCartPresenter,
+            // Narrow web has no sidebar, so sign-out, the theme toggle and the
+            // Money Mentor get a tab of their own. Occupies the same index as
+            // the rail's trailing destination, keeping the mapping 1:1.
+            extraTabs: [
+              TreasuryModuleTab(
+                icon: Icons.more_horiz,
+                label: 'More',
+                ownsHeader: true,
+                page: ValueListenableBuilder<ThemeMode>(
+                  valueListenable: webThemeMode,
+                  builder: (context, mode, _) => WebMorePage(
+                    authPresenter: widget.authPresenter,
+                    advisorPresenter: widget.advisorPresenter,
+                    isDark: mode == ThemeMode.dark,
+                    onToggleTheme: () => webThemeMode.value =
+                        mode == ThemeMode.dark
+                            ? ThemeMode.light
+                            : ThemeMode.dark,
+                  ),
+                ),
+              ),
+            ],
           );
         }
         final theme = Theme.of(context);
@@ -531,7 +604,10 @@ class _TreasuryWebHomeState extends State<_TreasuryWebHome> {
                       ?.copyWith(fontWeight: FontWeight.w700)),
             ],
           ),
-          footer: _SignOutFooter(authPresenter: widget.authPresenter),
+          footer: _SignOutFooter(
+            authPresenter: widget.authPresenter,
+            syncPresenter: widget.syncPresenter,
+          ),
           topBar: Row(
             children: [
               Text(_destinations[_index].label,
@@ -576,17 +652,54 @@ class _ThemeToggle extends StatelessWidget {
 
 class _SignOutFooter extends StatelessWidget {
   final AuthPresenter authPresenter;
-  const _SignOutFooter({required this.authPresenter});
+  final SyncPresenter? syncPresenter;
+
+  const _SignOutFooter({required this.authPresenter, this.syncPresenter});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final email = authPresenter.userEmail;
+    final sync = syncPresenter;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Real sync state, in the rail where the shell always shows it.
+        if (sync != null)
+          ListenableBuilder(
+            listenable: sync,
+            builder: (context, _) => Padding(
+              padding: const EdgeInsets.only(bottom: WebInsets.sm),
+              child: Row(
+                children: [
+                  Icon(
+                    sync.syncError != null
+                        ? Icons.error_outline
+                        : sync.pendingCount > 0
+                            ? Icons.cloud_upload_outlined
+                            : Icons.cloud_done_outlined,
+                    size: 14,
+                    color:
+                        sync.syncError != null ? cs.error : cs.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: WebInsets.sm),
+                  Expanded(
+                    child: Text(
+                      sync.syncError != null ? 'Sync failed' : sync.statusLabel,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: sync.syncError != null
+                            ? cs.error
+                            : cs.onSurfaceVariant,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         if (email != null)
           Padding(
             padding: const EdgeInsets.only(bottom: WebInsets.sm),

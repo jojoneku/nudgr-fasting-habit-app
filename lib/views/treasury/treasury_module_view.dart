@@ -4,6 +4,7 @@ import 'package:intermittent_fasting/presenters/budget_presenter.dart';
 import 'package:intermittent_fasting/presenters/grocery_cart_presenter.dart';
 import 'package:intermittent_fasting/presenters/installment_presenter.dart';
 import 'package:intermittent_fasting/presenters/nutrition_presenter.dart';
+import 'package:intermittent_fasting/presenters/sync_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_dashboard_presenter.dart';
 import 'package:intermittent_fasting/presenters/ledger_presenter.dart';
 import 'package:intermittent_fasting/presenters/treasury_history_presenter.dart';
@@ -14,6 +15,29 @@ import 'package:intermittent_fasting/views/treasury/dashboard/treasury_dashboard
 import 'package:intermittent_fasting/views/treasury/grocery/grocery_cart_view.dart';
 import 'package:intermittent_fasting/views/treasury/history/treasury_history_view.dart';
 import 'package:intermittent_fasting/views/treasury/ledger/ledger_view.dart';
+
+/// An extra tab appended after the seven built-in Treasury tabs.
+///
+/// Exists for the narrow-web surface: below the desktop breakpoint the browser
+/// renders this module instead of the sidebar shell, and the sidebar is where
+/// sign-out, the theme toggle and the advisor live. Without a slot here, a
+/// mobile-web user had no way to reach any of them. Mobile passes none.
+class TreasuryModuleTab {
+  final IconData icon;
+  final String label;
+  final Widget page;
+
+  /// True when [page] renders its own header, so the shared "TREASURY" app bar
+  /// is hidden while it is active (matching the built-in tabs that do).
+  final bool ownsHeader;
+
+  const TreasuryModuleTab({
+    required this.icon,
+    required this.label,
+    required this.page,
+    this.ownsHeader = false,
+  });
+}
 
 class TreasuryModuleView extends StatefulWidget {
   final TreasuryDashboardPresenter dashPresenter;
@@ -29,6 +53,22 @@ class TreasuryModuleView extends StatefulWidget {
   /// surfaces (e.g. the web treasury app).
   final NutritionPresenter? nutritionPresenter;
 
+  /// Drives the dashboard's sync pill. Null when signed out or no sync stack is
+  /// running — the pill reports that rather than claiming "Synced".
+  final SyncPresenter? syncPresenter;
+
+  /// Extra tabs appended after the built-in seven. See [TreasuryModuleTab].
+  final List<TreasuryModuleTab> extraTabs;
+
+  /// Tab to open on first build. Lets the web shell hand over the destination
+  /// the user was already on when the window crossed the desktop breakpoint,
+  /// instead of dumping them back on Dashboard.
+  final int initialTabIndex;
+
+  /// Fired whenever the active tab settles, so an enclosing shell can mirror
+  /// the position.
+  final ValueChanged<int>? onTabChanged;
+
   const TreasuryModuleView({
     super.key,
     required this.dashPresenter,
@@ -39,12 +79,17 @@ class TreasuryModuleView extends StatefulWidget {
     required this.installmentPresenter,
     required this.groceryCartPresenter,
     this.nutritionPresenter,
+    this.syncPresenter,
+    this.extraTabs = const [],
+    this.initialTabIndex = 0,
+    this.onTabChanged,
   });
 
   @override
   State<TreasuryModuleView> createState() => _TreasuryModuleViewState();
 
-  // Tab count — keep in sync with the TabBar/TabBarView below.
+  // Built-in tab count — keep in sync with the TabBar/TabBarView below.
+  // [extraTabs] are appended on top of these.
   static const int tabCount = 7;
 }
 
@@ -68,12 +113,18 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
   // app bar until they get the same treatment.
   bool _appBarHidden = false;
 
+  int get _tabCount => TreasuryModuleView.tabCount + widget.extraTabs.length;
+
   @override
   void initState() {
     super.initState();
-    _tabController =
-        TabController(length: TreasuryModuleView.tabCount, vsync: this);
+    _tabController = TabController(
+      length: _tabCount,
+      vsync: this,
+      initialIndex: widget.initialTabIndex.clamp(0, _tabCount - 1),
+    );
     _tabController.addListener(_onTabChanged);
+    _appBarHidden = _hidesAppBar(_tabController.index);
   }
 
   @override
@@ -83,19 +134,27 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
     super.dispose();
   }
 
+  bool _hidesAppBar(int index) {
+    if (index >= TreasuryModuleView.tabCount) {
+      return widget.extraTabs[index - TreasuryModuleView.tabCount].ownsHeader;
+    }
+    return index == _ledgerTabIndex ||
+        index == _billsTabIndex ||
+        index == _budgetTabIndex ||
+        index == _historyTabIndex ||
+        index == _goalsTabIndex;
+  }
+
   void _onTabChanged() {
     // Toggle the app bar as soon as we cross into/out of a header-owning tab
     // (Ledger, Bills) — even mid-animation — so there's no flash of the shared
     // "TREASURY" bar over that tab's own in-page header.
     final index = _tabController.index;
-    final hide = index == _ledgerTabIndex ||
-        index == _billsTabIndex ||
-        index == _budgetTabIndex ||
-        index == _historyTabIndex ||
-        index == _goalsTabIndex;
+    final hide = _hidesAppBar(index);
     if (hide != _appBarHidden) setState(() => _appBarHidden = hide);
 
     if (_tabController.indexIsChanging) return;
+    widget.onTabChanged?.call(index);
     // Each tab keeps its own presenter cache. Reload on focus so cross-tab
     // mutations (e.g. mark-paid in Bills, transfer in Ledger) show up without
     // an app restart.
@@ -158,19 +217,25 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
         ),
         child: TabBar(
           controller: _tabController,
+          isScrollable: _tabCount > TreasuryModuleView.tabCount,
+          tabAlignment: _tabCount > TreasuryModuleView.tabCount
+              ? TabAlignment.center
+              : null,
           indicatorColor: colorScheme.primary,
           indicatorWeight: 3,
           indicatorSize: TabBarIndicatorSize.label,
           labelColor: colorScheme.primary,
           unselectedLabelColor: colorScheme.onSurfaceVariant,
-          tabs: const [
-            Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
-            Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
-            Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),
-            Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
-            Tab(icon: Icon(Icons.history_outlined), text: 'History'),
-            Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Cart'),
-            Tab(icon: Icon(Icons.savings_outlined), text: 'Goals'),
+          tabs: [
+            const Tab(icon: Icon(Icons.dashboard_outlined), text: 'Dashboard'),
+            const Tab(icon: Icon(Icons.list_alt_outlined), text: 'Ledger'),
+            const Tab(icon: Icon(Icons.receipt_long_outlined), text: 'Bills'),
+            const Tab(icon: Icon(Icons.pie_chart_outline), text: 'Budget'),
+            const Tab(icon: Icon(Icons.history_outlined), text: 'History'),
+            const Tab(icon: Icon(Icons.shopping_cart_outlined), text: 'Cart'),
+            const Tab(icon: Icon(Icons.savings_outlined), text: 'Goals'),
+            for (final tab in widget.extraTabs)
+              Tab(icon: Icon(tab.icon), text: tab.label),
           ],
         ),
       ),
@@ -181,6 +246,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
           TreasuryDashboardView(
             presenter: widget.dashPresenter,
             billsPresenter: widget.billsPresenter,
+            syncPresenter: widget.syncPresenter,
           ),
           LedgerView(
             presenter: widget.ledgerPresenter,
@@ -194,6 +260,7 @@ class _TreasuryModuleViewState extends State<TreasuryModuleView>
           TreasuryHistoryView(presenter: widget.historyPresenter),
           GroceryCartView(presenter: widget.groceryCartPresenter),
           GoalsSavingsScreen(presenter: widget.dashPresenter),
+          for (final tab in widget.extraTabs) tab.page,
         ],
       ),
     );

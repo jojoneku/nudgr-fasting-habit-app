@@ -17,9 +17,15 @@ import 'package:intermittent_fasting/views/widgets/system/system.dart';
 class GoalsSavingsScreen extends StatelessWidget {
   final TreasuryDashboardPresenter presenter;
 
+  /// False when an enclosing shell already titles the page — the desktop web
+  /// sidebar names the destination in its topbar, so a second "Goals & Savings"
+  /// bar directly under it is pure duplication.
+  final bool showAppBar;
+
   const GoalsSavingsScreen({
     super.key,
     required this.presenter,
+    this.showAppBar = true,
   });
 
   void _showAddSheet(BuildContext context) {
@@ -59,10 +65,12 @@ class GoalsSavingsScreen extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
-          appBar: AppBar(
-            backgroundColor: theme.scaffoldBackgroundColor,
-            title: const Text('Goals & Savings'),
-          ),
+          appBar: showAppBar
+              ? AppBar(
+                  backgroundColor: theme.scaffoldBackgroundColor,
+                  title: const Text('Goals & Savings'),
+                )
+              : null,
           floatingActionButton: FloatingActionButton.extended(
             onPressed: () => _showAddSheet(context),
             backgroundColor: context.appColors.success,

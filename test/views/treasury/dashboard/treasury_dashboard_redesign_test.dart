@@ -102,7 +102,10 @@ void main() {
     expect(find.text('Proj. month-end cash'), findsOneWidget);
     expect(find.text('Accounts'), findsOneWidget);
     expect(find.text('BPI Personal'), findsWidgets);
-    expect(find.text('Synced'), findsOneWidget);
+    // No SyncPresenter is wired here, so the status pill must say so rather
+    // than claim "Synced" — it used to be a hardcoded green badge that read the
+    // same offline, signed out, or with changes still queued.
+    expect(find.text('Local only'), findsOneWidget);
   });
 
   testWidgets('Month-End Outlook shows the four forecast tiles',
